@@ -117,7 +117,7 @@ export default function AdminPollPage() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
         <div className="bg-white rounded-xl shadow-lg p-8 text-center max-w-md">
           <h1 className="text-2xl font-bold text-red-600 mb-2">Poll Not Found</h1>
-          <p className="text-gray-600">This poll doesn't exist.</p>
+          <p className="text-gray-700">This poll doesn't exist.</p>
         </div>
       </div>
     );
@@ -129,13 +129,13 @@ export default function AdminPollPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
       <div className="max-w-6xl mx-auto">
-        <button onClick={() => router.push('/')} className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6">
+        <button onClick={() => router.push('/')} className="flex items-center gap-2 text-gray-700 hover:text-gray-900 mb-6">
           <ArrowLeft className="h-4 w-4" /> Back to Dashboard
         </button>
 
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
           <h1 className="text-2xl font-bold mb-4">{poll.title}</h1>
-          {poll.description && <p className="text-gray-600 mb-4">{poll.description}</p>}
+          {poll.description && <p className="text-gray-700 mb-4">{poll.description}</p>}
           
           <div className="grid md:grid-cols-2 gap-4 mb-4">
             <div className="border-2 border-blue-200 rounded-lg p-4 bg-blue-50">
@@ -184,7 +184,7 @@ export default function AdminPollPage() {
         <div className="bg-white rounded-lg shadow-lg p-6">
           <h2 className="text-xl font-semibold mb-4">Availability Results</h2>
           {submissions.length === 0 ? (
-            <p className="text-gray-600 text-center py-8">No submissions yet. Share the participant link to collect availability.</p>
+            <p className="text-gray-700 text-center py-8">No submissions yet. Share the participant link to collect availability.</p>
           ) : (
             <div className="overflow-x-auto">
               <div className="inline-block min-w-full">
@@ -220,7 +220,7 @@ export default function AdminPollPage() {
                     <span className="font-medium">{sub.name}</span>
                     <span className="text-gray-500 text-sm ml-2">{sub.email}</span>
                   </div>
-                  <span className="text-sm text-gray-600">{sub.agency}</span>
+                  <span className="text-sm text-gray-700">{sub.agency}</span>
                 </div>
               ))}
             </div>

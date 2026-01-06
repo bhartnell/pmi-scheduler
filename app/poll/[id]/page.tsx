@@ -33,7 +33,7 @@ export default function PollPage() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading poll...</p>
+          <p className="mt-4 text-gray-700">Loading poll...</p>
         </div>
       </div>
     );
@@ -44,7 +44,7 @@ export default function PollPage() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
         <div className="bg-white rounded-xl shadow-lg p-8 text-center max-w-md">
           <h1 className="text-2xl font-bold text-red-600 mb-2">Poll Not Found</h1>
-          <p className="text-gray-600">This scheduling poll doesn't exist or has been deleted.</p>
+          <p className="text-gray-700">This scheduling poll doesn't exist or has been deleted.</p>
         </div>
       </div>
     );

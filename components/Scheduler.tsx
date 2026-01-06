@@ -194,7 +194,7 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-800 mb-3">Select Poll Type</h1>
-          <p className="text-gray-600">Choose the type of scheduling poll to create</p>
+          <p className="text-gray-700">Choose the type of scheduling poll to create</p>
         </div>
         <div className="grid md:grid-cols-2 gap-6">
           <button
@@ -205,8 +205,8 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
               <div className="p-3 bg-blue-100 rounded-lg"><UserCheck className="w-8 h-8 text-blue-600" /></div>
               <h2 className="text-2xl font-bold">Individual Meeting</h2>
             </div>
-            <p className="text-gray-600 mb-4">One-on-one internship check-ins with student, FTO, and instructor.</p>
-            <ul className="space-y-2 text-sm text-gray-500">
+            <p className="text-gray-700 mb-4">One-on-one internship check-ins with student, FTO, and instructor.</p>
+            <ul className="space-y-2 text-sm text-gray-600">
               <li>• Hourly time slots (6 AM - 8 PM)</li>
               <li>• Initial, mid-point, or final meetings</li>
             </ul>
@@ -219,8 +219,8 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
               <div className="p-3 bg-purple-100 rounded-lg"><UsersRound className="w-8 h-8 text-purple-600" /></div>
               <h2 className="text-2xl font-bold">Group Session</h2>
             </div>
-            <p className="text-gray-600 mb-4">Testing days, competencies, or orientation with multiple students.</p>
-            <ul className="space-y-2 text-sm text-gray-500">
+            <p className="text-gray-700 mb-4">Testing days, competencies, or orientation with multiple students.</p>
+            <ul className="space-y-2 text-sm text-gray-600">
               <li>• Half-day or full-day blocks</li>
               <li>• Skills testing or assessments</li>
             </ul>
@@ -244,7 +244,7 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
       <div className="max-w-6xl mx-auto" onMouseUp={() => { setIsPreviewSelecting(false); setPreviewSelectionStart(null); }}>
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
           <h1 className="text-2xl font-bold mb-4">Poll Preview: {pollConfig.title || 'New Poll'}</h1>
-          <p className="text-gray-600 mb-4">Review settings and calendar grid. Adjust as needed before finalizing.</p>
+          <p className="text-gray-700 mb-4">Review settings and calendar grid. Adjust as needed before finalizing.</p>
           
           <div className="bg-blue-50 p-4 rounded-lg mb-4">
             <h3 className="font-semibold text-blue-900 mb-2">Settings:</h3>
@@ -297,7 +297,7 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
       <div className="max-w-6xl mx-auto" onMouseUp={handleMouseUp}>
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
           <h1 className="text-2xl font-bold mb-2">{pollData?.title}</h1>
-          {pollData?.description && <p className="text-gray-600">{pollData.description}</p>}
+          {pollData?.description && <p className="text-gray-700">{pollData.description}</p>}
         </div>
         
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
@@ -317,7 +317,7 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
         
         <div className="bg-white rounded-lg shadow-lg p-6">
           <h2 className="text-xl font-semibold mb-4">Select Available Times</h2>
-          <p className="text-sm text-gray-600 mb-4"><strong>Click and drag</strong> to select multiple slots.</p>
+          <p className="text-sm text-gray-700 mb-4"><strong>Click and drag</strong> to select multiple slots.</p>
           <div className="overflow-x-auto">
             <div className="inline-block min-w-full select-none">
               <div className="grid" style={{ gridTemplateColumns: `80px repeat(${dates.length}, 100px)` }}>
@@ -350,7 +350,7 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
       <div className="max-w-md mx-auto bg-white rounded-xl shadow-lg p-8 text-center">
         <div className="mb-6"><div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center"><CheckCircle className="w-10 h-10 text-green-600" /></div></div>
         <h1 className="text-2xl font-bold mb-3">Availability Submitted!</h1>
-        <p className="text-gray-600 mb-6">Thank you, {studentData.name}. The coordinator will contact you with the meeting time.</p>
+        <p className="text-gray-700 mb-6">Thank you, {studentData.name}. The coordinator will contact you with the meeting time.</p>
         <button onClick={() => setView('participant-form')} className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Edit My Availability</button>
       </div>
     );
@@ -385,7 +385,7 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
       <div className="bg-white rounded-lg shadow-lg p-6">
         <h2 className="text-xl font-semibold mb-4">Availability Results</h2>
         {submissions.length === 0 ? (
-          <p className="text-gray-600 text-center py-8">No submissions yet. Share the participant link to collect availability.</p>
+          <p className="text-gray-700 text-center py-8">No submissions yet. Share the participant link to collect availability.</p>
         ) : (
           <div className="overflow-x-auto">
             <div className="grid" style={{ gridTemplateColumns: `80px repeat(${dates.length}, 100px)` }}>
