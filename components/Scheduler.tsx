@@ -203,7 +203,7 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
           >
             <div className="flex items-center gap-4 mb-4">
               <div className="p-3 bg-blue-100 rounded-lg"><UserCheck className="w-8 h-8 text-blue-600" /></div>
-              <h2 className="text-2xl font-bold">Individual Meeting</h2>
+              <h2 className="text-2xl font-bold text-gray-900">Individual Meeting</h2>
             </div>
             <p className="text-gray-700 mb-4">One-on-one internship check-ins with student, FTO, and instructor.</p>
             <ul className="space-y-2 text-sm text-gray-600">
@@ -217,7 +217,7 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
           >
             <div className="flex items-center gap-4 mb-4">
               <div className="p-3 bg-purple-100 rounded-lg"><UsersRound className="w-8 h-8 text-purple-600" /></div>
-              <h2 className="text-2xl font-bold">Group Session</h2>
+              <h2 className="text-2xl font-bold text-gray-900">Group Session</h2>
             </div>
             <p className="text-gray-700 mb-4">Testing days, competencies, or orientation with multiple students.</p>
             <ul className="space-y-2 text-sm text-gray-600">
@@ -243,7 +243,7 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
     return (
       <div className="max-w-6xl mx-auto" onMouseUp={() => { setIsPreviewSelecting(false); setPreviewSelectionStart(null); }}>
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <h1 className="text-2xl font-bold mb-4">Poll Preview: {pollConfig.title || 'New Poll'}</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Poll Preview: {pollConfig.title || 'New Poll'}</h1>
           <p className="text-gray-700 mb-4">Review settings and calendar grid. Adjust as needed before finalizing.</p>
           
           <div className="bg-blue-50 p-4 rounded-lg mb-4">
@@ -256,7 +256,7 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
           </div>
           
           <div className="flex gap-3">
-            <button onClick={() => setView('mode-select')} className="px-4 py-2 border rounded-lg hover:bg-gray-50">
+            <button onClick={() => setView('mode-select')} className="px-4 py-2 border rounded-lg hover:bg-gray-50 text-gray-900">
               <ArrowLeft className="w-4 h-4 inline mr-2" />Back
             </button>
             <button 
@@ -269,15 +269,15 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
         </div>
         
         <div className="bg-white rounded-lg shadow-lg p-6">
-          <h2 className="text-xl font-semibold mb-4">Calendar Preview</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Calendar Preview</h2>
           <div className="overflow-x-auto">
             <div className="inline-block min-w-full select-none">
               <div className="grid" style={{ gridTemplateColumns: `${schedulingMode === 'group' ? '180px' : '80px'} repeat(${dates.length}, ${schedulingMode === 'group' ? '110px' : '100px'})` }}>
                 <div className="p-2 bg-gray-50 border-b-2"></div>
-                {dates.map((d, i) => <div key={i} className="p-2 text-center text-sm bg-gray-50 border-b-2 font-medium">{d.display}</div>)}
+                {dates.map((d, i) => <div key={i} className="p-2 text-center text-sm bg-gray-50 border-b-2 font-medium text-gray-900">{d.display}</div>)}
                 {timeSlots.map((t, ti) => (
                   <React.Fragment key={ti}>
-                    <div className="p-2 text-sm font-medium bg-gray-50 border-r border-b">{t}</div>
+                    <div className="p-2 text-sm font-medium bg-gray-50 border-r border-b text-gray-900">{t}</div>
                     {dates.map((d, di) => (
                       <div key={`${di}-${ti}`} className="p-3 border-r border-b bg-blue-100" />
                     ))}
@@ -296,36 +296,36 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
     return (
       <div className="max-w-6xl mx-auto" onMouseUp={handleMouseUp}>
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <h1 className="text-2xl font-bold mb-2">{pollData?.title}</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">{pollData?.title}</h1>
           {pollData?.description && <p className="text-gray-700">{pollData.description}</p>}
         </div>
         
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <h2 className="text-xl font-semibold mb-4">Your Information</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Your Information</h2>
           <div className="grid md:grid-cols-2 gap-4">
-            <input type="text" value={studentData.name} onChange={(e) => setStudentData(p => ({ ...p, name: e.target.value }))} placeholder="Name" className="px-3 py-2 border rounded-md" />
-            <input type="email" value={studentData.email} onChange={(e) => setStudentData(p => ({ ...p, email: e.target.value }))} placeholder="Email" className="px-3 py-2 border rounded-md" />
-            <select value={studentData.agency} onChange={(e) => setStudentData(p => ({ ...p, agency: e.target.value }))} className="px-3 py-2 border rounded-md">
+            <input type="text" value={studentData.name} onChange={(e) => setStudentData(p => ({ ...p, name: e.target.value }))} placeholder="Name" className="px-3 py-2 border rounded-md text-gray-900 bg-white" />
+            <input type="email" value={studentData.email} onChange={(e) => setStudentData(p => ({ ...p, email: e.target.value }))} placeholder="Email" className="px-3 py-2 border rounded-md text-gray-900 bg-white" />
+            <select value={studentData.agency} onChange={(e) => setStudentData(p => ({ ...p, agency: e.target.value }))} className="px-3 py-2 border rounded-md text-gray-900 bg-white">
               <option value="">Select agency</option>
               {agencies.map(a => <option key={a} value={a}>{a}</option>)}
             </select>
-            <select value={studentData.meetingType} onChange={(e) => setStudentData(p => ({ ...p, meetingType: e.target.value }))} className="px-3 py-2 border rounded-md">
+            <select value={studentData.meetingType} onChange={(e) => setStudentData(p => ({ ...p, meetingType: e.target.value }))} className="px-3 py-2 border rounded-md text-gray-900 bg-white">
               {(schedulingMode === 'individual' ? meetingTypes : groupSessionTypes).map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
           </div>
         </div>
         
         <div className="bg-white rounded-lg shadow-lg p-6">
-          <h2 className="text-xl font-semibold mb-4">Select Available Times</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Select Available Times</h2>
           <p className="text-sm text-gray-700 mb-4"><strong>Click and drag</strong> to select multiple slots.</p>
           <div className="overflow-x-auto">
             <div className="inline-block min-w-full select-none">
               <div className="grid" style={{ gridTemplateColumns: `80px repeat(${dates.length}, 100px)` }}>
                 <div className="p-2 bg-gray-50 border-b-2"></div>
-                {dates.map((d, i) => <div key={i} className="p-2 text-center text-sm bg-gray-50 border-b-2">{d.display}</div>)}
+                {dates.map((d, i) => <div key={i} className="p-2 text-center text-sm bg-gray-50 border-b-2 text-gray-900">{d.display}</div>)}
                 {timeSlots.map((t, ti) => (
                   <React.Fragment key={ti}>
-                    <div className="p-2 text-sm font-medium bg-gray-50 border-r border-b">{t}</div>
+                    <div className="p-2 text-sm font-medium bg-gray-50 border-r border-b text-gray-900">{t}</div>
                     {dates.map((d, di) => (
                       <button key={`${di}-${ti}`} onMouseDown={() => handleMouseDown(di, ti)} onMouseEnter={() => handleMouseEnter(di, ti)} 
                         className={`p-3 border-r border-b transition-colors ${studentData.availability.includes(`${di}-${ti}`) ? 'bg-green-400' : 'bg-white hover:bg-blue-50'}`} />
@@ -349,7 +349,7 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
     return (
       <div className="max-w-md mx-auto bg-white rounded-xl shadow-lg p-8 text-center">
         <div className="mb-6"><div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center"><CheckCircle className="w-10 h-10 text-green-600" /></div></div>
-        <h1 className="text-2xl font-bold mb-3">Availability Submitted!</h1>
+        <h1 className="text-2xl font-bold text-gray-900 mb-3">Availability Submitted!</h1>
         <p className="text-gray-700 mb-6">Thank you, {studentData.name}. The coordinator will contact you with the meeting time.</p>
         <button onClick={() => setView('participant-form')} className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Edit My Availability</button>
       </div>
@@ -360,11 +360,11 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
   return (
     <div className="max-w-6xl mx-auto">
       <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-        <h1 className="text-2xl font-bold mb-4">{pollData?.title}</h1>
+        <h1 className="text-2xl font-bold text-gray-900 mb-4">{pollData?.title}</h1>
         <div className="grid md:grid-cols-2 gap-4 mb-4">
           <div className="border-2 border-blue-200 rounded-lg p-4 bg-blue-50">
             <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2"><ExternalLink className="w-5 h-5 text-blue-600" /><span className="font-semibold">Participant Link</span></div>
+              <div className="flex items-center gap-2"><ExternalLink className="w-5 h-5 text-blue-600" /><span className="font-semibold text-gray-900">Participant Link</span></div>
               <button onClick={() => copyLink('participant')} className="flex items-center gap-1 px-3 py-1 bg-blue-600 text-white rounded text-sm">
                 {linksCopied.participant ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />} {linksCopied.participant ? 'Copied!' : 'Copy'}
               </button>
@@ -372,7 +372,7 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
           </div>
           <div className="border-2 border-purple-200 rounded-lg p-4 bg-purple-50">
             <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2"><Eye className="w-5 h-5 text-purple-600" /><span className="font-semibold">Admin Link</span></div>
+              <div className="flex items-center gap-2"><Eye className="w-5 h-5 text-purple-600" /><span className="font-semibold text-gray-900">Admin Link</span></div>
               <button onClick={() => copyLink('admin')} className="flex items-center gap-1 px-3 py-1 bg-purple-600 text-white rounded text-sm">
                 {linksCopied.admin ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />} {linksCopied.admin ? 'Copied!' : 'Copy'}
               </button>
@@ -383,17 +383,17 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
       </div>
       
       <div className="bg-white rounded-lg shadow-lg p-6">
-        <h2 className="text-xl font-semibold mb-4">Availability Results</h2>
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Availability Results</h2>
         {submissions.length === 0 ? (
           <p className="text-gray-700 text-center py-8">No submissions yet. Share the participant link to collect availability.</p>
         ) : (
           <div className="overflow-x-auto">
             <div className="grid" style={{ gridTemplateColumns: `80px repeat(${dates.length}, 100px)` }}>
               <div className="p-2 bg-gray-50 border-b-2"></div>
-              {dates.map((d, i) => <div key={i} className="p-2 text-center text-sm bg-gray-50 border-b-2">{d.display}</div>)}
+              {dates.map((d, i) => <div key={i} className="p-2 text-center text-sm bg-gray-50 border-b-2 text-gray-900">{d.display}</div>)}
               {timeSlots.map((t, ti) => (
                 <React.Fragment key={ti}>
-                  <div className="p-2 text-sm font-medium bg-gray-50 border-r border-b">{t}</div>
+                  <div className="p-2 text-sm font-medium bg-gray-50 border-r border-b text-gray-900">{t}</div>
                   {dates.map((d, di) => {
                     const count = getOverlapCount(di, ti);
                     return <div key={`${di}-${ti}`} className={`p-3 border-r border-b flex items-center justify-center text-xs font-semibold ${getOverlapColor(count)}`}>
