@@ -45,20 +45,21 @@ export default function Home() {
 
     setDeleting(pollId);
 
-    // Delete submissions first (due to foreign key)
-    await supabase
-      .from('submissions')
-      .delete()
-      .eq('poll_id', pollId);
+    try {
+      const response = await fetch(`/api/polls?id=${pollId}`, {
+        method: 'DELETE',
+      });
 
-    // Delete the poll
-    const { error } = await supabase
-      .from('polls')
-      .delete()
-      .eq('id', pollId);
+      const result = await response.json();
 
-    if (!error) {
-      setPolls(polls.filter(p => p.id !== pollId));
+      if (result.success) {
+        setPolls(polls.filter(p => p.id !== pollId));
+      } else {
+        alert('Failed to delete poll: ' + (result.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error deleting poll:', error);
+      alert('Failed to delete poll. Please try again.');
     }
 
     setDeleting(null);
