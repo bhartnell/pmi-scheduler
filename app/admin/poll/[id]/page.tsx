@@ -24,12 +24,12 @@ export default function AdminPollPage() {
 
   useEffect(() => {
     const fetchPoll = async () => {
-      const currentUrl = window.location.href;
-      
+      const pollId = params.id as string;
+
       const { data: pollData, error: pollError } = await supabase
         .from('polls')
         .select('*')
-        .eq('admin_link', currentUrl)
+        .like('admin_link', `%${pollId}%`)
         .single();
 
       if (pollData) {
@@ -47,7 +47,7 @@ export default function AdminPollPage() {
       setLoading(false);
     };
     fetchPoll();
-  }, []);
+  }, [params.id]);
 
   const generateTimeSlots = () => {
     if (poll?.mode === 'group') return ['Morning (8 AM-12 PM)', 'Afternoon (1-5 PM)', 'Full Day (8 AM-5 PM)'];
@@ -134,7 +134,7 @@ export default function AdminPollPage() {
         </button>
 
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <h1 className="text-2xl font-bold mb-4">{poll.title}</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">{poll.title}</h1>
           {poll.description && <p className="text-gray-700 mb-4">{poll.description}</p>}
           
           <div className="grid md:grid-cols-2 gap-4 mb-4">
@@ -142,27 +142,27 @@ export default function AdminPollPage() {
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <ExternalLink className="w-5 h-5 text-blue-600" />
-                  <span className="font-semibold">Participant Link</span>
+                  <span className="font-semibold text-gray-900">Participant Link</span>
                 </div>
                 <button onClick={() => copyLink('participant')} className="flex items-center gap-1 px-3 py-1 bg-blue-600 text-white rounded text-sm">
                   {linksCopied.participant ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                   {linksCopied.participant ? 'Copied!' : 'Copy'}
                 </button>
               </div>
-              <p className="text-xs text-blue-700">Share with students/FTOs</p>
+              <p className="text-xs text-blue-800">Share with students/FTOs</p>
             </div>
             <div className="border-2 border-purple-200 rounded-lg p-4 bg-purple-50">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
                   <Eye className="w-5 h-5 text-purple-600" />
-                  <span className="font-semibold">Admin Link</span>
+                  <span className="font-semibold text-gray-900">Admin Link</span>
                 </div>
                 <button onClick={() => copyLink('admin')} className="flex items-center gap-1 px-3 py-1 bg-purple-600 text-white rounded text-sm">
                   {linksCopied.admin ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                   {linksCopied.admin ? 'Copied!' : 'Copy'}
                 </button>
               </div>
-              <p className="text-xs text-purple-700">Keep private - admin only</p>
+              <p className="text-xs text-purple-800">Keep private - admin only</p>
             </div>
           </div>
           
@@ -172,8 +172,8 @@ export default function AdminPollPage() {
         </div>
 
         <div className="bg-white rounded-lg shadow-lg p-4 mb-6">
-          <h3 className="font-semibold mb-2">Legend:</h3>
-          <div className="flex gap-4 flex-wrap text-sm">
+          <h3 className="font-semibold text-gray-900 mb-2">Legend:</h3>
+          <div className="flex gap-4 flex-wrap text-sm text-gray-900">
             <div className="flex items-center gap-2"><div className="w-6 h-6 bg-gray-100 border"></div><span>None</span></div>
             <div className="flex items-center gap-2"><div className="w-6 h-6 bg-red-100 border"></div><span>Low</span></div>
             <div className="flex items-center gap-2"><div className="w-6 h-6 bg-yellow-200 border"></div><span>Medium</span></div>
@@ -182,7 +182,7 @@ export default function AdminPollPage() {
         </div>
 
         <div className="bg-white rounded-lg shadow-lg p-6">
-          <h2 className="text-xl font-semibold mb-4">Availability Results</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Availability Results</h2>
           {submissions.length === 0 ? (
             <p className="text-gray-700 text-center py-8">No submissions yet. Share the participant link to collect availability.</p>
           ) : (
@@ -190,10 +190,10 @@ export default function AdminPollPage() {
               <div className="inline-block min-w-full">
                 <div className="grid" style={{ gridTemplateColumns: `80px repeat(${dates.length}, 100px)` }}>
                   <div className="p-2 bg-gray-50 border-b-2"></div>
-                  {dates.map((d, i) => <div key={i} className="p-2 text-center text-sm bg-gray-50 border-b-2">{d.display}</div>)}
+                  {dates.map((d, i) => <div key={i} className="p-2 text-center text-sm bg-gray-50 border-b-2 text-gray-900">{d.display}</div>)}
                   {timeSlots.map((t, ti) => (
-                    <>
-                      <div key={`time-${ti}`} className="p-2 text-sm font-medium bg-gray-50 border-r border-b">{t}</div>
+                    <div key={`row-${ti}`} className="contents">
+                      <div className="p-2 text-sm font-medium bg-gray-50 border-r border-b text-gray-900">{t}</div>
                       {dates.map((d, di) => {
                         const count = getOverlapCount(di, ti);
                         return (
@@ -202,7 +202,7 @@ export default function AdminPollPage() {
                           </div>
                         );
                       })}
-                    </>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -212,13 +212,13 @@ export default function AdminPollPage() {
 
         {submissions.length > 0 && (
           <div className="bg-white rounded-lg shadow-lg p-6 mt-6">
-            <h2 className="text-xl font-semibold mb-4">Submissions ({submissions.length})</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Submissions ({submissions.length})</h2>
             <div className="space-y-2">
               {submissions.map((sub) => (
                 <div key={sub.id} className="flex justify-between items-center p-3 bg-gray-50 rounded">
                   <div>
-                    <span className="font-medium">{sub.name}</span>
-                    <span className="text-gray-500 text-sm ml-2">{sub.email}</span>
+                    <span className="font-medium text-gray-900">{sub.name}</span>
+                    <span className="text-gray-600 text-sm ml-2">{sub.email}</span>
                   </div>
                   <span className="text-sm text-gray-700">{sub.agency}</span>
                 </div>

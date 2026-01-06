@@ -42,7 +42,7 @@ export default function Home() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+          <p className="mt-4 text-gray-700">Loading...</p>
         </div>
       </div>
     );
@@ -60,7 +60,7 @@ export default function Home() {
               <span className="ml-2 text-xl font-bold text-gray-900">PMI EMS Scheduler</span>
             </div>
             <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600">{session.user?.email}</span>
+              <span className="text-sm text-gray-700">{session.user?.email}</span>
               <button onClick={() => signOut()} className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg">
                 <LogOut className="h-4 w-4" />
                 Sign Out
@@ -73,7 +73,7 @@ export default function Home() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Your Scheduling Polls</h1>
-          <p className="mt-2 text-gray-600">Create and manage internship meeting and group session schedules</p>
+          <p className="mt-2 text-gray-700">Create and manage internship meeting and group session schedules</p>
         </div>
 
         <div className="mb-6">
@@ -87,7 +87,7 @@ export default function Home() {
           <div className="bg-white rounded-lg shadow p-12 text-center">
             <Calendar className="h-16 w-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No polls yet</h3>
-            <p className="text-gray-600 mb-6">Create your first scheduling poll to get started</p>
+            <p className="text-gray-700 mb-6">Create your first scheduling poll to get started</p>
           </div>
         ) : (
           <div className="grid gap-4">
@@ -95,8 +95,8 @@ export default function Home() {
               <div key={poll.id} className="bg-white rounded-lg shadow p-6">
                 <div className="flex justify-between items-start">
                   <div>
-                    <h3 className="font-semibold text-lg">{poll.title}</h3>
-                    <p className="text-gray-600 text-sm mt-1">{poll.description}</p>
+                    <h3 className="font-semibold text-lg text-gray-900">{poll.title}</h3>
+                    <p className="text-gray-700 text-sm mt-1">{poll.description}</p>
                     <div className="mt-2 flex gap-2">
                       <span className="inline-block px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">{poll.mode === 'individual' ? 'Individual' : 'Group'}</span>
                       <span className="inline-block px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded">{poll.num_weeks} weeks</span>

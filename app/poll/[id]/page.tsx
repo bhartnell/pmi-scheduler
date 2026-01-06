@@ -12,12 +12,13 @@ export default function PollPage() {
 
   useEffect(() => {
     const fetchPoll = async () => {
-      const currentUrl = window.location.href;
+      const pollId = params.id as string;
       
+      // Try to find poll by the ID in the URL
       const { data, error } = await supabase
         .from('polls')
         .select('*')
-        .eq('participant_link', currentUrl)
+        .like('participant_link', `%${pollId}%`)
         .single();
 
       if (data) {
@@ -26,7 +27,7 @@ export default function PollPage() {
       setLoading(false);
     };
     fetchPoll();
-  }, []);
+  }, [params.id]);
 
   if (loading) {
     return (
