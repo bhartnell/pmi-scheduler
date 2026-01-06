@@ -39,9 +39,29 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const link = searchParams.get('link');
+  const createdBy = searchParams.get('createdBy');
 
+  // If createdBy is provided, get all polls for that user
+  if (createdBy) {
+    try {
+      const { data, error } = await supabase
+        .from('polls')
+        .select('*')
+        .eq('created_by', createdBy)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      return NextResponse.json({ success: true, polls: data });
+    } catch (error) {
+      console.error('Error fetching polls:', error);
+      return NextResponse.json({ success: false, error: 'Failed to fetch polls' }, { status: 500 });
+    }
+  }
+
+  // Otherwise, get a single poll by link
   if (!link) {
-    return NextResponse.json({ success: false, error: 'Link required' }, { status: 400 });
+    return NextResponse.json({ success: false, error: 'Link or createdBy required' }, { status: 400 });
   }
 
   try {
@@ -57,5 +77,40 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching poll:', error);
     return NextResponse.json({ success: false, error: 'Poll not found' }, { status: 404 });
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const searchParams = request.nextUrl.searchParams;
+    const pollId = searchParams.get('id');
+
+    if (!pollId) {
+      return NextResponse.json({ success: false, error: 'Poll ID required' }, { status: 400 });
+    }
+
+    // First, delete all submissions associated with this poll
+    const { error: submissionsError } = await supabase
+      .from('submissions')
+      .delete()
+      .eq('poll_id', pollId);
+
+    if (submissionsError) {
+      console.error('Error deleting submissions:', submissionsError);
+      // Continue anyway - poll might not have submissions
+    }
+
+    // Then delete the poll itself
+    const { error: pollError } = await supabase
+      .from('polls')
+      .delete()
+      .eq('id', pollId);
+
+    if (pollError) throw pollError;
+
+    return NextResponse.json({ success: true, message: 'Poll deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting poll:', error);
+    return NextResponse.json({ success: false, error: 'Failed to delete poll' }, { status: 500 });
   }
 }
