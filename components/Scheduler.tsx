@@ -6,7 +6,7 @@ import { Calendar, Clock, Users, CheckCircle, Send, UserCheck, UsersRound, Exter
 interface SchedulerProps {
   mode: 'create' | 'participant' | 'admin-view';
   pollData?: any;
-  onComplete?: () => void;
+  onComplete?: (data: any) => void;
 }
 
 export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps) {
