@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, Users, CheckCircle, Send, UserCheck, UsersRound, ExternalLink, Copy, Eye, ArrowLeft } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Calendar, Clock, Users, CheckCircle, Send, UserCheck, UsersRound, ExternalLink, Copy, Eye, ArrowLeft, X, Sparkles, Filter } from 'lucide-react';
 
 interface SchedulerProps {
   mode: 'create' | 'participant' | 'admin-view';
@@ -24,13 +24,16 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
   });
   const [isSelecting, setIsSelecting] = useState(false);
   const [selectionStart, setSelectionStart] = useState<{date: number, time: number} | null>(null);
-  const [isPreviewSelecting, setIsPreviewSelecting] = useState(false);
-  const [previewSelectionStart, setPreviewSelectionStart] = useState<{date: number, time: number} | null>(null);
-  const [adminPreviewSelections, setAdminPreviewSelections] = useState<string[]>([]);
   const [submissionId, setSubmissionId] = useState<string | null>(null);
   const [submissions, setSubmissions] = useState<any[]>([]);
   const [linksCopied, setLinksCopied] = useState({ participant: false, admin: false });
   const [loading, setLoading] = useState(false);
+  
+  // New admin view state
+  const [selectedRespondents, setSelectedRespondents] = useState<string[]>([]);
+  const [hoveredCell, setHoveredCell] = useState<string | null>(null);
+  const [meetingTypeFilter, setMeetingTypeFilter] = useState<string>('all');
+  const [showBestTimes, setShowBestTimes] = useState(false);
 
   const agencies = ['Las Vegas Fire & Rescue', 'AMR', 'MedicWest', 'Community Ambulance', 'Henderson Fire', 'Pima Paramedic Program (Instructors/Staff)', 'Other'];
   const meetingTypes = [
@@ -93,23 +96,53 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
     return dates;
   };
 
-  const getDefaultSelections = () => {
-    if (schedulingMode !== 'individual') return [];
-    const timeSlots = generateTimeSlots();
-    const startIdx = timeSlots.findIndex(t => t === '9:00 AM');
-    const endIdx = timeSlots.findIndex(t => t === '5:00 PM');
-    const selections = [];
-    const numDates = generateDates().length;
-    for (let dateIdx = 0; dateIdx < numDates; dateIdx++) {
-      for (let timeIdx = startIdx; timeIdx <= endIdx; timeIdx++) {
-        selections.push(`${dateIdx}-${timeIdx}`);
-      }
-    }
-    return selections;
-  };
-
   const timeSlots = generateTimeSlots();
   const dates = generateDates();
+
+  // Filter submissions by meeting type
+  const filteredSubmissions = useMemo(() => {
+    if (meetingTypeFilter === 'all') return submissions;
+    return submissions.filter(sub => sub.meeting_type === meetingTypeFilter);
+  }, [submissions, meetingTypeFilter]);
+
+  // Get respondents to show (either selected or all filtered)
+  const activeRespondents = useMemo(() => {
+    if (selectedRespondents.length > 0) {
+      return filteredSubmissions.filter(sub => selectedRespondents.includes(sub.id));
+    }
+    return filteredSubmissions;
+  }, [filteredSubmissions, selectedRespondents]);
+
+  // Parse availability helper
+  const getAvailability = (sub: any): string[] => {
+    return typeof sub.availability === 'string' ? JSON.parse(sub.availability) : sub.availability;
+  };
+
+  // Get who is available at a specific slot
+  const getAvailableAt = (dateIndex: number, timeIndex: number) => {
+    const key = `${dateIndex}-${timeIndex}`;
+    return activeRespondents.filter(sub => getAvailability(sub).includes(key));
+  };
+
+  // Find best times (where most/all active respondents are available)
+  const bestTimes = useMemo(() => {
+    if (activeRespondents.length === 0) return [];
+    const slots: { key: string; count: number; names: string[] }[] = [];
+    
+    dates.forEach((_, di) => {
+      timeSlots.forEach((_, ti) => {
+        const available = getAvailableAt(di, ti);
+        if (available.length === activeRespondents.length && activeRespondents.length > 0) {
+          slots.push({
+            key: `${di}-${ti}`,
+            count: available.length,
+            names: available.map(s => s.name)
+          });
+        }
+      });
+    });
+    return slots;
+  }, [activeRespondents, dates, timeSlots]);
 
   const handleMouseDown = (dateIdx: number, timeIdx: number) => {
     setIsSelecting(true);
@@ -165,20 +198,31 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
     setLoading(false);
   };
 
-  const getOverlapCount = (dateIndex: number, timeIndex: number) => {
-    const key = `${dateIndex}-${timeIndex}`;
-    return submissions.filter(sub => {
-      const avail = typeof sub.availability === 'string' ? JSON.parse(sub.availability) : sub.availability;
-      return avail.includes(key);
-    }).length;
+  const toggleRespondentSelection = (id: string) => {
+    setSelectedRespondents(prev => 
+      prev.includes(id) ? prev.filter(r => r !== id) : [...prev, id]
+    );
   };
 
-  const getOverlapColor = (count: number) => {
-    if (schedulingMode === 'group') {
-      const pct = submissions.length > 0 ? count / submissions.length : 0;
-      return pct === 0 ? 'bg-gray-100' : pct < 0.4 ? 'bg-red-100' : pct < 0.7 ? 'bg-yellow-200' : 'bg-green-300';
-    }
-    return count === 0 ? 'bg-gray-100' : count === 1 ? 'bg-red-100' : count === 2 ? 'bg-yellow-200' : 'bg-green-300';
+  const clearSelection = () => {
+    setSelectedRespondents([]);
+  };
+
+  const getCellColor = (dateIndex: number, timeIndex: number) => {
+    const available = getAvailableAt(dateIndex, timeIndex);
+    const count = available.length;
+    const total = activeRespondents.length;
+    
+    if (total === 0) return 'bg-gray-50';
+    
+    const key = `${dateIndex}-${timeIndex}`;
+    const isBestTime = showBestTimes && bestTimes.some(bt => bt.key === key);
+    
+    if (count === 0) return 'bg-gray-50';
+    if (count === total) return isBestTime ? 'bg-green-400 ring-2 ring-green-600 ring-inset' : 'bg-green-400';
+    if (count >= total * 0.7) return 'bg-green-200';
+    if (count >= total * 0.4) return 'bg-yellow-200';
+    return 'bg-red-100';
   };
 
   const copyLink = (type: 'participant' | 'admin') => {
@@ -186,6 +230,11 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
     navigator.clipboard.writeText(link);
     setLinksCopied(p => ({ ...p, [type]: true }));
     setTimeout(() => setLinksCopied(p => ({ ...p, [type]: false })), 2000);
+  };
+
+  const getMeetingTypeLabel = (value: string) => {
+    const type = [...meetingTypes, ...groupSessionTypes].find(t => t.value === value);
+    return type?.label || value;
   };
 
   // Mode Selection View
@@ -234,14 +283,9 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
   if (view === 'setup') {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
-    const defaultStart = pollConfig.startDate || tomorrow.toISOString().split('T')[0];
-    
-    if (adminPreviewSelections.length === 0 && schedulingMode === 'individual') {
-      setAdminPreviewSelections(getDefaultSelections());
-    }
     
     return (
-      <div className="max-w-6xl mx-auto" onMouseUp={() => { setIsPreviewSelecting(false); setPreviewSelectionStart(null); }}>
+      <div className="max-w-6xl mx-auto">
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Poll Preview: {pollConfig.title || 'New Poll'}</h1>
           <p className="text-gray-700 mb-4">Review settings and calendar grid. Adjust as needed before finalizing.</p>
@@ -356,55 +400,241 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
     );
   }
 
-  // Admin Results View
+  // Admin Results View - IMPROVED
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="max-w-7xl mx-auto">
+      {/* Header with links */}
       <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
         <h1 className="text-2xl font-bold text-gray-900 mb-4">{pollData?.title}</h1>
         <div className="grid md:grid-cols-2 gap-4 mb-4">
           <div className="border-2 border-blue-200 rounded-lg p-4 bg-blue-50">
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-2"><ExternalLink className="w-5 h-5 text-blue-600" /><span className="font-semibold text-gray-900">Participant Link</span></div>
               <button onClick={() => copyLink('participant')} className="flex items-center gap-1 px-3 py-1 bg-blue-600 text-white rounded text-sm">
                 {linksCopied.participant ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />} {linksCopied.participant ? 'Copied!' : 'Copy'}
               </button>
             </div>
+            <p className="text-xs text-blue-700">Share with students/FTOs</p>
           </div>
           <div className="border-2 border-purple-200 rounded-lg p-4 bg-purple-50">
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-2"><Eye className="w-5 h-5 text-purple-600" /><span className="font-semibold text-gray-900">Admin Link</span></div>
               <button onClick={() => copyLink('admin')} className="flex items-center gap-1 px-3 py-1 bg-purple-600 text-white rounded text-sm">
                 {linksCopied.admin ? <CheckCircle className="w-4 h-4" /> : <Copy className="w-4 h-4" />} {linksCopied.admin ? 'Copied!' : 'Copy'}
               </button>
             </div>
+            <p className="text-xs text-purple-700">Keep private - admin only</p>
           </div>
         </div>
-        <div className="bg-green-50 p-4 rounded-lg"><p className="text-sm text-green-800"><strong>Responses: {submissions.length}</strong></p></div>
+        <div className="bg-green-50 p-3 rounded-lg">
+          <p className="text-sm text-green-800"><strong>Total Responses: {submissions.length}</strong></p>
+        </div>
       </div>
-      
-      <div className="bg-white rounded-lg shadow-lg p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Availability Results</h2>
-        {submissions.length === 0 ? (
-          <p className="text-gray-700 text-center py-8">No submissions yet. Share the participant link to collect availability.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <div className="grid" style={{ gridTemplateColumns: `80px repeat(${dates.length}, 100px)` }}>
-              <div className="p-2 bg-gray-50 border-b-2"></div>
-              {dates.map((d, i) => <div key={i} className="p-2 text-center text-sm bg-gray-50 border-b-2 text-gray-900">{d.display}</div>)}
-              {timeSlots.map((t, ti) => (
-                <React.Fragment key={ti}>
-                  <div className="p-2 text-sm font-medium bg-gray-50 border-r border-b text-gray-900">{t}</div>
-                  {dates.map((d, di) => {
-                    const count = getOverlapCount(di, ti);
-                    return <div key={`${di}-${ti}`} className={`p-3 border-r border-b flex items-center justify-center text-xs font-semibold ${getOverlapColor(count)}`}>
-                      {schedulingMode === 'group' ? `${count}/${submissions.length}` : count === submissions.length && <CheckCircle className="w-5 h-5 text-green-700" />}
-                    </div>;
-                  })}
-                </React.Fragment>
-              ))}
+
+      {/* Main content grid */}
+      <div className="grid lg:grid-cols-4 gap-6">
+        {/* Submissions sidebar */}
+        <div className="lg:col-span-1">
+          <div className="bg-white rounded-lg shadow-lg p-4 sticky top-4">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-lg font-semibold text-gray-900">Submissions ({filteredSubmissions.length})</h2>
+              {selectedRespondents.length > 0 && (
+                <button onClick={clearSelection} className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1">
+                  <X className="w-3 h-3" /> Clear
+                </button>
+              )}
             </div>
+            
+            {/* Filter by meeting type */}
+            <div className="mb-4">
+              <label className="text-xs font-medium text-gray-600 mb-1 block">Filter by type:</label>
+              <select 
+                value={meetingTypeFilter} 
+                onChange={(e) => setMeetingTypeFilter(e.target.value)}
+                className="w-full px-2 py-1.5 border rounded text-sm text-gray-900 bg-white"
+              >
+                <option value="all">All Types</option>
+                {meetingTypes.map(t => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Respondent list */}
+            <div className="space-y-2 max-h-96 overflow-y-auto">
+              {filteredSubmissions.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-4">No submissions yet</p>
+              ) : (
+                filteredSubmissions.map((sub) => {
+                  const isSelected = selectedRespondents.includes(sub.id);
+                  const avail = getAvailability(sub);
+                  return (
+                    <button
+                      key={sub.id}
+                      onClick={() => toggleRespondentSelection(sub.id)}
+                      className={`w-full text-left p-3 rounded-lg border-2 transition-all ${
+                        isSelected 
+                          ? 'border-blue-500 bg-blue-50' 
+                          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="font-medium text-gray-900">{sub.name}</div>
+                      <div className="text-xs text-gray-500 truncate">{sub.email}</div>
+                      <div className="flex items-center justify-between mt-1">
+                        <span className="text-xs text-gray-600">{getMeetingTypeLabel(sub.meeting_type)}</span>
+                        <span className="text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-700">{avail.length} slots</span>
+                      </div>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+
+            {selectedRespondents.length > 0 && (
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  <strong>{selectedRespondents.length}</strong> selected - showing only their availability
+                </p>
+              </div>
+            )}
           </div>
-        )}
+        </div>
+
+        {/* Calendar grid */}
+        <div className="lg:col-span-3">
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-gray-900">Availability Results</h2>
+              <button
+                onClick={() => setShowBestTimes(!showBestTimes)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  showBestTimes 
+                    ? 'bg-green-600 text-white' 
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                <Sparkles className="w-4 h-4" />
+                {showBestTimes ? 'Highlighting Best Times' : 'Find Best Times'}
+              </button>
+            </div>
+
+            {/* Legend */}
+            <div className="flex flex-wrap items-center gap-4 mb-4 p-3 bg-gray-50 rounded-lg">
+              <span className="text-sm font-medium text-gray-700">Legend:</span>
+              <div className="flex items-center gap-1.5">
+                <div className="w-5 h-5 bg-gray-50 border rounded"></div>
+                <span className="text-xs text-gray-600">None</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-5 h-5 bg-red-100 border rounded"></div>
+                <span className="text-xs text-gray-600">&lt;40%</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-5 h-5 bg-yellow-200 border rounded"></div>
+                <span className="text-xs text-gray-600">40-70%</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-5 h-5 bg-green-200 border rounded"></div>
+                <span className="text-xs text-gray-600">70-99%</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-5 h-5 bg-green-400 border rounded"></div>
+                <span className="text-xs text-gray-600">All ✓</span>
+              </div>
+            </div>
+
+            {/* Best times summary */}
+            {showBestTimes && bestTimes.length > 0 && (
+              <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <h3 className="font-semibold text-green-800 mb-2 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4" />
+                  Best Times ({bestTimes.length} slots where everyone is available)
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {bestTimes.slice(0, 10).map((bt, idx) => {
+                    const [di, ti] = bt.key.split('-').map(Number);
+                    return (
+                      <span key={idx} className="px-2 py-1 bg-green-100 text-green-800 rounded text-sm">
+                        {dates[di]?.display} @ {timeSlots[ti]}
+                      </span>
+                    );
+                  })}
+                  {bestTimes.length > 10 && (
+                    <span className="px-2 py-1 text-green-700 text-sm">+{bestTimes.length - 10} more</span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {showBestTimes && bestTimes.length === 0 && activeRespondents.length > 0 && (
+              <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <p className="text-yellow-800 text-sm">
+                  No times found where all {activeRespondents.length} selected respondent(s) are available. 
+                  Try selecting fewer people or check the calendar for partial overlaps.
+                </p>
+              </div>
+            )}
+
+            {filteredSubmissions.length === 0 ? (
+              <p className="text-gray-700 text-center py-8">No submissions yet. Share the participant link to collect availability.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <div className="inline-block min-w-full select-none">
+                  <div className="grid" style={{ gridTemplateColumns: `80px repeat(${dates.length}, 90px)` }}>
+                    <div className="p-2 bg-gray-50 border-b-2"></div>
+                    {dates.map((d, i) => (
+                      <div key={i} className="p-2 text-center text-xs bg-gray-50 border-b-2 font-medium text-gray-900">{d.display}</div>
+                    ))}
+                    {timeSlots.map((t, ti) => (
+                      <React.Fragment key={ti}>
+                        <div className="p-2 text-xs font-medium bg-gray-50 border-r border-b text-gray-900">{t}</div>
+                        {dates.map((d, di) => {
+                          const available = getAvailableAt(di, ti);
+                          const count = available.length;
+                          const total = activeRespondents.length;
+                          const cellKey = `${di}-${ti}`;
+                          const isHovered = hoveredCell === cellKey;
+                          
+                          return (
+                            <div 
+                              key={cellKey} 
+                              className={`relative p-2 border-r border-b flex items-center justify-center text-xs font-semibold cursor-pointer transition-all ${getCellColor(di, ti)} ${isHovered ? 'ring-2 ring-blue-500 ring-inset z-10' : ''}`}
+                              onMouseEnter={() => setHoveredCell(cellKey)}
+                              onMouseLeave={() => setHoveredCell(null)}
+                            >
+                              {total > 0 && (
+                                <span className={count === total ? 'text-green-800' : count > 0 ? 'text-gray-700' : 'text-gray-400'}>
+                                  {count}/{total}
+                                </span>
+                              )}
+                              
+                              {/* Tooltip */}
+                              {isHovered && count > 0 && (
+                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 z-50">
+                                  <div className="bg-gray-900 text-white text-xs rounded-lg py-2 px-3 shadow-lg whitespace-nowrap">
+                                    <div className="font-semibold mb-1">{dates[di]?.display} @ {timeSlots[ti]}</div>
+                                    <div className="text-green-300 mb-1">{count} available:</div>
+                                    {available.map((sub, idx) => (
+                                      <div key={idx} className="text-gray-300">• {sub.name}</div>
+                                    ))}
+                                    {total - count > 0 && (
+                                      <div className="text-red-300 mt-1">{total - count} unavailable</div>
+                                    )}
+                                  </div>
+                                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </React.Fragment>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
