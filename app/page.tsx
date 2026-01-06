@@ -85,7 +85,7 @@ export default function Home() {
 
         {polls.length === 0 ? (
           <div className="bg-white rounded-lg shadow p-12 text-center">
-            <Calendar className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+            <Calendar className="h-16 w-16 text-gray-700 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No polls yet</h3>
             <p className="text-gray-700 mb-6">Create your first scheduling poll to get started</p>
           </div>
