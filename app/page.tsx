@@ -1,8 +1,8 @@
 'use client';
 
-import { signIn, signOut, useSession } from 'next-auth/react';
+import { signOut, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { Calendar, LogOut, Plus, ExternalLink, Eye } from 'lucide-react';
+import { Calendar, LogOut, Plus, ExternalLink, Eye, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
@@ -11,6 +11,7 @@ export default function Home() {
   const router = useRouter();
   const [polls, setPolls] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -35,6 +36,32 @@ export default function Home() {
       setPolls(data);
     }
     setLoading(false);
+  };
+
+  const deletePoll = async (pollId: string, pollTitle: string) => {
+    if (!confirm(`Are you sure you want to delete "${pollTitle}"? This will also delete all submissions and cannot be undone.`)) {
+      return;
+    }
+
+    setDeleting(pollId);
+
+    // Delete submissions first (due to foreign key)
+    await supabase
+      .from('submissions')
+      .delete()
+      .eq('poll_id', pollId);
+
+    // Delete the poll
+    const { error } = await supabase
+      .from('polls')
+      .delete()
+      .eq('id', pollId);
+
+    if (!error) {
+      setPolls(polls.filter(p => p.id !== pollId));
+    }
+
+    setDeleting(null);
   };
 
   if (status === 'loading' || loading) {
@@ -85,7 +112,7 @@ export default function Home() {
 
         {polls.length === 0 ? (
           <div className="bg-white rounded-lg shadow p-12 text-center">
-            <Calendar className="h-16 w-16 text-gray-700 mx-auto mb-4" />
+            <Calendar className="h-16 w-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No polls yet</h3>
             <p className="text-gray-700 mb-6">Create your first scheduling poll to get started</p>
           </div>
@@ -108,14 +135,22 @@ export default function Home() {
                       className="flex items-center gap-1 px-3 py-2 text-sm bg-blue-50 text-blue-700 rounded hover:bg-blue-100"
                     >
                       <ExternalLink className="h-4 w-4" />
-                      Copy Participant Link
+                      Copy Link
                     </button>
                     <button 
                       onClick={() => window.open(poll.admin_link, '_blank')} 
                       className="flex items-center gap-1 px-3 py-2 text-sm bg-purple-50 text-purple-700 rounded hover:bg-purple-100"
                     >
                       <Eye className="h-4 w-4" />
-                      View Results
+                      Results
+                    </button>
+                    <button 
+                      onClick={() => deletePoll(poll.id, poll.title)}
+                      disabled={deleting === poll.id}
+                      className="flex items-center gap-1 px-3 py-2 text-sm bg-red-50 text-red-700 rounded hover:bg-red-100 disabled:opacity-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      {deleting === poll.id ? 'Deleting...' : 'Delete'}
                     </button>
                   </div>
                 </div>
