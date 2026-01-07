@@ -1,71 +1,23 @@
 'use client';
 
-import { signOut, useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { Calendar, LogOut, Plus, ExternalLink, Eye, Trash2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { useSession, signIn, signOut } from 'next-auth/react';
+import Link from 'next/link';
+import { 
+  Calendar, 
+  ClipboardList, 
+  LogIn, 
+  LogOut,
+  Stethoscope,
+  Users,
+  FileText,
+  GraduationCap
+} from 'lucide-react';
 
-export default function Home() {
+export default function HomePage() {
   const { data: session, status } = useSession();
-  const router = useRouter();
-  const [polls, setPolls] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [deleting, setDeleting] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/auth/signin');
-    }
-  }, [status, router]);
-
-  useEffect(() => {
-    if (session?.user?.email) {
-      fetchPolls();
-    }
-  }, [session]);
-
-  const fetchPolls = async () => {
-    const { data, error } = await supabase
-      .from('polls')
-      .select('*')
-      .eq('created_by', session?.user?.email)
-      .order('created_at', { ascending: false });
-
-    if (data) {
-      setPolls(data);
-    }
-    setLoading(false);
-  };
-
-  const deletePoll = async (pollId: string, pollTitle: string) => {
-    if (!confirm(`Are you sure you want to delete "${pollTitle}"? This will also delete all submissions and cannot be undone.`)) {
-      return;
-    }
-
-    setDeleting(pollId);
-
-    try {
-      const response = await fetch(`/api/polls?id=${pollId}`, {
-        method: 'DELETE',
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        setPolls(polls.filter(p => p.id !== pollId));
-      } else {
-        alert('Failed to delete poll: ' + (result.error || 'Unknown error'));
-      }
-    } catch (error) {
-      console.error('Error deleting poll:', error);
-      alert('Failed to delete poll. Please try again.');
-    }
-
-    setDeleting(null);
-  };
-
-  if (status === 'loading' || loading) {
+  // Loading state
+  if (status === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
         <div className="text-center">
@@ -76,90 +28,156 @@ export default function Home() {
     );
   }
 
-  if (!session) return null;
+  // Not logged in - show sign in page
+  if (!session) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full mx-4">
+          <div className="text-center mb-8">
+            <div className="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Stethoscope className="w-10 h-10 text-white" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900">PMI Paramedic Tools</h1>
+            <p className="text-gray-600 mt-2">Administrative tools for Pima Paramedic Institute</p>
+          </div>
+          
+          <button
+            onClick={() => signIn('google')}
+            className="w-full flex items-center justify-center gap-3 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+          >
+            <LogIn className="w-5 h-5" />
+            Sign in with Google
+          </button>
+          
+          <p className="text-center text-sm text-gray-500 mt-4">
+            Use your @pmi.edu account to sign in
+          </p>
+        </div>
+      </div>
+    );
+  }
 
+  // Logged in - show main menu
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <nav className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <Calendar className="h-8 w-8 text-blue-600" />
-              <span className="ml-2 text-xl font-bold text-gray-900">PMI EMS Scheduler</span>
+      {/* Header */}
+      <header className="bg-white shadow-sm">
+        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+              <Stethoscope className="w-5 h-5 text-white" />
             </div>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-700">{session.user?.email}</span>
-              <button onClick={() => signOut()} className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg">
-                <LogOut className="h-4 w-4" />
-                Sign Out
-              </button>
+            <div>
+              <h1 className="font-bold text-gray-900">PMI Paramedic Tools</h1>
+              <p className="text-sm text-gray-600">Pima Paramedic Institute</p>
             </div>
           </div>
-        </div>
-      </nav>
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Your Scheduling Polls</h1>
-          <p className="mt-2 text-gray-700">Create and manage internship meeting and group session schedules</p>
-        </div>
-
-        <div className="mb-6">
-          <button onClick={() => router.push('/admin/create')} className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">
-            <Plus className="h-5 w-5" />
-            Create New Poll
-          </button>
-        </div>
-
-        {polls.length === 0 ? (
-          <div className="bg-white rounded-lg shadow p-12 text-center">
-            <Calendar className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No polls yet</h3>
-            <p className="text-gray-700 mb-6">Create your first scheduling poll to get started</p>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-gray-600 hidden sm:block">{session.user?.email}</span>
+            <button
+              onClick={() => signOut()}
+              className="flex items-center gap-2 px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline">Sign Out</span>
+            </button>
           </div>
-        ) : (
-          <div className="grid gap-4">
-            {polls.map((poll) => (
-              <div key={poll.id} className="bg-white rounded-lg shadow p-6">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-semibold text-lg text-gray-900">{poll.title}</h3>
-                    <p className="text-gray-700 text-sm mt-1">{poll.description}</p>
-                    <div className="mt-2 flex gap-2">
-                      <span className="inline-block px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">{poll.mode === 'individual' ? 'Individual' : 'Group'}</span>
-                      <span className="inline-block px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded">{poll.num_weeks} weeks</span>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => navigator.clipboard.writeText(poll.participant_link)} 
-                      className="flex items-center gap-1 px-3 py-2 text-sm bg-blue-50 text-blue-700 rounded hover:bg-blue-100"
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                      Copy Link
-                    </button>
-                    <button 
-                      onClick={() => window.open(poll.admin_link, '_blank')} 
-                      className="flex items-center gap-1 px-3 py-2 text-sm bg-purple-50 text-purple-700 rounded hover:bg-purple-100"
-                    >
-                      <Eye className="h-4 w-4" />
-                      Results
-                    </button>
-                    <button 
-                      onClick={() => deletePoll(poll.id, poll.title)}
-                      disabled={deleting === poll.id}
-                      className="flex items-center gap-1 px-3 py-2 text-sm bg-red-50 text-red-700 rounded hover:bg-red-100 disabled:opacity-50"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      {deleting === poll.id ? 'Deleting...' : 'Delete'}
-                    </button>
-                  </div>
-                </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-6xl mx-auto px-4 py-12">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl font-bold text-gray-900">Welcome, {session.user?.name?.split(' ')[0] || 'User'}!</h2>
+          <p className="text-gray-600 mt-2">What would you like to do today?</p>
+        </div>
+
+        {/* Main Navigation Cards */}
+        <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+          {/* Lab Management Card */}
+          <Link 
+            href="/lab-management"
+            className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-8 group"
+          >
+            <div className="flex flex-col items-center text-center">
+              <div className="w-20 h-20 bg-green-100 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-green-200 transition-colors">
+                <GraduationCap className="w-10 h-10 text-green-600" />
               </div>
-            ))}
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Lab Management</h3>
+              <p className="text-gray-600 mb-6">
+                Manage lab schedules, scenarios, students, and assessments for EMS training programs.
+              </p>
+              <div className="flex flex-wrap justify-center gap-2 text-sm">
+                <span className="px-3 py-1 bg-green-50 text-green-700 rounded-full">Scenarios</span>
+                <span className="px-3 py-1 bg-green-50 text-green-700 rounded-full">Students</span>
+                <span className="px-3 py-1 bg-green-50 text-green-700 rounded-full">Grading</span>
+                <span className="px-3 py-1 bg-green-50 text-green-700 rounded-full">Reports</span>
+              </div>
+            </div>
+          </Link>
+
+          {/* Scheduling Card */}
+          <Link 
+            href="/scheduler"
+            className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-8 group"
+          >
+            <div className="flex flex-col items-center text-center">
+              <div className="w-20 h-20 bg-blue-100 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-blue-200 transition-colors">
+                <Calendar className="w-10 h-10 text-blue-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Scheduling Polls</h3>
+              <p className="text-gray-600 mb-6">
+                Create availability polls to find the best meeting times with students and preceptors.
+              </p>
+              <div className="flex flex-wrap justify-center gap-2 text-sm">
+                <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full">Create Polls</span>
+                <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full">View Results</span>
+                <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full">Find Times</span>
+              </div>
+            </div>
+          </Link>
+        </div>
+
+        {/* Quick Links */}
+        <div className="mt-12 max-w-4xl mx-auto">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 text-center">Quick Links</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Link
+              href="/lab-management/scenarios"
+              className="flex flex-col items-center p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
+            >
+              <FileText className="w-6 h-6 text-gray-600 mb-2" />
+              <span className="text-sm text-gray-700">Scenarios</span>
+            </Link>
+            <Link
+              href="/lab-management/students"
+              className="flex flex-col items-center p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
+            >
+              <Users className="w-6 h-6 text-gray-600 mb-2" />
+              <span className="text-sm text-gray-700">Students</span>
+            </Link>
+            <Link
+              href="/lab-management/schedule"
+              className="flex flex-col items-center p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
+            >
+              <Calendar className="w-6 h-6 text-gray-600 mb-2" />
+              <span className="text-sm text-gray-700">Lab Schedule</span>
+            </Link>
+            <Link
+              href="/lab-management/admin/cohorts"
+              className="flex flex-col items-center p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
+            >
+              <ClipboardList className="w-6 h-6 text-gray-600 mb-2" />
+              <span className="text-sm text-gray-700">Cohorts</span>
+            </Link>
           </div>
-        )}
+        </div>
       </main>
+
+      {/* Footer */}
+      <footer className="mt-12 py-6 text-center text-sm text-gray-500">
+        <p>PMI Paramedic Tools © {new Date().getFullYear()}</p>
+      </footer>
     </div>
   );
 }
