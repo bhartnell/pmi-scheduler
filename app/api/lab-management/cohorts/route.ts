@@ -6,44 +6,57 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params;
-  
+export async function GET(request: NextRequest) {
+  const searchParams = request.nextUrl.searchParams;
+  const programId = searchParams.get('programId');
+  const activeOnly = searchParams.get('activeOnly') !== 'false';
+
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from('cohorts')
       .select(`
         *,
-        program:programs(id, name, abbreviation)
+        program:programs(id, name, abbreviation),
+        student_count:students(count)
       `)
-      .eq('id', id)
-      .single();
+      .order('created_at', { ascending: false });
+
+    if (programId) {
+      query = query.eq('program_id', programId);
+    }
+
+    if (activeOnly) {
+      query = query.eq('is_active', true);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
 
-    return NextResponse.json({ success: true, cohort: data });
+    const cohorts = data.map((cohort: any) => ({
+      ...cohort,
+      student_count: cohort.student_count?.[0]?.count || 0
+    }));
+
+    return NextResponse.json({ success: true, cohorts });
   } catch (error) {
-    console.error('Error fetching cohort:', error);
-    return NextResponse.json({ success: false, error: 'Failed to fetch cohort' }, { status: 500 });
+    console.error('Error fetching cohorts:', error);
+    return NextResponse.json({ success: false, error: 'Failed to fetch cohorts' }, { status: 500 });
   }
 }
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params;
-  
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     
     const { data, error } = await supabase
       .from('cohorts')
-      .update(body)
-      .eq('id', id)
+      .insert({
+        program_id: body.program_id,
+        cohort_number: body.cohort_number,
+        start_date: body.start_date || null,
+        expected_end_date: body.expected_end_date || null,
+      })
       .select(`
         *,
         program:programs(id, name, abbreviation)
@@ -52,43 +65,9 @@ export async function PATCH(
 
     if (error) throw error;
 
-    return NextResponse.json({ success: true, cohort: data });
+    return NextResponse.json({ success: true, cohort: { ...data, student_count: 0 } });
   } catch (error) {
-    console.error('Error updating cohort:', error);
-    return NextResponse.json({ success: false, error: 'Failed to update cohort' }, { status: 500 });
-  }
-}
-
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params;
-  
-  try {
-    // Check if cohort has students
-    const { count } = await supabase
-      .from('students')
-      .select('*', { count: 'exact', head: true })
-      .eq('cohort_id', id);
-
-    if (count && count > 0) {
-      return NextResponse.json({ 
-        success: false, 
-        error: `Cannot delete cohort with ${count} students. Remove students first.` 
-      }, { status: 400 });
-    }
-
-    const { error } = await supabase
-      .from('cohorts')
-      .delete()
-      .eq('id', id);
-
-    if (error) throw error;
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error('Error deleting cohort:', error);
-    return NextResponse.json({ success: false, error: 'Failed to delete cohort' }, { status: 500 });
+    console.error('Error creating cohort:', error);
+    return NextResponse.json({ success: false, error: 'Failed to create cohort' }, { status: 500 });
   }
 }

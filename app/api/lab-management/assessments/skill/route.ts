@@ -1,38 +1,32 @@
-// app/api/lab-management/assessments/skill/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export async function GET(request: NextRequest) {
-  try {
-    const searchParams = request.nextUrl.searchParams;
-    const labStationId = searchParams.get('labStationId');
-    const labDayId = searchParams.get('labDayId');
-    const studentId = searchParams.get('studentId');
-    const cohortId = searchParams.get('cohortId');
+  const searchParams = request.nextUrl.searchParams;
+  const studentId = searchParams.get('studentId');
+  const stationId = searchParams.get('stationId');
 
+  try {
     let query = supabase
       .from('skill_assessments')
       .select(`
         *,
-        student:students!skill_assessments_student_id_fkey(id, first_name, last_name, photo_url),
-        grader:lab_users!skill_assessments_graded_by_fkey(id, name)
+        student:students(id, first_name, last_name),
+        station:lab_stations(id, station_number, skill_name)
       `)
       .order('assessed_at', { ascending: false });
-
-    if (labStationId) {
-      query = query.eq('lab_station_id', labStationId);
-    }
-
-    if (labDayId) {
-      query = query.eq('lab_day_id', labDayId);
-    }
 
     if (studentId) {
       query = query.eq('student_id', studentId);
     }
 
-    if (cohortId) {
-      query = query.eq('cohort_id', cohortId);
+    if (stationId) {
+      query = query.eq('lab_station_id', stationId);
     }
 
     const { data, error } = await query;
@@ -49,50 +43,23 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const {
-      lab_station_id,
-      lab_day_id,
-      skill_name,
-      student_id,
-      cohort_id,
-      preparation_safety,
-      technical_performance,
-      critical_thinking,
-      time_management,
-      overall_competency,
-      narrative_feedback,
-      graded_by,
-    } = body;
-
-    if (!lab_station_id || !lab_day_id || !skill_name || !student_id || !cohort_id) {
-      return NextResponse.json(
-        { success: false, error: 'Lab station, lab day, skill name, student, and cohort are required' },
-        { status: 400 }
-      );
-    }
-
+    
     const { data, error } = await supabase
       .from('skill_assessments')
       .insert({
-        lab_station_id,
-        lab_day_id,
-        skill_name,
-        student_id,
-        cohort_id,
-        preparation_safety: preparation_safety ?? null,
-        technical_performance: technical_performance ?? null,
-        critical_thinking: critical_thinking ?? null,
-        time_management: time_management ?? null,
-        overall_competency: overall_competency ?? null,
-        narrative_feedback: narrative_feedback || null,
-        graded_by: graded_by || null,
-        assessed_at: new Date().toISOString(),
+        student_id: body.student_id,
+        lab_station_id: body.lab_station_id || null,
+        skill_name: body.skill_name,
+        attempt_number: body.attempt_number || 1,
+        preparation_score: body.preparation_score || null,
+        technique_score: body.technique_score || null,
+        safety_score: body.safety_score || null,
+        overall_competency: body.overall_competency,
+        passed: body.passed || false,
+        comments: body.comments || null,
+        assessed_by: body.assessed_by || null,
       })
-      .select(`
-        *,
-        student:students!skill_assessments_student_id_fkey(id, first_name, last_name, photo_url),
-        grader:lab_users!skill_assessments_graded_by_fkey(id, name)
-      `)
+      .select()
       .single();
 
     if (error) throw error;

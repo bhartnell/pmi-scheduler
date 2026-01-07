@@ -1,68 +1,18 @@
-// app/api/lab-management/team-leads/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export async function GET(request: NextRequest) {
+  const searchParams = request.nextUrl.searchParams;
+  const cohortId = searchParams.get('cohortId');
+  const studentId = searchParams.get('studentId');
+
   try {
-    const searchParams = request.nextUrl.searchParams;
-    const cohortId = searchParams.get('cohortId');
-    const studentId = searchParams.get('studentId');
-
-    // Get team lead counts for the cohort
-    if (cohortId) {
-      const { data: students, error: studentsError } = await supabase
-        .from('students')
-        .select('id, first_name, last_name, photo_url')
-        .eq('cohort_id', cohortId)
-        .eq('status', 'active')
-        .order('last_name')
-        .order('first_name');
-
-      if (studentsError) throw studentsError;
-
-      // Get counts from the view
-      const { data: counts, error: countsError } = await supabase
-        .from('team_lead_counts')
-        .select('*')
-        .eq('cohort_id', cohortId);
-
-      if (countsError) throw countsError;
-
-      const countMap = new Map(counts?.map(c => [c.student_id, c]) || []);
-
-      // Merge data
-      const studentsWithCounts = students.map(student => ({
-        ...student,
-        team_lead_count: countMap.get(student.id)?.team_lead_count || 0,
-        last_team_lead_date: countMap.get(student.id)?.last_team_lead_date || null,
-      }));
-
-      // Calculate statistics
-      const totalLeads = studentsWithCounts.reduce((sum, s) => sum + s.team_lead_count, 0);
-      const avgLeads = students.length > 0 ? totalLeads / students.length : 0;
-      const countsArray = studentsWithCounts.map(s => s.team_lead_count);
-      const minLeads = countsArray.length > 0 ? Math.min(...countsArray) : 0;
-      const maxLeads = countsArray.length > 0 ? Math.max(...countsArray) : 0;
-
-      // Flag students who need more TL opportunities (below average)
-      const studentsNeedingTL = studentsWithCounts.filter(s => s.team_lead_count < avgLeads);
-
-      return NextResponse.json({
-        success: true,
-        students: studentsWithCounts,
-        stats: {
-          totalLeads,
-          avgLeads: Math.round(avgLeads * 10) / 10,
-          minLeads,
-          maxLeads,
-          studentsCount: students.length,
-          studentsNeedingTL: studentsNeedingTL.length,
-        },
-        needingTL: studentsNeedingTL,
-      });
-    }
-
-    // Get history for a specific student
+    // If requesting for a specific student, return their TL history
     if (studentId) {
       const { data, error } = await supabase
         .from('team_lead_log')
@@ -80,10 +30,62 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, history: data });
     }
 
-    return NextResponse.json(
-      { success: false, error: 'cohortId or studentId is required' },
-      { status: 400 }
-    );
+    // Otherwise, return stats for all students in cohort
+    let studentsQuery = supabase
+      .from('students')
+      .select('id, first_name, last_name')
+      .eq('status', 'active');
+
+    if (cohortId) {
+      studentsQuery = studentsQuery.eq('cohort_id', cohortId);
+    }
+
+    const { data: students, error: studentsError } = await studentsQuery;
+    if (studentsError) throw studentsError;
+
+    if (!students || students.length === 0) {
+      return NextResponse.json({ success: true, stats: [], averageTL: 0, needingTL: [] });
+    }
+
+    // Get TL counts
+    const studentIds = students.map(s => s.id);
+    const { data: tlLogs } = await supabase
+      .from('team_lead_log')
+      .select('student_id, date')
+      .in('student_id', studentIds);
+
+    // Calculate stats
+    const countMap: Record<string, { count: number; lastDate: string | null }> = {};
+    studentIds.forEach(id => {
+      countMap[id] = { count: 0, lastDate: null };
+    });
+
+    tlLogs?.forEach((log: any) => {
+      countMap[log.student_id].count++;
+      if (!countMap[log.student_id].lastDate || log.date > countMap[log.student_id].lastDate) {
+        countMap[log.student_id].lastDate = log.date;
+      }
+    });
+
+    const stats = students.map(s => ({
+      ...s,
+      team_lead_count: countMap[s.id].count,
+      last_team_lead_date: countMap[s.id].lastDate,
+    }));
+
+    const totalTL = stats.reduce((sum, s) => sum + s.team_lead_count, 0);
+    const averageTL = students.length > 0 ? totalTL / students.length : 0;
+
+    const needingTL = stats
+      .filter(s => s.team_lead_count < averageTL)
+      .sort((a, b) => a.team_lead_count - b.team_lead_count);
+
+    return NextResponse.json({ 
+      success: true, 
+      stats,
+      averageTL: Math.round(averageTL * 10) / 10,
+      needingTL
+    });
   } catch (error) {
     console.error('Error fetching team lead data:', error);
     return NextResponse.json({ success: false, error: 'Failed to fetch team lead data' }, { status: 500 });
@@ -93,42 +95,24 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const {
-      student_id,
-      cohort_id,
-      lab_day_id,
-      lab_station_id,
-      scenario_id,
-      date,
-      notes,
-    } = body;
-
-    if (!student_id || !cohort_id || !lab_day_id || !lab_station_id || !date) {
-      return NextResponse.json(
-        { success: false, error: 'student_id, cohort_id, lab_day_id, lab_station_id, and date are required' },
-        { status: 400 }
-      );
-    }
-
+    
     const { data, error } = await supabase
       .from('team_lead_log')
       .insert({
-        student_id,
-        cohort_id,
-        lab_day_id,
-        lab_station_id,
-        scenario_id: scenario_id || null,
-        date,
-        notes: notes || null,
+        student_id: body.student_id,
+        lab_day_id: body.lab_day_id,
+        lab_station_id: body.lab_station_id || null,
+        scenario_id: body.scenario_id || null,
+        date: body.date,
       })
       .select()
       .single();
 
     if (error) throw error;
 
-    return NextResponse.json({ success: true, entry: data });
+    return NextResponse.json({ success: true, log: data });
   } catch (error) {
-    console.error('Error logging team lead:', error);
-    return NextResponse.json({ success: false, error: 'Failed to log team lead' }, { status: 500 });
+    console.error('Error creating team lead log:', error);
+    return NextResponse.json({ success: false, error: 'Failed to create team lead log' }, { status: 500 });
   }
 }

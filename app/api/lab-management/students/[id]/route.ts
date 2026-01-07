@@ -1,74 +1,79 @@
-// app/api/lab-management/students/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
+  
   try {
     const { data, error } = await supabase
       .from('students')
       .select(`
         *,
         cohort:cohorts(
-          *,
-          program:programs(*)
+          id,
+          cohort_number,
+          program:programs(name, abbreviation)
         )
       `)
-      .eq('id', params.id)
+      .eq('id', id)
       .single();
 
     if (error) throw error;
 
-    // Get team lead count
-    const { data: tlCount } = await supabase
-      .from('team_lead_counts')
-      .select('*')
-      .eq('student_id', params.id)
+    const { count: teamLeadCount } = await supabase
+      .from('team_lead_log')
+      .select('*', { count: 'exact', head: true })
+      .eq('student_id', id);
+
+    const { data: lastTL } = await supabase
+      .from('team_lead_log')
+      .select('date')
+      .eq('student_id', id)
+      .order('date', { ascending: false })
+      .limit(1)
       .single();
 
     return NextResponse.json({ 
       success: true, 
       student: {
         ...data,
-        team_lead_count: tlCount?.team_lead_count || 0,
-        last_team_lead_date: tlCount?.last_team_lead_date || null,
+        team_lead_count: teamLeadCount || 0,
+        last_team_lead_date: lastTL?.date || null
       }
     });
   } catch (error) {
     console.error('Error fetching student:', error);
-    return NextResponse.json({ success: false, error: 'Student not found' }, { status: 404 });
+    return NextResponse.json({ success: false, error: 'Failed to fetch student' }, { status: 500 });
   }
 }
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
+  
   try {
     const body = await request.json();
-    const { first_name, last_name, email, cohort_id, photo_url, status, agency, notes } = body;
-
-    const updateData: any = { updated_at: new Date().toISOString() };
-    if (first_name !== undefined) updateData.first_name = first_name;
-    if (last_name !== undefined) updateData.last_name = last_name;
-    if (email !== undefined) updateData.email = email;
-    if (cohort_id !== undefined) updateData.cohort_id = cohort_id;
-    if (photo_url !== undefined) updateData.photo_url = photo_url;
-    if (status !== undefined) updateData.status = status;
-    if (agency !== undefined) updateData.agency = agency;
-    if (notes !== undefined) updateData.notes = notes;
-
+    
     const { data, error } = await supabase
       .from('students')
-      .update(updateData)
-      .eq('id', params.id)
+      .update(body)
+      .eq('id', id)
       .select(`
         *,
         cohort:cohorts(
-          *,
-          program:programs(*)
+          id,
+          cohort_number,
+          program:programs(name, abbreviation)
         )
       `)
       .single();
@@ -84,17 +89,19 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
+  
   try {
     const { error } = await supabase
       .from('students')
       .delete()
-      .eq('id', params.id);
+      .eq('id', id);
 
     if (error) throw error;
 
-    return NextResponse.json({ success: true, message: 'Student deleted successfully' });
+    return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting student:', error);
     return NextResponse.json({ success: false, error: 'Failed to delete student' }, { status: 500 });

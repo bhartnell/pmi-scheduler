@@ -6,14 +6,14 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params;
-  
+export async function GET(request: NextRequest) {
+  const searchParams = request.nextUrl.searchParams;
+  const cohortId = searchParams.get('cohortId');
+  const status = searchParams.get('status');
+  const search = searchParams.get('search');
+
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from('students')
       .select(`
         *,
@@ -23,53 +23,68 @@ export async function GET(
           program:programs(name, abbreviation)
         )
       `)
-      .eq('id', id)
-      .single();
+      .order('last_name');
+
+    if (cohortId) {
+      query = query.eq('cohort_id', cohortId);
+    }
+
+    if (status) {
+      query = query.eq('status', status);
+    }
+
+    if (search) {
+      query = query.or(`first_name.ilike.%${search}%,last_name.ilike.%${search}%,email.ilike.%${search}%`);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
 
-    // Get team lead count
-    const { count: teamLeadCount } = await supabase
-      .from('team_lead_log')
-      .select('*', { count: 'exact', head: true })
-      .eq('student_id', id);
+    // Get team lead counts for all students
+    const studentIds = data.map((s: any) => s.id);
+    
+    if (studentIds.length > 0) {
+      const { data: tlCounts } = await supabase
+        .from('team_lead_log')
+        .select('student_id')
+        .in('student_id', studentIds);
 
-    // Get last team lead date
-    const { data: lastTL } = await supabase
-      .from('team_lead_log')
-      .select('date')
-      .eq('student_id', id)
-      .order('date', { ascending: false })
-      .limit(1)
-      .single();
+      const countMap: Record<string, number> = {};
+      tlCounts?.forEach((tl: any) => {
+        countMap[tl.student_id] = (countMap[tl.student_id] || 0) + 1;
+      });
 
-    return NextResponse.json({ 
-      success: true, 
-      student: {
-        ...data,
-        team_lead_count: teamLeadCount || 0,
-        last_team_lead_date: lastTL?.date || null
-      }
-    });
+      const studentsWithCounts = data.map((student: any) => ({
+        ...student,
+        team_lead_count: countMap[student.id] || 0
+      }));
+
+      return NextResponse.json({ success: true, students: studentsWithCounts });
+    }
+
+    return NextResponse.json({ success: true, students: data });
   } catch (error) {
-    console.error('Error fetching student:', error);
-    return NextResponse.json({ success: false, error: 'Failed to fetch student' }, { status: 500 });
+    console.error('Error fetching students:', error);
+    return NextResponse.json({ success: false, error: 'Failed to fetch students' }, { status: 500 });
   }
 }
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params;
-  
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     
     const { data, error } = await supabase
       .from('students')
-      .update(body)
-      .eq('id', id)
+      .insert({
+        first_name: body.first_name,
+        last_name: body.last_name,
+        email: body.email || null,
+        cohort_id: body.cohort_id || null,
+        agency: body.agency || null,
+        photo_url: body.photo_url || null,
+        notes: body.notes || null,
+      })
       .select(`
         *,
         cohort:cohorts(
@@ -84,28 +99,7 @@ export async function PATCH(
 
     return NextResponse.json({ success: true, student: data });
   } catch (error) {
-    console.error('Error updating student:', error);
-    return NextResponse.json({ success: false, error: 'Failed to update student' }, { status: 500 });
-  }
-}
-
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params;
-  
-  try {
-    const { error } = await supabase
-      .from('students')
-      .delete()
-      .eq('id', id);
-
-    if (error) throw error;
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error('Error deleting student:', error);
-    return NextResponse.json({ success: false, error: 'Failed to delete student' }, { status: 500 });
+    console.error('Error creating student:', error);
+    return NextResponse.json({ success: false, error: 'Failed to create student' }, { status: 500 });
   }
 }

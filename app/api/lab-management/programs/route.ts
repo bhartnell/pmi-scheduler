@@ -1,14 +1,18 @@
-// app/api/lab-management/programs/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 
-export async function GET(request: NextRequest) {
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
+export async function GET() {
   try {
     const { data, error } = await supabase
       .from('programs')
       .select('*')
       .eq('is_active', true)
-      .order('name');
+      .order('display_order');
 
     if (error) throw error;
 

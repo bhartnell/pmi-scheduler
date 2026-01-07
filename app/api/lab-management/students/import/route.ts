@@ -1,41 +1,31 @@
-// app/api/lab-management/students/import/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { students, cohort_id } = body;
+    const { cohort_id, students } = body;
 
-    if (!Array.isArray(students) || students.length === 0) {
-      return NextResponse.json(
-        { success: false, error: 'Students array is required' },
-        { status: 400 }
-      );
+    if (!students || !Array.isArray(students) || students.length === 0) {
+      return NextResponse.json({ success: false, error: 'No students provided' }, { status: 400 });
     }
 
-    // Validate and prepare student data
-    const validStudents = students
-      .filter(s => s.first_name && s.last_name)
-      .map(s => ({
-        first_name: s.first_name.trim(),
-        last_name: s.last_name.trim(),
-        email: s.email?.trim() || null,
-        cohort_id: cohort_id || null,
-        agency: s.agency?.trim() || null,
-        notes: s.notes?.trim() || null,
-      }));
-
-    if (validStudents.length === 0) {
-      return NextResponse.json(
-        { success: false, error: 'No valid students found. Each student needs first_name and last_name.' },
-        { status: 400 }
-      );
-    }
+    const studentsToInsert = students.map((s: any) => ({
+      first_name: s.first_name,
+      last_name: s.last_name,
+      email: s.email || null,
+      agency: s.agency || null,
+      cohort_id: cohort_id || null,
+    }));
 
     const { data, error } = await supabase
       .from('students')
-      .insert(validStudents)
+      .insert(studentsToInsert)
       .select();
 
     if (error) throw error;
@@ -43,8 +33,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ 
       success: true, 
       imported: data.length,
-      skipped: students.length - validStudents.length,
-      students: data 
+      skipped: students.length - data.length
     });
   } catch (error) {
     console.error('Error importing students:', error);
