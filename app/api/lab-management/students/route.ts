@@ -1,99 +1,81 @@
-// app/api/lab-management/students/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 
-export async function GET(request: NextRequest) {
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  
   try {
-    const searchParams = request.nextUrl.searchParams;
-    const cohortId = searchParams.get('cohortId');
-    const status = searchParams.get('status');
-    const search = searchParams.get('search');
-
-    let query = supabase
+    const { data, error } = await supabase
       .from('students')
       .select(`
         *,
         cohort:cohorts(
-          *,
-          program:programs(*)
+          id,
+          cohort_number,
+          program:programs(name, abbreviation)
         )
       `)
-      .order('last_name')
-      .order('first_name');
-
-    if (cohortId) {
-      query = query.eq('cohort_id', cohortId);
-    }
-
-    if (status) {
-      query = query.eq('status', status);
-    } else {
-      // Default to active students
-      query = query.eq('status', 'active');
-    }
-
-    if (search) {
-      query = query.or(`first_name.ilike.%${search}%,last_name.ilike.%${search}%,email.ilike.%${search}%`);
-    }
-
-    const { data, error } = await query;
+      .eq('id', id)
+      .single();
 
     if (error) throw error;
 
-    // Get team lead counts for each student
-    const studentIds = data.map(s => s.id);
-    
-    if (studentIds.length > 0) {
-      const { data: tlCounts } = await supabase
-        .from('team_lead_counts')
-        .select('*')
-        .in('student_id', studentIds);
+    // Get team lead count
+    const { count: teamLeadCount } = await supabase
+      .from('team_lead_log')
+      .select('*', { count: 'exact', head: true })
+      .eq('student_id', id);
 
-      const tlCountMap = new Map(tlCounts?.map(tc => [tc.student_id, tc]) || []);
+    // Get last team lead date
+    const { data: lastTL } = await supabase
+      .from('team_lead_log')
+      .select('date')
+      .eq('student_id', id)
+      .order('date', { ascending: false })
+      .limit(1)
+      .single();
 
-      const studentsWithCounts = data.map(student => ({
-        ...student,
-        team_lead_count: tlCountMap.get(student.id)?.team_lead_count || 0,
-        last_team_lead_date: tlCountMap.get(student.id)?.last_team_lead_date || null,
-      }));
-
-      return NextResponse.json({ success: true, students: studentsWithCounts });
-    }
-
-    return NextResponse.json({ success: true, students: data });
+    return NextResponse.json({ 
+      success: true, 
+      student: {
+        ...data,
+        team_lead_count: teamLeadCount || 0,
+        last_team_lead_date: lastTL?.date || null
+      }
+    });
   } catch (error) {
-    console.error('Error fetching students:', error);
-    return NextResponse.json({ success: false, error: 'Failed to fetch students' }, { status: 500 });
+    console.error('Error fetching student:', error);
+    return NextResponse.json({ success: false, error: 'Failed to fetch student' }, { status: 500 });
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  
   try {
     const body = await request.json();
-    const { first_name, last_name, email, cohort_id, agency, notes } = body;
-
-    if (!first_name || !last_name) {
-      return NextResponse.json(
-        { success: false, error: 'First name and last name are required' },
-        { status: 400 }
-      );
-    }
-
+    
     const { data, error } = await supabase
       .from('students')
-      .insert({
-        first_name,
-        last_name,
-        email: email || null,
-        cohort_id: cohort_id || null,
-        agency: agency || null,
-        notes: notes || null,
-      })
+      .update(body)
+      .eq('id', id)
       .select(`
         *,
         cohort:cohorts(
-          *,
-          program:programs(*)
+          id,
+          cohort_number,
+          program:programs(name, abbreviation)
         )
       `)
       .single();
@@ -102,7 +84,28 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, student: data });
   } catch (error) {
-    console.error('Error creating student:', error);
-    return NextResponse.json({ success: false, error: 'Failed to create student' }, { status: 500 });
+    console.error('Error updating student:', error);
+    return NextResponse.json({ success: false, error: 'Failed to update student' }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  
+  try {
+    const { error } = await supabase
+      .from('students')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting student:', error);
+    return NextResponse.json({ success: false, error: 'Failed to delete student' }, { status: 500 });
   }
 }
