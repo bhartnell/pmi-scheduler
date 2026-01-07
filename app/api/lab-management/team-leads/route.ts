@@ -60,12 +60,15 @@ export async function GET(request: NextRequest) {
       countMap[id] = { count: 0, lastDate: null };
     });
 
-    tlLogs?.forEach((log: any) => {
-      countMap[log.student_id].count++;
-      if (!countMap[log.student_id].lastDate || log.date > countMap[log.student_id].lastDate) {
-        countMap[log.student_id].lastDate = log.date;
-      }
-    });
+    if (tlLogs) {
+      tlLogs.forEach((log: any) => {
+        countMap[log.student_id].count++;
+        const currentLastDate = countMap[log.student_id].lastDate;
+        if (!currentLastDate || log.date > currentLastDate) {
+          countMap[log.student_id].lastDate = log.date;
+        }
+      });
+    }
 
     const stats = students.map(s => ({
       ...s,
