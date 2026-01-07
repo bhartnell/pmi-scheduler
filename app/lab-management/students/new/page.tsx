@@ -1,7 +1,7 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ChevronRight, Save, UserPlus } from 'lucide-react';
@@ -15,8 +15,6 @@ interface Cohort {
 export default function NewStudentPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const cohortIdParam = searchParams.get('cohortId');
 
   const [cohorts, setCohorts] = useState<Cohort[]>([]);
   const [loading, setLoading] = useState(true);
@@ -26,7 +24,7 @@ export default function NewStudentPage() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
-  const [cohortId, setCohortId] = useState(cohortIdParam || '');
+  const [cohortId, setCohortId] = useState('');
   const [agency, setAgency] = useState('');
   const [notes, setNotes] = useState('');
 
