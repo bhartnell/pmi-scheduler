@@ -11,12 +11,14 @@ export async function GET() {
     const { data, error } = await supabase
       .from('programs')
       .select('*')
-      .eq('is_active', true)
       .order('display_order');
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase error:', error);
+      throw error;
+    }
 
-    return NextResponse.json({ success: true, programs: data });
+    return NextResponse.json({ success: true, programs: data || [] });
   } catch (error) {
     console.error('Error fetching programs:', error);
     return NextResponse.json({ success: false, error: 'Failed to fetch programs' }, { status: 500 });
