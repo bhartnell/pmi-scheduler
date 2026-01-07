@@ -1,7 +1,7 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { 
@@ -10,7 +10,6 @@ import {
   FileSpreadsheet,
   CheckCircle,
   AlertCircle,
-  Users,
   X
 } from 'lucide-react';
 
@@ -32,11 +31,9 @@ interface ParsedStudent {
 export default function ImportStudentsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const cohortIdParam = searchParams.get('cohortId');
 
   const [cohorts, setCohorts] = useState<Cohort[]>([]);
-  const [selectedCohort, setSelectedCohort] = useState(cohortIdParam || '');
+  const [selectedCohort, setSelectedCohort] = useState('');
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
   
@@ -63,6 +60,9 @@ export default function ImportStudentsPage() {
       const data = await res.json();
       if (data.success) {
         setCohorts(data.cohorts);
+        if (data.cohorts.length > 0) {
+          setSelectedCohort(data.cohorts[0].id);
+        }
       }
     } catch (error) {
       console.error('Error fetching cohorts:', error);
@@ -74,10 +74,8 @@ export default function ImportStudentsPage() {
     const lines = text.trim().split('\n');
     if (lines.length === 0) return [];
 
-    // Detect delimiter (comma or tab)
     const delimiter = lines[0].includes('\t') ? '\t' : ',';
     
-    // Check if first line is a header
     const firstLine = lines[0].toLowerCase();
     const hasHeader = firstLine.includes('first') || firstLine.includes('name') || firstLine.includes('email');
     
@@ -86,14 +84,12 @@ export default function ImportStudentsPage() {
     return dataLines.map(line => {
       const parts = line.split(delimiter).map(p => p.trim().replace(/^["']|["']$/g, ''));
       
-      // Try to parse: could be "First Last" or "First, Last" or "First\tLast\tEmail"
       let first_name = '';
       let last_name = '';
       let email = '';
       let agency = '';
 
       if (parts.length >= 2) {
-        // Assume: first_name, last_name, [email], [agency]
         first_name = parts[0];
         last_name = parts[1];
         if (parts.length >= 3 && parts[2].includes('@')) {
@@ -105,7 +101,6 @@ export default function ImportStudentsPage() {
           agency = parts[3];
         }
       } else if (parts.length === 1 && parts[0].includes(' ')) {
-        // Single field with space: "First Last"
         const nameParts = parts[0].split(' ');
         first_name = nameParts[0];
         last_name = nameParts.slice(1).join(' ');
@@ -121,7 +116,7 @@ export default function ImportStudentsPage() {
         valid,
         error: valid ? undefined : 'Missing first or last name',
       };
-    }).filter(s => s.first_name || s.last_name); // Remove completely empty lines
+    }).filter(s => s.first_name || s.last_name);
   };
 
   const handlePasteChange = (value: string) => {
@@ -243,7 +238,7 @@ export default function ImportStudentsPage() {
                 {importResult.skipped > 0 && ` ${importResult.skipped} skipped due to missing data.`}
               </p>
               <Link
-                href={`/lab-management/students${selectedCohort ? `?cohortId=${selectedCohort}` : ''}`}
+                href={`/lab-management/students`}
                 className="text-green-800 font-medium hover:underline mt-2 inline-block"
               >
                 View Students →
@@ -421,7 +416,7 @@ export default function ImportStudentsPage() {
             <li>• Each student should be on a separate line</li>
             <li>• Minimum required: First Name and Last Name</li>
             <li>• Optional fields: Email, Agency</li>
-            <li>• Supported formats: comma-separated, tab-separated, or "First Last" on each line</li>
+            <li>• Supported formats: comma-separated, tab-separated, or &quot;First Last&quot; on each line</li>
           </ul>
         </div>
       </main>
