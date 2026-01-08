@@ -1,7 +1,5 @@
-import { NextAuthOptions } from 'next-auth';
-import GoogleProvider from 'next-auth/providers/google';
-
-const authorizedEmails = process.env.AUTHORIZED_ADMINS?.split(',') || [];
+import { NextAuthOptions } from "next-auth";
+import GoogleProvider from "next-auth/providers/google";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -12,20 +10,17 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async signIn({ user }) {
-      if (user.email && authorizedEmails.includes(user.email)) {
+      // Allow any @pmi.edu email
+      if (user.email && user.email.endsWith('@pmi.edu')) {
         return true;
       }
       return false;
     },
-    async session({ session, token }) {
-      if (session.user) {
-        session.user.email = token.email as string;
-      }
+    async session({ session }) {
       return session;
     },
   },
   pages: {
     signIn: '/auth/signin',
-    error: '/auth/error',
   },
 };
