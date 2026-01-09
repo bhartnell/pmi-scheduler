@@ -6,31 +6,49 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
+// GET - Fetch assessments
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
-  const stationId = searchParams.get('stationId');
   const studentId = searchParams.get('studentId');
+  const labGroupId = searchParams.get('labGroupId');
+  const stationId = searchParams.get('stationId');
+  const scenarioId = searchParams.get('scenarioId');
 
   try {
     let query = supabase
       .from('scenario_assessments')
       .select(`
         *,
-        team_lead:students(id, first_name, last_name),
-        station:lab_stations(
-          id,
-          station_number,
-          scenario:scenarios(title, category)
-        )
+        scenario:scenarios(id, title, category),
+        station:lab_stations(id, station_number),
+        lab_group:lab_groups(id, name),
+        team_lead:students!scenario_assessments_team_lead_id_fkey(id, first_name, last_name)
       `)
-      .order('assessed_at', { ascending: false });
-
-    if (stationId) {
-      query = query.eq('lab_station_id', stationId);
-    }
+      .order('created_at', { ascending: false });
 
     if (studentId) {
-      query = query.eq('team_lead_id', studentId);
+      // Get assessments where this student was involved (through lab group)
+      const { data: groupMemberships } = await supabase
+        .from('lab_group_members')
+        .select('lab_group_id')
+        .eq('student_id', studentId);
+      
+      const groupIds = groupMemberships?.map(m => m.lab_group_id) || [];
+      if (groupIds.length > 0) {
+        query = query.in('lab_group_id', groupIds);
+      }
+    }
+
+    if (labGroupId) {
+      query = query.eq('lab_group_id', labGroupId);
+    }
+
+    if (stationId) {
+      query = query.eq('station_id', stationId);
+    }
+
+    if (scenarioId) {
+      query = query.eq('scenario_id', scenarioId);
     }
 
     const { data, error } = await query;
@@ -44,58 +62,64 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// POST - Create a new assessment
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    
-    // Create assessment
-    const { data: assessment, error: assessmentError } = await supabase
+
+    // Validate required fields
+    if (!body.lab_group_id) {
+      return NextResponse.json({ success: false, error: 'lab_group_id is required' }, { status: 400 });
+    }
+    if (!body.team_lead_id) {
+      return NextResponse.json({ success: false, error: 'team_lead_id is required' }, { status: 400 });
+    }
+
+    // Build assessment data
+    const assessmentData: any = {
+      station_id: body.station_id || null,
+      scenario_id: body.scenario_id || null,
+      lab_group_id: body.lab_group_id,
+      team_lead_id: body.team_lead_id,
+      rotation_number: body.rotation_number || 1,
+      
+      // Store the full criteria ratings as JSONB
+      criteria_ratings: body.criteria_ratings || [],
+      critical_actions_completed: body.critical_actions_completed || {},
+      
+      // Summary scores
+      satisfactory_count: body.satisfactory_count || 0,
+      phase1_pass: body.phase1_pass || false,
+      phase2_pass: body.phase2_pass || false,
+      
+      // Comments
+      overall_comments: body.overall_comments || null,
+      graded_by: body.graded_by || null,
+      
+      // Legacy fields for compatibility
+      overall_score: body.satisfactory_count || 0,
+      team_lead_performance: body.phase2_pass ? 'satisfactory' : body.phase1_pass ? 'needs_improvement' : 'unsatisfactory'
+    };
+
+    const { data, error } = await supabase
       .from('scenario_assessments')
-      .insert({
-        lab_station_id: body.lab_station_id,
-        rotation_number: body.rotation_number,
-        team_lead_id: body.team_lead_id || null,
-        assessment_score: body.assessment_score,
-        treatment_score: body.treatment_score || null,
-        communication_score: body.communication_score || null,
-        comments: body.comments || null,
-        team_lead_issues: body.team_lead_issues || null,
-        assessed_by: body.assessed_by || null,
-      })
+      .insert(assessmentData)
       .select()
       .single();
 
-    if (assessmentError) throw assessmentError;
+    if (error) throw error;
 
-    // Log team lead if provided
-    if (body.team_lead_id && body.lab_station_id) {
-      // Get station info for the log
-      const { data: station } = await supabase
-        .from('lab_stations')
-        .select('lab_day_id, scenario_id')
-        .eq('id', body.lab_station_id)
-        .single();
+    // Also record individual student assessments for each group member
+    // This links the group assessment to each student in the group
+    const { data: groupMembers } = await supabase
+      .from('lab_group_members')
+      .select('student_id')
+      .eq('lab_group_id', body.lab_group_id);
 
-      if (station) {
-        const { data: labDay } = await supabase
-          .from('lab_days')
-          .select('date')
-          .eq('id', station.lab_day_id)
-          .single();
+    // You could create individual records here if needed for reporting
+    // For now, the group assessment links to students through lab_group_id
 
-        await supabase
-          .from('team_lead_log')
-          .insert({
-            student_id: body.team_lead_id,
-            lab_day_id: station.lab_day_id,
-            lab_station_id: body.lab_station_id,
-            scenario_id: station.scenario_id,
-            date: labDay?.date || new Date().toISOString().split('T')[0],
-          });
-      }
-    }
-
-    return NextResponse.json({ success: true, assessment });
+    return NextResponse.json({ success: true, assessment: data });
   } catch (error) {
     console.error('Error creating assessment:', error);
     return NextResponse.json({ success: false, error: 'Failed to create assessment' }, { status: 500 });
