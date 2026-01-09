@@ -11,7 +11,7 @@ export async function GET() {
     const { data, error } = await supabase
       .from('programs')
       .select('*')
-      .order('display_order');
+      .order('name');
 
     if (error) {
       console.error('Supabase error:', error);
