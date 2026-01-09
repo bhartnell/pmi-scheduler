@@ -17,18 +17,15 @@ export async function GET(
       .from('lab_stations')
       .select(`
         *,
-        scenario:scenarios(id, title, category, difficulty),
-        instructor:lab_users(id, name),
+        scenario:scenarios(id, title, category, difficulty, instructor_notes, critical_actions, debrief_points),
         lab_day:lab_days(
           id,
           date,
-          week_number,
-          day_number,
-          num_rotations,
+          title,
           cohort:cohorts(
             id,
             cohort_number,
-            program:programs(name, abbreviation)
+            program:programs(abbreviation)
           )
         )
       `)
@@ -53,14 +50,26 @@ export async function PATCH(
   try {
     const body = await request.json();
     
+    // Build update object with only provided fields
+    const updateData: any = {};
+    
+    if (body.scenario_id !== undefined) updateData.scenario_id = body.scenario_id;
+    if (body.instructor_name !== undefined) updateData.instructor_name = body.instructor_name;
+    if (body.instructor_email !== undefined) updateData.instructor_email = body.instructor_email;
+    if (body.room !== undefined) updateData.room = body.room;
+    if (body.notes !== undefined) updateData.notes = body.notes;
+    if (body.station_number !== undefined) updateData.station_number = body.station_number;
+    if (body.rotation_minutes !== undefined) updateData.rotation_minutes = body.rotation_minutes;
+    if (body.num_rotations !== undefined) updateData.num_rotations = body.num_rotations;
+
     const { data, error } = await supabase
       .from('lab_stations')
-      .update(body)
+      .update(updateData)
       .eq('id', id)
       .select(`
         *,
-        scenario:scenarios(id, title, category, difficulty),
-        instructor:lab_users(id, name)
+        scenario:scenarios(id, title, category),
+        lab_day:lab_days(id, date, title)
       `)
       .single();
 
