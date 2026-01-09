@@ -14,9 +14,10 @@ import {
   Plus,
   ChevronRight,
   Clock,
-  MapPin,
   Star,
-  AlertCircle
+  AlertCircle,
+  UserPlus,
+  Check
 } from 'lucide-react';
 import LabHeader from '@/components/LabHeader';
 
@@ -27,9 +28,11 @@ interface DashboardStats {
   upcomingLabs: number;
 }
 
-interface MyAssignment {
+interface StationAssignment {
   id: string;
   station_number: number;
+  instructor_name: string | null;
+  instructor_email: string | null;
   scenario: {
     id: string;
     title: string;
@@ -68,9 +71,11 @@ export default function LabManagementDashboard() {
     totalScenarios: 0,
     upcomingLabs: 0
   });
-  const [myAssignments, setMyAssignments] = useState<MyAssignment[]>([]);
+  const [myAssignments, setMyAssignments] = useState<StationAssignment[]>([]);
+  const [openStations, setOpenStations] = useState<StationAssignment[]>([]);
   const [upcomingLabs, setUpcomingLabs] = useState<UpcomingLab[]>([]);
   const [loading, setLoading] = useState(true);
+  const [claiming, setClaiming] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -101,8 +106,12 @@ export default function LabManagementDashboard() {
       const labsData = await labsRes.json();
 
       // Fetch my assignments (stations where I'm the instructor)
-      const assignmentsRes = await fetch(`/api/lab-management/stations?instructor=${session?.user?.email}&upcoming=true`);
-      const assignmentsData = await assignmentsRes.json();
+      const myAssignmentsRes = await fetch(`/api/lab-management/stations?instructor=${session?.user?.email}&upcoming=true`);
+      const myAssignmentsData = await myAssignmentsRes.json();
+
+      // Fetch open stations (no instructor assigned)
+      const openRes = await fetch(`/api/lab-management/stations?open=true&upcoming=true`);
+      const openData = await openRes.json();
 
       setStats({
         totalStudents: studentsData.students?.length || 0,
@@ -111,12 +120,39 @@ export default function LabManagementDashboard() {
         upcomingLabs: labsData.labDays?.length || 0
       });
 
-      setMyAssignments(assignmentsData.stations || []);
+      setMyAssignments(myAssignmentsData.stations || []);
+      setOpenStations(openData.stations || []);
       setUpcomingLabs(labsData.labDays?.slice(0, 5) || []);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     }
     setLoading(false);
+  };
+
+  const claimStation = async (stationId: string) => {
+    setClaiming(stationId);
+    try {
+      const res = await fetch(`/api/lab-management/stations/${stationId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          instructor_name: session?.user?.name || '',
+          instructor_email: session?.user?.email || ''
+        })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        // Refresh data
+        fetchDashboardData();
+      } else {
+        alert('Failed to claim station');
+      }
+    } catch (error) {
+      console.error('Error claiming station:', error);
+      alert('Failed to claim station');
+    }
+    setClaiming(null);
   };
 
   if (status === 'loading') {
@@ -180,7 +216,7 @@ export default function LabManagementDashboard() {
       <main className="max-w-6xl mx-auto px-4 py-6">
         {/* My Assignments Section */}
         {myAssignments.length > 0 && (
-          <div className="mb-8">
+          <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                 <Star className="w-5 h-5 text-yellow-500" />
@@ -245,8 +281,77 @@ export default function LabManagementDashboard() {
           </div>
         )}
 
+        {/* Open Stations (Need Instructor) */}
+        {openStations.length > 0 && (
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-orange-500" />
+                Open Stations - Need Instructor
+                <span className="text-sm font-normal text-gray-500">({openStations.length})</span>
+              </h2>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {openStations.slice(0, 6).map((station) => (
+                <div
+                  key={station.id}
+                  className="bg-white rounded-lg shadow p-4 border-l-4 border-l-orange-400"
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div className={`text-sm font-medium px-2 py-1 rounded ${
+                      isUrgent(station.lab_day.date) 
+                        ? 'bg-red-100 text-red-800' 
+                        : 'bg-orange-100 text-orange-800'
+                    }`}>
+                      {formatDate(station.lab_day.date)}
+                    </div>
+                    <div className="text-sm text-gray-500">
+                      Station {station.station_number}
+                    </div>
+                  </div>
+                  
+                  <h3 className="font-semibold text-gray-900 mb-1">
+                    {station.scenario?.title || 'No scenario assigned'}
+                  </h3>
+                  
+                  <div className="text-sm text-gray-600 mb-3">
+                    {station.lab_day.cohort.program.abbreviation} Group {station.lab_day.cohort.cohort_number}
+                  </div>
+                  
+                  {station.scenario && (
+                    <div className="flex items-center gap-2 text-xs text-gray-500 mb-3">
+                      <span className="px-2 py-0.5 bg-gray-100 rounded">{station.scenario.category}</span>
+                      <span className="px-2 py-0.5 bg-gray-100 rounded">{station.scenario.difficulty}</span>
+                    </div>
+                  )}
+                  
+                  <button
+                    onClick={() => claimStation(station.id)}
+                    disabled={claiming === station.id}
+                    className="w-full flex items-center justify-center gap-2 px-3 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400"
+                  >
+                    {claiming === station.id ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    ) : (
+                      <UserPlus className="w-4 h-4" />
+                    )}
+                    {claiming === station.id ? 'Claiming...' : 'Claim This Station'}
+                  </button>
+                </div>
+              ))}
+            </div>
+            {openStations.length > 6 && (
+              <div className="text-center mt-4">
+                <Link href="/lab-management/schedule" className="text-blue-600 hover:underline text-sm">
+                  View all {openStations.length} open stations →
+                </Link>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-white rounded-lg shadow p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-green-100 rounded-lg">

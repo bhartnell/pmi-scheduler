@@ -10,6 +10,7 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const labDayId = searchParams.get('labDayId');
   const instructor = searchParams.get('instructor');
+  const open = searchParams.get('open') === 'true';
   const upcoming = searchParams.get('upcoming') === 'true';
 
   try {
@@ -41,11 +42,9 @@ export async function GET(request: NextRequest) {
       query = query.eq('instructor_email', instructor);
     }
 
-    // Filter for upcoming only (today and future)
-    if (upcoming) {
-      const today = new Date().toISOString().split('T')[0];
-      // We need to filter through the lab_day relationship
-      // This requires a different approach - fetch all and filter
+    // Filter for open stations (no instructor assigned)
+    if (open) {
+      query = query.or('instructor_email.is.null,instructor_email.eq.');
     }
 
     const { data, error } = await query;
@@ -53,11 +52,12 @@ export async function GET(request: NextRequest) {
     if (error) throw error;
 
     // Filter for upcoming if needed (post-fetch filter for relationship)
-    let filteredData = data;
-    if (upcoming && data) {
+    let filteredData = data || [];
+    
+    if (upcoming && filteredData.length > 0) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      filteredData = data.filter((station: any) => {
+      filteredData = filteredData.filter((station: any) => {
         if (station.lab_day?.date) {
           const labDate = new Date(station.lab_day.date);
           labDate.setHours(0, 0, 0, 0);
@@ -72,6 +72,13 @@ export async function GET(request: NextRequest) {
         const dateB = new Date(b.lab_day?.date || 0);
         return dateA.getTime() - dateB.getTime();
       });
+    }
+
+    // Additional filter for open - make sure instructor_email is truly empty
+    if (open) {
+      filteredData = filteredData.filter((station: any) => 
+        !station.instructor_email || station.instructor_email.trim() === ''
+      );
     }
 
     return NextResponse.json({ success: true, stations: filteredData });
