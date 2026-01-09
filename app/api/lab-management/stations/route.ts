@@ -12,6 +12,7 @@ export async function GET(request: NextRequest) {
   const instructor = searchParams.get('instructor');
   const open = searchParams.get('open') === 'true';
   const upcoming = searchParams.get('upcoming') === 'true';
+  const stationType = searchParams.get('stationType');
 
   try {
     let query = supabase
@@ -28,21 +29,26 @@ export async function GET(request: NextRequest) {
             cohort_number,
             program:programs(abbreviation)
           )
+        ),
+        station_skills(
+          id,
+          skill:skills(id, name, category)
         )
       `)
       .order('station_number');
 
-    // Filter by lab day
     if (labDayId) {
       query = query.eq('lab_day_id', labDayId);
     }
 
-    // Filter by instructor email
     if (instructor) {
       query = query.eq('instructor_email', instructor);
     }
 
-    // Filter for open stations (no instructor assigned)
+    if (stationType) {
+      query = query.eq('station_type', stationType);
+    }
+
     if (open) {
       query = query.or('instructor_email.is.null,instructor_email.eq.');
     }
@@ -51,7 +57,6 @@ export async function GET(request: NextRequest) {
 
     if (error) throw error;
 
-    // Filter for upcoming if needed (post-fetch filter for relationship)
     let filteredData = data || [];
     
     if (upcoming && filteredData.length > 0) {
@@ -66,7 +71,6 @@ export async function GET(request: NextRequest) {
         return false;
       });
       
-      // Sort by date
       filteredData.sort((a: any, b: any) => {
         const dateA = new Date(a.lab_day?.date || 0);
         const dateB = new Date(b.lab_day?.date || 0);
@@ -74,7 +78,6 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Additional filter for open - make sure instructor_email is truly empty
     if (open) {
       filteredData = filteredData.filter((station: any) => 
         !station.instructor_email || station.instructor_email.trim() === ''
@@ -101,6 +104,7 @@ export async function POST(request: NextRequest) {
       .insert({
         lab_day_id: body.lab_day_id,
         station_number: body.station_number || 1,
+        station_type: body.station_type || 'scenario',
         scenario_id: body.scenario_id || null,
         instructor_name: body.instructor_name || null,
         instructor_email: body.instructor_email || null,
