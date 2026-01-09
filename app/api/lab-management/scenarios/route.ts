@@ -60,13 +60,22 @@ export async function POST(request: NextRequest) {
       .insert({
         title: body.title,
         applicable_programs: body.applicable_programs || ['EMT', 'AEMT', 'Paramedic'],
-        category: body.category,
+        category: body.category || null,
         subcategory: body.subcategory || null,
         difficulty: body.difficulty || 'intermediate',
+        estimated_duration: body.estimated_duration || null,
+        
+        // Quick reference / instructor summary
+        instructor_notes: body.instructor_notes || null,
+        learning_objectives: body.learning_objectives || [],
+        
+        // Dispatch info
         dispatch_time: body.dispatch_time || null,
         dispatch_location: body.dispatch_location || null,
         chief_complaint: body.chief_complaint || null,
         dispatch_notes: body.dispatch_notes || null,
+        
+        // Patient info
         patient_name: body.patient_name || null,
         patient_age: body.patient_age || null,
         patient_sex: body.patient_sex || null,
@@ -74,28 +83,17 @@ export async function POST(request: NextRequest) {
         medical_history: body.medical_history || [],
         medications: body.medications || [],
         allergies: body.allergies || null,
-        general_impression: body.general_impression || null,
-        environment_notes: body.environment_notes || null,
-        assessment_x: body.assessment_x || null,
-        assessment_a: body.assessment_a || null,
-        assessment_b: body.assessment_b || null,
-        assessment_c: body.assessment_c || null,
-        assessment_d: body.assessment_d || null,
-        assessment_e: body.assessment_e || null,
-        avpu: body.avpu || null,
-        initial_vitals: body.initial_vitals || null,
-        sample_history: body.sample_history || null,
-        opqrst: body.opqrst || null,
+        
+        // Phases with vitals (stored as JSONB)
         phases: body.phases || [],
-        learning_objectives: body.learning_objectives || [],
+        
+        // Grading
         critical_actions: body.critical_actions || [],
         debrief_points: body.debrief_points || [],
-        instructor_notes: body.instructor_notes || null,
-        equipment_needed: body.equipment_needed || [],
-        medications_to_administer: body.medications_to_administer || [],
-        estimated_duration: body.estimated_duration || null,
-        documentation_required: body.documentation_required || false,
-        platinum_required: body.platinum_required || false,
+        
+        // Legacy fields (keep for compatibility)
+        initial_vitals: body.phases?.[0]?.vitals || null,
+        general_impression: body.phases?.[0]?.presentation_notes || null,
       })
       .select()
       .single();

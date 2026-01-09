@@ -36,11 +36,59 @@ export async function PATCH(
   
   try {
     const body = await request.json();
-    body.updated_at = new Date().toISOString();
     
+    // Build update object with only provided fields
+    const updateData: any = {
+      updated_at: new Date().toISOString()
+    };
+
+    // Basic info
+    if (body.title !== undefined) updateData.title = body.title;
+    if (body.applicable_programs !== undefined) updateData.applicable_programs = body.applicable_programs;
+    if (body.category !== undefined) updateData.category = body.category;
+    if (body.subcategory !== undefined) updateData.subcategory = body.subcategory;
+    if (body.difficulty !== undefined) updateData.difficulty = body.difficulty;
+    if (body.estimated_duration !== undefined) updateData.estimated_duration = body.estimated_duration;
+    
+    // Quick reference
+    if (body.instructor_notes !== undefined) updateData.instructor_notes = body.instructor_notes;
+    if (body.learning_objectives !== undefined) updateData.learning_objectives = body.learning_objectives;
+    
+    // Dispatch
+    if (body.dispatch_time !== undefined) updateData.dispatch_time = body.dispatch_time;
+    if (body.dispatch_location !== undefined) updateData.dispatch_location = body.dispatch_location;
+    if (body.chief_complaint !== undefined) updateData.chief_complaint = body.chief_complaint;
+    if (body.dispatch_notes !== undefined) updateData.dispatch_notes = body.dispatch_notes;
+    
+    // Patient
+    if (body.patient_name !== undefined) updateData.patient_name = body.patient_name;
+    if (body.patient_age !== undefined) updateData.patient_age = body.patient_age;
+    if (body.patient_sex !== undefined) updateData.patient_sex = body.patient_sex;
+    if (body.patient_weight !== undefined) updateData.patient_weight = body.patient_weight;
+    if (body.medical_history !== undefined) updateData.medical_history = body.medical_history;
+    if (body.medications !== undefined) updateData.medications = body.medications;
+    if (body.allergies !== undefined) updateData.allergies = body.allergies;
+    
+    // Phases
+    if (body.phases !== undefined) {
+      updateData.phases = body.phases;
+      // Also update legacy initial_vitals for compatibility
+      if (body.phases.length > 0) {
+        updateData.initial_vitals = body.phases[0].vitals || null;
+        updateData.general_impression = body.phases[0].presentation_notes || null;
+      }
+    }
+    
+    // Grading
+    if (body.critical_actions !== undefined) updateData.critical_actions = body.critical_actions;
+    if (body.debrief_points !== undefined) updateData.debrief_points = body.debrief_points;
+    
+    // Status
+    if (body.is_active !== undefined) updateData.is_active = body.is_active;
+
     const { data, error } = await supabase
       .from('scenarios')
-      .update(body)
+      .update(updateData)
       .eq('id', id)
       .select()
       .single();
@@ -61,12 +109,14 @@ export async function DELETE(
   const { id } = await params;
   
   try {
+    // Check if scenario is used in any lab stations
     const { count } = await supabase
       .from('lab_stations')
       .select('*', { count: 'exact', head: true })
       .eq('scenario_id', id);
 
     if (count && count > 0) {
+      // Soft delete - just mark as inactive
       const { error } = await supabase
         .from('scenarios')
         .update({ is_active: false })
@@ -80,6 +130,7 @@ export async function DELETE(
       });
     }
 
+    // Hard delete if not used
     const { error } = await supabase
       .from('scenarios')
       .delete()

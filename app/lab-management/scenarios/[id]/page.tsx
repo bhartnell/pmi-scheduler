@@ -8,111 +8,631 @@ import {
   ChevronRight,
   ChevronDown,
   ChevronUp,
-  Edit2,
-  Clock,
-  AlertCircle,
+  Save,
+  Plus,
+  Trash2,
+  GripVertical,
+  AlertTriangle,
+  Heart,
   Activity,
+  Thermometer,
+  Brain,
+  Wind,
+  Droplets,
   FileText,
-  Stethoscope,
-  Pill,
-  ClipboardList,
+  CheckSquare,
   MessageSquare,
-  Package,
-  Target,
-  Users
+  Clock
 } from 'lucide-react';
 
-interface Scenario {
+// Types
+interface VitalSigns {
+  bp: string;
+  hr: string;
+  rr: string;
+  spo2: string;
+  temp: string;
+  gcs_total: string;
+  gcs_e: string;
+  gcs_v: string;
+  gcs_m: string;
+  pupils: string;
+  loc: string;
+  pain: string;
+  ekg_rhythm: string;
+  etco2: string;
+  twelve_lead_notes: string;
+  lung_sounds: string;
+  lung_notes: string;
+  skin: string;
+  jvd: string;
+  edema: string;
+  blood_glucose: string;
+  other_findings: { key: string; value: string }[];
+}
+
+interface Phase {
   id: string;
+  name: string;
+  trigger: string;
+  vitals: VitalSigns;
+  presentation_notes: string;
+  expected_actions: string;
+  display_order: number;
+}
+
+interface CriticalAction {
+  id: string;
+  description: string;
+}
+
+interface EvaluationCriteria {
+  id: string;
+  name: string;
+  description: string;
+}
+
+interface Scenario {
+  id?: string;
   title: string;
   applicable_programs: string[];
   category: string;
-  subcategory: string | null;
+  subcategory: string;
   difficulty: string;
-  dispatch_time: string | null;
-  dispatch_location: string | null;
-  chief_complaint: string | null;
-  dispatch_notes: string | null;
-  patient_name: string | null;
-  patient_age: number | null;
-  patient_sex: string | null;
-  patient_weight: string | null;
+  estimated_duration: number | null;
+  
+  // Quick Reference
+  instructor_summary: string;
+  key_decision_points: string[];
+  
+  // Dispatch
+  dispatch_time: string;
+  dispatch_location: string;
+  chief_complaint: string;
+  dispatch_notes: string;
+  
+  // Patient Info
+  patient_name: string;
+  patient_age: string;
+  patient_sex: string;
+  patient_weight: string;
   medical_history: string[];
   medications: string[];
-  allergies: string | null;
-  general_impression: string | null;
-  environment_notes: string | null;
-  assessment_x: string | null;
-  assessment_a: string | null;
-  assessment_b: string | null;
-  assessment_c: string | null;
-  assessment_d: string | null;
-  assessment_e: string | null;
-  avpu: string | null;
-  initial_vitals: any;
-  sample_history: any;
-  opqrst: any;
-  phases: any[];
-  learning_objectives: string[];
-  critical_actions: string[];
+  allergies: string;
+  
+  // Phases
+  phases: Phase[];
+  
+  // Grading
+  critical_actions: CriticalAction[];
+  evaluation_criteria: EvaluationCriteria[];
   debrief_points: string[];
-  instructor_notes: string | null;
-  equipment_needed: string[];
-  medications_to_administer: string[];
-  estimated_duration: number | null;
-  documentation_required: boolean;
-  platinum_required: boolean;
 }
 
-const DIFFICULTY_COLORS: Record<string, string> = {
-  beginner: 'bg-green-100 text-green-800',
-  intermediate: 'bg-yellow-100 text-yellow-800',
-  advanced: 'bg-red-100 text-red-800',
-};
+// Constants
+const CATEGORIES = [
+  'Medical', 'Trauma', 'Cardiac', 'Respiratory', 'Neurological', 
+  'OB/GYN', 'Pediatric', 'Behavioral', 'Environmental', 'Toxicology', 'Other'
+];
 
-interface CollapsibleSectionProps {
-  title: string;
-  icon: React.ReactNode;
-  defaultOpen?: boolean;
+const DIFFICULTY_LEVELS = ['Beginner', 'Intermediate', 'Advanced'];
+
+const PROGRAMS = ['EMT', 'AEMT', 'Paramedic'];
+
+const EKG_RHYTHMS = [
+  'Normal Sinus Rhythm', 'Sinus Tachycardia', 'Sinus Bradycardia',
+  'Atrial Fibrillation', 'Atrial Flutter', 'SVT',
+  'Ventricular Tachycardia', 'Ventricular Fibrillation', 'Asystole', 'PEA',
+  '1st Degree AV Block', '2nd Degree Type I (Wenckebach)', '2nd Degree Type II', '3rd Degree (Complete) Block',
+  'Idioventricular', 'Agonal', 'Other'
+];
+
+const PUPIL_OPTIONS = [
+  'PERRL, 3mm', 'PERRL, 4mm', 'PERRL, 5mm',
+  'Dilated, reactive', 'Dilated, fixed', 'Dilated, sluggish',
+  'Constricted, reactive', 'Constricted, fixed',
+  'Unequal (R>L)', 'Unequal (L>R)', 'Other'
+];
+
+const LOC_OPTIONS = [
+  'Alert & Oriented x4', 'Alert & Oriented x3', 'Alert & Oriented x2', 'Alert & Oriented x1',
+  'Verbal response only', 'Pain response only', 'Unresponsive', 'Confused', 'Combative', 'Other'
+];
+
+const LUNG_SOUND_OPTIONS = [
+  'Clear bilateral', 'Wheezes bilateral', 'Wheezes (right)', 'Wheezes (left)',
+  'Crackles/Rales bilateral', 'Crackles (right)', 'Crackles (left)',
+  'Rhonchi bilateral', 'Rhonchi (right)', 'Rhonchi (left)',
+  'Diminished bilateral', 'Diminished (right)', 'Diminished (left)',
+  'Absent (right)', 'Absent (left)', 'Stridor', 'Other'
+];
+
+const SKIN_OPTIONS = [
+  'Warm, dry, pink', 'Cool, pale, dry', 'Cool, pale, diaphoretic',
+  'Hot, dry, flushed', 'Hot, moist', 'Cyanotic', 'Mottled', 'Jaundiced', 'Other'
+];
+
+const EDEMA_OPTIONS = ['None', 'Trace', '1+ (2mm)', '2+ (4mm)', '3+ (6mm)', '4+ (8mm+)'];
+
+const DEFAULT_EVALUATION_CRITERIA = [
+  { id: '1', name: 'Scene Safety', description: 'BSI, scene safety, situational awareness' },
+  { id: '2', name: 'Initial Assessment', description: 'Primary survey, life threat identification' },
+  { id: '3', name: 'History/Chief Complaint', description: 'SAMPLE, OPQRST, relevant history gathering' },
+  { id: '4', name: 'Physical Exam/Vital Signs', description: 'Secondary assessment, vital signs, monitoring' },
+  { id: '5', name: 'Protocol/Treatment', description: 'Appropriate interventions, medication dosing' },
+  { id: '6', name: 'Affective Domain', description: 'Professionalism, empathy, stress management' },
+  { id: '7', name: 'Communication', description: 'Team communication, patient rapport, documentation' },
+  { id: '8', name: 'Skills', description: 'Technical proficiency, proper technique' }
+];
+
+// Helper to create empty vitals
+const createEmptyVitals = (): VitalSigns => ({
+  bp: '', hr: '', rr: '', spo2: '', temp: '',
+  gcs_total: '', gcs_e: '', gcs_v: '', gcs_m: '',
+  pupils: '', loc: '', pain: '',
+  ekg_rhythm: '', etco2: '', twelve_lead_notes: '',
+  lung_sounds: '', lung_notes: '',
+  skin: '', jvd: '', edema: '',
+  blood_glucose: '',
+  other_findings: []
+});
+
+// Helper to create empty phase
+const createEmptyPhase = (order: number): Phase => ({
+  id: `phase-${Date.now()}-${order}`,
+  name: order === 0 ? 'Initial Presentation' : `Phase ${order + 1}`,
+  trigger: order === 0 ? 'On arrival' : '',
+  vitals: createEmptyVitals(),
+  presentation_notes: '',
+  expected_actions: '',
+  display_order: order
+});
+
+// Collapsible Section Component
+function Section({ 
+  title, 
+  icon: Icon, 
+  children, 
+  defaultOpen = false 
+}: { 
+  title: string; 
+  icon: any; 
   children: React.ReactNode;
-}
-
-function CollapsibleSection({ title, icon, defaultOpen = false, children }: CollapsibleSectionProps) {
+  defaultOpen?: boolean;
+}) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   
   return (
-    <div className="border rounded-lg overflow-hidden">
+    <div className="bg-white rounded-lg shadow">
       <button
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-4 py-3 flex items-center justify-between bg-gray-50 hover:bg-gray-100"
+        className="w-full px-4 py-3 flex items-center justify-between text-left"
       >
-        <div className="flex items-center gap-2 font-medium text-gray-900">
-          {icon}
-          {title}
+        <div className="flex items-center gap-2">
+          <Icon className="w-5 h-5 text-blue-600" />
+          <span className="font-semibold text-gray-900">{title}</span>
         </div>
-        {isOpen ? (
-          <ChevronUp className="w-5 h-5 text-gray-500" />
-        ) : (
-          <ChevronDown className="w-5 h-5 text-gray-500" />
-        )}
+        {isOpen ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
       </button>
-      {isOpen && (
-        <div className="p-4 border-t">
-          {children}
-        </div>
-      )}
+      {isOpen && <div className="px-4 pb-4 border-t">{children}</div>}
     </div>
   );
 }
 
-export default function ScenarioDetailPage() {
+// Vitals Editor Component
+function VitalsEditor({ 
+  vitals, 
+  onChange 
+}: { 
+  vitals: VitalSigns; 
+  onChange: (vitals: VitalSigns) => void;
+}) {
+  const updateVital = (key: keyof VitalSigns, value: any) => {
+    onChange({ ...vitals, [key]: value });
+  };
+
+  const addOtherFinding = () => {
+    onChange({
+      ...vitals,
+      other_findings: [...vitals.other_findings, { key: '', value: '' }]
+    });
+  };
+
+  const updateOtherFinding = (index: number, field: 'key' | 'value', value: string) => {
+    const updated = [...vitals.other_findings];
+    updated[index][field] = value;
+    onChange({ ...vitals, other_findings: updated });
+  };
+
+  const removeOtherFinding = (index: number) => {
+    onChange({
+      ...vitals,
+      other_findings: vitals.other_findings.filter((_, i) => i !== index)
+    });
+  };
+
+  return (
+    <div className="space-y-4 pt-3">
+      {/* Core Vitals */}
+      <div>
+        <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
+          <Activity className="w-4 h-4" /> Core Vitals
+        </h4>
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+          <div>
+            <label className="text-xs text-gray-500">BP</label>
+            <input
+              type="text"
+              value={vitals.bp}
+              onChange={(e) => updateVital('bp', e.target.value)}
+              placeholder="120/80"
+              className="w-full px-2 py-1 border rounded text-sm"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500">HR</label>
+            <input
+              type="text"
+              value={vitals.hr}
+              onChange={(e) => updateVital('hr', e.target.value)}
+              placeholder="80"
+              className="w-full px-2 py-1 border rounded text-sm"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500">RR</label>
+            <input
+              type="text"
+              value={vitals.rr}
+              onChange={(e) => updateVital('rr', e.target.value)}
+              placeholder="16"
+              className="w-full px-2 py-1 border rounded text-sm"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500">SpO2</label>
+            <input
+              type="text"
+              value={vitals.spo2}
+              onChange={(e) => updateVital('spo2', e.target.value)}
+              placeholder="98%"
+              className="w-full px-2 py-1 border rounded text-sm"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500">Temp</label>
+            <input
+              type="text"
+              value={vitals.temp}
+              onChange={(e) => updateVital('temp', e.target.value)}
+              placeholder="98.6°F"
+              className="w-full px-2 py-1 border rounded text-sm"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Neuro */}
+      <div>
+        <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
+          <Brain className="w-4 h-4" /> Neuro
+        </h4>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div>
+            <label className="text-xs text-gray-500">GCS Total</label>
+            <input
+              type="text"
+              value={vitals.gcs_total}
+              onChange={(e) => updateVital('gcs_total', e.target.value)}
+              placeholder="15"
+              className="w-full px-2 py-1 border rounded text-sm"
+            />
+          </div>
+          <div className="flex gap-1">
+            <div className="flex-1">
+              <label className="text-xs text-gray-500">E</label>
+              <input
+                type="text"
+                value={vitals.gcs_e}
+                onChange={(e) => updateVital('gcs_e', e.target.value)}
+                placeholder="4"
+                className="w-full px-2 py-1 border rounded text-sm"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="text-xs text-gray-500">V</label>
+              <input
+                type="text"
+                value={vitals.gcs_v}
+                onChange={(e) => updateVital('gcs_v', e.target.value)}
+                placeholder="5"
+                className="w-full px-2 py-1 border rounded text-sm"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="text-xs text-gray-500">M</label>
+              <input
+                type="text"
+                value={vitals.gcs_m}
+                onChange={(e) => updateVital('gcs_m', e.target.value)}
+                placeholder="6"
+                className="w-full px-2 py-1 border rounded text-sm"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="text-xs text-gray-500">Pupils</label>
+            <select
+              value={vitals.pupils}
+              onChange={(e) => updateVital('pupils', e.target.value)}
+              className="w-full px-2 py-1 border rounded text-sm"
+            >
+              <option value="">Select...</option>
+              {PUPIL_OPTIONS.map(opt => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs text-gray-500">LOC</label>
+            <select
+              value={vitals.loc}
+              onChange={(e) => updateVital('loc', e.target.value)}
+              className="w-full px-2 py-1 border rounded text-sm"
+            >
+              <option value="">Select...</option>
+              {LOC_OPTIONS.map(opt => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="mt-2">
+          <label className="text-xs text-gray-500">Pain (0-10)</label>
+          <input
+            type="text"
+            value={vitals.pain}
+            onChange={(e) => updateVital('pain', e.target.value)}
+            placeholder="0"
+            className="w-20 px-2 py-1 border rounded text-sm"
+          />
+        </div>
+      </div>
+
+      {/* Cardiac */}
+      <div>
+        <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
+          <Heart className="w-4 h-4" /> Cardiac
+        </h4>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <div>
+            <label className="text-xs text-gray-500">EKG Rhythm</label>
+            <select
+              value={vitals.ekg_rhythm}
+              onChange={(e) => updateVital('ekg_rhythm', e.target.value)}
+              className="w-full px-2 py-1 border rounded text-sm"
+            >
+              <option value="">Select...</option>
+              {EKG_RHYTHMS.map(opt => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs text-gray-500">EtCO2</label>
+            <input
+              type="text"
+              value={vitals.etco2}
+              onChange={(e) => updateVital('etco2', e.target.value)}
+              placeholder="35-45 mmHg"
+              className="w-full px-2 py-1 border rounded text-sm"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-gray-500">12-Lead Notes</label>
+            <input
+              type="text"
+              value={vitals.twelve_lead_notes}
+              onChange={(e) => updateVital('twelve_lead_notes', e.target.value)}
+              placeholder="ST changes, etc."
+              className="w-full px-2 py-1 border rounded text-sm"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Respiratory */}
+      <div>
+        <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
+          <Wind className="w-4 h-4" /> Respiratory
+        </h4>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div>
+            <label className="text-xs text-gray-500">Lung Sounds</label>
+            <select
+              value={vitals.lung_sounds}
+              onChange={(e) => updateVital('lung_sounds', e.target.value)}
+              className="w-full px-2 py-1 border rounded text-sm"
+            >
+              <option value="">Select...</option>
+              {LUNG_SOUND_OPTIONS.map(opt => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs text-gray-500">Lung Notes</label>
+            <input
+              type="text"
+              value={vitals.lung_notes}
+              onChange={(e) => updateVital('lung_notes', e.target.value)}
+              placeholder="Additional findings..."
+              className="w-full px-2 py-1 border rounded text-sm"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Skin/Perfusion */}
+      <div>
+        <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
+          <Droplets className="w-4 h-4" /> Skin/Perfusion
+        </h4>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <div>
+            <label className="text-xs text-gray-500">Skin</label>
+            <select
+              value={vitals.skin}
+              onChange={(e) => updateVital('skin', e.target.value)}
+              className="w-full px-2 py-1 border rounded text-sm"
+            >
+              <option value="">Select...</option>
+              {SKIN_OPTIONS.map(opt => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs text-gray-500">JVD</label>
+            <div className="flex gap-2 mt-1">
+              {['Present', 'Absent', 'Unable to assess'].map(opt => (
+                <label key={opt} className="flex items-center gap-1 text-sm">
+                  <input
+                    type="radio"
+                    name="jvd"
+                    value={opt}
+                    checked={vitals.jvd === opt}
+                    onChange={(e) => updateVital('jvd', e.target.value)}
+                  />
+                  {opt}
+                </label>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="text-xs text-gray-500">Peripheral Edema</label>
+            <select
+              value={vitals.edema}
+              onChange={(e) => updateVital('edema', e.target.value)}
+              className="w-full px-2 py-1 border rounded text-sm"
+            >
+              <option value="">Select...</option>
+              {EDEMA_OPTIONS.map(opt => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Labs */}
+      <div>
+        <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
+          <Thermometer className="w-4 h-4" /> Labs
+        </h4>
+        <div className="w-48">
+          <label className="text-xs text-gray-500">Blood Glucose</label>
+          <input
+            type="text"
+            value={vitals.blood_glucose}
+            onChange={(e) => updateVital('blood_glucose', e.target.value)}
+            placeholder="mg/dL"
+            className="w-full px-2 py-1 border rounded text-sm"
+          />
+        </div>
+      </div>
+
+      {/* Other Findings */}
+      <div>
+        <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center justify-between">
+          <span>Other Findings</span>
+          <button
+            type="button"
+            onClick={addOtherFinding}
+            className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+          >
+            <Plus className="w-3 h-3" /> Add Finding
+          </button>
+        </h4>
+        {vitals.other_findings.length === 0 ? (
+          <p className="text-sm text-gray-400">No additional findings</p>
+        ) : (
+          <div className="space-y-2">
+            {vitals.other_findings.map((finding, index) => (
+              <div key={index} className="flex gap-2 items-center">
+                <input
+                  type="text"
+                  value={finding.key}
+                  onChange={(e) => updateOtherFinding(index, 'key', e.target.value)}
+                  placeholder="Finding name"
+                  className="w-1/3 px-2 py-1 border rounded text-sm"
+                />
+                <input
+                  type="text"
+                  value={finding.value}
+                  onChange={(e) => updateOtherFinding(index, 'value', e.target.value)}
+                  placeholder="Value"
+                  className="flex-1 px-2 py-1 border rounded text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => removeOtherFinding(index)}
+                  className="p-1 text-red-500 hover:text-red-700"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Main Component
+export default function ScenarioEditorPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const params = useParams();
-  const scenarioId = params.id as string;
+  const scenarioId = params?.id as string | undefined;
+  const isEditing = !!scenarioId && scenarioId !== 'new';
 
-  const [scenario, setScenario] = useState<Scenario | null>(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [scenario, setScenario] = useState<Scenario>({
+    title: '',
+    applicable_programs: ['Paramedic'],
+    category: '',
+    subcategory: '',
+    difficulty: 'Intermediate',
+    estimated_duration: 20,
+    instructor_summary: '',
+    key_decision_points: [],
+    dispatch_time: '',
+    dispatch_location: '',
+    chief_complaint: '',
+    dispatch_notes: '',
+    patient_name: '',
+    patient_age: '',
+    patient_sex: '',
+    patient_weight: '',
+    medical_history: [],
+    medications: [],
+    allergies: '',
+    phases: [createEmptyPhase(0)],
+    critical_actions: [],
+    evaluation_criteria: DEFAULT_EVALUATION_CRITERIA,
+    debrief_points: []
+  });
+
+  // Temp inputs for array fields
+  const [newDecisionPoint, setNewDecisionPoint] = useState('');
+  const [newHistory, setNewHistory] = useState('');
+  const [newMedication, setNewMedication] = useState('');
+  const [newCriticalAction, setNewCriticalAction] = useState('');
+  const [newDebriefPoint, setNewDebriefPoint] = useState('');
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -121,19 +641,46 @@ export default function ScenarioDetailPage() {
   }, [status, router]);
 
   useEffect(() => {
-    if (session && scenarioId) {
+    if (session && isEditing) {
       fetchScenario();
+    } else {
+      setLoading(false);
     }
-  }, [session, scenarioId]);
+  }, [session, isEditing]);
 
   const fetchScenario = async () => {
-    setLoading(true);
     try {
       const res = await fetch(`/api/lab-management/scenarios/${scenarioId}`);
       const data = await res.json();
-      
-      if (data.success) {
-        setScenario(data.scenario);
+      if (data.success && data.scenario) {
+        // Map the database fields to our state
+        const s = data.scenario;
+        setScenario({
+          id: s.id,
+          title: s.title || '',
+          applicable_programs: s.applicable_programs || ['Paramedic'],
+          category: s.category || '',
+          subcategory: s.subcategory || '',
+          difficulty: s.difficulty || 'Intermediate',
+          estimated_duration: s.estimated_duration || 20,
+          instructor_summary: s.instructor_notes || '',
+          key_decision_points: s.learning_objectives || [],
+          dispatch_time: s.dispatch_time || '',
+          dispatch_location: s.dispatch_location || '',
+          chief_complaint: s.chief_complaint || '',
+          dispatch_notes: s.dispatch_notes || '',
+          patient_name: s.patient_name || '',
+          patient_age: s.patient_age?.toString() || '',
+          patient_sex: s.patient_sex || '',
+          patient_weight: s.patient_weight?.toString() || '',
+          medical_history: s.medical_history || [],
+          medications: s.medications || [],
+          allergies: s.allergies || '',
+          phases: s.phases?.length > 0 ? s.phases : [createEmptyPhase(0)],
+          critical_actions: s.critical_actions?.map((a: string, i: number) => ({ id: `ca-${i}`, description: a })) || [],
+          evaluation_criteria: DEFAULT_EVALUATION_CRITERIA,
+          debrief_points: s.debrief_points || []
+        });
       }
     } catch (error) {
       console.error('Error fetching scenario:', error);
@@ -141,346 +688,692 @@ export default function ScenarioDetailPage() {
     setLoading(false);
   };
 
+  const handleSave = async () => {
+    if (!scenario.title.trim()) {
+      alert('Please enter a scenario title');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const payload = {
+        title: scenario.title,
+        applicable_programs: scenario.applicable_programs,
+        category: scenario.category,
+        subcategory: scenario.subcategory,
+        difficulty: scenario.difficulty,
+        estimated_duration: scenario.estimated_duration,
+        instructor_notes: scenario.instructor_summary,
+        learning_objectives: scenario.key_decision_points,
+        dispatch_time: scenario.dispatch_time,
+        dispatch_location: scenario.dispatch_location,
+        chief_complaint: scenario.chief_complaint,
+        dispatch_notes: scenario.dispatch_notes,
+        patient_name: scenario.patient_name,
+        patient_age: scenario.patient_age ? parseInt(scenario.patient_age) : null,
+        patient_sex: scenario.patient_sex,
+        patient_weight: scenario.patient_weight ? parseInt(scenario.patient_weight) : null,
+        medical_history: scenario.medical_history,
+        medications: scenario.medications,
+        allergies: scenario.allergies,
+        phases: scenario.phases,
+        critical_actions: scenario.critical_actions.map(a => a.description),
+        debrief_points: scenario.debrief_points
+      };
+
+      const url = isEditing 
+        ? `/api/lab-management/scenarios/${scenarioId}`
+        : '/api/lab-management/scenarios';
+      
+      const res = await fetch(url, {
+        method: isEditing ? 'PATCH' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        router.push(`/lab-management/scenarios/${data.scenario.id}`);
+      } else {
+        alert('Failed to save scenario: ' + (data.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error saving scenario:', error);
+      alert('Failed to save scenario');
+    }
+    setSaving(false);
+  };
+
+  // Phase management
+  const addPhase = () => {
+    setScenario({
+      ...scenario,
+      phases: [...scenario.phases, createEmptyPhase(scenario.phases.length)]
+    });
+  };
+
+  const updatePhase = (index: number, updates: Partial<Phase>) => {
+    const newPhases = [...scenario.phases];
+    newPhases[index] = { ...newPhases[index], ...updates };
+    setScenario({ ...scenario, phases: newPhases });
+  };
+
+  const removePhase = (index: number) => {
+    if (scenario.phases.length <= 1) return;
+    setScenario({
+      ...scenario,
+      phases: scenario.phases.filter((_, i) => i !== index)
+    });
+  };
+
+  // Array field helpers
+  const addToArray = (field: keyof Scenario, value: string, setter: (v: string) => void) => {
+    if (!value.trim()) return;
+    setScenario({
+      ...scenario,
+      [field]: [...(scenario[field] as string[]), value.trim()]
+    });
+    setter('');
+  };
+
+  const removeFromArray = (field: keyof Scenario, index: number) => {
+    setScenario({
+      ...scenario,
+      [field]: (scenario[field] as string[]).filter((_, i) => i !== index)
+    });
+  };
+
   if (status === 'loading' || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-700">Loading scenario...</p>
-        </div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
   }
 
   if (!session) return null;
 
-  if (!scenario) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="bg-white rounded-lg shadow p-8 text-center">
-          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Scenario Not Found</h2>
-          <Link
-            href="/lab-management/scenarios"
-            className="text-blue-600 hover:underline"
-          >
-            Back to Scenarios
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       {/* Header */}
-      <div className="bg-white shadow-sm">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
-                <Link href="/lab-management" className="hover:text-blue-600">Lab Management</Link>
-                <ChevronRight className="w-4 h-4" />
-                <Link href="/lab-management/scenarios" className="hover:text-blue-600">Scenarios</Link>
-                <ChevronRight className="w-4 h-4" />
-                <span className="truncate max-w-[150px]">{scenario.title}</span>
-              </div>
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">{scenario.title}</h1>
-              <div className="flex flex-wrap items-center gap-2 mt-2">
-                <span className="px-2 py-1 bg-gray-100 text-gray-800 text-sm rounded">
-                  {scenario.category}
-                </span>
-                <span className={`px-2 py-1 text-sm rounded ${DIFFICULTY_COLORS[scenario.difficulty]}`}>
-                  {scenario.difficulty}
-                </span>
-                {scenario.platinum_required && (
-                  <span className="px-2 py-1 bg-purple-100 text-purple-800 text-sm rounded">
-                    Platinum
-                  </span>
-                )}
-                {scenario.documentation_required && (
-                  <span className="px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded">
-                    Documentation
-                  </span>
-                )}
-              </div>
-              <div className="flex flex-wrap gap-1 mt-2">
-                {scenario.applicable_programs.map(prog => (
-                  <span key={prog} className="px-2 py-0.5 bg-blue-50 text-blue-700 text-xs rounded">
-                    {prog}
-                  </span>
-                ))}
-              </div>
-            </div>
-            <Link
-              href={`/lab-management/scenarios/${scenarioId}/edit`}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium shrink-0"
+      <div className="bg-white shadow-sm sticky top-0 z-10">
+        <div className="max-w-4xl mx-auto px-4 py-4">
+          <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+            <Link href="/" className="hover:text-blue-600">Home</Link>
+            <ChevronRight className="w-4 h-4" />
+            <Link href="/lab-management" className="hover:text-blue-600">Lab Management</Link>
+            <ChevronRight className="w-4 h-4" />
+            <Link href="/lab-management/scenarios" className="hover:text-blue-600">Scenarios</Link>
+            <ChevronRight className="w-4 h-4" />
+            <span>{isEditing ? 'Edit' : 'New'}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <h1 className="text-xl font-bold text-gray-900">
+              {isEditing ? 'Edit Scenario' : 'Create Scenario'}
+            </h1>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
             >
-              <Edit2 className="w-4 h-4" />
-              Edit
-            </Link>
+              {saving ? (
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+              ) : (
+                <Save className="w-5 h-5" />
+              )}
+              {saving ? 'Saving...' : 'Save Scenario'}
+            </button>
           </div>
         </div>
       </div>
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-4">
-        {/* Quick Info */}
-        {(scenario.estimated_duration || scenario.chief_complaint) && (
-          <div className="bg-white rounded-lg shadow p-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {scenario.chief_complaint && (
-                <div>
-                  <div className="text-sm font-medium text-gray-500">Chief Complaint</div>
-                  <div className="text-gray-900">{scenario.chief_complaint}</div>
-                </div>
-              )}
-              {scenario.estimated_duration && (
-                <div>
-                  <div className="text-sm font-medium text-gray-500">Duration</div>
-                  <div className="text-gray-900 flex items-center gap-1">
-                    <Clock className="w-4 h-4" />
-                    ~{scenario.estimated_duration} minutes
-                  </div>
-                </div>
-              )}
+      <main className="max-w-4xl mx-auto px-4 py-6 space-y-4">
+        {/* Basic Info */}
+        <div className="bg-white rounded-lg shadow p-4">
+          <h2 className="font-semibold text-gray-900 mb-4">Basic Information</h2>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Scenario Title <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={scenario.title}
+                onChange={(e) => setScenario({ ...scenario, title: e.target.value })}
+                placeholder="e.g., COPD Exacerbation with Respiratory Failure"
+                className="w-full px-3 py-2 border rounded-lg"
+              />
+            </div>
+            
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                <select
+                  value={scenario.category}
+                  onChange={(e) => setScenario({ ...scenario, category: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg"
+                >
+                  <option value="">Select...</option>
+                  {CATEGORIES.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Subcategory</label>
+                <input
+                  type="text"
+                  value={scenario.subcategory}
+                  onChange={(e) => setScenario({ ...scenario, subcategory: e.target.value })}
+                  placeholder="Optional"
+                  className="w-full px-3 py-2 border rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Difficulty</label>
+                <select
+                  value={scenario.difficulty}
+                  onChange={(e) => setScenario({ ...scenario, difficulty: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg"
+                >
+                  {DIFFICULTY_LEVELS.map(level => (
+                    <option key={level} value={level}>{level}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Duration (min)</label>
+                <input
+                  type="number"
+                  value={scenario.estimated_duration || ''}
+                  onChange={(e) => setScenario({ ...scenario, estimated_duration: parseInt(e.target.value) || null })}
+                  placeholder="20"
+                  className="w-full px-3 py-2 border rounded-lg"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Applicable Programs</label>
+              <div className="flex gap-4">
+                {PROGRAMS.map(prog => (
+                  <label key={prog} className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={scenario.applicable_programs.includes(prog)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setScenario({ ...scenario, applicable_programs: [...scenario.applicable_programs, prog] });
+                        } else {
+                          setScenario({ ...scenario, applicable_programs: scenario.applicable_programs.filter(p => p !== prog) });
+                        }
+                      }}
+                    />
+                    {prog}
+                  </label>
+                ))}
+              </div>
             </div>
           </div>
-        )}
+        </div>
 
-        {/* Dispatch Information */}
-        {(scenario.dispatch_time || scenario.dispatch_location || scenario.dispatch_notes) && (
-          <CollapsibleSection 
-            title="Dispatch Information" 
-            icon={<MessageSquare className="w-5 h-5 text-blue-600" />}
-            defaultOpen={true}
-          >
-            <div className="space-y-3 text-sm">
-              {scenario.dispatch_time && (
-                <div><span className="font-medium">Time:</span> {scenario.dispatch_time}</div>
-              )}
-              {scenario.dispatch_location && (
-                <div><span className="font-medium">Location:</span> {scenario.dispatch_location}</div>
-              )}
-              {scenario.dispatch_notes && (
-                <div className="bg-yellow-50 p-3 rounded border border-yellow-200">
-                  <span className="font-medium">Dispatch Notes:</span> {scenario.dispatch_notes}
-                </div>
-              )}
+        {/* Quick Reference */}
+        <Section title="Quick Reference (Instructor Summary)" icon={FileText} defaultOpen={true}>
+          <div className="space-y-4 pt-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Summary
+              </label>
+              <textarea
+                value={scenario.instructor_summary}
+                onChange={(e) => setScenario({ ...scenario, instructor_summary: e.target.value })}
+                rows={4}
+                placeholder="Brief overview for instructor to read before running the scenario..."
+                className="w-full px-3 py-2 border rounded-lg"
+              />
             </div>
-          </CollapsibleSection>
-        )}
-
-        {/* Patient Information */}
-        {(scenario.patient_name || scenario.patient_age || scenario.medical_history?.length > 0) && (
-          <CollapsibleSection 
-            title="Patient Information" 
-            icon={<Users className="w-5 h-5 text-green-600" />}
-            defaultOpen={true}
-          >
-            <div className="space-y-3 text-sm">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {scenario.patient_name && <div><span className="font-medium">Name:</span> {scenario.patient_name}</div>}
-                {scenario.patient_age && <div><span className="font-medium">Age:</span> {scenario.patient_age}</div>}
-                {scenario.patient_sex && <div><span className="font-medium">Sex:</span> {scenario.patient_sex}</div>}
-                {scenario.patient_weight && <div><span className="font-medium">Weight:</span> {scenario.patient_weight}</div>}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Key Decision Points
+              </label>
+              <div className="space-y-2">
+                {scenario.key_decision_points.map((point, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <span className="text-sm text-gray-700 flex-1">• {point}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeFromArray('key_decision_points', index)}
+                      className="p-1 text-red-500 hover:text-red-700"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newDecisionPoint}
+                    onChange={(e) => setNewDecisionPoint(e.target.value)}
+                    placeholder="Add decision point..."
+                    className="flex-1 px-3 py-2 border rounded-lg text-sm"
+                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('key_decision_points', newDecisionPoint, setNewDecisionPoint))}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => addToArray('key_decision_points', newDecisionPoint, setNewDecisionPoint)}
+                    className="px-3 py-2 bg-gray-100 rounded-lg hover:bg-gray-200"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
-              {scenario.medical_history?.length > 0 && (
-                <div>
-                  <span className="font-medium">Medical History:</span>
-                  <ul className="list-disc list-inside ml-2 mt-1">
-                    {scenario.medical_history.map((item, i) => <li key={i}>{item}</li>)}
-                  </ul>
-                </div>
-              )}
-              {scenario.medications?.length > 0 && (
-                <div>
-                  <span className="font-medium">Medications:</span>
-                  <ul className="list-disc list-inside ml-2 mt-1">
-                    {scenario.medications.map((item, i) => <li key={i}>{item}</li>)}
-                  </ul>
-                </div>
-              )}
-              {scenario.allergies && (
-                <div className="bg-red-50 p-2 rounded border border-red-200">
-                  <span className="font-medium text-red-800">Allergies:</span> {scenario.allergies}
-                </div>
-              )}
             </div>
-          </CollapsibleSection>
-        )}
+          </div>
+        </Section>
 
-        {/* Upon Arrival / General Impression */}
-        {(scenario.general_impression || scenario.environment_notes) && (
-          <CollapsibleSection 
-            title="Upon Arrival" 
-            icon={<Activity className="w-5 h-5 text-orange-600" />}
-          >
-            <div className="space-y-3 text-sm">
-              {scenario.general_impression && (
-                <div className="bg-blue-50 p-3 rounded">
-                  <span className="font-medium">General Impression:</span> {scenario.general_impression}
-                </div>
-              )}
-              {scenario.environment_notes && (
-                <div><span className="font-medium">Environment:</span> {scenario.environment_notes}</div>
-              )}
+        {/* Dispatch & Scene */}
+        <Section title="Dispatch & Scene" icon={Clock}>
+          <div className="grid grid-cols-2 gap-4 pt-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
+              <input
+                type="text"
+                value={scenario.dispatch_time}
+                onChange={(e) => setScenario({ ...scenario, dispatch_time: e.target.value })}
+                placeholder="0845"
+                className="w-full px-3 py-2 border rounded-lg"
+              />
             </div>
-          </CollapsibleSection>
-        )}
-
-        {/* Assessment (XABCDE) */}
-        {(scenario.assessment_x || scenario.assessment_a || scenario.assessment_b || scenario.assessment_c || scenario.assessment_d || scenario.assessment_e) && (
-          <CollapsibleSection 
-            title="Initial Assessment (XABCDE)" 
-            icon={<Stethoscope className="w-5 h-5 text-red-600" />}
-          >
-            <div className="space-y-2 text-sm">
-              {scenario.assessment_x && <div><span className="font-medium text-red-600">X - Exsanguination:</span> {scenario.assessment_x}</div>}
-              {scenario.assessment_a && <div><span className="font-medium text-orange-600">A - Airway:</span> {scenario.assessment_a}</div>}
-              {scenario.assessment_b && <div><span className="font-medium text-yellow-600">B - Breathing:</span> {scenario.assessment_b}</div>}
-              {scenario.assessment_c && <div><span className="font-medium text-green-600">C - Circulation:</span> {scenario.assessment_c}</div>}
-              {scenario.assessment_d && <div><span className="font-medium text-blue-600">D - Disability:</span> {scenario.assessment_d}</div>}
-              {scenario.assessment_e && <div><span className="font-medium text-purple-600">E - Exposure:</span> {scenario.assessment_e}</div>}
-              {scenario.avpu && <div><span className="font-medium">AVPU:</span> {scenario.avpu}</div>}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+              <input
+                type="text"
+                value={scenario.dispatch_location}
+                onChange={(e) => setScenario({ ...scenario, dispatch_location: e.target.value })}
+                placeholder="Private residence"
+                className="w-full px-3 py-2 border rounded-lg"
+              />
             </div>
-          </CollapsibleSection>
-        )}
-
-        {/* Initial Vitals */}
-        {scenario.initial_vitals && Object.keys(scenario.initial_vitals).length > 0 && (
-          <CollapsibleSection 
-            title="Initial Vitals" 
-            icon={<Activity className="w-5 h-5 text-pink-600" />}
-          >
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-              {scenario.initial_vitals.bp && <div><span className="font-medium">BP:</span> {scenario.initial_vitals.bp}</div>}
-              {scenario.initial_vitals.pulse && <div><span className="font-medium">Pulse:</span> {scenario.initial_vitals.pulse}</div>}
-              {scenario.initial_vitals.resp && <div><span className="font-medium">RR:</span> {scenario.initial_vitals.resp}</div>}
-              {scenario.initial_vitals.spo2 && <div><span className="font-medium">SpO2:</span> {scenario.initial_vitals.spo2}%</div>}
-              {scenario.initial_vitals.etco2 && <div><span className="font-medium">EtCO2:</span> {scenario.initial_vitals.etco2}</div>}
-              {scenario.initial_vitals.temp && <div><span className="font-medium">Temp:</span> {scenario.initial_vitals.temp}</div>}
-              {scenario.initial_vitals.glucose && <div><span className="font-medium">Glucose:</span> {scenario.initial_vitals.glucose}</div>}
-              {scenario.initial_vitals.gcs && <div><span className="font-medium">GCS:</span> {scenario.initial_vitals.gcs}</div>}
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Chief Complaint</label>
+              <input
+                type="text"
+                value={scenario.chief_complaint}
+                onChange={(e) => setScenario({ ...scenario, chief_complaint: e.target.value })}
+                placeholder="Difficulty breathing"
+                className="w-full px-3 py-2 border rounded-lg"
+              />
             </div>
-          </CollapsibleSection>
-        )}
-
-        {/* Scenario Phases/Progression */}
-        {scenario.phases && scenario.phases.length > 0 && (
-          <CollapsibleSection 
-            title="Scenario Progression" 
-            icon={<Target className="w-5 h-5 text-indigo-600" />}
-          >
-            <div className="space-y-4">
-              {scenario.phases.map((phase: any, index: number) => (
-                <div key={index} className="border-l-4 border-indigo-400 pl-4">
-                  <h4 className="font-medium text-gray-900">
-                    Phase {phase.phase_number || index + 1}: {phase.title}
-                  </h4>
-                  {phase.trigger && (
-                    <p className="text-sm text-indigo-600 mt-1">Trigger: {phase.trigger}</p>
-                  )}
-                  {phase.description && (
-                    <p className="text-sm text-gray-600 mt-1">{phase.description}</p>
-                  )}
-                  {phase.expected_actions && phase.expected_actions.length > 0 && (
-                    <div className="mt-2">
-                      <span className="text-sm font-medium">Expected Actions:</span>
-                      <ul className="list-disc list-inside text-sm text-gray-600 ml-2">
-                        {phase.expected_actions.map((action: string, i: number) => (
-                          <li key={i}>{action}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              ))}
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Dispatch Notes</label>
+              <textarea
+                value={scenario.dispatch_notes}
+                onChange={(e) => setScenario({ ...scenario, dispatch_notes: e.target.value })}
+                rows={2}
+                placeholder="Additional dispatch information..."
+                className="w-full px-3 py-2 border rounded-lg"
+              />
             </div>
-          </CollapsibleSection>
-        )}
+          </div>
+        </Section>
 
-        {/* Learning Objectives */}
-        {scenario.learning_objectives?.length > 0 && (
-          <CollapsibleSection 
-            title="Learning Objectives" 
-            icon={<Target className="w-5 h-5 text-green-600" />}
-          >
-            <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
-              {scenario.learning_objectives.map((obj, i) => <li key={i}>{obj}</li>)}
-            </ul>
-          </CollapsibleSection>
-        )}
+        {/* Patient Info */}
+        <Section title="Patient Information" icon={Activity}>
+          <div className="space-y-4 pt-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                <input
+                  type="text"
+                  value={scenario.patient_name}
+                  onChange={(e) => setScenario({ ...scenario, patient_name: e.target.value })}
+                  placeholder="John Doe"
+                  className="w-full px-3 py-2 border rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Age</label>
+                <input
+                  type="text"
+                  value={scenario.patient_age}
+                  onChange={(e) => setScenario({ ...scenario, patient_age: e.target.value })}
+                  placeholder="65"
+                  className="w-full px-3 py-2 border rounded-lg"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Sex</label>
+                <select
+                  value={scenario.patient_sex}
+                  onChange={(e) => setScenario({ ...scenario, patient_sex: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg"
+                >
+                  <option value="">Select...</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Weight (kg)</label>
+                <input
+                  type="text"
+                  value={scenario.patient_weight}
+                  onChange={(e) => setScenario({ ...scenario, patient_weight: e.target.value })}
+                  placeholder="80"
+                  className="w-full px-3 py-2 border rounded-lg"
+                />
+              </div>
+            </div>
 
-        {/* Critical Actions */}
-        {scenario.critical_actions?.length > 0 && (
-          <CollapsibleSection 
-            title="Critical Actions" 
-            icon={<AlertCircle className="w-5 h-5 text-red-600" />}
-          >
-            <ul className="space-y-2 text-sm">
-              {scenario.critical_actions.map((action, i) => (
-                <li key={i} className="flex items-start gap-2">
-                  <span className="w-6 h-6 bg-red-100 text-red-800 rounded-full flex items-center justify-center text-xs font-bold shrink-0">
-                    {i + 1}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Medical History</label>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {scenario.medical_history.map((item, index) => (
+                  <span key={index} className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded text-sm">
+                    {item}
+                    <button type="button" onClick={() => removeFromArray('medical_history', index)} className="text-gray-500 hover:text-red-500">
+                      <X className="w-3 h-3" />
+                    </button>
                   </span>
-                  <span className="text-gray-700">{action}</span>
-                </li>
-              ))}
-            </ul>
-          </CollapsibleSection>
-        )}
-
-        {/* Equipment & Medications */}
-        {(scenario.equipment_needed?.length > 0 || scenario.medications_to_administer?.length > 0) && (
-          <CollapsibleSection 
-            title="Equipment & Medications" 
-            icon={<Package className="w-5 h-5 text-gray-600" />}
-          >
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-              {scenario.equipment_needed?.length > 0 && (
-                <div>
-                  <h4 className="font-medium mb-2">Equipment Needed:</h4>
-                  <ul className="list-disc list-inside text-gray-600">
-                    {scenario.equipment_needed.map((item, i) => <li key={i}>{item}</li>)}
-                  </ul>
-                </div>
-              )}
-              {scenario.medications_to_administer?.length > 0 && (
-                <div>
-                  <h4 className="font-medium mb-2">Medications:</h4>
-                  <ul className="list-disc list-inside text-gray-600">
-                    {scenario.medications_to_administer.map((item, i) => <li key={i}>{item}</li>)}
-                  </ul>
-                </div>
-              )}
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newHistory}
+                  onChange={(e) => setNewHistory(e.target.value)}
+                  placeholder="Add condition..."
+                  className="flex-1 px-3 py-2 border rounded-lg text-sm"
+                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('medical_history', newHistory, setNewHistory))}
+                />
+                <button type="button" onClick={() => addToArray('medical_history', newHistory, setNewHistory)} className="px-3 py-2 bg-gray-100 rounded-lg hover:bg-gray-200">
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
             </div>
-          </CollapsibleSection>
-        )}
 
-        {/* Instructor Notes */}
-        {scenario.instructor_notes && (
-          <CollapsibleSection 
-            title="Instructor Notes" 
-            icon={<FileText className="w-5 h-5 text-yellow-600" />}
-          >
-            <div className="bg-yellow-50 p-3 rounded text-sm text-gray-700 whitespace-pre-wrap">
-              {scenario.instructor_notes}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Medications</label>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {scenario.medications.map((item, index) => (
+                  <span key={index} className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 rounded text-sm">
+                    {item}
+                    <button type="button" onClick={() => removeFromArray('medications', index)} className="text-blue-500 hover:text-red-500">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newMedication}
+                  onChange={(e) => setNewMedication(e.target.value)}
+                  placeholder="Add medication..."
+                  className="flex-1 px-3 py-2 border rounded-lg text-sm"
+                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('medications', newMedication, setNewMedication))}
+                />
+                <button type="button" onClick={() => addToArray('medications', newMedication, setNewMedication)} className="px-3 py-2 bg-gray-100 rounded-lg hover:bg-gray-200">
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
             </div>
-          </CollapsibleSection>
-        )}
 
-        {/* Debrief Points */}
-        {scenario.debrief_points?.length > 0 && (
-          <CollapsibleSection 
-            title="Debrief Points" 
-            icon={<ClipboardList className="w-5 h-5 text-purple-600" />}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Allergies</label>
+              <input
+                type="text"
+                value={scenario.allergies}
+                onChange={(e) => setScenario({ ...scenario, allergies: e.target.value })}
+                placeholder="NKDA or list allergies"
+                className="w-full px-3 py-2 border rounded-lg"
+              />
+            </div>
+          </div>
+        </Section>
+
+        {/* Scenario Phases */}
+        <div className="bg-white rounded-lg shadow">
+          <div className="px-4 py-3 flex items-center justify-between border-b">
+            <div className="flex items-center gap-2">
+              <Activity className="w-5 h-5 text-blue-600" />
+              <span className="font-semibold text-gray-900">Scenario Phases</span>
+              <span className="text-sm text-gray-500">({scenario.phases.length})</span>
+            </div>
+            <button
+              type="button"
+              onClick={addPhase}
+              className="flex items-center gap-1 px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200"
+            >
+              <Plus className="w-4 h-4" /> Add Phase
+            </button>
+          </div>
+          <div className="p-4 space-y-4">
+            {scenario.phases.map((phase, index) => (
+              <div key={phase.id} className="border rounded-lg">
+                <div className="px-4 py-3 bg-gray-50 flex items-center justify-between rounded-t-lg">
+                  <div className="flex items-center gap-2 flex-1">
+                    <GripVertical className="w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      value={phase.name}
+                      onChange={(e) => updatePhase(index, { name: e.target.value })}
+                      className="font-medium text-gray-900 bg-transparent border-none focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1 flex-1"
+                    />
+                  </div>
+                  {scenario.phases.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removePhase(index)}
+                      className="p-1 text-red-500 hover:text-red-700"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+                <div className="p-4 space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Trigger</label>
+                    <input
+                      type="text"
+                      value={phase.trigger}
+                      onChange={(e) => updatePhase(index, { trigger: e.target.value })}
+                      placeholder="e.g., On arrival, After 5 minutes, After treatment..."
+                      className="w-full px-3 py-2 border rounded-lg"
+                    />
+                  </div>
+                  
+                  <VitalsEditor
+                    vitals={phase.vitals}
+                    onChange={(vitals) => updatePhase(index, { vitals })}
+                  />
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Presentation Notes</label>
+                    <textarea
+                      value={phase.presentation_notes}
+                      onChange={(e) => updatePhase(index, { presentation_notes: e.target.value })}
+                      rows={2}
+                      placeholder="Patient appearance, behavior, environment..."
+                      className="w-full px-3 py-2 border rounded-lg"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Expected Actions</label>
+                    <textarea
+                      value={phase.expected_actions}
+                      onChange={(e) => updatePhase(index, { expected_actions: e.target.value })}
+                      rows={2}
+                      placeholder="What should the student do at this point?"
+                      className="w-full px-3 py-2 border rounded-lg"
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Grading Criteria */}
+        <Section title="Grading Criteria" icon={CheckSquare}>
+          <div className="space-y-6 pt-3">
+            {/* Critical Actions */}
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-red-500" />
+                Critical Actions (Auto-fail if missed)
+              </h4>
+              <div className="space-y-2">
+                {scenario.critical_actions.map((action, index) => (
+                  <div key={action.id} className="flex items-center gap-2">
+                    <span className="text-sm text-gray-700 flex-1">• {action.description}</span>
+                    <button
+                      type="button"
+                      onClick={() => setScenario({
+                        ...scenario,
+                        critical_actions: scenario.critical_actions.filter((_, i) => i !== index)
+                      })}
+                      className="p-1 text-red-500 hover:text-red-700"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newCriticalAction}
+                    onChange={(e) => setNewCriticalAction(e.target.value)}
+                    placeholder="Add critical action..."
+                    className="flex-1 px-3 py-2 border rounded-lg text-sm"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (newCriticalAction.trim()) {
+                          setScenario({
+                            ...scenario,
+                            critical_actions: [...scenario.critical_actions, { id: `ca-${Date.now()}`, description: newCriticalAction.trim() }]
+                          });
+                          setNewCriticalAction('');
+                        }
+                      }
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (newCriticalAction.trim()) {
+                        setScenario({
+                          ...scenario,
+                          critical_actions: [...scenario.critical_actions, { id: `ca-${Date.now()}`, description: newCriticalAction.trim() }]
+                        });
+                        setNewCriticalAction('');
+                      }
+                    }}
+                    className="px-3 py-2 bg-gray-100 rounded-lg hover:bg-gray-200"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Evaluation Criteria - 8 Standard */}
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 mb-2">
+                Evaluation Criteria (8 Standard - S/NI/U)
+              </h4>
+              <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+                {scenario.evaluation_criteria.map((criteria, index) => (
+                  <div key={criteria.id} className="flex items-start gap-2">
+                    <span className="w-6 h-6 flex items-center justify-center bg-blue-100 text-blue-700 rounded text-sm font-medium">
+                      {index + 1}
+                    </span>
+                    <div>
+                      <div className="font-medium text-sm text-gray-900">{criteria.name}</div>
+                      <div className="text-xs text-gray-500">{criteria.description}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                Pass criteria: Phase 1 = 6/8, Phase 2 = 7/8 satisfactory ratings
+              </p>
+            </div>
+
+            {/* Debrief Points */}
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                <MessageSquare className="w-4 h-4" />
+                Debrief Points
+              </h4>
+              <div className="space-y-2">
+                {scenario.debrief_points.map((point, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <span className="text-sm text-gray-700 flex-1">• {point}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeFromArray('debrief_points', index)}
+                      className="p-1 text-red-500 hover:text-red-700"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newDebriefPoint}
+                    onChange={(e) => setNewDebriefPoint(e.target.value)}
+                    placeholder="Add debrief discussion point..."
+                    className="flex-1 px-3 py-2 border rounded-lg text-sm"
+                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('debrief_points', newDebriefPoint, setNewDebriefPoint))}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => addToArray('debrief_points', newDebriefPoint, setNewDebriefPoint)}
+                    className="px-3 py-2 bg-gray-100 rounded-lg hover:bg-gray-200"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </Section>
+
+        {/* Save Button (bottom) */}
+        <div className="flex justify-end gap-3 pt-4">
+          <Link
+            href="/lab-management/scenarios"
+            className="px-6 py-2 border text-gray-700 rounded-lg hover:bg-gray-50"
           >
-            <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
-              {scenario.debrief_points.map((point, i) => <li key={i}>{point}</li>)}
-            </ul>
-          </CollapsibleSection>
-        )}
+            Cancel
+          </Link>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+          >
+            {saving ? (
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+            ) : (
+              <Save className="w-5 h-5" />
+            )}
+            {saving ? 'Saving...' : 'Save Scenario'}
+          </button>
+        </div>
       </main>
     </div>
+  );
+}
+
+// Missing X icon import fix
+function X({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M18 6L6 18M6 6l12 12" />
+    </svg>
   );
 }
