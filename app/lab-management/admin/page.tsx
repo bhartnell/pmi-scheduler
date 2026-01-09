@@ -8,10 +8,10 @@ import {
   ChevronRight,
   Users,
   GraduationCap,
-  UserCog,
   Settings,
-  Database,
-  Shield
+  UserCog,
+  FolderKanban,
+  Home
 } from 'lucide-react';
 
 export default function AdminPage() {
@@ -34,45 +34,48 @@ export default function AdminPage() {
 
   if (!session) return null;
 
-  const adminSections = [
+  const adminLinks = [
     {
-      title: 'Cohort Management',
-      description: 'Create and manage EMT, AEMT, and Paramedic cohorts',
       href: '/lab-management/admin/cohorts',
       icon: GraduationCap,
-      color: 'bg-blue-100 text-blue-600',
+      title: 'Manage Cohorts',
+      description: 'Create and manage program cohorts (EMT Group 4, PM Group 14, etc.)',
+      color: 'bg-blue-500'
     },
     {
-      title: 'User Management',
-      description: 'Manage instructors and admin access',
-      href: '/lab-management/admin/users',
-      icon: UserCog,
-      color: 'bg-green-100 text-green-600',
-      coming: true,
-    },
-    {
-      title: 'Student Management',
-      description: 'Bulk operations, transfers, and status updates',
-      href: '/lab-management/students',
+      href: '/lab-management/admin/lab-groups',
       icon: Users,
-      color: 'bg-purple-100 text-purple-600',
+      title: 'Lab Groups',
+      description: 'Organize students into lab groups (Group A, B, C, D) for grading',
+      color: 'bg-green-500'
     },
     {
-      title: 'Data Management',
-      description: 'Export data, backup, and maintenance',
-      href: '/lab-management/admin/data',
-      icon: Database,
-      color: 'bg-orange-100 text-orange-600',
-      coming: true,
+      href: '/lab-management/students',
+      icon: UserCog,
+      title: 'Student Roster',
+      description: 'View all students, add new students, import from CSV',
+      color: 'bg-purple-500'
     },
+    {
+      href: '/lab-management/scenarios',
+      icon: FolderKanban,
+      title: 'Scenario Library',
+      description: 'Create and manage training scenarios',
+      color: 'bg-orange-500'
+    }
   ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
       {/* Header */}
       <div className="bg-white shadow-sm">
-        <div className="max-w-4xl mx-auto px-4 py-6">
-          <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
+        <div className="max-w-4xl mx-auto px-4 py-4">
+          <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+            <Link href="/" className="hover:text-blue-600 flex items-center gap-1">
+              <Home className="w-3 h-3" />
+              Home
+            </Link>
+            <ChevronRight className="w-4 h-4" />
             <Link href="/lab-management" className="hover:text-blue-600">Lab Management</Link>
             <ChevronRight className="w-4 h-4" />
             <span>Admin</span>
@@ -82,79 +85,45 @@ export default function AdminPage() {
               <Settings className="w-6 h-6 text-gray-600" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Administration</h1>
-              <p className="text-gray-600">System settings and management</p>
+              <h1 className="text-2xl font-bold text-gray-900">Admin Settings</h1>
+              <p className="text-gray-600">Manage cohorts, groups, and system settings</p>
             </div>
           </div>
         </div>
       </div>
 
       <main className="max-w-4xl mx-auto px-4 py-6">
-        {/* Admin Sections */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {adminSections.map((section) => (
+        {/* Quick Setup Guide */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+          <h2 className="font-semibold text-blue-900 mb-2">📋 Setup Order</h2>
+          <ol className="text-sm text-blue-800 space-y-1">
+            <li>1. <strong>Create a Cohort</strong> (e.g., "Paramedic Group 14")</li>
+            <li>2. <strong>Add Students</strong> to the cohort</li>
+            <li>3. <strong>Create Lab Groups</strong> within the cohort (Group A, B, C, D)</li>
+            <li>4. <strong>Assign Students</strong> to lab groups</li>
+            <li>5. <strong>Create Scenarios</strong> for training</li>
+            <li>6. <strong>Schedule Lab Days</strong> with stations and scenarios</li>
+          </ol>
+        </div>
+
+        {/* Admin Links */}
+        <div className="grid gap-4 md:grid-cols-2">
+          {adminLinks.map((link) => (
             <Link
-              key={section.href}
-              href={section.coming ? '#' : section.href}
-              className={`bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow ${section.coming ? 'opacity-60 cursor-not-allowed' : ''}`}
-              onClick={section.coming ? (e) => e.preventDefault() : undefined}
+              key={link.href}
+              href={link.href}
+              className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-5 flex items-start gap-4"
             >
-              <div className="flex items-start gap-4">
-                <div className={`p-3 rounded-lg ${section.color}`}>
-                  <section.icon className="w-6 h-6" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <h2 className="font-semibold text-gray-900">{section.title}</h2>
-                    {section.coming && (
-                      <span className="px-2 py-0.5 bg-gray-100 text-gray-500 text-xs rounded">
-                        Coming Soon
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-sm text-gray-600 mt-1">{section.description}</p>
-                </div>
-                <ChevronRight className="w-5 h-5 text-gray-400" />
+              <div className={`p-3 rounded-lg ${link.color}`}>
+                <link.icon className="w-6 h-6 text-white" />
               </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900 mb-1">{link.title}</h3>
+                <p className="text-sm text-gray-600">{link.description}</p>
+              </div>
+              <ChevronRight className="w-5 h-5 text-gray-400 mt-1" />
             </Link>
           ))}
-        </div>
-
-        {/* Quick Stats */}
-        <div className="mt-8 bg-white rounded-lg shadow p-6">
-          <h2 className="font-semibold text-gray-900 mb-4">System Information</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-            <div>
-              <div className="text-gray-500">Logged in as</div>
-              <div className="font-medium text-gray-900">{session.user?.email}</div>
-            </div>
-            <div>
-              <div className="text-gray-500">Role</div>
-              <div className="font-medium text-gray-900">Administrator</div>
-            </div>
-            <div>
-              <div className="text-gray-500">Version</div>
-              <div className="font-medium text-gray-900">1.0.0</div>
-            </div>
-            <div>
-              <div className="text-gray-500">Environment</div>
-              <div className="font-medium text-gray-900">Production</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Access Note */}
-        <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <div className="flex items-start gap-3">
-            <Shield className="w-5 h-5 text-yellow-600 shrink-0 mt-0.5" />
-            <div>
-              <h3 className="font-medium text-yellow-800">Admin Access</h3>
-              <p className="text-sm text-yellow-700 mt-1">
-                This area contains administrative functions. Changes made here affect all users of the system.
-                Please use caution when modifying settings.
-              </p>
-            </div>
-          </div>
         </div>
       </main>
     </div>
