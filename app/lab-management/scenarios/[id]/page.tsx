@@ -267,7 +267,7 @@ function VitalsEditor({
               value={vitals.bp}
               onChange={(e) => updateVital('bp', e.target.value)}
               placeholder="120/80"
-              className="w-full px-2 py-1 border rounded text-sm"
+              className="w-full px-2 py-1 border rounded text-sm text-gray-900 bg-white"
             />
           </div>
           <div>
@@ -277,7 +277,7 @@ function VitalsEditor({
               value={vitals.hr}
               onChange={(e) => updateVital('hr', e.target.value)}
               placeholder="80"
-              className="w-full px-2 py-1 border rounded text-sm"
+              className="w-full px-2 py-1 border rounded text-sm text-gray-900 bg-white"
             />
           </div>
           <div>
@@ -287,7 +287,7 @@ function VitalsEditor({
               value={vitals.rr}
               onChange={(e) => updateVital('rr', e.target.value)}
               placeholder="16"
-              className="w-full px-2 py-1 border rounded text-sm"
+              className="w-full px-2 py-1 border rounded text-sm text-gray-900 bg-white"
             />
           </div>
           <div>
@@ -297,7 +297,7 @@ function VitalsEditor({
               value={vitals.spo2}
               onChange={(e) => updateVital('spo2', e.target.value)}
               placeholder="98%"
-              className="w-full px-2 py-1 border rounded text-sm"
+              className="w-full px-2 py-1 border rounded text-sm text-gray-900 bg-white"
             />
           </div>
           <div>
@@ -307,7 +307,7 @@ function VitalsEditor({
               value={vitals.temp}
               onChange={(e) => updateVital('temp', e.target.value)}
               placeholder="98.6°F"
-              className="w-full px-2 py-1 border rounded text-sm"
+              className="w-full px-2 py-1 border rounded text-sm text-gray-900 bg-white"
             />
           </div>
         </div>
@@ -326,7 +326,7 @@ function VitalsEditor({
               value={vitals.gcs_total}
               onChange={(e) => updateVital('gcs_total', e.target.value)}
               placeholder="15"
-              className="w-full px-2 py-1 border rounded text-sm"
+              className="w-full px-2 py-1 border rounded text-sm text-gray-900 bg-white"
             />
           </div>
           <div className="flex gap-1">
@@ -337,7 +337,7 @@ function VitalsEditor({
                 value={vitals.gcs_e}
                 onChange={(e) => updateVital('gcs_e', e.target.value)}
                 placeholder="4"
-                className="w-full px-2 py-1 border rounded text-sm"
+                className="w-full px-2 py-1 border rounded text-sm text-gray-900 bg-white"
               />
             </div>
             <div className="flex-1">
@@ -347,7 +347,7 @@ function VitalsEditor({
                 value={vitals.gcs_v}
                 onChange={(e) => updateVital('gcs_v', e.target.value)}
                 placeholder="5"
-                className="w-full px-2 py-1 border rounded text-sm"
+                className="w-full px-2 py-1 border rounded text-sm text-gray-900 bg-white"
               />
             </div>
             <div className="flex-1">
@@ -357,7 +357,7 @@ function VitalsEditor({
                 value={vitals.gcs_m}
                 onChange={(e) => updateVital('gcs_m', e.target.value)}
                 placeholder="6"
-                className="w-full px-2 py-1 border rounded text-sm"
+                className="w-full px-2 py-1 border rounded text-sm text-gray-900 bg-white"
               />
             </div>
           </div>
@@ -366,7 +366,7 @@ function VitalsEditor({
             <select
               value={vitals.pupils}
               onChange={(e) => updateVital('pupils', e.target.value)}
-              className="w-full px-2 py-1 border rounded text-sm"
+              className="w-full px-2 py-1 border rounded text-sm text-gray-900 bg-white"
             >
               <option value="">Select...</option>
               {PUPIL_OPTIONS.map(opt => (
@@ -379,7 +379,7 @@ function VitalsEditor({
             <select
               value={vitals.loc}
               onChange={(e) => updateVital('loc', e.target.value)}
-              className="w-full px-2 py-1 border rounded text-sm"
+              className="w-full px-2 py-1 border rounded text-sm text-gray-900 bg-white"
             >
               <option value="">Select...</option>
               {LOC_OPTIONS.map(opt => (
@@ -395,7 +395,7 @@ function VitalsEditor({
             value={vitals.pain}
             onChange={(e) => updateVital('pain', e.target.value)}
             placeholder="0"
-            className="w-20 px-2 py-1 border rounded text-sm"
+            className="w-20 px-2 py-1 border rounded text-sm text-gray-900 bg-white"
           />
         </div>
       </div>
@@ -411,7 +411,7 @@ function VitalsEditor({
             <select
               value={vitals.ekg_rhythm}
               onChange={(e) => updateVital('ekg_rhythm', e.target.value)}
-              className="w-full px-2 py-1 border rounded text-sm"
+              className="w-full px-2 py-1 border rounded text-sm text-gray-900 bg-white"
             >
               <option value="">Select...</option>
               {EKG_RHYTHMS.map(opt => (
@@ -426,7 +426,7 @@ function VitalsEditor({
               value={vitals.etco2}
               onChange={(e) => updateVital('etco2', e.target.value)}
               placeholder="35-45 mmHg"
-              className="w-full px-2 py-1 border rounded text-sm"
+              className="w-full px-2 py-1 border rounded text-sm text-gray-900 bg-white"
             />
           </div>
           <div>
@@ -436,7 +436,7 @@ function VitalsEditor({
               value={vitals.twelve_lead_notes}
               onChange={(e) => updateVital('twelve_lead_notes', e.target.value)}
               placeholder="ST changes, etc."
-              className="w-full px-2 py-1 border rounded text-sm"
+              className="w-full px-2 py-1 border rounded text-sm text-gray-900 bg-white"
             />
           </div>
         </div>
@@ -453,7 +453,7 @@ function VitalsEditor({
             <select
               value={vitals.lung_sounds}
               onChange={(e) => updateVital('lung_sounds', e.target.value)}
-              className="w-full px-2 py-1 border rounded text-sm"
+              className="w-full px-2 py-1 border rounded text-sm text-gray-900 bg-white"
             >
               <option value="">Select...</option>
               {LUNG_SOUND_OPTIONS.map(opt => (
@@ -468,7 +468,7 @@ function VitalsEditor({
               value={vitals.lung_notes}
               onChange={(e) => updateVital('lung_notes', e.target.value)}
               placeholder="Additional findings..."
-              className="w-full px-2 py-1 border rounded text-sm"
+              className="w-full px-2 py-1 border rounded text-sm text-gray-900 bg-white"
             />
           </div>
         </div>
@@ -485,7 +485,7 @@ function VitalsEditor({
             <select
               value={vitals.skin}
               onChange={(e) => updateVital('skin', e.target.value)}
-              className="w-full px-2 py-1 border rounded text-sm"
+              className="w-full px-2 py-1 border rounded text-sm text-gray-900 bg-white"
             >
               <option value="">Select...</option>
               {SKIN_OPTIONS.map(opt => (
@@ -515,7 +515,7 @@ function VitalsEditor({
             <select
               value={vitals.edema}
               onChange={(e) => updateVital('edema', e.target.value)}
-              className="w-full px-2 py-1 border rounded text-sm"
+              className="w-full px-2 py-1 border rounded text-sm text-gray-900 bg-white"
             >
               <option value="">Select...</option>
               {EDEMA_OPTIONS.map(opt => (
@@ -531,14 +531,14 @@ function VitalsEditor({
         <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
           <Thermometer className="w-4 h-4" /> Labs
         </h4>
-        <div className="w-48">
+        <div className="w-48 text-gray-900 bg-white">
           <label className="text-xs text-gray-500">Blood Glucose</label>
           <input
             type="text"
             value={vitals.blood_glucose}
             onChange={(e) => updateVital('blood_glucose', e.target.value)}
             placeholder="mg/dL"
-            className="w-full px-2 py-1 border rounded text-sm"
+            className="w-full px-2 py-1 border rounded text-sm text-gray-900 bg-white"
           />
         </div>
       </div>
@@ -566,14 +566,14 @@ function VitalsEditor({
                   value={finding.key}
                   onChange={(e) => updateOtherFinding(index, 'key', e.target.value)}
                   placeholder="Finding name"
-                  className="w-1/3 px-2 py-1 border rounded text-sm"
+                  className="w-1/3 px-2 py-1 border rounded text-sm text-gray-900 bg-white"
                 />
                 <input
                   type="text"
                   value={finding.value}
                   onChange={(e) => updateOtherFinding(index, 'value', e.target.value)}
                   placeholder="Value"
-                  className="flex-1 px-2 py-1 border rounded text-sm"
+                  className="flex-1 px-2 py-1 border rounded text-sm text-gray-900 bg-white"
                 />
                 <button
                   type="button"
@@ -841,7 +841,7 @@ export default function ScenarioEditorPage() {
                 value={scenario.title}
                 onChange={(e) => setScenario({ ...scenario, title: e.target.value })}
                 placeholder="e.g., COPD Exacerbation with Respiratory Failure"
-                className="w-full px-3 py-2 border rounded-lg"
+                className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
               />
             </div>
             
@@ -851,7 +851,7 @@ export default function ScenarioEditorPage() {
                 <select
                   value={scenario.category}
                   onChange={(e) => setScenario({ ...scenario, category: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg"
+                  className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
                 >
                   <option value="">Select...</option>
                   {CATEGORIES.map(cat => (
@@ -866,7 +866,7 @@ export default function ScenarioEditorPage() {
                   value={scenario.subcategory}
                   onChange={(e) => setScenario({ ...scenario, subcategory: e.target.value })}
                   placeholder="Optional"
-                  className="w-full px-3 py-2 border rounded-lg"
+                  className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
                 />
               </div>
               <div>
@@ -874,7 +874,7 @@ export default function ScenarioEditorPage() {
                 <select
                   value={scenario.difficulty}
                   onChange={(e) => setScenario({ ...scenario, difficulty: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg"
+                  className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
                 >
                   {DIFFICULTY_LEVELS.map(level => (
                     <option key={level} value={level}>{level}</option>
@@ -888,7 +888,7 @@ export default function ScenarioEditorPage() {
                   value={scenario.estimated_duration || ''}
                   onChange={(e) => setScenario({ ...scenario, estimated_duration: parseInt(e.target.value) || null })}
                   placeholder="20"
-                  className="w-full px-3 py-2 border rounded-lg"
+                  className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
                 />
               </div>
             </div>
@@ -929,7 +929,7 @@ export default function ScenarioEditorPage() {
                 onChange={(e) => setScenario({ ...scenario, instructor_summary: e.target.value })}
                 rows={4}
                 placeholder="Brief overview for instructor to read before running the scenario..."
-                className="w-full px-3 py-2 border rounded-lg"
+                className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
               />
             </div>
             <div>
@@ -955,7 +955,7 @@ export default function ScenarioEditorPage() {
                     value={newDecisionPoint}
                     onChange={(e) => setNewDecisionPoint(e.target.value)}
                     placeholder="Add decision point..."
-                    className="flex-1 px-3 py-2 border rounded-lg text-sm"
+                    className="flex-1 px-3 py-2 border rounded-lg text-sm text-gray-900 bg-white"
                     onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('key_decision_points', newDecisionPoint, setNewDecisionPoint))}
                   />
                   <button
@@ -981,7 +981,7 @@ export default function ScenarioEditorPage() {
                 value={scenario.dispatch_time}
                 onChange={(e) => setScenario({ ...scenario, dispatch_time: e.target.value })}
                 placeholder="0845"
-                className="w-full px-3 py-2 border rounded-lg"
+                className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
               />
             </div>
             <div>
@@ -991,7 +991,7 @@ export default function ScenarioEditorPage() {
                 value={scenario.dispatch_location}
                 onChange={(e) => setScenario({ ...scenario, dispatch_location: e.target.value })}
                 placeholder="Private residence"
-                className="w-full px-3 py-2 border rounded-lg"
+                className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
               />
             </div>
             <div className="col-span-2">
@@ -1001,7 +1001,7 @@ export default function ScenarioEditorPage() {
                 value={scenario.chief_complaint}
                 onChange={(e) => setScenario({ ...scenario, chief_complaint: e.target.value })}
                 placeholder="Difficulty breathing"
-                className="w-full px-3 py-2 border rounded-lg"
+                className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
               />
             </div>
             <div className="col-span-2">
@@ -1011,7 +1011,7 @@ export default function ScenarioEditorPage() {
                 onChange={(e) => setScenario({ ...scenario, dispatch_notes: e.target.value })}
                 rows={2}
                 placeholder="Additional dispatch information..."
-                className="w-full px-3 py-2 border rounded-lg"
+                className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
               />
             </div>
           </div>
@@ -1028,7 +1028,7 @@ export default function ScenarioEditorPage() {
                   value={scenario.patient_name}
                   onChange={(e) => setScenario({ ...scenario, patient_name: e.target.value })}
                   placeholder="John Doe"
-                  className="w-full px-3 py-2 border rounded-lg"
+                  className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
                 />
               </div>
               <div>
@@ -1038,7 +1038,7 @@ export default function ScenarioEditorPage() {
                   value={scenario.patient_age}
                   onChange={(e) => setScenario({ ...scenario, patient_age: e.target.value })}
                   placeholder="65"
-                  className="w-full px-3 py-2 border rounded-lg"
+                  className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
                 />
               </div>
               <div>
@@ -1046,7 +1046,7 @@ export default function ScenarioEditorPage() {
                 <select
                   value={scenario.patient_sex}
                   onChange={(e) => setScenario({ ...scenario, patient_sex: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg"
+                  className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
                 >
                   <option value="">Select...</option>
                   <option value="Male">Male</option>
@@ -1060,7 +1060,7 @@ export default function ScenarioEditorPage() {
                   value={scenario.patient_weight}
                   onChange={(e) => setScenario({ ...scenario, patient_weight: e.target.value })}
                   placeholder="80"
-                  className="w-full px-3 py-2 border rounded-lg"
+                  className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
                 />
               </div>
             </div>
@@ -1083,7 +1083,7 @@ export default function ScenarioEditorPage() {
                   value={newHistory}
                   onChange={(e) => setNewHistory(e.target.value)}
                   placeholder="Add condition..."
-                  className="flex-1 px-3 py-2 border rounded-lg text-sm"
+                  className="flex-1 px-3 py-2 border rounded-lg text-sm text-gray-900 bg-white"
                   onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('medical_history', newHistory, setNewHistory))}
                 />
                 <button type="button" onClick={() => addToArray('medical_history', newHistory, setNewHistory)} className="px-3 py-2 bg-gray-100 rounded-lg hover:bg-gray-200">
@@ -1110,7 +1110,7 @@ export default function ScenarioEditorPage() {
                   value={newMedication}
                   onChange={(e) => setNewMedication(e.target.value)}
                   placeholder="Add medication..."
-                  className="flex-1 px-3 py-2 border rounded-lg text-sm"
+                  className="flex-1 px-3 py-2 border rounded-lg text-sm text-gray-900 bg-white"
                   onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('medications', newMedication, setNewMedication))}
                 />
                 <button type="button" onClick={() => addToArray('medications', newMedication, setNewMedication)} className="px-3 py-2 bg-gray-100 rounded-lg hover:bg-gray-200">
@@ -1126,7 +1126,7 @@ export default function ScenarioEditorPage() {
                 value={scenario.allergies}
                 onChange={(e) => setScenario({ ...scenario, allergies: e.target.value })}
                 placeholder="NKDA or list allergies"
-                className="w-full px-3 py-2 border rounded-lg"
+                className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
               />
             </div>
           </div>
@@ -1179,7 +1179,7 @@ export default function ScenarioEditorPage() {
                       value={phase.trigger}
                       onChange={(e) => updatePhase(index, { trigger: e.target.value })}
                       placeholder="e.g., On arrival, After 5 minutes, After treatment..."
-                      className="w-full px-3 py-2 border rounded-lg"
+                      className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
                     />
                   </div>
                   
@@ -1195,7 +1195,7 @@ export default function ScenarioEditorPage() {
                       onChange={(e) => updatePhase(index, { presentation_notes: e.target.value })}
                       rows={2}
                       placeholder="Patient appearance, behavior, environment..."
-                      className="w-full px-3 py-2 border rounded-lg"
+                      className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
                     />
                   </div>
 
@@ -1206,7 +1206,7 @@ export default function ScenarioEditorPage() {
                       onChange={(e) => updatePhase(index, { expected_actions: e.target.value })}
                       rows={2}
                       placeholder="What should the student do at this point?"
-                      className="w-full px-3 py-2 border rounded-lg"
+                      className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
                     />
                   </div>
                 </div>
@@ -1246,7 +1246,7 @@ export default function ScenarioEditorPage() {
                     value={newCriticalAction}
                     onChange={(e) => setNewCriticalAction(e.target.value)}
                     placeholder="Add critical action..."
-                    className="flex-1 px-3 py-2 border rounded-lg text-sm"
+                    className="flex-1 px-3 py-2 border rounded-lg text-sm text-gray-900 bg-white"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
@@ -1327,7 +1327,7 @@ export default function ScenarioEditorPage() {
                     value={newDebriefPoint}
                     onChange={(e) => setNewDebriefPoint(e.target.value)}
                     placeholder="Add debrief discussion point..."
-                    className="flex-1 px-3 py-2 border rounded-lg text-sm"
+                    className="flex-1 px-3 py-2 border rounded-lg text-sm text-gray-900 bg-white"
                     onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('debrief_points', newDebriefPoint, setNewDebriefPoint))}
                   />
                   <button
