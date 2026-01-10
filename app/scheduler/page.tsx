@@ -62,6 +62,25 @@ export default function SchedulerHome() {
     setDeleting(null);
   };
 
+  // Helper function to extract the poll ID from admin_link
+  // Handles both full URLs and plain IDs
+  const getAdminLinkId = (adminLink: string) => {
+    if (adminLink.includes('/')) {
+      // It's a full URL, extract the last segment
+      return adminLink.split('/').pop() || adminLink;
+    }
+    // It's already just the ID
+    return adminLink;
+  };
+
+  // Helper function to extract the poll ID from participant_link
+  const getParticipantLinkId = (participantLink: string) => {
+    if (participantLink.includes('/')) {
+      return participantLink.split('/').pop() || participantLink;
+    }
+    return participantLink;
+  };
+
   if (status === 'loading' || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -165,7 +184,8 @@ export default function SchedulerHome() {
                   <div className="flex flex-wrap gap-2">
                     <button
                       onClick={() => {
-                        navigator.clipboard.writeText(`${window.location.origin}/poll/${poll.participant_link}`);
+                        const participantId = getParticipantLinkId(poll.participant_link);
+                        navigator.clipboard.writeText(`${window.location.origin}/poll/${participantId}`);
                         alert('Participant link copied!');
                       }}
                       className="inline-flex items-center gap-1 px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700"
@@ -174,7 +194,10 @@ export default function SchedulerHome() {
                       Share
                     </button>
                     <button
-                      onClick={() => router.push(`/admin/poll/${poll.admin_link}`)}
+                      onClick={() => {
+                        const adminId = getAdminLinkId(poll.admin_link);
+                        router.push(`/admin/poll/${adminId}`);
+                      }}
                       className="inline-flex items-center gap-1 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                     >
                       <Eye className="w-4 h-4" />
