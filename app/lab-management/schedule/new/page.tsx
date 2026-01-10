@@ -47,6 +47,7 @@ interface Station {
   station_type: 'scenario' | 'skills' | 'documentation';
   scenario_id: string;
   selected_skills: string[];  // For skills stations
+  custom_skills: string[];  // For freetext custom skills
   instructor_name: string;
   instructor_email: string;
   room: string;
@@ -91,6 +92,7 @@ export default function NewLabDayPage() {
       station_type: 'scenario',
       scenario_id: '',
       selected_skills: [],
+      custom_skills: [],
       instructor_name: '',
       instructor_email: '',
       room: '',
@@ -232,7 +234,8 @@ export default function NewLabDayPage() {
         const stationData = await stationRes.json();
         
         // If skills station, add the skill links
-        if (station.station_type === 'skills' && station.selected_skills.length > 0 && stationData.success) {
+        if (station.station_type === 'skills' && stationData.success) {
+          // Add library skills
           for (const skillId of station.selected_skills) {
             await fetch('/api/lab-management/station-skills', {
               method: 'POST',
@@ -242,6 +245,20 @@ export default function NewLabDayPage() {
                 skill_id: skillId
               })
             });
+          }
+          
+          // Add custom skills
+          for (const customSkill of station.custom_skills) {
+            if (customSkill.trim()) {
+              await fetch('/api/lab-management/custom-skills', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  station_id: stationData.station.id,
+                  name: customSkill.trim()
+                })
+              });
+            }
           }
         }
       }
@@ -437,7 +454,8 @@ export default function NewLabDayPage() {
                               onClick={() => updateStation(index, { 
                                 station_type: type.value as any,
                                 scenario_id: '',
-                                selected_skills: []
+                                selected_skills: [],
+                                custom_skills: []
                               })}
                               className={`px-2 py-0.5 text-xs rounded ${
                                 station.station_type === type.value
@@ -486,32 +504,77 @@ export default function NewLabDayPage() {
 
                     {/* Skills Selection (only for skills type) */}
                     {station.station_type === 'skills' && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Skills ({station.selected_skills.length} selected)
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => setSkillsModalStation(index)}
-                          className="w-full px-3 py-2 border border-dashed rounded-lg text-gray-600 hover:bg-gray-50 text-left"
-                        >
-                          {station.selected_skills.length === 0 ? (
-                            <span className="flex items-center gap-2">
-                              <Plus className="w-4 h-4" /> Select skills for this station...
-                            </span>
-                          ) : (
-                            <div className="flex flex-wrap gap-1">
-                              {station.selected_skills.map(skillId => {
-                                const skill = skills.find(s => s.id === skillId);
-                                return skill ? (
-                                  <span key={skillId} className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded">
-                                    {skill.name}
-                                  </span>
-                                ) : null;
-                              })}
-                            </div>
-                          )}
-                        </button>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Skills from Library ({station.selected_skills.length} selected)
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => setSkillsModalStation(index)}
+                            className="w-full px-3 py-2 border border-dashed rounded-lg text-gray-600 hover:bg-gray-50 text-left"
+                          >
+                            {station.selected_skills.length === 0 ? (
+                              <span className="flex items-center gap-2">
+                                <Plus className="w-4 h-4" /> Select skills from library...
+                              </span>
+                            ) : (
+                              <div className="flex flex-wrap gap-1">
+                                {station.selected_skills.map(skillId => {
+                                  const skill = skills.find(s => s.id === skillId);
+                                  return skill ? (
+                                    <span key={skillId} className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded">
+                                      {skill.name}
+                                    </span>
+                                  ) : null;
+                                })}
+                              </div>
+                            )}
+                          </button>
+                        </div>
+                        
+                        {/* Custom/Other Skills */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Custom Skills (freetext)
+                          </label>
+                          <div className="space-y-2">
+                            {station.custom_skills.map((customSkill, skillIndex) => (
+                              <div key={skillIndex} className="flex items-center gap-2">
+                                <input
+                                  type="text"
+                                  value={customSkill}
+                                  onChange={(e) => {
+                                    const newCustomSkills = [...station.custom_skills];
+                                    newCustomSkills[skillIndex] = e.target.value;
+                                    updateStation(index, { custom_skills: newCustomSkills });
+                                  }}
+                                  className="flex-1 px-3 py-2 border rounded-lg text-sm text-gray-900 bg-white"
+                                  placeholder="Enter custom skill..."
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const newCustomSkills = station.custom_skills.filter((_, i) => i !== skillIndex);
+                                    updateStation(index, { custom_skills: newCustomSkills });
+                                  }}
+                                  className="p-2 text-red-500 hover:text-red-700"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            ))}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                updateStation(index, { custom_skills: [...station.custom_skills, ''] });
+                              }}
+                              className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800"
+                            >
+                              <Plus className="w-4 h-4" /> Add custom skill
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     )}
 
