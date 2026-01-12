@@ -24,8 +24,7 @@ export async function GET(
         ),
         stations:lab_stations(
           *,
-          scenario:scenarios(id, title, category, difficulty),
-          instructor:lab_users(id, name)
+          scenario:scenarios(id, title, category, difficulty)
         )
       `)
       .eq('id', id)
