@@ -49,9 +49,8 @@ export async function GET(request: NextRequest) {
       query = query.eq('station_type', stationType);
     }
 
-    if (open) {
-      query = query.or('instructor_email.is.null,instructor_email.eq.');
-    }
+    // Note: open stations filter is handled after query execution
+    // to properly check for null/empty instructor_email
 
     const { data, error } = await query;
 
