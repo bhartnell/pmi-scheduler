@@ -1,0 +1,330 @@
+'use client';
+
+import { useSession } from 'next-auth/react';
+import { useRouter, useParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { 
+  ChevronRight,
+  Save,
+  Trash2,
+  AlertCircle,
+  Calendar
+} from 'lucide-react';
+
+interface LabDay {
+  id: string;
+  date: string;
+  week_number: number | null;
+  day_number: number | null;
+  num_rotations: number;
+  rotation_duration: number;
+  notes: string | null;
+  cohort: {
+    id: string;
+    cohort_number: number;
+    program: {
+      name: string;
+      abbreviation: string;
+    };
+  };
+}
+
+export default function EditLabDayPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const params = useParams();
+  const labDayId = params.id as string;
+
+  const [labDay, setLabDay] = useState<LabDay | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  // Form state
+  const [labDate, setLabDate] = useState('');
+  const [weekNumber, setWeekNumber] = useState<number | ''>('');
+  const [dayNumber, setDayNumber] = useState<number | ''>('');
+  const [numRotations, setNumRotations] = useState(4);
+  const [rotationDuration, setRotationDuration] = useState(30);
+  const [notes, setNotes] = useState('');
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/auth/signin');
+    }
+  }, [status, router]);
+
+  useEffect(() => {
+    if (session && labDayId) {
+      fetchLabDay();
+    }
+  }, [session, labDayId]);
+
+  const fetchLabDay = async () => {
+    try {
+      const res = await fetch(`/api/lab-management/lab-days/${labDayId}`);
+      const data = await res.json();
+      
+      if (data.success) {
+        setLabDay(data.labDay);
+        // Populate form
+        setLabDate(data.labDay.date);
+        setWeekNumber(data.labDay.week_number || '');
+        setDayNumber(data.labDay.day_number || '');
+        setNumRotations(data.labDay.num_rotations || 4);
+        setRotationDuration(data.labDay.rotation_duration || 30);
+        setNotes(data.labDay.notes || '');
+      }
+    } catch (error) {
+      console.error('Error fetching lab day:', error);
+    }
+    setLoading(false);
+  };
+
+  const handleSave = async () => {
+    if (!labDate) {
+      alert('Please select a date');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/lab-management/lab-days/${labDayId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          date: labDate,
+          week_number: weekNumber || null,
+          day_number: dayNumber || null,
+          num_rotations: numRotations,
+          rotation_duration: rotationDuration,
+          notes: notes || null
+        })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        router.push(`/lab-management/schedule/${labDayId}`);
+      } else {
+        alert('Failed to save: ' + (data.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error saving:', error);
+      alert('Failed to save lab day');
+    }
+    setSaving(false);
+  };
+
+  const handleDelete = async () => {
+    if (!confirm('Are you sure you want to delete this lab day? This will also delete all stations and assessments.')) {
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/lab-management/lab-days/${labDayId}`, {
+        method: 'DELETE'
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        router.push('/lab-management/schedule');
+      } else {
+        alert('Failed to delete: ' + (data.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error deleting:', error);
+      alert('Failed to delete lab day');
+    }
+    setDeleting(false);
+  };
+
+  if (status === 'loading' || loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-700">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!session) return null;
+
+  if (!labDay) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="bg-white rounded-lg shadow p-8 text-center">
+          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Lab Day Not Found</h2>
+          <p className="text-gray-600 mb-4">The requested lab day could not be found.</p>
+          <Link
+            href="/lab-management/schedule"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            Back to Schedule
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      {/* Header */}
+      <div className="bg-white shadow-sm">
+        <div className="max-w-4xl mx-auto px-4 py-6">
+          <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+            <Link href="/lab-management" className="hover:text-blue-600">Lab Management</Link>
+            <ChevronRight className="w-4 h-4" />
+            <Link href="/lab-management/schedule" className="hover:text-blue-600">Schedule</Link>
+            <ChevronRight className="w-4 h-4" />
+            <Link href={`/lab-management/schedule/${labDayId}`} className="hover:text-blue-600">
+              {labDay.cohort.program.abbreviation} Group {labDay.cohort.cohort_number}
+            </Link>
+            <ChevronRight className="w-4 h-4" />
+            <span>Edit</span>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900">Edit Lab Day</h1>
+          <p className="text-gray-600 mt-1">
+            {labDay.cohort.program.abbreviation} Group {labDay.cohort.cohort_number}
+          </p>
+        </div>
+      </div>
+
+      <main className="max-w-4xl mx-auto px-4 py-8">
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Date */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Date <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="date"
+                value={labDate}
+                onChange={(e) => setLabDate(e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+              />
+            </div>
+
+            {/* Week/Day Numbers */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Week #
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={weekNumber}
+                  onChange={(e) => setWeekNumber(e.target.value ? parseInt(e.target.value) : '')}
+                  placeholder="Optional"
+                  className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Day #
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={dayNumber}
+                  onChange={(e) => setDayNumber(e.target.value ? parseInt(e.target.value) : '')}
+                  placeholder="Optional"
+                  className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                />
+              </div>
+            </div>
+
+            {/* Rotations */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Number of Rotations
+              </label>
+              <select
+                value={numRotations}
+                onChange={(e) => setNumRotations(parseInt(e.target.value))}
+                className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+              >
+                {[2, 3, 4, 5, 6].map(n => (
+                  <option key={n} value={n}>{n} rotations</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Rotation Duration */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Rotation Duration
+              </label>
+              <select
+                value={rotationDuration}
+                onChange={(e) => setRotationDuration(parseInt(e.target.value))}
+                className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+              >
+                {[15, 20, 25, 30, 45, 60].map(n => (
+                  <option key={n} value={n}>{n} minutes</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Notes */}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Notes
+              </label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={3}
+                placeholder="Any special instructions or notes for this lab day..."
+                className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+              />
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex flex-col sm:flex-row justify-between gap-4 mt-8 pt-6 border-t">
+            <button
+              onClick={handleDelete}
+              disabled={deleting}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 disabled:opacity-50"
+            >
+              {deleting ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
+              ) : (
+                <Trash2 className="w-4 h-4" />
+              )}
+              Delete Lab Day
+            </button>
+
+            <div className="flex gap-3">
+              <Link
+                href={`/lab-management/schedule/${labDayId}`}
+                className="px-6 py-2 border text-gray-700 rounded-lg hover:bg-gray-50"
+              >
+                Cancel
+              </Link>
+              <button
+                onClick={handleSave}
+                disabled={saving || !labDate}
+                className="inline-flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+              >
+                {saving ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
