@@ -4,14 +4,16 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import Link from 'next/link';
-import { 
+import {
   ChevronRight,
   Users,
   GraduationCap,
   Settings,
   UserCog,
   FolderKanban,
-  Home
+  Home,
+  Shield,
+  Trash2
 } from 'lucide-react';
 
 export default function AdminPage() {
@@ -35,6 +37,20 @@ export default function AdminPage() {
   if (!session) return null;
 
   const adminLinks = [
+    {
+      href: '/lab-management/admin/users',
+      icon: Shield,
+      title: 'Manage Users',
+      description: 'Approve users and assign roles (admin, instructor, user)',
+      color: 'bg-indigo-500'
+    },
+    {
+      href: '/lab-management/admin/deletion-requests',
+      icon: Trash2,
+      title: 'Deletion Requests',
+      description: 'Review and approve deletion requests from instructors',
+      color: 'bg-red-500'
+    },
     {
       href: '/lab-management/admin/cohorts',
       icon: GraduationCap,
