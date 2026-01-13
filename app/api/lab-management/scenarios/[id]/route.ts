@@ -55,7 +55,7 @@ export async function PATCH(
     if (body.applicable_programs !== undefined) updateData.applicable_programs = body.applicable_programs;
     if (body.category !== undefined) updateData.category = body.category;
     if (body.subcategory !== undefined) updateData.subcategory = body.subcategory;
-    if (body.difficulty !== undefined) updateData.difficulty = body.difficulty;
+    if (body.difficulty !== undefined) updateData.difficulty = body.difficulty.toLowerCase();
     if (body.estimated_duration !== undefined) updateData.estimated_duration = body.estimated_duration;
     
     // Quick reference

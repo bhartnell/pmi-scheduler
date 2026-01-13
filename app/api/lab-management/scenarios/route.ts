@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
       applicable_programs: body.applicable_programs || ['EMT', 'AEMT', 'Paramedic'],
       category: body.category || null,
       subcategory: body.subcategory || null,
-      difficulty: body.difficulty || 'intermediate',
+      difficulty: (body.difficulty || 'intermediate').toLowerCase(),
       estimated_duration: body.estimated_duration || null,
 
       // Quick reference / instructor summary
