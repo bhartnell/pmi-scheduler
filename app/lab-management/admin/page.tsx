@@ -76,6 +76,13 @@ export default function AdminPage() {
       color: 'bg-orange-500'
     },
     {
+      href: '/lab-management/seating/charts',
+      icon: Layout,
+      title: 'Seating Charts',
+      description: 'Create and manage classroom seating arrangements',
+      color: 'bg-indigo-500'
+    },
+    {
       href: '/lab-management/admin/cohorts',
       icon: GraduationCap,
       title: 'Manage Cohorts',
