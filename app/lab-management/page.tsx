@@ -4,7 +4,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { 
+import {
   BookOpen,
   Users,
   Calendar,
@@ -17,7 +17,8 @@ import {
   Star,
   AlertCircle,
   UserPlus,
-  Check
+  Check,
+  Award
 } from 'lucide-react';
 import LabHeader from '@/components/LabHeader';
 
@@ -169,6 +170,7 @@ export default function LabManagementDashboard() {
     { href: '/lab-management/scenarios', icon: BookOpen, label: 'Scenarios', color: 'bg-purple-500' },
     { href: '/lab-management/students', icon: Users, label: 'Students', color: 'bg-green-500' },
     { href: '/lab-management/schedule', icon: Calendar, label: 'Schedule', color: 'bg-blue-500' },
+    { href: '/lab-management/my-certifications', icon: Award, label: 'My Certs', color: 'bg-pink-500' },
     { href: '/lab-management/reports', icon: TrendingUp, label: 'Reports', color: 'bg-orange-500' },
     { href: '/lab-management/admin', icon: Settings, label: 'Admin', color: 'bg-gray-500' },
   ];

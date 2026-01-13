@@ -13,7 +13,8 @@ import {
   FolderKanban,
   Home,
   Shield,
-  Trash2
+  Trash2,
+  Award
 } from 'lucide-react';
 
 export default function AdminPage() {
@@ -50,6 +51,13 @@ export default function AdminPage() {
       title: 'Deletion Requests',
       description: 'Review and approve deletion requests from instructors',
       color: 'bg-red-500'
+    },
+    {
+      href: '/lab-management/admin/certifications',
+      icon: Award,
+      title: 'Certifications',
+      description: 'Monitor instructor certifications and expiration dates',
+      color: 'bg-purple-500'
     },
     {
       href: '/lab-management/admin/cohorts',
