@@ -24,3 +24,114 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Print styles for scenarios and other pages */
+@media print {
+  /* Hide navigation, buttons, and interactive elements */
+  nav,
+  .print\\:hidden,
+  button:not(.print-include),
+  .sticky {
+    display: none !important;
+  }
+
+  /* Reset background and colors for print */
+  body {
+    background: white !important;
+    color: black !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Remove shadows and make backgrounds white */
+  .bg-white,
+  .bg-gradient-to-br {
+    background: white !important;
+    box-shadow: none !important;
+  }
+
+  /* Ensure text is readable */
+  .text-gray-600,
+  .text-gray-700,
+  .text-gray-900 {
+    color: #333 !important;
+  }
+
+  /* Page breaks */
+  .page-break-before {
+    page-break-before: always;
+  }
+
+  .page-break-after {
+    page-break-after: always;
+  }
+
+  .avoid-break {
+    page-break-inside: avoid;
+  }
+
+  /* Scenario-specific print styles */
+  .scenario-phase {
+    page-break-inside: avoid;
+    border: 1px solid #ddd;
+    margin-bottom: 1rem;
+    padding: 1rem;
+  }
+
+  /* Make form inputs look like static text when printed */
+  input,
+  select,
+  textarea {
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+  }
+
+  /* Print header for scenarios */
+  .print-header {
+    display: block !important;
+    text-align: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #333;
+  }
+
+  .print-header h1 {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin: 0;
+  }
+
+  .print-header p {
+    font-size: 0.875rem;
+    color: #666;
+    margin: 0.25rem 0 0 0;
+  }
+
+  /* Expand all collapsed sections for print */
+  details {
+    display: block !important;
+  }
+
+  details[open] summary ~ * {
+    display: block !important;
+  }
+
+  /* Print-friendly tables */
+  table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+
+  th,
+  td {
+    border: 1px solid #ddd;
+    padding: 0.5rem;
+    text-align: left;
+  }
+
+  /* Ensure vitals grid prints nicely */
+  .grid {
+    display: grid !important;
+  }
+}

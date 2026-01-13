@@ -4,7 +4,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { 
+import {
   ChevronRight,
   ChevronDown,
   ChevronUp,
@@ -22,7 +22,9 @@ import {
   FileText,
   CheckSquare,
   MessageSquare,
-  Clock
+  Clock,
+  Printer,
+  ArrowLeft
 } from 'lucide-react';
 
 // Types
@@ -688,6 +690,10 @@ export default function ScenarioEditorPage() {
     setLoading(false);
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
   const handleSave = async () => {
     if (!scenario.title.trim()) {
       alert('Please enter a scenario title');
@@ -733,7 +739,8 @@ export default function ScenarioEditorPage() {
 
       const data = await res.json();
       if (data.success) {
-        router.push(`/lab-management/scenarios/${data.scenario.id}`);
+        // Redirect to scenarios list after successful save
+        router.push('/lab-management/scenarios');
       } else {
         alert('Failed to save scenario: ' + (data.error || 'Unknown error'));
       }
@@ -808,23 +815,53 @@ export default function ScenarioEditorPage() {
             <span>{isEditing ? 'Edit' : 'New'}</span>
           </div>
           <div className="flex items-center justify-between">
-            <h1 className="text-xl font-bold text-gray-900">
-              {isEditing ? 'Edit Scenario' : 'Create Scenario'}
-            </h1>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
-            >
-              {saving ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-              ) : (
-                <Save className="w-5 h-5" />
+            <div className="flex items-center gap-3">
+              <Link
+                href="/lab-management/scenarios"
+                className="flex items-center gap-1 text-gray-600 hover:text-gray-900 print:hidden"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </Link>
+              <h1 className="text-xl font-bold text-gray-900">
+                {isEditing ? 'Edit Scenario' : 'Create Scenario'}
+              </h1>
+            </div>
+            <div className="flex items-center gap-2 print:hidden">
+              {isEditing && (
+                <button
+                  onClick={handlePrint}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                  title="Print or save as PDF"
+                >
+                  <Printer className="w-5 h-5" />
+                  Print / PDF
+                </button>
               )}
-              {saving ? 'Saving...' : 'Save Scenario'}
-            </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+              >
+                {saving ? (
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                ) : (
+                  <Save className="w-5 h-5" />
+                )}
+                {saving ? 'Saving...' : 'Save Scenario'}
+              </button>
+            </div>
           </div>
         </div>
+      </div>
+
+      {/* Print Header - only visible when printing */}
+      <div className="hidden print:block print-header">
+        <h1>{scenario.title || 'EMS Scenario'}</h1>
+        <p>
+          {scenario.category && `${scenario.category} | `}
+          {scenario.difficulty && `${scenario.difficulty.charAt(0).toUpperCase() + scenario.difficulty.slice(1)} | `}
+          {scenario.estimated_duration && `${scenario.estimated_duration} min`}
+        </p>
       </div>
 
       <main className="max-w-4xl mx-auto px-4 py-6 space-y-4">
