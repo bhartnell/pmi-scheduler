@@ -13,7 +13,10 @@ import {
   AlertTriangle,
   Users,
   Printer,
-  RotateCcw
+  RotateCcw,
+  Wand2,
+  X,
+  AlertCircle
 } from 'lucide-react';
 
 interface Student {
@@ -86,9 +89,13 @@ export default function SeatingChartBuilderPage() {
   const [preferences, setPreferences] = useState<Preference[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [draggedStudent, setDraggedStudent] = useState<Student | null>(null);
   const [dragSource, setDragSource] = useState<{ table: number; seat: number } | 'unassigned' | null>(null);
+  const [warnings, setWarnings] = useState<string[]>([]);
+  const [showWarnings, setShowWarnings] = useState(false);
+  const [generationStats, setGenerationStats] = useState<any>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -261,6 +268,57 @@ export default function SeatingChartBuilderPage() {
     window.print();
   };
 
+  const handleGenerate = async () => {
+    if (!confirm('This will replace current seat assignments with auto-generated seating. Continue?')) {
+      return;
+    }
+
+    setGenerating(true);
+    setWarnings([]);
+    setGenerationStats(null);
+
+    try {
+      const res = await fetch(`/api/seating/charts/${chartId}/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        // Convert generated assignments to include student data
+        const allStudents = [...unassignedStudents, ...assignments.map(a => a.student).filter(Boolean) as Student[]];
+        const studentMap = new Map(allStudents.map(s => [s.id, s]));
+
+        const newAssignments: Assignment[] = data.assignments.map((a: any) => ({
+          ...a,
+          student: studentMap.get(a.student_id),
+        }));
+
+        // Find unassigned students
+        const assignedIds = new Set(newAssignments.map(a => a.student_id));
+        const newUnassigned = allStudents.filter(s => !assignedIds.has(s.id));
+
+        setAssignments(newAssignments);
+        setUnassignedStudents(newUnassigned);
+        setWarnings(data.warnings || []);
+        setGenerationStats(data.stats);
+        setHasChanges(true);
+
+        if (data.warnings?.length > 0) {
+          setShowWarnings(true);
+        }
+      } else {
+        alert('Failed to generate seating: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Error generating seating:', error);
+      alert('Failed to generate seating');
+    }
+
+    setGenerating(false);
+  };
+
   if (status === 'loading' || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -324,6 +382,14 @@ export default function SeatingChartBuilderPage() {
 
             <div className="flex items-center gap-2 print:hidden">
               <button
+                onClick={handleGenerate}
+                disabled={generating}
+                className="inline-flex items-center gap-1 px-3 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400"
+              >
+                <Wand2 className="w-4 h-4" />
+                {generating ? 'Generating...' : 'Auto-Generate'}
+              </button>
+              <button
                 onClick={handleClearAll}
                 className="inline-flex items-center gap-1 px-3 py-2 text-sm border rounded-lg hover:bg-gray-50"
               >
@@ -351,6 +417,50 @@ export default function SeatingChartBuilderPage() {
       </div>
 
       <main className="max-w-7xl mx-auto px-4 py-6 print:p-0">
+        {/* Warnings Panel */}
+        {warnings.length > 0 && showWarnings && (
+          <div className="mb-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4 print:hidden">
+            <div className="flex items-start justify-between">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="font-semibold text-yellow-800">Generation Warnings ({warnings.length})</h3>
+                  <ul className="mt-2 space-y-1 text-sm text-yellow-700">
+                    {warnings.map((warning, idx) => (
+                      <li key={idx}>• {warning}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowWarnings(false)}
+                className="text-yellow-600 hover:text-yellow-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            {generationStats && (
+              <div className="mt-3 pt-3 border-t border-yellow-200 text-xs text-yellow-700">
+                <span className="font-medium">Stats:</span> {generationStats.placed}/{generationStats.totalStudents} placed •
+                {generationStats.inOverflow} in overflow •
+                {generationStats.agencyConflicts} agency conflicts •
+                {generationStats.avoidanceConflicts} avoidance conflicts
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Toggle warnings button if hidden */}
+        {warnings.length > 0 && !showWarnings && (
+          <button
+            onClick={() => setShowWarnings(true)}
+            className="mb-4 text-sm text-yellow-600 hover:text-yellow-800 flex items-center gap-1 print:hidden"
+          >
+            <AlertCircle className="w-4 h-4" />
+            Show {warnings.length} warning(s)
+          </button>
+        )}
+
         <div className="flex gap-6 print:block">
           {/* Classroom Layout */}
           <div className="flex-1">

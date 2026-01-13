@@ -15,7 +15,9 @@ import {
   Edit2,
   Check,
   X,
-  GraduationCap
+  GraduationCap,
+  Wand2,
+  AlertCircle
 } from 'lucide-react';
 
 interface Student {
@@ -67,7 +69,12 @@ export default function StudyGroupsPage() {
   const [learningStyles, setLearningStyles] = useState<LearningStyle[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [warnings, setWarnings] = useState<string[]>([]);
+  const [showWarnings, setShowWarnings] = useState(false);
+  const [generationStats, setGenerationStats] = useState<any>(null);
+  const [numGroupsInput, setNumGroupsInput] = useState(4);
 
   const [draggedStudent, setDraggedStudent] = useState<Student | null>(null);
   const [dragSource, setDragSource] = useState<string | 'unassigned' | null>(null);
@@ -307,6 +314,86 @@ export default function StudyGroupsPage() {
     setSaving(false);
   };
 
+  const handleGenerate = async () => {
+    if (!confirm(`This will create ${numGroupsInput} groups and auto-assign all students. Existing group assignments will be replaced. Continue?`)) {
+      return;
+    }
+
+    setGenerating(true);
+    setWarnings([]);
+    setGenerationStats(null);
+
+    try {
+      // First, generate the groups assignment
+      const res = await fetch('/api/lab-management/groups/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cohort_id: cohortId,
+          num_groups: numGroupsInput,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        // Create groups if needed
+        const existingGroupCount = groups.length;
+        const neededGroups = numGroupsInput - existingGroupCount;
+
+        // Create additional groups if needed
+        const newGroupPromises = [];
+        for (let i = 0; i < neededGroups; i++) {
+          newGroupPromises.push(
+            fetch('/api/lab-management/groups', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                cohort_id: cohortId,
+                name: `Group ${existingGroupCount + i + 1}`,
+              }),
+            }).then(r => r.json())
+          );
+        }
+
+        const newGroups = await Promise.all(newGroupPromises);
+        const allGroups = [...groups, ...newGroups.filter(g => g.success).map(g => ({ ...g.group, members: [] }))];
+
+        // Take only the number of groups we need
+        const finalGroups = allGroups.slice(0, numGroupsInput);
+
+        // Build student lookup
+        const studentMap = new Map(allStudents.map(s => [s.id, s]));
+
+        // Apply generated assignments to groups
+        const updatedGroups = finalGroups.map((group, idx) => {
+          const groupAssignment = data.groups.find((g: any) => g.group_index === idx);
+          const members = groupAssignment?.student_ids
+            .map((id: string) => studentMap.get(id))
+            .filter(Boolean) || [];
+          return { ...group, members };
+        });
+
+        setGroups(updatedGroups);
+        setUnassignedStudents([]); // All students should be assigned
+        setWarnings(data.warnings || []);
+        setGenerationStats(data.stats);
+        setHasChanges(true);
+
+        if (data.warnings?.length > 0) {
+          setShowWarnings(true);
+        }
+      } else {
+        alert('Failed to generate groups: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Error generating groups:', error);
+      alert('Failed to generate groups');
+    }
+
+    setGenerating(false);
+  };
+
   if (status === 'loading' || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -363,6 +450,25 @@ export default function StudyGroupsPage() {
             </div>
 
             <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 border rounded-lg px-2 py-1">
+                <input
+                  type="number"
+                  min="2"
+                  max="10"
+                  value={numGroupsInput}
+                  onChange={(e) => setNumGroupsInput(parseInt(e.target.value) || 4)}
+                  className="w-12 text-center text-sm border-none focus:outline-none"
+                />
+                <span className="text-sm text-gray-500">groups</span>
+              </div>
+              <button
+                onClick={handleGenerate}
+                disabled={generating}
+                className="inline-flex items-center gap-1 px-3 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400"
+              >
+                <Wand2 className="w-4 h-4" />
+                {generating ? 'Generating...' : 'Auto-Generate'}
+              </button>
               <button
                 onClick={handleCreateGroup}
                 className="inline-flex items-center gap-1 px-3 py-2 text-sm border rounded-lg hover:bg-gray-50"
@@ -384,6 +490,50 @@ export default function StudyGroupsPage() {
       </div>
 
       <main className="max-w-7xl mx-auto px-4 py-6">
+        {/* Warnings Panel */}
+        {warnings.length > 0 && showWarnings && (
+          <div className="mb-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <div className="flex items-start justify-between">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="font-semibold text-yellow-800">Generation Warnings ({warnings.length})</h3>
+                  <ul className="mt-2 space-y-1 text-sm text-yellow-700">
+                    {warnings.map((warning, idx) => (
+                      <li key={idx}>• {warning}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowWarnings(false)}
+                className="text-yellow-600 hover:text-yellow-800"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            {generationStats && (
+              <div className="mt-3 pt-3 border-t border-yellow-200 text-xs text-yellow-700">
+                <span className="font-medium">Stats:</span> {generationStats.totalStudents} students •
+                {generationStats.numGroups} groups •
+                Sizes: [{generationStats.groupSizes?.join(', ')}] •
+                {generationStats.avoidanceConflicts} conflict(s)
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Toggle warnings button if hidden */}
+        {warnings.length > 0 && !showWarnings && (
+          <button
+            onClick={() => setShowWarnings(true)}
+            className="mb-4 text-sm text-yellow-600 hover:text-yellow-800 flex items-center gap-1"
+          >
+            <AlertCircle className="w-4 h-4" />
+            Show {warnings.length} warning(s)
+          </button>
+        )}
+
         <div className="flex gap-6">
           {/* Groups */}
           <div className="flex-1">
