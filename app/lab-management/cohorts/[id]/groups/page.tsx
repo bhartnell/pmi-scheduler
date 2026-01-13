@@ -17,7 +17,10 @@ import {
   X,
   GraduationCap,
   Wand2,
-  AlertCircle
+  AlertCircle,
+  Printer,
+  Download,
+  RotateCcw
 } from 'lucide-react';
 
 interface Student {
@@ -314,6 +317,25 @@ export default function StudyGroupsPage() {
     setSaving(false);
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleDownloadPDF = () => {
+    alert('In the print dialog, select "Save as PDF" as your printer to download a PDF.');
+    window.print();
+  };
+
+  const handleClearAllAssignments = async () => {
+    if (!confirm('This will remove all students from their groups. Continue?')) return;
+
+    // Move all students to unassigned
+    const allMembers = groups.flatMap(g => g.members);
+    setGroups(groups.map(g => ({ ...g, members: [] })));
+    setUnassignedStudents([...unassignedStudents, ...allMembers]);
+    setHasChanges(true);
+  };
+
   const handleGenerate = async () => {
     if (!confirm(`This will create ${numGroupsInput} groups and auto-assign all students. Existing group assignments will be replaced. Continue?`)) {
       return;
@@ -449,7 +471,7 @@ export default function StudyGroupsPage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 print:hidden">
               <div className="flex items-center gap-1 border rounded-lg px-2 py-1">
                 <input
                   type="number"
@@ -470,11 +492,32 @@ export default function StudyGroupsPage() {
                 {generating ? 'Generating...' : 'Auto-Generate'}
               </button>
               <button
+                onClick={handleClearAllAssignments}
+                className="inline-flex items-center gap-1 px-3 py-2 text-sm border rounded-lg hover:bg-gray-50"
+              >
+                <RotateCcw className="w-4 h-4" />
+                Clear
+              </button>
+              <button
                 onClick={handleCreateGroup}
                 className="inline-flex items-center gap-1 px-3 py-2 text-sm border rounded-lg hover:bg-gray-50"
               >
                 <Plus className="w-4 h-4" />
                 Add Group
+              </button>
+              <button
+                onClick={handlePrint}
+                className="inline-flex items-center gap-1 px-3 py-2 text-sm border rounded-lg hover:bg-gray-50"
+              >
+                <Printer className="w-4 h-4" />
+                Print
+              </button>
+              <button
+                onClick={handleDownloadPDF}
+                className="inline-flex items-center gap-1 px-3 py-2 text-sm border rounded-lg hover:bg-gray-50"
+              >
+                <Download className="w-4 h-4" />
+                PDF
               </button>
               <button
                 onClick={handleSaveAll}
@@ -489,10 +532,35 @@ export default function StudyGroupsPage() {
         </div>
       </div>
 
-      <main className="max-w-7xl mx-auto px-4 py-6">
+      <main className="max-w-7xl mx-auto px-4 py-6 print:p-0 print:max-w-none">
+        {/* Print Header - Only visible when printing */}
+        <div className="hidden print:block mb-6">
+          <div className="flex justify-between items-start border-b-2 border-gray-800 pb-3">
+            <div>
+              <h1 className="text-2xl font-bold">Study Groups</h1>
+              <p className="text-gray-600">
+                {cohort?.program.abbreviation} Group {cohort?.cohort_number} • {allStudents.length} students
+              </p>
+            </div>
+            <div className="text-right text-sm text-gray-600">
+              <p>Printed: {new Date().toLocaleDateString()}</p>
+              <p>{groups.length} groups</p>
+            </div>
+          </div>
+          {/* Print Legend */}
+          <div className="mt-3 flex gap-4 text-xs">
+            <span className="font-medium">Learning Styles:</span>
+            <span className="flex items-center gap-1"><span className="w-4 h-4 bg-blue-500 text-white rounded flex items-center justify-center text-xs">A</span> Audio</span>
+            <span className="flex items-center gap-1"><span className="w-4 h-4 bg-green-500 text-white rounded flex items-center justify-center text-xs">V</span> Visual</span>
+            <span className="flex items-center gap-1"><span className="w-4 h-4 bg-orange-500 text-white rounded flex items-center justify-center text-xs">K</span> Kinesthetic</span>
+            <span className="flex items-center gap-1"><span className="w-4 h-4 bg-purple-500 text-white rounded flex items-center justify-center text-xs">S</span> Social</span>
+            <span className="flex items-center gap-1"><span className="w-4 h-4 bg-gray-500 text-white rounded flex items-center justify-center text-xs">I</span> Independent</span>
+          </div>
+        </div>
+
         {/* Warnings Panel */}
         {warnings.length > 0 && showWarnings && (
-          <div className="mb-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className="mb-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4 print:hidden">
             <div className="flex items-start justify-between">
               <div className="flex items-start gap-2">
                 <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
@@ -527,14 +595,14 @@ export default function StudyGroupsPage() {
         {warnings.length > 0 && !showWarnings && (
           <button
             onClick={() => setShowWarnings(true)}
-            className="mb-4 text-sm text-yellow-600 hover:text-yellow-800 flex items-center gap-1"
+            className="mb-4 text-sm text-yellow-600 hover:text-yellow-800 flex items-center gap-1 print:hidden"
           >
             <AlertCircle className="w-4 h-4" />
             Show {warnings.length} warning(s)
           </button>
         )}
 
-        <div className="flex gap-6">
+        <div className="flex gap-6 print:block">
           {/* Groups */}
           <div className="flex-1">
             {groups.length === 0 ? (
@@ -550,7 +618,7 @@ export default function StudyGroupsPage() {
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 print:grid-cols-2 print:gap-6">
                 {groups.map((group) => {
                   const stats = getGroupStats(group.members);
                   return (
@@ -558,7 +626,7 @@ export default function StudyGroupsPage() {
                       key={group.id}
                       onDragOver={handleDragOver}
                       onDrop={() => handleDropToGroup(group.id)}
-                      className="bg-white rounded-lg shadow"
+                      className="bg-white rounded-lg shadow print:shadow-none print:border print:break-inside-avoid"
                     >
                       {/* Group Header */}
                       <div className="p-3 border-b flex items-center justify-between">
@@ -591,7 +659,7 @@ export default function StudyGroupsPage() {
                               <span className="font-semibold text-gray-900">{group.name}</span>
                               <span className="text-sm text-gray-500">({group.members.length})</span>
                             </div>
-                            <div className="flex items-center gap-1">
+                            <div className="flex items-center gap-1 print:hidden">
                               <button
                                 onClick={() => {
                                   setEditingGroupId(group.id);
@@ -695,7 +763,7 @@ export default function StudyGroupsPage() {
           </div>
 
           {/* Unassigned Sidebar */}
-          <div className="w-64 flex-shrink-0">
+          <div className="w-64 flex-shrink-0 print:hidden">
             <div
               onDragOver={handleDragOver}
               onDrop={handleDropToUnassigned}

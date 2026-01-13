@@ -16,7 +16,8 @@ import {
   RotateCcw,
   Wand2,
   X,
-  AlertCircle
+  AlertCircle,
+  Download
 } from 'lucide-react';
 
 interface Student {
@@ -268,6 +269,12 @@ export default function SeatingChartBuilderPage() {
     window.print();
   };
 
+  const handleDownloadPDF = () => {
+    // Trigger print dialog - users can save as PDF from there
+    alert('In the print dialog, select "Save as PDF" as your printer to download a PDF.');
+    window.print();
+  };
+
   const handleGenerate = async () => {
     if (!confirm('This will replace current seat assignments with auto-generated seating. Continue?')) {
       return;
@@ -404,6 +411,13 @@ export default function SeatingChartBuilderPage() {
                 Print
               </button>
               <button
+                onClick={handleDownloadPDF}
+                className="inline-flex items-center gap-1 px-3 py-2 text-sm border rounded-lg hover:bg-gray-50"
+              >
+                <Download className="w-4 h-4" />
+                PDF
+              </button>
+              <button
                 onClick={handleSave}
                 disabled={saving || !hasChanges}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
@@ -416,7 +430,32 @@ export default function SeatingChartBuilderPage() {
         </div>
       </div>
 
-      <main className="max-w-7xl mx-auto px-4 py-6 print:p-0">
+      <main className="max-w-7xl mx-auto px-4 py-6 print:p-0 print:max-w-none">
+        {/* Print Header - Only visible when printing */}
+        <div className="hidden print:block mb-6">
+          <div className="flex justify-between items-start border-b-2 border-gray-800 pb-3">
+            <div>
+              <h1 className="text-2xl font-bold">{chart?.name || 'Seating Chart'}</h1>
+              <p className="text-gray-600">
+                {chart?.cohort.program.abbreviation} Group {chart?.cohort.cohort_number} • {chart?.classroom.name}
+              </p>
+            </div>
+            <div className="text-right text-sm text-gray-600">
+              <p>Printed: {new Date().toLocaleDateString()}</p>
+              <p>{assignments.length} students seated</p>
+            </div>
+          </div>
+          {/* Print Legend */}
+          <div className="mt-3 flex gap-4 text-xs">
+            <span className="font-medium">Learning Styles:</span>
+            <span className="flex items-center gap-1"><span className="w-4 h-4 bg-blue-500 text-white rounded flex items-center justify-center text-xs">A</span> Audio</span>
+            <span className="flex items-center gap-1"><span className="w-4 h-4 bg-green-500 text-white rounded flex items-center justify-center text-xs">V</span> Visual</span>
+            <span className="flex items-center gap-1"><span className="w-4 h-4 bg-orange-500 text-white rounded flex items-center justify-center text-xs">K</span> Kinesthetic</span>
+            <span className="flex items-center gap-1"><span className="w-4 h-4 bg-purple-500 text-white rounded flex items-center justify-center text-xs">S</span> Social</span>
+            <span className="flex items-center gap-1"><span className="w-4 h-4 bg-gray-500 text-white rounded flex items-center justify-center text-xs">I</span> Independent</span>
+          </div>
+        </div>
+
         {/* Warnings Panel */}
         {warnings.length > 0 && showWarnings && (
           <div className="mb-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4 print:hidden">
