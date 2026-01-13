@@ -14,7 +14,9 @@ import {
   Home,
   Shield,
   Trash2,
-  Award
+  Award,
+  Brain,
+  Layout
 } from 'lucide-react';
 
 export default function AdminPage() {
@@ -58,6 +60,20 @@ export default function AdminPage() {
       title: 'Certifications',
       description: 'Monitor instructor certifications and expiration dates',
       color: 'bg-purple-500'
+    },
+    {
+      href: '/lab-management/seating/learning-styles',
+      icon: Brain,
+      title: 'Learning Styles',
+      description: 'Manage student learning style assessments for seating',
+      color: 'bg-cyan-500'
+    },
+    {
+      href: '/lab-management/seating/preferences',
+      icon: Layout,
+      title: 'Seating Preferences',
+      description: 'Manage student seating preferences and conflicts',
+      color: 'bg-orange-500'
     },
     {
       href: '/lab-management/admin/cohorts',

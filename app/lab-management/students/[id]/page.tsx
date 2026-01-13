@@ -172,38 +172,40 @@ export default function StudentDetailPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // For now, create a local URL - in production you'd upload to Supabase Storage
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      alert('Please select a JPG, PNG, or WebP image');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image must be under 5MB');
+      return;
+    }
+
     setUploading(true);
     try {
-      // Create FormData for upload
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('studentId', studentId);
 
-      // TODO: Implement actual Supabase Storage upload
-      // For demo, we'll use a data URL
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const photoUrl = reader.result as string;
-        
-        // Update student with photo URL
-        const res = await fetch(`/api/lab-management/students/${studentId}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ photo_url: photoUrl }),
-        });
-        
-        const data = await res.json();
-        if (data.success) {
-          setStudent(prev => prev ? { ...prev, photo_url: photoUrl } : null);
-        }
-        setUploading(false);
-      };
-      reader.readAsDataURL(file);
+      const res = await fetch(`/api/lab-management/students/${studentId}/photo`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setStudent(prev => prev ? { ...prev, photo_url: data.photoUrl } : null);
+      } else {
+        alert('Failed to upload photo: ' + data.error);
+      }
     } catch (error) {
       console.error('Error uploading photo:', error);
-      setUploading(false);
+      alert('Failed to upload photo');
     }
+    setUploading(false);
   };
 
   const handleSave = async () => {

@@ -429,10 +429,10 @@ export default function CohortManagementPage() {
                         </div>
                         <div className="flex items-center gap-1">
                           <Link
-                            href={`/lab-management/students?cohortId=${cohort.id}`}
+                            href={`/lab-management/cohorts/${cohort.id}`}
                             className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded"
                           >
-                            View Students
+                            Open Hub
                           </Link>
                           <button
                             onClick={() => startEdit(cohort)}
