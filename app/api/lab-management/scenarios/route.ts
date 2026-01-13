@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getServerSession } from 'next-auth';
 
+// Use service role key for server-side operations to bypass RLS
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
 export async function GET(request: NextRequest) {
@@ -53,56 +55,82 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    // Check authentication
+    const session = await getServerSession();
+    if (!session?.user?.email) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
-    
+
+    // Validate required fields
+    if (!body.title?.trim()) {
+      return NextResponse.json({ success: false, error: 'Title is required' }, { status: 400 });
+    }
+
+    const insertData = {
+      title: body.title.trim(),
+      applicable_programs: body.applicable_programs || ['EMT', 'AEMT', 'Paramedic'],
+      category: body.category || null,
+      subcategory: body.subcategory || null,
+      difficulty: body.difficulty || 'intermediate',
+      estimated_duration: body.estimated_duration || null,
+
+      // Quick reference / instructor summary
+      instructor_notes: body.instructor_notes || null,
+      learning_objectives: body.learning_objectives || [],
+
+      // Dispatch info
+      dispatch_time: body.dispatch_time || null,
+      dispatch_location: body.dispatch_location || null,
+      chief_complaint: body.chief_complaint || null,
+      dispatch_notes: body.dispatch_notes || null,
+
+      // Patient info
+      patient_name: body.patient_name || null,
+      patient_age: body.patient_age || null,
+      patient_sex: body.patient_sex || null,
+      patient_weight: body.patient_weight || null,
+      medical_history: body.medical_history || [],
+      medications: body.medications || [],
+      allergies: body.allergies || null,
+
+      // Phases with vitals (stored as JSONB)
+      phases: body.phases || [],
+
+      // Grading
+      critical_actions: body.critical_actions || [],
+      debrief_points: body.debrief_points || [],
+
+      // Legacy fields (keep for compatibility)
+      initial_vitals: body.phases?.[0]?.vitals || null,
+      general_impression: body.phases?.[0]?.presentation_notes || null,
+    };
+
+    console.log('Creating scenario with data:', JSON.stringify(insertData, null, 2));
+
     const { data, error } = await supabase
       .from('scenarios')
-      .insert({
-        title: body.title,
-        applicable_programs: body.applicable_programs || ['EMT', 'AEMT', 'Paramedic'],
-        category: body.category || null,
-        subcategory: body.subcategory || null,
-        difficulty: body.difficulty || 'intermediate',
-        estimated_duration: body.estimated_duration || null,
-        
-        // Quick reference / instructor summary
-        instructor_notes: body.instructor_notes || null,
-        learning_objectives: body.learning_objectives || [],
-        
-        // Dispatch info
-        dispatch_time: body.dispatch_time || null,
-        dispatch_location: body.dispatch_location || null,
-        chief_complaint: body.chief_complaint || null,
-        dispatch_notes: body.dispatch_notes || null,
-        
-        // Patient info
-        patient_name: body.patient_name || null,
-        patient_age: body.patient_age || null,
-        patient_sex: body.patient_sex || null,
-        patient_weight: body.patient_weight || null,
-        medical_history: body.medical_history || [],
-        medications: body.medications || [],
-        allergies: body.allergies || null,
-        
-        // Phases with vitals (stored as JSONB)
-        phases: body.phases || [],
-        
-        // Grading
-        critical_actions: body.critical_actions || [],
-        debrief_points: body.debrief_points || [],
-        
-        // Legacy fields (keep for compatibility)
-        initial_vitals: body.phases?.[0]?.vitals || null,
-        general_impression: body.phases?.[0]?.presentation_notes || null,
-      })
+      .insert(insertData)
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase error creating scenario:', error);
+      return NextResponse.json({
+        success: false,
+        error: `Database error: ${error.message}`,
+        details: error.details || null,
+        hint: error.hint || null
+      }, { status: 500 });
+    }
 
     return NextResponse.json({ success: true, scenario: data });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating scenario:', error);
-    return NextResponse.json({ success: false, error: 'Failed to create scenario' }, { status: 500 });
+    return NextResponse.json({
+      success: false,
+      error: error.message || 'Failed to create scenario'
+    }, { status: 500 });
   }
 }

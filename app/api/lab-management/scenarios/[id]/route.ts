@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getServerSession } from 'next-auth';
 
+// Use service role key for server-side operations to bypass RLS
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
 export async function GET(
@@ -33,8 +35,14 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  
+
   try {
+    // Check authentication
+    const session = await getServerSession();
+    if (!session?.user?.email) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     
     // Build update object with only provided fields
@@ -93,12 +101,19 @@ export async function PATCH(
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase error updating scenario:', error);
+      return NextResponse.json({
+        success: false,
+        error: `Database error: ${error.message}`,
+        details: error.details || null
+      }, { status: 500 });
+    }
 
     return NextResponse.json({ success: true, scenario: data });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error updating scenario:', error);
-    return NextResponse.json({ success: false, error: 'Failed to update scenario' }, { status: 500 });
+    return NextResponse.json({ success: false, error: error.message || 'Failed to update scenario' }, { status: 500 });
   }
 }
 
@@ -107,8 +122,14 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  
+
   try {
+    // Check authentication
+    const session = await getServerSession();
+    if (!session?.user?.email) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
     // Check if scenario is used in any lab stations
     const { count } = await supabase
       .from('lab_stations')
