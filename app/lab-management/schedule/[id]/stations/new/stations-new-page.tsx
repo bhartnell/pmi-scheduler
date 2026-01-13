@@ -277,7 +277,7 @@ export default function AddStationPage() {
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Add Station</h1>
           <p className="text-gray-600 mt-1">
-            Station {getNextStationNumber()} for {new Date(labDay.date).toLocaleDateString()}
+            Station {getNextStationNumber()} for {new Date(labDay.date + 'T12:00:00').toLocaleDateString()}
           </p>
         </div>
       </div>

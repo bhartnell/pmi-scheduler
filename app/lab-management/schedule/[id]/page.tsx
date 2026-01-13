@@ -50,6 +50,13 @@ interface Station {
   };
   skill_name: string | null;
   custom_title: string | null;
+  instructor_name: string | null;
+  instructor_email: string | null;
+  room: string | null;
+  notes: string | null;
+  rotation_minutes: number;
+  num_rotations: number;
+  // Legacy fields for backwards compatibility
   instructor?: {
     id: string;
     name: string;
@@ -116,10 +123,12 @@ export default function LabDayPage() {
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      weekday: 'long', 
-      month: 'long', 
+    // Parse date string as local date to avoid timezone issues
+    // Adding T12:00:00 ensures the date displays correctly in any timezone
+    const date = new Date(dateString + 'T12:00:00');
+    return date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'long',
       day: 'numeric',
       year: 'numeric'
     });
@@ -280,16 +289,16 @@ export default function LabDayPage() {
 
                   {/* Station Details */}
                   <div className="space-y-2 text-sm mb-4">
-                    {station.instructor && (
+                    {(station.instructor_name || station.instructor?.name) && (
                       <div className="flex items-center gap-2 text-gray-600">
                         <Users className="w-4 h-4" />
-                        <span>{station.instructor.name}</span>
+                        <span>{station.instructor_name || station.instructor?.name}</span>
                       </div>
                     )}
-                    {station.location && (
+                    {(station.room || station.location) && (
                       <div className="flex items-center gap-2 text-gray-600">
                         <MapPin className="w-4 h-4" />
-                        <span>{station.location}</span>
+                        <span>{station.room || station.location}</span>
                       </div>
                     )}
                     {station.documentation_required && (

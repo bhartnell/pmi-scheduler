@@ -63,16 +63,17 @@ export async function GET(request: NextRequest) {
       today.setHours(0, 0, 0, 0);
       filteredData = filteredData.filter((station: any) => {
         if (station.lab_day?.date) {
-          const labDate = new Date(station.lab_day.date);
+          // Parse date with T12:00:00 to avoid timezone issues
+          const labDate = new Date(station.lab_day.date + 'T12:00:00');
           labDate.setHours(0, 0, 0, 0);
           return labDate >= today;
         }
         return false;
       });
-      
+
       filteredData.sort((a: any, b: any) => {
-        const dateA = new Date(a.lab_day?.date || 0);
-        const dateB = new Date(b.lab_day?.date || 0);
+        const dateA = new Date((a.lab_day?.date || '1970-01-01') + 'T12:00:00');
+        const dateB = new Date((b.lab_day?.date || '1970-01-01') + 'T12:00:00');
         return dateA.getTime() - dateB.getTime();
       });
     }

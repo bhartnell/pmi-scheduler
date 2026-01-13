@@ -329,11 +329,11 @@ export default function SchedulePage() {
               </div>
             ) : (
               labDays
-                .filter(ld => new Date(ld.date) >= new Date(new Date().toDateString()))
-                .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                .filter(ld => new Date(ld.date + 'T12:00:00') >= new Date(new Date().toDateString()))
+                .sort((a, b) => new Date(a.date + 'T12:00:00').getTime() - new Date(b.date + 'T12:00:00').getTime())
                 .slice(0, 10)
                 .map(labDay => {
-                  const labDate = new Date(labDay.date);
+                  const labDate = new Date(labDay.date + 'T12:00:00');
                   const isLabToday = labDate.toDateString() === new Date().toDateString();
                   
                   return (

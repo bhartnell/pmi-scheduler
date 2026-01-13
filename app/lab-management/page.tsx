@@ -173,13 +173,15 @@ export default function LabManagementDashboard() {
     { href: '/lab-management/admin', icon: Settings, label: 'Admin', color: 'bg-gray-500' },
   ];
 
-  // Format date for display
+  // Format date for display (timezone-safe)
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
+    // Parse as local date by adding T12:00:00 to avoid timezone issues
+    const date = new Date(dateString + 'T12:00:00');
     const today = new Date();
+    today.setHours(12, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
-    
+
     if (date.toDateString() === today.toDateString()) {
       return 'Today';
     } else if (date.toDateString() === tomorrow.toDateString()) {
@@ -189,10 +191,11 @@ export default function LabManagementDashboard() {
     }
   };
 
-  // Check if date is today or tomorrow
+  // Check if date is today or tomorrow (timezone-safe)
   const isUrgent = (dateString: string) => {
-    const date = new Date(dateString);
+    const date = new Date(dateString + 'T12:00:00');
     const today = new Date();
+    today.setHours(12, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
     return date.toDateString() === today.toDateString() || date.toDateString() === tomorrow.toDateString();

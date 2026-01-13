@@ -301,7 +301,7 @@ export default function GradeStationPage() {
             <Link href="/lab-management" className="hover:text-blue-600">Lab Management</Link>
             <ChevronRight className="w-4 h-4" />
             <Link href={`/lab-management/schedule/${labDay.id}`} className="hover:text-blue-600">
-              {new Date(labDay.date).toLocaleDateString()}
+              {new Date(labDay.date + 'T12:00:00').toLocaleDateString()}
             </Link>
             <ChevronRight className="w-4 h-4" />
             <span>Grade</span>
