@@ -4,7 +4,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { 
+import {
   ChevronRight,
   ChevronDown,
   ChevronUp,
@@ -22,7 +22,9 @@ import {
   FileText,
   CheckSquare,
   MessageSquare,
-  Clock
+  Clock,
+  Check,
+  ArrowRight
 } from 'lucide-react';
 
 // Types
@@ -634,6 +636,49 @@ export default function ScenarioEditorPage() {
   const [newCriticalAction, setNewCriticalAction] = useState('');
   const [newDebriefPoint, setNewDebriefPoint] = useState('');
 
+  // Toast notification state
+  const [toast, setToast] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
+
+  // Show toast helper
+  const showToast = (message: string) => {
+    setToast({ show: true, message });
+    setTimeout(() => setToast({ show: false, message: '' }), 3000);
+  };
+
+  // Reset form to initial state
+  const resetForm = () => {
+    setScenario({
+      title: '',
+      applicable_programs: ['Paramedic'],
+      category: '',
+      subcategory: '',
+      difficulty: 'Intermediate',
+      estimated_duration: 20,
+      instructor_summary: '',
+      key_decision_points: [],
+      dispatch_time: '',
+      dispatch_location: '',
+      chief_complaint: '',
+      dispatch_notes: '',
+      patient_name: '',
+      patient_age: '',
+      patient_sex: '',
+      patient_weight: '',
+      medical_history: [],
+      medications: [],
+      allergies: '',
+      phases: [createEmptyPhase(0)],
+      critical_actions: [],
+      evaluation_criteria: DEFAULT_EVALUATION_CRITERIA,
+      debrief_points: []
+    });
+    setNewDecisionPoint('');
+    setNewHistory('');
+    setNewMedication('');
+    setNewCriticalAction('');
+    setNewDebriefPoint('');
+  };
+
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/signin');
@@ -688,7 +733,7 @@ export default function ScenarioEditorPage() {
     setLoading(false);
   };
 
-  const handleSave = async () => {
+  const handleSave = async (mode: 'exit' | 'addAnother' = 'exit') => {
     if (!scenario.title.trim()) {
       alert('Please enter a scenario title');
       return;
@@ -721,10 +766,10 @@ export default function ScenarioEditorPage() {
         debrief_points: scenario.debrief_points
       };
 
-      const url = isEditing 
+      const url = isEditing
         ? `/api/lab-management/scenarios/${scenarioId}`
         : '/api/lab-management/scenarios';
-      
+
       const res = await fetch(url, {
         method: isEditing ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -733,7 +778,16 @@ export default function ScenarioEditorPage() {
 
       const data = await res.json();
       if (data.success) {
-        router.push(`/lab-management/scenarios/${data.scenario.id}`);
+        if (mode === 'addAnother' && !isEditing) {
+          // Show success toast, clear form, stay on page
+          showToast('Scenario saved successfully!');
+          resetForm();
+          // Scroll to top
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+          // Redirect to scenarios list
+          router.push('/lab-management/scenarios');
+        }
       } else {
         alert('Failed to save scenario: ' + (data.error || 'Unknown error'));
       }
@@ -795,6 +849,16 @@ export default function ScenarioEditorPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-2 fade-in duration-300">
+          <div className="flex items-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg shadow-lg">
+            <Check className="w-5 h-5" />
+            <span className="font-medium">{toast.message}</span>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-white shadow-sm sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-4">
@@ -811,18 +875,34 @@ export default function ScenarioEditorPage() {
             <h1 className="text-xl font-bold text-gray-900">
               {isEditing ? 'Edit Scenario' : 'Create Scenario'}
             </h1>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
-            >
-              {saving ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-              ) : (
-                <Save className="w-5 h-5" />
+            <div className="flex items-center gap-2">
+              {!isEditing && (
+                <button
+                  onClick={() => handleSave('addAnother')}
+                  disabled={saving}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:bg-gray-300 disabled:text-gray-500"
+                >
+                  {saving ? (
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-500"></div>
+                  ) : (
+                    <Plus className="w-5 h-5" />
+                  )}
+                  Save & Add Another
+                </button>
               )}
-              {saving ? 'Saving...' : 'Save Scenario'}
-            </button>
+              <button
+                onClick={() => handleSave('exit')}
+                disabled={saving}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+              >
+                {saving ? (
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                ) : (
+                  <ArrowRight className="w-5 h-5" />
+                )}
+                Save & Exit
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -1343,7 +1423,7 @@ export default function ScenarioEditorPage() {
           </div>
         </Section>
 
-        {/* Save Button (bottom) */}
+        {/* Save Buttons (bottom) */}
         <div className="flex justify-end gap-3 pt-4">
           <Link
             href="/lab-management/scenarios"
@@ -1351,17 +1431,31 @@ export default function ScenarioEditorPage() {
           >
             Cancel
           </Link>
+          {!isEditing && (
+            <button
+              onClick={() => handleSave('addAnother')}
+              disabled={saving}
+              className="flex items-center gap-2 px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:bg-gray-300 disabled:text-gray-500"
+            >
+              {saving ? (
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-500"></div>
+              ) : (
+                <Plus className="w-5 h-5" />
+              )}
+              Save & Add Another
+            </button>
+          )}
           <button
-            onClick={handleSave}
+            onClick={() => handleSave('exit')}
             disabled={saving}
             className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
           >
             {saving ? (
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
             ) : (
-              <Save className="w-5 h-5" />
+              <ArrowRight className="w-5 h-5" />
             )}
-            {saving ? 'Saving...' : 'Save Scenario'}
+            Save & Exit
           </button>
         </div>
       </main>
