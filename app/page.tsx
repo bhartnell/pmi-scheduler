@@ -2,15 +2,17 @@
 
 import { useSession, signIn, signOut } from 'next-auth/react';
 import Link from 'next/link';
-import { 
-  Calendar, 
-  ClipboardList, 
-  LogIn, 
+import {
+  Calendar,
+  ClipboardList,
+  LogIn,
   LogOut,
   Stethoscope,
   Users,
   FileText,
-  GraduationCap
+  GraduationCap,
+  Award,
+  BookOpen
 } from 'lucide-react';
 
 export default function HomePage() {
@@ -93,55 +95,74 @@ export default function HomePage() {
         </div>
 
         {/* Main Navigation Cards */}
-        <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+        <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
           {/* Lab Management Card */}
-          <Link 
+          <Link
             href="/lab-management"
-            className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-8 group"
+            className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
           >
             <div className="flex flex-col items-center text-center">
-              <div className="w-20 h-20 bg-green-100 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-green-200 transition-colors">
-                <GraduationCap className="w-10 h-10 text-green-600" />
+              <div className="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-green-200 transition-colors">
+                <GraduationCap className="w-8 h-8 text-green-600" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Lab Management</h3>
-              <p className="text-gray-600 mb-6">
-                Manage lab schedules, scenarios, students, and assessments for EMS training programs.
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Lab Management</h3>
+              <p className="text-gray-600 text-sm mb-4">
+                Manage lab schedules, scenarios, students, and assessments.
               </p>
-              <div className="flex flex-wrap justify-center gap-2 text-sm">
-                <span className="px-3 py-1 bg-green-50 text-green-700 rounded-full">Scenarios</span>
-                <span className="px-3 py-1 bg-green-50 text-green-700 rounded-full">Students</span>
-                <span className="px-3 py-1 bg-green-50 text-green-700 rounded-full">Grading</span>
-                <span className="px-3 py-1 bg-green-50 text-green-700 rounded-full">Reports</span>
+              <div className="flex flex-wrap justify-center gap-2 text-xs">
+                <span className="px-2 py-1 bg-green-50 text-green-700 rounded-full">Scenarios</span>
+                <span className="px-2 py-1 bg-green-50 text-green-700 rounded-full">Students</span>
+                <span className="px-2 py-1 bg-green-50 text-green-700 rounded-full">Grading</span>
+              </div>
+            </div>
+          </Link>
+
+          {/* Instructor Portal Card */}
+          <Link
+            href="/instructor"
+            className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
+          >
+            <div className="flex flex-col items-center text-center">
+              <div className="w-16 h-16 bg-purple-100 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-purple-200 transition-colors">
+                <Award className="w-8 h-8 text-purple-600" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Instructor Portal</h3>
+              <p className="text-gray-600 text-sm mb-4">
+                Track certifications, CE hours, and teaching activities.
+              </p>
+              <div className="flex flex-wrap justify-center gap-2 text-xs">
+                <span className="px-2 py-1 bg-purple-50 text-purple-700 rounded-full">Certifications</span>
+                <span className="px-2 py-1 bg-purple-50 text-purple-700 rounded-full">CE Tracker</span>
+                <span className="px-2 py-1 bg-purple-50 text-purple-700 rounded-full">Teaching Log</span>
               </div>
             </div>
           </Link>
 
           {/* Scheduling Card */}
-          <Link 
+          <Link
             href="/scheduler"
-            className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-8 group"
+            className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
           >
             <div className="flex flex-col items-center text-center">
-              <div className="w-20 h-20 bg-blue-100 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-blue-200 transition-colors">
-                <Calendar className="w-10 h-10 text-blue-600" />
+              <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-blue-200 transition-colors">
+                <Calendar className="w-8 h-8 text-blue-600" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Scheduling Polls</h3>
-              <p className="text-gray-600 mb-6">
-                Create availability polls to find the best meeting times with students and preceptors.
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Scheduling Polls</h3>
+              <p className="text-gray-600 text-sm mb-4">
+                Find the best meeting times with students and preceptors.
               </p>
-              <div className="flex flex-wrap justify-center gap-2 text-sm">
-                <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full">Create Polls</span>
-                <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full">View Results</span>
-                <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full">Find Times</span>
+              <div className="flex flex-wrap justify-center gap-2 text-xs">
+                <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded-full">Create Polls</span>
+                <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded-full">View Results</span>
               </div>
             </div>
           </Link>
         </div>
 
         {/* Quick Links */}
-        <div className="mt-12 max-w-4xl mx-auto">
+        <div className="mt-12 max-w-5xl mx-auto">
           <h3 className="text-lg font-semibold text-gray-900 mb-4 text-center">Quick Links</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <Link
               href="/lab-management/scenarios"
               className="flex flex-col items-center p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
@@ -162,6 +183,13 @@ export default function HomePage() {
             >
               <Calendar className="w-6 h-6 text-gray-600 mb-2" />
               <span className="text-sm text-gray-700">Lab Schedule</span>
+            </Link>
+            <Link
+              href="/instructor/certifications"
+              className="flex flex-col items-center p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
+            >
+              <Award className="w-6 h-6 text-purple-600 mb-2" />
+              <span className="text-sm text-gray-700">My Certs</span>
             </Link>
             <Link
               href="/lab-management/admin/cohorts"
