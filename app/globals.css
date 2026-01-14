@@ -29,7 +29,7 @@ body {
 @media print {
   /* Hide navigation, buttons, and interactive elements */
   nav,
-  .print\\:hidden,
+  [class*="print:hidden"],
   button:not(.print-include),
   .sticky {
     display: none !important;
