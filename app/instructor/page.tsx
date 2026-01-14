@@ -18,6 +18,7 @@ import {
   Home
 } from 'lucide-react';
 import { canAccessAdmin, canManageContent, type Role } from '@/lib/permissions';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 interface DashboardStats {
   total_certs: number;
@@ -73,17 +74,17 @@ function getDaysUntil(dateString: string): number {
 }
 
 // Get status color based on days until expiration
-function getExpirationStatus(dateString: string): { color: string; bg: string; label: string } {
+function getExpirationStatus(dateString: string): { color: string; darkColor: string; bg: string; darkBg: string; label: string } {
   const days = getDaysUntil(dateString);
 
   if (days < 0) {
-    return { color: 'text-red-600', bg: 'bg-red-100', label: 'Expired' };
+    return { color: 'text-red-600', darkColor: 'dark:text-red-400', bg: 'bg-red-100', darkBg: 'dark:bg-red-900/30', label: 'Expired' };
   } else if (days <= 30) {
-    return { color: 'text-orange-600', bg: 'bg-orange-100', label: `${days} days` };
+    return { color: 'text-orange-600', darkColor: 'dark:text-orange-400', bg: 'bg-orange-100', darkBg: 'dark:bg-orange-900/30', label: `${days} days` };
   } else if (days <= 90) {
-    return { color: 'text-yellow-600', bg: 'bg-yellow-100', label: `${days} days` };
+    return { color: 'text-yellow-600', darkColor: 'dark:text-yellow-400', bg: 'bg-yellow-100', darkBg: 'dark:bg-yellow-900/30', label: `${days} days` };
   } else {
-    return { color: 'text-green-600', bg: 'bg-green-100', label: 'Valid' };
+    return { color: 'text-green-600', darkColor: 'dark:text-green-400', bg: 'bg-green-100', darkBg: 'dark:bg-green-900/30', label: 'Valid' };
   }
 }
 
@@ -168,7 +169,7 @@ export default function InstructorDashboard() {
 
   if (status === 'loading' || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
@@ -177,18 +178,18 @@ export default function InstructorDashboard() {
   if (!session) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
-      <div className="bg-white shadow-sm">
+      <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Link href="/" className="text-gray-500 hover:text-gray-700">
+              <Link href="/" className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
                 <Home className="w-5 h-5" />
               </Link>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">Instructor Portal</h1>
-                <p className="text-sm text-gray-600">
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">Instructor Portal</h1>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
                   Welcome, {currentUser?.name || session.user?.name}
                 </p>
               </div>
@@ -196,18 +197,19 @@ export default function InstructorDashboard() {
             <div className="flex items-center gap-3">
               <Link
                 href="/lab-management"
-                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
               >
                 Lab Management
               </Link>
               {currentUser && canAccessAdmin(currentUser.role) && (
                 <Link
                   href="/admin"
-                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+                  className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                 >
                   Admin
                 </Link>
               )}
+              <ThemeToggle />
             </div>
           </div>
         </div>
@@ -217,57 +219,57 @@ export default function InstructorDashboard() {
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {/* Total Certs */}
-          <div className="bg-white rounded-lg shadow p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Award className="w-6 h-6 text-blue-600" />
+              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                <Award className="w-6 h-6 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-gray-900">{stats?.total_certs || 0}</p>
-                <p className="text-sm text-gray-600">Certifications</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats?.total_certs || 0}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Certifications</p>
               </div>
             </div>
           </div>
 
           {/* Expiring Soon */}
-          <div className="bg-white rounded-lg shadow p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
             <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-lg ${stats?.expiring_soon ? 'bg-orange-100' : 'bg-green-100'}`}>
+              <div className={`p-2 rounded-lg ${stats?.expiring_soon ? 'bg-orange-100 dark:bg-orange-900/30' : 'bg-green-100 dark:bg-green-900/30'}`}>
                 {stats?.expiring_soon ? (
-                  <AlertTriangle className="w-6 h-6 text-orange-600" />
+                  <AlertTriangle className="w-6 h-6 text-orange-600 dark:text-orange-400" />
                 ) : (
-                  <CheckCircle className="w-6 h-6 text-green-600" />
+                  <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
                 )}
               </div>
               <div>
-                <p className="text-2xl font-bold text-gray-900">{stats?.expiring_soon || 0}</p>
-                <p className="text-sm text-gray-600">Expiring Soon</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats?.expiring_soon || 0}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Expiring Soon</p>
               </div>
             </div>
           </div>
 
           {/* CE Hours */}
-          <div className="bg-white rounded-lg shadow p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <BookOpen className="w-6 h-6 text-purple-600" />
+              <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                <BookOpen className="w-6 h-6 text-purple-600 dark:text-purple-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-gray-900">{stats?.ce_hours_this_year || 0}</p>
-                <p className="text-sm text-gray-600">CE Hours (Year)</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats?.ce_hours_this_year || 0}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">CE Hours (Year)</p>
               </div>
             </div>
           </div>
 
           {/* Teaching Hours */}
-          <div className="bg-white rounded-lg shadow p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-amber-100 rounded-lg">
-                <Users className="w-6 h-6 text-amber-600" />
+              <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+                <Users className="w-6 h-6 text-amber-600 dark:text-amber-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-gray-900">{stats?.classes_this_year || 0}</p>
-                <p className="text-sm text-gray-600">Classes (Year)</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats?.classes_this_year || 0}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Classes (Year)</p>
               </div>
             </div>
           </div>
@@ -275,15 +277,15 @@ export default function InstructorDashboard() {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* My Certifications */}
-          <div className="bg-white rounded-lg shadow">
-            <div className="p-4 border-b flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                <Award className="w-5 h-5 text-blue-600" />
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <Award className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 My Certifications
               </h2>
               <Link
                 href="/instructor/certifications"
-                className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 flex items-center gap-1"
               >
                 View All <ChevronRight className="w-4 h-4" />
               </Link>
@@ -291,11 +293,11 @@ export default function InstructorDashboard() {
             <div className="p-4">
               {certifications.length === 0 ? (
                 <div className="text-center py-8">
-                  <Award className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500">No certifications added yet</p>
+                  <Award className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                  <p className="text-gray-500 dark:text-gray-400">No certifications added yet</p>
                   <Link
                     href="/instructor/certifications/new"
-                    className="inline-flex items-center gap-2 mt-3 text-blue-600 hover:text-blue-800"
+                    className="inline-flex items-center gap-2 mt-3 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
                   >
                     <Plus className="w-4 h-4" /> Add Certification
                   </Link>
@@ -307,21 +309,21 @@ export default function InstructorDashboard() {
                     return (
                       <div
                         key={cert.id}
-                        className={`p-3 rounded-lg border-l-4 ${status.bg} border-l-current`}
+                        className={`p-3 rounded-lg border-l-4 ${status.bg} ${status.darkBg} border-l-current`}
                         style={{ borderLeftColor: status.color.replace('text-', '').includes('red') ? '#dc2626' :
                           status.color.includes('orange') ? '#ea580c' :
                           status.color.includes('yellow') ? '#ca8a04' : '#16a34a' }}
                       >
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="font-medium text-gray-900">{cert.cert_name}</p>
-                            <p className="text-sm text-gray-600">{cert.issuing_body || 'No issuer'}</p>
+                            <p className="font-medium text-gray-900 dark:text-white">{cert.cert_name}</p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">{cert.issuing_body || 'No issuer'}</p>
                           </div>
                           <div className="text-right">
-                            <span className={`text-sm font-medium ${status.color}`}>
+                            <span className={`text-sm font-medium ${status.color} ${status.darkColor}`}>
                               {status.label}
                             </span>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
                               {parseLocalDate(cert.expiration_date).toLocaleDateString()}
                             </p>
                           </div>
@@ -330,7 +332,7 @@ export default function InstructorDashboard() {
                     );
                   })}
                   {certifications.length > 5 && (
-                    <p className="text-center text-sm text-gray-500">
+                    <p className="text-center text-sm text-gray-500 dark:text-gray-400">
                       +{certifications.length - 5} more
                     </p>
                   )}
@@ -340,15 +342,15 @@ export default function InstructorDashboard() {
           </div>
 
           {/* Upcoming Labs */}
-          <div className="bg-white rounded-lg shadow">
-            <div className="p-4 border-b flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-green-600" />
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-green-600 dark:text-green-400" />
                 Upcoming Labs
               </h2>
               <Link
                 href="/lab-management/schedule"
-                className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 flex items-center gap-1"
               >
                 View Schedule <ChevronRight className="w-4 h-4" />
               </Link>
@@ -356,8 +358,8 @@ export default function InstructorDashboard() {
             <div className="p-4">
               {upcomingLabs.length === 0 ? (
                 <div className="text-center py-8">
-                  <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500">No upcoming lab assignments</p>
+                  <Calendar className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                  <p className="text-gray-500 dark:text-gray-400">No upcoming lab assignments</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -365,22 +367,22 @@ export default function InstructorDashboard() {
                     <Link
                       key={`${lab.lab_day_id}-${lab.station_id}`}
                       href={`/lab-management/schedule/${lab.lab_day_id}`}
-                      className="block p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition"
+                      className="block p-3 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition"
                     >
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="font-medium text-gray-900">
+                          <p className="font-medium text-gray-900 dark:text-white">
                             {lab.week_number ? `Week ${lab.week_number}` : ''}{lab.day_number ? ` Day ${lab.day_number}` : ''}{!lab.week_number && !lab.day_number ? 'Lab Day' : ''}
                           </p>
-                          <p className="text-sm text-gray-600">
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
                             Station {lab.station_number}: {lab.custom_title || lab.scenario_title || 'TBD'}
                           </p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
                             {lab.program} Cohort {lab.cohort_number}
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm font-medium text-gray-900">
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">
                             {new Date(lab.lab_date).toLocaleDateString('en-US', {
                               weekday: 'short',
                               month: 'short',
@@ -398,36 +400,36 @@ export default function InstructorDashboard() {
         </div>
 
         {/* Quick Actions */}
-        <div className="bg-white rounded-lg shadow p-4">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Quick Actions</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Link
               href="/instructor/certifications/new"
-              className="flex flex-col items-center gap-2 p-4 rounded-lg bg-blue-50 hover:bg-blue-100 transition"
+              className="flex flex-col items-center gap-2 p-4 rounded-lg bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition"
             >
-              <Plus className="w-8 h-8 text-blue-600" />
-              <span className="text-sm font-medium text-gray-900">Add Certification</span>
+              <Plus className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+              <span className="text-sm font-medium text-gray-900 dark:text-white">Add Certification</span>
             </Link>
             <Link
               href="/instructor/ce"
-              className="flex flex-col items-center gap-2 p-4 rounded-lg bg-purple-50 hover:bg-purple-100 transition"
+              className="flex flex-col items-center gap-2 p-4 rounded-lg bg-purple-50 dark:bg-purple-900/30 hover:bg-purple-100 dark:hover:bg-purple-900/50 transition"
             >
-              <BookOpen className="w-8 h-8 text-purple-600" />
-              <span className="text-sm font-medium text-gray-900">Log CE Hours</span>
+              <BookOpen className="w-8 h-8 text-purple-600 dark:text-purple-400" />
+              <span className="text-sm font-medium text-gray-900 dark:text-white">Log CE Hours</span>
             </Link>
             <Link
               href="/instructor/teaching"
-              className="flex flex-col items-center gap-2 p-4 rounded-lg bg-amber-50 hover:bg-amber-100 transition"
+              className="flex flex-col items-center gap-2 p-4 rounded-lg bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 dark:hover:bg-amber-900/50 transition"
             >
-              <FileText className="w-8 h-8 text-amber-600" />
-              <span className="text-sm font-medium text-gray-900">Teaching Log</span>
+              <FileText className="w-8 h-8 text-amber-600 dark:text-amber-400" />
+              <span className="text-sm font-medium text-gray-900 dark:text-white">Teaching Log</span>
             </Link>
             <Link
               href="/lab-management/scenarios"
-              className="flex flex-col items-center gap-2 p-4 rounded-lg bg-green-50 hover:bg-green-100 transition"
+              className="flex flex-col items-center gap-2 p-4 rounded-lg bg-green-50 dark:bg-green-900/30 hover:bg-green-100 dark:hover:bg-green-900/50 transition"
             >
-              <Users className="w-8 h-8 text-green-600" />
-              <span className="text-sm font-medium text-gray-900">View Scenarios</span>
+              <Users className="w-8 h-8 text-green-600 dark:text-green-400" />
+              <span className="text-sm font-medium text-gray-900 dark:text-white">View Scenarios</span>
             </Link>
           </div>
         </div>

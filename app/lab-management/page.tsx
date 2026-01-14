@@ -120,11 +120,11 @@ export default function LabManagementDashboard() {
       // Fetch students count
       const studentsRes = await fetch('/api/lab-management/students?status=active');
       const studentsData = await studentsRes.json();
-      
+
       // Fetch scenarios count
       const scenariosRes = await fetch('/api/lab-management/scenarios');
       const scenariosData = await scenariosRes.json();
-      
+
       // Fetch upcoming labs (next 14 days)
       const today = new Date().toISOString().split('T')[0];
       const twoWeeksOut = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
@@ -183,7 +183,7 @@ export default function LabManagementDashboard() {
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
@@ -231,7 +231,7 @@ export default function LabManagementDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       <LabHeader
         title="Lab Management Dashboard"
         actions={
@@ -252,7 +252,7 @@ export default function LabManagementDashboard() {
         {myAssignments.length > 0 && (
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                 <Star className="w-5 h-5 text-yellow-500" />
                 My Lab Assignments
               </h2>
@@ -261,43 +261,43 @@ export default function LabManagementDashboard() {
               {myAssignments.map((assignment) => (
                 <div
                   key={assignment.id}
-                  className={`bg-white rounded-lg shadow p-4 border-l-4 ${
+                  className={`bg-white dark:bg-gray-800 rounded-lg shadow p-4 border-l-4 ${
                     isUrgent(assignment.lab_day.date) ? 'border-l-yellow-500' : 'border-l-blue-500'
                   }`}
                 >
                   <div className="flex items-start justify-between mb-2">
                     <div className={`text-sm font-medium px-2 py-1 rounded ${
-                      isUrgent(assignment.lab_day.date) 
-                        ? 'bg-yellow-100 text-yellow-800' 
-                        : 'bg-blue-100 text-blue-800'
+                      isUrgent(assignment.lab_day.date)
+                        ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
+                        : 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
                     }`}>
                       {formatDate(assignment.lab_day.date)}
                     </div>
-                    <div className="text-sm text-gray-500">
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
                       Station {assignment.station_number}
                     </div>
                   </div>
-                  
-                  <h3 className="font-semibold text-gray-900 mb-1">
+
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
                     {assignment.scenario?.title || 'No scenario assigned'}
                   </h3>
-                  
-                  <div className="text-sm text-gray-600 mb-3">
+
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-3">
                     {assignment.lab_day.cohort.program.abbreviation} Group {assignment.lab_day.cohort.cohort_number}
                   </div>
-                  
+
                   {assignment.scenario && (
-                    <div className="flex items-center gap-2 text-xs text-gray-500 mb-3">
-                      <span className="px-2 py-0.5 bg-gray-100 rounded">{assignment.scenario.category}</span>
-                      <span className="px-2 py-0.5 bg-gray-100 rounded">{assignment.scenario.difficulty}</span>
+                    <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mb-3">
+                      <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">{assignment.scenario.category}</span>
+                      <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">{assignment.scenario.difficulty}</span>
                     </div>
                   )}
-                  
+
                   <div className="flex gap-2">
                     {assignment.scenario && (
                       <Link
                         href={`/lab-management/scenarios/${assignment.scenario.id}`}
-                        className="flex-1 text-center px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700"
+                        className="flex-1 text-center px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
                       >
                         View Scenario
                       </Link>
@@ -319,46 +319,46 @@ export default function LabManagementDashboard() {
         {openStations.length > 0 && (
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                 <AlertCircle className="w-5 h-5 text-orange-500" />
                 Open Stations - Need Instructor
-                <span className="text-sm font-normal text-gray-500">({openStations.length})</span>
+                <span className="text-sm font-normal text-gray-500 dark:text-gray-400">({openStations.length})</span>
               </h2>
             </div>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {openStations.slice(0, 6).map((station) => (
                 <div
                   key={station.id}
-                  className="bg-white rounded-lg shadow p-4 border-l-4 border-l-orange-400"
+                  className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border-l-4 border-l-orange-400"
                 >
                   <div className="flex items-start justify-between mb-2">
                     <div className={`text-sm font-medium px-2 py-1 rounded ${
-                      isUrgent(station.lab_day.date) 
-                        ? 'bg-red-100 text-red-800' 
-                        : 'bg-orange-100 text-orange-800'
+                      isUrgent(station.lab_day.date)
+                        ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
+                        : 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300'
                     }`}>
                       {formatDate(station.lab_day.date)}
                     </div>
-                    <div className="text-sm text-gray-500">
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
                       Station {station.station_number}
                     </div>
                   </div>
-                  
-                  <h3 className="font-semibold text-gray-900 mb-1">
+
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
                     {station.scenario?.title || 'No scenario assigned'}
                   </h3>
-                  
-                  <div className="text-sm text-gray-600 mb-3">
+
+                  <div className="text-sm text-gray-600 dark:text-gray-400 mb-3">
                     {station.lab_day.cohort.program.abbreviation} Group {station.lab_day.cohort.cohort_number}
                   </div>
-                  
+
                   {station.scenario && (
-                    <div className="flex items-center gap-2 text-xs text-gray-500 mb-3">
-                      <span className="px-2 py-0.5 bg-gray-100 rounded">{station.scenario.category}</span>
-                      <span className="px-2 py-0.5 bg-gray-100 rounded">{station.scenario.difficulty}</span>
+                    <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mb-3">
+                      <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">{station.scenario.category}</span>
+                      <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">{station.scenario.difficulty}</span>
                     </div>
                   )}
-                  
+
                   <button
                     onClick={() => claimStation(station.id)}
                     disabled={claiming === station.id}
@@ -376,7 +376,7 @@ export default function LabManagementDashboard() {
             </div>
             {openStations.length > 6 && (
               <div className="text-center mt-4">
-                <Link href="/lab-management/schedule" className="text-blue-600 hover:underline text-sm">
+                <Link href="/lab-management/schedule" className="text-blue-600 dark:text-blue-400 hover:underline text-sm">
                   View all {openStations.length} open stations →
                 </Link>
               </div>
@@ -386,58 +386,58 @@ export default function LabManagementDashboard() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white rounded-lg shadow p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Users className="w-6 h-6 text-green-600" />
+              <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                <Users className="w-6 h-6 text-green-600 dark:text-green-400" />
               </div>
               <div>
-                <div className="text-2xl font-bold text-gray-900">
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">
                   {loading ? '...' : stats.activeStudents}
                 </div>
-                <div className="text-sm text-gray-600">Active Students</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">Active Students</div>
               </div>
             </div>
           </div>
-          
-          <div className="bg-white rounded-lg shadow p-4">
+
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <BookOpen className="w-6 h-6 text-purple-600" />
+              <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                <BookOpen className="w-6 h-6 text-purple-600 dark:text-purple-400" />
               </div>
               <div>
-                <div className="text-2xl font-bold text-gray-900">
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">
                   {loading ? '...' : stats.totalScenarios}
                 </div>
-                <div className="text-sm text-gray-600">Scenarios</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">Scenarios</div>
               </div>
             </div>
           </div>
-          
-          <div className="bg-white rounded-lg shadow p-4">
+
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Calendar className="w-6 h-6 text-blue-600" />
+              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                <Calendar className="w-6 h-6 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <div className="text-2xl font-bold text-gray-900">
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">
                   {loading ? '...' : stats.upcomingLabs}
                 </div>
-                <div className="text-sm text-gray-600">Upcoming Labs</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">Upcoming Labs</div>
               </div>
             </div>
           </div>
-          
-          <div className="bg-white rounded-lg shadow p-4">
+
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <ClipboardList className="w-6 h-6 text-orange-600" />
+              <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+                <ClipboardList className="w-6 h-6 text-orange-600 dark:text-orange-400" />
               </div>
               <div>
-                <div className="text-2xl font-bold text-gray-900">
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">
                   {loading ? '...' : stats.totalStudents}
                 </div>
-                <div className="text-sm text-gray-600">Total Students</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">Total Students</div>
               </div>
             </div>
           </div>
@@ -446,13 +446,13 @@ export default function LabManagementDashboard() {
         {/* Two Column Layout */}
         <div className="grid md:grid-cols-2 gap-6">
           {/* Upcoming Labs */}
-          <div className="bg-white rounded-lg shadow">
-            <div className="p-4 border-b flex items-center justify-between">
-              <h2 className="font-semibold text-gray-900 flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-blue-600" />
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+              <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 Upcoming Labs
               </h2>
-              <Link href="/lab-management/schedule" className="text-sm text-blue-600 hover:underline">
+              <Link href="/lab-management/schedule" className="text-sm text-blue-600 dark:text-blue-400 hover:underline">
                 View All
               </Link>
             </div>
@@ -463,11 +463,11 @@ export default function LabManagementDashboard() {
                 </div>
               ) : upcomingLabs.length === 0 ? (
                 <div className="text-center py-6">
-                  <Calendar className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-                  <p className="text-gray-500 text-sm">No upcoming labs scheduled</p>
-                  <Link 
+                  <Calendar className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">No upcoming labs scheduled</p>
+                  <Link
                     href="/lab-management/schedule/new"
-                    className="text-blue-600 text-sm hover:underline mt-2 inline-block"
+                    className="text-blue-600 dark:text-blue-400 text-sm hover:underline mt-2 inline-block"
                   >
                     Schedule a lab day
                   </Link>
@@ -478,17 +478,17 @@ export default function LabManagementDashboard() {
                     <Link
                       key={lab.id}
                       href={`/lab-management/schedule/${lab.id}`}
-                      className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 border"
+                      className="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700"
                     >
                       <div>
-                        <div className="font-medium text-gray-900">
+                        <div className="font-medium text-gray-900 dark:text-white">
                           {lab.cohort.program.abbreviation} Group {lab.cohort.cohort_number}
                         </div>
-                        <div className="text-sm text-gray-500">
+                        <div className="text-sm text-gray-500 dark:text-gray-400">
                           {formatDate(lab.date)} • {lab.stations_count || 0} stations
                         </div>
                       </div>
-                      <ChevronRight className="w-5 h-5 text-gray-400" />
+                      <ChevronRight className="w-5 h-5 text-gray-400 dark:text-gray-500" />
                     </Link>
                   ))}
                 </div>
@@ -497,9 +497,9 @@ export default function LabManagementDashboard() {
           </div>
 
           {/* Quick Links */}
-          <div className="bg-white rounded-lg shadow">
-            <div className="p-4 border-b">
-              <h2 className="font-semibold text-gray-900">Quick Access</h2>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="font-semibold text-gray-900 dark:text-white">Quick Access</h2>
             </div>
             <div className="p-4">
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -507,12 +507,12 @@ export default function LabManagementDashboard() {
                   <Link
                     key={link.href}
                     href={link.href}
-                    className="flex flex-col items-center p-4 rounded-lg hover:bg-gray-50 border"
+                    className="flex flex-col items-center p-4 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700"
                   >
                     <div className={`p-2 rounded-full ${link.color} mb-2`}>
                       <link.icon className="w-5 h-5 text-white" />
                     </div>
-                    <span className="text-sm font-medium text-gray-900">{link.label}</span>
+                    <span className="text-sm font-medium text-gray-900 dark:text-white">{link.label}</span>
                   </Link>
                 ))}
               </div>
@@ -523,48 +523,48 @@ export default function LabManagementDashboard() {
         {/* Quick Actions - Only for lead_instructor+ */}
         {canManage && (
           <div className="mt-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Quick Actions</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <Link
                 href="/lab-management/students/new"
-                className="bg-white rounded-lg shadow p-4 hover:shadow-lg transition-shadow flex items-center gap-3"
+                className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 hover:shadow-lg transition-shadow flex items-center gap-3"
               >
-                <div className="p-2 bg-green-100 rounded-lg">
-                  <Plus className="w-5 h-5 text-green-600" />
+                <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                  <Plus className="w-5 h-5 text-green-600 dark:text-green-400" />
                 </div>
                 <div className="flex-1">
-                  <div className="font-medium text-gray-900">Add Student</div>
-                  <div className="text-sm text-gray-600">Register a new student</div>
+                  <div className="font-medium text-gray-900 dark:text-white">Add Student</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Register a new student</div>
                 </div>
-                <ChevronRight className="w-5 h-5 text-gray-400" />
+                <ChevronRight className="w-5 h-5 text-gray-400 dark:text-gray-500" />
               </Link>
 
               <Link
                 href="/lab-management/scenarios/new"
-                className="bg-white rounded-lg shadow p-4 hover:shadow-lg transition-shadow flex items-center gap-3"
+                className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 hover:shadow-lg transition-shadow flex items-center gap-3"
               >
-                <div className="p-2 bg-purple-100 rounded-lg">
-                  <Plus className="w-5 h-5 text-purple-600" />
+                <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                  <Plus className="w-5 h-5 text-purple-600 dark:text-purple-400" />
                 </div>
                 <div className="flex-1">
-                  <div className="font-medium text-gray-900">Create Scenario</div>
-                  <div className="text-sm text-gray-600">Add training scenario</div>
+                  <div className="font-medium text-gray-900 dark:text-white">Create Scenario</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Add training scenario</div>
                 </div>
-                <ChevronRight className="w-5 h-5 text-gray-400" />
+                <ChevronRight className="w-5 h-5 text-gray-400 dark:text-gray-500" />
               </Link>
 
               <Link
                 href="/lab-management/admin/cohorts"
-                className="bg-white rounded-lg shadow p-4 hover:shadow-lg transition-shadow flex items-center gap-3"
+                className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 hover:shadow-lg transition-shadow flex items-center gap-3"
               >
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Settings className="w-5 h-5 text-blue-600" />
+                <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                  <Settings className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div className="flex-1">
-                  <div className="font-medium text-gray-900">Manage Cohorts</div>
-                  <div className="text-sm text-gray-600">Add or edit cohorts</div>
+                  <div className="font-medium text-gray-900 dark:text-white">Manage Cohorts</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">Add or edit cohorts</div>
                 </div>
-                <ChevronRight className="w-5 h-5 text-gray-400" />
+                <ChevronRight className="w-5 h-5 text-gray-400 dark:text-gray-500" />
               </Link>
             </div>
           </div>

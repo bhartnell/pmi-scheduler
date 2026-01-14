@@ -24,6 +24,7 @@ import {
   getRoleBadgeClasses,
   type Role
 } from '@/lib/permissions';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 interface CurrentUser {
   id: string;
@@ -69,7 +70,7 @@ export default function AdminPage() {
 
   if (status === 'loading' || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
@@ -126,43 +127,46 @@ export default function AdminPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
-      <div className="bg-white shadow-sm">
+      <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-            <Link href="/" className="hover:text-blue-600 flex items-center gap-1">
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
+            <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1">
               <Home className="w-3 h-3" />
               Home
             </Link>
             <ChevronRight className="w-4 h-4" />
-            <span>Admin</span>
+            <span className="text-gray-900 dark:text-white">Admin</span>
           </div>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-gray-100 rounded-lg">
-                <Settings className="w-6 h-6 text-gray-600" />
+              <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                <Settings className="w-6 h-6 text-gray-600 dark:text-gray-400" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Admin Settings</h1>
-                <p className="text-gray-600">System administration and user management</p>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Admin Settings</h1>
+                <p className="text-gray-600 dark:text-gray-400">System administration and user management</p>
               </div>
             </div>
-            <span className={`px-3 py-1 rounded-full text-sm font-medium ${getRoleBadgeClasses(currentUser.role)}`}>
-              {getRoleLabel(currentUser.role)}
-            </span>
+            <div className="flex items-center gap-3">
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${getRoleBadgeClasses(currentUser.role)}`}>
+                {getRoleLabel(currentUser.role)}
+              </span>
+              <ThemeToggle />
+            </div>
           </div>
         </div>
       </div>
 
       <main className="max-w-4xl mx-auto px-4 py-6 space-y-6">
         {/* Role Info */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
           <div className="flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5" />
+            <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
             <div>
-              <h2 className="font-semibold text-blue-900">Admin Access</h2>
-              <p className="text-sm text-blue-800">
+              <h2 className="font-semibold text-blue-900 dark:text-blue-100">Admin Access</h2>
+              <p className="text-sm text-blue-800 dark:text-blue-200">
                 You are logged in as <strong>{currentUser.name}</strong> with{' '}
                 <strong>{getRoleLabel(currentUser.role)}</strong> privileges.
                 {isSuperadmin(currentUser.role) && ' You have full system access.'}
@@ -173,22 +177,22 @@ export default function AdminPage() {
 
         {/* Admin Links */}
         <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Administration</h2>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Administration</h2>
           <div className="grid gap-4 md:grid-cols-2">
             {adminLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-5 flex items-start gap-4"
+                className="bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-lg transition-shadow p-5 flex items-start gap-4"
               >
                 <div className={`p-3 rounded-lg ${link.color}`}>
                   <link.icon className="w-6 h-6 text-white" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900 mb-1">{link.title}</h3>
-                  <p className="text-sm text-gray-600">{link.description}</p>
+                  <h3 className="font-semibold text-gray-900 dark:text-white mb-1">{link.title}</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">{link.description}</p>
                 </div>
-                <ChevronRight className="w-5 h-5 text-gray-400 mt-1" />
+                <ChevronRight className="w-5 h-5 text-gray-400 dark:text-gray-500 mt-1" />
               </Link>
             ))}
           </div>
@@ -197,8 +201,8 @@ export default function AdminPage() {
         {/* Superadmin Only Links */}
         {isSuperadmin(currentUser.role) && (
           <div>
-            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <Shield className="w-5 h-5 text-purple-600" />
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <Shield className="w-5 h-5 text-purple-600 dark:text-purple-400" />
               Superadmin Only
             </h2>
             <div className="grid gap-4 md:grid-cols-2">
@@ -206,16 +210,16 @@ export default function AdminPage() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-5 flex items-start gap-4 border-2 border-purple-200"
+                  className="bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-lg transition-shadow p-5 flex items-start gap-4 border-2 border-purple-200 dark:border-purple-800"
                 >
                   <div className={`p-3 rounded-lg ${link.color}`}>
                     <link.icon className="w-6 h-6 text-white" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-semibold text-gray-900 mb-1">{link.title}</h3>
-                    <p className="text-sm text-gray-600">{link.description}</p>
+                    <h3 className="font-semibold text-gray-900 dark:text-white mb-1">{link.title}</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{link.description}</p>
                   </div>
-                  <ChevronRight className="w-5 h-5 text-gray-400 mt-1" />
+                  <ChevronRight className="w-5 h-5 text-gray-400 dark:text-gray-500 mt-1" />
                 </Link>
               ))}
             </div>
@@ -223,30 +227,30 @@ export default function AdminPage() {
         )}
 
         {/* Quick Links back to other areas */}
-        <div className="pt-4 border-t">
-          <h2 className="text-sm font-medium text-gray-500 mb-3">Related Areas</h2>
+        <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+          <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">Related Areas</h2>
           <div className="flex flex-wrap gap-2">
             <Link
               href="/lab-management/admin/cohorts"
-              className="px-3 py-1.5 bg-white rounded-lg shadow text-sm text-gray-700 hover:bg-gray-50"
+              className="px-3 py-1.5 bg-white dark:bg-gray-800 rounded-lg shadow text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
             >
               Manage Cohorts
             </Link>
             <Link
               href="/lab-management/admin/lab-groups"
-              className="px-3 py-1.5 bg-white rounded-lg shadow text-sm text-gray-700 hover:bg-gray-50"
+              className="px-3 py-1.5 bg-white dark:bg-gray-800 rounded-lg shadow text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
             >
               Lab Groups
             </Link>
             <Link
               href="/lab-management/students"
-              className="px-3 py-1.5 bg-white rounded-lg shadow text-sm text-gray-700 hover:bg-gray-50"
+              className="px-3 py-1.5 bg-white dark:bg-gray-800 rounded-lg shadow text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
             >
               Student Roster
             </Link>
             <Link
               href="/lab-management/scenarios"
-              className="px-3 py-1.5 bg-white rounded-lg shadow text-sm text-gray-700 hover:bg-gray-50"
+              className="px-3 py-1.5 bg-white dark:bg-gray-800 rounded-lg shadow text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
             >
               Scenarios
             </Link>
