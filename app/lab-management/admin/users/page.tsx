@@ -266,12 +266,14 @@ export default function UserManagementPage() {
                         </select>
                       </td>
                       <td className="px-6 py-4">
-                        {user.approved_at ? (
+                        {user.role !== 'pending' ? (
                           <div className="text-sm">
                             <span className="text-green-600 font-medium">Approved</span>
-                            <div className="text-gray-500">
-                              {new Date(user.approved_at).toLocaleDateString()}
-                            </div>
+                            {user.approved_at && (
+                              <div className="text-gray-500">
+                                {new Date(user.approved_at).toLocaleDateString()}
+                              </div>
+                            )}
                           </div>
                         ) : (
                           <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-sm rounded">
