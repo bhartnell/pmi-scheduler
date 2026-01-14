@@ -13,7 +13,9 @@ import {
   Home,
   X,
   Search,
-  Filter
+  Filter,
+  Save,
+  Table
 } from 'lucide-react';
 
 interface Student {
@@ -103,6 +105,12 @@ function LearningStylesContent() {
   const [formStructureStyle, setFormStructureStyle] = useState('');
   const [formNotes, setFormNotes] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // Bulk entry state
+  const [bulkMode, setBulkMode] = useState(false);
+  const [bulkEntries, setBulkEntries] = useState<Record<string, { primary: string; social: string }>>({});
+  const [showOnlyUnassessed, setShowOnlyUnassessed] = useState(true);
+  const [bulkSaving, setBulkSaving] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -243,6 +251,76 @@ function LearningStylesContent() {
     }
   };
 
+  // Bulk entry functions
+  const handleBulkEntryChange = (studentId: string, field: 'primary' | 'social', value: string) => {
+    setBulkEntries(prev => ({
+      ...prev,
+      [studentId]: {
+        ...prev[studentId],
+        [field]: value,
+      },
+    }));
+  };
+
+  const handleBulkSave = async () => {
+    // Get entries that have both primary and social styles filled in
+    const validEntries = Object.entries(bulkEntries).filter(
+      ([_, entry]) => entry.primary && entry.social
+    );
+
+    if (validEntries.length === 0) {
+      alert('No complete entries to save. Please fill in both Primary and Social styles for at least one student.');
+      return;
+    }
+
+    setBulkSaving(true);
+    let savedCount = 0;
+    const newLearningStyles: LearningStyle[] = [];
+
+    for (const [studentId, entry] of validEntries) {
+      try {
+        const res = await fetch('/api/seating/learning-styles', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            student_id: studentId,
+            primary_style: entry.primary,
+            social_style: entry.social,
+          }),
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          savedCount++;
+          newLearningStyles.push(data.learningStyle);
+        }
+      } catch (error) {
+        console.error(`Error saving for student ${studentId}:`, error);
+      }
+    }
+
+    // Update local state with new entries
+    setLearningStyles(prev => [...newLearningStyles, ...prev]);
+
+    // Clear saved entries from bulk entries
+    const savedIds = new Set(validEntries.map(([id]) => id));
+    setBulkEntries(prev => {
+      const updated = { ...prev };
+      for (const id of savedIds) {
+        delete updated[id];
+      }
+      return updated;
+    });
+
+    setBulkSaving(false);
+    alert(`Successfully saved ${savedCount} assessment(s)!`);
+  };
+
+  const getBulkEntryProgress = () => {
+    const validEntries = Object.values(bulkEntries).filter(e => e.primary && e.social).length;
+    return validEntries;
+  };
+
   // Students without learning styles (for add form)
   const assessedStudentIds = new Set(learningStyles.map(ls => ls.student_id));
   const unassessedStudents = students.filter(s => !assessedStudentIds.has(s.id));
@@ -289,14 +367,36 @@ function LearningStylesContent() {
                 <p className="text-gray-600">Manage student learning style assessments</p>
               </div>
             </div>
-            <button
-              onClick={() => setShowForm(true)}
-              disabled={unassessedStudents.length === 0}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
-            >
-              <Plus className="w-5 h-5" />
-              Add Assessment
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  setBulkMode(!bulkMode);
+                  if (!bulkMode) {
+                    setBulkEntries({});
+                  }
+                }}
+                disabled={!selectedCohort}
+                className={`inline-flex items-center gap-2 px-4 py-2 border rounded-lg transition-colors ${
+                  bulkMode
+                    ? 'bg-purple-600 text-white border-purple-600 hover:bg-purple-700'
+                    : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                } disabled:bg-gray-100 disabled:text-gray-400 disabled:border-gray-200`}
+                title={!selectedCohort ? 'Select a cohort to use bulk entry' : ''}
+              >
+                <Table className="w-5 h-5" />
+                {bulkMode ? 'Exit Bulk Entry' : 'Bulk Entry'}
+              </button>
+              {!bulkMode && (
+                <button
+                  onClick={() => setShowForm(true)}
+                  disabled={unassessedStudents.length === 0}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+                >
+                  <Plus className="w-5 h-5" />
+                  Add Assessment
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -429,7 +529,154 @@ function LearningStylesContent() {
           </div>
         )}
 
-        {/* Filters */}
+        {/* Bulk Entry Mode */}
+        {bulkMode && selectedCohort && (
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Bulk Entry Mode</h2>
+                <p className="text-sm text-gray-600">
+                  Quickly assign learning styles to multiple students at once.
+                </p>
+              </div>
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={showOnlyUnassessed}
+                    onChange={(e) => setShowOnlyUnassessed(e.target.checked)}
+                    className="rounded border-gray-300"
+                  />
+                  Show only unassessed
+                </label>
+              </div>
+            </div>
+
+            {/* Progress Bar */}
+            {getBulkEntryProgress() > 0 && (
+              <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-blue-700">
+                    {getBulkEntryProgress()} student(s) ready to save
+                  </span>
+                  <button
+                    onClick={handleBulkSave}
+                    disabled={bulkSaving}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+                  >
+                    <Save className="w-4 h-4" />
+                    {bulkSaving ? 'Saving...' : 'Save All'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Bulk Entry Table */}
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Student</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Agency</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Primary Style *</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Social Style *</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {(showOnlyUnassessed ? unassessedStudents : students).map((student) => {
+                    const existingStyle = learningStyles.find(ls => ls.student_id === student.id);
+                    const bulkEntry = bulkEntries[student.id] || { primary: '', social: '' };
+                    const isComplete = bulkEntry.primary && bulkEntry.social;
+
+                    return (
+                      <tr key={student.id} className={isComplete ? 'bg-green-50' : ''}>
+                        <td className="px-4 py-3">
+                          <div className="font-medium text-gray-900">
+                            {student.first_name} {student.last_name}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-600">
+                          {student.agency || '—'}
+                        </td>
+                        <td className="px-4 py-3">
+                          {existingStyle ? (
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${STYLE_BADGES[existingStyle.primary_style]?.bg} ${STYLE_BADGES[existingStyle.primary_style]?.text}`}>
+                              {existingStyle.primary_style.charAt(0).toUpperCase() + existingStyle.primary_style.slice(1)}
+                            </span>
+                          ) : (
+                            <select
+                              value={bulkEntry.primary}
+                              onChange={(e) => handleBulkEntryChange(student.id, 'primary', e.target.value)}
+                              className="w-full px-2 py-1 text-sm border rounded bg-white text-gray-900"
+                            >
+                              <option value="">Select...</option>
+                              {PRIMARY_STYLES.map(s => (
+                                <option key={s.value} value={s.value}>{s.label}</option>
+                              ))}
+                            </select>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          {existingStyle ? (
+                            <span className={`px-2 py-1 rounded text-xs font-medium ${STYLE_BADGES[existingStyle.social_style]?.bg} ${STYLE_BADGES[existingStyle.social_style]?.text}`}>
+                              {existingStyle.social_style.charAt(0).toUpperCase() + existingStyle.social_style.slice(1)}
+                            </span>
+                          ) : (
+                            <select
+                              value={bulkEntry.social}
+                              onChange={(e) => handleBulkEntryChange(student.id, 'social', e.target.value)}
+                              className="w-full px-2 py-1 text-sm border rounded bg-white text-gray-900"
+                            >
+                              <option value="">Select...</option>
+                              {SOCIAL_STYLES.map(s => (
+                                <option key={s.value} value={s.value}>{s.label}</option>
+                              ))}
+                            </select>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          {existingStyle ? (
+                            <span className="text-green-600 font-medium">Assessed</span>
+                          ) : isComplete ? (
+                            <span className="text-blue-600 font-medium">Ready to save</span>
+                          ) : (
+                            <span className="text-gray-400">Pending</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {(showOnlyUnassessed ? unassessedStudents : students).length === 0 && (
+              <div className="text-center py-8 text-gray-500">
+                {showOnlyUnassessed
+                  ? 'All students in this cohort have been assessed!'
+                  : 'No students found in this cohort.'}
+              </div>
+            )}
+
+            {/* Bulk Save Button (bottom) */}
+            {getBulkEntryProgress() > 0 && (
+              <div className="mt-4 pt-4 border-t flex justify-end">
+                <button
+                  onClick={handleBulkSave}
+                  disabled={bulkSaving}
+                  className="inline-flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+                >
+                  <Save className="w-5 h-5" />
+                  {bulkSaving ? 'Saving...' : `Save ${getBulkEntryProgress()} Assessment(s)`}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Filters - Hidden in bulk mode */}
+        {!bulkMode && (
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -457,8 +704,10 @@ function LearningStylesContent() {
             </select>
           </div>
         </div>
+        )}
 
-        {/* Stats */}
+        {/* Stats - Hidden in bulk mode */}
+        {!bulkMode && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div className="bg-white rounded-lg shadow p-4 text-center">
             <div className="text-2xl font-bold text-gray-900">{learningStyles.length}</div>
@@ -481,8 +730,10 @@ function LearningStylesContent() {
             <div className="text-sm text-gray-600">Visual</div>
           </div>
         </div>
+        )}
 
-        {/* Learning Styles List */}
+        {/* Learning Styles List - Hidden in bulk mode */}
+        {!bulkMode && (
         <div className="bg-white rounded-lg shadow overflow-hidden">
           {filteredStyles.length === 0 ? (
             <div className="p-8 text-center">
@@ -573,6 +824,7 @@ function LearningStylesContent() {
             </table>
           )}
         </div>
+        )}
       </main>
     </div>
   );

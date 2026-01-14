@@ -4,7 +4,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { 
+import {
   ChevronRight,
   ChevronLeft,
   Calendar,
@@ -16,7 +16,9 @@ import {
   MapPin,
   Clock,
   Check,
-  AlertCircle
+  AlertCircle,
+  Printer,
+  Download
 } from 'lucide-react';
 
 interface LabDay {
@@ -141,6 +143,46 @@ export default function LabDayPage() {
     return `Station ${station.station_number}`;
   };
 
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleDownloadPDF = async () => {
+    const html2pdf = (await import('html2pdf.js')).default;
+    const element = document.getElementById('lab-day-printable');
+
+    if (!element) {
+      alert('Could not find printable content');
+      return;
+    }
+
+    // Temporarily show print-only elements and hide screen-only elements
+    const printHiddenElements = element.querySelectorAll('.print\\:hidden');
+    const printBlockElements = element.querySelectorAll('.print\\:block');
+
+    printHiddenElements.forEach(el => (el as HTMLElement).style.display = 'none');
+    printBlockElements.forEach(el => (el as HTMLElement).style.display = 'block');
+
+    const cohortName = `${labDay?.cohort.program.abbreviation}-G${labDay?.cohort.cohort_number}`;
+    const dateStr = labDay?.date || new Date().toISOString().split('T')[0];
+
+    const options = {
+      margin: 0.5,
+      filename: `lab-day-${cohortName}-${dateStr}.pdf`,
+      image: { type: 'jpeg' as const, quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'in' as const, format: 'letter', orientation: 'portrait' as const }
+    };
+
+    try {
+      await html2pdf().set(options).from(element).save();
+    } finally {
+      // Restore visibility
+      printHiddenElements.forEach(el => (el as HTMLElement).style.display = '');
+      printBlockElements.forEach(el => (el as HTMLElement).style.display = '');
+    }
+  };
+
   if (status === 'loading' || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -174,17 +216,34 @@ export default function LabDayPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div id="lab-day-printable" className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 print:bg-white">
       {/* Success Toast */}
       {justGraded && (
-        <div className="fixed top-4 right-4 z-50 bg-green-500 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-fade-in">
+        <div className="fixed top-4 right-4 z-50 bg-green-500 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-fade-in print:hidden">
           <Check className="w-5 h-5" />
           <span>Assessment saved successfully!</span>
         </div>
       )}
 
+      {/* Print Header - Only visible when printing */}
+      <div className="hidden print:block mb-4 p-4 border-b-2 border-gray-800">
+        <h1 className="text-2xl font-bold text-center">LAB DAY SCHEDULE</h1>
+        <div className="mt-2 flex justify-between text-sm">
+          <div>
+            <p><strong>Cohort:</strong> {labDay.cohort.program.abbreviation} Group {labDay.cohort.cohort_number}</p>
+            <p><strong>Date:</strong> {formatDate(labDay.date)}</p>
+          </div>
+          <div className="text-right">
+            {labDay.week_number && labDay.day_number && (
+              <p><strong>Week {labDay.week_number}, Day {labDay.day_number}</strong></p>
+            )}
+            <p>{labDay.num_rotations} rotations × {labDay.rotation_duration} min</p>
+          </div>
+        </div>
+      </div>
+
       {/* Header */}
-      <div className="bg-white shadow-sm">
+      <div className="bg-white shadow-sm print:hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
@@ -211,7 +270,21 @@ export default function LabDayPage() {
                 </span>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 print:hidden">
+              <button
+                onClick={handlePrint}
+                className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+              >
+                <Printer className="w-4 h-4" />
+                Print
+              </button>
+              <button
+                onClick={handleDownloadPDF}
+                className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+              >
+                <Download className="w-4 h-4" />
+                PDF
+              </button>
               <Link
                 href={`/lab-management/schedule/${labDayId}/edit`}
                 className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
@@ -310,7 +383,7 @@ export default function LabDayPage() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex gap-2 pt-3 border-t">
+                  <div className="flex gap-2 pt-3 border-t print:hidden">
                     {station.scenario && (
                       <Link
                         href={`/lab-management/scenarios/${station.scenario.id}`}
@@ -335,7 +408,7 @@ export default function LabDayPage() {
         )}
 
         {/* Quick Actions */}
-        <div className="mt-8 flex flex-wrap gap-3">
+        <div className="mt-8 flex flex-wrap gap-3 print:hidden">
           <Link
             href={`/lab-management/students?cohortId=${labDay.cohort.id}`}
             className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"

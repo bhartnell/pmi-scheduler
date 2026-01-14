@@ -269,10 +269,40 @@ export default function SeatingChartBuilderPage() {
     window.print();
   };
 
-  const handleDownloadPDF = () => {
-    // Trigger print dialog - users can save as PDF from there
-    alert('In the print dialog, select "Save as PDF" as your printer to download a PDF.');
-    window.print();
+  const handleDownloadPDF = async () => {
+    const html2pdf = (await import('html2pdf.js')).default;
+    const element = document.getElementById('seating-chart-printable');
+
+    if (!element) {
+      alert('Could not find printable content');
+      return;
+    }
+
+    // Temporarily show print-only elements and hide screen-only elements
+    const printHiddenElements = element.querySelectorAll('.print\\:hidden');
+    const printBlockElements = element.querySelectorAll('.print\\:block');
+
+    printHiddenElements.forEach(el => (el as HTMLElement).style.display = 'none');
+    printBlockElements.forEach(el => (el as HTMLElement).style.display = 'block');
+
+    const cohortName = `${chart?.cohort.program.abbreviation}-G${chart?.cohort.cohort_number}`;
+    const date = new Date().toISOString().split('T')[0];
+
+    const options = {
+      margin: 0.5,
+      filename: `seating-chart-${cohortName}-${date}.pdf`,
+      image: { type: 'jpeg' as const, quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'in' as const, format: 'letter', orientation: 'landscape' as const }
+    };
+
+    try {
+      await html2pdf().set(options).from(element).save();
+    } finally {
+      // Restore visibility
+      printHiddenElements.forEach(el => (el as HTMLElement).style.display = '');
+      printBlockElements.forEach(el => (el as HTMLElement).style.display = '');
+    }
   };
 
   const handleGenerate = async () => {
@@ -430,7 +460,7 @@ export default function SeatingChartBuilderPage() {
         </div>
       </div>
 
-      <main className="max-w-7xl mx-auto px-4 py-6 print:p-0 print:max-w-none">
+      <main id="seating-chart-printable" className="max-w-7xl mx-auto px-4 py-6 print:p-0 print:max-w-none">
         {/* Print Header - Only visible when printing */}
         <div className="hidden print:block mb-6">
           <div className="flex justify-between items-start border-b-2 border-gray-800 pb-3">
