@@ -34,12 +34,14 @@ export async function GET(request: NextRequest) {
       .select(`
         id,
         station_number,
-        station_name,
+        station_type,
+        custom_title,
         scenario:scenarios(id, title),
         lab_day:lab_days!inner(
           id,
           date,
-          title,
+          week_number,
+          day_number,
           cohort:cohorts(
             id,
             cohort_number,
@@ -61,10 +63,12 @@ export async function GET(request: NextRequest) {
     const transformedLabs = (labs || []).map(lab => ({
       lab_day_id: lab.lab_day?.id,
       lab_date: lab.lab_day?.date,
-      lab_title: lab.lab_day?.title,
+      week_number: lab.lab_day?.week_number,
+      day_number: lab.lab_day?.day_number,
       station_id: lab.id,
       station_number: lab.station_number,
-      station_name: lab.station_name,
+      station_type: lab.station_type,
+      custom_title: lab.custom_title,
       scenario_title: lab.scenario?.title || null,
       cohort_number: lab.lab_day?.cohort?.cohort_number,
       program: lab.lab_day?.cohort?.program?.abbreviation

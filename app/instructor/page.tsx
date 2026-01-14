@@ -39,10 +39,12 @@ interface Certification {
 interface UpcomingLab {
   lab_day_id: string;
   lab_date: string;
-  lab_title: string;
+  week_number: number | null;
+  day_number: number | null;
   station_id: string;
   station_number: number;
-  station_name: string;
+  station_type: string;
+  custom_title: string | null;
   scenario_title: string | null;
   cohort_number: number;
   program: string;
@@ -367,10 +369,10 @@ export default function InstructorDashboard() {
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="font-medium text-gray-900">
-                            {lab.lab_title || `Lab Day`}
+                            {lab.week_number ? `Week ${lab.week_number}` : ''}{lab.day_number ? ` Day ${lab.day_number}` : ''}{!lab.week_number && !lab.day_number ? 'Lab Day' : ''}
                           </p>
                           <p className="text-sm text-gray-600">
-                            Station {lab.station_number}: {lab.station_name || lab.scenario_title || 'TBD'}
+                            Station {lab.station_number}: {lab.custom_title || lab.scenario_title || 'TBD'}
                           </p>
                           <p className="text-xs text-gray-500">
                             {lab.program} Cohort {lab.cohort_number}
