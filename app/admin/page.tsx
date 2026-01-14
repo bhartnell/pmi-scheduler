@@ -15,7 +15,8 @@ import {
   UserPlus,
   Key,
   Database,
-  AlertCircle
+  AlertCircle,
+  FileText
 } from 'lucide-react';
 import {
   canAccessAdmin,
@@ -110,6 +111,13 @@ export default function AdminPage() {
   ];
 
   const superadminLinks = [
+    {
+      href: '/admin/audit-log',
+      icon: FileText,
+      title: 'FERPA Audit Log',
+      description: 'View access logs for protected educational records',
+      color: 'bg-purple-600'
+    },
     {
       href: '/admin/roles',
       icon: Key,

@@ -140,3 +140,148 @@ export function getRoleBadgeClasses(role: Role | string): string {
 export function getRoleLabel(role: Role | string): string {
   return ROLE_LABELS[role as Role] || role;
 }
+
+// ============================================
+// FERPA Data Access Permissions
+// ============================================
+
+// FERPA Classification:
+// - Directory Information (can be shared): name, cohort, enrollment status, dates
+// - Protected Educational Records (restricted): email, agency, assessments, notes
+
+export const DATA_PERMISSIONS = {
+  // Who can see student email
+  studentEmail: ['superadmin', 'admin', 'lead_instructor'] as Role[],
+
+  // Who can see student agency/employer
+  studentAgency: ['superadmin', 'admin', 'lead_instructor', 'instructor'] as Role[],
+
+  // Who can see learning styles
+  learningStyles: ['superadmin', 'admin', 'lead_instructor', 'instructor'] as Role[],
+
+  // Who can see performance notes
+  performanceNotes: ['superadmin', 'admin', 'lead_instructor', 'instructor'] as Role[],
+
+  // Who can see skill assessments
+  skillAssessments: ['superadmin', 'admin', 'lead_instructor', 'instructor'] as Role[],
+
+  // Who can see student full records (all data)
+  studentFullRecord: ['superadmin', 'admin', 'lead_instructor', 'instructor'] as Role[],
+
+  // Who can see directory info only (name, cohort, status)
+  studentDirectoryInfo: ['superadmin', 'admin', 'lead_instructor', 'instructor', 'guest'] as Role[],
+
+  // Who can view audit logs
+  auditLogs: ['superadmin'] as Role[],
+
+  // Who can export student data
+  exportStudentData: ['superadmin', 'admin', 'lead_instructor'] as Role[],
+};
+
+export type DataPermissionType = keyof typeof DATA_PERMISSIONS;
+
+export function canAccessData(userRole: Role | string, dataType: DataPermissionType): boolean {
+  const allowedRoles = DATA_PERMISSIONS[dataType];
+  return allowedRoles.includes(userRole as Role);
+}
+
+// ============================================
+// Student Data Sanitization (FERPA Compliance)
+// ============================================
+
+export interface StudentRecord {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email?: string | null;
+  cohort_id?: string | null;
+  agency?: string | null;
+  photo_url?: string | null;
+  notes?: string | null;
+  status?: string;
+  cohort?: any;
+  learning_style?: any;
+  [key: string]: any;
+}
+
+export interface SanitizedStudent {
+  id: string;
+  first_name: string;
+  last_name: string;
+  cohort_id?: string | null;
+  cohort?: any;
+  status?: string;
+  email?: string | null;
+  agency?: string | null;
+  photo_url?: string | null;
+  notes?: string | null;
+  learning_style?: any;
+  [key: string]: any;
+}
+
+/**
+ * Sanitizes student data based on user role for FERPA compliance.
+ * Guests only see directory information (name, cohort).
+ * Instructors see most data except sensitive notes.
+ * Lead instructors and above see everything.
+ */
+export function sanitizeStudentForRole(student: StudentRecord, userRole: Role | string): SanitizedStudent {
+  // Always include directory information (FERPA allows this)
+  const sanitized: SanitizedStudent = {
+    id: student.id,
+    first_name: student.first_name,
+    last_name: student.last_name,
+    cohort_id: student.cohort_id,
+    status: student.status,
+  };
+
+  // Include cohort info if present (directory info)
+  if (student.cohort) {
+    sanitized.cohort = student.cohort;
+  }
+
+  // Add photo URL for instructors+ (helps identify students)
+  if (canAccessData(userRole, 'studentAgency')) {
+    sanitized.photo_url = student.photo_url;
+  }
+
+  // Add email if permitted
+  if (canAccessData(userRole, 'studentEmail')) {
+    sanitized.email = student.email;
+  }
+
+  // Add agency if permitted
+  if (canAccessData(userRole, 'studentAgency')) {
+    sanitized.agency = student.agency;
+  }
+
+  // Add learning styles if permitted
+  if (canAccessData(userRole, 'learningStyles') && student.learning_style) {
+    sanitized.learning_style = student.learning_style;
+  }
+
+  // Add notes if permitted (performance data)
+  if (canAccessData(userRole, 'performanceNotes')) {
+    sanitized.notes = student.notes;
+  }
+
+  // Pass through any additional fields for full access roles
+  if (canAccessData(userRole, 'studentFullRecord')) {
+    // Include team lead counts and other non-PII operational data
+    if (student.team_lead_count !== undefined) {
+      sanitized.team_lead_count = student.team_lead_count;
+    }
+    if (student.last_team_lead_date !== undefined) {
+      sanitized.last_team_lead_date = student.last_team_lead_date;
+    }
+  }
+
+  return sanitized;
+}
+
+/**
+ * Sanitizes an array of students based on user role
+ */
+export function sanitizeStudentsForRole(students: StudentRecord[], userRole: Role | string): SanitizedStudent[] {
+  return students.map(student => sanitizeStudentForRole(student, userRole));
+}

@@ -18,12 +18,12 @@ export async function POST(request: NextRequest) {
     const searchTerm = input.trim();
 
     // Try to find by access code first (exact match)
+    // FERPA: Do not select email - guests should not see PII
     let { data: guestAccess, error } = await supabase
       .from('guest_access')
       .select(`
         id,
         name,
-        email,
         access_code,
         assigned_role,
         expires_at,
@@ -50,7 +50,6 @@ export async function POST(request: NextRequest) {
         .select(`
           id,
           name,
-          email,
           access_code,
           assigned_role,
           expires_at,
