@@ -60,19 +60,24 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform the data to a cleaner format
-    const transformedLabs = (labs || []).map(lab => ({
-      lab_day_id: lab.lab_day?.id,
-      lab_date: lab.lab_day?.date,
-      week_number: lab.lab_day?.week_number,
-      day_number: lab.lab_day?.day_number,
-      station_id: lab.id,
-      station_number: lab.station_number,
-      station_type: lab.station_type,
-      custom_title: lab.custom_title,
-      scenario_title: lab.scenario?.title || null,
-      cohort_number: lab.lab_day?.cohort?.cohort_number,
-      program: lab.lab_day?.cohort?.program?.abbreviation
-    }));
+    const transformedLabs = (labs || []).map((lab: any) => {
+      const labDay = lab.lab_day;
+      const scenario = lab.scenario;
+      const cohort = labDay?.cohort;
+      return {
+        lab_day_id: labDay?.id,
+        lab_date: labDay?.date,
+        week_number: labDay?.week_number,
+        day_number: labDay?.day_number,
+        station_id: lab.id,
+        station_number: lab.station_number,
+        station_type: lab.station_type,
+        custom_title: lab.custom_title,
+        scenario_title: scenario?.title || null,
+        cohort_number: cohort?.cohort_number,
+        program: cohort?.program?.abbreviation
+      };
+    });
 
     return NextResponse.json({ success: true, labs: transformedLabs });
   } catch (error) {
