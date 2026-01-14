@@ -29,8 +29,9 @@ export async function GET(request: NextRequest) {
           .insert({
             email: session.user.email,
             name: session.user.name || session.user.email.split('@')[0],
-            role: 'pending',
-            is_active: true
+            role: 'instructor', // Default role for PMI users
+            is_active: true,
+            approved_at: new Date().toISOString(), // Auto-approve PMI users
           })
           .select()
           .single();
