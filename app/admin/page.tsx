@@ -1,0 +1,258 @@
+'use client';
+
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import {
+  ChevronRight,
+  Users,
+  Settings,
+  Home,
+  Shield,
+  Trash2,
+  Award,
+  UserPlus,
+  Key,
+  Database,
+  AlertCircle
+} from 'lucide-react';
+import {
+  canAccessAdmin,
+  isSuperadmin,
+  getRoleLabel,
+  getRoleBadgeClasses,
+  type Role
+} from '@/lib/permissions';
+
+interface CurrentUser {
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+}
+
+export default function AdminPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/');
+    }
+  }, [status, router]);
+
+  useEffect(() => {
+    if (session?.user?.email) {
+      fetchCurrentUser();
+    }
+  }, [session]);
+
+  const fetchCurrentUser = async () => {
+    try {
+      const res = await fetch('/api/instructor/me');
+      const data = await res.json();
+      if (data.success && data.user) {
+        if (!canAccessAdmin(data.user.role)) {
+          router.push('/');
+          return;
+        }
+        setCurrentUser(data.user);
+      }
+    } catch (error) {
+      console.error('Error fetching user:', error);
+    }
+    setLoading(false);
+  };
+
+  if (status === 'loading' || loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (!session || !currentUser) return null;
+
+  const adminLinks = [
+    {
+      href: '/admin/users',
+      icon: Shield,
+      title: 'User Management',
+      description: 'Manage users, approve accounts, and assign roles',
+      color: 'bg-indigo-500'
+    },
+    {
+      href: '/admin/guests',
+      icon: UserPlus,
+      title: 'Guest Access',
+      description: 'Create and manage guest access for external instructors',
+      color: 'bg-teal-500'
+    },
+    {
+      href: '/admin/deletion-requests',
+      icon: Trash2,
+      title: 'Deletion Requests',
+      description: 'Review and approve deletion requests from instructors',
+      color: 'bg-red-500'
+    },
+    {
+      href: '/admin/certifications',
+      icon: Award,
+      title: 'Certification Compliance',
+      description: 'Monitor instructor certifications and expiration dates',
+      color: 'bg-purple-500'
+    }
+  ];
+
+  const superadminLinks = [
+    {
+      href: '/admin/roles',
+      icon: Key,
+      title: 'Role Permissions',
+      description: 'View role hierarchy and permission matrix',
+      color: 'bg-amber-500'
+    },
+    {
+      href: '/admin/settings',
+      icon: Database,
+      title: 'System Settings',
+      description: 'Configure system-wide settings and preferences',
+      color: 'bg-gray-700'
+    }
+  ];
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      {/* Header */}
+      <div className="bg-white shadow-sm">
+        <div className="max-w-4xl mx-auto px-4 py-4">
+          <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+            <Link href="/" className="hover:text-blue-600 flex items-center gap-1">
+              <Home className="w-3 h-3" />
+              Home
+            </Link>
+            <ChevronRight className="w-4 h-4" />
+            <span>Admin</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gray-100 rounded-lg">
+                <Settings className="w-6 h-6 text-gray-600" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">Admin Settings</h1>
+                <p className="text-gray-600">System administration and user management</p>
+              </div>
+            </div>
+            <span className={`px-3 py-1 rounded-full text-sm font-medium ${getRoleBadgeClasses(currentUser.role)}`}>
+              {getRoleLabel(currentUser.role)}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <main className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+        {/* Role Info */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5" />
+            <div>
+              <h2 className="font-semibold text-blue-900">Admin Access</h2>
+              <p className="text-sm text-blue-800">
+                You are logged in as <strong>{currentUser.name}</strong> with{' '}
+                <strong>{getRoleLabel(currentUser.role)}</strong> privileges.
+                {isSuperadmin(currentUser.role) && ' You have full system access.'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Admin Links */}
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Administration</h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            {adminLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-5 flex items-start gap-4"
+              >
+                <div className={`p-3 rounded-lg ${link.color}`}>
+                  <link.icon className="w-6 h-6 text-white" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-gray-900 mb-1">{link.title}</h3>
+                  <p className="text-sm text-gray-600">{link.description}</p>
+                </div>
+                <ChevronRight className="w-5 h-5 text-gray-400 mt-1" />
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* Superadmin Only Links */}
+        {isSuperadmin(currentUser.role) && (
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <Shield className="w-5 h-5 text-purple-600" />
+              Superadmin Only
+            </h2>
+            <div className="grid gap-4 md:grid-cols-2">
+              {superadminLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-5 flex items-start gap-4 border-2 border-purple-200"
+                >
+                  <div className={`p-3 rounded-lg ${link.color}`}>
+                    <link.icon className="w-6 h-6 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-900 mb-1">{link.title}</h3>
+                    <p className="text-sm text-gray-600">{link.description}</p>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-gray-400 mt-1" />
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Quick Links back to other areas */}
+        <div className="pt-4 border-t">
+          <h2 className="text-sm font-medium text-gray-500 mb-3">Related Areas</h2>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/lab-management/admin/cohorts"
+              className="px-3 py-1.5 bg-white rounded-lg shadow text-sm text-gray-700 hover:bg-gray-50"
+            >
+              Manage Cohorts
+            </Link>
+            <Link
+              href="/lab-management/admin/lab-groups"
+              className="px-3 py-1.5 bg-white rounded-lg shadow text-sm text-gray-700 hover:bg-gray-50"
+            >
+              Lab Groups
+            </Link>
+            <Link
+              href="/lab-management/students"
+              className="px-3 py-1.5 bg-white rounded-lg shadow text-sm text-gray-700 hover:bg-gray-50"
+            >
+              Student Roster
+            </Link>
+            <Link
+              href="/lab-management/scenarios"
+              className="px-3 py-1.5 bg-white rounded-lg shadow text-sm text-gray-700 hover:bg-gray-50"
+            >
+              Scenarios
+            </Link>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}

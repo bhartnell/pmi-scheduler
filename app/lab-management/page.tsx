@@ -23,6 +23,7 @@ import {
   Layout
 } from 'lucide-react';
 import LabHeader from '@/components/LabHeader';
+import { canManageContent, type Role } from '@/lib/permissions';
 
 interface DashboardStats {
   totalStudents: number;
@@ -65,9 +66,15 @@ interface UpcomingLab {
   stations_count: number;
 }
 
+interface CurrentUser {
+  id: string;
+  role: Role;
+}
+
 export default function LabManagementDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [stats, setStats] = useState<DashboardStats>({
     totalStudents: 0,
     activeStudents: 0,
@@ -82,15 +89,31 @@ export default function LabManagementDashboard() {
 
   useEffect(() => {
     if (status === 'unauthenticated') {
-      router.push('/auth/signin');
+      router.push('/');
     }
   }, [status, router]);
 
   useEffect(() => {
-    if (session) {
-      fetchDashboardData();
+    if (session?.user?.email) {
+      fetchCurrentUser();
     }
   }, [session]);
+
+  const fetchCurrentUser = async () => {
+    try {
+      const res = await fetch('/api/instructor/me');
+      const data = await res.json();
+      if (data.success && data.user) {
+        setCurrentUser(data.user);
+        fetchDashboardData();
+      } else {
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error('Error fetching user:', error);
+      setLoading(false);
+    }
+  };
 
   const fetchDashboardData = async () => {
     try {
@@ -168,13 +191,15 @@ export default function LabManagementDashboard() {
 
   if (!session) return null;
 
+  const canManage = currentUser && canManageContent(currentUser.role);
+
   const quickLinks = [
     { href: '/lab-management/scenarios', icon: BookOpen, label: 'Scenarios', color: 'bg-purple-500' },
     { href: '/lab-management/students', icon: Users, label: 'Students', color: 'bg-green-500' },
     { href: '/lab-management/schedule', icon: Calendar, label: 'Schedule', color: 'bg-blue-500' },
     { href: '/lab-management/seating/learning-styles', icon: Brain, label: 'Learning', color: 'bg-cyan-500' },
     { href: '/lab-management/my-certifications', icon: Award, label: 'My Certs', color: 'bg-pink-500' },
-    { href: '/lab-management/admin', icon: Settings, label: 'Admin', color: 'bg-gray-500' },
+    ...(canManage ? [{ href: '/lab-management/admin', icon: Settings, label: 'Admin', color: 'bg-gray-500' }] : []),
   ];
 
   // Format date for display (timezone-safe)
@@ -207,16 +232,18 @@ export default function LabManagementDashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <LabHeader 
+      <LabHeader
         title="Lab Management Dashboard"
         actions={
-          <Link
-            href="/lab-management/schedule/new"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            <Plus className="w-4 h-4" />
-            New Lab Day
-          </Link>
+          canManage ? (
+            <Link
+              href="/lab-management/schedule/new"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              <Plus className="w-4 h-4" />
+              New Lab Day
+            </Link>
+          ) : null
         }
       />
 
@@ -493,53 +520,55 @@ export default function LabManagementDashboard() {
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className="mt-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <Link
-              href="/lab-management/students/new"
-              className="bg-white rounded-lg shadow p-4 hover:shadow-lg transition-shadow flex items-center gap-3"
-            >
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Plus className="w-5 h-5 text-green-600" />
-              </div>
-              <div className="flex-1">
-                <div className="font-medium text-gray-900">Add Student</div>
-                <div className="text-sm text-gray-600">Register a new student</div>
-              </div>
-              <ChevronRight className="w-5 h-5 text-gray-400" />
-            </Link>
-            
-            <Link
-              href="/lab-management/scenarios/new"
-              className="bg-white rounded-lg shadow p-4 hover:shadow-lg transition-shadow flex items-center gap-3"
-            >
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <Plus className="w-5 h-5 text-purple-600" />
-              </div>
-              <div className="flex-1">
-                <div className="font-medium text-gray-900">Create Scenario</div>
-                <div className="text-sm text-gray-600">Add training scenario</div>
-              </div>
-              <ChevronRight className="w-5 h-5 text-gray-400" />
-            </Link>
-            
-            <Link
-              href="/lab-management/admin/cohorts"
-              className="bg-white rounded-lg shadow p-4 hover:shadow-lg transition-shadow flex items-center gap-3"
-            >
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Settings className="w-5 h-5 text-blue-600" />
-              </div>
-              <div className="flex-1">
-                <div className="font-medium text-gray-900">Manage Cohorts</div>
-                <div className="text-sm text-gray-600">Add or edit cohorts</div>
-              </div>
-              <ChevronRight className="w-5 h-5 text-gray-400" />
-            </Link>
+        {/* Quick Actions - Only for lead_instructor+ */}
+        {canManage && (
+          <div className="mt-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <Link
+                href="/lab-management/students/new"
+                className="bg-white rounded-lg shadow p-4 hover:shadow-lg transition-shadow flex items-center gap-3"
+              >
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <Plus className="w-5 h-5 text-green-600" />
+                </div>
+                <div className="flex-1">
+                  <div className="font-medium text-gray-900">Add Student</div>
+                  <div className="text-sm text-gray-600">Register a new student</div>
+                </div>
+                <ChevronRight className="w-5 h-5 text-gray-400" />
+              </Link>
+
+              <Link
+                href="/lab-management/scenarios/new"
+                className="bg-white rounded-lg shadow p-4 hover:shadow-lg transition-shadow flex items-center gap-3"
+              >
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <Plus className="w-5 h-5 text-purple-600" />
+                </div>
+                <div className="flex-1">
+                  <div className="font-medium text-gray-900">Create Scenario</div>
+                  <div className="text-sm text-gray-600">Add training scenario</div>
+                </div>
+                <ChevronRight className="w-5 h-5 text-gray-400" />
+              </Link>
+
+              <Link
+                href="/lab-management/admin/cohorts"
+                className="bg-white rounded-lg shadow p-4 hover:shadow-lg transition-shadow flex items-center gap-3"
+              >
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Settings className="w-5 h-5 text-blue-600" />
+                </div>
+                <div className="flex-1">
+                  <div className="font-medium text-gray-900">Manage Cohorts</div>
+                  <div className="text-sm text-gray-600">Add or edit cohorts</div>
+                </div>
+                <ChevronRight className="w-5 h-5 text-gray-400" />
+              </Link>
+            </div>
           </div>
-        </div>
+        )}
       </main>
     </div>
   );

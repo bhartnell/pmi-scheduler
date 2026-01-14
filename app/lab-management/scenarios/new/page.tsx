@@ -26,6 +26,7 @@ import {
   Check,
   ArrowRight
 } from 'lucide-react';
+import { canManageContent, type Role } from '@/lib/permissions';
 
 // Types
 interface VitalSigns {
@@ -681,15 +682,31 @@ export default function ScenarioEditorPage() {
 
   useEffect(() => {
     if (status === 'unauthenticated') {
-      router.push('/auth/signin');
+      router.push('/');
     }
   }, [status, router]);
 
   useEffect(() => {
-    if (session && isEditing) {
-      fetchScenario();
-    } else {
-      setLoading(false);
+    if (session?.user?.email) {
+      // Check permissions first
+      fetch('/api/instructor/me')
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.user) {
+            if (!canManageContent(data.user.role)) {
+              router.push('/lab-management/scenarios');
+              return;
+            }
+            if (isEditing) {
+              fetchScenario();
+            } else {
+              setLoading(false);
+            }
+          } else {
+            setLoading(false);
+          }
+        })
+        .catch(() => setLoading(false));
     }
   }, [session, isEditing]);
 

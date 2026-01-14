@@ -17,6 +17,7 @@ import {
   Users,
   Home
 } from 'lucide-react';
+import { canAccessAdmin, canManageContent, type Role } from '@/lib/permissions';
 
 interface DashboardStats {
   total_certs: number;
@@ -54,7 +55,7 @@ interface CurrentUser {
   id: string;
   name: string;
   email: string;
-  role: string;
+  role: Role;
 }
 
 // Parse date as local date
@@ -98,7 +99,7 @@ export default function InstructorDashboard() {
 
   useEffect(() => {
     if (status === 'unauthenticated') {
-      router.push('/auth/signin');
+      router.push('/');
     }
   }, [status, router]);
 
@@ -199,9 +200,9 @@ export default function InstructorDashboard() {
               >
                 Lab Management
               </Link>
-              {currentUser?.role === 'admin' && (
+              {currentUser && canAccessAdmin(currentUser.role) && (
                 <Link
-                  href="/lab-management/admin"
+                  href="/admin"
                   className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
                 >
                   Admin

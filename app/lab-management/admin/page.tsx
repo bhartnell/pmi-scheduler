@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   ChevronRight,
@@ -18,18 +18,49 @@ import {
   Brain,
   Layout
 } from 'lucide-react';
+import { canManageContent, type Role } from '@/lib/permissions';
+
+interface CurrentUser {
+  id: string;
+  role: Role;
+}
 
 export default function AdminPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
-      router.push('/auth/signin');
+      router.push('/');
     }
   }, [status, router]);
 
-  if (status === 'loading') {
+  useEffect(() => {
+    if (session?.user?.email) {
+      fetchCurrentUser();
+    }
+  }, [session]);
+
+  const fetchCurrentUser = async () => {
+    try {
+      const res = await fetch('/api/instructor/me');
+      const data = await res.json();
+      if (data.success && data.user) {
+        if (!canManageContent(data.user.role)) {
+          router.push('/lab-management');
+          return;
+        }
+        setCurrentUser(data.user);
+      }
+    } catch (error) {
+      console.error('Error fetching user:', error);
+    }
+    setLoading(false);
+  };
+
+  if (status === 'loading' || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -37,7 +68,7 @@ export default function AdminPage() {
     );
   }
 
-  if (!session) return null;
+  if (!session || !currentUser) return null;
 
   const adminLinks = [
     {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useSession, signIn, signOut } from 'next-auth/react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   Calendar,
@@ -12,11 +13,33 @@ import {
   FileText,
   GraduationCap,
   Award,
-  BookOpen
+  BookOpen,
+  Settings,
+  UserPlus
 } from 'lucide-react';
+import { canAccessAdmin, getRoleLabel, getRoleBadgeClasses, type Role } from '@/lib/permissions';
+
+interface CurrentUser {
+  id: string;
+  role: Role;
+}
 
 export default function HomePage() {
   const { data: session, status } = useSession();
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+
+  useEffect(() => {
+    if (session?.user?.email) {
+      fetch('/api/instructor/me')
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.user) {
+            setCurrentUser(data.user);
+          }
+        })
+        .catch(console.error);
+    }
+  }, [session]);
 
   // Loading state
   if (status === 'loading') {
@@ -50,10 +73,21 @@ export default function HomePage() {
             <LogIn className="w-5 h-5" />
             Sign in with Google
           </button>
-          
+
           <p className="text-center text-sm text-gray-500 mt-4">
             Use your @pmi.edu account to sign in
           </p>
+
+          <div className="mt-6 pt-6 border-t text-center">
+            <p className="text-sm text-gray-500 mb-3">Guest instructor?</p>
+            <Link
+              href="/guest"
+              className="inline-flex items-center gap-2 px-4 py-2 text-teal-600 hover:bg-teal-50 rounded-lg transition-colors"
+            >
+              <UserPlus className="w-4 h-4" />
+              Guest Access
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -157,6 +191,29 @@ export default function HomePage() {
               </div>
             </div>
           </Link>
+
+          {/* Admin Card - Only for admin+ */}
+          {currentUser && canAccessAdmin(currentUser.role) && (
+            <Link
+              href="/admin"
+              className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group border-2 border-red-200"
+            >
+              <div className="flex flex-col items-center text-center">
+                <div className="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-red-200 transition-colors">
+                  <Settings className="w-8 h-8 text-red-600" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">Admin Settings</h3>
+                <p className="text-gray-600 text-sm mb-4">
+                  Manage users, roles, and system settings.
+                </p>
+                <div className="flex flex-wrap justify-center gap-2 text-xs">
+                  <span className="px-2 py-1 bg-red-50 text-red-700 rounded-full">Users</span>
+                  <span className="px-2 py-1 bg-red-50 text-red-700 rounded-full">Guests</span>
+                  <span className="px-2 py-1 bg-red-50 text-red-700 rounded-full">Settings</span>
+                </div>
+              </div>
+            </Link>
+          )}
         </div>
 
         {/* Quick Links */}
