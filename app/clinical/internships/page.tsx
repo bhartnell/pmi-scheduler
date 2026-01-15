@@ -17,7 +17,10 @@ import {
   Clock,
   TrendingUp,
   X,
-  Eye
+  Eye,
+  Edit2,
+  Save,
+  UserPlus
 } from 'lucide-react';
 import { canEditClinical, isSuperadmin, type Role } from '@/lib/permissions';
 
@@ -81,6 +84,13 @@ interface CohortOption {
   program: { abbreviation: string };
 }
 
+// Combined view item - either has internship or just student
+interface StudentRow {
+  student: Student;
+  internship: Internship | null;
+  hasRecord: boolean;
+}
+
 const PHASE_LABELS: Record<string, string> = {
   pre_internship: 'Pre-Internship',
   phase_1_mentorship: 'Phase 1 - Mentorship',
@@ -106,7 +116,7 @@ export default function InternshipTrackerPage() {
   const [internships, setInternships] = useState<Internship[]>([]);
   const [cohorts, setCohorts] = useState<CohortOption[]>([]);
   const [agencies, setAgencies] = useState<Agency[]>([]);
-  const [students, setStudents] = useState<Student[]>([]);
+  const [cohortStudents, setCohortStudents] = useState<Student[]>([]);
   const [preceptors, setPreceptors] = useState<Preceptor[]>([]);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<Role | null>(null);
@@ -117,9 +127,15 @@ export default function InternshipTrackerPage() {
   const [filterStatus, setFilterStatus] = useState('');
   const [filterAgency, setFilterAgency] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showOnlyWithRecords, setShowOnlyWithRecords] = useState(false);
 
-  // Add Modal
-  const [showAddModal, setShowAddModal] = useState(false);
+  // Check if selected cohort is a PM cohort
+  const selectedCohortData = cohorts.find(c => c.id === selectedCohort);
+  const isPMCohort = selectedCohortData?.program?.abbreviation === 'PM';
+
+  // Quick edit modal for creating/editing inline
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [editingInternship, setEditingInternship] = useState<Internship | null>(null);
   const [saving, setSaving] = useState(false);
   const [formData, setFormData] = useState({
     student_id: '',
@@ -128,7 +144,10 @@ export default function InternshipTrackerPage() {
     preceptor_id: '',
     shift_type: '12_hour',
     placement_date: '',
+    internship_start_date: '',
     status: 'not_started',
+    current_phase: 'pre_internship',
+    notes: '',
   });
 
   useEffect(() => {
@@ -146,8 +165,15 @@ export default function InternshipTrackerPage() {
   useEffect(() => {
     if (session && selectedCohort) {
       fetchInternships();
+      // For PM cohorts, also fetch all students to show who needs placement
+      const cohort = cohorts.find(c => c.id === selectedCohort);
+      if (cohort?.program?.abbreviation === 'PM') {
+        fetchCohortStudents(selectedCohort);
+      } else {
+        setCohortStudents([]);
+      }
     }
-  }, [selectedCohort, filterPhase, filterStatus, filterAgency]);
+  }, [selectedCohort, filterPhase, filterStatus, filterAgency, cohorts]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -207,35 +233,60 @@ export default function InternshipTrackerPage() {
     }
   };
 
-  const fetchStudentsForCohort = async (cohortId: string) => {
+  const fetchCohortStudents = async (cohortId: string) => {
     try {
       const res = await fetch(`/api/lab-management/students?cohortId=${cohortId}`);
       const data = await res.json();
       if (data.success) {
-        setStudents(data.students || []);
+        setCohortStudents(data.students || []);
       }
     } catch (error) {
       console.error('Error fetching students:', error);
     }
   };
 
-  const openAddModal = () => {
-    setFormData({
-      student_id: '',
-      cohort_id: selectedCohort,
-      agency_id: '',
-      preceptor_id: '',
-      shift_type: '12_hour',
-      placement_date: '',
-      status: 'not_started',
-    });
-    if (selectedCohort) {
-      fetchStudentsForCohort(selectedCohort);
+  // Open edit modal for a student (either create new or edit existing)
+  const openEditModal = (student: Student, internship: Internship | null) => {
+    setEditingStudent(student);
+    setEditingInternship(internship);
+
+    if (internship) {
+      // Editing existing internship
+      setFormData({
+        student_id: student.id,
+        cohort_id: selectedCohort,
+        agency_id: internship.agency_id || '',
+        preceptor_id: internship.preceptor_id || '',
+        shift_type: internship.shift_type || '12_hour',
+        placement_date: internship.placement_date || '',
+        internship_start_date: internship.internship_start_date || '',
+        status: internship.status || 'not_started',
+        current_phase: internship.current_phase || 'pre_internship',
+        notes: '',
+      });
+    } else {
+      // Creating new internship for this student
+      setFormData({
+        student_id: student.id,
+        cohort_id: selectedCohort,
+        agency_id: '',
+        preceptor_id: '',
+        shift_type: '12_hour',
+        placement_date: '',
+        internship_start_date: '',
+        status: 'not_started',
+        current_phase: 'pre_internship',
+        notes: '',
+      });
     }
-    setShowAddModal(true);
   };
 
-  const handleAddInternship = async () => {
+  const closeEditModal = () => {
+    setEditingStudent(null);
+    setEditingInternship(null);
+  };
+
+  const handleSaveInternship = async () => {
     if (!formData.student_id) {
       alert('Please select a student');
       return;
@@ -243,38 +294,103 @@ export default function InternshipTrackerPage() {
 
     setSaving(true);
     try {
-      const res = await fetch('/api/clinical/internships', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
+      let res;
+      if (editingInternship) {
+        // Update existing
+        res = await fetch(`/api/clinical/internships/${editingInternship.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData),
+        });
+      } else {
+        // Create new
+        res = await fetch('/api/clinical/internships', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData),
+        });
+      }
 
       const data = await res.json();
       if (data.success) {
-        setShowAddModal(false);
+        closeEditModal();
         fetchInternships();
       } else {
-        alert(data.error || 'Failed to create internship record');
+        alert(data.error || 'Failed to save internship record');
       }
     } catch (error) {
-      console.error('Error creating internship:', error);
-      alert('Failed to create internship record');
+      console.error('Error saving internship:', error);
+      alert('Failed to save internship record');
     }
     setSaving(false);
   };
 
-  // Filter internships by search
-  const filteredInternships = internships.filter(i => {
-    if (!searchQuery) return true;
-    const search = searchQuery.toLowerCase();
-    const studentName = `${i.students?.first_name || ''} ${i.students?.last_name || ''}`.toLowerCase();
-    const preceptorName = `${i.field_preceptors?.first_name || ''} ${i.field_preceptors?.last_name || ''}`.toLowerCase();
-    return studentName.includes(search) || preceptorName.includes(search) || i.agency_name?.toLowerCase().includes(search);
+  // Build combined student rows for PM cohorts (spreadsheet view)
+  const studentRows: StudentRow[] = isPMCohort
+    ? cohortStudents.map(student => {
+        const internship = internships.find(i => i.student_id === student.id) || null;
+        return { student, internship, hasRecord: !!internship };
+      })
+    : internships.map(i => ({
+        student: i.students as Student,
+        internship: i,
+        hasRecord: true,
+      }));
+
+  // Filter rows by search and other filters
+  const filteredRows = studentRows.filter(row => {
+    // Search filter
+    if (searchQuery) {
+      const search = searchQuery.toLowerCase();
+      const studentName = `${row.student.first_name} ${row.student.last_name}`.toLowerCase();
+      const preceptorName = row.internship
+        ? `${row.internship.field_preceptors?.first_name || ''} ${row.internship.field_preceptors?.last_name || ''}`.toLowerCase()
+        : '';
+      const agencyName = row.internship?.agency_name?.toLowerCase() || '';
+      if (!studentName.includes(search) && !preceptorName.includes(search) && !agencyName.includes(search)) {
+        return false;
+      }
+    }
+
+    // Show only with records filter
+    if (showOnlyWithRecords && !row.hasRecord) {
+      return false;
+    }
+
+    // Phase filter (only applies to rows with internships)
+    if (filterPhase && row.internship?.current_phase !== filterPhase) {
+      return false;
+    }
+
+    // Status filter (only applies to rows with internships)
+    if (filterStatus && row.internship?.status !== filterStatus) {
+      return false;
+    }
+
+    // Agency filter (only applies to rows with internships)
+    if (filterAgency && row.internship?.agency_id !== filterAgency) {
+      return false;
+    }
+
+    return true;
+  });
+
+  // Sort: students without records first, then by name
+  const sortedRows = [...filteredRows].sort((a, b) => {
+    if (a.hasRecord !== b.hasRecord) {
+      return a.hasRecord ? 1 : -1; // No record first
+    }
+    return `${a.student.first_name} ${a.student.last_name}`.localeCompare(
+      `${b.student.first_name} ${b.student.last_name}`
+    );
   });
 
   // Stats
+  const needsPlacement = isPMCohort ? cohortStudents.filter(s => !internships.find(i => i.student_id === s.id)).length : 0;
   const stats = {
-    total: internships.length,
+    totalStudents: isPMCohort ? cohortStudents.length : internships.length,
+    needsPlacement,
+    placed: internships.length,
     phase1: internships.filter(i => i.current_phase === 'phase_1_mentorship').length,
     phase2: internships.filter(i => i.current_phase === 'phase_2_evaluation').length,
     atRisk: internships.filter(i => i.status === 'at_risk').length,
@@ -320,18 +436,13 @@ export default function InternshipTrackerPage() {
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Internship Tracker</h1>
-                <p className="text-gray-600 dark:text-gray-400">Track student progress through internship phases</p>
+                <p className="text-gray-600 dark:text-gray-400">
+                  {isPMCohort
+                    ? 'View all students and track their internship placement'
+                    : 'Track student progress through internship phases'}
+                </p>
               </div>
             </div>
-            {canEdit && selectedCohort && (
-              <button
-                onClick={openAddModal}
-                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
-              >
-                <Plus className="w-5 h-5" />
-                Add Student
-              </button>
-            )}
           </div>
         </div>
       </div>
@@ -411,10 +522,22 @@ export default function InternshipTrackerPage() {
         {selectedCohort && (
           <>
             {/* Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className={`grid grid-cols-2 ${isPMCohort ? 'md:grid-cols-6' : 'md:grid-cols-5'} gap-4`}>
+              {isPMCohort && (
+                <>
+                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 text-center">
+                    <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalStudents}</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">Total Students</div>
+                  </div>
+                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 text-center border-2 border-orange-200 dark:border-orange-800">
+                    <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">{stats.needsPlacement}</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">Needs Placement</div>
+                  </div>
+                </>
+              )}
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 text-center">
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total}</div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">Total</div>
+                <div className="text-2xl font-bold text-teal-600 dark:text-teal-400">{stats.placed}</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">Placed</div>
               </div>
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 text-center">
                 <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.phase1}</div>
@@ -425,34 +548,41 @@ export default function InternshipTrackerPage() {
                 <div className="text-sm text-gray-500 dark:text-gray-400">Phase 2</div>
               </div>
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 text-center">
-                <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{stats.atRisk}</div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">At Risk</div>
-              </div>
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 text-center">
                 <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{stats.completed}</div>
                 <div className="text-sm text-gray-500 dark:text-gray-400">Completed</div>
               </div>
             </div>
 
-            {/* Internships Table */}
+            {/* Toggle for PM cohorts */}
+            {isPMCohort && (
+              <div className="flex items-center gap-4 bg-white dark:bg-gray-800 rounded-lg shadow px-4 py-3">
+                <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showOnlyWithRecords}
+                    onChange={(e) => setShowOnlyWithRecords(e.target.checked)}
+                    className="w-4 h-4 text-purple-600 rounded"
+                  />
+                  Show only students with internship records
+                </label>
+                <span className="text-sm text-gray-500 dark:text-gray-400">
+                  Showing {sortedRows.length} of {cohortStudents.length} students
+                </span>
+              </div>
+            )}
+
+            {/* Students/Internships Table */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-              {filteredInternships.length === 0 ? (
+              {sortedRows.length === 0 ? (
                 <div className="p-8 text-center">
                   <ClipboardList className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
                   <p className="text-gray-500 dark:text-gray-400">
-                    {internships.length === 0
+                    {isPMCohort
+                      ? 'No students found in this cohort'
+                      : internships.length === 0
                       ? 'No internship records for this cohort'
                       : 'No internships match your filters'}
                   </p>
-                  {canEdit && internships.length === 0 && (
-                    <button
-                      onClick={openAddModal}
-                      className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Add First Student
-                    </button>
-                  )}
                 </div>
               ) : (
                 <div className="overflow-x-auto">
@@ -464,30 +594,45 @@ export default function InternshipTrackerPage() {
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Preceptor</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Start Date</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Phase</th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">P1 Eval</th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">P2 Eval</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">P1</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">P2</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
                         <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                      {filteredInternships.map((internship) => {
-                        const statusConfig = STATUS_CONFIG[internship.status] || STATUS_CONFIG.not_started;
+                      {sortedRows.map((row) => {
+                        const { student, internship, hasRecord } = row;
+                        const statusConfig = internship
+                          ? STATUS_CONFIG[internship.status] || STATUS_CONFIG.not_started
+                          : null;
+
                         return (
                           <tr
-                            key={internship.id}
-                            className="hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                            key={student.id}
+                            className={`hover:bg-gray-50 dark:hover:bg-gray-700/50 ${
+                              !hasRecord ? 'bg-orange-50/50 dark:bg-orange-900/10' : ''
+                            }`}
                           >
                             <td className="px-4 py-3">
-                              <div className="font-medium text-gray-900 dark:text-white">
-                                {internship.students?.first_name} {internship.students?.last_name}
+                              <div className="flex items-center gap-2">
+                                <div className="font-medium text-gray-900 dark:text-white">
+                                  {student.first_name} {student.last_name}
+                                </div>
+                                {!hasRecord && (
+                                  <span className="px-1.5 py-0.5 text-xs bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 rounded">
+                                    Needs placement
+                                  </span>
+                                )}
                               </div>
                             </td>
                             <td className="px-4 py-3 text-gray-700 dark:text-gray-300">
-                              {internship.agencies?.abbreviation || internship.agency_name || '-'}
+                              {internship?.agencies?.abbreviation || internship?.agency_name || (
+                                <span className="text-gray-400 italic">-</span>
+                              )}
                             </td>
                             <td className="px-4 py-3">
-                              {internship.field_preceptors ? (
+                              {internship?.field_preceptors ? (
                                 <div>
                                   <div className="text-gray-900 dark:text-white">
                                     {internship.field_preceptors.first_name} {internship.field_preceptors.last_name}
@@ -497,44 +642,80 @@ export default function InternshipTrackerPage() {
                                   )}
                                 </div>
                               ) : (
-                                <span className="text-gray-400">Not assigned</span>
+                                <span className="text-gray-400 italic">-</span>
                               )}
                             </td>
                             <td className="px-4 py-3 text-gray-700 dark:text-gray-300">
-                              {formatDate(internship.internship_start_date)}
-                            </td>
-                            <td className="px-4 py-3">
-                              <span className="text-sm text-gray-700 dark:text-gray-300">
-                                {PHASE_LABELS[internship.current_phase] || internship.current_phase}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-center">
-                              {internship.phase_1_eval_completed ? (
-                                <CheckCircle2 className="w-5 h-5 text-green-500 mx-auto" />
-                              ) : (
-                                <Clock className="w-5 h-5 text-gray-300 mx-auto" />
-                              )}
-                            </td>
-                            <td className="px-4 py-3 text-center">
-                              {internship.phase_2_eval_completed ? (
-                                <CheckCircle2 className="w-5 h-5 text-green-500 mx-auto" />
-                              ) : (
-                                <Clock className="w-5 h-5 text-gray-300 mx-auto" />
+                              {internship ? formatDate(internship.internship_start_date) : (
+                                <span className="text-gray-400 italic">-</span>
                               )}
                             </td>
                             <td className="px-4 py-3">
-                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${statusConfig.bgColor} ${statusConfig.color} dark:bg-opacity-20`}>
-                                {statusConfig.label}
-                              </span>
+                              {internship ? (
+                                <span className="text-sm text-gray-700 dark:text-gray-300">
+                                  {PHASE_LABELS[internship.current_phase] || internship.current_phase}
+                                </span>
+                              ) : (
+                                <span className="text-gray-400 italic">-</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              {internship?.phase_1_eval_completed ? (
+                                <CheckCircle2 className="w-5 h-5 text-green-500 mx-auto" />
+                              ) : (
+                                <span className="text-gray-300">-</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              {internship?.phase_2_eval_completed ? (
+                                <CheckCircle2 className="w-5 h-5 text-green-500 mx-auto" />
+                              ) : (
+                                <span className="text-gray-300">-</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              {statusConfig ? (
+                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${statusConfig.bgColor} ${statusConfig.color} dark:bg-opacity-20`}>
+                                  {statusConfig.label}
+                                </span>
+                              ) : (
+                                <span className="text-gray-400 italic">-</span>
+                              )}
                             </td>
                             <td className="px-4 py-3 text-right">
-                              <Link
-                                href={`/clinical/internships/${internship.id}`}
-                                className="inline-flex items-center gap-1 px-3 py-1.5 text-sm text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded"
-                              >
-                                <Eye className="w-4 h-4" />
-                                View
-                              </Link>
+                              <div className="flex items-center justify-end gap-1">
+                                {canEdit && (
+                                  <button
+                                    onClick={() => openEditModal(student, internship)}
+                                    className={`inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded ${
+                                      hasRecord
+                                        ? 'text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/30'
+                                        : 'text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/30'
+                                    }`}
+                                  >
+                                    {hasRecord ? (
+                                      <>
+                                        <Edit2 className="w-4 h-4" />
+                                        Edit
+                                      </>
+                                    ) : (
+                                      <>
+                                        <UserPlus className="w-4 h-4" />
+                                        Setup
+                                      </>
+                                    )}
+                                  </button>
+                                )}
+                                {hasRecord && internship && (
+                                  <Link
+                                    href={`/clinical/internships/${internship.id}`}
+                                    className="inline-flex items-center gap-1 px-3 py-1.5 text-sm text-teal-600 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/30 rounded"
+                                  >
+                                    <Eye className="w-4 h-4" />
+                                    View
+                                  </Link>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         );
@@ -555,16 +736,21 @@ export default function InternshipTrackerPage() {
         )}
       </main>
 
-      {/* Add Student Modal */}
-      {showAddModal && (
+      {/* Edit/Create Internship Modal */}
+      {editingStudent && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full">
-            <div className="p-4 border-b dark:border-gray-700 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Add Student to Internship Tracker
-              </h3>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-4 border-b dark:border-gray-700 flex items-center justify-between sticky top-0 bg-white dark:bg-gray-800">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {editingInternship ? 'Edit Internship Record' : 'Setup Internship'}
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {editingStudent.first_name} {editingStudent.last_name}
+                </p>
+              </div>
               <button
-                onClick={() => setShowAddModal(false)}
+                onClick={closeEditModal}
                 className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
               >
                 <X className="w-5 h-5 text-gray-500" />
@@ -572,25 +758,6 @@ export default function InternshipTrackerPage() {
             </div>
 
             <div className="p-4 space-y-4">
-              {/* Student */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Student *
-                </label>
-                <select
-                  value={formData.student_id}
-                  onChange={(e) => setFormData({ ...formData, student_id: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-                >
-                  <option value="">Select Student</option>
-                  {students.map(s => (
-                    <option key={s.id} value={s.id}>
-                      {s.first_name} {s.last_name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
               {/* Agency */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -604,7 +771,7 @@ export default function InternshipTrackerPage() {
                   <option value="">Select Agency</option>
                   {agencies.map(a => (
                     <option key={a.id} value={a.id}>
-                      {a.name}
+                      {a.name} {a.abbreviation ? `(${a.abbreviation})` : ''}
                     </option>
                   ))}
                 </select>
@@ -625,28 +792,14 @@ export default function InternshipTrackerPage() {
                     .filter(p => !formData.agency_id || p.agency_name === agencies.find(a => a.id === formData.agency_id)?.name)
                     .map(p => (
                       <option key={p.id} value={p.id}>
-                        {p.first_name} {p.last_name} {p.agency_name ? `(${p.agency_name})` : ''}
+                        {p.first_name} {p.last_name} {p.agency_name ? `(${p.agency_name})` : ''} {p.station ? `- Station ${p.station}` : ''}
                       </option>
                     ))}
                 </select>
               </div>
 
-              {/* Shift Type & Placement Date */}
+              {/* Dates Row 1 */}
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Shift Type
-                  </label>
-                  <select
-                    value={formData.shift_type}
-                    onChange={(e) => setFormData({ ...formData, shift_type: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-                  >
-                    <option value="12_hour">12 Hour</option>
-                    <option value="24_hour">24 Hour</option>
-                    <option value="48_hour">48 Hour</option>
-                  </select>
-                </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Placement Date
@@ -658,22 +811,101 @@ export default function InternshipTrackerPage() {
                     className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
                   />
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Start Date
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.internship_start_date}
+                    onChange={(e) => setFormData({ ...formData, internship_start_date: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                  />
+                </div>
               </div>
+
+              {/* Status Row */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Phase
+                  </label>
+                  <select
+                    value={formData.current_phase}
+                    onChange={(e) => setFormData({ ...formData, current_phase: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                  >
+                    {Object.entries(PHASE_LABELS).map(([value, label]) => (
+                      <option key={value} value={value}>{label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Status
+                  </label>
+                  <select
+                    value={formData.status}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                  >
+                    {Object.entries(STATUS_CONFIG).map(([value, config]) => (
+                      <option key={value} value={value}>{config.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Shift Type */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Shift Type
+                </label>
+                <select
+                  value={formData.shift_type}
+                  onChange={(e) => setFormData({ ...formData, shift_type: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                >
+                  <option value="12_hour">12-Hour Shifts</option>
+                  <option value="24_hour">24-Hour Shifts</option>
+                  <option value="48_hour">48-Hour Shifts</option>
+                  <option value="mixed">Mixed Schedule</option>
+                </select>
+              </div>
+
+              {/* Full details link for existing records */}
+              {editingInternship && (
+                <div className="pt-2 border-t dark:border-gray-700">
+                  <Link
+                    href={`/clinical/internships/${editingInternship.id}`}
+                    className="text-sm text-teal-600 dark:text-teal-400 hover:underline"
+                  >
+                    View full details & edit all fields →
+                  </Link>
+                </div>
+              )}
             </div>
 
-            <div className="p-4 border-t dark:border-gray-700 flex justify-end gap-3">
+            <div className="p-4 border-t dark:border-gray-700 flex justify-end gap-3 sticky bottom-0 bg-white dark:bg-gray-800">
               <button
-                onClick={() => setShowAddModal(false)}
+                onClick={closeEditModal}
                 className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
               >
                 Cancel
               </button>
               <button
-                onClick={handleAddInternship}
-                disabled={saving || !formData.student_id}
-                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400"
+                onClick={handleSaveInternship}
+                disabled={saving}
+                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400"
               >
-                {saving ? 'Adding...' : 'Add Student'}
+                {saving ? (
+                  <>Saving...</>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    {editingInternship ? 'Save Changes' : 'Create Record'}
+                  </>
+                )}
               </button>
             </div>
           </div>
