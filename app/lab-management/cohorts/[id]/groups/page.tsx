@@ -22,6 +22,7 @@ import {
   Download,
   RotateCcw
 } from 'lucide-react';
+import { canManageContent, type Role } from '@/lib/permissions';
 
 interface Student {
   id: string;
@@ -84,6 +85,7 @@ export default function StudyGroupsPage() {
 
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
+  const [userRole, setUserRole] = useState<Role | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -94,8 +96,21 @@ export default function StudyGroupsPage() {
   useEffect(() => {
     if (session && cohortId) {
       fetchData();
+      fetchCurrentUser();
     }
   }, [session, cohortId]);
+
+  const fetchCurrentUser = async () => {
+    try {
+      const res = await fetch('/api/instructor/me');
+      const data = await res.json();
+      if (data.success && data.user) {
+        setUserRole(data.user.role);
+      }
+    } catch (error) {
+      console.error('Error fetching user:', error);
+    }
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -669,12 +684,14 @@ export default function StudyGroupsPage() {
                               >
                                 <Edit2 className="w-4 h-4" />
                               </button>
-                              <button
-                                onClick={() => handleDeleteGroup(group.id)}
-                                className="p-1 text-gray-400 hover:text-red-600"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
+                              {userRole && canManageContent(userRole) && (
+                                <button
+                                  onClick={() => handleDeleteGroup(group.id)}
+                                  className="p-1 text-gray-400 hover:text-red-600"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
                             </div>
                           </>
                         )}

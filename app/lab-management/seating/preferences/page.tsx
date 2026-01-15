@@ -16,6 +16,7 @@ import {
   Search,
   Filter
 } from 'lucide-react';
+import { canManageContent, type Role } from '@/lib/permissions';
 
 interface Student {
   id: string;
@@ -76,6 +77,7 @@ function SeatingPreferencesContent() {
   const [formType, setFormType] = useState<'avoid' | 'prefer_near'>('avoid');
   const [formReason, setFormReason] = useState('');
   const [saving, setSaving] = useState(false);
+  const [userRole, setUserRole] = useState<Role | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -86,8 +88,21 @@ function SeatingPreferencesContent() {
   useEffect(() => {
     if (session) {
       fetchCohorts();
+      fetchCurrentUser();
     }
   }, [session]);
+
+  const fetchCurrentUser = async () => {
+    try {
+      const res = await fetch('/api/instructor/me');
+      const data = await res.json();
+      if (data.success && data.user) {
+        setUserRole(data.user.role);
+      }
+    } catch (error) {
+      console.error('Error fetching user:', error);
+    }
+  };
 
   useEffect(() => {
     if (session) {
@@ -450,12 +465,14 @@ function SeatingPreferencesContent() {
                   </div>
 
                   {/* Delete */}
-                  <button
-                    onClick={() => handleDelete(pref.id)}
-                    className="p-2 text-gray-400 hover:text-red-600"
-                  >
-                    <Trash2 className="w-5 h-5" />
-                  </button>
+                  {userRole && canManageContent(userRole) && (
+                    <button
+                      onClick={() => handleDelete(pref.id)}
+                      className="p-2 text-gray-400 hover:text-red-600"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  )}
                 </div>
               ))}
             </div>

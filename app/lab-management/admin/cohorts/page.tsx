@@ -4,7 +4,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { 
+import {
   ChevronRight,
   Plus,
   Edit2,
@@ -15,6 +15,7 @@ import {
   X,
   AlertCircle
 } from 'lucide-react';
+import { canManageCohorts, type Role } from '@/lib/permissions';
 
 interface Program {
   id: string;
@@ -54,6 +55,7 @@ export default function CohortManagementPage() {
   const [editStartDate, setEditStartDate] = useState('');
   const [editEndDate, setEditEndDate] = useState('');
   const [saving, setSaving] = useState(false);
+  const [userRole, setUserRole] = useState<Role | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -64,8 +66,21 @@ export default function CohortManagementPage() {
   useEffect(() => {
     if (session) {
       fetchData();
+      fetchCurrentUser();
     }
   }, [session, showInactive]);
+
+  const fetchCurrentUser = async () => {
+    try {
+      const res = await fetch('/api/instructor/me');
+      const data = await res.json();
+      if (data.success && data.user) {
+        setUserRole(data.user.role);
+      }
+    } catch (error) {
+      console.error('Error fetching user:', error);
+    }
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -448,13 +463,15 @@ export default function CohortManagementPage() {
                           >
                             {cohort.is_active ? <X className="w-4 h-4" /> : <Check className="w-4 h-4" />}
                           </button>
-                          <button
-                            onClick={() => handleDelete(cohort)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          {userRole && canManageCohorts(userRole) && (
+                            <button
+                              onClick={() => handleDelete(cohort)}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </div>
                     )}

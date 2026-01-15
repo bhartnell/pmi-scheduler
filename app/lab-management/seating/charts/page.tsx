@@ -16,6 +16,7 @@ import {
   Check,
   Calendar
 } from 'lucide-react';
+import { canManageContent, type Role } from '@/lib/permissions';
 
 interface Chart {
   id: string;
@@ -51,6 +52,7 @@ function SeatingChartsContent() {
   const [loading, setLoading] = useState(true);
   const [selectedCohort, setSelectedCohort] = useState<string>(initialCohortId || '');
   const [creating, setCreating] = useState(false);
+  const [userRole, setUserRole] = useState<Role | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -61,8 +63,21 @@ function SeatingChartsContent() {
   useEffect(() => {
     if (session) {
       fetchCohorts();
+      fetchCurrentUser();
     }
   }, [session]);
+
+  const fetchCurrentUser = async () => {
+    try {
+      const res = await fetch('/api/instructor/me');
+      const data = await res.json();
+      if (data.success && data.user) {
+        setUserRole(data.user.role);
+      }
+    } catch (error) {
+      console.error('Error fetching user:', error);
+    }
+  };
 
   useEffect(() => {
     if (session) {
@@ -303,12 +318,14 @@ function SeatingChartsContent() {
                         Set Active
                       </button>
                     )}
-                    <button
-                      onClick={() => handleDelete(chart.id)}
-                      className="p-1.5 text-red-600 hover:bg-red-50 rounded"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {userRole && canManageContent(userRole) && (
+                      <button
+                        onClick={() => handleDelete(chart.id)}
+                        className="p-1.5 text-red-600 hover:bg-red-50 rounded"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}

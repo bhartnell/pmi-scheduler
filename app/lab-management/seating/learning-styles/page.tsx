@@ -17,6 +17,7 @@ import {
   Save,
   Table
 } from 'lucide-react';
+import { canManageContent, type Role } from '@/lib/permissions';
 
 interface Student {
   id: string;
@@ -94,6 +95,7 @@ function LearningStylesContent() {
   const [loading, setLoading] = useState(true);
   const [selectedCohort, setSelectedCohort] = useState<string>(initialCohortId || '');
   const [searchQuery, setSearchQuery] = useState('');
+  const [userRole, setUserRole] = useState<Role | null>(null);
 
   // Form state
   const [showForm, setShowForm] = useState(false);
@@ -121,8 +123,21 @@ function LearningStylesContent() {
   useEffect(() => {
     if (session) {
       fetchCohorts();
+      fetchCurrentUser();
     }
   }, [session]);
+
+  const fetchCurrentUser = async () => {
+    try {
+      const res = await fetch('/api/instructor/me');
+      const data = await res.json();
+      if (data.success && data.user) {
+        setUserRole(data.user.role);
+      }
+    } catch (error) {
+      console.error('Error fetching user:', error);
+    }
+  };
 
   useEffect(() => {
     if (session) {
@@ -811,12 +826,14 @@ function LearningStylesContent() {
                       >
                         <Edit2 className="w-4 h-4" />
                       </button>
-                      <button
-                        onClick={() => handleDelete(ls.id)}
-                        className="p-1 text-gray-600 hover:text-red-600 ml-2"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {userRole && canManageContent(userRole) && (
+                        <button
+                          onClick={() => handleDelete(ls.id)}
+                          className="p-1 text-gray-600 hover:text-red-600 ml-2"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}

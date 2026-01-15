@@ -4,7 +4,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
-import { 
+import {
   ChevronRight,
   Edit2,
   Camera,
@@ -18,6 +18,7 @@ import {
   Trash2,
   Upload
 } from 'lucide-react';
+import { canManageStudentRoster, type Role } from '@/lib/permissions';
 
 interface Student {
   id: string;
@@ -88,6 +89,7 @@ export default function StudentDetailPage() {
   const [uploading, setUploading] = useState(false);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [userRole, setUserRole] = useState<Role | null>(null);
 
   // Edit form state
   const [editFirstName, setEditFirstName] = useState('');
@@ -108,8 +110,21 @@ export default function StudentDetailPage() {
       fetchStudent();
       fetchTeamLeadHistory();
       fetchAssessments();
+      fetchCurrentUser();
     }
   }, [session, studentId]);
+
+  const fetchCurrentUser = async () => {
+    try {
+      const res = await fetch('/api/instructor/me');
+      const data = await res.json();
+      if (data.success && data.user) {
+        setUserRole(data.user.role);
+      }
+    } catch (error) {
+      console.error('Error fetching user:', error);
+    }
+  };
 
   const fetchStudent = async () => {
     try {
@@ -395,9 +410,11 @@ export default function StudentDetailPage() {
                       <button onClick={() => setEditing(true)} className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg">
                         <Edit2 className="w-5 h-5" />
                       </button>
-                      <button onClick={handleDelete} className="p-2 text-red-600 hover:bg-red-50 rounded-lg">
-                        <Trash2 className="w-5 h-5" />
-                      </button>
+                      {userRole && canManageStudentRoster(userRole) && (
+                        <button onClick={handleDelete} className="p-2 text-red-600 hover:bg-red-50 rounded-lg">
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      )}
                     </div>
                   </div>
 
