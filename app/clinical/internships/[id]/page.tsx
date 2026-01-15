@@ -176,6 +176,7 @@ export default function InternshipDetailPage() {
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   // Form state with all fields
   const [formData, setFormData] = useState<Record<string, any>>({});
@@ -255,8 +256,8 @@ export default function InternshipDetailPage() {
           notes: i.notes || '',
         });
       } else {
-        router.push('/clinical/internships');
-        return;
+        console.error('Failed to load internship:', internshipData.error);
+        setError('Failed to load internship record. It may not exist or you may not have permission to view it.');
       }
 
       setPreceptors(preceptorsData.preceptors || []);
@@ -379,7 +380,45 @@ export default function InternshipDetailPage() {
     );
   }
 
-  if (!session || !internship) return null;
+  if (!session) return null;
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-teal-50 to-cyan-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="bg-white dark:bg-gray-800 shadow-sm">
+          <div className="max-w-4xl mx-auto px-4 py-6">
+            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
+              <Link href="/" className="hover:text-teal-600 dark:hover:text-teal-400 flex items-center gap-1">
+                <Home className="w-3 h-3" />
+                Home
+              </Link>
+              <ChevronRight className="w-4 h-4" />
+              <Link href="/clinical" className="hover:text-teal-600 dark:hover:text-teal-400">Clinical</Link>
+              <ChevronRight className="w-4 h-4" />
+              <Link href="/clinical/internships" className="hover:text-teal-600 dark:hover:text-teal-400">Internships</Link>
+            </div>
+          </div>
+        </div>
+        <main className="max-w-4xl mx-auto px-4 py-8">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-8 text-center">
+            <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Error Loading Internship</h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">{error}</p>
+            <Link
+              href="/clinical/internships"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Internships
+            </Link>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (!internship) return null;
 
   const student = internship.students;
   const canEdit = userRole ? canEditClinical(userRole) : false;

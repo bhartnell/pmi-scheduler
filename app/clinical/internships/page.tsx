@@ -23,7 +23,8 @@ import {
   UserPlus,
   AlertCircle,
   Calendar,
-  Bell
+  Bell,
+  Loader2
 } from 'lucide-react';
 import { canEditClinical, isSuperadmin, type Role } from '@/lib/permissions';
 
@@ -185,6 +186,7 @@ export default function InternshipTrackerPage() {
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [editingInternship, setEditingInternship] = useState<Internship | null>(null);
   const [saving, setSaving] = useState(false);
+  const [togglingPhase, setTogglingPhase] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     student_id: '',
     cohort_id: '',
@@ -371,6 +373,31 @@ export default function InternshipTrackerPage() {
       alert('Failed to save internship record');
     }
     setSaving(false);
+  };
+
+  // Toggle phase completion directly from the table
+  const togglePhaseCompletion = async (internshipId: string, phase: 'phase_1' | 'phase_2', currentValue: boolean) => {
+    if (!userRole || !canEditClinical(userRole)) return;
+
+    const toggleKey = `${internshipId}-${phase}`;
+    setTogglingPhase(toggleKey);
+
+    try {
+      const fieldName = phase === 'phase_1' ? 'phase_1_eval_completed' : 'phase_2_eval_completed';
+      const res = await fetch(`/api/clinical/internships/${internshipId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [fieldName]: !currentValue }),
+      });
+
+      if (res.ok) {
+        // Refresh the data
+        await fetchInternships();
+      }
+    } catch (error) {
+      console.error('Error toggling phase:', error);
+    }
+    setTogglingPhase(null);
   };
 
   // Calculate milestone statuses for each internship (defined early so it can be used in filters)
@@ -854,7 +881,21 @@ export default function InternshipTrackerPage() {
                                 (() => {
                                   const status = getMilestoneStatus(internship.phase_1_eval_scheduled, internship.phase_1_eval_completed);
                                   const indicator = MILESTONE_INDICATORS[status];
-                                  return (
+                                  const isToggling = togglingPhase === `${internship.id}-phase_1`;
+                                  return canEdit ? (
+                                    <button
+                                      onClick={() => togglePhaseCompletion(internship.id, 'phase_1', internship.phase_1_eval_completed)}
+                                      disabled={isToggling}
+                                      className="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                                      title={`${indicator.label} - Click to toggle`}
+                                    >
+                                      {isToggling ? (
+                                        <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                                      ) : (
+                                        <span>{indicator.emoji}</span>
+                                      )}
+                                    </button>
+                                  ) : (
                                     <span title={indicator.label} className="cursor-help">
                                       {indicator.emoji}
                                     </span>
@@ -869,7 +910,21 @@ export default function InternshipTrackerPage() {
                                 (() => {
                                   const status = getMilestoneStatus(internship.phase_2_eval_scheduled, internship.phase_2_eval_completed);
                                   const indicator = MILESTONE_INDICATORS[status];
-                                  return (
+                                  const isToggling = togglingPhase === `${internship.id}-phase_2`;
+                                  return canEdit ? (
+                                    <button
+                                      onClick={() => togglePhaseCompletion(internship.id, 'phase_2', internship.phase_2_eval_completed)}
+                                      disabled={isToggling}
+                                      className="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                                      title={`${indicator.label} - Click to toggle`}
+                                    >
+                                      {isToggling ? (
+                                        <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                                      ) : (
+                                        <span>{indicator.emoji}</span>
+                                      )}
+                                    </button>
+                                  ) : (
                                     <span title={indicator.label} className="cursor-help">
                                       {indicator.emoji}
                                     </span>
