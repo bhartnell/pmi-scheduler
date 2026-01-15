@@ -15,7 +15,9 @@ import {
   Car,
   AlertTriangle,
   TrendingUp,
-  Clock
+  Clock,
+  FileCheck,
+  BookOpen
 } from 'lucide-react';
 import { canAccessClinical, type Role } from '@/lib/permissions';
 
@@ -228,6 +230,72 @@ export default function ClinicalDashboardPage() {
                 </p>
                 <div className="flex items-center text-purple-600 dark:text-purple-400 text-sm font-medium">
                   {stats.totalInternships} students tracked
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </div>
+              </div>
+            </div>
+          </Link>
+
+          {/* Compliance Docs Tracker */}
+          <Link
+            href="/clinical/compliance"
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
+          >
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-xl group-hover:bg-green-200 dark:group-hover:bg-green-900/50 transition-colors">
+                <FileCheck className="w-6 h-6 text-green-600 dark:text-green-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Compliance Docs</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                  Track immunizations, clearances, and required documents
+                </p>
+                <div className="flex items-center text-green-600 dark:text-green-400 text-sm font-medium">
+                  View tracker
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </div>
+              </div>
+            </div>
+          </Link>
+
+          {/* Clinical Hours Tracker */}
+          <Link
+            href="/clinical/hours"
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
+          >
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl group-hover:bg-blue-200 dark:group-hover:bg-blue-900/50 transition-colors">
+                <Clock className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Clinical Hours</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                  Track shifts and hours by department
+                </p>
+                <div className="flex items-center text-blue-600 dark:text-blue-400 text-sm font-medium">
+                  View tracker
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </div>
+              </div>
+            </div>
+          </Link>
+
+          {/* mCE Module Tracker */}
+          <Link
+            href="/clinical/mce"
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
+          >
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl group-hover:bg-indigo-200 dark:group-hover:bg-indigo-900/50 transition-colors">
+                <BookOpen className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">mCE Modules</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                  Track continuing education module completion
+                </p>
+                <div className="flex items-center text-indigo-600 dark:text-indigo-400 text-sm font-medium">
+                  View tracker
                   <ChevronRight className="w-4 h-4 ml-1" />
                 </div>
               </div>
