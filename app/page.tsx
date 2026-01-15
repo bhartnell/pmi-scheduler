@@ -15,9 +15,10 @@ import {
   Award,
   BookOpen,
   Settings,
-  UserPlus
+  UserPlus,
+  Briefcase
 } from 'lucide-react';
-import { canAccessAdmin, getRoleLabel, getRoleBadgeClasses, type Role } from '@/lib/permissions';
+import { canAccessAdmin, canAccessClinical, getRoleLabel, getRoleBadgeClasses, type Role } from '@/lib/permissions';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
 interface CurrentUser {
@@ -193,6 +194,29 @@ export default function HomePage() {
               </div>
             </div>
           </Link>
+
+          {/* Clinical & Internship Card - Only for lead_instructor+ */}
+          {currentUser && canAccessClinical(currentUser.role) && (
+            <Link
+              href="/clinical"
+              className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group border-2 border-teal-200 dark:border-teal-800"
+            >
+              <div className="flex flex-col items-center text-center">
+                <div className="w-16 h-16 bg-teal-100 dark:bg-teal-900/30 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-teal-200 dark:group-hover:bg-teal-900/50 transition-colors">
+                  <Briefcase className="w-8 h-8 text-teal-600 dark:text-teal-400" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Clinical & Internship</h3>
+                <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
+                  Track internships, preceptors, and field placements.
+                </p>
+                <div className="flex flex-wrap justify-center gap-2 text-xs">
+                  <span className="px-2 py-1 bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 rounded-full">Internships</span>
+                  <span className="px-2 py-1 bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 rounded-full">Preceptors</span>
+                  <span className="px-2 py-1 bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 rounded-full">Meetings</span>
+                </div>
+              </div>
+            </Link>
+          )}
 
           {/* Admin Card - Only for admin+ */}
           {currentUser && canAccessAdmin(currentUser.role) && (

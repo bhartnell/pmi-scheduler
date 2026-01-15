@@ -106,6 +106,21 @@ export function canAccessSystemSettings(role: Role | string): boolean {
   return role === 'superadmin';
 }
 
+export function canAccessClinical(role: Role | string): boolean {
+  // Clinical & Internship section - admin, lead_instructor, superadmin
+  return getRoleLevel(role) >= ROLE_LEVELS.lead_instructor;
+}
+
+export function canEditClinical(role: Role | string): boolean {
+  // Can edit preceptors, internships, meetings - lead_instructor+
+  return getRoleLevel(role) >= ROLE_LEVELS.lead_instructor;
+}
+
+export function canViewPreceptors(role: Role | string): boolean {
+  // All authenticated users can view preceptors (per permission matrix)
+  return getRoleLevel(role) >= ROLE_LEVELS.instructor;
+}
+
 export function isSuperadmin(role: Role | string): boolean {
   return role === 'superadmin';
 }
