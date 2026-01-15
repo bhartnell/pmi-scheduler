@@ -130,6 +130,21 @@ export async function PUT(
     if (body.closeout_meeting_date !== undefined) updateData.closeout_meeting_date = body.closeout_meeting_date || null;
     if (body.closeout_completed !== undefined) updateData.closeout_completed = body.closeout_completed;
 
+    // Orientation
+    if (body.orientation_completed !== undefined) updateData.orientation_completed = body.orientation_completed;
+
+    // Clearance fields
+    if (body.liability_form_completed !== undefined) updateData.liability_form_completed = body.liability_form_completed;
+    if (body.background_check_completed !== undefined) updateData.background_check_completed = body.background_check_completed;
+    if (body.drug_screen_completed !== undefined) updateData.drug_screen_completed = body.drug_screen_completed;
+    if (body.immunizations_verified !== undefined) updateData.immunizations_verified = body.immunizations_verified;
+    if (body.cpr_card_verified !== undefined) updateData.cpr_card_verified = body.cpr_card_verified;
+    if (body.uniform_issued !== undefined) updateData.uniform_issued = body.uniform_issued;
+    if (body.badge_issued !== undefined) updateData.badge_issued = body.badge_issued;
+    if (body.cleared_for_nremt !== undefined) updateData.cleared_for_nremt = body.cleared_for_nremt;
+    if (body.ryan_notified !== undefined) updateData.ryan_notified = body.ryan_notified;
+    if (body.ryan_notified_date !== undefined) updateData.ryan_notified_date = body.ryan_notified_date || null;
+
     // Handle agency update
     if (body.agency_id !== undefined) {
       updateData.agency_id = body.agency_id || null;

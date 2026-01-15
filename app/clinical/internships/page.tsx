@@ -20,7 +20,10 @@ import {
   Eye,
   Edit2,
   Save,
-  UserPlus
+  UserPlus,
+  AlertCircle,
+  Calendar,
+  Bell
 } from 'lucide-react';
 import { canEditClinical, isSuperadmin, type Role } from '@/lib/permissions';
 
@@ -66,11 +69,26 @@ interface Internship {
   shift_type: string;
   placement_date: string | null;
   orientation_date: string | null;
+  orientation_completed: boolean;
   internship_start_date: string | null;
   expected_end_date: string | null;
+  actual_end_date: string | null;
   current_phase: string;
+  phase_1_start_date: string | null;
+  phase_1_eval_scheduled: string | null;
   phase_1_eval_completed: boolean;
+  phase_2_start_date: string | null;
+  phase_2_eval_scheduled: string | null;
   phase_2_eval_completed: boolean;
+  closeout_meeting_date: string | null;
+  closeout_completed: boolean;
+  // Clearance fields
+  liability_form_completed: boolean;
+  background_check_completed: boolean;
+  drug_screen_completed: boolean;
+  immunizations_verified: boolean;
+  cpr_card_verified: boolean;
+  cleared_for_nremt: boolean;
   status: string;
   students: Student | null;
   cohorts: Cohort | null;
@@ -109,6 +127,33 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: str
   withdrawn: { label: 'Withdrawn', color: 'text-red-600', bgColor: 'bg-red-100' },
 };
 
+// Milestone status helpers
+type MilestoneStatus = 'complete' | 'due_soon' | 'due_week' | 'overdue' | 'not_set';
+
+const getMilestoneStatus = (dueDate: string | null, isComplete: boolean): MilestoneStatus => {
+  if (isComplete) return 'complete';
+  if (!dueDate) return 'not_set';
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const due = new Date(dueDate);
+  due.setHours(0, 0, 0, 0);
+  const daysUntilDue = Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+  if (daysUntilDue < 0) return 'overdue';
+  if (daysUntilDue <= 7) return 'due_week';
+  if (daysUntilDue <= 14) return 'due_soon';
+  return 'not_set';
+};
+
+const MILESTONE_INDICATORS: Record<MilestoneStatus, { emoji: string; className: string; label: string }> = {
+  complete: { emoji: '🟢', className: 'text-green-500', label: 'Complete' },
+  due_soon: { emoji: '🟡', className: 'text-yellow-500', label: 'Due in 14 days' },
+  due_week: { emoji: '🟠', className: 'text-orange-500', label: 'Due in 7 days' },
+  overdue: { emoji: '🔴', className: 'text-red-500', label: 'Overdue' },
+  not_set: { emoji: '⚪', className: 'text-gray-300', label: 'Not set' },
+};
+
 export default function InternshipTrackerPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -128,6 +173,9 @@ export default function InternshipTrackerPage() {
   const [filterAgency, setFilterAgency] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [showOnlyWithRecords, setShowOnlyWithRecords] = useState(false);
+  const [showOverdueOnly, setShowOverdueOnly] = useState(false);
+  const [showDueThisWeek, setShowDueThisWeek] = useState(false);
+  const [showIncomplete, setShowIncomplete] = useState(false);
 
   // Check if selected cohort is a PM cohort
   const selectedCohortData = cohorts.find(c => c.id === selectedCohort);
@@ -372,6 +420,31 @@ export default function InternshipTrackerPage() {
       return false;
     }
 
+    // New milestone filters
+    if (row.internship) {
+      const milestones = getInternshipMilestones(row.internship);
+
+      // Overdue only filter
+      if (showOverdueOnly && !milestones.isOverdue) {
+        return false;
+      }
+
+      // Due this week filter
+      if (showDueThisWeek && !milestones.isDueThisWeek) {
+        return false;
+      }
+
+      // Incomplete filter
+      if (showIncomplete && !milestones.isIncomplete) {
+        return false;
+      }
+    } else {
+      // If no internship record, filter out for milestone filters
+      if (showOverdueOnly || showDueThisWeek || showIncomplete) {
+        return false;
+      }
+    }
+
     return true;
   });
 
@@ -396,6 +469,37 @@ export default function InternshipTrackerPage() {
     atRisk: internships.filter(i => i.status === 'at_risk').length,
     completed: internships.filter(i => i.status === 'completed').length,
   };
+
+  // Calculate milestone statuses for each internship
+  const getInternshipMilestones = (internship: Internship) => {
+    const p1Status = getMilestoneStatus(internship.phase_1_eval_scheduled, internship.phase_1_eval_completed);
+    const p2Status = getMilestoneStatus(internship.phase_2_eval_scheduled, internship.phase_2_eval_completed);
+    const endStatus = getMilestoneStatus(internship.expected_end_date, internship.status === 'completed');
+
+    const isOverdue = p1Status === 'overdue' || p2Status === 'overdue' || endStatus === 'overdue';
+    const isDueThisWeek = p1Status === 'due_week' || p2Status === 'due_week' || endStatus === 'due_week';
+    const isIncomplete = internship.status !== 'completed' && internship.status !== 'withdrawn';
+
+    // Check pre-requisites completion
+    const preReqsComplete = internship.liability_form_completed &&
+      internship.background_check_completed &&
+      internship.drug_screen_completed &&
+      internship.immunizations_verified &&
+      internship.cpr_card_verified;
+
+    return { p1Status, p2Status, endStatus, isOverdue, isDueThisWeek, isIncomplete, preReqsComplete };
+  };
+
+  // Calculate alerts
+  const alerts = internships.reduce((acc, internship) => {
+    const milestones = getInternshipMilestones(internship);
+    if (milestones.isOverdue) acc.overdue.push({ internship, milestones });
+    else if (milestones.isDueThisWeek) acc.dueThisWeek.push({ internship, milestones });
+    if (!milestones.preReqsComplete && internship.current_phase !== 'completed') {
+      acc.missingPreReqs.push({ internship, milestones });
+    }
+    return acc;
+  }, { overdue: [] as { internship: Internship; milestones: ReturnType<typeof getInternshipMilestones> }[], dueThisWeek: [] as { internship: Internship; milestones: ReturnType<typeof getInternshipMilestones> }[], missingPreReqs: [] as { internship: Internship; milestones: ReturnType<typeof getInternshipMilestones> }[] });
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '-';
@@ -553,9 +657,64 @@ export default function InternshipTrackerPage() {
               </div>
             </div>
 
-            {/* Toggle for PM cohorts */}
-            {isPMCohort && (
-              <div className="flex items-center gap-4 bg-white dark:bg-gray-800 rounded-lg shadow px-4 py-3">
+            {/* Alerts Section */}
+            {(alerts.overdue.length > 0 || alerts.dueThisWeek.length > 0) && (
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+                <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-red-50 dark:bg-red-900/20">
+                  <div className="flex items-center gap-2">
+                    <Bell className="w-5 h-5 text-red-600 dark:text-red-400" />
+                    <h3 className="font-semibold text-red-900 dark:text-red-300">Needs Attention</h3>
+                    <span className="ml-auto text-sm text-red-700 dark:text-red-400">
+                      {alerts.overdue.length + alerts.dueThisWeek.length} items
+                    </span>
+                  </div>
+                </div>
+                <div className="p-4 space-y-3 max-h-64 overflow-y-auto">
+                  {alerts.overdue.map(({ internship }) => (
+                    <div key={internship.id} className="flex items-center justify-between p-2 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">🔴</span>
+                        <div>
+                          <div className="text-sm font-medium text-gray-900 dark:text-white">
+                            {internship.students?.first_name} {internship.students?.last_name}
+                          </div>
+                          <div className="text-xs text-red-600 dark:text-red-400">Overdue milestone</div>
+                        </div>
+                      </div>
+                      <Link
+                        href={`/clinical/internships/${internship.id}`}
+                        className="text-sm text-red-600 dark:text-red-400 hover:underline"
+                      >
+                        View →
+                      </Link>
+                    </div>
+                  ))}
+                  {alerts.dueThisWeek.map(({ internship }) => (
+                    <div key={internship.id} className="flex items-center justify-between p-2 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">🟠</span>
+                        <div>
+                          <div className="text-sm font-medium text-gray-900 dark:text-white">
+                            {internship.students?.first_name} {internship.students?.last_name}
+                          </div>
+                          <div className="text-xs text-orange-600 dark:text-orange-400">Due this week</div>
+                        </div>
+                      </div>
+                      <Link
+                        href={`/clinical/internships/${internship.id}`}
+                        className="text-sm text-orange-600 dark:text-orange-400 hover:underline"
+                      >
+                        View →
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Filter Toggles */}
+            <div className="flex flex-wrap items-center gap-4 bg-white dark:bg-gray-800 rounded-lg shadow px-4 py-3">
+              {isPMCohort && (
                 <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
                   <input
                     type="checkbox"
@@ -563,13 +722,44 @@ export default function InternshipTrackerPage() {
                     onChange={(e) => setShowOnlyWithRecords(e.target.checked)}
                     className="w-4 h-4 text-purple-600 rounded"
                   />
-                  Show only students with internship records
+                  With records only
                 </label>
-                <span className="text-sm text-gray-500 dark:text-gray-400">
-                  Showing {sortedRows.length} of {cohortStudents.length} students
+              )}
+              <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showOverdueOnly}
+                  onChange={(e) => setShowOverdueOnly(e.target.checked)}
+                  className="w-4 h-4 text-red-600 rounded"
+                />
+                <span className="flex items-center gap-1">
+                  🔴 Overdue
                 </span>
-              </div>
-            )}
+              </label>
+              <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showDueThisWeek}
+                  onChange={(e) => setShowDueThisWeek(e.target.checked)}
+                  className="w-4 h-4 text-orange-600 rounded"
+                />
+                <span className="flex items-center gap-1">
+                  🟠 Due This Week
+                </span>
+              </label>
+              <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showIncomplete}
+                  onChange={(e) => setShowIncomplete(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 rounded"
+                />
+                Incomplete Only
+              </label>
+              <span className="ml-auto text-sm text-gray-500 dark:text-gray-400">
+                Showing {sortedRows.length} {isPMCohort ? `of ${cohortStudents.length} students` : 'records'}
+              </span>
+            </div>
 
             {/* Students/Internships Table */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
@@ -660,15 +850,31 @@ export default function InternshipTrackerPage() {
                               )}
                             </td>
                             <td className="px-4 py-3 text-center">
-                              {internship?.phase_1_eval_completed ? (
-                                <CheckCircle2 className="w-5 h-5 text-green-500 mx-auto" />
+                              {internship ? (
+                                (() => {
+                                  const status = getMilestoneStatus(internship.phase_1_eval_scheduled, internship.phase_1_eval_completed);
+                                  const indicator = MILESTONE_INDICATORS[status];
+                                  return (
+                                    <span title={indicator.label} className="cursor-help">
+                                      {indicator.emoji}
+                                    </span>
+                                  );
+                                })()
                               ) : (
                                 <span className="text-gray-300">-</span>
                               )}
                             </td>
                             <td className="px-4 py-3 text-center">
-                              {internship?.phase_2_eval_completed ? (
-                                <CheckCircle2 className="w-5 h-5 text-green-500 mx-auto" />
+                              {internship ? (
+                                (() => {
+                                  const status = getMilestoneStatus(internship.phase_2_eval_scheduled, internship.phase_2_eval_completed);
+                                  const indicator = MILESTONE_INDICATORS[status];
+                                  return (
+                                    <span title={indicator.label} className="cursor-help">
+                                      {indicator.emoji}
+                                    </span>
+                                  );
+                                })()
                               ) : (
                                 <span className="text-gray-300">-</span>
                               )}

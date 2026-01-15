@@ -8,7 +8,6 @@ import Image from 'next/image';
 import {
   ChevronRight,
   Home,
-  Briefcase,
   Save,
   ArrowLeft,
   User,
@@ -16,17 +15,18 @@ import {
   Calendar,
   Clock,
   CheckCircle2,
-  AlertTriangle,
-  XCircle,
+  Circle,
   Loader2,
   Phone,
   Mail,
   MapPin,
   FileText,
   Users,
-  Plus,
-  Trash2,
-  Edit2
+  Bell,
+  Award,
+  ClipboardCheck,
+  AlertCircle,
+  CheckSquare
 } from 'lucide-react';
 import { canAccessClinical, canEditClinical, type Role } from '@/lib/permissions';
 
@@ -40,6 +40,7 @@ interface Internship {
   shift_type: string;
   placement_date: string | null;
   orientation_date: string | null;
+  orientation_completed: boolean;
   internship_start_date: string | null;
   expected_end_date: string | null;
   actual_end_date: string | null;
@@ -57,6 +58,17 @@ interface Internship {
   phase_2_eval_notes: string | null;
   closeout_meeting_date: string | null;
   closeout_completed: boolean;
+  // Clearance fields
+  liability_form_completed: boolean;
+  background_check_completed: boolean;
+  drug_screen_completed: boolean;
+  immunizations_verified: boolean;
+  cpr_card_verified: boolean;
+  uniform_issued: boolean;
+  badge_issued: boolean;
+  cleared_for_nremt: boolean;
+  ryan_notified: boolean;
+  ryan_notified_date: string | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -67,7 +79,6 @@ interface Internship {
     email: string;
     phone: string | null;
     photo_url: string | null;
-    agency: string | null;
   } | null;
   cohorts: {
     id: string;
@@ -86,7 +97,6 @@ interface Internship {
     phone: string | null;
     station: string | null;
     agency_name: string | null;
-    normal_schedule: string | null;
   } | null;
   agencies: {
     id: string;
@@ -94,16 +104,6 @@ interface Internship {
     abbreviation: string | null;
     phone: string | null;
   } | null;
-}
-
-interface Meeting {
-  id: string;
-  student_internship_id: string;
-  meeting_type: string;
-  scheduled_date: string;
-  completed_date: string | null;
-  notes: string | null;
-  created_at: string;
 }
 
 interface Preceptor {
@@ -120,28 +120,45 @@ interface Agency {
   abbreviation: string | null;
 }
 
-const PHASES = [
-  { value: 'pre_internship', label: 'Pre-Internship', color: 'gray' },
-  { value: 'phase_1_mentorship', label: 'Phase 1 - Mentorship', color: 'blue' },
-  { value: 'phase_2_evaluation', label: 'Phase 2 - Evaluation', color: 'purple' },
-  { value: 'completed', label: 'Completed', color: 'green' },
-  { value: 'extended', label: 'Extended', color: 'orange' },
+// Checklist item definition
+interface ChecklistItem {
+  key: string;
+  label: string;
+  dateKey?: string;
+  required: boolean;
+}
+
+const PLACEMENT_ITEMS: ChecklistItem[] = [
+  { key: 'agency_id', label: 'Agency Assigned', required: true },
+  { key: 'preceptor_id', label: 'Preceptor Assigned', required: true },
+  { key: 'placement_date', label: 'Placement Date Set', dateKey: 'placement_date', required: true },
+  { key: 'orientation_completed', label: 'Orientation Completed', dateKey: 'orientation_date', required: true },
+  { key: 'liability_form_completed', label: 'Liability Form Signed', required: true },
+  { key: 'background_check_completed', label: 'Background Check', required: true },
+  { key: 'drug_screen_completed', label: 'Drug Screen', required: true },
+  { key: 'immunizations_verified', label: 'Immunizations Verified', required: true },
+  { key: 'cpr_card_verified', label: 'CPR Card Verified', required: true },
+  { key: 'uniform_issued', label: 'Uniform Issued', required: false },
+  { key: 'badge_issued', label: 'Badge Issued', required: false },
 ];
 
-const STATUSES = [
-  { value: 'not_started', label: 'Not Started', color: 'gray' },
-  { value: 'in_progress', label: 'In Progress', color: 'blue' },
-  { value: 'on_track', label: 'On Track', color: 'green' },
-  { value: 'at_risk', label: 'At Risk', color: 'yellow' },
-  { value: 'extended', label: 'Extended', color: 'orange' },
-  { value: 'completed', label: 'Completed', color: 'green' },
-  { value: 'withdrawn', label: 'Withdrawn', color: 'red' },
+const PHASE1_ITEMS: ChecklistItem[] = [
+  { key: 'internship_start_date', label: 'Internship Started', dateKey: 'internship_start_date', required: true },
+  { key: 'phase_1_start_date', label: 'Phase 1 Started', dateKey: 'phase_1_start_date', required: true },
+  { key: 'phase_1_eval_scheduled', label: 'Evaluation Scheduled', dateKey: 'phase_1_eval_scheduled', required: true },
+  { key: 'phase_1_eval_completed', label: 'Phase 1 Evaluation Completed', required: true },
 ];
 
-const SHIFT_TYPES = [
-  { value: '12_hour', label: '12-Hour Shifts' },
-  { value: '24_hour', label: '24-Hour Shifts' },
-  { value: 'mixed', label: 'Mixed Schedule' },
+const PHASE2_ITEMS: ChecklistItem[] = [
+  { key: 'phase_2_start_date', label: 'Phase 2 Started', dateKey: 'phase_2_start_date', required: true },
+  { key: 'phase_2_eval_scheduled', label: 'Evaluation Scheduled', dateKey: 'phase_2_eval_scheduled', required: true },
+  { key: 'phase_2_eval_completed', label: 'Phase 2 Evaluation Completed', required: true },
+];
+
+const CLEARANCE_ITEMS: ChecklistItem[] = [
+  { key: 'closeout_meeting_date', label: 'Closeout Meeting Scheduled', dateKey: 'closeout_meeting_date', required: true },
+  { key: 'closeout_completed', label: 'Closeout Meeting Completed', required: true },
+  { key: 'actual_end_date', label: 'Internship End Date Recorded', dateKey: 'actual_end_date', required: true },
 ];
 
 export default function InternshipDetailPage() {
@@ -152,39 +169,16 @@ export default function InternshipDetailPage() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [notifying, setNotifying] = useState(false);
   const [userRole, setUserRole] = useState<Role | null>(null);
   const [internship, setInternship] = useState<Internship | null>(null);
-  const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [preceptors, setPreceptors] = useState<Preceptor[]>([]);
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
-  // Form state
-  const [formData, setFormData] = useState({
-    preceptor_id: '',
-    agency_id: '',
-    shift_type: '12_hour',
-    current_phase: 'pre_internship',
-    status: 'not_started',
-    placement_date: '',
-    orientation_date: '',
-    internship_start_date: '',
-    expected_end_date: '',
-    actual_end_date: '',
-    phase_1_start_date: '',
-    phase_1_end_date: '',
-    phase_1_eval_scheduled: '',
-    phase_1_eval_completed: false,
-    phase_1_eval_notes: '',
-    phase_2_start_date: '',
-    phase_2_end_date: '',
-    phase_2_eval_scheduled: '',
-    phase_2_eval_completed: false,
-    phase_2_eval_notes: '',
-    closeout_meeting_date: '',
-    closeout_completed: false,
-    notes: '',
-  });
+  // Form state with all fields
+  const [formData, setFormData] = useState<Record<string, any>>({});
 
   useEffect(() => {
     if (sessionStatus === 'unauthenticated') {
@@ -201,7 +195,6 @@ export default function InternshipDetailPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch user role
       const userRes = await fetch('/api/instructor/me');
       const userData = await userRes.json();
       if (userData.success && userData.user) {
@@ -212,7 +205,6 @@ export default function InternshipDetailPage() {
         }
       }
 
-      // Fetch internship, preceptors, and agencies in parallel
       const [internshipRes, preceptorsRes, agenciesRes] = await Promise.all([
         fetch(`/api/clinical/internships/${internshipId}`),
         fetch('/api/clinical/preceptors?activeOnly=true'),
@@ -225,9 +217,6 @@ export default function InternshipDetailPage() {
 
       if (internshipData.success && internshipData.internship) {
         setInternship(internshipData.internship);
-        setMeetings(internshipData.meetings || []);
-
-        // Initialize form data
         const i = internshipData.internship;
         setFormData({
           preceptor_id: i.preceptor_id || '',
@@ -237,6 +226,7 @@ export default function InternshipDetailPage() {
           status: i.status || 'not_started',
           placement_date: i.placement_date || '',
           orientation_date: i.orientation_date || '',
+          orientation_completed: i.orientation_completed || false,
           internship_start_date: i.internship_start_date || '',
           expected_end_date: i.expected_end_date || '',
           actual_end_date: i.actual_end_date || '',
@@ -252,6 +242,16 @@ export default function InternshipDetailPage() {
           phase_2_eval_notes: i.phase_2_eval_notes || '',
           closeout_meeting_date: i.closeout_meeting_date || '',
           closeout_completed: i.closeout_completed || false,
+          liability_form_completed: i.liability_form_completed || false,
+          background_check_completed: i.background_check_completed || false,
+          drug_screen_completed: i.drug_screen_completed || false,
+          immunizations_verified: i.immunizations_verified || false,
+          cpr_card_verified: i.cpr_card_verified || false,
+          uniform_issued: i.uniform_issued || false,
+          badge_issued: i.badge_issued || false,
+          cleared_for_nremt: i.cleared_for_nremt || false,
+          ryan_notified: i.ryan_notified || false,
+          ryan_notified_date: i.ryan_notified_date || '',
           notes: i.notes || '',
         });
       } else {
@@ -286,30 +286,88 @@ export default function InternshipDetailPage() {
       const data = await res.json();
       if (data.success) {
         setHasChanges(false);
-        // Refresh data
+        showToast('Changes saved successfully', 'success');
         await fetchData();
       } else {
-        alert('Failed to save changes');
+        showToast('Failed to save changes', 'error');
       }
     } catch (error) {
       console.error('Error saving:', error);
-      alert('Failed to save changes');
+      showToast('Failed to save changes', 'error');
     }
     setSaving(false);
   };
 
-  const getPhaseColor = (phase: string) => {
-    const p = PHASES.find(p => p.value === phase);
-    return p?.color || 'gray';
+  const handleNotifyRyan = async () => {
+    if (!canEdit || !isClearedForNREMT) return;
+
+    setNotifying(true);
+    try {
+      // Mark as notified and save
+      const updatedData = {
+        ...formData,
+        ryan_notified: true,
+        ryan_notified_date: new Date().toISOString().split('T')[0],
+      };
+
+      const res = await fetch(`/api/clinical/internships/${internshipId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedData),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setFormData(updatedData);
+        setHasChanges(false);
+        showToast('Ryan has been notified! Student is cleared for NREMT.', 'success');
+        await fetchData();
+      } else {
+        showToast('Failed to notify', 'error');
+      }
+    } catch (error) {
+      console.error('Error notifying:', error);
+      showToast('Failed to notify', 'error');
+    }
+    setNotifying(false);
   };
 
-  const getStatusColor = (status: string) => {
-    const s = STATUSES.find(s => s.value === status);
-    return s?.color || 'gray';
+  const showToast = (message: string, type: 'success' | 'error') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
   };
+
+  // Calculate progress
+  const isItemComplete = (item: ChecklistItem): boolean => {
+    if (item.key === 'agency_id' || item.key === 'preceptor_id') {
+      return !!formData[item.key];
+    }
+    if (item.dateKey) {
+      return !!formData[item.dateKey];
+    }
+    return !!formData[item.key];
+  };
+
+  const calculateSectionProgress = (items: ChecklistItem[]): number => {
+    const completed = items.filter(item => isItemComplete(item)).length;
+    return Math.round((completed / items.length) * 100);
+  };
+
+  const placementProgress = calculateSectionProgress(PLACEMENT_ITEMS);
+  const phase1Progress = calculateSectionProgress(PHASE1_ITEMS);
+  const phase2Progress = calculateSectionProgress(PHASE2_ITEMS);
+  const clearanceProgress = calculateSectionProgress(CLEARANCE_ITEMS);
+
+  const totalItems = PLACEMENT_ITEMS.length + PHASE1_ITEMS.length + PHASE2_ITEMS.length + CLEARANCE_ITEMS.length;
+  const completedItems = [...PLACEMENT_ITEMS, ...PHASE1_ITEMS, ...PHASE2_ITEMS, ...CLEARANCE_ITEMS].filter(isItemComplete).length;
+  const overallProgress = Math.round((completedItems / totalItems) * 100);
+
+  // Check if cleared for NREMT (all required items complete)
+  const allRequiredItems = [...PLACEMENT_ITEMS, ...PHASE1_ITEMS, ...PHASE2_ITEMS, ...CLEARANCE_ITEMS].filter(i => i.required);
+  const isClearedForNREMT = allRequiredItems.every(isItemComplete);
 
   const formatDate = (dateString: string | null) => {
-    if (!dateString) return '-';
+    if (!dateString) return '';
     return new Date(dateString).toLocaleDateString();
   };
 
@@ -326,8 +384,67 @@ export default function InternshipDetailPage() {
   const student = internship.students;
   const canEdit = userRole ? canEditClinical(userRole) : false;
 
+  // Checklist item component
+  const ChecklistRow = ({ item, section }: { item: ChecklistItem; section: string }) => {
+    const isComplete = isItemComplete(item);
+    const dateValue = item.dateKey ? formData[item.dateKey] : null;
+    const isCheckbox = !item.dateKey || (item.dateKey && typeof formData[item.key] === 'boolean');
+
+    return (
+      <div className={`flex items-center justify-between py-2 px-3 rounded-lg ${
+        isComplete ? 'bg-green-50 dark:bg-green-900/20' : 'bg-gray-50 dark:bg-gray-700/30'
+      }`}>
+        <div className="flex items-center gap-3">
+          {isComplete ? (
+            <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
+          ) : (
+            <Circle className="w-5 h-5 text-gray-400" />
+          )}
+          <span className={`text-sm ${isComplete ? 'text-green-800 dark:text-green-300' : 'text-gray-700 dark:text-gray-300'}`}>
+            {item.label}
+            {item.required && <span className="text-red-500 ml-1">*</span>}
+          </span>
+        </div>
+
+        {canEdit && (
+          <div className="flex items-center gap-2">
+            {item.dateKey && (
+              <input
+                type="date"
+                value={formData[item.dateKey] || ''}
+                onChange={(e) => handleInputChange(item.dateKey!, e.target.value)}
+                className="px-2 py-1 text-sm border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
+              />
+            )}
+            {isCheckbox && item.key !== 'agency_id' && item.key !== 'preceptor_id' && (
+              <input
+                type="checkbox"
+                checked={!!formData[item.key]}
+                onChange={(e) => handleInputChange(item.key, e.target.checked)}
+                className="w-5 h-5 text-teal-600 rounded"
+              />
+            )}
+          </div>
+        )}
+
+        {!canEdit && dateValue && (
+          <span className="text-sm text-gray-500 dark:text-gray-400">{formatDate(dateValue)}</span>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50 to-cyan-100 dark:from-gray-900 dark:to-gray-800">
+      {/* Toast */}
+      {toast && (
+        <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg ${
+          toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+        }`}>
+          {toast.message}
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-6">
@@ -337,13 +454,9 @@ export default function InternshipDetailPage() {
               Home
             </Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/clinical" className="hover:text-teal-600 dark:hover:text-teal-400">
-              Clinical
-            </Link>
+            <Link href="/clinical" className="hover:text-teal-600 dark:hover:text-teal-400">Clinical</Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/clinical/internships" className="hover:text-teal-600 dark:hover:text-teal-400">
-              Internships
-            </Link>
+            <Link href="/clinical/internships" className="hover:text-teal-600 dark:hover:text-teal-400">Internships</Link>
             <ChevronRight className="w-4 h-4" />
             <span>{student?.first_name} {student?.last_name}</span>
           </div>
@@ -352,7 +465,7 @@ export default function InternshipDetailPage() {
             <div className="flex items-center gap-4">
               <Link
                 href="/clinical/internships"
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
               >
                 <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
               </Link>
@@ -381,563 +494,332 @@ export default function InternshipDetailPage() {
                       {internship.cohorts.programs?.abbreviation} - Cohort {internship.cohorts.cohort_number}
                     </span>
                   )}
-                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                    getPhaseColor(formData.current_phase) === 'blue' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
-                    getPhaseColor(formData.current_phase) === 'purple' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' :
-                    getPhaseColor(formData.current_phase) === 'green' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                    getPhaseColor(formData.current_phase) === 'orange' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
-                    'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-400'
-                  }`}>
-                    {PHASES.find(p => p.value === formData.current_phase)?.label}
-                  </span>
                 </div>
               </div>
             </div>
 
-            {canEdit && hasChanges && (
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50"
-              >
-                {saving ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Save className="w-4 h-4" />
-                )}
-                Save Changes
-              </button>
-            )}
+            <div className="flex items-center gap-3">
+              {canEdit && hasChanges && (
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50"
+                >
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  Save Changes
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
       <main className="max-w-6xl mx-auto px-4 py-8">
-        <div className="grid lg:grid-cols-3 gap-6">
-          {/* Left Column - Student & Preceptor Info */}
-          <div className="space-y-6">
-            {/* Student Contact */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                <User className="w-5 h-5 text-teal-600 dark:text-teal-400" />
-                Student Contact
-              </h3>
-              <div className="space-y-3 text-sm">
-                {student?.email && (
-                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                    <Mail className="w-4 h-4" />
-                    <a href={`mailto:${student.email}`} className="hover:text-teal-600 dark:hover:text-teal-400">
-                      {student.email}
-                    </a>
-                  </div>
-                )}
-                {student?.phone && (
-                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                    <Phone className="w-4 h-4" />
-                    <a href={`tel:${student.phone}`} className="hover:text-teal-600 dark:hover:text-teal-400">
-                      {student.phone}
-                    </a>
-                  </div>
-                )}
-              </div>
+        {/* Overall Progress Card */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <ClipboardCheck className="w-6 h-6 text-teal-600 dark:text-teal-400" />
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Internship Progress</h2>
             </div>
-
-            {/* Preceptor Assignment */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                Preceptor Assignment
-              </h3>
-
-              {canEdit ? (
-                <select
-                  value={formData.preceptor_id}
-                  onChange={(e) => handleInputChange('preceptor_id', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white mb-4"
-                >
-                  <option value="">Select Preceptor</option>
-                  {preceptors.map(p => (
-                    <option key={p.id} value={p.id}>
-                      {p.first_name} {p.last_name} - {p.agency_name || 'No Agency'}
-                    </option>
-                  ))}
-                </select>
-              ) : null}
-
-              {internship.field_preceptors ? (
-                <div className="space-y-3 text-sm">
-                  <div className="font-medium text-gray-900 dark:text-white">
-                    {internship.field_preceptors.first_name} {internship.field_preceptors.last_name}
-                  </div>
-                  {internship.field_preceptors.agency_name && (
-                    <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                      <Building2 className="w-4 h-4" />
-                      {internship.field_preceptors.agency_name}
-                    </div>
-                  )}
-                  {internship.field_preceptors.station && (
-                    <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                      <MapPin className="w-4 h-4" />
-                      Station {internship.field_preceptors.station}
-                    </div>
-                  )}
-                  {internship.field_preceptors.email && (
-                    <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                      <Mail className="w-4 h-4" />
-                      <a href={`mailto:${internship.field_preceptors.email}`} className="hover:text-teal-600 dark:hover:text-teal-400">
-                        {internship.field_preceptors.email}
-                      </a>
-                    </div>
-                  )}
-                  {internship.field_preceptors.phone && (
-                    <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                      <Phone className="w-4 h-4" />
-                      <a href={`tel:${internship.field_preceptors.phone}`} className="hover:text-teal-600 dark:hover:text-teal-400">
-                        {internship.field_preceptors.phone}
-                      </a>
-                    </div>
-                  )}
-                  {internship.field_preceptors.normal_schedule && (
-                    <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                      <Clock className="w-4 h-4" />
-                      {internship.field_preceptors.normal_schedule}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <p className="text-sm text-gray-500 dark:text-gray-400">No preceptor assigned</p>
-              )}
-            </div>
-
-            {/* Agency */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                <Building2 className="w-5 h-5 text-green-600 dark:text-green-400" />
-                Agency
-              </h3>
-
-              {canEdit ? (
-                <select
-                  value={formData.agency_id}
-                  onChange={(e) => handleInputChange('agency_id', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white mb-4"
-                >
-                  <option value="">Select Agency</option>
-                  {agencies.map(a => (
-                    <option key={a.id} value={a.id}>
-                      {a.name} {a.abbreviation ? `(${a.abbreviation})` : ''}
-                    </option>
-                  ))}
-                </select>
-              ) : null}
-
-              {internship.agencies ? (
-                <div className="space-y-2 text-sm">
-                  <div className="font-medium text-gray-900 dark:text-white">
-                    {internship.agencies.name}
-                  </div>
-                  {internship.agencies.phone && (
-                    <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                      <Phone className="w-4 h-4" />
-                      <a href={`tel:${internship.agencies.phone}`} className="hover:text-teal-600 dark:hover:text-teal-400">
-                        {internship.agencies.phone}
-                      </a>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <p className="text-sm text-gray-500 dark:text-gray-400">No agency assigned</p>
-              )}
+            <div className="text-right">
+              <div className="text-3xl font-bold text-teal-600 dark:text-teal-400">{overallProgress}%</div>
+              <div className="text-sm text-gray-500 dark:text-gray-400">{completedItems} of {totalItems} items</div>
             </div>
           </div>
 
-          {/* Middle Column - Dates & Status */}
-          <div className="space-y-6">
-            {/* Status & Phase */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Status & Phase</h3>
+          {/* Progress Bar */}
+          <div className="w-full h-4 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-teal-500 to-emerald-500 transition-all duration-500"
+              style={{ width: `${overallProgress}%` }}
+            />
+          </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Current Phase
-                  </label>
-                  <select
-                    value={formData.current_phase}
-                    onChange={(e) => handleInputChange('current_phase', e.target.value)}
-                    disabled={!canEdit}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50"
-                  >
-                    {PHASES.map(p => (
-                      <option key={p.value} value={p.value}>{p.label}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Status
-                  </label>
-                  <select
-                    value={formData.status}
-                    onChange={(e) => handleInputChange('status', e.target.value)}
-                    disabled={!canEdit}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50"
-                  >
-                    {STATUSES.map(s => (
-                      <option key={s.value} value={s.value}>{s.label}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Shift Type
-                  </label>
-                  <select
-                    value={formData.shift_type}
-                    onChange={(e) => handleInputChange('shift_type', e.target.value)}
-                    disabled={!canEdit}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50"
-                  >
-                    {SHIFT_TYPES.map(s => (
-                      <option key={s.value} value={s.value}>{s.label}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
+          {/* Section Progress Indicators */}
+          <div className="grid grid-cols-4 gap-4 mt-6">
+            <div className="text-center">
+              <div className="text-lg font-semibold text-gray-900 dark:text-white">{placementProgress}%</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">Placement</div>
             </div>
-
-            {/* Key Dates */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                Key Dates
-              </h3>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Placement Date
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.placement_date}
-                    onChange={(e) => handleInputChange('placement_date', e.target.value)}
-                    disabled={!canEdit}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Orientation Date
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.orientation_date}
-                    onChange={(e) => handleInputChange('orientation_date', e.target.value)}
-                    disabled={!canEdit}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Internship Start Date
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.internship_start_date}
-                    onChange={(e) => handleInputChange('internship_start_date', e.target.value)}
-                    disabled={!canEdit}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Expected End
-                    </label>
-                    <input
-                      type="date"
-                      value={formData.expected_end_date}
-                      onChange={(e) => handleInputChange('expected_end_date', e.target.value)}
-                      disabled={!canEdit}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Actual End
-                    </label>
-                    <input
-                      type="date"
-                      value={formData.actual_end_date}
-                      onChange={(e) => handleInputChange('actual_end_date', e.target.value)}
-                      disabled={!canEdit}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50"
-                    />
-                  </div>
-                </div>
-              </div>
+            <div className="text-center">
+              <div className="text-lg font-semibold text-gray-900 dark:text-white">{phase1Progress}%</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">Phase 1</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-semibold text-gray-900 dark:text-white">{phase2Progress}%</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">Phase 2</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-semibold text-gray-900 dark:text-white">{clearanceProgress}%</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">Clearance</div>
             </div>
           </div>
 
-          {/* Right Column - Phase Evaluations */}
+          {/* NREMT Clearance Status */}
+          <div className={`mt-6 p-4 rounded-lg ${
+            isClearedForNREMT
+              ? 'bg-green-100 dark:bg-green-900/30 border-2 border-green-500'
+              : 'bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600'
+          }`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Award className={`w-6 h-6 ${isClearedForNREMT ? 'text-green-600 dark:text-green-400' : 'text-gray-400'}`} />
+                <div>
+                  <div className={`font-semibold ${isClearedForNREMT ? 'text-green-800 dark:text-green-300' : 'text-gray-700 dark:text-gray-300'}`}>
+                    {isClearedForNREMT ? 'Cleared for NREMT!' : 'Not Yet Cleared for NREMT'}
+                  </div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    {isClearedForNREMT
+                      ? 'All required items completed. Student can proceed to NREMT exam.'
+                      : `${allRequiredItems.filter(i => !isItemComplete(i)).length} required items remaining`}
+                  </div>
+                </div>
+              </div>
+
+              {canEdit && isClearedForNREMT && !formData.ryan_notified && (
+                <button
+                  onClick={handleNotifyRyan}
+                  disabled={notifying}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+                >
+                  {notifying ? <Loader2 className="w-4 h-4 animate-spin" /> : <Bell className="w-4 h-4" />}
+                  Notify Ryan
+                </button>
+              )}
+
+              {formData.ryan_notified && (
+                <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
+                  <CheckCircle2 className="w-5 h-5" />
+                  <span className="text-sm">Notified {formData.ryan_notified_date && formatDate(formData.ryan_notified_date)}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="grid lg:grid-cols-2 gap-6">
+          {/* Left Column */}
           <div className="space-y-6">
+            {/* Placement & Pre-Requisites */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-blue-50 dark:bg-blue-900/20">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    <h3 className="font-semibold text-gray-900 dark:text-white">Placement & Pre-Requisites</h3>
+                  </div>
+                  <span className={`px-2 py-1 text-xs font-medium rounded ${
+                    placementProgress === 100
+                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                      : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                  }`}>
+                    {placementProgress}%
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-4 space-y-2">
+                {/* Agency & Preceptor Selects */}
+                {canEdit && (
+                  <div className="grid grid-cols-2 gap-4 mb-4 pb-4 border-b border-gray-200 dark:border-gray-700">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Agency</label>
+                      <select
+                        value={formData.agency_id || ''}
+                        onChange={(e) => handleInputChange('agency_id', e.target.value)}
+                        className="w-full px-2 py-1.5 text-sm border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
+                      >
+                        <option value="">Select Agency</option>
+                        {agencies.map(a => (
+                          <option key={a.id} value={a.id}>{a.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Preceptor</label>
+                      <select
+                        value={formData.preceptor_id || ''}
+                        onChange={(e) => handleInputChange('preceptor_id', e.target.value)}
+                        className="w-full px-2 py-1.5 text-sm border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
+                      >
+                        <option value="">Select Preceptor</option>
+                        {preceptors.map(p => (
+                          <option key={p.id} value={p.id}>{p.first_name} {p.last_name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+                {PLACEMENT_ITEMS.map(item => (
+                  <ChecklistRow key={item.key} item={item} section="placement" />
+                ))}
+              </div>
+            </div>
+
             {/* Phase 1 */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                <div className="w-6 h-6 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center text-sm font-bold text-blue-600 dark:text-blue-400">
-                  1
-                </div>
-                Phase 1 - Mentorship
-              </h3>
-
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Start Date
-                    </label>
-                    <input
-                      type="date"
-                      value={formData.phase_1_start_date}
-                      onChange={(e) => handleInputChange('phase_1_start_date', e.target.value)}
-                      disabled={!canEdit}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50"
-                    />
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-indigo-50 dark:bg-indigo-900/20">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 bg-indigo-100 dark:bg-indigo-900/50 rounded-full flex items-center justify-center text-sm font-bold text-indigo-600 dark:text-indigo-400">
+                      1
+                    </div>
+                    <h3 className="font-semibold text-gray-900 dark:text-white">Phase 1 - Mentorship</h3>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      End Date
-                    </label>
-                    <input
-                      type="date"
-                      value={formData.phase_1_end_date}
-                      onChange={(e) => handleInputChange('phase_1_end_date', e.target.value)}
-                      disabled={!canEdit}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50"
-                    />
-                  </div>
+                  <span className={`px-2 py-1 text-xs font-medium rounded ${
+                    phase1Progress === 100
+                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                      : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                  }`}>
+                    {phase1Progress}%
+                  </span>
                 </div>
+              </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Eval Scheduled
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.phase_1_eval_scheduled}
-                    onChange={(e) => handleInputChange('phase_1_eval_scheduled', e.target.value)}
-                    disabled={!canEdit}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50"
-                  />
-                </div>
+              <div className="p-4 space-y-2">
+                {PHASE1_ITEMS.map(item => (
+                  <ChecklistRow key={item.key} item={item} section="phase1" />
+                ))}
 
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="phase_1_eval_completed"
-                    checked={formData.phase_1_eval_completed}
-                    onChange={(e) => handleInputChange('phase_1_eval_completed', e.target.checked)}
-                    disabled={!canEdit}
-                    className="w-4 h-4 text-teal-600 rounded"
-                  />
-                  <label htmlFor="phase_1_eval_completed" className="text-sm text-gray-700 dark:text-gray-300">
-                    Evaluation Completed
-                  </label>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Eval Notes
-                  </label>
+                {/* Phase 1 Notes */}
+                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Phase 1 Notes</label>
                   <textarea
-                    value={formData.phase_1_eval_notes}
+                    value={formData.phase_1_eval_notes || ''}
                     onChange={(e) => handleInputChange('phase_1_eval_notes', e.target.value)}
                     disabled={!canEdit}
                     rows={2}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50"
+                    className="w-full px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white disabled:opacity-50"
+                    placeholder="Add notes..."
                   />
                 </div>
               </div>
             </div>
+          </div>
 
+          {/* Right Column */}
+          <div className="space-y-6">
             {/* Phase 2 */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                <div className="w-6 h-6 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center text-sm font-bold text-purple-600 dark:text-purple-400">
-                  2
-                </div>
-                Phase 2 - Evaluation
-              </h3>
-
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Start Date
-                    </label>
-                    <input
-                      type="date"
-                      value={formData.phase_2_start_date}
-                      onChange={(e) => handleInputChange('phase_2_start_date', e.target.value)}
-                      disabled={!canEdit}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50"
-                    />
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-purple-50 dark:bg-purple-900/20">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 bg-purple-100 dark:bg-purple-900/50 rounded-full flex items-center justify-center text-sm font-bold text-purple-600 dark:text-purple-400">
+                      2
+                    </div>
+                    <h3 className="font-semibold text-gray-900 dark:text-white">Phase 2 - Evaluation</h3>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      End Date
-                    </label>
-                    <input
-                      type="date"
-                      value={formData.phase_2_end_date}
-                      onChange={(e) => handleInputChange('phase_2_end_date', e.target.value)}
-                      disabled={!canEdit}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50"
-                    />
-                  </div>
+                  <span className={`px-2 py-1 text-xs font-medium rounded ${
+                    phase2Progress === 100
+                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                      : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                  }`}>
+                    {phase2Progress}%
+                  </span>
                 </div>
+              </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Eval Scheduled
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.phase_2_eval_scheduled}
-                    onChange={(e) => handleInputChange('phase_2_eval_scheduled', e.target.value)}
-                    disabled={!canEdit}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50"
-                  />
-                </div>
+              <div className="p-4 space-y-2">
+                {PHASE2_ITEMS.map(item => (
+                  <ChecklistRow key={item.key} item={item} section="phase2" />
+                ))}
 
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="phase_2_eval_completed"
-                    checked={formData.phase_2_eval_completed}
-                    onChange={(e) => handleInputChange('phase_2_eval_completed', e.target.checked)}
-                    disabled={!canEdit}
-                    className="w-4 h-4 text-teal-600 rounded"
-                  />
-                  <label htmlFor="phase_2_eval_completed" className="text-sm text-gray-700 dark:text-gray-300">
-                    Evaluation Completed
-                  </label>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Eval Notes
-                  </label>
+                {/* Phase 2 Notes */}
+                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Phase 2 Notes</label>
                   <textarea
-                    value={formData.phase_2_eval_notes}
+                    value={formData.phase_2_eval_notes || ''}
                     onChange={(e) => handleInputChange('phase_2_eval_notes', e.target.value)}
                     disabled={!canEdit}
                     rows={2}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50"
+                    className="w-full px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white disabled:opacity-50"
+                    placeholder="Add notes..."
                   />
                 </div>
               </div>
             </div>
 
-            {/* Closeout */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
-                Closeout
+            {/* Clearance & Closeout */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-green-50 dark:bg-green-900/20">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <CheckSquare className="w-5 h-5 text-green-600 dark:text-green-400" />
+                    <h3 className="font-semibold text-gray-900 dark:text-white">Clearance & Closeout</h3>
+                  </div>
+                  <span className={`px-2 py-1 text-xs font-medium rounded ${
+                    clearanceProgress === 100
+                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                      : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                  }`}>
+                    {clearanceProgress}%
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-4 space-y-2">
+                {CLEARANCE_ITEMS.map(item => (
+                  <ChecklistRow key={item.key} item={item} section="clearance" />
+                ))}
+              </div>
+            </div>
+
+            {/* Contact Info */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-4">
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                <Users className="w-5 h-5 text-gray-500" />
+                Contact Information
               </h3>
 
-              <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Closeout Meeting Date
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.closeout_meeting_date}
-                    onChange={(e) => handleInputChange('closeout_meeting_date', e.target.value)}
-                    disabled={!canEdit}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50"
-                  />
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Student</div>
+                  {student?.email && (
+                    <a href={`mailto:${student.email}`} className="flex items-center gap-1 text-teal-600 dark:text-teal-400 hover:underline">
+                      <Mail className="w-3 h-3" /> {student.email}
+                    </a>
+                  )}
+                  {student?.phone && (
+                    <a href={`tel:${student.phone}`} className="flex items-center gap-1 text-gray-600 dark:text-gray-400 mt-1">
+                      <Phone className="w-3 h-3" /> {student.phone}
+                    </a>
+                  )}
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="closeout_completed"
-                    checked={formData.closeout_completed}
-                    onChange={(e) => handleInputChange('closeout_completed', e.target.checked)}
-                    disabled={!canEdit}
-                    className="w-4 h-4 text-teal-600 rounded"
-                  />
-                  <label htmlFor="closeout_completed" className="text-sm text-gray-700 dark:text-gray-300">
-                    Closeout Completed
-                  </label>
-                </div>
+                {internship.field_preceptors && (
+                  <div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Preceptor</div>
+                    <div className="text-gray-900 dark:text-white">
+                      {internship.field_preceptors.first_name} {internship.field_preceptors.last_name}
+                    </div>
+                    {internship.field_preceptors.email && (
+                      <a href={`mailto:${internship.field_preceptors.email}`} className="flex items-center gap-1 text-teal-600 dark:text-teal-400 hover:underline">
+                        <Mail className="w-3 h-3" /> Email
+                      </a>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </div>
 
-        {/* Notes Section - Full Width */}
+        {/* Notes Section */}
         <div className="mt-6 bg-white dark:bg-gray-800 rounded-xl shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <FileText className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-            Notes
+          <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <FileText className="w-5 h-5 text-gray-500" />
+            General Notes
           </h3>
           <textarea
-            value={formData.notes}
+            value={formData.notes || ''}
             onChange={(e) => handleInputChange('notes', e.target.value)}
             disabled={!canEdit}
             rows={4}
-            placeholder="Add notes about this internship..."
+            placeholder="Add general notes about this internship..."
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50"
           />
-        </div>
-
-        {/* Meeting History */}
-        <div className="mt-6 bg-white dark:bg-gray-800 rounded-xl shadow p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-              Meeting History
-            </h3>
-          </div>
-
-          {meetings.length === 0 ? (
-            <p className="text-sm text-gray-500 dark:text-gray-400">No meetings recorded yet.</p>
-          ) : (
-            <div className="space-y-3">
-              {meetings.map(meeting => (
-                <div key={meeting.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                  <div>
-                    <div className="font-medium text-gray-900 dark:text-white capitalize">
-                      {meeting.meeting_type.replace('_', ' ')}
-                    </div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                      Scheduled: {formatDate(meeting.scheduled_date)}
-                      {meeting.completed_date && ` | Completed: ${formatDate(meeting.completed_date)}`}
-                    </div>
-                    {meeting.notes && (
-                      <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        {meeting.notes}
-                      </div>
-                    )}
-                  </div>
-                  {meeting.completed_date ? (
-                    <CheckCircle2 className="w-5 h-5 text-green-500" />
-                  ) : (
-                    <Clock className="w-5 h-5 text-yellow-500" />
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       </main>
     </div>
