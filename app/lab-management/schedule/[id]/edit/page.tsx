@@ -142,10 +142,10 @@ export default function EditLabDayPage() {
 
   if (status === 'loading' || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-700">Loading...</p>
+          <p className="mt-4 text-gray-700 dark:text-gray-300">Loading...</p>
         </div>
       </div>
     );
@@ -155,11 +155,11 @@ export default function EditLabDayPage() {
 
   if (!labDay) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="bg-white rounded-lg shadow p-8 text-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
           <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Lab Day Not Found</h2>
-          <p className="text-gray-600 mb-4">The requested lab day could not be found.</p>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Lab Day Not Found</h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">The requested lab day could not be found.</p>
           <Link
             href="/lab-management/schedule"
             className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
@@ -172,48 +172,48 @@ export default function EditLabDayPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
-      <div className="bg-white shadow-sm">
+      <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-4xl mx-auto px-4 py-6">
-          <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-            <Link href="/lab-management" className="hover:text-blue-600">Lab Management</Link>
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
+            <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management/schedule" className="hover:text-blue-600">Schedule</Link>
+            <Link href="/lab-management/schedule" className="hover:text-blue-600 dark:hover:text-blue-400">Schedule</Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href={`/lab-management/schedule/${labDayId}`} className="hover:text-blue-600">
+            <Link href={`/lab-management/schedule/${labDayId}`} className="hover:text-blue-600 dark:hover:text-blue-400">
               {labDay.cohort.program.abbreviation} Group {labDay.cohort.cohort_number}
             </Link>
             <ChevronRight className="w-4 h-4" />
             <span>Edit</span>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Edit Lab Day</h1>
-          <p className="text-gray-600 mt-1">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Edit Lab Day</h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">
             {labDay.cohort.program.abbreviation} Group {labDay.cohort.cohort_number}
           </p>
         </div>
       </div>
 
       <main className="max-w-4xl mx-auto px-4 py-8">
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Date */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Date <span className="text-red-500">*</span>
               </label>
               <input
                 type="date"
                 value={labDate}
                 onChange={(e) => setLabDate(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
               />
             </div>
 
             {/* Week/Day Numbers */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Week #
                 </label>
                 <input
@@ -222,11 +222,11 @@ export default function EditLabDayPage() {
                   value={weekNumber}
                   onChange={(e) => setWeekNumber(e.target.value ? parseInt(e.target.value) : '')}
                   placeholder="Optional"
-                  className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 placeholder-gray-400 dark:placeholder-gray-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Day #
                 </label>
                 <input
@@ -235,20 +235,20 @@ export default function EditLabDayPage() {
                   value={dayNumber}
                   onChange={(e) => setDayNumber(e.target.value ? parseInt(e.target.value) : '')}
                   placeholder="Optional"
-                  className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 placeholder-gray-400 dark:placeholder-gray-500"
                 />
               </div>
             </div>
 
             {/* Rotations */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Number of Rotations
               </label>
               <select
                 value={numRotations}
                 onChange={(e) => setNumRotations(parseInt(e.target.value))}
-                className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
               >
                 {[2, 3, 4, 5, 6].map(n => (
                   <option key={n} value={n}>{n} rotations</option>
@@ -258,13 +258,13 @@ export default function EditLabDayPage() {
 
             {/* Rotation Duration */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Rotation Duration
               </label>
               <select
                 value={rotationDuration}
                 onChange={(e) => setRotationDuration(parseInt(e.target.value))}
-                className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
               >
                 {[15, 20, 25, 30, 45, 60].map(n => (
                   <option key={n} value={n}>{n} minutes</option>
@@ -274,7 +274,7 @@ export default function EditLabDayPage() {
 
             {/* Notes */}
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Notes
               </label>
               <textarea
@@ -282,20 +282,20 @@ export default function EditLabDayPage() {
                 onChange={(e) => setNotes(e.target.value)}
                 rows={3}
                 placeholder="Any special instructions or notes for this lab day..."
-                className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 placeholder-gray-400 dark:placeholder-gray-500"
               />
             </div>
           </div>
 
           {/* Actions */}
-          <div className="flex flex-col sm:flex-row justify-between gap-4 mt-8 pt-6 border-t">
+          <div className="flex flex-col sm:flex-row justify-between gap-4 mt-8 pt-6 border-t dark:border-gray-700">
             <button
               onClick={handleDelete}
               disabled={deleting}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 disabled:opacity-50"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 disabled:opacity-50"
             >
               {deleting ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600 dark:border-red-400"></div>
               ) : (
                 <Trash2 className="w-4 h-4" />
               )}
@@ -305,7 +305,7 @@ export default function EditLabDayPage() {
             <div className="flex gap-3">
               <Link
                 href={`/lab-management/schedule/${labDayId}`}
-                className="px-6 py-2 border text-gray-700 rounded-lg hover:bg-gray-50"
+                className="px-6 py-2 border dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
               >
                 Cancel
               </Link>

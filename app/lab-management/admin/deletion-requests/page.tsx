@@ -127,7 +127,7 @@ export default function DeletionRequestsPage() {
 
   if (status === 'loading' || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
@@ -136,7 +136,7 @@ export default function DeletionRequestsPage() {
   if (!session) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Toast Notification */}
       {toast && (
         <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg ${
@@ -147,27 +147,27 @@ export default function DeletionRequestsPage() {
       )}
 
       {/* Header */}
-      <div className="bg-white shadow-sm">
+      <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-5xl mx-auto px-4 py-6">
-          <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
-            <Link href="/" className="hover:text-blue-600 flex items-center gap-1">
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1">
+            <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1">
               <Home className="w-3 h-3" />
               Home
             </Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management" className="hover:text-blue-600">Lab Management</Link>
+            <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management/admin" className="hover:text-blue-600">Admin</Link>
+            <Link href="/lab-management/admin" className="hover:text-blue-600 dark:hover:text-blue-400">Admin</Link>
             <ChevronRight className="w-4 h-4" />
-            <span>Deletion Requests</span>
+            <span className="dark:text-gray-300">Deletion Requests</span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-red-100 rounded-lg">
-              <Trash2 className="w-6 h-6 text-red-600" />
+            <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
+              <Trash2 className="w-6 h-6 text-red-600 dark:text-red-400" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Deletion Requests</h1>
-              <p className="text-gray-600">Review and approve deletion requests from instructors</p>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Deletion Requests</h1>
+              <p className="text-gray-600 dark:text-gray-400">Review and approve deletion requests from instructors</p>
             </div>
           </div>
         </div>
@@ -175,7 +175,7 @@ export default function DeletionRequestsPage() {
 
       <main className="max-w-5xl mx-auto px-4 py-6 space-y-6">
         {/* Tabs */}
-        <div className="flex gap-2 border-b border-gray-200">
+        <div className="flex gap-2 border-b border-gray-200 dark:border-gray-700">
           {TABS.map(tab => {
             const Icon = tab.icon;
             return (
@@ -184,14 +184,14 @@ export default function DeletionRequestsPage() {
                 onClick={() => setActiveTab(tab.value)}
                 className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
                   activeTab === tab.value
-                    ? 'border-blue-600 text-blue-600'
-                    : 'border-transparent text-gray-600 hover:text-gray-900'
+                    ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
+                    : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
                 }`}
               >
                 <Icon className="w-4 h-4" />
                 {tab.label}
                 {tab.value === 'pending' && pendingCount > 0 && (
-                  <span className="px-2 py-0.5 bg-red-100 text-red-800 text-xs rounded-full">
+                  <span className="px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 text-xs rounded-full">
                     {pendingCount}
                   </span>
                 )}
@@ -203,10 +203,10 @@ export default function DeletionRequestsPage() {
         {/* Requests List */}
         <div className="space-y-4">
           {filteredRequests.length === 0 ? (
-            <div className="bg-white rounded-lg shadow p-12 text-center">
-              <Trash2 className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-1">No {activeTab} requests</h3>
-              <p className="text-gray-500">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
+              <Trash2 className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">No {activeTab} requests</h3>
+              <p className="text-gray-500 dark:text-gray-400">
                 {activeTab === 'pending'
                   ? 'All deletion requests have been processed.'
                   : `No ${activeTab} requests to show.`}
@@ -214,28 +214,28 @@ export default function DeletionRequestsPage() {
             </div>
           ) : (
             filteredRequests.map(request => (
-              <div key={request.id} className="bg-white rounded-lg shadow p-4">
+              <div key={request.id} className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="flex items-start gap-3">
-                    <div className="p-2 bg-red-50 rounded-lg">
-                      <AlertTriangle className="w-5 h-5 text-red-500" />
+                    <div className="p-2 bg-red-50 dark:bg-red-900/30 rounded-lg">
+                      <AlertTriangle className="w-5 h-5 text-red-500 dark:text-red-400" />
                     </div>
                     <div>
-                      <div className="font-medium text-gray-900">
+                      <div className="font-medium text-gray-900 dark:text-white">
                         {request.record_title || 'Untitled'}
                       </div>
-                      <div className="text-sm text-gray-500">
-                        <span className="px-2 py-0.5 bg-gray-100 rounded text-xs mr-2">
+                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                        <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-xs mr-2">
                           {TABLE_LABELS[request.table_name] || request.table_name}
                         </span>
                         Requested by {request.requester?.name || 'Unknown'}
                       </div>
                       {request.reason && (
-                        <div className="text-sm text-gray-600 mt-1">
+                        <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                           <span className="font-medium">Reason:</span> {request.reason}
                         </div>
                       )}
-                      <div className="text-xs text-gray-400 mt-1">
+                      <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                         {new Date(request.requested_at).toLocaleString()}
                       </div>
                     </div>
@@ -247,7 +247,7 @@ export default function DeletionRequestsPage() {
                         <button
                           onClick={() => handleAction(request.id, 'deny')}
                           disabled={processing === request.id}
-                          className="flex items-center gap-1 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+                          className="flex items-center gap-1 px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
                         >
                           <X className="w-4 h-4" />
                           Deny
@@ -268,8 +268,8 @@ export default function DeletionRequestsPage() {
                     ) : (
                       <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm ${
                         request.status === 'approved'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-gray-100 text-gray-800'
+                          ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300'
                       }`}>
                         {request.status === 'approved' ? (
                           <CheckCircle className="w-4 h-4" />

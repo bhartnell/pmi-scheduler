@@ -349,7 +349,7 @@ function LearningStylesContent() {
 
   if (status === 'loading' || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
@@ -358,28 +358,28 @@ function LearningStylesContent() {
   if (!session) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
-      <div className="bg-white shadow-sm">
+      <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-5xl mx-auto px-4 py-6">
-          <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-            <Link href="/" className="hover:text-blue-600 flex items-center gap-1">
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
+            <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1">
               <Home className="w-3 h-3" />
               Home
             </Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management" className="hover:text-blue-600">Lab Management</Link>
+            <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
             <ChevronRight className="w-4 h-4" />
-            <span>Learning Styles</span>
+            <span className="dark:text-gray-300">Learning Styles</span>
           </div>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <Brain className="w-6 h-6 text-purple-600" />
+              <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                <Brain className="w-6 h-6 text-purple-600 dark:text-purple-400" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Learning Styles</h1>
-                <p className="text-gray-600">Manage student learning style assessments</p>
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Learning Styles</h1>
+                <p className="text-gray-600 dark:text-gray-400">Manage student learning style assessments</p>
               </div>
             </div>
             <div className="flex gap-2">
@@ -394,8 +394,8 @@ function LearningStylesContent() {
                 className={`inline-flex items-center gap-2 px-4 py-2 border rounded-lg transition-colors ${
                   bulkMode
                     ? 'bg-purple-600 text-white border-purple-600 hover:bg-purple-700'
-                    : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                } disabled:bg-gray-100 disabled:text-gray-400 disabled:border-gray-200`}
+                    : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                } disabled:bg-gray-100 dark:disabled:bg-gray-700 disabled:text-gray-400 disabled:border-gray-200 dark:disabled:border-gray-600`}
                 title={!selectedCohort ? 'Select a cohort to use bulk entry' : ''}
               >
                 <Table className="w-5 h-5" />
@@ -405,7 +405,7 @@ function LearningStylesContent() {
                 <button
                   onClick={() => setShowForm(true)}
                   disabled={unassessedStudents.length === 0}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 dark:disabled:bg-gray-600"
                 >
                   <Plus className="w-5 h-5" />
                   Add Assessment
@@ -419,12 +419,12 @@ function LearningStylesContent() {
       <main className="max-w-5xl mx-auto px-4 py-6 space-y-6">
         {/* Form */}
         {showForm && (
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
                 {editingId ? 'Edit Learning Style' : 'Add Learning Style Assessment'}
               </h2>
-              <button onClick={resetForm} className="text-gray-400 hover:text-gray-600">
+              <button onClick={resetForm} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                 <X className="w-6 h-6" />
               </button>
             </div>
@@ -432,13 +432,13 @@ function LearningStylesContent() {
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Student Select */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Student *</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Student *</label>
                 <select
                   value={formStudentId}
                   onChange={(e) => setFormStudentId(e.target.value)}
                   disabled={!!editingId}
                   required
-                  className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white disabled:bg-gray-100"
+                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700 disabled:bg-gray-100 dark:disabled:bg-gray-600"
                 >
                   <option value="">Select a student...</option>
                   {(editingId ? students : unassessedStudents).map(s => (
@@ -453,12 +453,12 @@ function LearningStylesContent() {
               {/* Primary & Social Style (Required) */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Primary Style *</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Primary Style *</label>
                   <select
                     value={formPrimaryStyle}
                     onChange={(e) => setFormPrimaryStyle(e.target.value)}
                     required
-                    className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                    className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700"
                   >
                     <option value="">Select...</option>
                     {PRIMARY_STYLES.map(s => (
@@ -467,12 +467,12 @@ function LearningStylesContent() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Social Style *</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Social Style *</label>
                   <select
                     value={formSocialStyle}
                     onChange={(e) => setFormSocialStyle(e.target.value)}
                     required
-                    className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                    className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700"
                   >
                     <option value="">Select...</option>
                     {SOCIAL_STYLES.map(s => (
@@ -485,11 +485,11 @@ function LearningStylesContent() {
               {/* Processing & Structure Style (Optional) */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Processing Style</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Processing Style</label>
                   <select
                     value={formProcessingStyle}
                     onChange={(e) => setFormProcessingStyle(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                    className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700"
                   >
                     <option value="">Not assessed</option>
                     {PROCESSING_STYLES.map(s => (
@@ -498,11 +498,11 @@ function LearningStylesContent() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Structure Style</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Structure Style</label>
                   <select
                     value={formStructureStyle}
                     onChange={(e) => setFormStructureStyle(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                    className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700"
                   >
                     <option value="">Not assessed</option>
                     {STRUCTURE_STYLES.map(s => (
@@ -514,13 +514,13 @@ function LearningStylesContent() {
 
               {/* Notes */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>
                 <textarea
                   value={formNotes}
                   onChange={(e) => setFormNotes(e.target.value)}
                   rows={2}
                   placeholder="Additional observations..."
-                  className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700"
                 />
               </div>
 
@@ -528,14 +528,14 @@ function LearningStylesContent() {
                 <button
                   type="button"
                   onClick={resetForm}
-                  className="px-4 py-2 border rounded-lg text-gray-700 hover:bg-gray-50"
+                  className="px-4 py-2 border dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 dark:disabled:bg-gray-600"
                 >
                   {saving ? 'Saving...' : (editingId ? 'Update' : 'Add Assessment')}
                 </button>
@@ -546,21 +546,21 @@ function LearningStylesContent() {
 
         {/* Bulk Entry Mode */}
         {bulkMode && selectedCohort && (
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">Bulk Entry Mode</h2>
-                <p className="text-sm text-gray-600">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Bulk Entry Mode</h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
                   Quickly assign learning styles to multiple students at once.
                 </p>
               </div>
               <div className="flex items-center gap-4">
-                <label className="flex items-center gap-2 text-sm">
+                <label className="flex items-center gap-2 text-sm dark:text-gray-300">
                   <input
                     type="checkbox"
                     checked={showOnlyUnassessed}
                     onChange={(e) => setShowOnlyUnassessed(e.target.checked)}
-                    className="rounded border-gray-300"
+                    className="rounded border-gray-300 dark:border-gray-600"
                   />
                   Show only unassessed
                 </label>
@@ -569,15 +569,15 @@ function LearningStylesContent() {
 
             {/* Progress Bar */}
             {getBulkEntryProgress() > 0 && (
-              <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+              <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-blue-700">
+                  <span className="text-blue-700 dark:text-blue-400">
                     {getBulkEntryProgress()} student(s) ready to save
                   </span>
                   <button
                     onClick={handleBulkSave}
                     disabled={bulkSaving}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 dark:disabled:bg-gray-600"
                   >
                     <Save className="w-4 h-4" />
                     {bulkSaving ? 'Saving...' : 'Save All'}
@@ -588,30 +588,30 @@ function LearningStylesContent() {
 
             {/* Bulk Entry Table */}
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-700">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Student</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Agency</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Primary Style *</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Social Style *</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Student</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Agency</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Primary Style *</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Social Style *</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {(showOnlyUnassessed ? unassessedStudents : students).map((student) => {
                     const existingStyle = learningStyles.find(ls => ls.student_id === student.id);
                     const bulkEntry = bulkEntries[student.id] || { primary: '', social: '' };
                     const isComplete = bulkEntry.primary && bulkEntry.social;
 
                     return (
-                      <tr key={student.id} className={isComplete ? 'bg-green-50' : ''}>
+                      <tr key={student.id} className={isComplete ? 'bg-green-50 dark:bg-green-900/30' : ''}>
                         <td className="px-4 py-3">
-                          <div className="font-medium text-gray-900">
+                          <div className="font-medium text-gray-900 dark:text-white">
                             {student.first_name} {student.last_name}
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-600">
+                        <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
                           {student.agency || '—'}
                         </td>
                         <td className="px-4 py-3">
@@ -623,7 +623,7 @@ function LearningStylesContent() {
                             <select
                               value={bulkEntry.primary}
                               onChange={(e) => handleBulkEntryChange(student.id, 'primary', e.target.value)}
-                              className="w-full px-2 py-1 text-sm border rounded bg-white text-gray-900"
+                              className="w-full px-2 py-1 text-sm border dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                             >
                               <option value="">Select...</option>
                               {PRIMARY_STYLES.map(s => (
@@ -641,7 +641,7 @@ function LearningStylesContent() {
                             <select
                               value={bulkEntry.social}
                               onChange={(e) => handleBulkEntryChange(student.id, 'social', e.target.value)}
-                              className="w-full px-2 py-1 text-sm border rounded bg-white text-gray-900"
+                              className="w-full px-2 py-1 text-sm border dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
                             >
                               <option value="">Select...</option>
                               {SOCIAL_STYLES.map(s => (
@@ -652,9 +652,9 @@ function LearningStylesContent() {
                         </td>
                         <td className="px-4 py-3 text-sm">
                           {existingStyle ? (
-                            <span className="text-green-600 font-medium">Assessed</span>
+                            <span className="text-green-600 dark:text-green-400 font-medium">Assessed</span>
                           ) : isComplete ? (
-                            <span className="text-blue-600 font-medium">Ready to save</span>
+                            <span className="text-blue-600 dark:text-blue-400 font-medium">Ready to save</span>
                           ) : (
                             <span className="text-gray-400">Pending</span>
                           )}
@@ -667,7 +667,7 @@ function LearningStylesContent() {
             </div>
 
             {(showOnlyUnassessed ? unassessedStudents : students).length === 0 && (
-              <div className="text-center py-8 text-gray-500">
+              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
                 {showOnlyUnassessed
                   ? 'All students in this cohort have been assessed!'
                   : 'No students found in this cohort.'}
@@ -676,11 +676,11 @@ function LearningStylesContent() {
 
             {/* Bulk Save Button (bottom) */}
             {getBulkEntryProgress() > 0 && (
-              <div className="mt-4 pt-4 border-t flex justify-end">
+              <div className="mt-4 pt-4 border-t dark:border-gray-700 flex justify-end">
                 <button
                   onClick={handleBulkSave}
                   disabled={bulkSaving}
-                  className="inline-flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+                  className="inline-flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 dark:disabled:bg-gray-600"
                 >
                   <Save className="w-5 h-5" />
                   {bulkSaving ? 'Saving...' : `Save ${getBulkEntryProgress()} Assessment(s)`}
@@ -700,7 +700,7 @@ function LearningStylesContent() {
               placeholder="Search students..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border rounded-lg text-gray-900 bg-white"
+              className="w-full pl-10 pr-4 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700"
             />
           </div>
           <div className="flex items-center gap-2">
@@ -708,7 +708,7 @@ function LearningStylesContent() {
             <select
               value={selectedCohort}
               onChange={(e) => setSelectedCohort(e.target.value)}
-              className="px-3 py-2 border rounded-lg text-gray-900 bg-white"
+              className="px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700"
             >
               <option value="">All Cohorts</option>
               {cohorts.map(c => (
@@ -724,36 +724,36 @@ function LearningStylesContent() {
         {/* Stats - Hidden in bulk mode */}
         {!bulkMode && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="bg-white rounded-lg shadow p-4 text-center">
-            <div className="text-2xl font-bold text-gray-900">{learningStyles.length}</div>
-            <div className="text-sm text-gray-600">Assessed</div>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 text-center">
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">{learningStyles.length}</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">Assessed</div>
           </div>
-          <div className="bg-white rounded-lg shadow p-4 text-center">
-            <div className="text-2xl font-bold text-gray-900">{unassessedStudents.length}</div>
-            <div className="text-sm text-gray-600">Not Assessed</div>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 text-center">
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">{unassessedStudents.length}</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">Not Assessed</div>
           </div>
-          <div className="bg-white rounded-lg shadow p-4 text-center">
-            <div className="text-2xl font-bold text-blue-600">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 text-center">
+            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
               {learningStyles.filter(ls => ls.primary_style === 'audio').length}
             </div>
-            <div className="text-sm text-gray-600">Audio</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">Audio</div>
           </div>
-          <div className="bg-white rounded-lg shadow p-4 text-center">
-            <div className="text-2xl font-bold text-green-600">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 text-center">
+            <div className="text-2xl font-bold text-green-600 dark:text-green-400">
               {learningStyles.filter(ls => ls.primary_style === 'visual').length}
             </div>
-            <div className="text-sm text-gray-600">Visual</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">Visual</div>
           </div>
         </div>
         )}
 
         {/* Learning Styles List - Hidden in bulk mode */}
         {!bulkMode && (
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
           {filteredStyles.length === 0 ? (
             <div className="p-8 text-center">
-              <Brain className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500">
+              <Brain className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+              <p className="text-gray-500 dark:text-gray-400">
                 {searchQuery ? 'No matching students found' : 'No learning styles assessed yet'}
               </p>
               {!searchQuery && unassessedStudents.length > 0 && (
@@ -767,26 +767,26 @@ function LearningStylesContent() {
               )}
             </div>
           ) : (
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Student</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Primary</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Social</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden sm:table-cell">Processing</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase hidden sm:table-cell">Structure</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Student</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Primary</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Social</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase hidden sm:table-cell">Processing</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase hidden sm:table-cell">Structure</th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Actions</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                 {filteredStyles.map((ls) => (
-                  <tr key={ls.id} className="hover:bg-gray-50">
+                  <tr key={ls.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                     <td className="px-6 py-4">
-                      <div className="font-medium text-gray-900">
+                      <div className="font-medium text-gray-900 dark:text-white">
                         {ls.student.first_name} {ls.student.last_name}
                       </div>
                       {ls.student.cohort && (
-                        <div className="text-sm text-gray-500">
+                        <div className="text-sm text-gray-500 dark:text-gray-400">
                           {ls.student.cohort.program.abbreviation} {ls.student.cohort.cohort_number}
                         </div>
                       )}
@@ -822,14 +822,14 @@ function LearningStylesContent() {
                     <td className="px-6 py-4 text-right">
                       <button
                         onClick={() => openEditForm(ls)}
-                        className="p-1 text-gray-600 hover:text-blue-600"
+                        className="p-1 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
                       >
                         <Edit2 className="w-4 h-4" />
                       </button>
                       {userRole && canManageContent(userRole) && (
                         <button
                           onClick={() => handleDelete(ls.id)}
-                          className="p-1 text-gray-600 hover:text-red-600 ml-2"
+                          className="p-1 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 ml-2"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -850,7 +850,7 @@ function LearningStylesContent() {
 export default function LearningStylesPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     }>

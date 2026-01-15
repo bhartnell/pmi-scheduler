@@ -62,7 +62,7 @@ export default function AdminPage() {
 
   if (status === 'loading' || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
@@ -144,27 +144,27 @@ export default function AdminPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
-      <div className="bg-white shadow-sm">
+      <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-            <Link href="/" className="hover:text-blue-600 flex items-center gap-1">
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
+            <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1">
               <Home className="w-3 h-3" />
               Home
             </Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management" className="hover:text-blue-600">Lab Management</Link>
+            <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
             <ChevronRight className="w-4 h-4" />
-            <span>Admin</span>
+            <span className="dark:text-gray-300">Admin</span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-gray-100 rounded-lg">
-              <Settings className="w-6 h-6 text-gray-600" />
+            <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
+              <Settings className="w-6 h-6 text-gray-600 dark:text-gray-300" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Admin Settings</h1>
-              <p className="text-gray-600">Manage cohorts, groups, and system settings</p>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Admin Settings</h1>
+              <p className="text-gray-600 dark:text-gray-400">Manage cohorts, groups, and system settings</p>
             </div>
           </div>
         </div>
@@ -172,9 +172,9 @@ export default function AdminPage() {
 
       <main className="max-w-4xl mx-auto px-4 py-6">
         {/* Quick Setup Guide */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-          <h2 className="font-semibold text-blue-900 mb-2">📋 Setup Order</h2>
-          <ol className="text-sm text-blue-800 space-y-1">
+        <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-lg p-4 mb-6">
+          <h2 className="font-semibold text-blue-900 dark:text-blue-200 mb-2">Setup Order</h2>
+          <ol className="text-sm text-blue-800 dark:text-blue-300 space-y-1">
             <li>1. <strong>Create a Cohort</strong> (e.g., "Paramedic Group 14")</li>
             <li>2. <strong>Add Students</strong> to the cohort</li>
             <li>3. <strong>Create Lab Groups</strong> within the cohort (Group A, B, C, D)</li>
@@ -190,16 +190,16 @@ export default function AdminPage() {
             <Link
               key={link.href}
               href={link.href}
-              className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow p-5 flex items-start gap-4"
+              className="bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-lg transition-shadow p-5 flex items-start gap-4"
             >
               <div className={`p-3 rounded-lg ${link.color}`}>
                 <link.icon className="w-6 h-6 text-white" />
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold text-gray-900 mb-1">{link.title}</h3>
-                <p className="text-sm text-gray-600">{link.description}</p>
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-1">{link.title}</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{link.description}</p>
               </div>
-              <ChevronRight className="w-5 h-5 text-gray-400 mt-1" />
+              <ChevronRight className="w-5 h-5 text-gray-400 dark:text-gray-500 mt-1" />
             </Link>
           ))}
         </div>

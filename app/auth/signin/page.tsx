@@ -5,17 +5,17 @@ import { Calendar } from 'lucide-react';
 
 export default function SignIn() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-6">
-      <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-6">
+      <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
         <div className="text-center mb-8">
-          <Calendar className="h-16 w-16 text-blue-600 mx-auto mb-4" />
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">PMI EMS Scheduler</h1>
-          <p className="text-gray-600">Sign in with your PMI.edu Google account</p>
+          <Calendar className="h-16 w-16 text-blue-600 dark:text-blue-400 mx-auto mb-4" />
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">PMI EMS Scheduler</h1>
+          <p className="text-gray-600 dark:text-gray-400">Sign in with your PMI.edu Google account</p>
         </div>
-        
+
         <button
           onClick={() => signIn('google', { callbackUrl: '/' })}
-          className="w-full flex items-center justify-center gap-3 px-6 py-3 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 font-medium transition-colors"
+          className="w-full flex items-center justify-center gap-3 px-6 py-3 bg-white dark:bg-gray-700 border-2 border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 font-medium text-gray-900 dark:text-white transition-colors"
         >
           <svg className="h-5 w-5" viewBox="0 0 24 24">
             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -26,7 +26,7 @@ export default function SignIn() {
           Sign in with Google
         </button>
 
-        <p className="mt-6 text-center text-sm text-gray-600">
+        <p className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
           Only authorized PMI.edu accounts can access admin features
         </p>
       </div>

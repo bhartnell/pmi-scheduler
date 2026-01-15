@@ -91,7 +91,7 @@ export default function NewStudentPage() {
 
   if (status === 'loading' || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
@@ -100,36 +100,36 @@ export default function NewStudentPage() {
   if (!session) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
-      <div className="bg-white shadow-sm">
+      <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-2xl mx-auto px-4 py-6">
-          <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
-            <Link href="/lab-management" className="hover:text-blue-600">Lab Management</Link>
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1">
+            <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management/students" className="hover:text-blue-600">Students</Link>
+            <Link href="/lab-management/students" className="hover:text-blue-600 dark:hover:text-blue-400">Students</Link>
             <ChevronRight className="w-4 h-4" />
-            <span>New</span>
+            <span className="dark:text-gray-300">New</span>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Add Student</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Add Student</h1>
         </div>
       </div>
 
       <main className="max-w-2xl mx-auto px-4 py-6">
-        <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6 space-y-6">
-          <div className="flex items-center gap-4 pb-4 border-b">
-            <div className="w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center">
-              <UserPlus className="w-8 h-8 text-blue-600" />
+        <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 space-y-6">
+          <div className="flex items-center gap-4 pb-4 border-b dark:border-gray-700">
+            <div className="w-16 h-16 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+              <UserPlus className="w-8 h-8 text-blue-600 dark:text-blue-400" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">Student Information</h2>
-              <p className="text-sm text-gray-600">Add a new student to the system</p>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Student Information</h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Add a new student to the system</p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 First Name <span className="text-red-500">*</span>
               </label>
               <input
@@ -138,11 +138,11 @@ export default function NewStudentPage() {
                 onChange={(e) => setFirstName(e.target.value)}
                 required
                 placeholder="John"
-                className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Last Name <span className="text-red-500">*</span>
               </label>
               <input
@@ -151,13 +151,13 @@ export default function NewStudentPage() {
                 onChange={(e) => setLastName(e.target.value)}
                 required
                 placeholder="Doe"
-                className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Email
             </label>
             <input
@@ -165,18 +165,18 @@ export default function NewStudentPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="john.doe@email.com"
-              className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+              className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Cohort
             </label>
             <select
               value={cohortId}
               onChange={(e) => setCohortId(e.target.value)}
-              className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+              className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
             >
               <option value="">No cohort assigned</option>
               {cohorts.map(cohort => (
@@ -188,7 +188,7 @@ export default function NewStudentPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Agency
             </label>
             <input
@@ -196,12 +196,12 @@ export default function NewStudentPage() {
               value={agency}
               onChange={(e) => setAgency(e.target.value)}
               placeholder="e.g., AMR, Las Vegas Fire"
-              className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+              className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Notes
             </label>
             <textarea
@@ -209,14 +209,14 @@ export default function NewStudentPage() {
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
               placeholder="Any additional notes about this student..."
-              className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white resize-none"
+              className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 resize-none"
             />
           </div>
 
-          <div className="flex gap-3 pt-4 border-t">
+          <div className="flex gap-3 pt-4 border-t dark:border-gray-700">
             <Link
               href="/lab-management/students"
-              className="px-6 py-2 border text-gray-700 rounded-lg hover:bg-gray-50"
+              className="px-6 py-2 border dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
             >
               Cancel
             </Link>
@@ -241,8 +241,8 @@ export default function NewStudentPage() {
         </form>
 
         {/* Quick tip */}
-        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <p className="text-sm text-blue-800">
+        <div className="mt-6 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+          <p className="text-sm text-blue-800 dark:text-blue-300">
             <strong>Tip:</strong> Need to add multiple students at once?{' '}
             <Link href="/lab-management/students/import" className="font-medium underline">
               Use the import feature

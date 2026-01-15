@@ -202,7 +202,7 @@ export default function ImportStudentsPage() {
 
   if (status === 'loading' || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
@@ -211,35 +211,35 @@ export default function ImportStudentsPage() {
   if (!session) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
-      <div className="bg-white shadow-sm">
+      <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-4xl mx-auto px-4 py-6">
-          <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
-            <Link href="/lab-management" className="hover:text-blue-600">Lab Management</Link>
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1">
+            <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management/students" className="hover:text-blue-600">Students</Link>
+            <Link href="/lab-management/students" className="hover:text-blue-600 dark:hover:text-blue-400">Students</Link>
             <ChevronRight className="w-4 h-4" />
-            <span>Import</span>
+            <span className="dark:text-gray-300">Import</span>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Import Students</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Import Students</h1>
         </div>
       </div>
 
       <main className="max-w-4xl mx-auto px-4 py-6 space-y-6">
         {/* Success Message */}
         {importResult && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-start gap-3">
-            <CheckCircle className="w-6 h-6 text-green-600 shrink-0" />
+          <div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 rounded-lg p-4 flex items-start gap-3">
+            <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400 shrink-0" />
             <div>
-              <h3 className="font-medium text-green-800">Import Complete!</h3>
-              <p className="text-green-700">
+              <h3 className="font-medium text-green-800 dark:text-green-300">Import Complete!</h3>
+              <p className="text-green-700 dark:text-green-400">
                 Successfully imported {importResult.imported} student{importResult.imported !== 1 ? 's' : ''}.
                 {importResult.skipped > 0 && ` ${importResult.skipped} skipped due to missing data.`}
               </p>
               <Link
                 href={`/lab-management/students`}
-                className="text-green-800 font-medium hover:underline mt-2 inline-block"
+                className="text-green-800 dark:text-green-300 font-medium hover:underline mt-2 inline-block"
               >
                 View Students →
               </Link>
@@ -248,12 +248,12 @@ export default function ImportStudentsPage() {
         )}
 
         {/* Cohort Selection */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Select Cohort</h2>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Select Cohort</h2>
           <select
             value={selectedCohort}
             onChange={(e) => setSelectedCohort(e.target.value)}
-            className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+            className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
           >
             <option value="">Choose a cohort...</option>
             {cohorts.map(cohort => (
@@ -265,15 +265,15 @@ export default function ImportStudentsPage() {
         </div>
 
         {/* Input Method */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Add Student Data</h2>
-          
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Add Student Data</h2>
+
           {/* Method Toggle */}
           <div className="flex gap-2 mb-4">
             <button
               onClick={() => setInputMethod('paste')}
               className={`px-4 py-2 rounded-lg font-medium ${
-                inputMethod === 'paste' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'
+                inputMethod === 'paste' ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
               }`}
             >
               Paste Data
@@ -281,7 +281,7 @@ export default function ImportStudentsPage() {
             <button
               onClick={() => setInputMethod('file')}
               className={`px-4 py-2 rounded-lg font-medium ${
-                inputMethod === 'file' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'
+                inputMethod === 'file' ? 'bg-blue-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
               }`}
             >
               Upload File
@@ -290,7 +290,7 @@ export default function ImportStudentsPage() {
 
           {inputMethod === 'paste' ? (
             <div>
-              <p className="text-sm text-gray-600 mb-2">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                 Paste student data from Excel or a spreadsheet. Format: First Name, Last Name, Email (optional), Agency (optional)
               </p>
               <textarea
@@ -298,18 +298,18 @@ export default function ImportStudentsPage() {
                 onChange={(e) => handlePasteChange(e.target.value)}
                 placeholder={`John, Doe, john@email.com, AMR\nJane, Smith, jane@email.com\nBob Johnson`}
                 rows={8}
-                className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white font-mono text-sm"
+                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 font-mono text-sm"
               />
             </div>
           ) : (
             <div>
-              <p className="text-sm text-gray-600 mb-2">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                 Upload a CSV or TXT file with student data.
               </p>
-              <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+              <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
                 <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                  <FileSpreadsheet className="w-10 h-10 text-gray-400 mb-2" />
-                  <p className="text-sm text-gray-600">Click to upload CSV or TXT file</p>
+                  <FileSpreadsheet className="w-10 h-10 text-gray-400 dark:text-gray-500 mb-2" />
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Click to upload CSV or TXT file</p>
                 </div>
                 <input
                   type="file"
@@ -324,33 +324,33 @@ export default function ImportStudentsPage() {
 
         {/* Preview */}
         {parsedStudents.length > 0 && (
-          <div className="bg-white rounded-lg shadow">
-            <div className="p-4 border-b flex items-center justify-between">
-              <h2 className="font-semibold text-gray-900">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+            <div className="p-4 border-b dark:border-gray-700 flex items-center justify-between">
+              <h2 className="font-semibold text-gray-900 dark:text-white">
                 Preview ({validCount} valid, {invalidCount} invalid)
               </h2>
               <button
                 onClick={() => { setParsedStudents([]); setPasteData(''); }}
-                className="text-sm text-gray-600 hover:text-gray-800"
+                className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
               >
                 Clear All
               </button>
             </div>
             <div className="max-h-96 overflow-y-auto">
               <table className="w-full">
-                <thead className="bg-gray-50 sticky top-0">
+                <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0">
                   <tr>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">First Name</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Last Name</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Agency</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">First Name</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Last Name</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Email</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Agency</th>
                     <th className="px-4 py-2"></th>
                   </tr>
                 </thead>
-                <tbody className="divide-y">
+                <tbody className="divide-y dark:divide-gray-700">
                   {parsedStudents.map((student, index) => (
-                    <tr key={index} className={student.valid ? '' : 'bg-red-50'}>
+                    <tr key={index} className={student.valid ? '' : 'bg-red-50 dark:bg-red-900/30'}>
                       <td className="px-4 py-2">
                         {student.valid ? (
                           <CheckCircle className="w-5 h-5 text-green-500" />
@@ -358,14 +358,14 @@ export default function ImportStudentsPage() {
                           <AlertCircle className="w-5 h-5 text-red-500" />
                         )}
                       </td>
-                      <td className="px-4 py-2 text-sm text-gray-900">{student.first_name || '—'}</td>
-                      <td className="px-4 py-2 text-sm text-gray-900">{student.last_name || '—'}</td>
-                      <td className="px-4 py-2 text-sm text-gray-600">{student.email || '—'}</td>
-                      <td className="px-4 py-2 text-sm text-gray-600">{student.agency || '—'}</td>
+                      <td className="px-4 py-2 text-sm text-gray-900 dark:text-white">{student.first_name || '—'}</td>
+                      <td className="px-4 py-2 text-sm text-gray-900 dark:text-white">{student.last_name || '—'}</td>
+                      <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">{student.email || '—'}</td>
+                      <td className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400">{student.agency || '—'}</td>
                       <td className="px-4 py-2">
                         <button
                           onClick={() => removeStudent(index)}
-                          className="p-1 text-gray-400 hover:text-red-600"
+                          className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400"
                         >
                           <X className="w-4 h-4" />
                         </button>
@@ -383,7 +383,7 @@ export default function ImportStudentsPage() {
           <div className="flex gap-3">
             <Link
               href="/lab-management/students"
-              className="px-6 py-3 border text-gray-700 rounded-lg hover:bg-gray-50"
+              className="px-6 py-3 border dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
             >
               Cancel
             </Link>
@@ -409,9 +409,9 @@ export default function ImportStudentsPage() {
         )}
 
         {/* Help Text */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h3 className="font-medium text-blue-800 mb-2">Tips for importing</h3>
-          <ul className="text-sm text-blue-700 space-y-1">
+        <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+          <h3 className="font-medium text-blue-800 dark:text-blue-300 mb-2">Tips for importing</h3>
+          <ul className="text-sm text-blue-700 dark:text-blue-400 space-y-1">
             <li>• Copy and paste directly from Excel, Google Sheets, or any spreadsheet</li>
             <li>• Each student should be on a separate line</li>
             <li>• Minimum required: First Name and Last Name</li>

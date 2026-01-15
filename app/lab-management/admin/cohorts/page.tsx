@@ -243,7 +243,7 @@ export default function CohortManagementPage() {
 
   if (status === 'loading' || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
@@ -252,19 +252,19 @@ export default function CohortManagementPage() {
   if (!session) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
-      <div className="bg-white shadow-sm">
+      <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-5xl mx-auto px-4 py-6">
-          <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
-            <Link href="/lab-management" className="hover:text-blue-600">Lab Management</Link>
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1">
+            <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management/admin" className="hover:text-blue-600">Admin</Link>
+            <Link href="/lab-management/admin" className="hover:text-blue-600 dark:hover:text-blue-400">Admin</Link>
             <ChevronRight className="w-4 h-4" />
-            <span>Cohorts</span>
+            <span className="dark:text-gray-300">Cohorts</span>
           </div>
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-gray-900">Manage Cohorts</h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Manage Cohorts</h1>
             <button
               onClick={() => setShowCreateForm(!showCreateForm)}
               className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
@@ -279,16 +279,16 @@ export default function CohortManagementPage() {
       <main className="max-w-5xl mx-auto px-4 py-6 space-y-6">
         {/* Create Form */}
         {showCreateForm && (
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Create New Cohort</h2>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Create New Cohort</h2>
             <form onSubmit={handleCreate} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Program</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Program</label>
                   <select
                     value={createProgramId}
                     onChange={(e) => setCreateProgramId(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                    className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                   >
                     {programs.map(p => (
                       <option key={p.id} value={p.id}>{p.name}</option>
@@ -296,7 +296,7 @@ export default function CohortManagementPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Group Number</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Group Number</label>
                   <input
                     type="number"
                     min="1"
@@ -304,25 +304,25 @@ export default function CohortManagementPage() {
                     onChange={(e) => setCreateCohortNumber(e.target.value)}
                     placeholder="e.g., 14"
                     required
-                    className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                    className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
                   <input
                     type="date"
                     value={createStartDate}
                     onChange={(e) => setCreateStartDate(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                    className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Date</label>
                   <input
                     type="date"
                     value={createEndDate}
                     onChange={(e) => setCreateEndDate(e.target.value)}
-                    className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                    className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                   />
                 </div>
               </div>
@@ -330,7 +330,7 @@ export default function CohortManagementPage() {
                 <button
                   type="button"
                   onClick={() => setShowCreateForm(false)}
-                  className="px-4 py-2 border rounded-lg text-gray-700 hover:bg-gray-50"
+                  className="px-4 py-2 border dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
                 >
                   Cancel
                 </button>
@@ -348,12 +348,12 @@ export default function CohortManagementPage() {
 
         {/* Filter */}
         <div className="flex items-center gap-4">
-          <label className="flex items-center gap-2 text-sm text-gray-700">
+          <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
             <input
               type="checkbox"
               checked={showInactive}
               onChange={(e) => setShowInactive(e.target.checked)}
-              className="rounded border-gray-300"
+              className="rounded border-gray-300 dark:border-gray-600"
             />
             Show inactive cohorts
           </label>
@@ -361,23 +361,23 @@ export default function CohortManagementPage() {
 
         {/* Cohorts by Program */}
         {cohortsByProgram.map(({ program, cohorts: programCohorts }) => (
-          <div key={program.id} className="bg-white rounded-lg shadow">
-            <div className="p-4 border-b bg-gray-50">
-              <h2 className="font-semibold text-gray-900">{program.name}</h2>
+          <div key={program.id} className="bg-white dark:bg-gray-800 rounded-lg shadow">
+            <div className="p-4 border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-700">
+              <h2 className="font-semibold text-gray-900 dark:text-white">{program.name}</h2>
             </div>
-            
+
             {programCohorts.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">
+              <div className="p-8 text-center text-gray-500 dark:text-gray-400">
                 No {showInactive ? '' : 'active '}cohorts for {program.name}
               </div>
             ) : (
-              <div className="divide-y">
+              <div className="divide-y dark:divide-gray-700">
                 {programCohorts.map(cohort => (
-                  <div key={cohort.id} className={`p-4 ${!cohort.is_active ? 'bg-gray-50 opacity-75' : ''}`}>
+                  <div key={cohort.id} className={`p-4 ${!cohort.is_active ? 'bg-gray-50 dark:bg-gray-700/50 opacity-75' : ''}`}>
                     {editingId === cohort.id ? (
                       // Edit mode
                       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-                        <div className="font-medium text-gray-900 min-w-[120px]">
+                        <div className="font-medium text-gray-900 dark:text-white min-w-[120px]">
                           {program.abbreviation} Group {cohort.cohort_number}
                         </div>
                         <div className="flex flex-wrap gap-2 flex-1">
@@ -385,15 +385,15 @@ export default function CohortManagementPage() {
                             type="date"
                             value={editStartDate}
                             onChange={(e) => setEditStartDate(e.target.value)}
-                            className="px-2 py-1 border rounded text-sm text-gray-900 bg-white"
+                            className="px-2 py-1 border dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                             placeholder="Start date"
                           />
-                          <span className="text-gray-500">to</span>
+                          <span className="text-gray-500 dark:text-gray-400">to</span>
                           <input
                             type="date"
                             value={editEndDate}
                             onChange={(e) => setEditEndDate(e.target.value)}
-                            className="px-2 py-1 border rounded text-sm text-gray-900 bg-white"
+                            className="px-2 py-1 border dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                             placeholder="End date"
                           />
                         </div>
@@ -401,13 +401,13 @@ export default function CohortManagementPage() {
                           <button
                             onClick={() => handleSaveEdit(cohort.id)}
                             disabled={saving}
-                            className="p-2 text-green-600 hover:bg-green-50 rounded"
+                            className="p-2 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 rounded"
                           >
                             <Check className="w-5 h-5" />
                           </button>
                           <button
                             onClick={cancelEdit}
-                            className="p-2 text-gray-600 hover:bg-gray-100 rounded"
+                            className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
                           >
                             <X className="w-5 h-5" />
                           </button>
@@ -418,15 +418,15 @@ export default function CohortManagementPage() {
                       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
                         <div className="flex items-center gap-4">
                           <div>
-                            <div className="font-medium text-gray-900">
+                            <div className="font-medium text-gray-900 dark:text-white">
                               {program.abbreviation} Group {cohort.cohort_number}
                               {!cohort.is_active && (
-                                <span className="ml-2 px-2 py-0.5 bg-gray-200 text-gray-600 text-xs rounded">
+                                <span className="ml-2 px-2 py-0.5 bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 text-xs rounded">
                                   Inactive
                                 </span>
                               )}
                             </div>
-                            <div className="text-sm text-gray-600 flex items-center gap-3">
+                            <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-3">
                               <span className="flex items-center gap-1">
                                 <Users className="w-4 h-4" />
                                 {cohort.student_count} students
@@ -445,20 +445,20 @@ export default function CohortManagementPage() {
                         <div className="flex items-center gap-1">
                           <Link
                             href={`/lab-management/cohorts/${cohort.id}`}
-                            className="px-3 py-1 text-sm text-blue-600 hover:bg-blue-50 rounded"
+                            className="px-3 py-1 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded"
                           >
                             Open Hub
                           </Link>
                           <button
                             onClick={() => startEdit(cohort)}
-                            className="p-2 text-gray-600 hover:bg-gray-100 rounded"
+                            className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
                             title="Edit dates"
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleToggleActive(cohort)}
-                            className={`p-2 rounded ${cohort.is_active ? 'text-yellow-600 hover:bg-yellow-50' : 'text-green-600 hover:bg-green-50'}`}
+                            className={`p-2 rounded ${cohort.is_active ? 'text-yellow-600 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/30' : 'text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30'}`}
                             title={cohort.is_active ? 'Deactivate' : 'Activate'}
                           >
                             {cohort.is_active ? <X className="w-4 h-4" /> : <Check className="w-4 h-4" />}
@@ -466,7 +466,7 @@ export default function CohortManagementPage() {
                           {userRole && canManageCohorts(userRole) && (
                             <button
                               onClick={() => handleDelete(cohort)}
-                              className="p-2 text-red-600 hover:bg-red-50 rounded"
+                              className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded"
                               title="Delete"
                             >
                               <Trash2 className="w-4 h-4" />

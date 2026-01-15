@@ -4,7 +4,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { 
+import {
   ChevronRight,
   ChevronLeft,
   Calendar,
@@ -41,12 +41,12 @@ interface LabDay {
 export default function SchedulePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  
+
   const [cohorts, setCohorts] = useState<Cohort[]>([]);
   const [labDays, setLabDays] = useState<LabDay[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCohort, setSelectedCohort] = useState('');
-  
+
   // Calendar state
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
@@ -86,7 +86,7 @@ export default function SchedulePage() {
       // Get first and last day of current month view (including overflow days)
       const startDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
       startDate.setDate(startDate.getDate() - startDate.getDay()); // Go back to Sunday
-      
+
       const endDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
       endDate.setDate(endDate.getDate() + (6 - endDate.getDay())); // Go forward to Saturday
 
@@ -94,14 +94,14 @@ export default function SchedulePage() {
         startDate: startDate.toISOString().split('T')[0],
         endDate: endDate.toISOString().split('T')[0],
       });
-      
+
       if (selectedCohort) {
         params.append('cohortId', selectedCohort);
       }
 
       const res = await fetch(`/api/lab-management/lab-days?${params}`);
       const data = await res.json();
-      
+
       if (data.success) {
         setLabDays(data.labDays);
       }
@@ -128,21 +128,21 @@ export default function SchedulePage() {
     const days = [];
     const firstDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
     const lastDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
-    
+
     // Start from Sunday of the first week
     const startDate = new Date(firstDay);
     startDate.setDate(startDate.getDate() - startDate.getDay());
-    
+
     // End on Saturday of the last week
     const endDate = new Date(lastDay);
     endDate.setDate(endDate.getDate() + (6 - endDate.getDay()));
-    
+
     const current = new Date(startDate);
     while (current <= endDate) {
       days.push(new Date(current));
       current.setDate(current.getDate() + 1);
     }
-    
+
     return days;
   };
 
@@ -165,10 +165,10 @@ export default function SchedulePage() {
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-700">Loading...</p>
+          <p className="mt-4 text-gray-700 dark:text-gray-300">Loading...</p>
         </div>
       </div>
     );
@@ -177,18 +177,18 @@ export default function SchedulePage() {
   if (!session) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
-      <div className="bg-white shadow-sm">
+      <div className="bg-white shadow-sm dark:bg-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
-                <Link href="/lab-management" className="hover:text-blue-600">Lab Management</Link>
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1">
+                <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
                 <ChevronRight className="w-4 h-4" />
                 <span>Schedule</span>
               </div>
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Lab Schedule</h1>
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Lab Schedule</h1>
             </div>
             <Link
               href="/lab-management/schedule/new"
@@ -203,28 +203,28 @@ export default function SchedulePage() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Calendar Controls */}
-        <div className="bg-white rounded-lg shadow mb-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
           <div className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
             {/* Month Navigation */}
             <div className="flex items-center gap-4">
               <button
                 onClick={goToPreviousMonth}
-                className="p-2 hover:bg-gray-100 rounded-lg"
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
               >
-                <ChevronLeft className="w-5 h-5 text-gray-600" />
+                <ChevronLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
               </button>
-              <h2 className="text-xl font-semibold text-gray-900 min-w-[200px] text-center">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white min-w-[200px] text-center">
                 {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
               </h2>
               <button
                 onClick={goToNextMonth}
-                className="p-2 hover:bg-gray-100 rounded-lg"
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
               >
-                <ChevronRight className="w-5 h-5 text-gray-600" />
+                <ChevronRight className="w-5 h-5 text-gray-600 dark:text-gray-400" />
               </button>
               <button
                 onClick={goToToday}
-                className="px-3 py-1 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700"
+                className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
               >
                 Today
               </button>
@@ -232,11 +232,11 @@ export default function SchedulePage() {
 
             {/* Cohort Filter */}
             <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-gray-500" />
+              <Filter className="w-4 h-4 text-gray-500 dark:text-gray-400" />
               <select
                 value={selectedCohort}
                 onChange={(e) => setSelectedCohort(e.target.value)}
-                className="px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
               >
                 <option value="">All Cohorts</option>
                 {cohorts.map(cohort => (
@@ -250,11 +250,11 @@ export default function SchedulePage() {
         </div>
 
         {/* Calendar Grid */}
-        <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
           {/* Week day headers */}
-          <div className="grid grid-cols-7 bg-gray-50 border-b">
+          <div className="grid grid-cols-7 bg-gray-50 dark:bg-gray-700 border-b dark:border-gray-600">
             {weekDays.map(day => (
-              <div key={day} className="py-3 text-center text-sm font-medium text-gray-600">
+              <div key={day} className="py-3 text-center text-sm font-medium text-gray-600 dark:text-gray-300">
                 {day}
               </div>
             ))}
@@ -266,44 +266,44 @@ export default function SchedulePage() {
               const dayLabDays = getLabDaysForDate(date);
               const today = isToday(date);
               const currentMo = isCurrentMonth(date);
-              
+
               return (
                 <div
                   key={idx}
-                  className={`min-h-[100px] md:min-h-[120px] border-b border-r p-1 md:p-2 ${
-                    !currentMo ? 'bg-gray-50' : ''
-                  } ${today ? 'bg-blue-50' : ''}`}
+                  className={`min-h-[100px] md:min-h-[120px] border-b border-r dark:border-gray-600 p-1 md:p-2 ${
+                    !currentMo ? 'bg-gray-50 dark:bg-gray-700' : ''
+                  } ${today ? 'bg-blue-50 dark:bg-blue-900/30' : ''}`}
                 >
                   <div className={`text-sm font-medium mb-1 ${
-                    today 
-                      ? 'text-blue-600' 
-                      : currentMo 
-                        ? 'text-gray-900' 
-                        : 'text-gray-400'
+                    today
+                      ? 'text-blue-600 dark:text-blue-400'
+                      : currentMo
+                        ? 'text-gray-900 dark:text-white'
+                        : 'text-gray-400 dark:text-gray-500'
                   }`}>
                     {date.getDate()}
                   </div>
-                  
+
                   {/* Lab day entries */}
                   <div className="space-y-1">
                     {dayLabDays.slice(0, 3).map(labDay => (
                       <Link
                         key={labDay.id}
                         href={`/lab-management/schedule/${labDay.id}`}
-                        className="block px-1.5 py-1 text-xs rounded bg-blue-100 text-blue-800 hover:bg-blue-200 truncate"
+                        className="block px-1.5 py-1 text-xs rounded bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/70 truncate"
                       >
                         <span className="font-medium">
                           {labDay.cohort.program.abbreviation} G{labDay.cohort.cohort_number}
                         </span>
                         {labDay.stations.length > 0 && (
-                          <span className="text-blue-600 ml-1">
+                          <span className="text-blue-600 dark:text-blue-400 ml-1">
                             ({labDay.stations.length})
                           </span>
                         )}
                       </Link>
                     ))}
                     {dayLabDays.length > 3 && (
-                      <div className="text-xs text-gray-500 px-1">
+                      <div className="text-xs text-gray-500 dark:text-gray-400 px-1">
                         +{dayLabDays.length - 3} more
                       </div>
                     )}
@@ -315,16 +315,16 @@ export default function SchedulePage() {
         </div>
 
         {/* Upcoming Labs List (Mobile-friendly alternative) */}
-        <div className="mt-6 bg-white rounded-lg shadow">
-          <div className="p-4 border-b">
-            <h3 className="font-semibold text-gray-900">Upcoming Labs</h3>
+        <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow">
+          <div className="p-4 border-b dark:border-gray-600">
+            <h3 className="font-semibold text-gray-900 dark:text-white">Upcoming Labs</h3>
           </div>
-          <div className="divide-y">
+          <div className="divide-y dark:divide-gray-600">
             {loading ? (
-              <div className="p-8 text-center text-gray-500">Loading...</div>
+              <div className="p-8 text-center text-gray-500 dark:text-gray-400">Loading...</div>
             ) : labDays.length === 0 ? (
-              <div className="p-8 text-center text-gray-500">
-                <Calendar className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+              <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+                <Calendar className="w-12 h-12 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
                 <p>No lab days scheduled for this period</p>
               </div>
             ) : (
@@ -335,49 +335,49 @@ export default function SchedulePage() {
                 .map(labDay => {
                   const labDate = new Date(labDay.date + 'T12:00:00');
                   const isLabToday = labDate.toDateString() === new Date().toDateString();
-                  
+
                   return (
                     <Link
                       key={labDay.id}
                       href={`/lab-management/schedule/${labDay.id}`}
-                      className="p-4 flex items-center gap-4 hover:bg-gray-50"
+                      className="p-4 flex items-center gap-4 hover:bg-gray-50 dark:hover:bg-gray-700"
                     >
                       <div className={`text-center p-2 rounded-lg min-w-[60px] ${
-                        isLabToday ? 'bg-blue-100' : 'bg-gray-100'
+                        isLabToday ? 'bg-blue-100 dark:bg-blue-900/50' : 'bg-gray-100 dark:bg-gray-700'
                       }`}>
                         <div className={`text-xs font-medium ${
-                          isLabToday ? 'text-blue-600' : 'text-gray-600'
+                          isLabToday ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400'
                         }`}>
                           {labDate.toLocaleDateString('en-US', { weekday: 'short' })}
                         </div>
                         <div className={`text-xl font-bold ${
-                          isLabToday ? 'text-blue-700' : 'text-gray-900'
+                          isLabToday ? 'text-blue-700 dark:text-blue-300' : 'text-gray-900 dark:text-white'
                         }`}>
                           {labDate.getDate()}
                         </div>
                         <div className={`text-xs ${
-                          isLabToday ? 'text-blue-600' : 'text-gray-600'
+                          isLabToday ? 'text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400'
                         }`}>
                           {labDate.toLocaleDateString('en-US', { month: 'short' })}
                         </div>
                       </div>
                       <div className="flex-1">
-                        <div className="font-medium text-gray-900">
+                        <div className="font-medium text-gray-900 dark:text-white">
                           {labDay.cohort.program.abbreviation} Group {labDay.cohort.cohort_number}
                         </div>
-                        <div className="text-sm text-gray-600">
-                          {labDay.week_number && labDay.day_number 
+                        <div className="text-sm text-gray-600 dark:text-gray-400">
+                          {labDay.week_number && labDay.day_number
                             ? `Week ${labDay.week_number}, Day ${labDay.day_number} • `
                             : ''}
                           {labDay.stations.length} station{labDay.stations.length !== 1 ? 's' : ''}
                         </div>
                       </div>
                       {isLabToday && (
-                        <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs font-medium rounded">
+                        <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-xs font-medium rounded">
                           Today
                         </span>
                       )}
-                      <ChevronRight className="w-5 h-5 text-gray-400" />
+                      <ChevronRight className="w-5 h-5 text-gray-400 dark:text-gray-500" />
                     </Link>
                   );
                 })

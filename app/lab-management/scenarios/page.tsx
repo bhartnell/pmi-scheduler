@@ -4,10 +4,10 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { 
-  Search, 
-  Plus, 
-  Filter, 
+import {
+  Search,
+  Plus,
+  Filter,
   FileText,
   ChevronRight,
   Activity,
@@ -46,9 +46,9 @@ const CATEGORIES = [
 ];
 
 const DIFFICULTY_COLORS: Record<string, string> = {
-  beginner: 'bg-green-100 text-green-800',
-  intermediate: 'bg-yellow-100 text-yellow-800',
-  advanced: 'bg-red-100 text-red-800',
+  beginner: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+  intermediate: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+  advanced: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
 };
 
 const CATEGORY_ICONS: Record<string, any> = {
@@ -106,8 +106,8 @@ export default function ScenariosPage() {
     setLoading(false);
   };
 
-  const filteredScenarios = scenarios.filter(s => 
-    search === '' || 
+  const filteredScenarios = scenarios.filter(s =>
+    search === '' ||
     s.title.toLowerCase().includes(search.toLowerCase()) ||
     s.chief_complaint?.toLowerCase().includes(search.toLowerCase()) ||
     s.category.toLowerCase().includes(search.toLowerCase())
@@ -124,10 +124,10 @@ export default function ScenariosPage() {
 
   if (status === 'loading' || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-700">Loading scenarios...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400 mx-auto"></div>
+          <p className="mt-4 text-gray-700 dark:text-gray-300">Loading scenarios...</p>
         </div>
       </div>
     );
@@ -136,22 +136,22 @@ export default function ScenariosPage() {
   if (!session) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
-      <div className="bg-white shadow-sm">
+      <div className="bg-white shadow-sm dark:bg-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
-                <Link href="/lab-management" className="hover:text-blue-600">Lab Management</Link>
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1">
+                <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
                 <ChevronRight className="w-4 h-4" />
                 <span>Scenarios</span>
               </div>
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Scenario Library</h1>
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Scenario Library</h1>
             </div>
             <Link
               href="/lab-management/scenarios/new"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 font-medium"
             >
               <Plus className="w-5 h-5" />
               New Scenario
@@ -162,29 +162,31 @@ export default function ScenariosPage() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Search and Filters */}
-        <div className="bg-white rounded-lg shadow mb-6">
+        <div className="bg-white rounded-lg shadow mb-6 dark:bg-gray-800">
           <div className="p-4">
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500" />
                 <input
                   type="text"
                   placeholder="Search scenarios..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border rounded-lg text-gray-900 bg-white"
+                  className="w-full pl-10 pr-4 py-2 border rounded-lg text-gray-900 bg-white dark:bg-gray-700 dark:text-white dark:border-gray-600"
                 />
               </div>
               <button
                 onClick={() => setShowFilters(!showFilters)}
                 className={`inline-flex items-center gap-2 px-4 py-2 border rounded-lg ${
-                  hasActiveFilters ? 'border-blue-500 bg-blue-50 text-blue-700' : 'text-gray-700 hover:bg-gray-50'
+                  hasActiveFilters
+                    ? 'border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-400 dark:bg-blue-900/30 dark:text-blue-300'
+                    : 'text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700'
                 }`}
               >
                 <Filter className="w-5 h-5" />
                 Filters
                 {hasActiveFilters && (
-                  <span className="w-5 h-5 bg-blue-600 text-white text-xs rounded-full flex items-center justify-center">
+                  <span className="w-5 h-5 bg-blue-600 text-white text-xs rounded-full flex items-center justify-center dark:bg-blue-500">
                     {[categoryFilter, difficultyFilter, programFilter].filter(Boolean).length}
                   </span>
                 )}
@@ -193,14 +195,14 @@ export default function ScenariosPage() {
 
             {/* Filter Panel */}
             {showFilters && (
-              <div className="mt-4 pt-4 border-t">
+              <div className="mt-4 pt-4 border-t dark:border-gray-700">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
                     <select
                       value={categoryFilter}
                       onChange={(e) => setCategoryFilter(e.target.value)}
-                      className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                      className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white dark:bg-gray-700 dark:text-white dark:border-gray-600"
                     >
                       <option value="">All Categories</option>
                       {CATEGORIES.map(cat => (
@@ -209,11 +211,11 @@ export default function ScenariosPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Difficulty</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Difficulty</label>
                     <select
                       value={difficultyFilter}
                       onChange={(e) => setDifficultyFilter(e.target.value)}
-                      className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                      className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white dark:bg-gray-700 dark:text-white dark:border-gray-600"
                     >
                       <option value="">All Levels</option>
                       <option value="beginner">Beginner</option>
@@ -222,11 +224,11 @@ export default function ScenariosPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Program</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Program</label>
                     <select
                       value={programFilter}
                       onChange={(e) => setProgramFilter(e.target.value)}
-                      className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                      className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white dark:bg-gray-700 dark:text-white dark:border-gray-600"
                     >
                       <option value="">All Programs</option>
                       <option value="EMT">EMT</option>
@@ -238,7 +240,7 @@ export default function ScenariosPage() {
                 {hasActiveFilters && (
                   <button
                     onClick={clearFilters}
-                    className="mt-3 text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                    className="mt-3 text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 flex items-center gap-1"
                   >
                     <X className="w-4 h-4" />
                     Clear all filters
@@ -250,24 +252,24 @@ export default function ScenariosPage() {
         </div>
 
         {/* Results count */}
-        <div className="mb-4 text-sm text-gray-600">
+        <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
           {filteredScenarios.length} scenario{filteredScenarios.length !== 1 ? 's' : ''} found
         </div>
 
         {/* Scenarios Grid */}
         {filteredScenarios.length === 0 ? (
-          <div className="bg-white rounded-lg shadow p-12 text-center">
-            <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No scenarios found</h3>
-            <p className="text-gray-600 mb-4">
-              {hasActiveFilters 
+          <div className="bg-white rounded-lg shadow p-12 text-center dark:bg-gray-800">
+            <FileText className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No scenarios found</h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-4">
+              {hasActiveFilters
                 ? 'Try adjusting your filters or search term'
                 : 'Get started by creating your first scenario'}
             </p>
             {!hasActiveFilters && (
               <Link
                 href="/lab-management/scenarios/new"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
               >
                 <Plus className="w-5 h-5" />
                 Create Scenario
@@ -278,50 +280,50 @@ export default function ScenariosPage() {
           <div className="grid gap-4">
             {filteredScenarios.map((scenario) => {
               const CategoryIcon = CATEGORY_ICONS[scenario.category] || FileText;
-              
+
               return (
                 <Link
                   key={scenario.id}
                   href={`/lab-management/scenarios/${scenario.id}`}
-                  className="bg-white rounded-lg shadow p-4 hover:shadow-lg transition-shadow"
+                  className="bg-white rounded-lg shadow p-4 hover:shadow-lg transition-shadow dark:bg-gray-800 dark:hover:bg-gray-750"
                 >
                   <div className="flex items-start gap-4">
-                    <div className="p-3 bg-blue-100 rounded-lg shrink-0">
-                      <CategoryIcon className="w-6 h-6 text-blue-600" />
+                    <div className="p-3 bg-blue-100 rounded-lg shrink-0 dark:bg-blue-900/50">
+                      <CategoryIcon className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2 mb-1">
-                        <h3 className="font-semibold text-gray-900 truncate">{scenario.title}</h3>
+                        <h3 className="font-semibold text-gray-900 dark:text-white truncate">{scenario.title}</h3>
                         <span className={`px-2 py-0.5 text-xs font-medium rounded ${DIFFICULTY_COLORS[scenario.difficulty]}`}>
                           {scenario.difficulty}
                         </span>
                         {scenario.platinum_required && (
-                          <span className="px-2 py-0.5 text-xs font-medium rounded bg-purple-100 text-purple-800">
+                          <span className="px-2 py-0.5 text-xs font-medium rounded bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
                             Platinum
                           </span>
                         )}
                       </div>
-                      <p className="text-sm text-gray-600 mb-2">
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
                         {scenario.chief_complaint || scenario.category}
                         {scenario.subcategory && ` • ${scenario.subcategory}`}
                       </p>
                       <div className="flex flex-wrap gap-2">
-                        <span className="px-2 py-0.5 text-xs bg-gray-100 text-gray-700 rounded">
+                        <span className="px-2 py-0.5 text-xs bg-gray-100 text-gray-700 rounded dark:bg-gray-700 dark:text-gray-300">
                           {scenario.category}
                         </span>
                         {scenario.applicable_programs.map(prog => (
-                          <span key={prog} className="px-2 py-0.5 text-xs bg-blue-50 text-blue-700 rounded">
+                          <span key={prog} className="px-2 py-0.5 text-xs bg-blue-50 text-blue-700 rounded dark:bg-blue-900/30 dark:text-blue-300">
                             {prog}
                           </span>
                         ))}
                         {scenario.estimated_duration && (
-                          <span className="px-2 py-0.5 text-xs bg-gray-100 text-gray-700 rounded">
+                          <span className="px-2 py-0.5 text-xs bg-gray-100 text-gray-700 rounded dark:bg-gray-700 dark:text-gray-300">
                             ~{scenario.estimated_duration} min
                           </span>
                         )}
                       </div>
                     </div>
-                    <ChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
+                    <ChevronRight className="w-5 h-5 text-gray-400 dark:text-gray-500 shrink-0" />
                   </div>
                 </Link>
               );

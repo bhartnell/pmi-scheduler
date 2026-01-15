@@ -29,7 +29,7 @@ const ROLE_DEFINITIONS = [
     label: 'Super Admin',
     level: 5,
     icon: Crown,
-    color: 'text-red-600 bg-red-100',
+    color: 'text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30',
     description: 'Full system access with protected status',
     permissions: [
       'All permissions below',
@@ -44,7 +44,7 @@ const ROLE_DEFINITIONS = [
     label: 'Admin',
     level: 4,
     icon: UserCog,
-    color: 'text-orange-600 bg-orange-100',
+    color: 'text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-900/30',
     description: 'Administrative access for managing users and content',
     permissions: [
       'All permissions below',
@@ -60,7 +60,7 @@ const ROLE_DEFINITIONS = [
     label: 'Lead Instructor',
     level: 3,
     icon: GraduationCap,
-    color: 'text-blue-600 bg-blue-100',
+    color: 'text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30',
     description: 'Senior instructor with content management abilities',
     permissions: [
       'All permissions below',
@@ -75,7 +75,7 @@ const ROLE_DEFINITIONS = [
     label: 'Instructor',
     level: 2,
     icon: Users,
-    color: 'text-green-600 bg-green-100',
+    color: 'text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30',
     description: 'Standard instructor access',
     permissions: [
       'View lab schedules',
@@ -91,7 +91,7 @@ const ROLE_DEFINITIONS = [
     label: 'Guest',
     level: 1,
     icon: Eye,
-    color: 'text-gray-600 bg-gray-100',
+    color: 'text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700',
     description: 'Temporary view-only access',
     permissions: [
       'View assigned lab day only',
@@ -161,8 +161,8 @@ export default function RolesPage() {
 
   if (status === 'loading' || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400"></div>
       </div>
     );
   }
@@ -170,27 +170,27 @@ export default function RolesPage() {
   if (!session || !currentUser) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
-      <div className="bg-white shadow-sm">
+      <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-            <Link href="/" className="hover:text-blue-600 flex items-center gap-1">
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
+            <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1">
               <Home className="w-3 h-3" />
               Home
             </Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/admin" className="hover:text-blue-600">Admin</Link>
+            <Link href="/admin" className="hover:text-blue-600 dark:hover:text-blue-400">Admin</Link>
             <ChevronRight className="w-4 h-4" />
             <span>Role Permissions</span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-indigo-100 rounded-lg">
-              <Shield className="w-6 h-6 text-indigo-600" />
+            <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
+              <Shield className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Role Permissions</h1>
-              <p className="text-gray-600">Reference guide for role capabilities</p>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Role Permissions</h1>
+              <p className="text-gray-600 dark:text-gray-400">Reference guide for role capabilities</p>
             </div>
           </div>
         </div>
@@ -198,17 +198,17 @@ export default function RolesPage() {
 
       <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
         {/* Protected Accounts Notice */}
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-          <div className="flex items-center gap-2 text-amber-800">
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+          <div className="flex items-center gap-2 text-amber-800 dark:text-amber-400">
             <Shield className="w-5 h-5" />
             <span className="font-medium">Protected Superadmin Accounts</span>
           </div>
-          <p className="text-sm text-amber-700 mt-1">
+          <p className="text-sm text-amber-700 dark:text-amber-500 mt-1">
             The following accounts have protected superadmin status and cannot be modified or deleted:
           </p>
           <div className="mt-2 flex gap-2">
             {PROTECTED_SUPERADMINS.map(email => (
-              <span key={email} className="px-2 py-1 bg-amber-100 text-amber-800 text-sm rounded">
+              <span key={email} className="px-2 py-1 bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-400 text-sm rounded">
                 {email}
               </span>
             ))}
@@ -220,20 +220,20 @@ export default function RolesPage() {
           {ROLE_DEFINITIONS.map(role => {
             const Icon = role.icon;
             return (
-              <div key={role.role} className="bg-white rounded-lg shadow p-4">
+              <div key={role.role} className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
                 <div className="flex items-center gap-3 mb-3">
                   <div className={`p-2 rounded-lg ${role.color}`}>
                     <Icon className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-900">{role.label}</h3>
-                    <span className="text-xs text-gray-500">Level {role.level}</span>
+                    <h3 className="font-semibold text-gray-900 dark:text-white">{role.label}</h3>
+                    <span className="text-xs text-gray-500 dark:text-gray-400">Level {role.level}</span>
                   </div>
                 </div>
-                <p className="text-sm text-gray-600 mb-3">{role.description}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">{role.description}</p>
                 <ul className="space-y-1">
                   {role.permissions.map((perm, i) => (
-                    <li key={i} className="text-sm text-gray-700 flex items-start gap-2">
+                    <li key={i} className="text-sm text-gray-700 dark:text-gray-300 flex items-start gap-2">
                       <Check className="w-4 h-4 text-green-500 flex-shrink-0 mt-0.5" />
                       {perm}
                     </li>
@@ -245,59 +245,59 @@ export default function RolesPage() {
         </div>
 
         {/* Permission Matrix */}
-        <div className="bg-white rounded-lg shadow overflow-hidden">
-          <div className="px-4 py-3 border-b">
-            <h2 className="font-semibold text-gray-900">Permission Matrix</h2>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+            <h2 className="font-semibold text-gray-900 dark:text-white">Permission Matrix</h2>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50">
+              <thead className="bg-gray-50 dark:bg-gray-900">
                 <tr>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Permission</th>
-                  <th className="px-3 py-3 text-center text-sm font-medium text-red-700">Super Admin</th>
-                  <th className="px-3 py-3 text-center text-sm font-medium text-orange-700">Admin</th>
-                  <th className="px-3 py-3 text-center text-sm font-medium text-blue-700">Lead</th>
-                  <th className="px-3 py-3 text-center text-sm font-medium text-green-700">Instructor</th>
-                  <th className="px-3 py-3 text-center text-sm font-medium text-gray-700">Guest</th>
+                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-700 dark:text-gray-300">Permission</th>
+                  <th className="px-3 py-3 text-center text-sm font-medium text-red-700 dark:text-red-400">Super Admin</th>
+                  <th className="px-3 py-3 text-center text-sm font-medium text-orange-700 dark:text-orange-400">Admin</th>
+                  <th className="px-3 py-3 text-center text-sm font-medium text-blue-700 dark:text-blue-400">Lead</th>
+                  <th className="px-3 py-3 text-center text-sm font-medium text-green-700 dark:text-green-400">Instructor</th>
+                  <th className="px-3 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-400">Guest</th>
                 </tr>
               </thead>
-              <tbody className="divide-y">
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                 {PERMISSION_MATRIX.map((row, i) => (
-                  <tr key={i} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                    <td className="px-4 py-2 text-sm text-gray-700">{row.permission}</td>
+                  <tr key={i} className={i % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-900/50'}>
+                    <td className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300">{row.permission}</td>
                     <td className="px-3 py-2 text-center">
                       {row.superadmin ? (
                         <Check className="w-4 h-4 text-green-500 mx-auto" />
                       ) : (
-                        <X className="w-4 h-4 text-gray-300 mx-auto" />
+                        <X className="w-4 h-4 text-gray-300 dark:text-gray-600 mx-auto" />
                       )}
                     </td>
                     <td className="px-3 py-2 text-center">
                       {row.admin ? (
                         <Check className="w-4 h-4 text-green-500 mx-auto" />
                       ) : (
-                        <X className="w-4 h-4 text-gray-300 mx-auto" />
+                        <X className="w-4 h-4 text-gray-300 dark:text-gray-600 mx-auto" />
                       )}
                     </td>
                     <td className="px-3 py-2 text-center">
                       {row.lead_instructor ? (
                         <Check className="w-4 h-4 text-green-500 mx-auto" />
                       ) : (
-                        <X className="w-4 h-4 text-gray-300 mx-auto" />
+                        <X className="w-4 h-4 text-gray-300 dark:text-gray-600 mx-auto" />
                       )}
                     </td>
                     <td className="px-3 py-2 text-center">
                       {row.instructor ? (
                         <Check className="w-4 h-4 text-green-500 mx-auto" />
                       ) : (
-                        <X className="w-4 h-4 text-gray-300 mx-auto" />
+                        <X className="w-4 h-4 text-gray-300 dark:text-gray-600 mx-auto" />
                       )}
                     </td>
                     <td className="px-3 py-2 text-center">
                       {row.guest ? (
                         <Check className="w-4 h-4 text-green-500 mx-auto" />
                       ) : (
-                        <X className="w-4 h-4 text-gray-300 mx-auto" />
+                        <X className="w-4 h-4 text-gray-300 dark:text-gray-600 mx-auto" />
                       )}
                     </td>
                   </tr>

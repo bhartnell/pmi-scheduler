@@ -192,21 +192,21 @@ const createEmptyPhase = (order: number): Phase => ({
 });
 
 // Collapsible Section Component
-function Section({ 
-  title, 
-  icon: Icon, 
-  children, 
-  defaultOpen = false 
-}: { 
-  title: string; 
-  icon: any; 
+function Section({
+  title,
+  icon: Icon,
+  children,
+  defaultOpen = false
+}: {
+  title: string;
+  icon: any;
   children: React.ReactNode;
   defaultOpen?: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
-  
+
   return (
-    <div className="bg-white rounded-lg shadow">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
@@ -214,11 +214,11 @@ function Section({
       >
         <div className="flex items-center gap-2">
           <Icon className="w-5 h-5 text-blue-600" />
-          <span className="font-semibold text-gray-900">{title}</span>
+          <span className="font-semibold text-gray-900 dark:text-white">{title}</span>
         </div>
         {isOpen ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
       </button>
-      {isOpen && <div className="px-4 pb-4 border-t">{children}</div>}
+      {isOpen && <div className="px-4 pb-4 border-t dark:border-gray-700">{children}</div>}
     </div>
   );
 }
@@ -259,58 +259,58 @@ function VitalsEditor({
     <div className="space-y-4 pt-3">
       {/* Core Vitals */}
       <div>
-        <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
+        <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
           <Activity className="w-4 h-4" /> Core Vitals
         </h4>
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
           <div>
-            <label className="text-xs text-gray-500">BP</label>
+            <label className="text-xs text-gray-500 dark:text-gray-400">BP</label>
             <input
               type="text"
               value={vitals.bp}
               onChange={(e) => updateVital('bp', e.target.value)}
               placeholder="120/80"
-              className="w-full px-2 py-1 border rounded text-sm text-gray-900 bg-white"
+              className="w-full px-2 py-1 border dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
             />
           </div>
           <div>
-            <label className="text-xs text-gray-500">HR</label>
+            <label className="text-xs text-gray-500 dark:text-gray-400">HR</label>
             <input
               type="text"
               value={vitals.hr}
               onChange={(e) => updateVital('hr', e.target.value)}
               placeholder="80"
-              className="w-full px-2 py-1 border rounded text-sm text-gray-900 bg-white"
+              className="w-full px-2 py-1 border dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
             />
           </div>
           <div>
-            <label className="text-xs text-gray-500">RR</label>
+            <label className="text-xs text-gray-500 dark:text-gray-400">RR</label>
             <input
               type="text"
               value={vitals.rr}
               onChange={(e) => updateVital('rr', e.target.value)}
               placeholder="16"
-              className="w-full px-2 py-1 border rounded text-sm text-gray-900 bg-white"
+              className="w-full px-2 py-1 border dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
             />
           </div>
           <div>
-            <label className="text-xs text-gray-500">SpO2</label>
+            <label className="text-xs text-gray-500 dark:text-gray-400">SpO2</label>
             <input
               type="text"
               value={vitals.spo2}
               onChange={(e) => updateVital('spo2', e.target.value)}
               placeholder="98%"
-              className="w-full px-2 py-1 border rounded text-sm text-gray-900 bg-white"
+              className="w-full px-2 py-1 border dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
             />
           </div>
           <div>
-            <label className="text-xs text-gray-500">Temp</label>
+            <label className="text-xs text-gray-500 dark:text-gray-400">Temp</label>
             <input
               type="text"
               value={vitals.temp}
               onChange={(e) => updateVital('temp', e.target.value)}
               placeholder="98.6°F"
-              className="w-full px-2 py-1 border rounded text-sm text-gray-900 bg-white"
+              className="w-full px-2 py-1 border dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
             />
           </div>
         </div>
@@ -318,58 +318,58 @@ function VitalsEditor({
 
       {/* Neuro */}
       <div>
-        <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
+        <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
           <Brain className="w-4 h-4" /> Neuro
         </h4>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <div>
-            <label className="text-xs text-gray-500">GCS Total</label>
+            <label className="text-xs text-gray-500 dark:text-gray-400">GCS Total</label>
             <input
               type="text"
               value={vitals.gcs_total}
               onChange={(e) => updateVital('gcs_total', e.target.value)}
               placeholder="15"
-              className="w-full px-2 py-1 border rounded text-sm text-gray-900 bg-white"
+              className="w-full px-2 py-1 border dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
             />
           </div>
           <div className="flex gap-1">
             <div className="flex-1">
-              <label className="text-xs text-gray-500">E</label>
+              <label className="text-xs text-gray-500 dark:text-gray-400">E</label>
               <input
                 type="text"
                 value={vitals.gcs_e}
                 onChange={(e) => updateVital('gcs_e', e.target.value)}
                 placeholder="4"
-                className="w-full px-2 py-1 border rounded text-sm text-gray-900 bg-white"
+                className="w-full px-2 py-1 border dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
               />
             </div>
             <div className="flex-1">
-              <label className="text-xs text-gray-500">V</label>
+              <label className="text-xs text-gray-500 dark:text-gray-400">V</label>
               <input
                 type="text"
                 value={vitals.gcs_v}
                 onChange={(e) => updateVital('gcs_v', e.target.value)}
                 placeholder="5"
-                className="w-full px-2 py-1 border rounded text-sm text-gray-900 bg-white"
+                className="w-full px-2 py-1 border dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
               />
             </div>
             <div className="flex-1">
-              <label className="text-xs text-gray-500">M</label>
+              <label className="text-xs text-gray-500 dark:text-gray-400">M</label>
               <input
                 type="text"
                 value={vitals.gcs_m}
                 onChange={(e) => updateVital('gcs_m', e.target.value)}
                 placeholder="6"
-                className="w-full px-2 py-1 border rounded text-sm text-gray-900 bg-white"
+                className="w-full px-2 py-1 border dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
               />
             </div>
           </div>
           <div>
-            <label className="text-xs text-gray-500">Pupils</label>
+            <label className="text-xs text-gray-500 dark:text-gray-400">Pupils</label>
             <select
               value={vitals.pupils}
               onChange={(e) => updateVital('pupils', e.target.value)}
-              className="w-full px-2 py-1 border rounded text-sm text-gray-900 bg-white"
+              className="w-full px-2 py-1 border dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
             >
               <option value="">Select...</option>
               {PUPIL_OPTIONS.map(opt => (
@@ -378,11 +378,11 @@ function VitalsEditor({
             </select>
           </div>
           <div>
-            <label className="text-xs text-gray-500">LOC</label>
+            <label className="text-xs text-gray-500 dark:text-gray-400">LOC</label>
             <select
               value={vitals.loc}
               onChange={(e) => updateVital('loc', e.target.value)}
-              className="w-full px-2 py-1 border rounded text-sm text-gray-900 bg-white"
+              className="w-full px-2 py-1 border dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
             >
               <option value="">Select...</option>
               {LOC_OPTIONS.map(opt => (
@@ -392,29 +392,29 @@ function VitalsEditor({
           </div>
         </div>
         <div className="mt-2">
-          <label className="text-xs text-gray-500">Pain (0-10)</label>
+          <label className="text-xs text-gray-500 dark:text-gray-400">Pain (0-10)</label>
           <input
             type="text"
             value={vitals.pain}
             onChange={(e) => updateVital('pain', e.target.value)}
             placeholder="0"
-            className="w-20 px-2 py-1 border rounded text-sm text-gray-900 bg-white"
+            className="w-20 px-2 py-1 border dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
           />
         </div>
       </div>
 
       {/* Cardiac */}
       <div>
-        <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
+        <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
           <Heart className="w-4 h-4" /> Cardiac
         </h4>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           <div>
-            <label className="text-xs text-gray-500">EKG Rhythm</label>
+            <label className="text-xs text-gray-500 dark:text-gray-400">EKG Rhythm</label>
             <select
               value={vitals.ekg_rhythm}
               onChange={(e) => updateVital('ekg_rhythm', e.target.value)}
-              className="w-full px-2 py-1 border rounded text-sm text-gray-900 bg-white"
+              className="w-full px-2 py-1 border dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
             >
               <option value="">Select...</option>
               {EKG_RHYTHMS.map(opt => (
@@ -423,23 +423,23 @@ function VitalsEditor({
             </select>
           </div>
           <div>
-            <label className="text-xs text-gray-500">EtCO2</label>
+            <label className="text-xs text-gray-500 dark:text-gray-400">EtCO2</label>
             <input
               type="text"
               value={vitals.etco2}
               onChange={(e) => updateVital('etco2', e.target.value)}
               placeholder="35-45 mmHg"
-              className="w-full px-2 py-1 border rounded text-sm text-gray-900 bg-white"
+              className="w-full px-2 py-1 border dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
             />
           </div>
           <div>
-            <label className="text-xs text-gray-500">12-Lead Notes</label>
+            <label className="text-xs text-gray-500 dark:text-gray-400">12-Lead Notes</label>
             <input
               type="text"
               value={vitals.twelve_lead_notes}
               onChange={(e) => updateVital('twelve_lead_notes', e.target.value)}
               placeholder="ST changes, etc."
-              className="w-full px-2 py-1 border rounded text-sm text-gray-900 bg-white"
+              className="w-full px-2 py-1 border dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
             />
           </div>
         </div>
@@ -447,16 +447,16 @@ function VitalsEditor({
 
       {/* Respiratory */}
       <div>
-        <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
+        <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
           <Wind className="w-4 h-4" /> Respiratory
         </h4>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <div>
-            <label className="text-xs text-gray-500">Lung Sounds</label>
+            <label className="text-xs text-gray-500 dark:text-gray-400">Lung Sounds</label>
             <select
               value={vitals.lung_sounds}
               onChange={(e) => updateVital('lung_sounds', e.target.value)}
-              className="w-full px-2 py-1 border rounded text-sm text-gray-900 bg-white"
+              className="w-full px-2 py-1 border dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
             >
               <option value="">Select...</option>
               {LUNG_SOUND_OPTIONS.map(opt => (
@@ -465,13 +465,13 @@ function VitalsEditor({
             </select>
           </div>
           <div>
-            <label className="text-xs text-gray-500">Lung Notes</label>
+            <label className="text-xs text-gray-500 dark:text-gray-400">Lung Notes</label>
             <input
               type="text"
               value={vitals.lung_notes}
               onChange={(e) => updateVital('lung_notes', e.target.value)}
               placeholder="Additional findings..."
-              className="w-full px-2 py-1 border rounded text-sm text-gray-900 bg-white"
+              className="w-full px-2 py-1 border dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
             />
           </div>
         </div>
@@ -479,16 +479,16 @@ function VitalsEditor({
 
       {/* Skin/Perfusion */}
       <div>
-        <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
+        <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
           <Droplets className="w-4 h-4" /> Skin/Perfusion
         </h4>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           <div>
-            <label className="text-xs text-gray-500">Skin</label>
+            <label className="text-xs text-gray-500 dark:text-gray-400">Skin</label>
             <select
               value={vitals.skin}
               onChange={(e) => updateVital('skin', e.target.value)}
-              className="w-full px-2 py-1 border rounded text-sm text-gray-900 bg-white"
+              className="w-full px-2 py-1 border dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
             >
               <option value="">Select...</option>
               {SKIN_OPTIONS.map(opt => (
@@ -497,10 +497,10 @@ function VitalsEditor({
             </select>
           </div>
           <div>
-            <label className="text-xs text-gray-500">JVD</label>
+            <label className="text-xs text-gray-500 dark:text-gray-400">JVD</label>
             <div className="flex gap-2 mt-1">
               {['Present', 'Absent', 'Unable to assess'].map(opt => (
-                <label key={opt} className="flex items-center gap-1 text-sm">
+                <label key={opt} className="flex items-center gap-1 text-sm dark:text-gray-300">
                   <input
                     type="radio"
                     name="jvd"
@@ -514,11 +514,11 @@ function VitalsEditor({
             </div>
           </div>
           <div>
-            <label className="text-xs text-gray-500">Peripheral Edema</label>
+            <label className="text-xs text-gray-500 dark:text-gray-400">Peripheral Edema</label>
             <select
               value={vitals.edema}
               onChange={(e) => updateVital('edema', e.target.value)}
-              className="w-full px-2 py-1 border rounded text-sm text-gray-900 bg-white"
+              className="w-full px-2 py-1 border dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
             >
               <option value="">Select...</option>
               {EDEMA_OPTIONS.map(opt => (
@@ -531,24 +531,24 @@ function VitalsEditor({
 
       {/* Labs */}
       <div>
-        <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-1">
+        <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
           <Thermometer className="w-4 h-4" /> Labs
         </h4>
-        <div className="w-48 text-gray-900 bg-white">
-          <label className="text-xs text-gray-500">Blood Glucose</label>
+        <div className="w-48">
+          <label className="text-xs text-gray-500 dark:text-gray-400">Blood Glucose</label>
           <input
             type="text"
             value={vitals.blood_glucose}
             onChange={(e) => updateVital('blood_glucose', e.target.value)}
             placeholder="mg/dL"
-            className="w-full px-2 py-1 border rounded text-sm text-gray-900 bg-white"
+            className="w-full px-2 py-1 border dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
           />
         </div>
       </div>
 
       {/* Other Findings */}
       <div>
-        <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center justify-between">
+        <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center justify-between">
           <span>Other Findings</span>
           <button
             type="button"
@@ -569,14 +569,14 @@ function VitalsEditor({
                   value={finding.key}
                   onChange={(e) => updateOtherFinding(index, 'key', e.target.value)}
                   placeholder="Finding name"
-                  className="w-1/3 px-2 py-1 border rounded text-sm text-gray-900 bg-white"
+                  className="w-1/3 px-2 py-1 border dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                 />
                 <input
                   type="text"
                   value={finding.value}
                   onChange={(e) => updateOtherFinding(index, 'value', e.target.value)}
                   placeholder="Value"
-                  className="flex-1 px-2 py-1 border rounded text-sm text-gray-900 bg-white"
+                  className="flex-1 px-2 py-1 border dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                 />
                 <button
                   type="button"
@@ -856,7 +856,7 @@ export default function ScenarioEditorPage() {
 
   if (status === 'loading' || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
@@ -865,7 +865,7 @@ export default function ScenarioEditorPage() {
   if (!session) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Toast Notification */}
       {toast.show && (
         <div className="fixed top-4 right-4 z-50 animate-in slide-in-from-top-2 fade-in duration-300">
@@ -877,9 +877,9 @@ export default function ScenarioEditorPage() {
       )}
 
       {/* Header */}
-      <div className="bg-white shadow-sm sticky top-0 z-10">
+      <div className="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
             <Link href="/" className="hover:text-blue-600">Home</Link>
             <ChevronRight className="w-4 h-4" />
             <Link href="/lab-management" className="hover:text-blue-600">Lab Management</Link>
@@ -889,7 +889,7 @@ export default function ScenarioEditorPage() {
             <span>{isEditing ? 'Edit' : 'New'}</span>
           </div>
           <div className="flex items-center justify-between">
-            <h1 className="text-xl font-bold text-gray-900">
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white">
               {isEditing ? 'Edit Scenario' : 'Create Scenario'}
             </h1>
             <div className="flex items-center gap-2">
@@ -897,7 +897,7 @@ export default function ScenarioEditorPage() {
                 <button
                   onClick={() => handleSave('addAnother')}
                   disabled={saving}
-                  className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:bg-gray-300 disabled:text-gray-500"
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:text-gray-500"
                 >
                   {saving ? (
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-500"></div>
@@ -926,11 +926,11 @@ export default function ScenarioEditorPage() {
 
       <main className="max-w-4xl mx-auto px-4 py-6 space-y-4">
         {/* Basic Info */}
-        <div className="bg-white rounded-lg shadow p-4">
-          <h2 className="font-semibold text-gray-900 mb-4">Basic Information</h2>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+          <h2 className="font-semibold text-gray-900 dark:text-white mb-4">Basic Information</h2>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Scenario Title <span className="text-red-500">*</span>
               </label>
               <input
@@ -938,17 +938,17 @@ export default function ScenarioEditorPage() {
                 value={scenario.title}
                 onChange={(e) => setScenario({ ...scenario, title: e.target.value })}
                 placeholder="e.g., COPD Exacerbation with Respiratory Failure"
-                className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
               />
             </div>
-            
+
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
                 <select
                   value={scenario.category}
                   onChange={(e) => setScenario({ ...scenario, category: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                 >
                   <option value="">Select...</option>
                   {CATEGORIES.map(cat => (
@@ -957,21 +957,21 @@ export default function ScenarioEditorPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Subcategory</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Subcategory</label>
                 <input
                   type="text"
                   value={scenario.subcategory}
                   onChange={(e) => setScenario({ ...scenario, subcategory: e.target.value })}
                   placeholder="Optional"
-                  className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Difficulty</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Difficulty</label>
                 <select
                   value={scenario.difficulty}
                   onChange={(e) => setScenario({ ...scenario, difficulty: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                 >
                   {DIFFICULTY_LEVELS.map(level => (
                     <option key={level} value={level}>{level}</option>
@@ -979,22 +979,22 @@ export default function ScenarioEditorPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Duration (min)</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Duration (min)</label>
                 <input
                   type="number"
                   value={scenario.estimated_duration || ''}
                   onChange={(e) => setScenario({ ...scenario, estimated_duration: parseInt(e.target.value) || null })}
                   placeholder="20"
-                  className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Applicable Programs</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Applicable Programs</label>
               <div className="flex gap-4">
                 {PROGRAMS.map(prog => (
-                  <label key={prog} className="flex items-center gap-2">
+                  <label key={prog} className="flex items-center gap-2 dark:text-gray-300">
                     <input
                       type="checkbox"
                       checked={scenario.applicable_programs.includes(prog)}
@@ -1018,7 +1018,7 @@ export default function ScenarioEditorPage() {
         <Section title="Quick Reference (Instructor Summary)" icon={FileText} defaultOpen={true}>
           <div className="space-y-4 pt-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Summary
               </label>
               <textarea
@@ -1026,17 +1026,17 @@ export default function ScenarioEditorPage() {
                 onChange={(e) => setScenario({ ...scenario, instructor_summary: e.target.value })}
                 rows={4}
                 placeholder="Brief overview for instructor to read before running the scenario..."
-                className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Key Decision Points
               </label>
               <div className="space-y-2">
                 {scenario.key_decision_points.map((point, index) => (
                   <div key={index} className="flex items-center gap-2">
-                    <span className="text-sm text-gray-700 flex-1">• {point}</span>
+                    <span className="text-sm text-gray-700 dark:text-gray-300 flex-1">• {point}</span>
                     <button
                       type="button"
                       onClick={() => removeFromArray('key_decision_points', index)}
@@ -1052,15 +1052,15 @@ export default function ScenarioEditorPage() {
                     value={newDecisionPoint}
                     onChange={(e) => setNewDecisionPoint(e.target.value)}
                     placeholder="Add decision point..."
-                    className="flex-1 px-3 py-2 border rounded-lg text-sm text-gray-900 bg-white"
+                    className="flex-1 px-3 py-2 border dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                     onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('key_decision_points', newDecisionPoint, setNewDecisionPoint))}
                   />
                   <button
                     type="button"
                     onClick={() => addToArray('key_decision_points', newDecisionPoint, setNewDecisionPoint)}
-                    className="px-3 py-2 bg-gray-100 rounded-lg hover:bg-gray-200"
+                    className="px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
                   >
-                    <Plus className="w-4 h-4" />
+                    <Plus className="w-4 h-4 dark:text-gray-300" />
                   </button>
                 </div>
               </div>

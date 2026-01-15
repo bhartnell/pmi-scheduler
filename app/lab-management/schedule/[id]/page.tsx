@@ -69,19 +69,19 @@ interface Station {
 }
 
 const STATION_TYPE_COLORS: Record<string, string> = {
-  scenario: 'border-blue-200 bg-blue-50',
-  skill: 'border-green-200 bg-green-50',
-  documentation: 'border-purple-200 bg-purple-50',
-  lecture: 'border-yellow-200 bg-yellow-50',
-  testing: 'border-red-200 bg-red-50',
+  scenario: 'border-blue-200 bg-blue-50 dark:border-blue-700 dark:bg-blue-900/30',
+  skill: 'border-green-200 bg-green-50 dark:border-green-700 dark:bg-green-900/30',
+  documentation: 'border-purple-200 bg-purple-50 dark:border-purple-700 dark:bg-purple-900/30',
+  lecture: 'border-yellow-200 bg-yellow-50 dark:border-yellow-700 dark:bg-yellow-900/30',
+  testing: 'border-red-200 bg-red-50 dark:border-red-700 dark:bg-red-900/30',
 };
 
 const STATION_TYPE_BADGES: Record<string, string> = {
-  scenario: 'bg-blue-100 text-blue-800',
-  skill: 'bg-green-100 text-green-800',
-  documentation: 'bg-purple-100 text-purple-800',
-  lecture: 'bg-yellow-100 text-yellow-800',
-  testing: 'bg-red-100 text-red-800',
+  scenario: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300',
+  skill: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300',
+  documentation: 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300',
+  lecture: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300',
+  testing: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300',
 };
 
 export default function LabDayPage() {
@@ -185,10 +185,10 @@ export default function LabDayPage() {
 
   if (status === 'loading' || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-700">Loading schedule...</p>
+          <p className="mt-4 text-gray-700 dark:text-gray-300">Loading schedule...</p>
         </div>
       </div>
     );
@@ -198,11 +198,11 @@ export default function LabDayPage() {
 
   if (!labDay) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="bg-white rounded-lg shadow p-8 text-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
           <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Lab Day Not Found</h2>
-          <p className="text-gray-600 mb-4">The requested lab day could not be found.</p>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Lab Day Not Found</h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">The requested lab day could not be found.</p>
           <Link
             href="/lab-management/schedule"
             className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
@@ -216,7 +216,7 @@ export default function LabDayPage() {
   }
 
   return (
-    <div id="lab-day-printable" className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 print:bg-white">
+    <div id="lab-day-printable" className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 print:bg-white">
       {/* Success Toast */}
       {justGraded && (
         <div className="fixed top-4 right-4 z-50 bg-green-500 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-fade-in print:hidden">
@@ -243,21 +243,21 @@ export default function LabDayPage() {
       </div>
 
       {/* Header */}
-      <div className="bg-white shadow-sm print:hidden">
+      <div className="bg-white dark:bg-gray-800 shadow-sm print:hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
-                <Link href="/lab-management" className="hover:text-blue-600">Lab Management</Link>
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1">
+                <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
                 <ChevronRight className="w-4 h-4" />
-                <Link href="/lab-management/schedule" className="hover:text-blue-600">Schedule</Link>
+                <Link href="/lab-management/schedule" className="hover:text-blue-600 dark:hover:text-blue-400">Schedule</Link>
                 <ChevronRight className="w-4 h-4" />
                 <span>{labDay.cohort.program.abbreviation} Group {labDay.cohort.cohort_number}</span>
               </div>
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
                 {formatDate(labDay.date)}
               </h1>
-              <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
+              <div className="flex items-center gap-4 mt-2 text-sm text-gray-600 dark:text-gray-400">
                 {labDay.week_number && labDay.day_number && (
                   <span className="flex items-center gap-1">
                     <Calendar className="w-4 h-4" />
@@ -273,21 +273,21 @@ export default function LabDayPage() {
             <div className="flex gap-2 print:hidden">
               <button
                 onClick={handlePrint}
-                className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
               >
                 <Printer className="w-4 h-4" />
                 Print
               </button>
               <button
                 onClick={handleDownloadPDF}
-                className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
               >
                 <Download className="w-4 h-4" />
                 PDF
               </button>
               <Link
                 href={`/lab-management/schedule/${labDayId}/edit`}
-                className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
+                className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 font-medium"
               >
                 <Edit2 className="w-4 h-4" />
                 Edit
@@ -307,18 +307,18 @@ export default function LabDayPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Notes */}
         {labDay.notes && (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-            <h3 className="font-medium text-yellow-800 mb-1">Notes</h3>
-            <p className="text-yellow-700 text-sm">{labDay.notes}</p>
+          <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded-lg p-4 mb-6">
+            <h3 className="font-medium text-yellow-800 dark:text-yellow-300 mb-1">Notes</h3>
+            <p className="text-yellow-700 dark:text-yellow-400 text-sm">{labDay.notes}</p>
           </div>
         )}
 
         {/* Stations Grid */}
         {labDay.stations.length === 0 ? (
-          <div className="bg-white rounded-lg shadow p-12 text-center">
-            <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No Stations Yet</h3>
-            <p className="text-gray-600 mb-4">Add stations to this lab day to get started.</p>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
+            <FileText className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Stations Yet</h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-4">Add stations to this lab day to get started.</p>
             <Link
               href={`/lab-management/schedule/${labDayId}/stations/new`}
               className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
@@ -332,30 +332,30 @@ export default function LabDayPage() {
             {labDay.stations.map((station) => (
               <div
                 key={station.id}
-                className={`bg-white rounded-lg shadow border-l-4 ${STATION_TYPE_COLORS[station.station_type] || 'border-gray-200'}`}
+                className={`bg-white dark:bg-gray-800 rounded-lg shadow border-l-4 ${STATION_TYPE_COLORS[station.station_type] || 'border-gray-200 dark:border-gray-700'}`}
               >
                 <div className="p-4">
                   {/* Station Header */}
                   <div className="flex items-start justify-between mb-3">
                     <div>
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-lg font-bold text-gray-900">
+                        <span className="text-lg font-bold text-gray-900 dark:text-white">
                           Station {station.station_number}
                         </span>
-                        <span className={`px-2 py-0.5 text-xs font-medium rounded ${STATION_TYPE_BADGES[station.station_type] || 'bg-gray-100 text-gray-800'}`}>
+                        <span className={`px-2 py-0.5 text-xs font-medium rounded ${STATION_TYPE_BADGES[station.station_type] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'}`}>
                           {station.station_type}
                         </span>
                         {station.platinum_required && (
-                          <span className="px-2 py-0.5 text-xs font-medium rounded bg-purple-100 text-purple-800">
+                          <span className="px-2 py-0.5 text-xs font-medium rounded bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300">
                             Platinum
                           </span>
                         )}
                       </div>
-                      <h3 className="font-semibold text-gray-900">
+                      <h3 className="font-semibold text-gray-900 dark:text-white">
                         {getStationTitle(station)}
                       </h3>
                       {station.scenario && (
-                        <p className="text-sm text-gray-600">{station.scenario.category}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">{station.scenario.category}</p>
                       )}
                     </div>
                   </div>
@@ -363,19 +363,19 @@ export default function LabDayPage() {
                   {/* Station Details */}
                   <div className="space-y-2 text-sm mb-4">
                     {(station.instructor_name || station.instructor?.name) && (
-                      <div className="flex items-center gap-2 text-gray-600">
+                      <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                         <Users className="w-4 h-4" />
                         <span>{station.instructor_name || station.instructor?.name}</span>
                       </div>
                     )}
                     {(station.room || station.location) && (
-                      <div className="flex items-center gap-2 text-gray-600">
+                      <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                         <MapPin className="w-4 h-4" />
                         <span>{station.room || station.location}</span>
                       </div>
                     )}
                     {station.documentation_required && (
-                      <div className="flex items-center gap-2 text-purple-600">
+                      <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400">
                         <FileText className="w-4 h-4" />
                         <span>Documentation required</span>
                       </div>
@@ -383,11 +383,11 @@ export default function LabDayPage() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex gap-2 pt-3 border-t print:hidden">
+                  <div className="flex gap-2 pt-3 border-t dark:border-gray-700 print:hidden">
                     {station.scenario && (
                       <Link
                         href={`/lab-management/scenarios/${station.scenario.id}`}
-                        className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                        className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
                       >
                         <FileText className="w-4 h-4" />
                         View Scenario
@@ -411,14 +411,14 @@ export default function LabDayPage() {
         <div className="mt-8 flex flex-wrap gap-3 print:hidden">
           <Link
             href={`/lab-management/students?cohortId=${labDay.cohort.id}`}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             <Users className="w-4 h-4" />
             View Students
           </Link>
           <Link
             href={`/lab-management/reports/team-leads?cohortId=${labDay.cohort.id}`}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             <ClipboardCheck className="w-4 h-4" />
             Team Lead Report

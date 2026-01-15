@@ -63,30 +63,30 @@ function getExpirationStatus(dateString: string): { bg: string; border: string; 
 
   if (days < 0) {
     return {
-      bg: 'bg-red-50',
+      bg: 'bg-red-50 dark:bg-red-900/30',
       border: 'border-red-500',
-      text: 'text-red-600',
+      text: 'text-red-600 dark:text-red-400',
       label: `Expired ${Math.abs(days)} days ago`
     };
   } else if (days <= 30) {
     return {
-      bg: 'bg-orange-50',
+      bg: 'bg-orange-50 dark:bg-orange-900/30',
       border: 'border-orange-500',
-      text: 'text-orange-600',
+      text: 'text-orange-600 dark:text-orange-400',
       label: `${days} days remaining`
     };
   } else if (days <= 90) {
     return {
-      bg: 'bg-yellow-50',
+      bg: 'bg-yellow-50 dark:bg-yellow-900/30',
       border: 'border-yellow-500',
-      text: 'text-yellow-600',
+      text: 'text-yellow-600 dark:text-yellow-400',
       label: `${days} days remaining`
     };
   } else {
     return {
-      bg: 'bg-green-50',
+      bg: 'bg-green-50 dark:bg-green-900/30',
       border: 'border-green-500',
-      text: 'text-green-600',
+      text: 'text-green-600 dark:text-green-400',
       label: 'Valid'
     };
   }
@@ -257,7 +257,7 @@ export default function InstructorCertificationsPage() {
 
   if (status === 'loading' || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
@@ -266,23 +266,23 @@ export default function InstructorCertificationsPage() {
   if (!session) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
-      <div className="bg-white shadow-sm">
+      <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-            <Link href="/" className="hover:text-blue-600">Home</Link>
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
+            <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400">Home</Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/instructor" className="hover:text-blue-600">Instructor Portal</Link>
+            <Link href="/instructor" className="hover:text-blue-600 dark:hover:text-blue-400">Instructor Portal</Link>
             <ChevronRight className="w-4 h-4" />
             <span>My Certifications</span>
           </div>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Link href="/instructor" className="text-gray-600 hover:text-gray-900">
+              <Link href="/instructor" className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                 <ArrowLeft className="w-5 h-5" />
               </Link>
-              <h1 className="text-xl font-bold text-gray-900">My Certifications</h1>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">My Certifications</h1>
             </div>
             {!showForm && (
               <button
@@ -300,19 +300,19 @@ export default function InstructorCertificationsPage() {
       <main className="max-w-4xl mx-auto px-4 py-6">
         {/* Add/Edit Form */}
         {showForm && (
-          <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
                 {editingCert ? 'Edit Certification' : 'Add Certification'}
               </h2>
-              <button onClick={resetForm} className="text-gray-400 hover:text-gray-600">
+              <button onClick={resetForm} className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Certification Name <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -321,13 +321,13 @@ export default function InstructorCertificationsPage() {
                   onChange={(e) => setCertName(e.target.value)}
                   required
                   placeholder="e.g., EMS Instructor, ACLS, PALS"
-                  className="w-full px-4 py-2 border rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Certification Number
                   </label>
                   <input
@@ -335,12 +335,12 @@ export default function InstructorCertificationsPage() {
                     value={certNumber}
                     onChange={(e) => setCertNumber(e.target.value)}
                     placeholder="Optional"
-                    className="w-full px-4 py-2 border rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Issuing Body
                   </label>
                   <input
@@ -348,26 +348,26 @@ export default function InstructorCertificationsPage() {
                     value={issuingBody}
                     onChange={(e) => setIssuingBody(e.target.value)}
                     placeholder="e.g., PMI, AHA, NREMT"
-                    className="w-full px-4 py-2 border rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Issue Date
                   </label>
                   <input
                     type="date"
                     value={issueDate}
                     onChange={(e) => setIssueDate(e.target.value)}
-                    className="w-full px-4 py-2 border rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Expiration Date <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -375,29 +375,29 @@ export default function InstructorCertificationsPage() {
                     value={expirationDate}
                     onChange={(e) => setExpirationDate(e.target.value)}
                     required
-                    className="w-full px-4 py-2 border rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Card Image (JPG, PNG, or PDF)
                 </label>
                 {existingImageUrl && (
                   <div className="mb-2 flex items-center gap-3">
-                    <span className="text-green-600 text-sm">Image attached</span>
+                    <span className="text-green-600 dark:text-green-400 text-sm">Image attached</span>
                     <button
                       type="button"
                       onClick={() => window.open(existingImageUrl, '_blank')}
-                      className="text-blue-600 hover:text-blue-800 text-sm"
+                      className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 text-sm"
                     >
                       View
                     </button>
                     <button
                       type="button"
                       onClick={() => setExistingImageUrl(null)}
-                      className="text-red-600 hover:text-red-800 text-sm"
+                      className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 text-sm"
                     >
                       Remove
                     </button>
@@ -408,10 +408,10 @@ export default function InstructorCertificationsPage() {
                   type="file"
                   accept="image/jpeg,image/png,image/jpg,application/pdf"
                   onChange={handleFileChange}
-                  className="w-full px-4 py-2 border rounded-lg text-gray-900 bg-white file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-600 file:font-medium hover:file:bg-blue-100"
+                  className="w-full px-4 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-50 dark:file:bg-blue-900/30 file:text-blue-600 dark:file:text-blue-400 file:font-medium hover:file:bg-blue-100 dark:hover:file:bg-blue-900/50"
                 />
                 {cardImage && (
-                  <p className="mt-1 text-sm text-gray-600">Selected: {cardImage.name}</p>
+                  <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">Selected: {cardImage.name}</p>
                 )}
               </div>
 
@@ -419,14 +419,14 @@ export default function InstructorCertificationsPage() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 dark:disabled:bg-gray-600"
                 >
                   {saving ? 'Saving...' : (editingCert ? 'Update' : 'Add Certification')}
                 </button>
                 <button
                   type="button"
                   onClick={resetForm}
-                  className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                  className="px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600"
                 >
                   Cancel
                 </button>
@@ -437,10 +437,10 @@ export default function InstructorCertificationsPage() {
 
         {/* Certifications List */}
         {certifications.length === 0 && !showForm ? (
-          <div className="bg-white rounded-lg shadow p-8 text-center">
-            <Award className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No Certifications Yet</h3>
-            <p className="text-gray-600 mb-4">Add your certifications to track expiration dates and CE requirements.</p>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
+            <Award className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Certifications Yet</h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-4">Add your certifications to track expiration dates and CE requirements.</p>
             <button
               onClick={() => setShowForm(true)}
               className="inline-flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
@@ -456,17 +456,17 @@ export default function InstructorCertificationsPage() {
               return (
                 <div
                   key={cert.id}
-                  className={`${status.bg} border-l-4 ${status.border} rounded-lg p-4 bg-white shadow`}
+                  className={`${status.bg} border-l-4 ${status.border} rounded-lg p-4 bg-white dark:bg-gray-800 shadow`}
                 >
                   <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-1">
-                        <h3 className="text-lg font-semibold text-gray-900">{cert.cert_name}</h3>
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{cert.cert_name}</h3>
                         <span className={`text-sm font-medium ${status.text}`}>
                           {status.label}
                         </span>
                       </div>
-                      <div className="text-sm text-gray-600 space-y-1">
+                      <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
                         {cert.issuing_body && <p>Issued by: {cert.issuing_body}</p>}
                         {cert.cert_number && <p>Number: {cert.cert_number}</p>}
                         <p className="flex items-center gap-1">
@@ -480,7 +480,7 @@ export default function InstructorCertificationsPage() {
                       {cert.card_image_url && (
                         <button
                           onClick={() => window.open(cert.card_image_url!, '_blank')}
-                          className="flex items-center gap-1 px-3 py-1.5 text-sm text-green-600 hover:bg-green-50 rounded"
+                          className="flex items-center gap-1 px-3 py-1.5 text-sm text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 rounded"
                         >
                           <Download className="w-4 h-4" />
                           View Card
@@ -488,21 +488,21 @@ export default function InstructorCertificationsPage() {
                       )}
                       <Link
                         href={`/instructor/certifications/${cert.id}/ce`}
-                        className="flex items-center gap-1 px-3 py-1.5 text-sm text-purple-600 hover:bg-purple-50 rounded"
+                        className="flex items-center gap-1 px-3 py-1.5 text-sm text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded"
                       >
                         <BookOpen className="w-4 h-4" />
                         CE Hours
                       </Link>
                       <button
                         onClick={() => openEditForm(cert)}
-                        className="flex items-center gap-1 px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded"
+                        className="flex items-center gap-1 px-3 py-1.5 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded"
                       >
                         <Edit className="w-4 h-4" />
                         Edit
                       </button>
                       <button
                         onClick={() => handleDelete(cert.id)}
-                        className="flex items-center gap-1 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded"
+                        className="flex items-center gap-1 px-3 py-1.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded"
                       >
                         <Trash2 className="w-4 h-4" />
                         Delete

@@ -215,7 +215,7 @@ export default function CETrackerPage() {
 
   if (status === 'loading' || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
@@ -224,11 +224,11 @@ export default function CETrackerPage() {
   if (!session) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
-      <div className="bg-white shadow-sm">
+      <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 mb-2">
             <Link href="/" className="hover:text-blue-600">Home</Link>
             <ChevronRight className="w-4 h-4" />
             <Link href="/instructor" className="hover:text-blue-600">Instructor Portal</Link>
@@ -237,14 +237,14 @@ export default function CETrackerPage() {
           </div>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Link href="/instructor" className="text-gray-600 hover:text-gray-900">
+              <Link href="/instructor" className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
                 <ArrowLeft className="w-5 h-5" />
               </Link>
-              <h1 className="text-xl font-bold text-gray-900">CE Hours Tracker</h1>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">CE Hours Tracker</h1>
             </div>
             <div className="text-right">
               <p className="text-2xl font-bold text-purple-600">{getTotalHoursThisYear().toFixed(1)}</p>
-              <p className="text-sm text-gray-600">Hours This Year</p>
+              <p className="text-sm text-gray-600 dark:text-gray-300">Hours This Year</p>
             </div>
           </div>
         </div>
@@ -262,14 +262,14 @@ export default function CETrackerPage() {
               <div
                 key={cert.id}
                 onClick={() => setSelectedCert(cert)}
-                className={`bg-white rounded-lg shadow p-4 cursor-pointer transition hover:shadow-md ${
+                className={`bg-white dark:bg-gray-800 rounded-lg shadow p-4 cursor-pointer transition hover:shadow-md ${
                   selectedCert?.id === cert.id ? 'ring-2 ring-purple-500' : ''
                 }`}
               >
                 <div className="flex items-start justify-between mb-3">
                   <div>
-                    <h3 className="font-semibold text-gray-900">{cert.cert_name}</h3>
-                    <p className="text-sm text-gray-600">
+                    <h3 className="font-semibold text-gray-900 dark:text-white">{cert.cert_name}</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-300">
                       {cert.ce_requirement?.display_name || 'No CE requirement linked'}
                     </p>
                   </div>
@@ -278,7 +278,7 @@ export default function CETrackerPage() {
 
                 {required > 0 ? (
                   <>
-                    <div className="bg-gray-200 rounded-full h-3 overflow-hidden mb-2">
+                    <div className="bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden mb-2">
                       <div
                         className={`h-full transition-all ${
                           progress >= 100 ? 'bg-green-500' : 'bg-purple-500'
@@ -287,8 +287,8 @@ export default function CETrackerPage() {
                       />
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-700">{total.toFixed(1)} / {required} hours</span>
-                      <span className={progress >= 100 ? 'text-green-600' : 'text-gray-500'}>
+                      <span className="text-gray-700 dark:text-gray-300">{total.toFixed(1)} / {required} hours</span>
+                      <span className={progress >= 100 ? 'text-green-600' : 'text-gray-500 dark:text-gray-400'}>
                         {progress >= 100 ? 'Complete' : `${(required - total).toFixed(1)} remaining`}
                       </span>
                     </div>
@@ -301,14 +301,14 @@ export default function CETrackerPage() {
                           const catProgress = Math.min(100, (catHours / Number(req)) * 100);
                           return (
                             <div key={cat} className="flex items-center gap-2 text-xs">
-                              <span className="w-24 text-gray-600 capitalize">{cat.replace('_', ' ')}</span>
-                              <div className="flex-1 bg-gray-200 rounded-full h-1.5">
+                              <span className="w-24 text-gray-600 dark:text-gray-400 capitalize">{cat.replace('_', ' ')}</span>
+                              <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
                                 <div
                                   className={`h-full rounded-full ${catProgress >= 100 ? 'bg-green-400' : 'bg-purple-400'}`}
                                   style={{ width: `${catProgress}%` }}
                                 />
                               </div>
-                              <span className="w-12 text-right text-gray-500">{catHours}/{req}</span>
+                              <span className="w-12 text-right text-gray-500 dark:text-gray-400">{catHours}/{req}</span>
                             </div>
                           );
                         })}
@@ -316,7 +316,7 @@ export default function CETrackerPage() {
                     )}
                   </>
                 ) : (
-                  <p className="text-sm text-gray-500 italic">
+                  <p className="text-sm text-gray-500 dark:text-gray-400 italic">
                     Link a CE requirement to track progress
                   </p>
                 )}
@@ -326,9 +326,9 @@ export default function CETrackerPage() {
         </div>
 
         {/* Add CE Record Section */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="p-4 border-b flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+          <div className="p-4 border-b dark:border-gray-700 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
               <BookOpen className="w-5 h-5 text-purple-600" />
               {selectedCert ? `CE Records for ${selectedCert.cert_name}` : 'All CE Records'}
             </h2>
@@ -345,17 +345,17 @@ export default function CETrackerPage() {
 
           {/* Add Form */}
           {showForm && (
-            <div className="p-4 border-b bg-purple-50">
+            <div className="p-4 border-b dark:border-gray-700 bg-purple-50 dark:bg-purple-900/30">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-medium text-gray-900">Add CE Record</h3>
-                <button onClick={resetForm} className="text-gray-400 hover:text-gray-600">
+                <h3 className="font-medium text-gray-900 dark:text-white">Add CE Record</h3>
+                <button onClick={resetForm} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Course/Activity Title <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -364,13 +364,13 @@ export default function CETrackerPage() {
                     onChange={(e) => setTitle(e.target.value)}
                     required
                     placeholder="e.g., ACLS Renewal, Trauma Conference"
-                    className="w-full px-4 py-2 border rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-4 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-purple-500"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Hours <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -381,11 +381,11 @@ export default function CETrackerPage() {
                       onChange={(e) => setHours(e.target.value)}
                       required
                       placeholder="e.g., 4"
-                      className="w-full px-4 py-2 border rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-purple-500"
+                      className="w-full px-4 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-purple-500"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Completion Date <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -393,18 +393,18 @@ export default function CETrackerPage() {
                       value={completionDate}
                       onChange={(e) => setCompletionDate(e.target.value)}
                       required
-                      className="w-full px-4 py-2 border rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-purple-500"
+                      className="w-full px-4 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-purple-500"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Category</label>
                     <select
                       value={category}
                       onChange={(e) => setCategory(e.target.value)}
-                      className="w-full px-4 py-2 border rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-purple-500"
+                      className="w-full px-4 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-purple-500"
                     >
                       <option value="">Select category</option>
                       {getCategoryOptions().map(cat => (
@@ -415,25 +415,25 @@ export default function CETrackerPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Provider</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Provider</label>
                     <input
                       type="text"
                       value={provider}
                       onChange={(e) => setProvider(e.target.value)}
                       placeholder="e.g., AHA, EMS Training Center"
-                      className="w-full px-4 py-2 border rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-purple-500"
+                      className="w-full px-4 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-purple-500"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>
                   <input
                     type="text"
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     placeholder="Optional notes"
-                    className="w-full px-4 py-2 border rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-4 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-purple-500"
                   />
                 </div>
 
@@ -448,7 +448,7 @@ export default function CETrackerPage() {
                   <button
                     type="button"
                     onClick={resetForm}
-                    className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                    className="px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600"
                   >
                     Cancel
                   </button>
@@ -467,8 +467,8 @@ export default function CETrackerPage() {
               if (records.length === 0) {
                 return (
                   <div className="text-center py-8">
-                    <BookOpen className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-gray-500">No CE records yet. Add your first one above.</p>
+                    <BookOpen className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                    <p className="text-gray-500 dark:text-gray-400">No CE records yet. Add your first one above.</p>
                   </div>
                 );
               }
@@ -478,20 +478,20 @@ export default function CETrackerPage() {
                   {records.map(record => (
                     <div
                       key={record.id}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                      className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
                     >
                       <div className="flex-1">
                         <div className="flex items-center gap-2">
-                          <span className="font-medium text-gray-900">{record.title}</span>
+                          <span className="font-medium text-gray-900 dark:text-white">{record.title}</span>
                           <span className="text-purple-600 text-sm font-medium">{record.hours} hrs</span>
                         </div>
-                        <div className="text-sm text-gray-600">
+                        <div className="text-sm text-gray-600 dark:text-gray-300">
                           {parseLocalDate(record.completion_date).toLocaleDateString()}
                           {record.provider && ` • ${record.provider}`}
                           {record.category && ` • ${record.category.replace('_', ' ')}`}
                         </div>
                         {record.notes && (
-                          <div className="text-sm text-gray-500 mt-1">{record.notes}</div>
+                          <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">{record.notes}</div>
                         )}
                       </div>
                       <button

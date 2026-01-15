@@ -301,10 +301,10 @@ export default function NewStationPage() {
 
   if (status === 'loading' || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-700">Loading...</p>
+          <p className="mt-4 text-gray-700 dark:text-gray-300">Loading...</p>
         </div>
       </div>
     );
@@ -314,11 +314,11 @@ export default function NewStationPage() {
 
   if (!labDay) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="bg-white rounded-lg shadow p-8 text-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
           <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Lab Day Not Found</h2>
-          <p className="text-gray-600 mb-4">The requested lab day could not be found.</p>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Lab Day Not Found</h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">The requested lab day could not be found.</p>
           <Link
             href="/lab-management/schedule"
             className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
@@ -334,28 +334,28 @@ export default function NewStationPage() {
   const TypeIcon = stationTypeConfig?.icon || Stethoscope;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
-      <div className="bg-white shadow-sm sticky top-0 z-10">
+      <div className="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-            <Link href="/" className="hover:text-blue-600 flex items-center gap-1">
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
+            <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1">
               <Home className="w-3 h-3" />
               Home
             </Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management" className="hover:text-blue-600">Lab Management</Link>
+            <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management/schedule" className="hover:text-blue-600">Schedule</Link>
+            <Link href="/lab-management/schedule" className="hover:text-blue-600 dark:hover:text-blue-400">Schedule</Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href={`/lab-management/schedule/${labDayId}`} className="hover:text-blue-600">
+            <Link href={`/lab-management/schedule/${labDayId}`} className="hover:text-blue-600 dark:hover:text-blue-400">
               {labDay.cohort.program.abbreviation} Group {labDay.cohort.cohort_number}
             </Link>
             <ChevronRight className="w-4 h-4" />
             <span>New Station</span>
           </div>
           <div className="flex items-center justify-between">
-            <h1 className="text-xl font-bold text-gray-900">Add New Station</h1>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white">Add New Station</h1>
             <button
               onClick={handleSave}
               disabled={saving}

@@ -78,10 +78,10 @@ const EVALUATION_CRITERIA = [
 ];
 
 const RATING_COLORS = {
-  'S': 'bg-green-100 text-green-800 border-green-300',
-  'NI': 'bg-yellow-100 text-yellow-800 border-yellow-300',
-  'U': 'bg-red-100 text-red-800 border-red-300',
-  null: 'bg-gray-100 text-gray-500 border-gray-300'
+  'S': 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border-green-300 dark:border-green-700',
+  'NI': 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border-yellow-300 dark:border-yellow-700',
+  'U': 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border-red-300 dark:border-red-700',
+  null: 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-300 dark:border-gray-600'
 };
 
 const RATING_LABELS = {
@@ -266,7 +266,7 @@ export default function GradeStationPage() {
 
   if (status === 'loading' || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
@@ -276,10 +276,10 @@ export default function GradeStationPage() {
 
   if (!station) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="bg-white rounded-lg shadow p-8 text-center">
-          <p className="text-gray-600">Station not found</p>
-          <Link href="/lab-management/schedule" className="text-blue-600 hover:underline mt-4 block">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
+          <p className="text-gray-600 dark:text-gray-400">Station not found</p>
+          <Link href="/lab-management/schedule" className="text-blue-600 dark:text-blue-400 hover:underline mt-4 block">
             Back to Schedule
           </Link>
         </div>
@@ -291,16 +291,16 @@ export default function GradeStationPage() {
   const scenario = station.scenario;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
-      <div className="bg-white shadow-sm sticky top-0 z-10">
+      <div className="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-4 py-3">
-          <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
-            <Link href="/" className="hover:text-blue-600">Home</Link>
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1">
+            <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400">Home</Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management" className="hover:text-blue-600">Lab Management</Link>
+            <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href={`/lab-management/schedule/${labDay.id}`} className="hover:text-blue-600">
+            <Link href={`/lab-management/schedule/${labDay.id}`} className="hover:text-blue-600 dark:hover:text-blue-400">
               {new Date(labDay.date + 'T12:00:00').toLocaleDateString()}
             </Link>
             <ChevronRight className="w-4 h-4" />
@@ -308,10 +308,10 @@ export default function GradeStationPage() {
           </div>
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-lg font-bold text-gray-900">
+              <h1 className="text-lg font-bold text-gray-900 dark:text-white">
                 Station {station.station_number} - Grade Rotation
               </h1>
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
                 {labDay.cohort.program.abbreviation} Group {labDay.cohort.cohort_number}
               </p>
             </div>
@@ -334,42 +334,42 @@ export default function GradeStationPage() {
       <main className="max-w-2xl mx-auto px-4 py-4 space-y-4">
         {/* Scenario Info */}
         {scenario ? (
-          <div className="bg-white rounded-lg shadow">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
             <button
               onClick={() => setShowScenarioDetails(!showScenarioDetails)}
               className="w-full px-4 py-3 flex items-center justify-between text-left"
             >
               <div>
-                <h2 className="font-semibold text-gray-900">{scenario.title}</h2>
-                <p className="text-sm text-gray-600">{scenario.category} • {scenario.difficulty}</p>
+                <h2 className="font-semibold text-gray-900 dark:text-white">{scenario.title}</h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{scenario.category} • {scenario.difficulty}</p>
               </div>
-              {showScenarioDetails ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+              {showScenarioDetails ? <ChevronUp className="w-5 h-5 text-gray-600 dark:text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-600 dark:text-gray-400" />}
             </button>
             {showScenarioDetails && scenario.instructor_notes && (
-              <div className="px-4 pb-4 border-t">
-                <div className="mt-3 p-3 bg-blue-50 rounded-lg">
-                  <h3 className="text-sm font-medium text-blue-800 mb-1">Instructor Notes</h3>
-                  <p className="text-sm text-blue-700">{scenario.instructor_notes}</p>
+              <div className="px-4 pb-4 border-t dark:border-gray-700">
+                <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+                  <h3 className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-1">Instructor Notes</h3>
+                  <p className="text-sm text-blue-700 dark:text-blue-400">{scenario.instructor_notes}</p>
                 </div>
               </div>
             )}
           </div>
         ) : (
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-            <p className="text-yellow-800">No scenario assigned to this station</p>
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+            <p className="text-yellow-800 dark:text-yellow-300">No scenario assigned to this station</p>
           </div>
         )}
 
         {/* Group & Team Lead Selection */}
-        <div className="bg-white rounded-lg shadow p-4 space-y-4">
-          <h2 className="font-semibold text-gray-900 flex items-center gap-2">
-            <Users className="w-5 h-5 text-blue-600" />
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 space-y-4">
+          <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+            <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             Select Group & Team Lead
           </h2>
 
           {/* Rotation Number */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Rotation Number</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Rotation Number</label>
             <div className="flex gap-2">
               {[1, 2, 3, 4].map(num => (
                 <button
@@ -377,9 +377,9 @@ export default function GradeStationPage() {
                   type="button"
                   onClick={() => setRotationNumber(num)}
                   className={`w-12 h-12 rounded-lg font-medium ${
-                    rotationNumber === num 
-                      ? 'bg-blue-600 text-white' 
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    rotationNumber === num
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
                   }`}
                 >
                   {num}
@@ -390,11 +390,11 @@ export default function GradeStationPage() {
 
           {/* Lab Group Selection */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Lab Group</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Lab Group</label>
             {labGroups.length === 0 ? (
-              <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                <p className="text-sm text-yellow-800">
-                  No lab groups found for this cohort. 
+              <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                <p className="text-sm text-yellow-800 dark:text-yellow-300">
+                  No lab groups found for this cohort.
                   <Link href="/lab-management/admin/lab-groups" className="underline ml-1">
                     Create groups first
                   </Link>
@@ -412,12 +412,12 @@ export default function GradeStationPage() {
                     }}
                     className={`p-3 rounded-lg border-2 text-left ${
                       selectedGroupId === group.id
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-200 hover:border-gray-300'
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
+                        : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
                     }`}
                   >
-                    <div className="font-medium text-gray-900">{group.name}</div>
-                    <div className="text-xs text-gray-500">{group.members?.length || 0} students</div>
+                    <div className="font-medium text-gray-900 dark:text-white">{group.name}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">{group.members?.length || 0} students</div>
                   </button>
                 ))}
               </div>
@@ -427,7 +427,7 @@ export default function GradeStationPage() {
           {/* Team Lead Selection */}
           {selectedGroup && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Team Leader <Star className="w-4 h-4 inline text-yellow-500" />
               </label>
               <div className="grid grid-cols-2 gap-2">
@@ -438,25 +438,25 @@ export default function GradeStationPage() {
                     onClick={() => setTeamLeaderId(member.student.id)}
                     className={`flex items-center gap-3 p-3 rounded-lg border-2 ${
                       teamLeaderId === member.student.id
-                        ? 'border-yellow-500 bg-yellow-50'
-                        : 'border-gray-200 hover:border-gray-300'
+                        ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/30'
+                        : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
                     }`}
                   >
-                    <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center overflow-hidden shrink-0">
                       {member.student.photo_url ? (
                         <img src={member.student.photo_url} alt="" className="w-full h-full object-cover" />
                       ) : (
-                        <span className="text-sm font-medium text-gray-500">
+                        <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
                           {member.student.first_name[0]}{member.student.last_name[0]}
                         </span>
                       )}
                     </div>
                     <div className="text-left">
-                      <div className="font-medium text-gray-900 text-sm">
+                      <div className="font-medium text-gray-900 dark:text-white text-sm">
                         {member.student.first_name} {member.student.last_name}
                       </div>
                       {teamLeaderId === member.student.id && (
-                        <div className="text-xs text-yellow-600 flex items-center gap-1">
+                        <div className="text-xs text-yellow-600 dark:text-yellow-400 flex items-center gap-1">
                           <Star className="w-3 h-3" /> Team Lead
                         </div>
                       )}
@@ -470,8 +470,8 @@ export default function GradeStationPage() {
 
         {/* Critical Actions */}
         {scenario?.critical_actions && scenario.critical_actions.length > 0 && (
-          <div className="bg-white rounded-lg shadow p-4">
-            <h2 className="font-semibold text-gray-900 flex items-center gap-2 mb-3">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+            <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-3">
               <AlertTriangle className="w-5 h-5 text-red-500" />
               Critical Actions
             </h2>
@@ -480,7 +480,7 @@ export default function GradeStationPage() {
                 <label
                   key={index}
                   className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer ${
-                    criticalActions[`action-${index}`] ? 'bg-green-50' : 'bg-red-50'
+                    criticalActions[`action-${index}`] ? 'bg-green-50 dark:bg-green-900/30' : 'bg-red-50 dark:bg-red-900/30'
                   }`}
                 >
                   <input
@@ -493,12 +493,12 @@ export default function GradeStationPage() {
                     className="mt-1 w-5 h-5"
                   />
                   <span className={`text-sm ${
-                    criticalActions[`action-${index}`] ? 'text-green-800' : 'text-red-800'
+                    criticalActions[`action-${index}`] ? 'text-green-800 dark:text-green-300' : 'text-red-800 dark:text-red-300'
                   }`}>
                     {action}
                   </span>
                   {criticalActions[`action-${index}`] ? (
-                    <CheckCircle className="w-5 h-5 text-green-500 ml-auto shrink-0" />
+                    <CheckCircle className="w-5 h-5 text-green-500" />
                   ) : (
                     <XCircle className="w-5 h-5 text-red-500 ml-auto shrink-0" />
                   )}
@@ -509,19 +509,19 @@ export default function GradeStationPage() {
         )}
 
         {/* 8 Criteria Grading */}
-        <div className="bg-white rounded-lg shadow p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-gray-900 flex items-center gap-2">
-              <FileText className="w-5 h-5 text-blue-600" />
+            <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
               Evaluation Criteria
             </h2>
             <div className="text-sm">
-              <span className="text-green-600 font-medium">{satisfactoryCount} S</span>
+              <span className="text-green-600 dark:text-green-400 font-medium">{satisfactoryCount} S</span>
               {needsImprovementCount > 0 && (
-                <span className="text-yellow-600 font-medium ml-2">{needsImprovementCount} NI</span>
+                <span className="text-yellow-600 dark:text-yellow-400 font-medium ml-2">{needsImprovementCount} NI</span>
               )}
               {unsatisfactoryCount > 0 && (
-                <span className="text-red-600 font-medium ml-2">{unsatisfactoryCount} U</span>
+                <span className="text-red-600 dark:text-red-400 font-medium ml-2">{unsatisfactoryCount} U</span>
               )}
             </div>
           </div>
@@ -530,17 +530,17 @@ export default function GradeStationPage() {
             {EVALUATION_CRITERIA.map((criteria, index) => {
               const rating = criteriaRatings.find(r => r.criteria_id === criteria.id);
               const needsNotes = rating?.rating === 'NI' || rating?.rating === 'U';
-              
+
               return (
-                <div key={criteria.id} className="border rounded-lg p-3">
+                <div key={criteria.id} className="border dark:border-gray-700 rounded-lg p-3">
                   <div className="flex items-start gap-3">
-                    <span className="w-6 h-6 flex items-center justify-center bg-blue-100 text-blue-700 rounded text-sm font-medium shrink-0">
+                    <span className="w-6 h-6 flex items-center justify-center bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded text-sm font-medium shrink-0">
                       {index + 1}
                     </span>
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium text-gray-900">{criteria.name}</div>
-                      <div className="text-xs text-gray-500 mb-2">{criteria.description}</div>
-                      
+                      <div className="font-medium text-gray-900 dark:text-white">{criteria.name}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">{criteria.description}</div>
+
                       {/* Rating Buttons */}
                       <div className="flex gap-2 mb-2">
                         {(['S', 'NI', 'U'] as const).map(r => (
@@ -551,7 +551,7 @@ export default function GradeStationPage() {
                             className={`flex-1 py-2 px-3 rounded-lg border-2 font-medium text-sm transition-colors ${
                               rating?.rating === r
                                 ? RATING_COLORS[r]
-                                : 'bg-gray-50 text-gray-500 border-gray-200 hover:border-gray-300'
+                                : 'bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
                             }`}
                           >
                             {r === 'S' ? 'Satisfactory' : r === 'NI' ? 'Needs Improvement' : 'Unsatisfactory'}
@@ -567,8 +567,8 @@ export default function GradeStationPage() {
                             onChange={(e) => updateNotes(criteria.id, e.target.value)}
                             placeholder="Required: Explain the issue and improvement plan..."
                             rows={2}
-                            className={`w-full px-3 py-2 border rounded-lg text-sm text-gray-900 bg-white ${
-                              !rating?.notes?.trim() ? 'border-red-300' : 'border-gray-300'
+                            className={`w-full px-3 py-2 border rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 ${
+                              !rating?.notes?.trim() ? 'border-red-300 dark:border-red-700' : 'border-gray-300 dark:border-gray-600'
                             }`}
                           />
                         </div>
@@ -583,30 +583,30 @@ export default function GradeStationPage() {
           {/* Pass/Fail Summary */}
           {allRated && (
             <div className={`mt-4 p-4 rounded-lg ${
-              phase2Pass ? 'bg-green-100 border border-green-300' :
-              phase1Pass ? 'bg-yellow-100 border border-yellow-300' :
-              'bg-red-100 border border-red-300'
+              phase2Pass ? 'bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700' :
+              phase1Pass ? 'bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700' :
+              'bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700'
             }`}>
               <div className="flex items-center gap-3">
                 {phase2Pass ? (
-                  <CheckCircle className="w-6 h-6 text-green-600" />
+                  <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
                 ) : phase1Pass ? (
-                  <AlertTriangle className="w-6 h-6 text-yellow-600" />
+                  <AlertTriangle className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
                 ) : (
-                  <XCircle className="w-6 h-6 text-red-600" />
+                  <XCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
                 )}
                 <div>
                   <div className={`font-medium ${
-                    phase2Pass ? 'text-green-800' :
-                    phase1Pass ? 'text-yellow-800' :
-                    'text-red-800'
+                    phase2Pass ? 'text-green-800 dark:text-green-300' :
+                    phase1Pass ? 'text-yellow-800 dark:text-yellow-300' :
+                    'text-red-800 dark:text-red-300'
                   }`}>
                     {satisfactoryCount}/8 Satisfactory
                   </div>
                   <div className={`text-sm ${
-                    phase2Pass ? 'text-green-700' :
-                    phase1Pass ? 'text-yellow-700' :
-                    'text-red-700'
+                    phase2Pass ? 'text-green-700 dark:text-green-400' :
+                    phase1Pass ? 'text-yellow-700 dark:text-yellow-400' :
+                    'text-red-700 dark:text-red-400'
                   }`}>
                     {phase2Pass ? 'Phase 2 Pass (7/8 required)' :
                      phase1Pass ? 'Phase 1 Pass (6/8 required) - Does not meet Phase 2' :
@@ -619,25 +619,25 @@ export default function GradeStationPage() {
         </div>
 
         {/* Overall Comments */}
-        <div className="bg-white rounded-lg shadow p-4">
-          <h2 className="font-semibold text-gray-900 mb-3">Overall Comments</h2>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+          <h2 className="font-semibold text-gray-900 dark:text-white mb-3">Overall Comments</h2>
           <textarea
             value={overallComments}
             onChange={(e) => setOverallComments(e.target.value)}
             placeholder="Additional comments, feedback, or observations..."
             rows={4}
-            className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+            className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
           />
         </div>
 
         {/* Debrief Points */}
         {scenario?.debrief_points && scenario.debrief_points.length > 0 && (
-          <div className="bg-white rounded-lg shadow p-4">
-            <h2 className="font-semibold text-gray-900 mb-3">Debrief Discussion Points</h2>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+            <h2 className="font-semibold text-gray-900 dark:text-white mb-3">Debrief Discussion Points</h2>
             <ul className="space-y-2">
               {scenario.debrief_points.map((point, index) => (
-                <li key={index} className="flex items-start gap-2 text-sm text-gray-700">
-                  <span className="text-blue-500">•</span>
+                <li key={index} className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
+                  <span className="text-blue-500 dark:text-blue-400">•</span>
                   {point}
                 </li>
               ))}
@@ -660,8 +660,8 @@ export default function GradeStationPage() {
             {saving ? 'Saving Assessment...' : 'Save Assessment'}
           </button>
           {(!selectedGroupId || !teamLeaderId || !allRated) && (
-            <p className="text-center text-sm text-gray-500 mt-2">
-              {!selectedGroupId ? 'Select a lab group' : 
+            <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-2">
+              {!selectedGroupId ? 'Select a lab group' :
                !teamLeaderId ? 'Select a team leader' :
                'Rate all 8 criteria to save'}
             </p>

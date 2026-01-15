@@ -202,7 +202,7 @@ export default function TeachingLogPage() {
 
   if (status === 'loading' || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
@@ -211,11 +211,11 @@ export default function TeachingLogPage() {
   if (!session) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
-      <div className="bg-white shadow-sm">
+      <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
             <Link href="/" className="hover:text-blue-600">Home</Link>
             <ChevronRight className="w-4 h-4" />
             <Link href="/instructor" className="hover:text-blue-600">Instructor Portal</Link>
@@ -224,15 +224,15 @@ export default function TeachingLogPage() {
           </div>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Link href="/instructor" className="text-gray-600 hover:text-gray-900">
+              <Link href="/instructor" className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white">
                 <ArrowLeft className="w-5 h-5" />
               </Link>
-              <h1 className="text-xl font-bold text-gray-900">Teaching Log</h1>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Teaching Log</h1>
             </div>
             <select
               value={selectedYear}
               onChange={(e) => setSelectedYear(e.target.value)}
-              className="px-3 py-2 border rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-amber-500"
+              className="px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-amber-500"
             >
               {getYearOptions().map(year => (
                 <option key={year} value={year}>{year}</option>
@@ -245,24 +245,24 @@ export default function TeachingLogPage() {
       <main className="max-w-4xl mx-auto px-4 py-6 space-y-6">
         {/* Stats Cards */}
         <div className="grid grid-cols-3 gap-4">
-          <div className="bg-white rounded-lg shadow p-4 text-center">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 text-center">
             <div className="text-3xl font-bold text-amber-600">{stats.totalClasses}</div>
-            <div className="text-sm text-gray-600">Classes Taught</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">Classes Taught</div>
           </div>
-          <div className="bg-white rounded-lg shadow p-4 text-center">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 text-center">
             <div className="text-3xl font-bold text-amber-600">{stats.totalHours.toFixed(1)}</div>
-            <div className="text-sm text-gray-600">Hours Taught</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">Hours Taught</div>
           </div>
-          <div className="bg-white rounded-lg shadow p-4 text-center">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 text-center">
             <div className="text-3xl font-bold text-amber-600">{stats.totalStudents}</div>
-            <div className="text-sm text-gray-600">Students</div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">Students</div>
           </div>
         </div>
 
         {/* Teaching Log Section */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="p-4 border-b flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+          <div className="p-4 border-b dark:border-gray-700 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
               <FileText className="w-5 h-5 text-amber-600" />
               Teaching History ({selectedYear})
             </h2>
@@ -279,17 +279,17 @@ export default function TeachingLogPage() {
 
           {/* Add Form */}
           {showForm && (
-            <div className="p-4 border-b bg-amber-50">
+            <div className="p-4 border-b dark:border-gray-700 bg-amber-50 dark:bg-amber-900/30">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-medium text-gray-900">Add Teaching Entry</h3>
-                <button onClick={resetForm} className="text-gray-400 hover:text-gray-600">
+                <h3 className="font-medium text-gray-900 dark:text-white">Add Teaching Entry</h3>
+                <button onClick={resetForm} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Course Name <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -298,17 +298,17 @@ export default function TeachingLogPage() {
                     onChange={(e) => setCourseName(e.target.value)}
                     required
                     placeholder="e.g., EMT Initial, Paramedic Lab Day 5"
-                    className="w-full px-4 py-2 border rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-amber-500"
+                    className="w-full px-4 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-amber-500"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Course Type</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Course Type</label>
                     <select
                       value={courseType}
                       onChange={(e) => setCourseType(e.target.value)}
-                      className="w-full px-4 py-2 border rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-amber-500"
+                      className="w-full px-4 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-amber-500"
                     >
                       <option value="">Select type</option>
                       {courseTypes.map(type => (
@@ -317,7 +317,7 @@ export default function TeachingLogPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Date Taught <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -325,14 +325,14 @@ export default function TeachingLogPage() {
                       value={dateTaught}
                       onChange={(e) => setDateTaught(e.target.value)}
                       required
-                      className="w-full px-4 py-2 border rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-amber-500"
+                      className="w-full px-4 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-amber-500"
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Hours <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -343,40 +343,40 @@ export default function TeachingLogPage() {
                       onChange={(e) => setHours(e.target.value)}
                       required
                       placeholder="e.g., 8"
-                      className="w-full px-4 py-2 border rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-amber-500"
+                      className="w-full px-4 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-amber-500"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Students</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Students</label>
                     <input
                       type="number"
                       min="0"
                       value={studentCount}
                       onChange={(e) => setStudentCount(e.target.value)}
                       placeholder="e.g., 24"
-                      className="w-full px-4 py-2 border rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-amber-500"
+                      className="w-full px-4 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-amber-500"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Location</label>
                     <input
                       type="text"
                       value={location}
                       onChange={(e) => setLocation(e.target.value)}
                       placeholder="e.g., Room 101"
-                      className="w-full px-4 py-2 border rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-amber-500"
+                      className="w-full px-4 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-amber-500"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>
                   <input
                     type="text"
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     placeholder="Optional notes"
-                    className="w-full px-4 py-2 border rounded-lg text-gray-900 bg-white focus:ring-2 focus:ring-amber-500"
+                    className="w-full px-4 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-amber-500"
                   />
                 </div>
 
@@ -391,7 +391,7 @@ export default function TeachingLogPage() {
                   <button
                     type="button"
                     onClick={resetForm}
-                    className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                    className="px-6 py-2 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500"
                   >
                     Cancel
                   </button>
@@ -404,8 +404,8 @@ export default function TeachingLogPage() {
           <div className="p-4">
             {entries.length === 0 ? (
               <div className="text-center py-8">
-                <FileText className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500">No teaching entries for {selectedYear}.</p>
+                <FileText className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                <p className="text-gray-500 dark:text-gray-400">No teaching entries for {selectedYear}.</p>
                 <button
                   onClick={() => setShowForm(true)}
                   className="mt-3 text-amber-600 hover:text-amber-700"
@@ -418,20 +418,20 @@ export default function TeachingLogPage() {
                 {entries.map(entry => (
                   <div
                     key={entry.id}
-                    className="p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
+                    className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition"
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <span className="font-semibold text-gray-900">{entry.course_name}</span>
+                          <span className="font-semibold text-gray-900 dark:text-white">{entry.course_name}</span>
                           <span className="text-amber-600 font-medium">{entry.hours} hrs</span>
                           {entry.course_type && (
-                            <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded">
+                            <span className="text-xs bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded">
                               {entry.course_type}
                             </span>
                           )}
                         </div>
-                        <div className="flex items-center gap-4 text-sm text-gray-600 flex-wrap">
+                        <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400 flex-wrap">
                           <span className="flex items-center gap-1">
                             <Calendar className="w-4 h-4" />
                             {parseLocalDate(entry.date_taught).toLocaleDateString()}
@@ -450,12 +450,12 @@ export default function TeachingLogPage() {
                           )}
                         </div>
                         {entry.cohort && (
-                          <div className="text-sm text-gray-500 mt-1">
+                          <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                             {entry.cohort.program.abbreviation} Cohort {entry.cohort.cohort_number}
                           </div>
                         )}
                         {entry.notes && (
-                          <div className="text-sm text-gray-500 mt-1">{entry.notes}</div>
+                          <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">{entry.notes}</div>
                         )}
                       </div>
                       <button

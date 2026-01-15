@@ -115,8 +115,8 @@ export default function DeletionRequestsPage() {
 
   if (status === 'loading' || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400"></div>
       </div>
     );
   }
@@ -124,7 +124,7 @@ export default function DeletionRequestsPage() {
   if (!session || !currentUser) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Toast */}
       {toast && (
         <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg ${
@@ -135,25 +135,25 @@ export default function DeletionRequestsPage() {
       )}
 
       {/* Header */}
-      <div className="bg-white shadow-sm">
+      <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-            <Link href="/" className="hover:text-blue-600 flex items-center gap-1">
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
+            <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1">
               <Home className="w-3 h-3" />
               Home
             </Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/admin" className="hover:text-blue-600">Admin</Link>
+            <Link href="/admin" className="hover:text-blue-600 dark:hover:text-blue-400">Admin</Link>
             <ChevronRight className="w-4 h-4" />
             <span>Deletion Requests</span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-red-100 rounded-lg">
-              <Trash2 className="w-6 h-6 text-red-600" />
+            <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
+              <Trash2 className="w-6 h-6 text-red-600 dark:text-red-400" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Deletion Requests</h1>
-              <p className="text-gray-600">Review and approve deletion requests from instructors</p>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Deletion Requests</h1>
+              <p className="text-gray-600 dark:text-gray-400">Review and approve deletion requests from instructors</p>
             </div>
           </div>
         </div>
@@ -161,45 +161,45 @@ export default function DeletionRequestsPage() {
 
       <main className="max-w-4xl mx-auto px-4 py-6 space-y-6">
         {/* Pending Requests */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="px-4 py-3 border-b flex items-center justify-between">
-            <h2 className="font-semibold text-gray-900">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+          <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+            <h2 className="font-semibold text-gray-900 dark:text-white">
               Pending Requests ({pendingRequests.length})
             </h2>
           </div>
           {pendingRequests.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">
-              <FileText className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+            <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+              <FileText className="w-12 h-12 mx-auto mb-3 text-gray-300 dark:text-gray-600" />
               No pending deletion requests
             </div>
           ) : (
-            <div className="divide-y">
+            <div className="divide-y divide-gray-200 dark:divide-gray-700">
               {pendingRequests.map(request => (
                 <div key={request.id} className="p-4">
                   <div className="flex items-start justify-between">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs font-medium rounded">
+                        <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-medium rounded">
                           {request.item_type}
                         </span>
-                        <span className="font-medium text-gray-900">{request.item_name}</span>
+                        <span className="font-medium text-gray-900 dark:text-white">{request.item_name}</span>
                       </div>
-                      <p className="text-sm text-gray-600 mt-1">{request.reason}</p>
-                      <p className="text-xs text-gray-500 mt-2">
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{request.reason}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
                         Requested by {request.requester_name} on {new Date(request.requested_at).toLocaleDateString()}
                       </p>
                     </div>
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleAction(request.id, 'approve')}
-                        className="flex items-center gap-1 px-3 py-1.5 bg-green-100 text-green-700 rounded hover:bg-green-200"
+                        className="flex items-center gap-1 px-3 py-1.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded hover:bg-green-200 dark:hover:bg-green-900/50"
                       >
                         <Check className="w-4 h-4" />
                         Approve
                       </button>
                       <button
                         onClick={() => handleAction(request.id, 'deny')}
-                        className="flex items-center gap-1 px-3 py-1.5 bg-red-100 text-red-700 rounded hover:bg-red-200"
+                        className="flex items-center gap-1 px-3 py-1.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded hover:bg-red-200 dark:hover:bg-red-900/50"
                       >
                         <X className="w-4 h-4" />
                         Deny
@@ -214,21 +214,21 @@ export default function DeletionRequestsPage() {
 
         {/* Processed Requests */}
         {processedRequests.length > 0 && (
-          <div className="bg-white rounded-lg shadow">
-            <div className="px-4 py-3 border-b">
-              <h2 className="font-semibold text-gray-700">Recent History</h2>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+            <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="font-semibold text-gray-700 dark:text-gray-300">Recent History</h2>
             </div>
-            <div className="divide-y">
+            <div className="divide-y divide-gray-200 dark:divide-gray-700">
               {processedRequests.slice(0, 10).map(request => (
                 <div key={request.id} className="p-4 flex items-center justify-between">
                   <div>
-                    <span className="font-medium text-gray-700">{request.item_name}</span>
-                    <span className="text-sm text-gray-500 ml-2">({request.item_type})</span>
+                    <span className="font-medium text-gray-700 dark:text-gray-300">{request.item_name}</span>
+                    <span className="text-sm text-gray-500 dark:text-gray-500 ml-2">({request.item_type})</span>
                   </div>
                   <span className={`px-2 py-0.5 rounded text-sm ${
                     request.status === 'approved'
-                      ? 'bg-green-100 text-green-700'
-                      : 'bg-red-100 text-red-700'
+                      ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                      : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
                   }`}>
                     {request.status}
                   </span>

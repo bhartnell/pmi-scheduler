@@ -48,27 +48,27 @@ function parseLocalDate(dateString: string): Date {
 }
 
 // Get status info based on days until expiration
-function getStatus(expirationDate: string): { color: string; bgColor: string; label: string; priority: number } {
+function getStatus(expirationDate: string): { color: string; darkColor: string; bgColor: string; darkBgColor: string; label: string; priority: number } {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const expDate = parseLocalDate(expirationDate);
   const daysUntil = Math.ceil((expDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
   if (daysUntil < 0) {
-    return { color: 'text-red-600', bgColor: 'bg-red-100', label: 'Expired', priority: 0 };
+    return { color: 'text-red-600', darkColor: 'dark:text-red-400', bgColor: 'bg-red-100', darkBgColor: 'dark:bg-red-900/30', label: 'Expired', priority: 0 };
   } else if (daysUntil <= 30) {
-    return { color: 'text-orange-600', bgColor: 'bg-orange-100', label: `${daysUntil}d`, priority: 1 };
+    return { color: 'text-orange-600', darkColor: 'dark:text-orange-400', bgColor: 'bg-orange-100', darkBgColor: 'dark:bg-orange-900/30', label: `${daysUntil}d`, priority: 1 };
   } else if (daysUntil <= 90) {
-    return { color: 'text-yellow-600', bgColor: 'bg-yellow-100', label: `${daysUntil}d`, priority: 2 };
+    return { color: 'text-yellow-600', darkColor: 'dark:text-yellow-400', bgColor: 'bg-yellow-100', darkBgColor: 'dark:bg-yellow-900/30', label: `${daysUntil}d`, priority: 2 };
   } else {
-    return { color: 'text-green-600', bgColor: 'bg-green-100', label: 'Valid', priority: 3 };
+    return { color: 'text-green-600', darkColor: 'dark:text-green-400', bgColor: 'bg-green-100', darkBgColor: 'dark:bg-green-900/30', label: 'Valid', priority: 3 };
   }
 }
 
 // Get instructor's overall status (worst cert status)
-function getInstructorStatus(certs: Certification[]): { color: string; icon: React.ReactNode; label: string } {
+function getInstructorStatus(certs: Certification[]): { color: string; darkColor: string; icon: React.ReactNode; label: string } {
   if (certs.length === 0) {
-    return { color: 'text-gray-400', icon: <Clock className="w-5 h-5" />, label: 'No certs' };
+    return { color: 'text-gray-400', darkColor: 'dark:text-gray-500', icon: <Clock className="w-5 h-5" />, label: 'No certs' };
   }
 
   let worstPriority = 4;
@@ -80,11 +80,11 @@ function getInstructorStatus(certs: Certification[]): { color: string; icon: Rea
   }
 
   if (worstPriority === 0) {
-    return { color: 'text-red-600', icon: <AlertTriangle className="w-5 h-5" />, label: 'Expired' };
+    return { color: 'text-red-600', darkColor: 'dark:text-red-400', icon: <AlertTriangle className="w-5 h-5" />, label: 'Expired' };
   } else if (worstPriority <= 2) {
-    return { color: 'text-yellow-600', icon: <Clock className="w-5 h-5" />, label: 'Expiring soon' };
+    return { color: 'text-yellow-600', darkColor: 'dark:text-yellow-400', icon: <Clock className="w-5 h-5" />, label: 'Expiring soon' };
   } else {
-    return { color: 'text-green-600', icon: <CheckCircle className="w-5 h-5" />, label: 'All valid' };
+    return { color: 'text-green-600', darkColor: 'dark:text-green-400', icon: <CheckCircle className="w-5 h-5" />, label: 'All valid' };
   }
 }
 
@@ -207,10 +207,10 @@ export default function AdminCertificationsPage() {
 
   if (status === 'loading' || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-700">Loading certifications...</p>
+          <p className="mt-4 text-gray-700 dark:text-gray-300">Loading certifications...</p>
         </div>
       </div>
     );
@@ -219,29 +219,29 @@ export default function AdminCertificationsPage() {
   if (!session) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
-      <div className="bg-white shadow-sm">
+      <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-5xl mx-auto px-4 py-6">
-          <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
-            <Link href="/" className="hover:text-blue-600 flex items-center gap-1">
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1">
+            <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1">
               <Home className="w-3 h-3" />
               Home
             </Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management" className="hover:text-blue-600">Lab Management</Link>
+            <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management/admin" className="hover:text-blue-600">Admin</Link>
+            <Link href="/lab-management/admin" className="hover:text-blue-600 dark:hover:text-blue-400">Admin</Link>
             <ChevronRight className="w-4 h-4" />
-            <span>Certifications</span>
+            <span className="dark:text-gray-300">Certifications</span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <Award className="w-6 h-6 text-purple-600" />
+            <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+              <Award className="w-6 h-6 text-purple-600 dark:text-purple-400" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Instructor Certifications</h1>
-              <p className="text-gray-600">Monitor all instructor certifications and expirations</p>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Instructor Certifications</h1>
+              <p className="text-gray-600 dark:text-gray-400">Monitor all instructor certifications and expirations</p>
             </div>
           </div>
         </div>
@@ -250,61 +250,61 @@ export default function AdminCertificationsPage() {
       <main className="max-w-5xl mx-auto px-4 py-6 space-y-6">
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="bg-white rounded-lg shadow p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <User className="w-5 h-5 text-blue-600" />
+              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                <User className="w-5 h-5 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-gray-900">{instructors.length}</p>
-                <p className="text-gray-600 text-sm">Instructors</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{instructors.length}</p>
+                <p className="text-gray-600 dark:text-gray-400 text-sm">Instructors</p>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-100 rounded-lg">
-                <AlertTriangle className="w-5 h-5 text-red-600" />
+              <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
+                <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-gray-900">{expiredCount}</p>
-                <p className="text-gray-600 text-sm">With Expired Certs</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{expiredCount}</p>
+                <p className="text-gray-600 dark:text-gray-400 text-sm">With Expired Certs</p>
               </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-yellow-100 rounded-lg">
-                <Clock className="w-5 h-5 text-yellow-600" />
+              <div className="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
+                <Clock className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-gray-900">{expiringCount}</p>
-                <p className="text-gray-600 text-sm">Expiring Within 90 Days</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{expiringCount}</p>
+                <p className="text-gray-600 dark:text-gray-400 text-sm">Expiring Within 90 Days</p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2 border-b border-gray-200">
+        <div className="flex gap-2 border-b border-gray-200 dark:border-gray-700">
           {TABS.map(tab => (
             <button
               key={tab.value}
               onClick={() => setActiveTab(tab.value)}
               className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === tab.value
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
+                  ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
+                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
               }`}
             >
               {tab.label}
               {tab.value === 'expired' && expiredCount > 0 && (
-                <span className="ml-2 px-2 py-0.5 bg-red-100 text-red-800 text-xs rounded-full">
+                <span className="ml-2 px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 text-xs rounded-full">
                   {expiredCount}
                 </span>
               )}
               {tab.value === 'expiring' && expiringCount > 0 && (
-                <span className="ml-2 px-2 py-0.5 bg-yellow-100 text-yellow-800 text-xs rounded-full">
+                <span className="ml-2 px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 text-xs rounded-full">
                   {expiringCount}
                 </span>
               )}
@@ -315,9 +315,9 @@ export default function AdminCertificationsPage() {
         {/* Instructors List */}
         <div className="space-y-4">
           {filteredInstructors.length === 0 ? (
-            <div className="bg-white rounded-lg shadow p-8 text-center">
-              <Award className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-600">No instructors match the current filter.</p>
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
+              <Award className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+              <p className="text-gray-600 dark:text-gray-400">No instructors match the current filter.</p>
             </div>
           ) : (
             filteredInstructors.map(instructor => {
@@ -325,39 +325,39 @@ export default function AdminCertificationsPage() {
               const isExpanded = expandedInstructors.has(instructor.id);
 
               return (
-                <div key={instructor.id} className="bg-white rounded-lg shadow overflow-hidden">
+                <div key={instructor.id} className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
                   {/* Instructor Header */}
                   <button
                     onClick={() => toggleExpanded(instructor.id)}
-                    className="w-full px-4 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                    className="w-full px-4 py-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-full ${instructorStatus.color === 'text-red-600' ? 'bg-red-100' : instructorStatus.color === 'text-yellow-600' ? 'bg-yellow-100' : instructorStatus.color === 'text-green-600' ? 'bg-green-100' : 'bg-gray-100'}`}>
+                      <div className={`p-2 rounded-full ${instructorStatus.color === 'text-red-600' ? 'bg-red-100 dark:bg-red-900/30' : instructorStatus.color === 'text-yellow-600' ? 'bg-yellow-100 dark:bg-yellow-900/30' : instructorStatus.color === 'text-green-600' ? 'bg-green-100 dark:bg-green-900/30' : 'bg-gray-100 dark:bg-gray-700'}`}>
                         {instructorStatus.icon}
                       </div>
                       <div className="text-left">
-                        <h3 className="font-semibold text-gray-900">{instructor.name}</h3>
-                        <p className="text-sm text-gray-500">{instructor.email}</p>
+                        <h3 className="font-semibold text-gray-900 dark:text-white">{instructor.name}</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{instructor.email}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
                       <div className="text-right">
-                        <p className={`text-sm font-medium ${instructorStatus.color}`}>
+                        <p className={`text-sm font-medium ${instructorStatus.color} ${instructorStatus.darkColor}`}>
                           {instructorStatus.label}
                         </p>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
                           {instructor.certifications.length} certification{instructor.certifications.length !== 1 ? 's' : ''}
                         </p>
                       </div>
-                      <ChevronRight className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                      <ChevronRight className={`w-5 h-5 text-gray-400 dark:text-gray-500 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
                     </div>
                   </button>
 
                   {/* Certifications List */}
                   {isExpanded && (
-                    <div className="border-t border-gray-100 px-4 py-3 bg-gray-50">
+                    <div className="border-t border-gray-100 dark:border-gray-700 px-4 py-3 bg-gray-50 dark:bg-gray-700/50">
                       {instructor.certifications.length === 0 ? (
-                        <p className="text-gray-500 text-sm py-2">No certifications on file.</p>
+                        <p className="text-gray-500 dark:text-gray-400 text-sm py-2">No certifications on file.</p>
                       ) : (
                         <div className="space-y-2">
                           {instructor.certifications.map(cert => {
@@ -365,16 +365,16 @@ export default function AdminCertificationsPage() {
                             return (
                               <div
                                 key={cert.id}
-                                className="bg-white rounded-lg p-3 border border-gray-200 flex items-center justify-between"
+                                className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-600 flex items-center justify-between"
                               >
                                 <div className="flex-1">
                                   <div className="flex items-center gap-2">
-                                    <span className="font-medium text-gray-900">{cert.cert_name}</span>
-                                    <span className={`text-xs font-semibold px-2 py-0.5 rounded ${certStatus.bgColor} ${certStatus.color}`}>
+                                    <span className="font-medium text-gray-900 dark:text-white">{cert.cert_name}</span>
+                                    <span className={`text-xs font-semibold px-2 py-0.5 rounded ${certStatus.bgColor} ${certStatus.darkBgColor} ${certStatus.color} ${certStatus.darkColor}`}>
                                       {certStatus.label}
                                     </span>
                                   </div>
-                                  <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-sm text-gray-500">
+                                  <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-sm text-gray-500 dark:text-gray-400">
                                     {cert.issuing_body && (
                                       <span className="flex items-center gap-1">
                                         <Building className="w-3 h-3" />
@@ -399,7 +399,7 @@ export default function AdminCertificationsPage() {
                                       e.stopPropagation();
                                       downloadImage(cert.card_image_url!, cert.cert_name, instructor.name);
                                     }}
-                                    className="flex items-center gap-1 text-green-600 hover:text-green-700 text-sm font-medium ml-4"
+                                    className="flex items-center gap-1 text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 text-sm font-medium ml-4"
                                   >
                                     <Download className="w-4 h-4" />
                                     Card

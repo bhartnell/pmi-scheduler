@@ -61,10 +61,10 @@ interface Assessment {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  active: 'bg-green-100 text-green-800',
-  graduated: 'bg-blue-100 text-blue-800',
-  withdrawn: 'bg-red-100 text-red-800',
-  on_hold: 'bg-yellow-100 text-yellow-800',
+  active: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+  graduated: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+  withdrawn: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+  on_hold: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
 };
 
 const SCORE_COLORS: Record<number, string> = {
@@ -277,7 +277,7 @@ export default function StudentDetailPage() {
 
   if (status === 'loading' || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
@@ -285,46 +285,46 @@ export default function StudentDetailPage() {
 
   if (!session || !student) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-        <div className="bg-white rounded-lg shadow p-8 text-center">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
           <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Student Not Found</h2>
-          <Link href="/lab-management/students" className="text-blue-600 hover:underline">Back to Students</Link>
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Student Not Found</h2>
+          <Link href="/lab-management/students" className="text-blue-600 dark:text-blue-400 hover:underline">Back to Students</Link>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
-      <div className="bg-white shadow-sm">
+      <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-4xl mx-auto px-4 py-6">
-          <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
-            <Link href="/lab-management" className="hover:text-blue-600">Lab Management</Link>
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1">
+            <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management/students" className="hover:text-blue-600">Students</Link>
+            <Link href="/lab-management/students" className="hover:text-blue-600 dark:hover:text-blue-400">Students</Link>
             <ChevronRight className="w-4 h-4" />
-            <span>{student.first_name} {student.last_name}</span>
+            <span className="dark:text-gray-300">{student.first_name} {student.last_name}</span>
           </div>
         </div>
       </div>
 
       <main className="max-w-4xl mx-auto px-4 py-6 space-y-6">
         {/* Profile Card */}
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
           <div className="flex flex-col sm:flex-row gap-6">
             {/* Photo */}
             <div className="flex flex-col items-center">
-              <div 
+              <div
                 onClick={handlePhotoClick}
-                className="relative w-32 h-32 rounded-full overflow-hidden bg-gray-200 cursor-pointer group"
+                className="relative w-32 h-32 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 cursor-pointer group"
               >
                 {student.photo_url ? (
                   <img src={student.photo_url} alt="" className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
-                    <span className="text-4xl font-bold text-gray-400">
+                    <span className="text-4xl font-bold text-gray-400 dark:text-gray-500">
                       {student.first_name[0]}{student.last_name[0]}
                     </span>
                   </div>
@@ -346,7 +346,7 @@ export default function StudentDetailPage() {
               />
               <button
                 onClick={handlePhotoClick}
-                className="mt-2 text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                className="mt-2 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 flex items-center gap-1"
               >
                 <Upload className="w-4 h-4" />
                 {student.photo_url ? 'Change Photo' : 'Add Photo'}
@@ -359,26 +359,26 @@ export default function StudentDetailPage() {
                 <div className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
-                      <input type="text" value={editFirstName} onChange={e => setEditFirstName(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white" />
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">First Name</label>
+                      <input type="text" value={editFirstName} onChange={e => setEditFirstName(e.target.value)} className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700" />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
-                      <input type="text" value={editLastName} onChange={e => setEditLastName(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white" />
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Last Name</label>
+                      <input type="text" value={editLastName} onChange={e => setEditLastName(e.target.value)} className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700" />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                    <input type="email" value={editEmail} onChange={e => setEditEmail(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white" />
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
+                    <input type="email" value={editEmail} onChange={e => setEditEmail(e.target.value)} className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700" />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Agency</label>
-                      <input type="text" value={editAgency} onChange={e => setEditAgency(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white" />
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Agency</label>
+                      <input type="text" value={editAgency} onChange={e => setEditAgency(e.target.value)} className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700" />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                      <select value={editStatus} onChange={e => setEditStatus(e.target.value)} className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+                      <select value={editStatus} onChange={e => setEditStatus(e.target.value)} className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700">
                         <option value="active">Active</option>
                         <option value="graduated">Graduated</option>
                         <option value="withdrawn">Withdrawn</option>
@@ -387,11 +387,11 @@ export default function StudentDetailPage() {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                    <textarea value={editNotes} onChange={e => setEditNotes(e.target.value)} rows={2} className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white" />
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>
+                    <textarea value={editNotes} onChange={e => setEditNotes(e.target.value)} rows={2} className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700" />
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={() => setEditing(false)} className="px-4 py-2 border rounded-lg text-gray-700 hover:bg-gray-50">Cancel</button>
+                    <button onClick={() => setEditing(false)} className="px-4 py-2 border dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</button>
                     <button onClick={handleSave} disabled={saving} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400">
                       {saving ? 'Saving...' : 'Save Changes'}
                     </button>
@@ -401,17 +401,17 @@ export default function StudentDetailPage() {
                 <>
                   <div className="flex items-start justify-between mb-4">
                     <div>
-                      <h1 className="text-2xl font-bold text-gray-900">{student.first_name} {student.last_name}</h1>
+                      <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{student.first_name} {student.last_name}</h1>
                       {student.cohort && (
-                        <p className="text-gray-600">{student.cohort.program.abbreviation} Group {student.cohort.cohort_number}</p>
+                        <p className="text-gray-600 dark:text-gray-400">{student.cohort.program.abbreviation} Group {student.cohort.cohort_number}</p>
                       )}
                     </div>
                     <div className="flex gap-2">
-                      <button onClick={() => setEditing(true)} className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg">
+                      <button onClick={() => setEditing(true)} className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
                         <Edit2 className="w-5 h-5" />
                       </button>
                       {userRole && canManageStudentRoster(userRole) && (
-                        <button onClick={handleDelete} className="p-2 text-red-600 hover:bg-red-50 rounded-lg">
+                        <button onClick={handleDelete} className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg">
                           <Trash2 className="w-5 h-5" />
                         </button>
                       )}
@@ -425,13 +425,13 @@ export default function StudentDetailPage() {
                       </span>
                     </div>
                     {student.email && (
-                      <div className="flex items-center gap-2 text-gray-600">
+                      <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                         <Mail className="w-4 h-4" />
-                        <a href={`mailto:${student.email}`} className="hover:text-blue-600">{student.email}</a>
+                        <a href={`mailto:${student.email}`} className="hover:text-blue-600 dark:hover:text-blue-400">{student.email}</a>
                       </div>
                     )}
                     {student.agency && (
-                      <div className="flex items-center gap-2 text-gray-600">
+                      <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                         <Building className="w-4 h-4" />
                         <span>{student.agency}</span>
                       </div>
@@ -439,7 +439,7 @@ export default function StudentDetailPage() {
                   </div>
 
                   {student.notes && (
-                    <div className="mt-4 p-3 bg-gray-50 rounded-lg text-sm text-gray-700">
+                    <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm text-gray-700 dark:text-gray-300">
                       <strong>Notes:</strong> {student.notes}
                     </div>
                   )}
@@ -451,72 +451,72 @@ export default function StudentDetailPage() {
 
         {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="bg-white rounded-lg shadow p-4">
-            <div className="flex items-center gap-2 text-yellow-600 mb-1">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+            <div className="flex items-center gap-2 text-yellow-600 dark:text-yellow-400 mb-1">
               <Star className="w-5 h-5" />
               <span className="text-sm font-medium">Team Lead</span>
             </div>
-            <div className="text-2xl font-bold text-gray-900">{student.team_lead_count}</div>
-            <div className="text-xs text-gray-500">assignments</div>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">{student.team_lead_count}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">assignments</div>
           </div>
-          <div className="bg-white rounded-lg shadow p-4">
-            <div className="flex items-center gap-2 text-blue-600 mb-1">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+            <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-1">
               <Calendar className="w-5 h-5" />
               <span className="text-sm font-medium">Last TL</span>
             </div>
-            <div className="text-lg font-bold text-gray-900">
-              {student.last_team_lead_date 
+            <div className="text-lg font-bold text-gray-900 dark:text-white">
+              {student.last_team_lead_date
                 ? new Date(student.last_team_lead_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
                 : '—'}
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow p-4">
-            <div className="flex items-center gap-2 text-green-600 mb-1">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+            <div className="flex items-center gap-2 text-green-600 dark:text-green-400 mb-1">
               <ClipboardCheck className="w-5 h-5" />
               <span className="text-sm font-medium">Assessments</span>
             </div>
-            <div className="text-2xl font-bold text-gray-900">{assessments.length}</div>
-            <div className="text-xs text-gray-500">recorded</div>
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">{assessments.length}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">recorded</div>
           </div>
-          <div className="bg-white rounded-lg shadow p-4">
-            <div className="flex items-center gap-2 text-purple-600 mb-1">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+            <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400 mb-1">
               <User className="w-5 h-5" />
               <span className="text-sm font-medium">Joined</span>
             </div>
-            <div className="text-lg font-bold text-gray-900">
+            <div className="text-lg font-bold text-gray-900 dark:text-white">
               {new Date(student.created_at).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
             </div>
           </div>
         </div>
 
         {/* Team Lead History */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="p-4 border-b">
-            <h2 className="font-semibold text-gray-900">Team Lead History</h2>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+          <div className="p-4 border-b dark:border-gray-700">
+            <h2 className="font-semibold text-gray-900 dark:text-white">Team Lead History</h2>
           </div>
           {teamLeadHistory.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">
-              <Star className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+            <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+              <Star className="w-12 h-12 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
               <p>No team lead assignments yet</p>
             </div>
           ) : (
-            <div className="divide-y">
+            <div className="divide-y dark:divide-gray-700">
               {teamLeadHistory.map((entry) => (
                 <div key={entry.id} className="p-4 flex items-center gap-4">
-                  <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                    <Star className="w-6 h-6 text-yellow-600" />
+                  <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg flex items-center justify-center">
+                    <Star className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
                   </div>
                   <div className="flex-1">
-                    <div className="font-medium text-gray-900">
+                    <div className="font-medium text-gray-900 dark:text-white">
                       {entry.scenario?.title || `Station ${entry.lab_station.station_number}`}
                     </div>
-                    <div className="text-sm text-gray-600">
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
                       {new Date(entry.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                       {entry.lab_day.week_number && ` • Week ${entry.lab_day.week_number}, Day ${entry.lab_day.day_number}`}
                     </div>
                   </div>
                   {entry.scenario?.category && (
-                    <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
+                    <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs rounded">
                       {entry.scenario.category}
                     </span>
                   )}
@@ -527,34 +527,34 @@ export default function StudentDetailPage() {
         </div>
 
         {/* Recent Assessments */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="p-4 border-b">
-            <h2 className="font-semibold text-gray-900">Recent Assessments</h2>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+          <div className="p-4 border-b dark:border-gray-700">
+            <h2 className="font-semibold text-gray-900 dark:text-white">Recent Assessments</h2>
           </div>
           {assessments.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">
-              <ClipboardCheck className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+            <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+              <ClipboardCheck className="w-12 h-12 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
               <p>No assessments recorded yet</p>
             </div>
           ) : (
-            <div className="divide-y">
+            <div className="divide-y dark:divide-gray-700">
               {assessments.map((assessment) => (
                 <div key={assessment.id} className="p-4">
                   <div className="flex items-center justify-between mb-2">
-                    <div className="text-sm text-gray-600">
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
                       {new Date(assessment.assessed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </div>
                     {assessment.skill_name && (
-                      <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded">Skill</span>
+                      <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400 text-xs rounded">Skill</span>
                     )}
                   </div>
                   {assessment.skill_name ? (
                     <div>
-                      <div className="font-medium text-gray-900">{assessment.skill_name}</div>
+                      <div className="font-medium text-gray-900 dark:text-white">{assessment.skill_name}</div>
                       {assessment.overall_competency && (
                         <div className="mt-1 flex items-center gap-2">
-                          <span className="text-sm text-gray-600">Overall:</span>
-                          <span className="font-bold">{assessment.overall_competency}/5</span>
+                          <span className="text-sm text-gray-600 dark:text-gray-400">Overall:</span>
+                          <span className="font-bold dark:text-white">{assessment.overall_competency}/5</span>
                         </div>
                       )}
                     </div>
@@ -562,7 +562,7 @@ export default function StudentDetailPage() {
                     <div className="flex gap-4">
                       {assessment.assessment_score !== undefined && (
                         <div className="flex items-center gap-2">
-                          <span className="text-sm text-gray-600">Assessment:</span>
+                          <span className="text-sm text-gray-600 dark:text-gray-400">Assessment:</span>
                           <span className={`w-6 h-6 rounded text-white text-sm font-bold flex items-center justify-center ${SCORE_COLORS[assessment.assessment_score]}`}>
                             {assessment.assessment_score}
                           </span>
@@ -570,7 +570,7 @@ export default function StudentDetailPage() {
                       )}
                       {assessment.treatment_score !== undefined && (
                         <div className="flex items-center gap-2">
-                          <span className="text-sm text-gray-600">Treatment:</span>
+                          <span className="text-sm text-gray-600 dark:text-gray-400">Treatment:</span>
                           <span className={`w-6 h-6 rounded text-white text-sm font-bold flex items-center justify-center ${SCORE_COLORS[assessment.treatment_score]}`}>
                             {assessment.treatment_score}
                           </span>
@@ -578,7 +578,7 @@ export default function StudentDetailPage() {
                       )}
                       {assessment.communication_score !== undefined && (
                         <div className="flex items-center gap-2">
-                          <span className="text-sm text-gray-600">Comm:</span>
+                          <span className="text-sm text-gray-600 dark:text-gray-400">Comm:</span>
                           <span className={`w-6 h-6 rounded text-white text-sm font-bold flex items-center justify-center ${SCORE_COLORS[assessment.communication_score]}`}>
                             {assessment.communication_score}
                           </span>

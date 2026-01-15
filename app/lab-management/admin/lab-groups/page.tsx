@@ -4,7 +4,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { 
+import {
   ChevronRight,
   Plus,
   Users,
@@ -54,13 +54,13 @@ export default function LabGroupsPage() {
   const [loading, setLoading] = useState(true);
   const [showHistory, setShowHistory] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
-  
+
   // Editing states
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
   const [newGroupName, setNewGroupName] = useState('');
   const [showNewGroup, setShowNewGroup] = useState(false);
-  
+
   // Drag state
   const [draggedStudent, setDraggedStudent] = useState<Student | null>(null);
   const [dragOverGroup, setDragOverGroup] = useState<string | null>(null);
@@ -139,7 +139,7 @@ export default function LabGroupsPage() {
 
   const createGroup = async () => {
     if (!newGroupName.trim()) return;
-    
+
     try {
       const res = await fetch('/api/lab-management/lab-groups', {
         method: 'POST',
@@ -162,7 +162,7 @@ export default function LabGroupsPage() {
 
   const renameGroup = async (groupId: string) => {
     if (!editingName.trim()) return;
-    
+
     try {
       const res = await fetch(`/api/lab-management/lab-groups/${groupId}`, {
         method: 'PATCH',
@@ -181,7 +181,7 @@ export default function LabGroupsPage() {
 
   const deleteGroup = async (groupId: string) => {
     if (!confirm('Are you sure you want to delete this group?')) return;
-    
+
     try {
       const res = await fetch(`/api/lab-management/lab-groups/${groupId}`, {
         method: 'DELETE'
@@ -246,7 +246,7 @@ export default function LabGroupsPage() {
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
@@ -255,27 +255,27 @@ export default function LabGroupsPage() {
   if (!session) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
-      <div className="bg-white shadow-sm">
+      <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-            <Link href="/" className="hover:text-blue-600">Home</Link>
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
+            <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400">Home</Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management" className="hover:text-blue-600">Lab Management</Link>
+            <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management/admin" className="hover:text-blue-600">Admin</Link>
+            <Link href="/lab-management/admin" className="hover:text-blue-600 dark:hover:text-blue-400">Admin</Link>
             <ChevronRight className="w-4 h-4" />
-            <span>Lab Groups</span>
+            <span className="dark:text-gray-300">Lab Groups</span>
           </div>
-          
+
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <h1 className="text-2xl font-bold text-gray-900">Lab Groups</h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Lab Groups</h1>
             <div className="flex items-center gap-2">
               <select
                 value={selectedCohort}
                 onChange={(e) => setSelectedCohort(e.target.value)}
-                className="px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                className="px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
               >
                 <option value="">Select Cohort</option>
                 {cohorts.map(cohort => (
@@ -286,7 +286,7 @@ export default function LabGroupsPage() {
               </select>
               <button
                 onClick={() => { setShowHistory(!showHistory); if (!showHistory) fetchHistory(); }}
-                className={`p-2 rounded-lg ${showHistory ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'}`}
+                className={`p-2 rounded-lg ${showHistory ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'}`}
                 title="View history"
               >
                 <History className="w-5 h-5" />
@@ -298,30 +298,30 @@ export default function LabGroupsPage() {
 
       <main className="max-w-6xl mx-auto px-4 py-6">
         {!selectedCohort ? (
-          <div className="bg-white rounded-lg shadow p-8 text-center">
-            <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-            <p className="text-gray-600">Select a cohort to manage lab groups</p>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
+            <Users className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+            <p className="text-gray-600 dark:text-gray-400">Select a cohort to manage lab groups</p>
           </div>
         ) : loading ? (
-          <div className="bg-white rounded-lg shadow p-8 text-center">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           </div>
         ) : (
           <div className="space-y-6">
             {/* History Panel */}
             {showHistory && (
-              <div className="bg-white rounded-lg shadow p-4">
-                <h2 className="font-semibold text-gray-900 mb-3">Recent Changes</h2>
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+                <h2 className="font-semibold text-gray-900 dark:text-white mb-3">Recent Changes</h2>
                 {history.length === 0 ? (
-                  <p className="text-sm text-gray-500">No changes recorded yet</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">No changes recorded yet</p>
                 ) : (
                   <div className="space-y-2 max-h-48 overflow-y-auto">
                     {history.map(h => (
                       <div key={h.id} className="text-sm flex items-start gap-2">
-                        <span className="text-gray-400 shrink-0">
+                        <span className="text-gray-400 dark:text-gray-500 shrink-0">
                           {new Date(h.changed_at).toLocaleDateString()}
                         </span>
-                        <span className="text-gray-700">{h.description}</span>
+                        <span className="text-gray-700 dark:text-gray-300">{h.description}</span>
                       </div>
                     ))}
                   </div>
@@ -330,9 +330,9 @@ export default function LabGroupsPage() {
             )}
 
             {/* Instructions */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-sm text-blue-800">
-                {isMobile 
+            <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
+              <p className="text-sm text-blue-800 dark:text-blue-300">
+                {isMobile
                   ? 'Tap a student and select "Move to" to reassign them to a different group.'
                   : 'Drag and drop students between groups to reassign them. Changes are saved automatically.'}
               </p>
@@ -342,9 +342,9 @@ export default function LabGroupsPage() {
             <div className={`grid gap-4 ${isMobile ? 'grid-cols-1' : 'grid-cols-2 lg:grid-cols-4'}`}>
               {/* Existing Groups */}
               {groups.map(group => (
-                <div 
+                <div
                   key={group.id}
-                  className={`bg-white rounded-lg shadow ${
+                  className={`bg-white dark:bg-gray-800 rounded-lg shadow ${
                     dragOverGroup === group.id ? 'ring-2 ring-blue-500' : ''
                   }`}
                   onDragOver={(e) => handleDragOver(e, group.id)}
@@ -352,49 +352,49 @@ export default function LabGroupsPage() {
                   onDrop={(e) => handleDrop(e, group.id)}
                 >
                   {/* Group Header */}
-                  <div className="p-3 border-b flex items-center justify-between">
+                  <div className="p-3 border-b dark:border-gray-700 flex items-center justify-between">
                     {editingGroupId === group.id ? (
                       <div className="flex items-center gap-2 flex-1">
                         <input
                           type="text"
                           value={editingName}
                           onChange={(e) => setEditingName(e.target.value)}
-                          className="flex-1 px-2 py-1 border rounded text-sm"
+                          className="flex-1 px-2 py-1 border dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                           autoFocus
                           onKeyDown={(e) => e.key === 'Enter' && renameGroup(group.id)}
                         />
-                        <button onClick={() => renameGroup(group.id)} className="text-green-600">
+                        <button onClick={() => renameGroup(group.id)} className="text-green-600 dark:text-green-400">
                           <Check className="w-4 h-4" />
                         </button>
-                        <button onClick={() => setEditingGroupId(null)} className="text-gray-400">
+                        <button onClick={() => setEditingGroupId(null)} className="text-gray-400 dark:text-gray-500">
                           <X className="w-4 h-4" />
                         </button>
                       </div>
                     ) : (
                       <>
-                        <div 
+                        <div
                           className="flex items-center gap-2 cursor-pointer"
                           onClick={() => isMobile && setExpandedGroup(expandedGroup === group.id ? null : group.id)}
                         >
-                          <h3 className="font-semibold text-gray-900">{group.name}</h3>
-                          <span className="text-xs text-gray-500">({group.members?.length || 0})</span>
+                          <h3 className="font-semibold text-gray-900 dark:text-white">{group.name}</h3>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">({group.members?.length || 0})</span>
                           {isMobile && (
-                            expandedGroup === group.id 
-                              ? <ChevronUp className="w-4 h-4 text-gray-400" />
-                              : <ChevronDown className="w-4 h-4 text-gray-400" />
+                            expandedGroup === group.id
+                              ? <ChevronUp className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                              : <ChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-500" />
                           )}
                         </div>
                         <div className="flex items-center gap-1">
-                          <button 
+                          <button
                             onClick={() => { setEditingGroupId(group.id); setEditingName(group.name); }}
-                            className="p-1 text-gray-400 hover:text-gray-600"
+                            className="p-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
                           {group.members?.length === 0 && (
-                            <button 
+                            <button
                               onClick={() => deleteGroup(group.id)}
-                              className="p-1 text-gray-400 hover:text-red-600"
+                              className="p-1 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400"
                             >
                               <X className="w-4 h-4" />
                             </button>
@@ -403,11 +403,11 @@ export default function LabGroupsPage() {
                       </>
                     )}
                   </div>
-                  
+
                   {/* Group Members */}
                   <div className={`p-2 min-h-[100px] ${isMobile && expandedGroup !== group.id ? 'hidden' : ''}`}>
                     {group.members?.length === 0 ? (
-                      <p className="text-sm text-gray-400 text-center py-4">
+                      <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">
                         {isMobile ? 'No students' : 'Drop students here'}
                       </p>
                     ) : (
@@ -417,27 +417,27 @@ export default function LabGroupsPage() {
                             key={member.id}
                             draggable={!isMobile}
                             onDragStart={(e) => handleDragStart(e, member.student)}
-                            className={`flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 ${
+                            className={`flex items-center gap-2 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 ${
                               !isMobile ? 'cursor-grab active:cursor-grabbing' : ''
-                            } ${movingStudent?.id === member.student.id ? 'bg-blue-50' : ''}`}
+                            } ${movingStudent?.id === member.student.id ? 'bg-blue-50 dark:bg-blue-900/30' : ''}`}
                           >
-                            {!isMobile && <GripVertical className="w-4 h-4 text-gray-300" />}
-                            <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden shrink-0">
+                            {!isMobile && <GripVertical className="w-4 h-4 text-gray-300 dark:text-gray-600" />}
+                            <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center overflow-hidden shrink-0">
                               {member.student.photo_url ? (
                                 <img src={member.student.photo_url} alt="" className="w-full h-full object-cover" />
                               ) : (
-                                <span className="text-xs font-medium text-gray-500">
+                                <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
                                   {member.student.first_name[0]}{member.student.last_name[0]}
                                 </span>
                               )}
                             </div>
-                            <span className="text-sm text-gray-900 flex-1 truncate">
+                            <span className="text-sm text-gray-900 dark:text-white flex-1 truncate">
                               {member.student.first_name} {member.student.last_name}
                             </span>
                             {isMobile && (
                               <button
                                 onClick={() => setMovingStudent(movingStudent?.id === member.student.id ? null : member.student)}
-                                className="p-1 text-gray-400"
+                                className="p-1 text-gray-400 dark:text-gray-500"
                               >
                                 <ArrowRight className="w-4 h-4" />
                               </button>
@@ -450,21 +450,21 @@ export default function LabGroupsPage() {
 
                   {/* Mobile Move Options */}
                   {isMobile && movingStudent && group.members?.some(m => m.student.id === movingStudent.id) && (
-                    <div className="p-2 border-t bg-gray-50">
-                      <p className="text-xs text-gray-600 mb-2">Move to:</p>
+                    <div className="p-2 border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">Move to:</p>
                       <div className="flex flex-wrap gap-1">
                         {groups.filter(g => g.id !== group.id).map(g => (
                           <button
                             key={g.id}
                             onClick={() => moveStudent(movingStudent.id, g.id)}
-                            className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded"
+                            className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded"
                           >
                             {g.name}
                           </button>
                         ))}
                         <button
                           onClick={() => moveStudent(movingStudent.id, null)}
-                          className="px-2 py-1 text-xs bg-gray-200 text-gray-700 rounded"
+                          className="px-2 py-1 text-xs bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded"
                         >
                           Unassign
                         </button>
@@ -476,13 +476,13 @@ export default function LabGroupsPage() {
 
               {/* Add New Group */}
               {showNewGroup ? (
-                <div className="bg-white rounded-lg shadow p-4">
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
                   <input
                     type="text"
                     value={newGroupName}
                     onChange={(e) => setNewGroupName(e.target.value)}
                     placeholder="Group name..."
-                    className="w-full px-3 py-2 border rounded-lg mb-2"
+                    className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg mb-2 text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                     autoFocus
                     onKeyDown={(e) => e.key === 'Enter' && createGroup()}
                   />
@@ -495,7 +495,7 @@ export default function LabGroupsPage() {
                     </button>
                     <button
                       onClick={() => { setShowNewGroup(false); setNewGroupName(''); }}
-                      className="px-3 py-2 border rounded-lg text-sm"
+                      className="px-3 py-2 border dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300"
                     >
                       Cancel
                     </button>
@@ -504,7 +504,7 @@ export default function LabGroupsPage() {
               ) : (
                 <button
                   onClick={() => setShowNewGroup(true)}
-                  className="bg-white rounded-lg shadow p-4 border-2 border-dashed border-gray-300 flex items-center justify-center gap-2 text-gray-500 hover:border-blue-500 hover:text-blue-600 transition-colors min-h-[150px]"
+                  className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center gap-2 text-gray-500 dark:text-gray-400 hover:border-blue-500 dark:hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors min-h-[150px]"
                 >
                   <Plus className="w-5 h-5" />
                   Add Group
@@ -514,16 +514,16 @@ export default function LabGroupsPage() {
 
             {/* Ungrouped Students */}
             {ungroupedStudents.length > 0 && (
-              <div 
-                className={`bg-yellow-50 border border-yellow-200 rounded-lg ${
+              <div
+                className={`bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700 rounded-lg ${
                   dragOverGroup === 'ungrouped' ? 'ring-2 ring-yellow-500' : ''
                 }`}
                 onDragOver={(e) => handleDragOver(e, 'ungrouped')}
                 onDragLeave={handleDragLeave}
                 onDrop={(e) => handleDrop(e, null)}
               >
-                <div className="p-3 border-b border-yellow-200">
-                  <h3 className="font-semibold text-yellow-800 flex items-center gap-2">
+                <div className="p-3 border-b border-yellow-200 dark:border-yellow-700">
+                  <h3 className="font-semibold text-yellow-800 dark:text-yellow-300 flex items-center gap-2">
                     <UserMinus className="w-5 h-5" />
                     Ungrouped Students ({ungroupedStudents.length})
                   </h3>
@@ -535,27 +535,27 @@ export default function LabGroupsPage() {
                         key={student.id}
                         draggable={!isMobile}
                         onDragStart={(e) => handleDragStart(e, student)}
-                        className={`flex items-center gap-2 p-2 bg-white rounded-lg ${
+                        className={`flex items-center gap-2 p-2 bg-white dark:bg-gray-800 rounded-lg ${
                           !isMobile ? 'cursor-grab active:cursor-grabbing' : ''
                         } ${movingStudent?.id === student.id ? 'ring-2 ring-blue-500' : ''}`}
                       >
-                        {!isMobile && <GripVertical className="w-4 h-4 text-gray-300" />}
-                        <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden shrink-0">
+                        {!isMobile && <GripVertical className="w-4 h-4 text-gray-300 dark:text-gray-600" />}
+                        <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center overflow-hidden shrink-0">
                           {student.photo_url ? (
                             <img src={student.photo_url} alt="" className="w-full h-full object-cover" />
                           ) : (
-                            <span className="text-xs font-medium text-gray-500">
+                            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
                               {student.first_name[0]}{student.last_name[0]}
                             </span>
                           )}
                         </div>
-                        <span className="text-sm text-gray-900 flex-1 truncate">
+                        <span className="text-sm text-gray-900 dark:text-white flex-1 truncate">
                           {student.first_name} {student.last_name}
                         </span>
                         {isMobile && (
                           <button
                             onClick={() => setMovingStudent(movingStudent?.id === student.id ? null : student)}
-                            className="p-1 text-gray-400"
+                            className="p-1 text-gray-400 dark:text-gray-500"
                           >
                             <ArrowRight className="w-4 h-4" />
                           </button>
@@ -563,17 +563,17 @@ export default function LabGroupsPage() {
                       </div>
                     ))}
                   </div>
-                  
+
                   {/* Mobile Move Options for Ungrouped */}
                   {isMobile && movingStudent && ungroupedStudents.some(s => s.id === movingStudent.id) && (
-                    <div className="mt-3 p-2 bg-white rounded-lg">
-                      <p className="text-xs text-gray-600 mb-2">Assign to:</p>
+                    <div className="mt-3 p-2 bg-white dark:bg-gray-800 rounded-lg">
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">Assign to:</p>
                       <div className="flex flex-wrap gap-1">
                         {groups.map(g => (
                           <button
                             key={g.id}
                             onClick={() => moveStudent(movingStudent.id, g.id)}
-                            className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded"
+                            className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded"
                           >
                             {g.name}
                           </button>

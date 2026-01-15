@@ -71,11 +71,11 @@ interface Stats {
 }
 
 const STYLE_BADGES: Record<string, { bg: string; text: string; label: string }> = {
-  audio: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'A' },
-  visual: { bg: 'bg-green-100', text: 'text-green-700', label: 'V' },
-  kinesthetic: { bg: 'bg-orange-100', text: 'text-orange-700', label: 'K' },
-  social: { bg: 'bg-purple-100', text: 'text-purple-700', label: 'S' },
-  independent: { bg: 'bg-gray-100', text: 'text-gray-700', label: 'I' },
+  audio: { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-700 dark:text-blue-300', label: 'A' },
+  visual: { bg: 'bg-green-100 dark:bg-green-900/30', text: 'text-green-700 dark:text-green-300', label: 'V' },
+  kinesthetic: { bg: 'bg-orange-100 dark:bg-orange-900/30', text: 'text-orange-700 dark:text-orange-300', label: 'K' },
+  social: { bg: 'bg-purple-100 dark:bg-purple-900/30', text: 'text-purple-700 dark:text-purple-300', label: 'S' },
+  independent: { bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-700 dark:text-gray-300', label: 'I' },
 };
 
 function ProgressBar({ label, current, total, href }: { label: string; current: number; total: number; href?: string }) {
@@ -85,17 +85,17 @@ function ProgressBar({ label, current, total, href }: { label: string; current: 
   return (
     <div className="mb-3">
       <div className="flex items-center justify-between mb-1">
-        <span className="text-sm font-medium text-gray-700">{label}</span>
+        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{label}</span>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500">{current}/{total} ({percent}%)</span>
+          <span className="text-sm text-gray-500 dark:text-gray-400">{current}/{total} ({percent}%)</span>
           {href && percent < 100 && (
-            <Link href={href} className="text-xs text-blue-600 hover:text-blue-800">
+            <Link href={href} className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300">
               + Add
             </Link>
           )}
         </div>
       </div>
-      <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+      <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
         <div className={`h-full ${barColor} transition-all duration-300`} style={{ width: `${percent}%` }} />
       </div>
     </div>
@@ -120,16 +120,16 @@ function ToolCard({
   disabled?: boolean;
 }) {
   const content = (
-    <div className={`bg-white rounded-lg shadow p-4 border ${disabled ? 'opacity-50' : 'hover:shadow-md transition-shadow'}`}>
+    <div className={`bg-white dark:bg-gray-800 rounded-lg shadow p-4 border dark:border-gray-700 ${disabled ? 'opacity-50' : 'hover:shadow-md transition-shadow'}`}>
       <div className="flex items-start gap-3">
-        <div className="p-2 bg-gray-100 rounded-lg">
-          <Icon className="w-5 h-5 text-gray-600" />
+        <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
+          <Icon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
         </div>
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-gray-900">{title}</h3>
-          <p className="text-sm text-gray-500 truncate">{status}</p>
+          <h3 className="font-semibold text-gray-900 dark:text-white">{title}</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{status}</p>
           {warning && (
-            <p className="text-xs text-yellow-600 mt-1 flex items-center gap-1">
+            <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1 flex items-center gap-1">
               <AlertCircle className="w-3 h-3" />
               {warning}
             </p>
@@ -137,7 +137,7 @@ function ToolCard({
         </div>
       </div>
       <div className="mt-3 text-right">
-        <span className={`text-sm font-medium ${disabled ? 'text-gray-400' : 'text-blue-600'}`}>
+        <span className={`text-sm font-medium ${disabled ? 'text-gray-400 dark:text-gray-500' : 'text-blue-600 dark:text-blue-400'}`}>
           {actionLabel} &rarr;
         </span>
       </div>
@@ -221,10 +221,10 @@ export default function CohortHubPage() {
 
   if (status === 'loading' || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading cohort...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading cohort...</p>
         </div>
       </div>
     );
@@ -232,11 +232,11 @@ export default function CohortHubPage() {
 
   if (!session || !cohort) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-        <div className="bg-white rounded-lg shadow p-8 text-center">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
           <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Cohort Not Found</h2>
-          <Link href="/lab-management/admin/cohorts" className="text-blue-600 hover:underline">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Cohort Not Found</h2>
+          <Link href="/lab-management/admin/cohorts" className="text-blue-600 dark:text-blue-400 hover:underline">
             Back to Cohorts
           </Link>
         </div>
@@ -247,34 +247,34 @@ export default function CohortHubPage() {
   const missingLearningStyles = (stats?.totalStudents || 0) - (stats?.withLearningStyles || 0);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
-      <div className="bg-white shadow-sm">
+      <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-6">
-          <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-            <Link href="/" className="hover:text-blue-600 flex items-center gap-1">
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
+            <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1">
               <Home className="w-3 h-3" />
               Home
             </Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management" className="hover:text-blue-600">Lab Management</Link>
+            <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management/admin/cohorts" className="hover:text-blue-600">Cohorts</Link>
+            <Link href="/lab-management/admin/cohorts" className="hover:text-blue-600 dark:hover:text-blue-400">Cohorts</Link>
             <ChevronRight className="w-4 h-4" />
             <span>{cohort.program.abbreviation} Group {cohort.cohort_number}</span>
           </div>
 
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <GraduationCap className="w-8 h-8 text-blue-600" />
+              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                <GraduationCap className="w-8 h-8 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
                   {cohort.program.abbreviation} Group {cohort.cohort_number}
                 </h1>
-                <div className="flex items-center gap-3 text-sm text-gray-600">
-                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${cohort.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-400">
+                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${cohort.is_active ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300'}`}>
                     {cohort.is_active ? 'Active' : 'Inactive'}
                   </span>
                   {cohort.start_date && (
@@ -288,21 +288,21 @@ export default function CohortHubPage() {
             <div className="flex gap-2">
               <Link
                 href={`/lab-management/students/new?cohortId=${cohortId}`}
-                className="inline-flex items-center gap-2 px-3 py-2 bg-white border rounded-lg hover:bg-gray-50 text-sm"
+                className="inline-flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-700 border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 text-sm text-gray-700 dark:text-gray-200"
               >
                 <UserPlus className="w-4 h-4" />
                 Add Student
               </Link>
               <Link
                 href={`/lab-management/students/import?cohortId=${cohortId}`}
-                className="inline-flex items-center gap-2 px-3 py-2 bg-white border rounded-lg hover:bg-gray-50 text-sm"
+                className="inline-flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-700 border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 text-sm text-gray-700 dark:text-gray-200"
               >
                 <Upload className="w-4 h-4" />
                 Import
               </Link>
               <Link
                 href={`/lab-management/admin/cohorts`}
-                className="inline-flex items-center gap-2 px-3 py-2 bg-white border rounded-lg hover:bg-gray-50 text-sm"
+                className="inline-flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-700 border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 text-sm text-gray-700 dark:text-gray-200"
               >
                 <Edit2 className="w-4 h-4" />
                 Edit
@@ -314,9 +314,9 @@ export default function CohortHubPage() {
 
       <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
         {/* Data Completion Section */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 text-blue-600" />
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <BarChart3 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             Data Completion
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -341,8 +341,8 @@ export default function CohortHubPage() {
 
         {/* Cohort Tools Section */}
         <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <Settings className="w-5 h-5 text-gray-600" />
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <Settings className="w-5 h-5 text-gray-600 dark:text-gray-400" />
             Cohort Tools
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -384,11 +384,11 @@ export default function CohortHubPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Agency Breakdown */}
             {stats.agencyBreakdown.length > 0 && (
-              <div className="bg-white rounded-lg shadow p-6">
-                <h3 className="font-semibold text-gray-900 mb-3">Agencies</h3>
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Agencies</h3>
                 <div className="flex flex-wrap gap-2">
                   {stats.agencyBreakdown.map(({ name, count }) => (
-                    <span key={name} className="px-3 py-1 bg-gray-100 rounded-full text-sm">
+                    <span key={name} className="px-3 py-1 bg-gray-100 dark:bg-gray-700 rounded-full text-sm text-gray-700 dark:text-gray-300">
                       {name} <span className="font-semibold">({count})</span>
                     </span>
                   ))}
@@ -398,24 +398,24 @@ export default function CohortHubPage() {
 
             {/* Learning Style Breakdown */}
             {stats.learningStyleBreakdown.length > 0 && (
-              <div className="bg-white rounded-lg shadow p-6">
-                <h3 className="font-semibold text-gray-900 mb-3">Learning Styles</h3>
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Learning Styles</h3>
                 <div className="flex flex-wrap gap-2">
                   {stats.learningStyleBreakdown.map(({ style, count }) => {
                     const badge = STYLE_BADGES[style];
                     return (
-                      <span key={style} className={`px-3 py-1 rounded-full text-sm ${badge?.bg || 'bg-gray-100'} ${badge?.text || 'text-gray-700'}`}>
+                      <span key={style} className={`px-3 py-1 rounded-full text-sm ${badge?.bg || 'bg-gray-100 dark:bg-gray-700'} ${badge?.text || 'text-gray-700 dark:text-gray-300'}`}>
                         {style.charAt(0).toUpperCase() + style.slice(1)} <span className="font-semibold">({count})</span>
                       </span>
                     );
                   })}
                 </div>
                 {stats.socialStyleBreakdown.length > 0 && (
-                  <div className="mt-3 pt-3 border-t flex flex-wrap gap-2">
+                  <div className="mt-3 pt-3 border-t dark:border-gray-700 flex flex-wrap gap-2">
                     {stats.socialStyleBreakdown.map(({ style, count }) => {
                       const badge = STYLE_BADGES[style];
                       return (
-                        <span key={style} className={`px-3 py-1 rounded-full text-sm ${badge?.bg || 'bg-gray-100'} ${badge?.text || 'text-gray-700'}`}>
+                        <span key={style} className={`px-3 py-1 rounded-full text-sm ${badge?.bg || 'bg-gray-100 dark:bg-gray-700'} ${badge?.text || 'text-gray-700 dark:text-gray-300'}`}>
                           {style.charAt(0).toUpperCase() + style.slice(1)} <span className="font-semibold">({count})</span>
                         </span>
                       );
@@ -428,15 +428,15 @@ export default function CohortHubPage() {
         )}
 
         {/* Student List */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="p-4 border-b flex items-center justify-between">
-            <h2 className="font-semibold text-gray-900 flex items-center gap-2">
-              <Users className="w-5 h-5 text-gray-600" />
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+          <div className="p-4 border-b dark:border-gray-700 flex items-center justify-between">
+            <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <Users className="w-5 h-5 text-gray-600 dark:text-gray-400" />
               Students ({students.length})
             </h2>
             <Link
               href={`/lab-management/students?cohortId=${cohortId}`}
-              className="text-sm text-blue-600 hover:text-blue-800"
+              className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
             >
               View All &rarr;
             </Link>
@@ -444,8 +444,8 @@ export default function CohortHubPage() {
 
           {students.length === 0 ? (
             <div className="p-8 text-center">
-              <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500 mb-4">No students in this cohort yet</p>
+              <Users className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+              <p className="text-gray-500 dark:text-gray-400 mb-4">No students in this cohort yet</p>
               <Link
                 href={`/lab-management/students/new?cohortId=${cohortId}`}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
@@ -455,21 +455,21 @@ export default function CohortHubPage() {
               </Link>
             </div>
           ) : (
-            <div className="divide-y max-h-96 overflow-y-auto">
+            <div className="divide-y dark:divide-gray-700 max-h-96 overflow-y-auto">
               {students.map((student) => {
                 const ls = getLearningStyle(student.id);
                 return (
                   <Link
                     key={student.id}
                     href={`/lab-management/students/${student.id}`}
-                    className="flex items-center gap-4 p-4 hover:bg-gray-50"
+                    className="flex items-center gap-4 p-4 hover:bg-gray-50 dark:hover:bg-gray-700"
                   >
                     {/* Photo */}
-                    <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
+                    <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 flex-shrink-0">
                       {student.photo_url ? (
                         <img src={student.photo_url} alt="" className="w-full h-full object-cover" />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm font-medium">
+                        <div className="w-full h-full flex items-center justify-center text-gray-400 dark:text-gray-500 text-sm font-medium">
                           {student.first_name[0]}{student.last_name[0]}
                         </div>
                       )}
@@ -477,11 +477,11 @@ export default function CohortHubPage() {
 
                     {/* Name & Agency */}
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium text-gray-900">
+                      <div className="font-medium text-gray-900 dark:text-white">
                         {student.first_name} {student.last_name}
                       </div>
                       {student.agency && (
-                        <div className="text-sm text-gray-500">{student.agency}</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">{student.agency}</div>
                       )}
                     </div>
 
@@ -501,7 +501,7 @@ export default function CohortHubPage() {
                           )}
                         </>
                       ) : (
-                        <span className="text-xs text-gray-400 px-2 py-1 bg-gray-100 rounded">
+                        <span className="text-xs text-gray-400 dark:text-gray-500 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">
                           Not assessed
                         </span>
                       )}
@@ -512,11 +512,11 @@ export default function CohortHubPage() {
                       {student.photo_url ? (
                         <CheckCircle className="w-4 h-4 text-green-500" />
                       ) : (
-                        <Camera className="w-4 h-4 text-gray-300" />
+                        <Camera className="w-4 h-4 text-gray-300 dark:text-gray-600" />
                       )}
                     </div>
 
-                    <ChevronRight className="w-4 h-4 text-gray-400" />
+                    <ChevronRight className="w-4 h-4 text-gray-400 dark:text-gray-500" />
                   </Link>
                 );
               })}

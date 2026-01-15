@@ -76,10 +76,10 @@ export default function MyCertificationsPage() {
 
   if (status === 'loading' || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-700">Loading certifications...</p>
+          <p className="mt-4 text-gray-700 dark:text-gray-300">Loading certifications...</p>
         </div>
       </div>
     );
@@ -89,11 +89,11 @@ export default function MyCertificationsPage() {
 
   if (!labUser) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="bg-white rounded-lg shadow p-8 text-center max-w-md">
-          <Award className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Account Not Found</h2>
-          <p className="text-gray-600 mb-4">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center max-w-md">
+          <Award className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Account Not Found</h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">
             Your account hasn&apos;t been set up yet. Please contact an administrator.
           </p>
           <Link
@@ -108,25 +108,25 @@ export default function MyCertificationsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
-      <div className="bg-white shadow-sm">
+      <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-4xl mx-auto px-4 py-6">
-          <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-            <Link href="/" className="hover:text-blue-600 flex items-center gap-1">
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
+            <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1">
               <Home className="w-3 h-3" />
               Home
             </Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management" className="hover:text-blue-600">Lab Management</Link>
+            <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
             <ChevronRight className="w-4 h-4" />
             <span>My Certifications</span>
           </div>
           <div className="flex items-center gap-3">
-            <Award className="w-8 h-8 text-purple-600" />
+            <Award className="w-8 h-8 text-purple-600 dark:text-purple-400" />
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">My Certifications</h1>
-              <p className="text-gray-600">Track your certifications and CE hours</p>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">My Certifications</h1>
+              <p className="text-gray-600 dark:text-gray-400">Track your certifications and CE hours</p>
             </div>
           </div>
         </div>

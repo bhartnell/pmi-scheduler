@@ -91,8 +91,8 @@ export default function SettingsPage() {
 
   if (status === 'loading' || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400"></div>
       </div>
     );
   }
@@ -100,7 +100,7 @@ export default function SettingsPage() {
   if (!session || !currentUser) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Toast */}
       {toast && (
         <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg ${
@@ -111,25 +111,25 @@ export default function SettingsPage() {
       )}
 
       {/* Header */}
-      <div className="bg-white shadow-sm">
+      <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-            <Link href="/" className="hover:text-blue-600 flex items-center gap-1">
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
+            <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1">
               <Home className="w-3 h-3" />
               Home
             </Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/admin" className="hover:text-blue-600">Admin</Link>
+            <Link href="/admin" className="hover:text-blue-600 dark:hover:text-blue-400">Admin</Link>
             <ChevronRight className="w-4 h-4" />
             <span>Settings</span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-red-100 rounded-lg">
-              <Settings className="w-6 h-6 text-red-600" />
+            <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
+              <Settings className="w-6 h-6 text-red-600 dark:text-red-400" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">System Settings</h1>
-              <p className="text-gray-600">Superadmin configuration options</p>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">System Settings</h1>
+              <p className="text-gray-600 dark:text-gray-400">Superadmin configuration options</p>
             </div>
           </div>
         </div>
@@ -137,64 +137,64 @@ export default function SettingsPage() {
 
       <main className="max-w-4xl mx-auto px-4 py-6 space-y-6">
         {/* Superadmin Warning */}
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <div className="flex items-center gap-2 text-red-800">
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+          <div className="flex items-center gap-2 text-red-800 dark:text-red-400">
             <Shield className="w-5 h-5" />
             <span className="font-medium">Superadmin Access Only</span>
           </div>
-          <p className="text-sm text-red-700 mt-1">
+          <p className="text-sm text-red-700 dark:text-red-500 mt-1">
             Changes made here affect the entire system. Please exercise caution.
           </p>
         </div>
 
         {/* System Stats */}
         {stats && (
-          <div className="bg-white rounded-lg shadow">
-            <div className="px-4 py-3 border-b flex items-center gap-2">
-              <Database className="w-5 h-5 text-gray-500" />
-              <h2 className="font-semibold text-gray-900">System Statistics</h2>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+            <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+              <Database className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+              <h2 className="font-semibold text-gray-900 dark:text-white">System Statistics</h2>
             </div>
             <div className="p-4 grid grid-cols-2 md:grid-cols-5 gap-4">
               <div className="text-center">
-                <p className="text-2xl font-bold text-gray-900">{stats.users}</p>
-                <p className="text-sm text-gray-500">Users</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.users}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Users</p>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold text-gray-900">{stats.scenarios}</p>
-                <p className="text-sm text-gray-500">Scenarios</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.scenarios}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Scenarios</p>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold text-gray-900">{stats.students}</p>
-                <p className="text-sm text-gray-500">Students</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.students}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Students</p>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold text-gray-900">{stats.labDays}</p>
-                <p className="text-sm text-gray-500">Lab Days</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.labDays}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Lab Days</p>
               </div>
               <div className="text-center">
-                <p className="text-2xl font-bold text-gray-900">{stats.certifications}</p>
-                <p className="text-sm text-gray-500">Certifications</p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.certifications}</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Certifications</p>
               </div>
             </div>
           </div>
         )}
 
         {/* Protected Accounts */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="px-4 py-3 border-b flex items-center gap-2">
-            <Shield className="w-5 h-5 text-gray-500" />
-            <h2 className="font-semibold text-gray-900">Protected Accounts</h2>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+          <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+            <Shield className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+            <h2 className="font-semibold text-gray-900 dark:text-white">Protected Accounts</h2>
           </div>
           <div className="p-4">
-            <p className="text-sm text-gray-600 mb-3">
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
               These accounts have permanent superadmin status and cannot be modified or deleted.
             </p>
             <div className="space-y-2">
               {PROTECTED_SUPERADMINS.map(email => (
-                <div key={email} className="flex items-center gap-2 p-2 bg-gray-50 rounded">
-                  <Shield className="w-4 h-4 text-red-500" />
-                  <span className="text-sm text-gray-700">{email}</span>
-                  <span className="ml-auto text-xs text-gray-500">Protected</span>
+                <div key={email} className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                  <Shield className="w-4 h-4 text-red-500 dark:text-red-400" />
+                  <span className="text-sm text-gray-700 dark:text-gray-300">{email}</span>
+                  <span className="ml-auto text-xs text-gray-500 dark:text-gray-500">Protected</span>
                 </div>
               ))}
             </div>
@@ -202,19 +202,19 @@ export default function SettingsPage() {
         </div>
 
         {/* Danger Zone */}
-        <div className="bg-white rounded-lg shadow border-2 border-red-200">
-          <div className="px-4 py-3 border-b bg-red-50 flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-red-600" />
-            <h2 className="font-semibold text-red-900">Danger Zone</h2>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow border-2 border-red-200 dark:border-red-800">
+          <div className="px-4 py-3 border-b border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30 flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
+            <h2 className="font-semibold text-red-900 dark:text-red-400">Danger Zone</h2>
           </div>
           <div className="p-4 space-y-4">
-            <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+            <div className="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
               <div>
-                <h3 className="font-medium text-gray-900">Export Data</h3>
-                <p className="text-sm text-gray-500">Download all system data as JSON</p>
+                <h3 className="font-medium text-gray-900 dark:text-white">Export Data</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Download all system data as JSON</p>
               </div>
               <button
-                className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+                className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
                 onClick={() => showToast('Export feature coming soon', 'success')}
               >
                 <Download className="w-4 h-4" />
@@ -222,13 +222,13 @@ export default function SettingsPage() {
               </button>
             </div>
 
-            <div className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+            <div className="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-lg">
               <div>
-                <h3 className="font-medium text-gray-900">Clear Expired Sessions</h3>
-                <p className="text-sm text-gray-500">Remove expired guest access entries</p>
+                <h3 className="font-medium text-gray-900 dark:text-white">Clear Expired Sessions</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Remove expired guest access entries</p>
               </div>
               <button
-                className="flex items-center gap-2 px-3 py-1.5 bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200"
+                className="flex items-center gap-2 px-3 py-1.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded hover:bg-yellow-200 dark:hover:bg-yellow-900/50"
                 onClick={() => showToast('Cleanup feature coming soon', 'success')}
               >
                 <RefreshCw className="w-4 h-4" />
@@ -236,13 +236,13 @@ export default function SettingsPage() {
               </button>
             </div>
 
-            <div className="flex items-center justify-between p-3 border border-red-200 rounded-lg bg-red-50">
+            <div className="flex items-center justify-between p-3 border border-red-200 dark:border-red-800 rounded-lg bg-red-50 dark:bg-red-900/20">
               <div>
-                <h3 className="font-medium text-red-900">Purge Old Data</h3>
-                <p className="text-sm text-red-700">Permanently delete data older than 2 years</p>
+                <h3 className="font-medium text-red-900 dark:text-red-400">Purge Old Data</h3>
+                <p className="text-sm text-red-700 dark:text-red-500">Permanently delete data older than 2 years</p>
               </div>
               <button
-                className="flex items-center gap-2 px-3 py-1.5 bg-red-100 text-red-700 rounded hover:bg-red-200"
+                className="flex items-center gap-2 px-3 py-1.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded hover:bg-red-200 dark:hover:bg-red-900/50"
                 onClick={() => showToast('This action is disabled for safety', 'error')}
               >
                 <Trash2 className="w-4 h-4" />
