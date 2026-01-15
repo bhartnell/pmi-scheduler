@@ -373,6 +373,26 @@ export default function InternshipTrackerPage() {
     setSaving(false);
   };
 
+  // Calculate milestone statuses for each internship (defined early so it can be used in filters)
+  const getInternshipMilestones = (internship: Internship) => {
+    const p1Status = getMilestoneStatus(internship.phase_1_eval_scheduled, internship.phase_1_eval_completed);
+    const p2Status = getMilestoneStatus(internship.phase_2_eval_scheduled, internship.phase_2_eval_completed);
+    const endStatus = getMilestoneStatus(internship.expected_end_date, internship.status === 'completed');
+
+    const isOverdue = p1Status === 'overdue' || p2Status === 'overdue' || endStatus === 'overdue';
+    const isDueThisWeek = p1Status === 'due_week' || p2Status === 'due_week' || endStatus === 'due_week';
+    const isIncomplete = internship.status !== 'completed' && internship.status !== 'withdrawn';
+
+    // Check pre-requisites completion
+    const preReqsComplete = internship.liability_form_completed &&
+      internship.background_check_completed &&
+      internship.drug_screen_completed &&
+      internship.immunizations_verified &&
+      internship.cpr_card_verified;
+
+    return { p1Status, p2Status, endStatus, isOverdue, isDueThisWeek, isIncomplete, preReqsComplete };
+  };
+
   // Build combined student rows for PM cohorts (spreadsheet view)
   const studentRows: StudentRow[] = isPMCohort
     ? cohortStudents.map(student => {
@@ -468,26 +488,6 @@ export default function InternshipTrackerPage() {
     phase2: internships.filter(i => i.current_phase === 'phase_2_evaluation').length,
     atRisk: internships.filter(i => i.status === 'at_risk').length,
     completed: internships.filter(i => i.status === 'completed').length,
-  };
-
-  // Calculate milestone statuses for each internship
-  const getInternshipMilestones = (internship: Internship) => {
-    const p1Status = getMilestoneStatus(internship.phase_1_eval_scheduled, internship.phase_1_eval_completed);
-    const p2Status = getMilestoneStatus(internship.phase_2_eval_scheduled, internship.phase_2_eval_completed);
-    const endStatus = getMilestoneStatus(internship.expected_end_date, internship.status === 'completed');
-
-    const isOverdue = p1Status === 'overdue' || p2Status === 'overdue' || endStatus === 'overdue';
-    const isDueThisWeek = p1Status === 'due_week' || p2Status === 'due_week' || endStatus === 'due_week';
-    const isIncomplete = internship.status !== 'completed' && internship.status !== 'withdrawn';
-
-    // Check pre-requisites completion
-    const preReqsComplete = internship.liability_form_completed &&
-      internship.background_check_completed &&
-      internship.drug_screen_completed &&
-      internship.immunizations_verified &&
-      internship.cpr_card_verified;
-
-    return { p1Status, p2Status, endStatus, isOverdue, isDueThisWeek, isIncomplete, preReqsComplete };
   };
 
   // Calculate alerts
