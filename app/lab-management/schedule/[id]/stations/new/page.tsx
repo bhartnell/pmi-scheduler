@@ -37,7 +37,13 @@ interface Scenario {
   id: string;
   title: string;
   category: string;
+  subcategory: string | null;
   difficulty: string;
+  applicable_programs: string[];
+  chief_complaint: string | null;
+  patient_name: string | null;
+  patient_age: string | null;
+  estimated_duration: number | null;
 }
 
 interface Skill {
@@ -83,6 +89,13 @@ export default function NewStationPage() {
   // Skills modal
   const [showSkillsModal, setShowSkillsModal] = useState(false);
   const [skillSearch, setSkillSearch] = useState('');
+
+  // Scenario modal
+  const [showScenarioModal, setShowScenarioModal] = useState(false);
+  const [scenarioSearch, setScenarioSearch] = useState('');
+  const [scenarioFilterCategory, setScenarioFilterCategory] = useState('');
+  const [scenarioFilterDifficulty, setScenarioFilterDifficulty] = useState('');
+  const [scenarioFilterProgram, setScenarioFilterProgram] = useState('');
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -247,6 +260,45 @@ export default function NewStationPage() {
     return acc;
   }, {} as Record<string, Skill[]>);
 
+  // Get unique scenario categories and difficulties for filters
+  const scenarioCategories = [...new Set(scenarios.map(s => s.category).filter(Boolean))].sort();
+  const scenarioDifficulties = ['basic', 'intermediate', 'advanced'];
+  const scenarioPrograms = ['EMT', 'AEMT', 'Paramedic'];
+
+  // Filter scenarios based on search and filters
+  const filteredScenarios = scenarios.filter(scenario => {
+    // Search filter - search across title, chief_complaint
+    const searchLower = scenarioSearch.toLowerCase();
+    const matchesSearch = !scenarioSearch ||
+      scenario.title.toLowerCase().includes(searchLower) ||
+      (scenario.chief_complaint && scenario.chief_complaint.toLowerCase().includes(searchLower)) ||
+      (scenario.category && scenario.category.toLowerCase().includes(searchLower)) ||
+      (scenario.patient_name && scenario.patient_name.toLowerCase().includes(searchLower));
+
+    // Category filter
+    const matchesCategory = !scenarioFilterCategory || scenario.category === scenarioFilterCategory;
+
+    // Difficulty filter
+    const matchesDifficulty = !scenarioFilterDifficulty || scenario.difficulty === scenarioFilterDifficulty;
+
+    // Program filter - check if applicable_programs includes the selected program
+    const matchesProgram = !scenarioFilterProgram ||
+      (scenario.applicable_programs && scenario.applicable_programs.includes(scenarioFilterProgram));
+
+    return matchesSearch && matchesCategory && matchesDifficulty && matchesProgram;
+  });
+
+  // Group filtered scenarios by category for display
+  const scenariosByCategory = filteredScenarios.reduce((acc, scenario) => {
+    const cat = scenario.category || 'Uncategorized';
+    if (!acc[cat]) acc[cat] = [];
+    acc[cat].push(scenario);
+    return acc;
+  }, {} as Record<string, Scenario[]>);
+
+  // Get selected scenario details
+  const selectedScenario = scenarios.find(s => s.id === scenarioId);
+
   if (status === 'loading' || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -362,18 +414,37 @@ export default function NewStationPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Scenario
                 </label>
-                <select
-                  value={scenarioId}
-                  onChange={(e) => setScenarioId(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                <button
+                  type="button"
+                  onClick={() => setShowScenarioModal(true)}
+                  className="w-full px-3 py-2 border rounded-lg text-left hover:bg-gray-50 transition-colors"
                 >
-                  <option value="">Select scenario...</option>
-                  {scenarios.map(scenario => (
-                    <option key={scenario.id} value={scenario.id}>
-                      {scenario.title} ({scenario.category} - {scenario.difficulty})
-                    </option>
-                  ))}
-                </select>
+                  {selectedScenario ? (
+                    <div>
+                      <div className="font-medium text-gray-900">{selectedScenario.title}</div>
+                      <div className="text-sm text-gray-500 flex items-center gap-2 mt-1">
+                        <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs">
+                          {selectedScenario.category}
+                        </span>
+                        <span className={`px-2 py-0.5 rounded text-xs ${
+                          selectedScenario.difficulty === 'basic' ? 'bg-green-100 text-green-700' :
+                          selectedScenario.difficulty === 'intermediate' ? 'bg-yellow-100 text-yellow-700' :
+                          'bg-red-100 text-red-700'
+                        }`}>
+                          {selectedScenario.difficulty}
+                        </span>
+                        {selectedScenario.chief_complaint && (
+                          <span className="text-gray-400">• {selectedScenario.chief_complaint}</span>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 text-gray-500">
+                      <Search className="w-4 h-4" />
+                      <span>Search and select a scenario... ({scenarios.length} available)</span>
+                    </div>
+                  )}
+                </button>
               </div>
             )}
 
@@ -627,6 +698,212 @@ export default function NewStationPage() {
               >
                 Done ({selectedSkills.length} skills selected)
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Scenario Selection Modal */}
+      {showScenarioModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[85vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="p-4 border-b flex items-center justify-between flex-shrink-0">
+              <div>
+                <h3 className="font-semibold text-gray-900">Select Scenario</h3>
+                <p className="text-sm text-gray-500">{filteredScenarios.length} of {scenarios.length} scenarios</p>
+              </div>
+              <button
+                onClick={() => setShowScenarioModal(false)}
+                className="p-1 hover:bg-gray-100 rounded"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Search and Filters */}
+            <div className="p-4 border-b space-y-3 flex-shrink-0">
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  value={scenarioSearch}
+                  onChange={(e) => setScenarioSearch(e.target.value)}
+                  placeholder="Search by title, chief complaint, patient name..."
+                  className="w-full pl-10 pr-4 py-2 border rounded-lg text-gray-900 bg-white"
+                  autoFocus
+                />
+              </div>
+
+              {/* Filter Pills */}
+              <div className="flex flex-wrap gap-2">
+                {/* Program Filter */}
+                <select
+                  value={scenarioFilterProgram}
+                  onChange={(e) => setScenarioFilterProgram(e.target.value)}
+                  className="px-3 py-1.5 border rounded-lg text-sm text-gray-700 bg-white"
+                >
+                  <option value="">All Programs</option>
+                  {scenarioPrograms.map(prog => (
+                    <option key={prog} value={prog}>{prog}</option>
+                  ))}
+                </select>
+
+                {/* Category Filter */}
+                <select
+                  value={scenarioFilterCategory}
+                  onChange={(e) => setScenarioFilterCategory(e.target.value)}
+                  className="px-3 py-1.5 border rounded-lg text-sm text-gray-700 bg-white"
+                >
+                  <option value="">All Categories</option>
+                  {scenarioCategories.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+
+                {/* Difficulty Filter */}
+                <select
+                  value={scenarioFilterDifficulty}
+                  onChange={(e) => setScenarioFilterDifficulty(e.target.value)}
+                  className="px-3 py-1.5 border rounded-lg text-sm text-gray-700 bg-white"
+                >
+                  <option value="">All Difficulties</option>
+                  {scenarioDifficulties.map(diff => (
+                    <option key={diff} value={diff} className="capitalize">{diff.charAt(0).toUpperCase() + diff.slice(1)}</option>
+                  ))}
+                </select>
+
+                {/* Clear Filters */}
+                {(scenarioSearch || scenarioFilterProgram || scenarioFilterCategory || scenarioFilterDifficulty) && (
+                  <button
+                    onClick={() => {
+                      setScenarioSearch('');
+                      setScenarioFilterProgram('');
+                      setScenarioFilterCategory('');
+                      setScenarioFilterDifficulty('');
+                    }}
+                    className="px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-lg"
+                  >
+                    Clear Filters
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Scenarios List */}
+            <div className="flex-1 overflow-y-auto p-4">
+              {filteredScenarios.length === 0 ? (
+                <div className="text-center py-8">
+                  <Stethoscope className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500">No scenarios match your filters</p>
+                  <button
+                    onClick={() => {
+                      setScenarioSearch('');
+                      setScenarioFilterProgram('');
+                      setScenarioFilterCategory('');
+                      setScenarioFilterDifficulty('');
+                    }}
+                    className="mt-2 text-sm text-blue-600 hover:text-blue-800"
+                  >
+                    Clear all filters
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {Object.entries(scenariosByCategory).sort(([a], [b]) => a.localeCompare(b)).map(([category, categoryScenarios]) => (
+                    <div key={category}>
+                      <h4 className="text-sm font-medium text-gray-700 mb-2 sticky top-0 bg-white py-1">
+                        {category} ({categoryScenarios.length})
+                      </h4>
+                      <div className="space-y-1">
+                        {categoryScenarios.map(scenario => {
+                          const isSelected = scenarioId === scenario.id;
+                          return (
+                            <button
+                              key={scenario.id}
+                              type="button"
+                              onClick={() => {
+                                setScenarioId(scenario.id);
+                                setShowScenarioModal(false);
+                              }}
+                              className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                                isSelected
+                                  ? 'bg-purple-50 border-purple-300'
+                                  : 'hover:bg-gray-50 border-gray-200'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-medium text-gray-900">{scenario.title}</div>
+                                  {scenario.chief_complaint && (
+                                    <div className="text-sm text-gray-600 mt-0.5">
+                                      CC: {scenario.chief_complaint}
+                                    </div>
+                                  )}
+                                  {scenario.patient_name && scenario.patient_age && (
+                                    <div className="text-xs text-gray-500 mt-0.5">
+                                      Patient: {scenario.patient_name}, {scenario.patient_age}
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                    scenario.difficulty === 'basic' ? 'bg-green-100 text-green-700' :
+                                    scenario.difficulty === 'intermediate' ? 'bg-yellow-100 text-yellow-700' :
+                                    'bg-red-100 text-red-700'
+                                  }`}>
+                                    {scenario.difficulty}
+                                  </span>
+                                  {scenario.estimated_duration && (
+                                    <span className="text-xs text-gray-400">
+                                      ~{scenario.estimated_duration} min
+                                    </span>
+                                  )}
+                                  <div className="flex gap-0.5">
+                                    {scenario.applicable_programs?.map(prog => (
+                                      <span key={prog} className="text-xs px-1 py-0.5 bg-gray-100 text-gray-600 rounded">
+                                        {prog}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t flex justify-between items-center flex-shrink-0">
+              <div className="text-sm text-gray-500">
+                {selectedScenario ? (
+                  <span>Selected: <strong>{selectedScenario.title}</strong></span>
+                ) : (
+                  <span>No scenario selected</span>
+                )}
+              </div>
+              <div className="flex gap-2">
+                {selectedScenario && (
+                  <button
+                    onClick={() => setScenarioId('')}
+                    className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                  >
+                    Clear Selection
+                  </button>
+                )}
+                <button
+                  onClick={() => setShowScenarioModal(false)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  {selectedScenario ? 'Confirm Selection' : 'Close'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
