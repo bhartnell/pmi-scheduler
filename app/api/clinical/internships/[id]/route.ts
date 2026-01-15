@@ -76,24 +76,21 @@ export async function GET(
     }
     console.log('Fetched internship data:', data ? 'found' : 'not found');
 
-    // Also fetch meetings for this internship (table may not exist yet)
-    let meetings: any[] = [];
-    try {
-      const { data: meetingsData } = await supabase
-        .from('internship_meetings')
-        .select('*')
-        .eq('student_internship_id', id)
-        .order('scheduled_date', { ascending: false });
-      meetings = meetingsData || [];
-    } catch (e) {
-      // Table may not exist yet - that's ok
-      console.log('internship_meetings table not available');
+    // Also fetch meetings for this internship
+    const { data: meetings, error: meetingsError } = await supabase
+      .from('internship_meetings')
+      .select('*')
+      .eq('student_internship_id', id)
+      .order('scheduled_date', { ascending: false });
+
+    if (meetingsError) {
+      console.log('Error fetching meetings:', meetingsError.message);
     }
 
     return NextResponse.json({
       success: true,
       internship: data,
-      meetings
+      meetings: meetings || []
     });
   } catch (error) {
     console.error('Error fetching internship:', error);

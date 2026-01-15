@@ -49,15 +49,14 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Fetch all related data in parallel (some tables may not exist yet)
-    let internships: any[] = [];
-    let complianceDocs: any[] = [];
-    let clinicalHours: any[] = [];
-    let mceModules: any[] = [];
-
-    // Internships query
-    try {
-      const { data } = await supabase
+    // Fetch all related data in parallel
+    const [
+      internshipsResult,
+      complianceDocsResult,
+      clinicalHoursResult,
+      mceModulesResult,
+    ] = await Promise.all([
+      supabase
         .from('student_internships')
         .select(`
           *,
@@ -65,44 +64,31 @@ export async function GET(request: NextRequest) {
           field_preceptors (first_name, last_name),
           agencies (name, abbreviation)
         `)
-        .in('student_id', studentIds);
-      internships = data || [];
-    } catch (e) {
-      console.log('student_internships query failed:', e);
-    }
-
-    // Compliance docs query
-    try {
-      const { data } = await supabase
+        .in('student_id', studentIds),
+      supabase
         .from('student_compliance_docs')
         .select('*')
-        .in('student_id', studentIds);
-      complianceDocs = data || [];
-    } catch (e) {
-      console.log('student_compliance_docs query failed:', e);
-    }
-
-    // Clinical hours query
-    try {
-      const { data } = await supabase
+        .in('student_id', studentIds),
+      supabase
         .from('student_clinical_hours')
         .select('*')
-        .in('student_id', studentIds);
-      clinicalHours = data || [];
-    } catch (e) {
-      console.log('student_clinical_hours query failed:', e);
-    }
-
-    // MCE modules query
-    try {
-      const { data } = await supabase
+        .in('student_id', studentIds),
+      supabase
         .from('student_mce_modules')
         .select('*')
-        .in('student_id', studentIds);
-      mceModules = data || [];
-    } catch (e) {
-      console.log('student_mce_modules query failed:', e);
-    }
+        .in('student_id', studentIds),
+    ]);
+
+    // Log any errors but continue with available data
+    if (internshipsResult.error) console.error('Internships query error:', internshipsResult.error.message);
+    if (complianceDocsResult.error) console.error('Compliance docs query error:', complianceDocsResult.error.message);
+    if (clinicalHoursResult.error) console.error('Clinical hours query error:', clinicalHoursResult.error.message);
+    if (mceModulesResult.error) console.error('MCE modules query error:', mceModulesResult.error.message);
+
+    const internships = internshipsResult.data || [];
+    const complianceDocs = complianceDocsResult.data || [];
+    const clinicalHours = clinicalHoursResult.data || [];
+    const mceModules = mceModulesResult.data || [];
 
     // Calculate compliance stats
     const REQUIRED_DOCS = ['mmr', 'vzv', 'hepb', 'tdap', 'covid', 'tb', 'physical', 'insurance', 'bls', 'flu', 'hospital_orient', 'background', 'drug_test'];
