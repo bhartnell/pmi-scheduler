@@ -1,0 +1,194 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+import { getServerSession } from 'next-auth';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getServerSession();
+    if (!session?.user?.email) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { id } = await params;
+
+    const { data, error } = await supabase
+      .from('student_internships')
+      .select(`
+        *,
+        students (
+          id,
+          first_name,
+          last_name,
+          email,
+          phone,
+          photo_url,
+          agency
+        ),
+        cohorts (
+          id,
+          cohort_number,
+          programs (
+            id,
+            name,
+            abbreviation
+          )
+        ),
+        field_preceptors (
+          id,
+          first_name,
+          last_name,
+          email,
+          phone,
+          station,
+          agency_name,
+          normal_schedule
+        ),
+        agencies (
+          id,
+          name,
+          abbreviation,
+          phone
+        )
+      `)
+      .eq('id', id)
+      .single();
+
+    if (error) throw error;
+
+    // Also fetch meetings for this internship
+    const { data: meetings } = await supabase
+      .from('internship_meetings')
+      .select('*')
+      .eq('student_internship_id', id)
+      .order('scheduled_date', { ascending: false });
+
+    return NextResponse.json({
+      success: true,
+      internship: data,
+      meetings: meetings || []
+    });
+  } catch (error) {
+    console.error('Error fetching internship:', error);
+    return NextResponse.json({ success: false, error: 'Failed to fetch internship' }, { status: 500 });
+  }
+}
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getServerSession();
+    if (!session?.user?.email) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { id } = await params;
+    const body = await request.json();
+
+    const updateData: Record<string, any> = {
+      updated_at: new Date().toISOString(),
+    };
+
+    // Basic fields
+    if (body.preceptor_id !== undefined) updateData.preceptor_id = body.preceptor_id || null;
+    if (body.shift_type !== undefined) updateData.shift_type = body.shift_type;
+    if (body.current_phase !== undefined) updateData.current_phase = body.current_phase;
+    if (body.status !== undefined) updateData.status = body.status;
+    if (body.notes !== undefined) updateData.notes = body.notes?.trim() || null;
+
+    // Dates
+    if (body.placement_date !== undefined) updateData.placement_date = body.placement_date || null;
+    if (body.orientation_date !== undefined) updateData.orientation_date = body.orientation_date || null;
+    if (body.internship_start_date !== undefined) updateData.internship_start_date = body.internship_start_date || null;
+    if (body.expected_end_date !== undefined) updateData.expected_end_date = body.expected_end_date || null;
+    if (body.actual_end_date !== undefined) updateData.actual_end_date = body.actual_end_date || null;
+
+    // Phase 1
+    if (body.phase_1_start_date !== undefined) updateData.phase_1_start_date = body.phase_1_start_date || null;
+    if (body.phase_1_end_date !== undefined) updateData.phase_1_end_date = body.phase_1_end_date || null;
+    if (body.phase_1_eval_scheduled !== undefined) updateData.phase_1_eval_scheduled = body.phase_1_eval_scheduled || null;
+    if (body.phase_1_eval_completed !== undefined) updateData.phase_1_eval_completed = body.phase_1_eval_completed;
+    if (body.phase_1_eval_notes !== undefined) updateData.phase_1_eval_notes = body.phase_1_eval_notes?.trim() || null;
+
+    // Phase 2
+    if (body.phase_2_start_date !== undefined) updateData.phase_2_start_date = body.phase_2_start_date || null;
+    if (body.phase_2_end_date !== undefined) updateData.phase_2_end_date = body.phase_2_end_date || null;
+    if (body.phase_2_eval_scheduled !== undefined) updateData.phase_2_eval_scheduled = body.phase_2_eval_scheduled || null;
+    if (body.phase_2_eval_completed !== undefined) updateData.phase_2_eval_completed = body.phase_2_eval_completed;
+    if (body.phase_2_eval_notes !== undefined) updateData.phase_2_eval_notes = body.phase_2_eval_notes?.trim() || null;
+
+    // Closeout
+    if (body.closeout_meeting_date !== undefined) updateData.closeout_meeting_date = body.closeout_meeting_date || null;
+    if (body.closeout_completed !== undefined) updateData.closeout_completed = body.closeout_completed;
+
+    // Handle agency update
+    if (body.agency_id !== undefined) {
+      updateData.agency_id = body.agency_id || null;
+      if (body.agency_id) {
+        const { data: agency } = await supabase
+          .from('agencies')
+          .select('name')
+          .eq('id', body.agency_id)
+          .single();
+        updateData.agency_name = agency?.name || null;
+      } else {
+        updateData.agency_name = null;
+      }
+    }
+
+    const { data, error } = await supabase
+      .from('student_internships')
+      .update(updateData)
+      .eq('id', id)
+      .select(`
+        *,
+        students (id, first_name, last_name, email),
+        cohorts (id, cohort_number, programs (id, name, abbreviation)),
+        field_preceptors (id, first_name, last_name, agency_name),
+        agencies (id, name, abbreviation)
+      `)
+      .single();
+
+    if (error) throw error;
+
+    return NextResponse.json({ success: true, internship: data });
+  } catch (error) {
+    console.error('Error updating internship:', error);
+    return NextResponse.json({ success: false, error: 'Failed to update internship' }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await getServerSession();
+    if (!session?.user?.email) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { id } = await params;
+
+    const { error } = await supabase
+      .from('student_internships')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting internship:', error);
+    return NextResponse.json({ success: false, error: 'Failed to delete internship' }, { status: 500 });
+  }
+}

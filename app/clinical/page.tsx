@@ -22,6 +22,10 @@ import { canAccessClinical, type Role } from '@/lib/permissions';
 interface DashboardStats {
   activePreceptors: number;
   totalAgencies: number;
+  inPhase1: number;
+  inPhase2: number;
+  atRisk: number;
+  totalInternships: number;
 }
 
 export default function ClinicalDashboardPage() {
@@ -33,6 +37,10 @@ export default function ClinicalDashboardPage() {
   const [stats, setStats] = useState<DashboardStats>({
     activePreceptors: 0,
     totalAgencies: 0,
+    inPhase1: 0,
+    inPhase2: 0,
+    atRisk: 0,
+    totalInternships: 0,
   });
 
   useEffect(() => {
@@ -64,17 +72,28 @@ export default function ClinicalDashboardPage() {
       }
 
       // Fetch stats
-      const [preceptorsRes, agenciesRes] = await Promise.all([
+      const [preceptorsRes, agenciesRes, internshipsRes] = await Promise.all([
         fetch('/api/clinical/preceptors?activeOnly=true'),
         fetch('/api/clinical/agencies'),
+        fetch('/api/clinical/internships'),
       ]);
 
       const preceptorsData = await preceptorsRes.json();
       const agenciesData = await agenciesRes.json();
+      const internshipsData = await internshipsRes.json();
+
+      const internships = internshipsData.internships || [];
+      const inPhase1 = internships.filter((i: any) => i.current_phase === 'phase_1_mentorship').length;
+      const inPhase2 = internships.filter((i: any) => i.current_phase === 'phase_2_evaluation').length;
+      const atRisk = internships.filter((i: any) => i.status === 'at_risk').length;
 
       setStats({
         activePreceptors: preceptorsData.preceptors?.length || 0,
         totalAgencies: agenciesData.agencies?.length || 0,
+        inPhase1,
+        inPhase2,
+        atRisk,
+        totalInternships: internships.length,
       });
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -150,7 +169,7 @@ export default function ClinicalDashboardPage() {
                 <TrendingUp className="w-5 h-5 text-purple-600 dark:text-purple-400" />
               </div>
               <div>
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">-</div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.inPhase1}</div>
                 <div className="text-sm text-gray-500 dark:text-gray-400">In Phase 1</div>
               </div>
             </div>
@@ -162,7 +181,7 @@ export default function ClinicalDashboardPage() {
                 <Clock className="w-5 h-5 text-green-600 dark:text-green-400" />
               </div>
               <div>
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">-</div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.inPhase2}</div>
                 <div className="text-sm text-gray-500 dark:text-gray-400">In Phase 2</div>
               </div>
             </div>
@@ -193,10 +212,13 @@ export default function ClinicalDashboardPage() {
             </div>
           </Link>
 
-          {/* Internship Tracker - Coming Soon */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 opacity-60">
+          {/* Internship Tracker */}
+          <Link
+            href="/clinical/internships"
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
+          >
             <div className="flex items-start gap-4">
-              <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-xl">
+              <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-xl group-hover:bg-purple-200 dark:group-hover:bg-purple-900/50 transition-colors">
                 <ClipboardList className="w-6 h-6 text-purple-600 dark:text-purple-400" />
               </div>
               <div className="flex-1">
@@ -204,12 +226,13 @@ export default function ClinicalDashboardPage() {
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
                   Track student progress through internship phases
                 </p>
-                <span className="inline-block px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-xs rounded-full">
-                  Coming Soon
-                </span>
+                <div className="flex items-center text-purple-600 dark:text-purple-400 text-sm font-medium">
+                  {stats.totalInternships} students tracked
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </div>
               </div>
             </div>
-          </div>
+          </Link>
 
           {/* Meetings - Coming Soon */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 opacity-60">
