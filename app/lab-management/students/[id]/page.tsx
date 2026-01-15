@@ -16,7 +16,14 @@ import {
   Building,
   User,
   Trash2,
-  Upload
+  Upload,
+  FileCheck,
+  Clock,
+  BookOpen,
+  Briefcase,
+  Check,
+  X,
+  ExternalLink
 } from 'lucide-react';
 import { canManageStudentRoster, type Role } from '@/lib/permissions';
 
@@ -60,6 +67,34 @@ interface Assessment {
   overall_competency?: number;
 }
 
+interface ClinicalTasks {
+  compliance: {
+    completed: string[];
+    total: number;
+    percent: number;
+  };
+  internship: {
+    id: string;
+    status: string;
+    currentPhase: number | null;
+    agency: string | null;
+    phase1Completed: boolean;
+    phase2Completed: boolean;
+  } | null;
+  clinicalHours: {
+    total: number;
+    byDepartment: Record<string, number>;
+  };
+  mce: {
+    completed: string[];
+    total: number;
+    percent: number;
+  };
+}
+
+const REQUIRED_DOCS = ['mmr', 'vzv', 'hepb', 'tdap', 'covid', 'tb', 'physical', 'insurance', 'bls', 'flu', 'hospital_orient', 'background', 'drug_test'];
+const MCE_MODULES = ['airway', 'respiratory', 'cardiovascular', 'trauma', 'medical', 'obstetrics', 'pediatrics', 'geriatrics', 'behavioral', 'toxicology', 'neurology', 'endocrine', 'immunology', 'infectious', 'operations'];
+
 const STATUS_COLORS: Record<string, string> = {
   active: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
   graduated: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
@@ -85,6 +120,7 @@ export default function StudentDetailPage() {
   const [student, setStudent] = useState<Student | null>(null);
   const [teamLeadHistory, setTeamLeadHistory] = useState<TeamLeadEntry[]>([]);
   const [assessments, setAssessments] = useState<Assessment[]>([]);
+  const [clinicalTasks, setClinicalTasks] = useState<ClinicalTasks | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -110,6 +146,7 @@ export default function StudentDetailPage() {
       fetchStudent();
       fetchTeamLeadHistory();
       fetchAssessments();
+      fetchClinicalTasks();
       fetchCurrentUser();
     }
   }, [session, studentId]);
@@ -176,6 +213,18 @@ export default function StudentDetailPage() {
       setAssessments(allAssessments.slice(0, 10)); // Last 10
     } catch (error) {
       console.error('Error fetching assessments:', error);
+    }
+  };
+
+  const fetchClinicalTasks = async () => {
+    try {
+      const res = await fetch(`/api/lab-management/students/${studentId}/clinical-tasks`);
+      const data = await res.json();
+      if (data.success) {
+        setClinicalTasks(data.tasks);
+      }
+    } catch (error) {
+      console.error('Error fetching clinical tasks:', error);
     }
   };
 
@@ -488,6 +537,142 @@ export default function StudentDetailPage() {
             </div>
           </div>
         </div>
+
+        {/* Clinical Tasks */}
+        {clinicalTasks && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+            <div className="p-4 border-b dark:border-gray-700 flex items-center justify-between">
+              <h2 className="font-semibold text-gray-900 dark:text-white">Clinical Progress</h2>
+              <Link href="/clinical/overview" className="text-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
+                View Dashboard <ExternalLink className="w-3 h-3" />
+              </Link>
+            </div>
+            <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Compliance Docs */}
+              <div className="border dark:border-gray-700 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <FileCheck className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  <span className="font-medium text-gray-900 dark:text-white">Compliance Docs</span>
+                </div>
+                <div className="mb-2">
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-gray-600 dark:text-gray-400">{clinicalTasks.compliance.completed.length}/{clinicalTasks.compliance.total}</span>
+                    <span className="font-medium text-gray-900 dark:text-white">{clinicalTasks.compliance.percent}%</span>
+                  </div>
+                  <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full transition-all ${clinicalTasks.compliance.percent === 100 ? 'bg-green-500' : 'bg-blue-500'}`}
+                      style={{ width: `${clinicalTasks.compliance.percent}%` }}
+                    />
+                  </div>
+                </div>
+                {clinicalTasks.compliance.percent < 100 && (
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    Missing: {REQUIRED_DOCS.filter(d => !clinicalTasks.compliance.completed.includes(d)).slice(0, 3).map(d => d.toUpperCase()).join(', ')}
+                    {REQUIRED_DOCS.filter(d => !clinicalTasks.compliance.completed.includes(d)).length > 3 && '...'}
+                  </div>
+                )}
+                {clinicalTasks.compliance.percent === 100 && (
+                  <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+                    <Check className="w-3 h-3" /> All documents complete
+                  </div>
+                )}
+              </div>
+
+              {/* mCE Modules */}
+              <div className="border dark:border-gray-700 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <BookOpen className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                  <span className="font-medium text-gray-900 dark:text-white">mCE Modules</span>
+                </div>
+                <div className="mb-2">
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-gray-600 dark:text-gray-400">{clinicalTasks.mce.completed.length}/{clinicalTasks.mce.total}</span>
+                    <span className="font-medium text-gray-900 dark:text-white">{clinicalTasks.mce.percent}%</span>
+                  </div>
+                  <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full transition-all ${clinicalTasks.mce.percent === 100 ? 'bg-green-500' : 'bg-purple-500'}`}
+                      style={{ width: `${clinicalTasks.mce.percent}%` }}
+                    />
+                  </div>
+                </div>
+                {clinicalTasks.mce.percent === 100 ? (
+                  <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+                    <Check className="w-3 h-3" /> All modules complete
+                  </div>
+                ) : (
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    {clinicalTasks.mce.total - clinicalTasks.mce.completed.length} modules remaining
+                  </div>
+                )}
+              </div>
+
+              {/* Clinical Hours */}
+              <div className="border dark:border-gray-700 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Clock className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                  <span className="font-medium text-gray-900 dark:text-white">Clinical Hours</span>
+                </div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+                  {clinicalTasks.clinicalHours.total}
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  {clinicalTasks.clinicalHours.total >= 24 ? (
+                    <span className="text-green-600 dark:text-green-400 flex items-center gap-1">
+                      <Check className="w-3 h-3" /> Minimum met (24h)
+                    </span>
+                  ) : (
+                    <span className="text-orange-600 dark:text-orange-400">
+                      {24 - clinicalTasks.clinicalHours.total}h to minimum
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Internship Status */}
+              <div className="border dark:border-gray-700 rounded-lg p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Briefcase className="w-5 h-5 text-green-600 dark:text-green-400" />
+                  <span className="font-medium text-gray-900 dark:text-white">Internship</span>
+                </div>
+                {clinicalTasks.internship ? (
+                  <>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        clinicalTasks.internship.status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
+                        clinicalTasks.internship.status === 'at_risk' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
+                        clinicalTasks.internship.status === 'completed' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
+                        'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                      }`}>
+                        {clinicalTasks.internship.status.charAt(0).toUpperCase() + clinicalTasks.internship.status.slice(1).replace('_', ' ')}
+                      </span>
+                      {clinicalTasks.internship.currentPhase && (
+                        <span className="text-sm text-gray-600 dark:text-gray-400">Phase {clinicalTasks.internship.currentPhase}</span>
+                      )}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                      {clinicalTasks.internship.agency || 'No agency assigned'}
+                    </div>
+                    <div className="flex gap-2 text-xs">
+                      <span className={clinicalTasks.internship.phase1Completed ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'}>
+                        {clinicalTasks.internship.phase1Completed ? '✓' : '○'} P1
+                      </span>
+                      <span className={clinicalTasks.internship.phase2Completed ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'}>
+                        {clinicalTasks.internship.phase2Completed ? '✓' : '○'} P2
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400">
+                    <X className="w-4 h-4" />
+                    <span className="text-sm">No internship assigned</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Team Lead History */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow">

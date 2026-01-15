@@ -276,6 +276,14 @@ export default function InternshipTrackerPage() {
       const res = await fetch(url);
       const data = await res.json();
       if (data.success) {
+        // Debug: log first internship to verify ID field
+        if (data.internships?.length > 0) {
+          console.log('Sample internship data:', {
+            id: data.internships[0].id,
+            student_id: data.internships[0].student_id,
+            student_name: data.internships[0].students?.first_name + ' ' + data.internships[0].students?.last_name
+          });
+        }
         setInternships(data.internships || []);
       }
     } catch (error) {

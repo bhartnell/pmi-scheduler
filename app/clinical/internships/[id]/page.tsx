@@ -256,8 +256,9 @@ export default function InternshipDetailPage() {
           notes: i.notes || '',
         });
       } else {
-        console.error('Failed to load internship:', internshipData.error);
-        setError('Failed to load internship record. It may not exist or you may not have permission to view it.');
+        console.error('Failed to load internship:', internshipData.error, internshipData.debug);
+        const debugInfo = internshipData.debug ? ` (Queried ID: ${internshipData.debug.queriedId})` : '';
+        setError(`${internshipData.error || 'Failed to load internship record'}${debugInfo}`);
       }
 
       setPreceptors(preceptorsData.preceptors || []);

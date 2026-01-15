@@ -18,6 +18,7 @@ export async function GET(
     }
 
     const { id } = await params;
+    console.log('Fetching internship with ID:', id);
 
     const { data, error } = await supabase
       .from('student_internships')
@@ -61,7 +62,19 @@ export async function GET(
       .eq('id', id)
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase error fetching internship:', error.code, error.message);
+      // Return more specific error for debugging
+      if (error.code === 'PGRST116') {
+        return NextResponse.json({
+          success: false,
+          error: `No internship record found with ID: ${id}`,
+          debug: { queriedId: id }
+        }, { status: 404 });
+      }
+      throw error;
+    }
+    console.log('Fetched internship data:', data ? 'found' : 'not found');
 
     // Also fetch meetings for this internship
     const { data: meetings } = await supabase
