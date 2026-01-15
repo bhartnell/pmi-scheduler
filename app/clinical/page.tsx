@@ -17,7 +17,8 @@ import {
   TrendingUp,
   Clock,
   FileCheck,
-  BookOpen
+  BookOpen,
+  LayoutDashboard
 } from 'lucide-react';
 import { canAccessClinical, type Role } from '@/lib/permissions';
 
@@ -192,6 +193,28 @@ export default function ClinicalDashboardPage() {
 
         {/* Navigation Cards */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Overview Dashboard - Primary */}
+          <Link
+            href="/clinical/overview"
+            className="bg-gradient-to-br from-teal-500 to-cyan-600 dark:from-teal-600 dark:to-cyan-700 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group md:col-span-2 lg:col-span-1"
+          >
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-white/20 rounded-xl group-hover:bg-white/30 transition-colors">
+                <LayoutDashboard className="w-6 h-6 text-white" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-white mb-1">Overview Dashboard</h3>
+                <p className="text-sm text-teal-100 mb-3">
+                  See all priorities and what needs attention
+                </p>
+                <div className="flex items-center text-white text-sm font-medium">
+                  View Dashboard
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </div>
+              </div>
+            </div>
+          </Link>
+
           {/* Preceptors */}
           <Link
             href="/clinical/preceptors"
