@@ -52,7 +52,8 @@ export async function PATCH(
     
     // Build update object with only provided fields
     const updateData: any = {};
-    
+
+    if (body.station_type !== undefined) updateData.station_type = body.station_type;
     if (body.scenario_id !== undefined) updateData.scenario_id = body.scenario_id;
     if (body.instructor_name !== undefined) updateData.instructor_name = body.instructor_name;
     if (body.instructor_email !== undefined) updateData.instructor_email = body.instructor_email;

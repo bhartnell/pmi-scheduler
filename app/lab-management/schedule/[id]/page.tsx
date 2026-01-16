@@ -78,6 +78,18 @@ interface Scenario {
   difficulty: string;
 }
 
+interface Skill {
+  id: string;
+  name: string;
+  category: string;
+}
+
+const STATION_TYPES = [
+  { value: 'scenario', label: 'Scenario', description: 'Full scenario with grading' },
+  { value: 'skills', label: 'Skills', description: 'Skills practice station' },
+  { value: 'documentation', label: 'Documentation', description: 'Documentation/PCR station' }
+];
+
 const STATION_TYPE_COLORS: Record<string, string> = {
   scenario: 'border-blue-200 bg-blue-50 dark:border-blue-700 dark:bg-blue-900/30',
   skill: 'border-green-200 bg-green-50 dark:border-green-700 dark:bg-green-900/30',
@@ -108,10 +120,15 @@ export default function LabDayPage() {
   // Edit station modal state
   const [editingStation, setEditingStation] = useState<Station | null>(null);
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
+  const [skills, setSkills] = useState<Skill[]>([]);
   const [savingStation, setSavingStation] = useState(false);
   const [deletingStation, setDeletingStation] = useState(false);
+  const [skillsModalOpen, setSkillsModalOpen] = useState(false);
+  const [skillSearch, setSkillSearch] = useState('');
   const [editForm, setEditForm] = useState({
+    station_type: 'scenario' as string,
     scenario_id: '',
+    selectedSkills: [] as string[],
     instructor_name: '',
     instructor_email: '',
     room: '',
@@ -206,32 +223,90 @@ export default function LabDayPage() {
     }
   };
 
-  const fetchScenarios = async () => {
+  const fetchScenariosAndSkills = async () => {
     try {
-      const res = await fetch('/api/lab-management/scenarios');
-      const data = await res.json();
-      if (data.success) {
-        setScenarios(data.scenarios || []);
+      const [scenariosRes, skillsRes] = await Promise.all([
+        fetch('/api/lab-management/scenarios'),
+        fetch('/api/lab-management/skills')
+      ]);
+      const scenariosData = await scenariosRes.json();
+      const skillsData = await skillsRes.json();
+      if (scenariosData.success) {
+        setScenarios(scenariosData.scenarios || []);
+      }
+      if (skillsData.success) {
+        setSkills(skillsData.skills || []);
       }
     } catch (error) {
-      console.error('Error fetching scenarios:', error);
+      console.error('Error fetching scenarios/skills:', error);
     }
   };
 
-  const openEditModal = (station: Station) => {
+  const openEditModal = async (station: Station) => {
     setEditingStation(station);
+
+    // Fetch station skills if it's a skills station
+    let stationSkillIds: string[] = [];
+    if (station.station_type === 'skills') {
+      try {
+        const res = await fetch(`/api/lab-management/stations?labDayId=${labDayId}`);
+        const data = await res.json();
+        if (data.success) {
+          const fullStation = data.stations.find((s: any) => s.id === station.id);
+          if (fullStation?.station_skills) {
+            stationSkillIds = fullStation.station_skills.map((ss: any) => ss.skill?.id).filter(Boolean);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching station skills:', error);
+      }
+    }
+
     setEditForm({
+      station_type: station.station_type || 'scenario',
       scenario_id: station.scenario?.id || '',
+      selectedSkills: stationSkillIds,
       instructor_name: station.instructor_name || '',
       instructor_email: station.instructor_email || '',
       room: station.room || '',
       notes: station.notes || ''
     });
-    // Fetch scenarios if not already loaded
-    if (scenarios.length === 0) {
-      fetchScenarios();
+
+    // Fetch scenarios and skills if not already loaded
+    if (scenarios.length === 0 || skills.length === 0) {
+      fetchScenariosAndSkills();
     }
   };
+
+  const toggleSkill = (skillId: string) => {
+    setEditForm(prev => ({
+      ...prev,
+      selectedSkills: prev.selectedSkills.includes(skillId)
+        ? prev.selectedSkills.filter(id => id !== skillId)
+        : [...prev.selectedSkills, skillId]
+    }));
+  };
+
+  const assignSelf = () => {
+    setEditForm(prev => ({
+      ...prev,
+      instructor_name: session?.user?.name || '',
+      instructor_email: session?.user?.email || ''
+    }));
+  };
+
+  // Group skills by category for the modal
+  const filteredSkills = skills.filter(skill =>
+    !skillSearch ||
+    skill.name.toLowerCase().includes(skillSearch.toLowerCase()) ||
+    skill.category.toLowerCase().includes(skillSearch.toLowerCase())
+  );
+
+  const skillsByCategory = filteredSkills.reduce((acc, skill) => {
+    if (!acc[skill.category]) acc[skill.category] = [];
+    acc[skill.category].push(skill);
+    return acc;
+  }, {} as Record<string, Skill[]>);
 
   const closeEditModal = () => {
     setEditingStation(null);
@@ -242,11 +317,13 @@ export default function LabDayPage() {
 
     setSavingStation(true);
     try {
+      // Update station basic info
       const res = await fetch(`/api/lab-management/stations/${editingStation.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          scenario_id: editForm.scenario_id || null,
+          station_type: editForm.station_type,
+          scenario_id: editForm.station_type === 'scenario' ? (editForm.scenario_id || null) : null,
           instructor_name: editForm.instructor_name || null,
           instructor_email: editForm.instructor_email || null,
           room: editForm.room || null,
@@ -255,12 +332,34 @@ export default function LabDayPage() {
       });
 
       const data = await res.json();
-      if (data.success) {
-        closeEditModal();
-        fetchLabDay(); // Refresh the data
-      } else {
+      if (!data.success) {
         alert('Failed to save: ' + (data.error || 'Unknown error'));
+        setSavingStation(false);
+        return;
       }
+
+      // If skills station, update skill links
+      if (editForm.station_type === 'skills') {
+        // Delete existing skill links
+        await fetch(`/api/lab-management/station-skills?stationId=${editingStation.id}`, {
+          method: 'DELETE'
+        });
+
+        // Add new skill links
+        for (const skillId of editForm.selectedSkills) {
+          await fetch('/api/lab-management/station-skills', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              station_id: editingStation.id,
+              skill_id: skillId
+            })
+          });
+        }
+      }
+
+      closeEditModal();
+      fetchLabDay(); // Refresh the data
     } catch (error) {
       console.error('Error saving station:', error);
       alert('Failed to save station');
@@ -543,7 +642,7 @@ export default function LabDayPage() {
       </main>
 
       {/* Edit Station Modal */}
-      {editingStation && (
+      {editingStation && !skillsModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
@@ -559,51 +658,123 @@ export default function LabDayPage() {
             </div>
 
             <div className="p-4 space-y-4">
-              {/* Scenario Selection */}
+              {/* Station Type Selection */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Scenario
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Station Type
                 </label>
-                <select
-                  value={editForm.scenario_id}
-                  onChange={(e) => setEditForm({ ...editForm, scenario_id: e.target.value })}
-                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
-                >
-                  <option value="">No scenario assigned</option>
-                  {scenarios.map(scenario => (
-                    <option key={scenario.id} value={scenario.id}>
-                      {scenario.title} ({scenario.category})
-                    </option>
+                <div className="grid grid-cols-3 gap-2">
+                  {STATION_TYPES.map(type => (
+                    <button
+                      key={type.value}
+                      type="button"
+                      onClick={() => setEditForm({ ...editForm, station_type: type.value })}
+                      className={`p-3 rounded-lg border-2 text-center transition-all ${
+                        editForm.station_type === type.value
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
+                          : 'border-gray-200 dark:border-gray-600 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="font-medium text-sm text-gray-900 dark:text-white">{type.label}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">{type.description}</div>
+                    </button>
                   ))}
-                </select>
+                </div>
               </div>
 
-              {/* Instructor Name */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Instructor Name
-                </label>
-                <input
-                  type="text"
-                  value={editForm.instructor_name}
-                  onChange={(e) => setEditForm({ ...editForm, instructor_name: e.target.value })}
-                  placeholder="Enter instructor name"
-                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
-                />
-              </div>
+              {/* Scenario Selection (for scenario type) */}
+              {editForm.station_type === 'scenario' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Scenario
+                  </label>
+                  <select
+                    value={editForm.scenario_id}
+                    onChange={(e) => setEditForm({ ...editForm, scenario_id: e.target.value })}
+                    className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  >
+                    <option value="">Select a scenario...</option>
+                    {scenarios.map(scenario => (
+                      <option key={scenario.id} value={scenario.id}>
+                        {scenario.title} ({scenario.category})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
-              {/* Instructor Email */}
+              {/* Skills Selection (for skills type) */}
+              {editForm.station_type === 'skills' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Skills
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setSkillsModalOpen(true)}
+                    className="w-full px-4 py-3 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:border-blue-400 hover:text-blue-600 transition-colors"
+                  >
+                    <ClipboardCheck className="w-5 h-5 mx-auto mb-1" />
+                    {editForm.selectedSkills.length > 0
+                      ? `${editForm.selectedSkills.length} skills selected - Click to modify`
+                      : 'Click to select skills from library'
+                    }
+                  </button>
+                  {editForm.selectedSkills.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {editForm.selectedSkills.map(skillId => {
+                        const skill = skills.find(s => s.id === skillId);
+                        return skill ? (
+                          <span key={skillId} className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-sm rounded">
+                            {skill.name}
+                          </span>
+                        ) : null;
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Documentation Info */}
+              {editForm.station_type === 'documentation' && (
+                <div className="p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+                  <p className="text-blue-800 dark:text-blue-300 text-sm">
+                    Documentation station for PCR practice and review. Instructor assignment is optional.
+                  </p>
+                </div>
+              )}
+
+              {/* Instructor */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Instructor Email
+                  Instructor
                 </label>
-                <input
-                  type="email"
-                  value={editForm.instructor_email}
-                  onChange={(e) => setEditForm({ ...editForm, instructor_email: e.target.value })}
-                  placeholder="instructor@email.com"
-                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
-                />
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    value={editForm.instructor_name}
+                    onChange={(e) => setEditForm({ ...editForm, instructor_name: e.target.value })}
+                    placeholder="Name (optional)"
+                    className="px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  />
+                  <input
+                    type="email"
+                    value={editForm.instructor_email}
+                    onChange={(e) => setEditForm({ ...editForm, instructor_email: e.target.value })}
+                    placeholder="Email (optional)"
+                    className="px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  />
+                </div>
+                {!editForm.instructor_email && (
+                  <button
+                    type="button"
+                    onClick={assignSelf}
+                    className="mt-2 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 flex items-center gap-1"
+                  >
+                    <Users className="w-4 h-4" />
+                    Assign myself
+                  </button>
+                )}
               </div>
 
               {/* Room */}
@@ -615,7 +786,7 @@ export default function LabDayPage() {
                   type="text"
                   value={editForm.room}
                   onChange={(e) => setEditForm({ ...editForm, room: e.target.value })}
-                  placeholder="e.g., Room 101, Lab A"
+                  placeholder="e.g., Sim Lab A"
                   className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                 />
               </div>
@@ -628,8 +799,8 @@ export default function LabDayPage() {
                 <textarea
                   value={editForm.notes}
                   onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
-                  rows={3}
-                  placeholder="Any additional notes..."
+                  rows={2}
+                  placeholder="Special instructions, equipment needed, etc."
                   className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                 />
               </div>
@@ -670,6 +841,80 @@ export default function LabDayPage() {
                   Save Changes
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Skills Selection Modal */}
+      {skillsModalOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden">
+            <div className="p-4 border-b dark:border-gray-700 flex items-center justify-between">
+              <h3 className="font-semibold text-gray-900 dark:text-white">Select Skills</h3>
+              <button
+                onClick={() => setSkillsModalOpen(false)}
+                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            {/* Search */}
+            <div className="p-4 border-b dark:border-gray-700">
+              <input
+                type="text"
+                value={skillSearch}
+                onChange={(e) => setSkillSearch(e.target.value)}
+                placeholder="Search skills..."
+                className="w-full px-4 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+              />
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                {editForm.selectedSkills.length} selected
+              </p>
+            </div>
+
+            {/* Skills List */}
+            <div className="p-4 overflow-y-auto max-h-[50vh]">
+              {Object.entries(skillsByCategory).map(([category, categorySkills]) => (
+                <div key={category} className="mb-4">
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{category}</h4>
+                  <div className="space-y-1">
+                    {categorySkills.map(skill => {
+                      const isSelected = editForm.selectedSkills.includes(skill.id);
+                      return (
+                        <label
+                          key={skill.id}
+                          className={`flex items-center gap-3 p-2 rounded cursor-pointer ${
+                            isSelected ? 'bg-green-50 dark:bg-green-900/30' : 'hover:bg-gray-50 dark:hover:bg-gray-700'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleSkill(skill.id)}
+                            className="w-4 h-4 text-green-600"
+                          />
+                          <span className="text-sm text-gray-900 dark:text-white">{skill.name}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+              {Object.keys(skillsByCategory).length === 0 && (
+                <p className="text-gray-500 dark:text-gray-400 text-center py-8">No skills found</p>
+              )}
+            </div>
+
+            {/* Done Button */}
+            <div className="p-4 border-t dark:border-gray-700">
+              <button
+                onClick={() => setSkillsModalOpen(false)}
+                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Done ({editForm.selectedSkills.length} skills selected)
+              </button>
             </div>
           </div>
         </div>
