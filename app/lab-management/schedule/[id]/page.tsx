@@ -18,7 +18,10 @@ import {
   Check,
   AlertCircle,
   Printer,
-  Download
+  Download,
+  X,
+  Save,
+  Trash2
 } from 'lucide-react';
 
 interface LabDay {
@@ -68,6 +71,13 @@ interface Station {
   platinum_required: boolean;
 }
 
+interface Scenario {
+  id: string;
+  title: string;
+  category: string;
+  difficulty: string;
+}
+
 const STATION_TYPE_COLORS: Record<string, string> = {
   scenario: 'border-blue-200 bg-blue-50 dark:border-blue-700 dark:bg-blue-900/30',
   skill: 'border-green-200 bg-green-50 dark:border-green-700 dark:bg-green-900/30',
@@ -94,6 +104,19 @@ export default function LabDayPage() {
 
   const [labDay, setLabDay] = useState<LabDay | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Edit station modal state
+  const [editingStation, setEditingStation] = useState<Station | null>(null);
+  const [scenarios, setScenarios] = useState<Scenario[]>([]);
+  const [savingStation, setSavingStation] = useState(false);
+  const [deletingStation, setDeletingStation] = useState(false);
+  const [editForm, setEditForm] = useState({
+    scenario_id: '',
+    instructor_name: '',
+    instructor_email: '',
+    room: '',
+    notes: ''
+  });
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -181,6 +204,92 @@ export default function LabDayPage() {
       printHiddenElements.forEach(el => (el as HTMLElement).style.display = '');
       printBlockElements.forEach(el => (el as HTMLElement).style.display = '');
     }
+  };
+
+  const fetchScenarios = async () => {
+    try {
+      const res = await fetch('/api/lab-management/scenarios');
+      const data = await res.json();
+      if (data.success) {
+        setScenarios(data.scenarios || []);
+      }
+    } catch (error) {
+      console.error('Error fetching scenarios:', error);
+    }
+  };
+
+  const openEditModal = (station: Station) => {
+    setEditingStation(station);
+    setEditForm({
+      scenario_id: station.scenario?.id || '',
+      instructor_name: station.instructor_name || '',
+      instructor_email: station.instructor_email || '',
+      room: station.room || '',
+      notes: station.notes || ''
+    });
+    // Fetch scenarios if not already loaded
+    if (scenarios.length === 0) {
+      fetchScenarios();
+    }
+  };
+
+  const closeEditModal = () => {
+    setEditingStation(null);
+  };
+
+  const handleSaveStation = async () => {
+    if (!editingStation) return;
+
+    setSavingStation(true);
+    try {
+      const res = await fetch(`/api/lab-management/stations/${editingStation.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scenario_id: editForm.scenario_id || null,
+          instructor_name: editForm.instructor_name || null,
+          instructor_email: editForm.instructor_email || null,
+          room: editForm.room || null,
+          notes: editForm.notes || null
+        })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        closeEditModal();
+        fetchLabDay(); // Refresh the data
+      } else {
+        alert('Failed to save: ' + (data.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error saving station:', error);
+      alert('Failed to save station');
+    }
+    setSavingStation(false);
+  };
+
+  const handleDeleteStation = async () => {
+    if (!editingStation) return;
+    if (!confirm('Are you sure you want to delete this station? This cannot be undone.')) return;
+
+    setDeletingStation(true);
+    try {
+      const res = await fetch(`/api/lab-management/stations/${editingStation.id}`, {
+        method: 'DELETE'
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        closeEditModal();
+        fetchLabDay(); // Refresh the data
+      } else {
+        alert('Failed to delete: ' + (data.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error deleting station:', error);
+      alert('Failed to delete station');
+    }
+    setDeletingStation(false);
   };
 
   if (status === 'loading' || loading) {
@@ -384,13 +493,20 @@ export default function LabDayPage() {
 
                   {/* Actions */}
                   <div className="flex gap-2 pt-3 border-t dark:border-gray-700 print:hidden">
+                    <button
+                      onClick={() => openEditModal(station)}
+                      className="inline-flex items-center justify-center gap-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                      Edit
+                    </button>
                     {station.scenario && (
                       <Link
                         href={`/lab-management/scenarios/${station.scenario.id}`}
-                        className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+                        className="inline-flex items-center justify-center gap-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
                       >
                         <FileText className="w-4 h-4" />
-                        View Scenario
+                        Scenario
                       </Link>
                     )}
                     <Link
@@ -425,6 +541,139 @@ export default function LabDayPage() {
           </Link>
         </div>
       </main>
+
+      {/* Edit Station Modal */}
+      {editingStation && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Edit Station {editingStation.station_number}
+              </h2>
+              <button
+                onClick={closeEditModal}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              {/* Scenario Selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Scenario
+                </label>
+                <select
+                  value={editForm.scenario_id}
+                  onChange={(e) => setEditForm({ ...editForm, scenario_id: e.target.value })}
+                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                >
+                  <option value="">No scenario assigned</option>
+                  {scenarios.map(scenario => (
+                    <option key={scenario.id} value={scenario.id}>
+                      {scenario.title} ({scenario.category})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Instructor Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Instructor Name
+                </label>
+                <input
+                  type="text"
+                  value={editForm.instructor_name}
+                  onChange={(e) => setEditForm({ ...editForm, instructor_name: e.target.value })}
+                  placeholder="Enter instructor name"
+                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                />
+              </div>
+
+              {/* Instructor Email */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Instructor Email
+                </label>
+                <input
+                  type="email"
+                  value={editForm.instructor_email}
+                  onChange={(e) => setEditForm({ ...editForm, instructor_email: e.target.value })}
+                  placeholder="instructor@email.com"
+                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                />
+              </div>
+
+              {/* Room */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Room / Location
+                </label>
+                <input
+                  type="text"
+                  value={editForm.room}
+                  onChange={(e) => setEditForm({ ...editForm, room: e.target.value })}
+                  placeholder="e.g., Room 101, Lab A"
+                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                />
+              </div>
+
+              {/* Notes */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Notes
+                </label>
+                <textarea
+                  value={editForm.notes}
+                  onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+                  rows={3}
+                  placeholder="Any additional notes..."
+                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                />
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex items-center justify-between p-4 border-t dark:border-gray-700">
+              <button
+                onClick={handleDeleteStation}
+                disabled={deletingStation}
+                className="inline-flex items-center gap-2 px-4 py-2 text-red-600 dark:text-red-400 border border-red-300 dark:border-red-700 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/30 disabled:opacity-50"
+              >
+                {deletingStation ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
+                ) : (
+                  <Trash2 className="w-4 h-4" />
+                )}
+                Delete
+              </button>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={closeEditModal}
+                  className="px-4 py-2 border dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveStation}
+                  disabled={savingStation}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {savingStation ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  ) : (
+                    <Save className="w-4 h-4" />
+                  )}
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
