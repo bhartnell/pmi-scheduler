@@ -155,11 +155,24 @@ export async function PUT(
     if (body.drug_screen_completed !== undefined) updateData.drug_screen_completed = body.drug_screen_completed;
     if (body.immunizations_verified !== undefined) updateData.immunizations_verified = body.immunizations_verified;
     if (body.cpr_card_verified !== undefined) updateData.cpr_card_verified = body.cpr_card_verified;
-    if (body.uniform_issued !== undefined) updateData.uniform_issued = body.uniform_issued;
-    if (body.badge_issued !== undefined) updateData.badge_issued = body.badge_issued;
     if (body.cleared_for_nremt !== undefined) updateData.cleared_for_nremt = body.cleared_for_nremt;
     if (body.ryan_notified !== undefined) updateData.ryan_notified = body.ryan_notified;
     if (body.ryan_notified_date !== undefined) updateData.ryan_notified_date = body.ryan_notified_date || null;
+
+    // Exam fields
+    if (body.written_exam_date !== undefined) updateData.written_exam_date = body.written_exam_date || null;
+    if (body.written_exam_passed !== undefined) updateData.written_exam_passed = body.written_exam_passed;
+    if (body.psychomotor_exam_date !== undefined) updateData.psychomotor_exam_date = body.psychomotor_exam_date || null;
+    if (body.psychomotor_exam_passed !== undefined) updateData.psychomotor_exam_passed = body.psychomotor_exam_passed;
+    if (body.course_completion_date !== undefined) updateData.course_completion_date = body.course_completion_date || null;
+
+    // Meeting poll fields
+    if (body.phase_1_meeting_poll_id !== undefined) updateData.phase_1_meeting_poll_id = body.phase_1_meeting_poll_id || null;
+    if (body.phase_1_meeting_scheduled !== undefined) updateData.phase_1_meeting_scheduled = body.phase_1_meeting_scheduled || null;
+    if (body.phase_2_meeting_poll_id !== undefined) updateData.phase_2_meeting_poll_id = body.phase_2_meeting_poll_id || null;
+    if (body.phase_2_meeting_scheduled !== undefined) updateData.phase_2_meeting_scheduled = body.phase_2_meeting_scheduled || null;
+    if (body.final_exam_poll_id !== undefined) updateData.final_exam_poll_id = body.final_exam_poll_id || null;
+    if (body.final_exam_scheduled !== undefined) updateData.final_exam_scheduled = body.final_exam_scheduled || null;
 
     // Handle agency update
     if (body.agency_id !== undefined) {

@@ -162,7 +162,10 @@ export default function PreceptorsPage() {
       (p.email && p.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (p.agency_name && p.agency_name.toLowerCase().includes(searchQuery.toLowerCase()));
 
-    const matchesAgency = !filterAgency || p.agency_id === filterAgency;
+    // Match by agency_id OR by the linked agencies relation
+    const matchesAgency = !filterAgency ||
+      p.agency_id === filterAgency ||
+      p.agencies?.id === filterAgency;
 
     return matchesSearch && matchesAgency;
   });

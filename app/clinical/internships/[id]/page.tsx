@@ -12,6 +12,7 @@ import {
   User,
   Building2,
   Calendar,
+  CalendarDays,
   Clock,
   CheckCircle2,
   Circle,
@@ -24,7 +25,8 @@ import {
   Award,
   ClipboardCheck,
   AlertCircle,
-  CheckSquare
+  CheckSquare,
+  ExternalLink
 } from 'lucide-react';
 import { canAccessClinical, canEditClinical, type Role } from '@/lib/permissions';
 
@@ -62,11 +64,23 @@ interface Internship {
   drug_screen_completed: boolean;
   immunizations_verified: boolean;
   cpr_card_verified: boolean;
-  uniform_issued: boolean;
-  badge_issued: boolean;
   cleared_for_nremt: boolean;
   ryan_notified: boolean;
   ryan_notified_date: string | null;
+  // Exam fields
+  written_exam_date: string | null;
+  written_exam_passed: boolean;
+  psychomotor_exam_date: string | null;
+  psychomotor_exam_passed: boolean;
+  // Course completion
+  course_completion_date: string | null;
+  // Meeting poll IDs
+  phase_1_meeting_poll_id: string | null;
+  phase_1_meeting_scheduled: string | null;
+  phase_2_meeting_poll_id: string | null;
+  phase_2_meeting_scheduled: string | null;
+  final_exam_poll_id: string | null;
+  final_exam_scheduled: string | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -136,8 +150,12 @@ const PLACEMENT_ITEMS: ChecklistItem[] = [
   { key: 'drug_screen_completed', label: 'Drug Screen', required: true },
   { key: 'immunizations_verified', label: 'Immunizations Verified', required: true },
   { key: 'cpr_card_verified', label: 'CPR Card Verified', required: true },
-  { key: 'uniform_issued', label: 'Uniform Issued', required: false },
-  { key: 'badge_issued', label: 'Badge Issued', required: false },
+];
+
+// Exam tracking items
+const EXAM_ITEMS: ChecklistItem[] = [
+  { key: 'written_exam_passed', label: 'Written Exam', dateKey: 'written_exam_date', required: true },
+  { key: 'psychomotor_exam_passed', label: 'Psychomotor Exam', dateKey: 'psychomotor_exam_date', required: true },
 ];
 
 const PHASE1_ITEMS: ChecklistItem[] = [
@@ -246,11 +264,22 @@ export default function InternshipDetailPage() {
           drug_screen_completed: i.drug_screen_completed || false,
           immunizations_verified: i.immunizations_verified || false,
           cpr_card_verified: i.cpr_card_verified || false,
-          uniform_issued: i.uniform_issued || false,
-          badge_issued: i.badge_issued || false,
           cleared_for_nremt: i.cleared_for_nremt || false,
           ryan_notified: i.ryan_notified || false,
           ryan_notified_date: i.ryan_notified_date || '',
+          // Exam fields
+          written_exam_date: i.written_exam_date || '',
+          written_exam_passed: i.written_exam_passed || false,
+          psychomotor_exam_date: i.psychomotor_exam_date || '',
+          psychomotor_exam_passed: i.psychomotor_exam_passed || false,
+          course_completion_date: i.course_completion_date || '',
+          // Meeting poll IDs
+          phase_1_meeting_poll_id: i.phase_1_meeting_poll_id || '',
+          phase_1_meeting_scheduled: i.phase_1_meeting_scheduled || '',
+          phase_2_meeting_poll_id: i.phase_2_meeting_poll_id || '',
+          phase_2_meeting_scheduled: i.phase_2_meeting_scheduled || '',
+          final_exam_poll_id: i.final_exam_poll_id || '',
+          final_exam_scheduled: i.final_exam_scheduled || '',
           notes: i.notes || '',
         });
       } else {
@@ -355,16 +384,17 @@ export default function InternshipDetailPage() {
   };
 
   const placementProgress = calculateSectionProgress(PLACEMENT_ITEMS);
+  const examProgress = calculateSectionProgress(EXAM_ITEMS);
   const phase1Progress = calculateSectionProgress(PHASE1_ITEMS);
   const phase2Progress = calculateSectionProgress(PHASE2_ITEMS);
   const clearanceProgress = calculateSectionProgress(CLEARANCE_ITEMS);
 
-  const totalItems = PLACEMENT_ITEMS.length + PHASE1_ITEMS.length + PHASE2_ITEMS.length + CLEARANCE_ITEMS.length;
-  const completedItems = [...PLACEMENT_ITEMS, ...PHASE1_ITEMS, ...PHASE2_ITEMS, ...CLEARANCE_ITEMS].filter(isItemComplete).length;
+  const totalItems = PLACEMENT_ITEMS.length + EXAM_ITEMS.length + PHASE1_ITEMS.length + PHASE2_ITEMS.length + CLEARANCE_ITEMS.length;
+  const completedItems = [...PLACEMENT_ITEMS, ...EXAM_ITEMS, ...PHASE1_ITEMS, ...PHASE2_ITEMS, ...CLEARANCE_ITEMS].filter(isItemComplete).length;
   const overallProgress = Math.round((completedItems / totalItems) * 100);
 
   // Check if cleared for NREMT (all required items complete)
-  const allRequiredItems = [...PLACEMENT_ITEMS, ...PHASE1_ITEMS, ...PHASE2_ITEMS, ...CLEARANCE_ITEMS].filter(i => i.required);
+  const allRequiredItems = [...PLACEMENT_ITEMS, ...EXAM_ITEMS, ...PHASE1_ITEMS, ...PHASE2_ITEMS, ...CLEARANCE_ITEMS].filter(i => i.required);
   const isClearedForNREMT = allRequiredItems.every(isItemComplete);
 
   const formatDate = (dateString: string | null) => {
@@ -566,10 +596,14 @@ export default function InternshipDetailPage() {
           </div>
 
           {/* Section Progress Indicators */}
-          <div className="grid grid-cols-4 gap-4 mt-6">
+          <div className="grid grid-cols-5 gap-4 mt-6">
             <div className="text-center">
               <div className="text-lg font-semibold text-gray-900 dark:text-white">{placementProgress}%</div>
               <div className="text-xs text-gray-500 dark:text-gray-400">Placement</div>
+            </div>
+            <div className="text-center">
+              <div className="text-lg font-semibold text-gray-900 dark:text-white">{examProgress}%</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">Exams</div>
             </div>
             <div className="text-center">
               <div className="text-lg font-semibold text-gray-900 dark:text-white">{phase1Progress}%</div>
@@ -684,6 +718,46 @@ export default function InternshipDetailPage() {
                 {PLACEMENT_ITEMS.map(item => (
                   <ChecklistRow key={item.key} item={item} section="placement" />
                 ))}
+              </div>
+            </div>
+
+            {/* Exams */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-amber-50 dark:bg-amber-900/20">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Award className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                    <h3 className="font-semibold text-gray-900 dark:text-white">Exams</h3>
+                  </div>
+                  <span className={`px-2 py-1 text-xs font-medium rounded ${
+                    examProgress === 100
+                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                      : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                  }`}>
+                    {examProgress}%
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-4 space-y-2">
+                {EXAM_ITEMS.map(item => (
+                  <ChecklistRow key={item.key} item={item} section="exams" />
+                ))}
+
+                {/* Course Completion Date */}
+                {canEdit && (
+                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm text-gray-700 dark:text-gray-300">Course Completion Date</label>
+                      <input
+                        type="date"
+                        value={formData.course_completion_date || ''}
+                        onChange={(e) => handleInputChange('course_completion_date', e.target.value)}
+                        className="px-2 py-1 text-sm border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -825,6 +899,147 @@ export default function InternshipDetailPage() {
                     )}
                   </div>
                 )}
+              </div>
+            </div>
+
+            {/* Meeting Scheduling */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-cyan-50 dark:bg-cyan-900/20">
+                <div className="flex items-center gap-2">
+                  <CalendarDays className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
+                  <h3 className="font-semibold text-gray-900 dark:text-white">Meeting Scheduling</h3>
+                </div>
+              </div>
+
+              <div className="p-4 space-y-4">
+                {/* Phase 1 Meeting */}
+                <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-gray-50 dark:bg-gray-700/30">
+                  <div>
+                    <div className="font-medium text-gray-900 dark:text-white">Phase 1 Evaluation</div>
+                    {formData.phase_1_meeting_scheduled && (
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        Scheduled: {formatDate(formData.phase_1_meeting_scheduled)}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {canEdit && (
+                      <input
+                        type="text"
+                        value={formData.phase_1_meeting_poll_id || ''}
+                        onChange={(e) => handleInputChange('phase_1_meeting_poll_id', e.target.value)}
+                        placeholder="Rallly poll ID"
+                        className="px-2 py-1 text-sm border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white w-32"
+                      />
+                    )}
+                    {formData.phase_1_meeting_poll_id && (
+                      <a
+                        href={`https://rallly.co/p/${formData.phase_1_meeting_poll_id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 px-3 py-1.5 text-sm text-cyan-600 dark:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-900/30 rounded"
+                      >
+                        View Poll <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                    {!formData.phase_1_meeting_poll_id && (
+                      <a
+                        href="https://rallly.co/new"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                      >
+                        Create Poll <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+
+                {/* Phase 2 Meeting */}
+                <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-gray-50 dark:bg-gray-700/30">
+                  <div>
+                    <div className="font-medium text-gray-900 dark:text-white">Phase 2 Evaluation</div>
+                    {formData.phase_2_meeting_scheduled && (
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        Scheduled: {formatDate(formData.phase_2_meeting_scheduled)}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {canEdit && (
+                      <input
+                        type="text"
+                        value={formData.phase_2_meeting_poll_id || ''}
+                        onChange={(e) => handleInputChange('phase_2_meeting_poll_id', e.target.value)}
+                        placeholder="Rallly poll ID"
+                        className="px-2 py-1 text-sm border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white w-32"
+                      />
+                    )}
+                    {formData.phase_2_meeting_poll_id && (
+                      <a
+                        href={`https://rallly.co/p/${formData.phase_2_meeting_poll_id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 px-3 py-1.5 text-sm text-cyan-600 dark:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-900/30 rounded"
+                      >
+                        View Poll <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                    {!formData.phase_2_meeting_poll_id && (
+                      <a
+                        href="https://rallly.co/new"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                      >
+                        Create Poll <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+
+                {/* Final Exam Meeting */}
+                <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-gray-50 dark:bg-gray-700/30">
+                  <div>
+                    <div className="font-medium text-gray-900 dark:text-white">Final Exam</div>
+                    {formData.final_exam_scheduled && (
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        Scheduled: {formatDate(formData.final_exam_scheduled)}
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {canEdit && (
+                      <input
+                        type="text"
+                        value={formData.final_exam_poll_id || ''}
+                        onChange={(e) => handleInputChange('final_exam_poll_id', e.target.value)}
+                        placeholder="Rallly poll ID"
+                        className="px-2 py-1 text-sm border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white w-32"
+                      />
+                    )}
+                    {formData.final_exam_poll_id && (
+                      <a
+                        href={`https://rallly.co/p/${formData.final_exam_poll_id}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 px-3 py-1.5 text-sm text-cyan-600 dark:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-900/30 rounded"
+                      >
+                        View Poll <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                    {!formData.final_exam_poll_id && (
+                      <a
+                        href="https://rallly.co/new"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                      >
+                        Create Poll <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
