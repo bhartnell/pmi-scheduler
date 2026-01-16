@@ -29,9 +29,8 @@ export async function GET(
           first_name,
           last_name,
           email,
-          phone,
-          photo_url,
-          agency
+          cohort_id,
+          status
         ),
         cohorts (
           id,

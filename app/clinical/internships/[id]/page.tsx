@@ -4,7 +4,6 @@ import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import {
   ChevronRight,
   Home,
@@ -17,7 +16,6 @@ import {
   CheckCircle2,
   Circle,
   Loader2,
-  Phone,
   Mail,
   MapPin,
   FileText,
@@ -77,8 +75,8 @@ interface Internship {
     first_name: string;
     last_name: string;
     email: string;
-    phone: string | null;
-    photo_url: string | null;
+    cohort_id: string | null;
+    status: string | null;
   } | null;
   cohorts: {
     id: string;
@@ -510,19 +508,9 @@ export default function InternshipDetailPage() {
                 <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
               </Link>
 
-              {student?.photo_url ? (
-                <Image
-                  src={student.photo_url}
-                  alt={`${student.first_name} ${student.last_name}`}
-                  width={56}
-                  height={56}
-                  className="rounded-full object-cover"
-                />
-              ) : (
-                <div className="w-14 h-14 bg-teal-100 dark:bg-teal-900/30 rounded-full flex items-center justify-center">
-                  <User className="w-7 h-7 text-teal-600 dark:text-teal-400" />
-                </div>
-              )}
+              <div className="w-14 h-14 bg-teal-100 dark:bg-teal-900/30 rounded-full flex items-center justify-center">
+                <User className="w-7 h-7 text-teal-600 dark:text-teal-400" />
+              </div>
 
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -819,11 +807,6 @@ export default function InternshipDetailPage() {
                   {student?.email && (
                     <a href={`mailto:${student.email}`} className="flex items-center gap-1 text-teal-600 dark:text-teal-400 hover:underline">
                       <Mail className="w-3 h-3" /> {student.email}
-                    </a>
-                  )}
-                  {student?.phone && (
-                    <a href={`tel:${student.phone}`} className="flex items-center gap-1 text-gray-600 dark:text-gray-400 mt-1">
-                      <Phone className="w-3 h-3" /> {student.phone}
                     </a>
                   )}
                 </div>

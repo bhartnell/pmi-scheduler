@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
           first_name,
           last_name,
           email,
-          photo_url
+          status
         ),
         cohorts (
           id,
