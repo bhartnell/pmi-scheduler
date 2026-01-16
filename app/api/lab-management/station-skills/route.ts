@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
 export async function GET(request: NextRequest) {
@@ -65,16 +65,23 @@ export async function DELETE(request: NextRequest) {
   const stationId = searchParams.get('stationId');
   const skillId = searchParams.get('skillId');
 
-  if (!stationId || !skillId) {
-    return NextResponse.json({ success: false, error: 'stationId and skillId are required' }, { status: 400 });
+  if (!stationId) {
+    return NextResponse.json({ success: false, error: 'stationId is required' }, { status: 400 });
   }
 
   try {
-    const { error } = await supabase
+    // If skillId is provided, delete specific skill link
+    // If only stationId is provided, delete ALL skill links for that station
+    let query = supabase
       .from('station_skills')
       .delete()
-      .eq('station_id', stationId)
-      .eq('skill_id', skillId);
+      .eq('station_id', stationId);
+
+    if (skillId) {
+      query = query.eq('skill_id', skillId);
+    }
+
+    const { error } = await query;
 
     if (error) throw error;
 
