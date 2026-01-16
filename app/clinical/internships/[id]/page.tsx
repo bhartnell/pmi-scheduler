@@ -289,11 +289,12 @@ export default function InternshipDetailPage() {
         showToast('Changes saved successfully', 'success');
         await fetchData();
       } else {
-        showToast('Failed to save changes', 'error');
+        console.error('Save failed:', data.error, data.code);
+        showToast(data.error || 'Failed to save changes', 'error');
       }
     } catch (error) {
       console.error('Error saving:', error);
-      showToast('Failed to save changes', 'error');
+      showToast('Network error saving changes', 'error');
     }
     setSaving(false);
   };

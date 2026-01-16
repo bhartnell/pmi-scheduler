@@ -189,12 +189,20 @@ export async function PUT(
       `)
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase update error:', error.code, error.message, error.details);
+      return NextResponse.json({
+        success: false,
+        error: `Database error: ${error.message}`,
+        code: error.code
+      }, { status: 500 });
+    }
 
     return NextResponse.json({ success: true, internship: data });
   } catch (error) {
     console.error('Error updating internship:', error);
-    return NextResponse.json({ success: false, error: 'Failed to update internship' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Failed to update internship';
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }
 
