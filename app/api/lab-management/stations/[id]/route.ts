@@ -32,12 +32,20 @@ export async function GET(
       .eq('id', id)
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase GET error:', error.code, error.message, error.details);
+      return NextResponse.json({
+        success: false,
+        error: `Database error: ${error.message}`,
+        code: error.code
+      }, { status: 500 });
+    }
 
     return NextResponse.json({ success: true, station: data });
   } catch (error) {
     console.error('Error fetching station:', error);
-    return NextResponse.json({ success: false, error: 'Failed to fetch station' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Failed to fetch station';
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }
 
@@ -74,12 +82,20 @@ export async function PATCH(
       `)
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase PATCH error:', error.code, error.message, error.details);
+      return NextResponse.json({
+        success: false,
+        error: `Database error: ${error.message}`,
+        code: error.code
+      }, { status: 500 });
+    }
 
     return NextResponse.json({ success: true, station: data });
   } catch (error) {
     console.error('Error updating station:', error);
-    return NextResponse.json({ success: false, error: 'Failed to update station' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Failed to update station';
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }
 
