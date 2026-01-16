@@ -21,7 +21,6 @@ export async function GET(
         lab_day:lab_days(
           id,
           date,
-          title,
           cohort:cohorts(
             id,
             cohort_number,
@@ -78,7 +77,7 @@ export async function PATCH(
       .select(`
         *,
         scenario:scenarios(id, title, category),
-        lab_day:lab_days(id, date, title)
+        lab_day:lab_days(id, date)
       `)
       .single();
 
