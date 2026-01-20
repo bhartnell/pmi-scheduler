@@ -142,7 +142,11 @@ export async function PUT(
     if (body.phase_2_eval_completed !== undefined) updateData.phase_2_eval_completed = body.phase_2_eval_completed;
     if (body.phase_2_eval_notes !== undefined) updateData.phase_2_eval_notes = body.phase_2_eval_notes?.trim() || null;
 
-    // Closeout
+    // Closeout - new organized workflow
+    if (body.internship_completion_date !== undefined) updateData.internship_completion_date = body.internship_completion_date || null;
+    if (body.snhd_submitted !== undefined) updateData.snhd_submitted = body.snhd_submitted;
+    if (body.snhd_submitted_date !== undefined) updateData.snhd_submitted_date = body.snhd_submitted_date || null;
+    if (body.nremt_clearance_date !== undefined) updateData.nremt_clearance_date = body.nremt_clearance_date || null;
     if (body.closeout_meeting_date !== undefined) updateData.closeout_meeting_date = body.closeout_meeting_date || null;
     if (body.closeout_completed !== undefined) updateData.closeout_completed = body.closeout_completed;
 

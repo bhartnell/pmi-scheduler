@@ -525,16 +525,56 @@ export default function InternshipTrackerPage() {
     completed: internships.filter(i => i.status === 'completed').length,
   };
 
-  // Calculate alerts
+  // Calculate alerts with categories: critical, action, upcoming
   const alerts = internships.reduce((acc, internship) => {
     const milestones = getInternshipMilestones(internship);
-    if (milestones.isOverdue) acc.overdue.push({ internship, milestones });
-    else if (milestones.isDueThisWeek) acc.dueThisWeek.push({ internship, milestones });
-    if (!milestones.preReqsComplete && internship.current_phase !== 'completed') {
-      acc.missingPreReqs.push({ internship, milestones });
+
+    // CRITICAL: Overdue items that need immediate attention
+    if (milestones.isOverdue) {
+      acc.critical.push({
+        internship,
+        milestones,
+        reason: milestones.p1Status === 'overdue' ? 'Phase 1 eval overdue' :
+                milestones.p2Status === 'overdue' ? 'Phase 2 eval overdue' :
+                'Expected end date passed'
+      });
     }
+
+    // ACTION: Items that need attention soon (due this week, at risk status, missing placement)
+    if (milestones.isDueThisWeek && !milestones.isOverdue) {
+      acc.action.push({
+        internship,
+        milestones,
+        reason: milestones.p1Status === 'due_week' ? 'Phase 1 eval due this week' :
+                milestones.p2Status === 'due_week' ? 'Phase 2 eval due this week' :
+                'Expected end date this week'
+      });
+    }
+    if (internship.status === 'at_risk' && !milestones.isOverdue) {
+      const exists = acc.action.find(a => a.internship.id === internship.id);
+      if (!exists) {
+        acc.action.push({ internship, milestones, reason: 'At risk status' });
+      }
+    }
+
+    // UPCOMING: Items due within 14 days
+    const hasDueSoon = milestones.p1Status === 'due_soon' || milestones.p2Status === 'due_soon' || milestones.endStatus === 'due_soon';
+    if (hasDueSoon && !milestones.isOverdue && !milestones.isDueThisWeek) {
+      acc.upcoming.push({
+        internship,
+        milestones,
+        reason: milestones.p1Status === 'due_soon' ? 'Phase 1 eval in ~2 weeks' :
+                milestones.p2Status === 'due_soon' ? 'Phase 2 eval in ~2 weeks' :
+                'Internship ending in ~2 weeks'
+      });
+    }
+
     return acc;
-  }, { overdue: [] as { internship: Internship; milestones: ReturnType<typeof getInternshipMilestones> }[], dueThisWeek: [] as { internship: Internship; milestones: ReturnType<typeof getInternshipMilestones> }[], missingPreReqs: [] as { internship: Internship; milestones: ReturnType<typeof getInternshipMilestones> }[] });
+  }, {
+    critical: [] as { internship: Internship; milestones: ReturnType<typeof getInternshipMilestones>; reason: string }[],
+    action: [] as { internship: Internship; milestones: ReturnType<typeof getInternshipMilestones>; reason: string }[],
+    upcoming: [] as { internship: Internship; milestones: ReturnType<typeof getInternshipMilestones>; reason: string }[]
+  });
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '-';
@@ -692,57 +732,126 @@ export default function InternshipTrackerPage() {
               </div>
             </div>
 
-            {/* Alerts Section */}
-            {(alerts.overdue.length > 0 || alerts.dueThisWeek.length > 0) && (
+            {/* Alerts Section - Organized by Category */}
+            {(alerts.critical.length > 0 || alerts.action.length > 0 || alerts.upcoming.length > 0) && (
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-                <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-red-50 dark:bg-red-900/20">
+                <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
                   <div className="flex items-center gap-2">
-                    <Bell className="w-5 h-5 text-red-600 dark:text-red-400" />
-                    <h3 className="font-semibold text-red-900 dark:text-red-300">Needs Attention</h3>
-                    <span className="ml-auto text-sm text-red-700 dark:text-red-400">
-                      {alerts.overdue.length + alerts.dueThisWeek.length} items
-                    </span>
+                    <Bell className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                    <h3 className="font-semibold text-gray-900 dark:text-white">Alerts</h3>
+                    <div className="ml-auto flex items-center gap-2">
+                      {alerts.critical.length > 0 && (
+                        <span className="px-2 py-0.5 text-xs font-medium bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 rounded-full">
+                          {alerts.critical.length} critical
+                        </span>
+                      )}
+                      {alerts.action.length > 0 && (
+                        <span className="px-2 py-0.5 text-xs font-medium bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 rounded-full">
+                          {alerts.action.length} action
+                        </span>
+                      )}
+                      {alerts.upcoming.length > 0 && (
+                        <span className="px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded-full">
+                          {alerts.upcoming.length} upcoming
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-                <div className="p-4 space-y-3 max-h-64 overflow-y-auto">
-                  {alerts.overdue.map(({ internship }) => (
-                    <div key={internship.id} className="flex items-center justify-between p-2 bg-red-50 dark:bg-red-900/20 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">🔴</span>
-                        <div>
-                          <div className="text-sm font-medium text-gray-900 dark:text-white">
-                            {internship.students?.first_name} {internship.students?.last_name}
-                          </div>
-                          <div className="text-xs text-red-600 dark:text-red-400">Overdue milestone</div>
-                        </div>
+
+                <div className="divide-y divide-gray-100 dark:divide-gray-700 max-h-80 overflow-y-auto">
+                  {/* Critical Alerts */}
+                  {alerts.critical.length > 0 && (
+                    <div className="p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <AlertCircle className="w-4 h-4 text-red-500" />
+                        <span className="text-xs font-semibold uppercase tracking-wider text-red-600 dark:text-red-400">Critical</span>
                       </div>
-                      <Link
-                        href={`/clinical/internships/${internship.id}`}
-                        className="text-sm text-red-600 dark:text-red-400 hover:underline"
-                      >
-                        View →
-                      </Link>
-                    </div>
-                  ))}
-                  {alerts.dueThisWeek.map(({ internship }) => (
-                    <div key={internship.id} className="flex items-center justify-between p-2 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">🟠</span>
-                        <div>
-                          <div className="text-sm font-medium text-gray-900 dark:text-white">
-                            {internship.students?.first_name} {internship.students?.last_name}
+                      <div className="space-y-2">
+                        {alerts.critical.map(({ internship, reason }) => (
+                          <div key={internship.id} className="flex items-center justify-between p-2 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                            <div className="flex items-center gap-2">
+                              <span className="text-lg">🔴</span>
+                              <div>
+                                <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                  {internship.students?.first_name} {internship.students?.last_name}
+                                </div>
+                                <div className="text-xs text-red-600 dark:text-red-400">{reason}</div>
+                              </div>
+                            </div>
+                            <Link
+                              href={`/clinical/internships/${internship.id}`}
+                              className="text-sm text-red-600 dark:text-red-400 hover:underline font-medium"
+                            >
+                              View →
+                            </Link>
                           </div>
-                          <div className="text-xs text-orange-600 dark:text-orange-400">Due this week</div>
-                        </div>
+                        ))}
                       </div>
-                      <Link
-                        href={`/clinical/internships/${internship.id}`}
-                        className="text-sm text-orange-600 dark:text-orange-400 hover:underline"
-                      >
-                        View →
-                      </Link>
                     </div>
-                  ))}
+                  )}
+
+                  {/* Action Required */}
+                  {alerts.action.length > 0 && (
+                    <div className="p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Clock className="w-4 h-4 text-orange-500" />
+                        <span className="text-xs font-semibold uppercase tracking-wider text-orange-600 dark:text-orange-400">Action Required</span>
+                      </div>
+                      <div className="space-y-2">
+                        {alerts.action.map(({ internship, reason }) => (
+                          <div key={`action-${internship.id}`} className="flex items-center justify-between p-2 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
+                            <div className="flex items-center gap-2">
+                              <span className="text-lg">🟠</span>
+                              <div>
+                                <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                  {internship.students?.first_name} {internship.students?.last_name}
+                                </div>
+                                <div className="text-xs text-orange-600 dark:text-orange-400">{reason}</div>
+                              </div>
+                            </div>
+                            <Link
+                              href={`/clinical/internships/${internship.id}`}
+                              className="text-sm text-orange-600 dark:text-orange-400 hover:underline font-medium"
+                            >
+                              View →
+                            </Link>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Upcoming */}
+                  {alerts.upcoming.length > 0 && (
+                    <div className="p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Calendar className="w-4 h-4 text-blue-500" />
+                        <span className="text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">Upcoming</span>
+                      </div>
+                      <div className="space-y-2">
+                        {alerts.upcoming.map(({ internship, reason }) => (
+                          <div key={`upcoming-${internship.id}`} className="flex items-center justify-between p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                            <div className="flex items-center gap-2">
+                              <span className="text-lg">🟡</span>
+                              <div>
+                                <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                  {internship.students?.first_name} {internship.students?.last_name}
+                                </div>
+                                <div className="text-xs text-blue-600 dark:text-blue-400">{reason}</div>
+                              </div>
+                            </div>
+                            <Link
+                              href={`/clinical/internships/${internship.id}`}
+                              className="text-sm text-blue-600 dark:text-blue-400 hover:underline font-medium"
+                            >
+                              View →
+                            </Link>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

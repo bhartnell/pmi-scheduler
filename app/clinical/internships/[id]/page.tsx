@@ -58,13 +58,18 @@ interface Internship {
   phase_2_eval_notes: string | null;
   closeout_meeting_date: string | null;
   closeout_completed: boolean;
-  // Clearance fields
+  // Clearance fields (legacy S2 - kept for data but not displayed)
   liability_form_completed: boolean;
   background_check_completed: boolean;
   drug_screen_completed: boolean;
   immunizations_verified: boolean;
   cpr_card_verified: boolean;
+  // New closeout workflow fields
+  internship_completion_date: string | null;
+  snhd_submitted: boolean;
+  snhd_submitted_date: string | null;
   cleared_for_nremt: boolean;
+  nremt_clearance_date: string | null;
   ryan_notified: boolean;
   ryan_notified_date: string | null;
   // Exam fields
@@ -145,11 +150,6 @@ const PLACEMENT_ITEMS: ChecklistItem[] = [
   { key: 'preceptor_id', label: 'Preceptor Assigned', required: true },
   { key: 'placement_date', label: 'Placement Date Set', dateKey: 'placement_date', required: true },
   { key: 'orientation_completed', label: 'Orientation Completed', dateKey: 'orientation_date', required: true },
-  { key: 'liability_form_completed', label: 'Liability Form Signed', required: true },
-  { key: 'background_check_completed', label: 'Background Check', required: true },
-  { key: 'drug_screen_completed', label: 'Drug Screen', required: true },
-  { key: 'immunizations_verified', label: 'Immunizations Verified', required: true },
-  { key: 'cpr_card_verified', label: 'CPR Card Verified', required: true },
 ];
 
 // Exam tracking items
@@ -171,10 +171,12 @@ const PHASE2_ITEMS: ChecklistItem[] = [
   { key: 'phase_2_eval_completed', label: 'Phase 2 Evaluation Completed', required: true },
 ];
 
-const CLEARANCE_ITEMS: ChecklistItem[] = [
-  { key: 'closeout_meeting_date', label: 'Closeout Meeting Scheduled', dateKey: 'closeout_meeting_date', required: true },
-  { key: 'closeout_completed', label: 'Closeout Meeting Completed', required: true },
-  { key: 'actual_end_date', label: 'Internship End Date Recorded', dateKey: 'actual_end_date', required: true },
+// New organized closeout workflow: Internship Completion → SNHD Requirements → NREMT Clearance → Closeout Meeting
+const CLOSEOUT_ITEMS: ChecklistItem[] = [
+  { key: 'internship_completion_date', label: 'Internship Completed', dateKey: 'internship_completion_date', required: true },
+  { key: 'snhd_submitted', label: 'SNHD Requirements Submitted', dateKey: 'snhd_submitted_date', required: true },
+  { key: 'cleared_for_nremt', label: 'NREMT Clearance', dateKey: 'nremt_clearance_date', required: true },
+  { key: 'closeout_completed', label: 'Closeout Meeting Completed', dateKey: 'closeout_meeting_date', required: true },
 ];
 
 export default function InternshipDetailPage() {
@@ -259,12 +261,18 @@ export default function InternshipDetailPage() {
           phase_2_eval_notes: i.phase_2_eval_notes || '',
           closeout_meeting_date: i.closeout_meeting_date || '',
           closeout_completed: i.closeout_completed || false,
+          // Legacy S2 fields (kept for data compatibility)
           liability_form_completed: i.liability_form_completed || false,
           background_check_completed: i.background_check_completed || false,
           drug_screen_completed: i.drug_screen_completed || false,
           immunizations_verified: i.immunizations_verified || false,
           cpr_card_verified: i.cpr_card_verified || false,
+          // New closeout workflow fields
+          internship_completion_date: i.internship_completion_date || '',
+          snhd_submitted: i.snhd_submitted || false,
+          snhd_submitted_date: i.snhd_submitted_date || '',
           cleared_for_nremt: i.cleared_for_nremt || false,
+          nremt_clearance_date: i.nremt_clearance_date || '',
           ryan_notified: i.ryan_notified || false,
           ryan_notified_date: i.ryan_notified_date || '',
           // Exam fields
@@ -387,14 +395,14 @@ export default function InternshipDetailPage() {
   const examProgress = calculateSectionProgress(EXAM_ITEMS);
   const phase1Progress = calculateSectionProgress(PHASE1_ITEMS);
   const phase2Progress = calculateSectionProgress(PHASE2_ITEMS);
-  const clearanceProgress = calculateSectionProgress(CLEARANCE_ITEMS);
+  const closeoutProgress = calculateSectionProgress(CLOSEOUT_ITEMS);
 
-  const totalItems = PLACEMENT_ITEMS.length + EXAM_ITEMS.length + PHASE1_ITEMS.length + PHASE2_ITEMS.length + CLEARANCE_ITEMS.length;
-  const completedItems = [...PLACEMENT_ITEMS, ...EXAM_ITEMS, ...PHASE1_ITEMS, ...PHASE2_ITEMS, ...CLEARANCE_ITEMS].filter(isItemComplete).length;
+  const totalItems = PLACEMENT_ITEMS.length + EXAM_ITEMS.length + PHASE1_ITEMS.length + PHASE2_ITEMS.length + CLOSEOUT_ITEMS.length;
+  const completedItems = [...PLACEMENT_ITEMS, ...EXAM_ITEMS, ...PHASE1_ITEMS, ...PHASE2_ITEMS, ...CLOSEOUT_ITEMS].filter(isItemComplete).length;
   const overallProgress = Math.round((completedItems / totalItems) * 100);
 
   // Check if cleared for NREMT (all required items complete)
-  const allRequiredItems = [...PLACEMENT_ITEMS, ...EXAM_ITEMS, ...PHASE1_ITEMS, ...PHASE2_ITEMS, ...CLEARANCE_ITEMS].filter(i => i.required);
+  const allRequiredItems = [...PLACEMENT_ITEMS, ...EXAM_ITEMS, ...PHASE1_ITEMS, ...PHASE2_ITEMS, ...CLOSEOUT_ITEMS].filter(i => i.required);
   const isClearedForNREMT = allRequiredItems.every(isItemComplete);
 
   const formatDate = (dateString: string | null) => {
@@ -499,6 +507,90 @@ export default function InternshipDetailPage() {
         {!canEdit && dateValue && (
           <span className="text-sm text-gray-500 dark:text-gray-400">{formatDate(dateValue)}</span>
         )}
+      </div>
+    );
+  };
+
+  // Closeout step component with auto-date buttons
+  const CloseoutStep = ({
+    step,
+    label,
+    description,
+    dateKey,
+    dateValue,
+    isComplete,
+    onMarkComplete,
+    onDateChange,
+    onClear,
+    canEdit,
+    buttonLabel,
+  }: {
+    step: number;
+    label: string;
+    description: string;
+    dateKey: string;
+    dateValue: string;
+    isComplete: boolean;
+    onMarkComplete: () => void;
+    onDateChange: (date: string) => void;
+    onClear: () => void;
+    canEdit: boolean;
+    buttonLabel: string;
+  }) => {
+    return (
+      <div className={`p-3 rounded-lg border-2 transition-all ${
+        isComplete
+          ? 'bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700'
+          : 'bg-gray-50 dark:bg-gray-700/30 border-gray-200 dark:border-gray-600'
+      }`}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+              isComplete
+                ? 'bg-green-500 text-white'
+                : 'bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-300'
+            }`}>
+              {isComplete ? <CheckCircle2 className="w-5 h-5" /> : step}
+            </div>
+            <div>
+              <div className={`font-medium ${isComplete ? 'text-green-800 dark:text-green-300' : 'text-gray-900 dark:text-white'}`}>
+                {label}
+              </div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">{description}</div>
+              {dateValue && (
+                <div className="text-xs text-green-600 dark:text-green-400 mt-1">
+                  Completed: {formatDate(dateValue)}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {canEdit && (
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {!isComplete ? (
+                <button
+                  onClick={onMarkComplete}
+                  className="px-3 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  {buttonLabel}
+                </button>
+              ) : (
+                <button
+                  onClick={onClear}
+                  className="px-3 py-1.5 text-sm bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
+                >
+                  Undo
+                </button>
+              )}
+              <input
+                type="date"
+                value={dateValue || ''}
+                onChange={(e) => onDateChange(e.target.value)}
+                className="px-2 py-1 text-sm border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white w-32"
+              />
+            </div>
+          )}
+        </div>
       </div>
     );
   };
@@ -614,8 +706,8 @@ export default function InternshipDetailPage() {
               <div className="text-xs text-gray-500 dark:text-gray-400">Phase 2</div>
             </div>
             <div className="text-center">
-              <div className="text-lg font-semibold text-gray-900 dark:text-white">{clearanceProgress}%</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">Clearance</div>
+              <div className="text-lg font-semibold text-gray-900 dark:text-white">{closeoutProgress}%</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">Closeout</div>
             </div>
           </div>
 
@@ -844,28 +936,117 @@ export default function InternshipDetailPage() {
               </div>
             </div>
 
-            {/* Clearance & Closeout */}
+            {/* Closeout Workflow */}
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
               <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-green-50 dark:bg-green-900/20">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <CheckSquare className="w-5 h-5 text-green-600 dark:text-green-400" />
-                    <h3 className="font-semibold text-gray-900 dark:text-white">Clearance & Closeout</h3>
+                    <h3 className="font-semibold text-gray-900 dark:text-white">Closeout Workflow</h3>
                   </div>
                   <span className={`px-2 py-1 text-xs font-medium rounded ${
-                    clearanceProgress === 100
+                    closeoutProgress === 100
                       ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                       : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
                   }`}>
-                    {clearanceProgress}%
+                    {closeoutProgress}%
                   </span>
                 </div>
               </div>
 
-              <div className="p-4 space-y-2">
-                {CLEARANCE_ITEMS.map(item => (
-                  <ChecklistRow key={item.key} item={item} section="clearance" />
-                ))}
+              <div className="p-4 space-y-3">
+                {/* Step 1: Internship Completion */}
+                <CloseoutStep
+                  step={1}
+                  label="Internship Completed"
+                  description="All hours and competencies completed"
+                  dateKey="internship_completion_date"
+                  dateValue={formData.internship_completion_date}
+                  isComplete={!!formData.internship_completion_date}
+                  onMarkComplete={() => {
+                    const today = new Date().toISOString().split('T')[0];
+                    handleInputChange('internship_completion_date', today);
+                  }}
+                  onDateChange={(date) => handleInputChange('internship_completion_date', date)}
+                  onClear={() => handleInputChange('internship_completion_date', '')}
+                  canEdit={canEdit}
+                  buttonLabel="Complete"
+                />
+
+                {/* Step 2: SNHD Requirements */}
+                <CloseoutStep
+                  step={2}
+                  label="SNHD Requirements"
+                  description="Southern Nevada Health District paperwork submitted"
+                  dateKey="snhd_submitted_date"
+                  dateValue={formData.snhd_submitted_date}
+                  isComplete={formData.snhd_submitted}
+                  onMarkComplete={() => {
+                    const today = new Date().toISOString().split('T')[0];
+                    handleInputChange('snhd_submitted', true);
+                    handleInputChange('snhd_submitted_date', today);
+                  }}
+                  onDateChange={(date) => {
+                    handleInputChange('snhd_submitted_date', date);
+                    if (date) handleInputChange('snhd_submitted', true);
+                  }}
+                  onClear={() => {
+                    handleInputChange('snhd_submitted', false);
+                    handleInputChange('snhd_submitted_date', '');
+                  }}
+                  canEdit={canEdit}
+                  buttonLabel="Submit"
+                />
+
+                {/* Step 3: NREMT Clearance */}
+                <CloseoutStep
+                  step={3}
+                  label="NREMT Clearance"
+                  description="Cleared to take national registry exam"
+                  dateKey="nremt_clearance_date"
+                  dateValue={formData.nremt_clearance_date}
+                  isComplete={formData.cleared_for_nremt}
+                  onMarkComplete={() => {
+                    const today = new Date().toISOString().split('T')[0];
+                    handleInputChange('cleared_for_nremt', true);
+                    handleInputChange('nremt_clearance_date', today);
+                  }}
+                  onDateChange={(date) => {
+                    handleInputChange('nremt_clearance_date', date);
+                    if (date) handleInputChange('cleared_for_nremt', true);
+                  }}
+                  onClear={() => {
+                    handleInputChange('cleared_for_nremt', false);
+                    handleInputChange('nremt_clearance_date', '');
+                  }}
+                  canEdit={canEdit}
+                  buttonLabel="Clear"
+                />
+
+                {/* Step 4: Closeout Meeting */}
+                <CloseoutStep
+                  step={4}
+                  label="Closeout Meeting"
+                  description="Final meeting with student completed"
+                  dateKey="closeout_meeting_date"
+                  dateValue={formData.closeout_meeting_date}
+                  isComplete={formData.closeout_completed}
+                  onMarkComplete={() => {
+                    const today = new Date().toISOString().split('T')[0];
+                    handleInputChange('closeout_completed', true);
+                    handleInputChange('closeout_meeting_date', today);
+                  }}
+                  onDateChange={(date) => {
+                    handleInputChange('closeout_meeting_date', date);
+                    if (date) handleInputChange('closeout_completed', true);
+                  }}
+                  onClear={() => {
+                    handleInputChange('closeout_completed', false);
+                    handleInputChange('closeout_meeting_date', '');
+                  }}
+                  canEdit={canEdit}
+                  buttonLabel="Complete"
+                />
               </div>
             </div>
 
