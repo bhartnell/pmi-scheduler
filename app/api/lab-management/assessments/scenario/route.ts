@@ -82,20 +82,25 @@ export async function POST(request: NextRequest) {
       lab_group_id: body.lab_group_id,
       team_lead_id: body.team_lead_id,
       rotation_number: body.rotation_number || 1,
-      
+
       // Store the full criteria ratings as JSONB
       criteria_ratings: body.criteria_ratings || [],
       critical_actions_completed: body.critical_actions_completed || {},
-      
+
       // Summary scores
       satisfactory_count: body.satisfactory_count || 0,
       phase1_pass: body.phase1_pass || false,
       phase2_pass: body.phase2_pass || false,
-      
+
       // Comments
       overall_comments: body.overall_comments || null,
       graded_by: body.graded_by || null,
-      
+
+      // Flagging fields
+      issue_level: body.issue_level || 'none',
+      flag_categories: body.flag_categories || null,
+      flagged_for_review: body.flagged_for_review || false,
+
       // Legacy fields for compatibility
       overall_score: body.satisfactory_count || 0,
       team_lead_performance: body.phase2_pass ? 'satisfactory' : body.phase1_pass ? 'needs_improvement' : 'unsatisfactory'

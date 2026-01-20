@@ -111,7 +111,11 @@ export async function POST(request: NextRequest) {
         room: body.room || null,
         notes: body.notes || null,
         rotation_minutes: body.rotation_minutes || 30,
-        num_rotations: body.num_rotations || 4
+        num_rotations: body.num_rotations || 4,
+        // Skills station document fields
+        skill_sheet_url: body.skill_sheet_url || null,
+        instructions_url: body.instructions_url || null,
+        station_notes: body.station_notes || null
       })
       .select(`
         *,

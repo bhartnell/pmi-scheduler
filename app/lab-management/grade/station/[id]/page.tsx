@@ -4,7 +4,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { 
+import {
   ChevronRight,
   Save,
   CheckCircle,
@@ -15,7 +15,9 @@ import {
   FileText,
   ChevronDown,
   ChevronUp,
-  Clock
+  Clock,
+  ExternalLink,
+  ClipboardCheck
 } from 'lucide-react';
 
 // Types
@@ -35,16 +37,54 @@ interface LabGroup {
   }[];
 }
 
+interface ScenarioPhase {
+  phase_name: string;
+  vitals?: {
+    bp?: string;
+    hr?: string;
+    rr?: string;
+    spo2?: string;
+    etco2?: string;
+    temp?: string;
+    glucose?: string;
+    gcs?: string;
+    pain?: string;
+  };
+  presentation_notes?: string;
+  expected_interventions?: string[];
+}
+
 interface Station {
   id: string;
   station_number: number;
+  station_type: string;
+  skill_sheet_url: string | null;
+  instructions_url: string | null;
+  station_notes: string | null;
   scenario: {
     id: string;
     title: string;
     category: string;
+    subcategory: string | null;
     difficulty: string;
+    estimated_duration: number | null;
+    instructor_notes: string | null;
+    learning_objectives: string[] | null;
+    dispatch_time: string | null;
+    dispatch_location: string | null;
+    chief_complaint: string | null;
+    dispatch_notes: string | null;
+    patient_name: string | null;
+    patient_age: number | null;
+    patient_sex: string | null;
+    patient_weight: number | null;
+    medical_history: string[] | null;
+    medications: string[] | null;
+    allergies: string[] | null;
+    general_impression: string | null;
+    initial_vitals: Record<string, string> | null;
+    phases: ScenarioPhase[] | null;
     critical_actions: string[];
-    instructor_notes: string;
     debrief_points: string[];
   } | null;
   lab_day: {
@@ -111,6 +151,10 @@ export default function GradeStationPage() {
   );
   const [overallComments, setOverallComments] = useState('');
   const [showScenarioDetails, setShowScenarioDetails] = useState(false);
+
+  // Flagging state
+  const [issueLevel, setIssueLevel] = useState<'none' | 'minor' | 'needs_followup'>('none');
+  const [flagCategories, setFlagCategories] = useState<string[]>([]);
 
   // Computed values
   const selectedGroup = labGroups.find(g => g.id === selectedGroupId);
@@ -227,7 +271,11 @@ export default function GradeStationPage() {
         overall_comments: overallComments,
         graded_by: session?.user?.email,
         phase1_pass: phase1Pass,
-        phase2_pass: phase2Pass
+        phase2_pass: phase2Pass,
+        // Flagging fields
+        issue_level: issueLevel,
+        flag_categories: flagCategories.length > 0 ? flagCategories : null,
+        flagged_for_review: issueLevel === 'needs_followup'
       };
 
       const res = await fetch('/api/lab-management/assessments/scenario', {
@@ -332,6 +380,52 @@ export default function GradeStationPage() {
       </div>
 
       <main className="max-w-2xl mx-auto px-4 py-4 space-y-4">
+        {/* Skills Station Materials */}
+        {station.station_type === 'skills' && (station.skill_sheet_url || station.instructions_url || station.station_notes) && (
+          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+            <h2 className="font-semibold text-green-800 dark:text-green-300 flex items-center gap-2 mb-3">
+              <ClipboardCheck className="w-5 h-5" />
+              Station Materials
+            </h2>
+            <div className="space-y-3">
+              {station.skill_sheet_url && (
+                <div className="flex items-center gap-3">
+                  <FileText className="w-5 h-5 text-green-600 dark:text-green-400" />
+                  <a
+                    href={station.skill_sheet_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-green-700 dark:text-green-300 hover:underline flex items-center gap-1"
+                  >
+                    Skill Sheet
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                </div>
+              )}
+              {station.instructions_url && (
+                <div className="flex items-center gap-3">
+                  <FileText className="w-5 h-5 text-green-600 dark:text-green-400" />
+                  <a
+                    href={station.instructions_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-green-700 dark:text-green-300 hover:underline flex items-center gap-1"
+                  >
+                    Station Instructions
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                </div>
+              )}
+              {station.station_notes && (
+                <div className="mt-2 p-3 bg-white dark:bg-gray-800 rounded-lg">
+                  <div className="text-sm font-medium text-green-700 dark:text-green-400 mb-1">Notes:</div>
+                  <div className="text-sm text-green-800 dark:text-green-300 whitespace-pre-wrap">{station.station_notes}</div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Scenario Info */}
         {scenario ? (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
@@ -341,16 +435,191 @@ export default function GradeStationPage() {
             >
               <div>
                 <h2 className="font-semibold text-gray-900 dark:text-white">{scenario.title}</h2>
-                <p className="text-sm text-gray-600 dark:text-gray-400">{scenario.category} • {scenario.difficulty}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {scenario.category}{scenario.subcategory ? ` / ${scenario.subcategory}` : ''} • {scenario.difficulty}
+                  {scenario.estimated_duration ? ` • ${scenario.estimated_duration} min` : ''}
+                </p>
               </div>
               {showScenarioDetails ? <ChevronUp className="w-5 h-5 text-gray-600 dark:text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-600 dark:text-gray-400" />}
             </button>
-            {showScenarioDetails && scenario.instructor_notes && (
-              <div className="px-4 pb-4 border-t dark:border-gray-700">
-                <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
-                  <h3 className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-1">Instructor Notes</h3>
-                  <p className="text-sm text-blue-700 dark:text-blue-400">{scenario.instructor_notes}</p>
-                </div>
+            {showScenarioDetails && (
+              <div className="px-4 pb-4 border-t dark:border-gray-700 space-y-4 mt-3">
+                {/* Dispatch Info */}
+                {(scenario.chief_complaint || scenario.dispatch_location) && (
+                  <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                    <h3 className="text-sm font-medium text-red-800 dark:text-red-300 mb-2">Dispatch</h3>
+                    {scenario.chief_complaint && (
+                      <p className="text-sm text-red-700 dark:text-red-400 font-medium">
+                        Chief Complaint: {scenario.chief_complaint}
+                      </p>
+                    )}
+                    {scenario.dispatch_location && (
+                      <p className="text-sm text-red-700 dark:text-red-400">Location: {scenario.dispatch_location}</p>
+                    )}
+                    {scenario.dispatch_notes && (
+                      <p className="text-sm text-red-700 dark:text-red-400 mt-1">{scenario.dispatch_notes}</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Patient Info */}
+                {(scenario.patient_name || scenario.patient_age || scenario.general_impression) && (
+                  <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                    <h3 className="text-sm font-medium text-purple-800 dark:text-purple-300 mb-2">Patient</h3>
+                    <div className="text-sm text-purple-700 dark:text-purple-400 space-y-1">
+                      {scenario.patient_name && (
+                        <p><span className="font-medium">Name:</span> {scenario.patient_name}</p>
+                      )}
+                      {(scenario.patient_age || scenario.patient_sex) && (
+                        <p>
+                          {scenario.patient_age && <span>{scenario.patient_age} y/o </span>}
+                          {scenario.patient_sex && <span>{scenario.patient_sex}</span>}
+                          {scenario.patient_weight && <span>, {scenario.patient_weight} kg</span>}
+                        </p>
+                      )}
+                      {scenario.general_impression && (
+                        <p className="mt-2"><span className="font-medium">Presentation:</span> {scenario.general_impression}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Medical History */}
+                {(scenario.medical_history?.length || scenario.medications?.length || scenario.allergies?.length) && (
+                  <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
+                    <h3 className="text-sm font-medium text-orange-800 dark:text-orange-300 mb-2">History</h3>
+                    <div className="text-sm text-orange-700 dark:text-orange-400 space-y-1">
+                      {scenario.medical_history && scenario.medical_history.length > 0 && (
+                        <p><span className="font-medium">PMHx:</span> {scenario.medical_history.join(', ')}</p>
+                      )}
+                      {scenario.medications && scenario.medications.length > 0 && (
+                        <p><span className="font-medium">Meds:</span> {scenario.medications.join(', ')}</p>
+                      )}
+                      {scenario.allergies && scenario.allergies.length > 0 && (
+                        <p><span className="font-medium">Allergies:</span> {scenario.allergies.join(', ')}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Vitals */}
+                {scenario.initial_vitals && Object.keys(scenario.initial_vitals).length > 0 && (
+                  <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                    <h3 className="text-sm font-medium text-green-800 dark:text-green-300 mb-2">Initial Vitals</h3>
+                    <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 text-xs">
+                      {scenario.initial_vitals.bp && (
+                        <div className="text-center p-2 bg-white dark:bg-gray-800 rounded">
+                          <div className="font-medium text-green-700 dark:text-green-400">BP</div>
+                          <div className="text-green-900 dark:text-green-300">{scenario.initial_vitals.bp}</div>
+                        </div>
+                      )}
+                      {scenario.initial_vitals.hr && (
+                        <div className="text-center p-2 bg-white dark:bg-gray-800 rounded">
+                          <div className="font-medium text-green-700 dark:text-green-400">HR</div>
+                          <div className="text-green-900 dark:text-green-300">{scenario.initial_vitals.hr}</div>
+                        </div>
+                      )}
+                      {scenario.initial_vitals.rr && (
+                        <div className="text-center p-2 bg-white dark:bg-gray-800 rounded">
+                          <div className="font-medium text-green-700 dark:text-green-400">RR</div>
+                          <div className="text-green-900 dark:text-green-300">{scenario.initial_vitals.rr}</div>
+                        </div>
+                      )}
+                      {scenario.initial_vitals.spo2 && (
+                        <div className="text-center p-2 bg-white dark:bg-gray-800 rounded">
+                          <div className="font-medium text-green-700 dark:text-green-400">SpO2</div>
+                          <div className="text-green-900 dark:text-green-300">{scenario.initial_vitals.spo2}</div>
+                        </div>
+                      )}
+                      {scenario.initial_vitals.etco2 && (
+                        <div className="text-center p-2 bg-white dark:bg-gray-800 rounded">
+                          <div className="font-medium text-green-700 dark:text-green-400">EtCO2</div>
+                          <div className="text-green-900 dark:text-green-300">{scenario.initial_vitals.etco2}</div>
+                        </div>
+                      )}
+                      {scenario.initial_vitals.temp && (
+                        <div className="text-center p-2 bg-white dark:bg-gray-800 rounded">
+                          <div className="font-medium text-green-700 dark:text-green-400">Temp</div>
+                          <div className="text-green-900 dark:text-green-300">{scenario.initial_vitals.temp}</div>
+                        </div>
+                      )}
+                      {scenario.initial_vitals.glucose && (
+                        <div className="text-center p-2 bg-white dark:bg-gray-800 rounded">
+                          <div className="font-medium text-green-700 dark:text-green-400">BGL</div>
+                          <div className="text-green-900 dark:text-green-300">{scenario.initial_vitals.glucose}</div>
+                        </div>
+                      )}
+                      {scenario.initial_vitals.gcs && (
+                        <div className="text-center p-2 bg-white dark:bg-gray-800 rounded">
+                          <div className="font-medium text-green-700 dark:text-green-400">GCS</div>
+                          <div className="text-green-900 dark:text-green-300">{scenario.initial_vitals.gcs}</div>
+                        </div>
+                      )}
+                      {scenario.initial_vitals.pain && (
+                        <div className="text-center p-2 bg-white dark:bg-gray-800 rounded">
+                          <div className="font-medium text-green-700 dark:text-green-400">Pain</div>
+                          <div className="text-green-900 dark:text-green-300">{scenario.initial_vitals.pain}</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Phases with Vitals Changes */}
+                {scenario.phases && scenario.phases.length > 1 && (
+                  <div className="p-3 bg-cyan-50 dark:bg-cyan-900/20 rounded-lg border border-cyan-200 dark:border-cyan-800">
+                    <h3 className="text-sm font-medium text-cyan-800 dark:text-cyan-300 mb-2">Scenario Phases</h3>
+                    <div className="space-y-3">
+                      {scenario.phases.map((phase, index) => (
+                        <div key={index} className="border-l-2 border-cyan-400 dark:border-cyan-600 pl-3">
+                          <div className="font-medium text-cyan-700 dark:text-cyan-400 text-sm">{phase.phase_name}</div>
+                          {phase.presentation_notes && (
+                            <p className="text-xs text-cyan-600 dark:text-cyan-500 mt-1">{phase.presentation_notes}</p>
+                          )}
+                          {phase.vitals && Object.keys(phase.vitals).length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-2 text-xs">
+                              {Object.entries(phase.vitals).map(([key, value]) => (
+                                value && (
+                                  <span key={key} className="px-2 py-1 bg-white dark:bg-gray-800 rounded text-cyan-700 dark:text-cyan-400">
+                                    {key.toUpperCase()}: {value}
+                                  </span>
+                                )
+                              ))}
+                            </div>
+                          )}
+                          {phase.expected_interventions && phase.expected_interventions.length > 0 && (
+                            <div className="mt-2 text-xs text-cyan-600 dark:text-cyan-500">
+                              <span className="font-medium">Expected:</span> {phase.expected_interventions.join(', ')}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Learning Objectives */}
+                {scenario.learning_objectives && scenario.learning_objectives.length > 0 && (
+                  <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-200 dark:border-indigo-800">
+                    <h3 className="text-sm font-medium text-indigo-800 dark:text-indigo-300 mb-2">Learning Objectives</h3>
+                    <ul className="text-sm text-indigo-700 dark:text-indigo-400 space-y-1">
+                      {scenario.learning_objectives.map((obj, index) => (
+                        <li key={index} className="flex items-start gap-2">
+                          <span className="text-indigo-400 dark:text-indigo-500">•</span>
+                          {obj}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Instructor Notes */}
+                {scenario.instructor_notes && (
+                  <div className="p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <h3 className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-1">Instructor Notes</h3>
+                    <p className="text-sm text-blue-700 dark:text-blue-400">{scenario.instructor_notes}</p>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -628,6 +897,104 @@ export default function GradeStationPage() {
             rows={4}
             className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
           />
+        </div>
+
+        {/* Flagging Section */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+          <h2 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-orange-500" />
+            Flag for Review
+          </h2>
+
+          {/* Issue Level */}
+          <div className="space-y-2 mb-4">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Issue Level</label>
+            <div className="space-y-2">
+              <label className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer border-2 transition-colors ${
+                issueLevel === 'none' ? 'border-green-500 bg-green-50 dark:bg-green-900/20' : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
+              }`}>
+                <input
+                  type="radio"
+                  name="issueLevel"
+                  value="none"
+                  checked={issueLevel === 'none'}
+                  onChange={() => { setIssueLevel('none'); setFlagCategories([]); }}
+                  className="w-4 h-4 text-green-600"
+                />
+                <span className="text-gray-900 dark:text-white">No Issues</span>
+              </label>
+              <label className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer border-2 transition-colors ${
+                issueLevel === 'minor' ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20' : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
+              }`}>
+                <input
+                  type="radio"
+                  name="issueLevel"
+                  value="minor"
+                  checked={issueLevel === 'minor'}
+                  onChange={() => setIssueLevel('minor')}
+                  className="w-4 h-4 text-yellow-600"
+                />
+                <span className="text-gray-900 dark:text-white">Minor - Learning Opportunity</span>
+              </label>
+              <label className={`flex items-center gap-3 p-3 rounded-lg cursor-pointer border-2 transition-colors ${
+                issueLevel === 'needs_followup' ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
+              }`}>
+                <input
+                  type="radio"
+                  name="issueLevel"
+                  value="needs_followup"
+                  checked={issueLevel === 'needs_followup'}
+                  onChange={() => setIssueLevel('needs_followup')}
+                  className="w-4 h-4 text-red-600"
+                />
+                <span className="text-gray-900 dark:text-white flex items-center gap-2">
+                  Needs Follow-up - Flag for Lead
+                  <AlertTriangle className="w-4 h-4 text-red-500" />
+                </span>
+              </label>
+            </div>
+          </div>
+
+          {/* Flag Categories (shown when minor or needs_followup) */}
+          {issueLevel !== 'none' && (
+            <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                Flag Categories (select all that apply)
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { value: 'affective', label: 'Affective/Attitude' },
+                  { value: 'skill_performance', label: 'Skill Performance' },
+                  { value: 'safety', label: 'Safety Concern' },
+                  { value: 'remediation', label: 'Needs Remediation' },
+                  { value: 'positive', label: 'Positive Recognition 🌟' }
+                ].map(category => (
+                  <label
+                    key={category.value}
+                    className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer ${
+                      flagCategories.includes(category.value)
+                        ? 'bg-blue-100 dark:bg-blue-900/30'
+                        : 'hover:bg-gray-100 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={flagCategories.includes(category.value)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setFlagCategories([...flagCategories, category.value]);
+                        } else {
+                          setFlagCategories(flagCategories.filter(c => c !== category.value));
+                        }
+                      }}
+                      className="w-4 h-4 text-blue-600"
+                    />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">{category.label}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Debrief Points */}

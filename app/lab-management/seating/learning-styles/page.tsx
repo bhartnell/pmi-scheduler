@@ -120,6 +120,22 @@ function LearningStylesContent() {
     }
   }, [status, router]);
 
+  // Update URL when cohort selection changes to preserve filter state
+  useEffect(() => {
+    if (status === 'authenticated') {
+      const currentUrl = new URL(window.location.href);
+      if (selectedCohort) {
+        currentUrl.searchParams.set('cohortId', selectedCohort);
+      } else {
+        currentUrl.searchParams.delete('cohortId');
+      }
+      // Only update if the URL actually changed
+      if (currentUrl.href !== window.location.href) {
+        router.replace(currentUrl.pathname + currentUrl.search, { scroll: false });
+      }
+    }
+  }, [selectedCohort, status, router]);
+
   useEffect(() => {
     if (session) {
       fetchCohorts();

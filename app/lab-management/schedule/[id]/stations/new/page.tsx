@@ -86,6 +86,11 @@ export default function NewStationPage() {
   const [room, setRoom] = useState('');
   const [notes, setNotes] = useState('');
 
+  // Skills station document fields
+  const [skillSheetUrl, setSkillSheetUrl] = useState('');
+  const [instructionsUrl, setInstructionsUrl] = useState('');
+  const [stationNotes, setStationNotes] = useState('');
+
   // Skills modal
   const [showSkillsModal, setShowSkillsModal] = useState(false);
   const [skillSearch, setSkillSearch] = useState('');
@@ -191,7 +196,11 @@ export default function NewStationPage() {
           instructor_name: instructorName || null,
           instructor_email: instructorEmail || null,
           room: room || null,
-          notes: notes || null
+          notes: notes || null,
+          // Skills station document fields
+          skill_sheet_url: stationType === 'skills' ? skillSheetUrl || null : null,
+          instructions_url: stationType === 'skills' ? instructionsUrl || null : null,
+          station_notes: stationType === 'skills' ? stationNotes || null : null
         })
       });
 
@@ -392,6 +401,9 @@ export default function NewStationPage() {
                         setScenarioId('');
                         setSelectedSkills([]);
                         setCustomSkills([]);
+                        setSkillSheetUrl('');
+                        setInstructionsUrl('');
+                        setStationNotes('');
                       }}
                       className={`px-3 py-1 text-sm rounded-lg transition-colors ${
                         stationType === type.value
@@ -510,6 +522,46 @@ export default function NewStationPage() {
                     >
                       <Plus className="w-4 h-4" /> Add custom skill
                     </button>
+                  </div>
+                </div>
+
+                {/* Station Documentation */}
+                <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                  <h4 className="text-sm font-medium text-green-800 dark:text-green-300 mb-3 flex items-center gap-2">
+                    <FileText className="w-4 h-4" />
+                    Station Documentation
+                  </h4>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs text-green-700 dark:text-green-400 mb-1">Skill Sheet URL</label>
+                      <input
+                        type="url"
+                        value={skillSheetUrl}
+                        onChange={(e) => setSkillSheetUrl(e.target.value)}
+                        placeholder="https://drive.google.com/... or paste URL"
+                        className="w-full px-3 py-2 border border-green-300 dark:border-green-700 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-green-700 dark:text-green-400 mb-1">Instructions URL</label>
+                      <input
+                        type="url"
+                        value={instructionsUrl}
+                        onChange={(e) => setInstructionsUrl(e.target.value)}
+                        placeholder="https://drive.google.com/... or paste URL"
+                        className="w-full px-3 py-2 border border-green-300 dark:border-green-700 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-green-700 dark:text-green-400 mb-1">Station Notes</label>
+                      <textarea
+                        value={stationNotes}
+                        onChange={(e) => setStationNotes(e.target.value)}
+                        placeholder="Equipment needed, setup instructions, special notes..."
+                        rows={3}
+                        className="w-full px-3 py-2 border border-green-300 dark:border-green-700 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

@@ -17,7 +17,32 @@ export async function GET(
       .from('lab_stations')
       .select(`
         *,
-        scenario:scenarios(id, title, category, difficulty, instructor_notes, critical_actions, debrief_points),
+        scenario:scenarios(
+          id,
+          title,
+          category,
+          subcategory,
+          difficulty,
+          estimated_duration,
+          instructor_notes,
+          learning_objectives,
+          dispatch_time,
+          dispatch_location,
+          chief_complaint,
+          dispatch_notes,
+          patient_name,
+          patient_age,
+          patient_sex,
+          patient_weight,
+          medical_history,
+          medications,
+          allergies,
+          general_impression,
+          initial_vitals,
+          phases,
+          critical_actions,
+          debrief_points
+        ),
         lab_day:lab_days(
           id,
           date,
@@ -69,6 +94,10 @@ export async function PATCH(
     if (body.station_number !== undefined) updateData.station_number = body.station_number;
     if (body.rotation_minutes !== undefined) updateData.rotation_minutes = body.rotation_minutes;
     if (body.num_rotations !== undefined) updateData.num_rotations = body.num_rotations;
+    // Skills station document fields
+    if (body.skill_sheet_url !== undefined) updateData.skill_sheet_url = body.skill_sheet_url;
+    if (body.instructions_url !== undefined) updateData.instructions_url = body.instructions_url;
+    if (body.station_notes !== undefined) updateData.station_notes = body.station_notes;
 
     const { data, error } = await supabase
       .from('lab_stations')
