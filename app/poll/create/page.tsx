@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Scheduler from '@/components/Scheduler';
 import { Home, ChevronRight, ArrowLeft, Calendar } from 'lucide-react';
@@ -10,12 +10,45 @@ import { Home, ChevronRight, ArrowLeft, Calendar } from 'lucide-react';
 export default function CreatePollPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/signin');
     }
   }, [status, router]);
+
+  const handleCreatePoll = async (pollConfig: any) => {
+    setCreating(true);
+    try {
+      const response = await fetch('/api/polls', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: pollConfig.title,
+          description: pollConfig.description || '',
+          mode: pollConfig.mode || 'individual',
+          start_date: pollConfig.startDate,
+          num_weeks: pollConfig.numWeeks || 2,
+          weekdays_only: pollConfig.weekdaysOnly ?? true,
+          created_by: session?.user?.email,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success && result.poll) {
+        // Redirect to the scheduler home to see the new poll
+        router.push('/scheduler');
+      } else {
+        alert('Failed to create poll: ' + (result.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error creating poll:', error);
+      alert('Failed to create poll. Please try again.');
+    }
+    setCreating(false);
+  };
 
   if (status === 'loading') {
     return (
@@ -29,6 +62,17 @@ export default function CreatePollPage() {
   }
 
   if (!session) return null;
+
+  if (creating) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-700 dark:text-gray-300">Creating poll...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
@@ -73,7 +117,7 @@ export default function CreatePollPage() {
 
       {/* Poll Creation Form */}
       <div className="p-4 sm:p-6">
-        <Scheduler mode="create" />
+        <Scheduler mode="create" onComplete={handleCreatePoll} />
       </div>
     </div>
   );

@@ -321,53 +321,136 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
 
   // Setup/Preview View
   if (view === 'setup') {
+    const canCreate = pollConfig.title.trim() && pollConfig.startDate;
+
     return (
       <div className="max-w-6xl mx-auto px-4">
         <div className="bg-white rounded-lg shadow-lg p-4 md:p-6 mb-4 md:mb-6">
-          <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-3 md:mb-4">Poll Preview: {pollConfig.title || 'New Poll'}</h1>
-          <p className="text-gray-700 mb-3 md:mb-4 text-sm md:text-base">Review settings and calendar grid. Adjust as needed before finalizing.</p>
-          
+          <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-3 md:mb-4">
+            Create {schedulingMode === 'individual' ? 'Individual Meeting' : 'Group Session'} Poll
+          </h1>
+
+          {/* Poll Configuration Form */}
+          <div className="space-y-4 mb-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Poll Title *</label>
+              <input
+                type="text"
+                value={pollConfig.title}
+                onChange={(e) => setPollConfig(p => ({ ...p, title: e.target.value }))}
+                placeholder={schedulingMode === 'individual' ? 'e.g., John Smith - Phase 1 Meeting' : 'e.g., Capstone Skills Testing - Group A'}
+                className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Description (optional)</label>
+              <textarea
+                value={pollConfig.description}
+                onChange={(e) => setPollConfig(p => ({ ...p, description: e.target.value }))}
+                placeholder="Additional details about this scheduling poll..."
+                rows={2}
+                className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Start Date *</label>
+                <input
+                  type="date"
+                  value={pollConfig.startDate}
+                  onChange={(e) => setPollConfig(p => ({ ...p, startDate: e.target.value }))}
+                  min={new Date().toISOString().split('T')[0]}
+                  className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Number of Weeks</label>
+                <select
+                  value={pollConfig.numWeeks}
+                  onChange={(e) => setPollConfig(p => ({ ...p, numWeeks: parseInt(e.target.value) }))}
+                  className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                >
+                  <option value={1}>1 week</option>
+                  <option value={2}>2 weeks</option>
+                  <option value={3}>3 weeks</option>
+                  <option value={4}>4 weeks</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Days to Include</label>
+                <select
+                  value={pollConfig.weekdaysOnly ? 'weekdays' : 'all'}
+                  onChange={(e) => setPollConfig(p => ({ ...p, weekdaysOnly: e.target.value === 'weekdays' }))}
+                  className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                >
+                  <option value="weekdays">Weekdays Only</option>
+                  <option value="all">All Days (incl. weekends)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
           <div className="bg-blue-50 p-3 md:p-4 rounded-lg mb-4">
-            <h3 className="font-semibold text-blue-900 mb-2 text-sm md:text-base">Settings:</h3>
+            <h3 className="font-semibold text-blue-900 mb-2 text-sm md:text-base">Poll Settings Summary:</h3>
             <ul className="space-y-1 text-xs md:text-sm text-blue-800">
               <li>• Type: {schedulingMode === 'individual' ? 'Individual Meeting' : 'Group Session'}</li>
               <li>• Time Slots: {schedulingMode === 'individual' ? 'Hourly (6 AM - 8 PM)' : 'Half-day blocks'}</li>
-              <li>• Dates: {pollConfig.numWeeks} weeks, {pollConfig.weekdaysOnly ? 'Weekdays only' : 'All days'}</li>
+              <li>• Duration: {pollConfig.numWeeks} week{pollConfig.numWeeks > 1 ? 's' : ''}, {pollConfig.weekdaysOnly ? 'weekdays only' : 'all days'}</li>
+              <li>• Calendar shows {dates.length} days with {timeSlots.length} time slots each</li>
             </ul>
           </div>
-          
+
           <div className="flex flex-col sm:flex-row gap-3">
             <button onClick={() => setView('mode-select')} className="px-4 py-2 border rounded-lg hover:bg-gray-50 text-gray-900 text-sm md:text-base">
               <ArrowLeft className="w-4 h-4 inline mr-2" />Back
             </button>
-            <button 
-              onClick={() => {if (onComplete) onComplete(pollConfig);}}
-              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm md:text-base"
+            <button
+              onClick={() => {
+                if (onComplete) {
+                  onComplete({ ...pollConfig, mode: schedulingMode });
+                }
+              }}
+              disabled={!canCreate || loading}
+              className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm md:text-base"
             >
-              ✓ Create Poll
+              {loading ? 'Creating...' : '✓ Create Poll'}
             </button>
           </div>
         </div>
-        
+
         <div className="bg-white rounded-lg shadow-lg p-4 md:p-6">
           <h2 className="text-lg md:text-xl font-semibold text-gray-900 mb-4">Calendar Preview</h2>
-          <p className="text-sm text-gray-600 mb-4 md:hidden">Scroll horizontally to see all dates →</p>
-          <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
-            <div className="inline-block min-w-full select-none">
-              <div className="grid" style={{ gridTemplateColumns: `${schedulingMode === 'group' ? '140px' : '70px'} repeat(${dates.length}, ${schedulingMode === 'group' ? '90px' : '70px'})` }}>
-                <div className="p-2 bg-gray-50 border-b-2"></div>
-                {dates.map((d, i) => <div key={i} className="p-2 text-center text-xs md:text-sm bg-gray-50 border-b-2 font-medium text-gray-900">{isMobile ? d.shortDisplay : d.display}</div>)}
-                {timeSlots.map((t, ti) => (
-                  <React.Fragment key={ti}>
-                    <div className="p-2 text-xs md:text-sm font-medium bg-gray-50 border-r border-b text-gray-900">{t}</div>
-                    {dates.map((d, di) => (
-                      <div key={`${di}-${ti}`} className="p-2 md:p-3 border-r border-b bg-blue-100" />
-                    ))}
-                  </React.Fragment>
-                ))}
-              </div>
+          <p className="text-sm text-gray-600 mb-4">This is how the calendar will look to participants. They will click cells to mark their availability.</p>
+          {!pollConfig.startDate && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+              <p className="text-sm text-yellow-800">Select a start date above to see the calendar preview.</p>
             </div>
-          </div>
+          )}
+          {pollConfig.startDate && (
+            <>
+              <p className="text-sm text-gray-600 mb-4 md:hidden">Scroll horizontally to see all dates →</p>
+              <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+                <div className="inline-block min-w-full select-none">
+                  <div className="grid" style={{ gridTemplateColumns: `${schedulingMode === 'group' ? '140px' : '80px'} repeat(${dates.length}, ${schedulingMode === 'group' ? '90px' : '80px'})` }}>
+                    <div className="p-2 bg-gray-50 border-b-2"></div>
+                    {dates.map((d, i) => <div key={i} className="p-2 text-center text-xs md:text-sm bg-gray-50 border-b-2 font-medium text-gray-900">{isMobile ? d.shortDisplay : d.display}</div>)}
+                    {timeSlots.map((t, ti) => (
+                      <React.Fragment key={ti}>
+                        <div className="p-2 text-xs md:text-sm font-medium bg-gray-50 border-r border-b text-gray-900">{t}</div>
+                        {dates.map((d, di) => (
+                          <div key={`${di}-${ti}`} className="p-2 md:p-3 border-r border-b bg-blue-50 hover:bg-blue-100 transition-colors" />
+                        ))}
+                      </React.Fragment>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     );
