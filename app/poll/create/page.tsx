@@ -28,10 +28,10 @@ export default function CreatePollPage() {
           title: pollConfig.title,
           description: pollConfig.description || '',
           mode: pollConfig.mode || 'individual',
-          start_date: pollConfig.startDate,
-          num_weeks: pollConfig.numWeeks || 2,
-          weekdays_only: pollConfig.weekdaysOnly ?? true,
-          created_by: session?.user?.email,
+          startDate: pollConfig.startDate,
+          numWeeks: pollConfig.numWeeks || 2,
+          weekdaysOnly: pollConfig.weekdaysOnly ?? true,
+          createdBy: session?.user?.email,
         }),
       });
 
