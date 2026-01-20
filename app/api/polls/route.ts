@@ -5,7 +5,7 @@ import { nanoid } from 'nanoid';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { title, description, mode, startDate, numWeeks, weekdaysOnly, createdBy } = body;
+    const { title, description, mode, startDate, numWeeks, weekdaysOnly, createdBy, availableSlots } = body;
 
     const participantId = nanoid(10);
     const adminId = nanoid(10);
@@ -23,6 +23,7 @@ export async function POST(request: NextRequest) {
         created_by: createdBy,
         participant_link: `${baseUrl}/poll/${participantId}`,
         admin_link: `${baseUrl}/admin/poll/${adminId}`,
+        available_slots: availableSlots || [],
       })
       .select()
       .single();

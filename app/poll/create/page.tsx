@@ -32,6 +32,7 @@ export default function CreatePollPage() {
           numWeeks: pollConfig.numWeeks || 2,
           weekdaysOnly: pollConfig.weekdaysOnly ?? true,
           createdBy: session?.user?.email,
+          availableSlots: pollConfig.availableSlots || [],
         }),
       });
 

@@ -22,6 +22,9 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
     numWeeks: pollData?.num_weeks || 2,
     weekdaysOnly: pollData?.weekdays_only ?? true
   });
+  const [creatorSelectedSlots, setCreatorSelectedSlots] = useState<string[]>(
+    pollData?.available_slots ? (typeof pollData.available_slots === 'string' ? JSON.parse(pollData.available_slots) : pollData.available_slots) : []
+  );
   const [isSelecting, setIsSelecting] = useState(false);
   const [selectionStart, setSelectionStart] = useState<{date: number, time: number} | null>(null);
   const [submissionId, setSubmissionId] = useState<string | null>(null);
@@ -321,7 +324,31 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
 
   // Setup/Preview View
   if (view === 'setup') {
-    const canCreate = pollConfig.title.trim() && pollConfig.startDate;
+    const canCreate = pollConfig.title.trim() && pollConfig.startDate && creatorSelectedSlots.length > 0;
+
+    // Toggle slot selection for creator
+    const toggleCreatorSlot = (dateIdx: number, timeIdx: number) => {
+      const key = `${dateIdx}-${timeIdx}`;
+      setCreatorSelectedSlots(prev =>
+        prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+      );
+    };
+
+    // Select all slots
+    const selectAllSlots = () => {
+      const allSlots: string[] = [];
+      dates.forEach((_, di) => {
+        timeSlots.forEach((_, ti) => {
+          allSlots.push(`${di}-${ti}`);
+        });
+      });
+      setCreatorSelectedSlots(allSlots);
+    };
+
+    // Clear all slots
+    const clearAllSlots = () => {
+      setCreatorSelectedSlots([]);
+    };
 
     return (
       <div className="max-w-6xl mx-auto px-4">
@@ -360,7 +387,10 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
                 <input
                   type="date"
                   value={pollConfig.startDate}
-                  onChange={(e) => setPollConfig(p => ({ ...p, startDate: e.target.value }))}
+                  onChange={(e) => {
+                    setPollConfig(p => ({ ...p, startDate: e.target.value }));
+                    setCreatorSelectedSlots([]); // Clear selections when date changes
+                  }}
                   min={new Date().toISOString().split('T')[0]}
                   className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
                 />
@@ -370,7 +400,10 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
                 <label className="block text-sm font-medium text-gray-700 mb-1">Number of Weeks</label>
                 <select
                   value={pollConfig.numWeeks}
-                  onChange={(e) => setPollConfig(p => ({ ...p, numWeeks: parseInt(e.target.value) }))}
+                  onChange={(e) => {
+                    setPollConfig(p => ({ ...p, numWeeks: parseInt(e.target.value) }));
+                    setCreatorSelectedSlots([]); // Clear selections when weeks change
+                  }}
                   className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
                 >
                   <option value={1}>1 week</option>
@@ -384,7 +417,10 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
                 <label className="block text-sm font-medium text-gray-700 mb-1">Days to Include</label>
                 <select
                   value={pollConfig.weekdaysOnly ? 'weekdays' : 'all'}
-                  onChange={(e) => setPollConfig(p => ({ ...p, weekdaysOnly: e.target.value === 'weekdays' }))}
+                  onChange={(e) => {
+                    setPollConfig(p => ({ ...p, weekdaysOnly: e.target.value === 'weekdays' }));
+                    setCreatorSelectedSlots([]); // Clear selections when this changes
+                  }}
                   className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
                 >
                   <option value="weekdays">Weekdays Only</option>
@@ -400,7 +436,7 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
               <li>• Type: {schedulingMode === 'individual' ? 'Individual Meeting' : 'Group Session'}</li>
               <li>• Time Slots: {schedulingMode === 'individual' ? 'Hourly (6 AM - 8 PM)' : 'Half-day blocks'}</li>
               <li>• Duration: {pollConfig.numWeeks} week{pollConfig.numWeeks > 1 ? 's' : ''}, {pollConfig.weekdaysOnly ? 'weekdays only' : 'all days'}</li>
-              <li>• Calendar shows {dates.length} days with {timeSlots.length} time slots each</li>
+              <li>• <strong>{creatorSelectedSlots.length} time slots selected</strong> for participants to choose from</li>
             </ul>
           </div>
 
@@ -411,27 +447,62 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
             <button
               onClick={() => {
                 if (onComplete) {
-                  onComplete({ ...pollConfig, mode: schedulingMode });
+                  onComplete({ ...pollConfig, mode: schedulingMode, availableSlots: creatorSelectedSlots });
                 }
               }}
               disabled={!canCreate || loading}
               className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm md:text-base"
             >
-              {loading ? 'Creating...' : '✓ Create Poll'}
+              {loading ? 'Creating...' : `✓ Create Poll (${creatorSelectedSlots.length} slots)`}
             </button>
           </div>
+          {!creatorSelectedSlots.length && pollConfig.startDate && (
+            <p className="text-sm text-red-600 mt-2">Please select at least one time slot below for participants to choose from.</p>
+          )}
         </div>
 
         <div className="bg-white rounded-lg shadow-lg p-4 md:p-6">
-          <h2 className="text-lg md:text-xl font-semibold text-gray-900 mb-4">Calendar Preview</h2>
-          <p className="text-sm text-gray-600 mb-4">This is how the calendar will look to participants. They will click cells to mark their availability.</p>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+            <div>
+              <h2 className="text-lg md:text-xl font-semibold text-gray-900">Select Available Time Slots *</h2>
+              <p className="text-sm text-gray-600">Click on cells to select which times participants can choose from.</p>
+            </div>
+            {pollConfig.startDate && (
+              <div className="flex gap-2">
+                <button
+                  onClick={selectAllSlots}
+                  className="px-3 py-1.5 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200"
+                >
+                  Select All
+                </button>
+                <button
+                  onClick={clearAllSlots}
+                  className="px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                >
+                  Clear All
+                </button>
+              </div>
+            )}
+          </div>
+
           {!pollConfig.startDate && (
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
-              <p className="text-sm text-yellow-800">Select a start date above to see the calendar preview.</p>
+              <p className="text-sm text-yellow-800">Select a start date above to see the calendar.</p>
             </div>
           )}
           {pollConfig.startDate && (
             <>
+              <div className="flex items-center gap-4 mb-4 p-3 bg-gray-50 rounded-lg">
+                <span className="text-sm font-medium text-gray-700">Legend:</span>
+                <div className="flex items-center gap-1">
+                  <div className="w-5 h-5 bg-white border-2 border-gray-300 rounded"></div>
+                  <span className="text-xs text-gray-600">Not available</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-5 h-5 bg-green-400 border-2 border-green-500 rounded"></div>
+                  <span className="text-xs text-gray-600">Available for selection</span>
+                </div>
+              </div>
               <p className="text-sm text-gray-600 mb-4 md:hidden">Scroll horizontally to see all dates →</p>
               <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
                 <div className="inline-block min-w-full select-none">
@@ -441,9 +512,21 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
                     {timeSlots.map((t, ti) => (
                       <React.Fragment key={ti}>
                         <div className="p-2 text-xs md:text-sm font-medium bg-gray-50 border-r border-b text-gray-900">{t}</div>
-                        {dates.map((d, di) => (
-                          <div key={`${di}-${ti}`} className="p-2 md:p-3 border-r border-b bg-blue-50 hover:bg-blue-100 transition-colors" />
-                        ))}
+                        {dates.map((d, di) => {
+                          const slotKey = `${di}-${ti}`;
+                          const isSelected = creatorSelectedSlots.includes(slotKey);
+                          return (
+                            <button
+                              key={slotKey}
+                              onClick={() => toggleCreatorSlot(di, ti)}
+                              className={`p-2 md:p-3 border-r border-b transition-colors cursor-pointer ${
+                                isSelected
+                                  ? 'bg-green-400 hover:bg-green-500'
+                                  : 'bg-white hover:bg-blue-50'
+                              }`}
+                            />
+                          );
+                        })}
                       </React.Fragment>
                     ))}
                   </div>
@@ -458,48 +541,66 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
 
   // Participant Form View - MOBILE OPTIMIZED
   if (view === 'participant-form') {
+    // Get available slots from poll data (if creator selected specific slots)
+    const pollAvailableSlots: string[] = pollData?.available_slots
+      ? (typeof pollData.available_slots === 'string' ? JSON.parse(pollData.available_slots) : pollData.available_slots)
+      : [];
+    const hasSlotRestrictions = pollAvailableSlots.length > 0;
+
+    // Check if a slot is available for selection
+    const isSlotAvailable = (di: number, ti: number) => {
+      if (!hasSlotRestrictions) return true;
+      return pollAvailableSlots.includes(`${di}-${ti}`);
+    };
+
+    // For mobile, check if a day has any available slots
+    const dayHasAvailableSlots = (dayIndex: number) => {
+      if (!hasSlotRestrictions) return true;
+      return timeSlots.some((_, ti) => isSlotAvailable(dayIndex, ti));
+    };
+
     return (
       <div className="max-w-6xl mx-auto px-4" onMouseUp={handleMouseUp} onTouchEnd={handleMouseUp}>
         <div className="bg-white rounded-lg shadow-lg p-4 md:p-6 mb-4 md:mb-6">
           <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">{pollData?.title}</h1>
           {pollData?.description && <p className="text-gray-700 text-sm md:text-base">{pollData.description}</p>}
         </div>
-        
+
         <div className="bg-white rounded-lg shadow-lg p-4 md:p-6 mb-4 md:mb-6">
           <h2 className="text-lg md:text-xl font-semibold text-gray-900 mb-3 md:mb-4">Your Information</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-            <input 
-              type="text" 
-              value={studentData.name} 
-              onChange={(e) => setStudentData(p => ({ ...p, name: e.target.value }))} 
-              placeholder="Name" 
-              className="px-3 py-3 md:py-2 border rounded-md text-gray-900 bg-white text-base" 
+            <input
+              type="text"
+              value={studentData.name}
+              onChange={(e) => setStudentData(p => ({ ...p, name: e.target.value }))}
+              placeholder="Name"
+              className="px-3 py-3 md:py-2 border rounded-md text-gray-900 bg-white text-base"
             />
-            <input 
-              type="email" 
-              value={studentData.email} 
-              onChange={(e) => setStudentData(p => ({ ...p, email: e.target.value }))} 
-              placeholder="Email" 
-              className="px-3 py-3 md:py-2 border rounded-md text-gray-900 bg-white text-base" 
+            <input
+              type="email"
+              value={studentData.email}
+              onChange={(e) => setStudentData(p => ({ ...p, email: e.target.value }))}
+              placeholder="Email"
+              className="px-3 py-3 md:py-2 border rounded-md text-gray-900 bg-white text-base"
             />
-            <select 
-              value={studentData.agency} 
-              onChange={(e) => setStudentData(p => ({ ...p, agency: e.target.value }))} 
+            <select
+              value={studentData.agency}
+              onChange={(e) => setStudentData(p => ({ ...p, agency: e.target.value }))}
               className="px-3 py-3 md:py-2 border rounded-md text-gray-900 bg-white text-base"
             >
               <option value="">Select agency</option>
               {agencies.map(a => <option key={a} value={a}>{a}</option>)}
             </select>
-            <select 
-              value={studentData.meetingType} 
-              onChange={(e) => setStudentData(p => ({ ...p, meetingType: e.target.value }))} 
+            <select
+              value={studentData.meetingType}
+              onChange={(e) => setStudentData(p => ({ ...p, meetingType: e.target.value }))}
               className="px-3 py-3 md:py-2 border rounded-md text-gray-900 bg-white text-base"
             >
               {(schedulingMode === 'individual' ? meetingTypes : groupSessionTypes).map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
           </div>
         </div>
-        
+
         <div className="bg-white rounded-lg shadow-lg p-4 md:p-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
             <h2 className="text-lg md:text-xl font-semibold text-gray-900">Select Available Times</h2>
@@ -509,7 +610,7 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
               </span>
             )}
           </div>
-          
+
           {/* Mobile instruction */}
           <p className="text-sm text-gray-700 mb-4">
             {isMobile ? (
@@ -524,7 +625,7 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
             <div>
               {/* Day navigation */}
               <div className="flex items-center justify-between mb-4 bg-gray-50 rounded-lg p-2">
-                <button 
+                <button
                   onClick={goToPreviousDay}
                   disabled={currentDayIndex === 0}
                   className="p-2 rounded-lg bg-white shadow disabled:opacity-50 disabled:shadow-none"
@@ -535,7 +636,7 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
                   <div className="font-semibold text-gray-900">{dates[currentDayIndex]?.dayName}</div>
                   <div className="text-sm text-gray-600">{dates[currentDayIndex]?.fullDate}</div>
                 </div>
-                <button 
+                <button
                   onClick={goToNextDay}
                   disabled={currentDayIndex === dates.length - 1}
                   className="p-2 rounded-lg bg-white shadow disabled:opacity-50 disabled:shadow-none"
@@ -543,23 +644,26 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
                   <ChevronRight className="w-5 h-5 text-gray-700" />
                 </button>
               </div>
-              
+
               {/* Day indicator dots */}
               <div className="flex justify-center gap-1 mb-4 flex-wrap">
                 {dates.map((d, i) => {
-                  const hasSelections = timeSlots.some((_, ti) => 
+                  const hasSelections = timeSlots.some((_, ti) =>
                     studentData.availability.includes(`${i}-${ti}`)
                   );
+                  const hasAvailable = dayHasAvailableSlots(i);
                   return (
                     <button
                       key={i}
                       onClick={() => setCurrentDayIndex(i)}
                       className={`w-2.5 h-2.5 rounded-full transition-all ${
-                        i === currentDayIndex 
-                          ? 'bg-blue-600 scale-125' 
-                          : hasSelections 
-                            ? 'bg-green-400' 
-                            : 'bg-gray-300'
+                        i === currentDayIndex
+                          ? 'bg-blue-600 scale-125'
+                          : hasSelections
+                            ? 'bg-green-400'
+                            : hasAvailable
+                              ? 'bg-gray-300'
+                              : 'bg-gray-200 opacity-50'
                       }`}
                     />
                   );
@@ -569,14 +673,19 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
               {/* Time slots for current day */}
               <div className="space-y-2">
                 {timeSlots.map((t, ti) => {
-                  const isSelected = studentData.availability.includes(`${currentDayIndex}-${ti}`);
+                  const slotKey = `${currentDayIndex}-${ti}`;
+                  const isSelected = studentData.availability.includes(slotKey);
+                  const isAvailable = isSlotAvailable(currentDayIndex, ti);
+
+                  if (!isAvailable) return null; // Don't show unavailable slots
+
                   return (
                     <button
                       key={ti}
                       onClick={() => handleCellTap(currentDayIndex, ti)}
                       className={`w-full p-4 rounded-lg border-2 text-left transition-all ${
-                        isSelected 
-                          ? 'border-green-500 bg-green-100 text-green-800' 
+                        isSelected
+                          ? 'border-green-500 bg-green-100 text-green-800'
                           : 'border-gray-200 bg-white text-gray-700 hover:border-blue-300 hover:bg-blue-50'
                       }`}
                     >
@@ -587,6 +696,9 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
                     </button>
                   );
                 })}
+                {!dayHasAvailableSlots(currentDayIndex) && (
+                  <p className="text-center text-gray-500 py-4">No available time slots on this day.</p>
+                )}
               </div>
             </div>
           ) : (
@@ -599,24 +711,37 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
                   {timeSlots.map((t, ti) => (
                     <React.Fragment key={ti}>
                       <div className="p-2 text-sm font-medium bg-gray-50 border-r border-b text-gray-900">{t}</div>
-                      {dates.map((d, di) => (
-                        <button 
-                          key={`${di}-${ti}`} 
-                          onMouseDown={() => handleMouseDown(di, ti)} 
-                          onMouseEnter={() => handleMouseEnter(di, ti)} 
-                          className={`p-3 border-r border-b transition-colors ${studentData.availability.includes(`${di}-${ti}`) ? 'bg-green-400' : 'bg-white hover:bg-blue-50'}`} 
-                        />
-                      ))}
+                      {dates.map((d, di) => {
+                        const slotKey = `${di}-${ti}`;
+                        const isSelected = studentData.availability.includes(slotKey);
+                        const isAvailable = isSlotAvailable(di, ti);
+
+                        return (
+                          <button
+                            key={slotKey}
+                            onMouseDown={() => isAvailable && handleMouseDown(di, ti)}
+                            onMouseEnter={() => isAvailable && handleMouseEnter(di, ti)}
+                            disabled={!isAvailable}
+                            className={`p-3 border-r border-b transition-colors ${
+                              !isAvailable
+                                ? 'bg-gray-100 cursor-not-allowed'
+                                : isSelected
+                                  ? 'bg-green-400'
+                                  : 'bg-white hover:bg-blue-50 cursor-pointer'
+                            }`}
+                          />
+                        );
+                      })}
                     </React.Fragment>
                   ))}
                 </div>
               </div>
             </div>
           )}
-          
-          <button 
-            onClick={handleSubmit} 
-            disabled={!studentData.name || !studentData.email || !studentData.availability.length || loading} 
+
+          <button
+            onClick={handleSubmit}
+            disabled={!studentData.name || !studentData.email || !studentData.availability.length || loading}
             className="mt-6 w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 text-base"
           >
             <Send className="w-5 h-5" /> {loading ? 'Submitting...' : 'Submit Availability'}
