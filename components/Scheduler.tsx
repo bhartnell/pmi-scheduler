@@ -326,12 +326,41 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
   if (view === 'setup') {
     const canCreate = pollConfig.title.trim() && pollConfig.startDate && creatorSelectedSlots.length > 0;
 
-    // Toggle slot selection for creator
+    // Toggle slot selection for creator (single click / tap)
     const toggleCreatorSlot = (dateIdx: number, timeIdx: number) => {
       const key = `${dateIdx}-${timeIdx}`;
       setCreatorSelectedSlots(prev =>
         prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
       );
+    };
+
+    // Drag selection handlers for creator
+    const handleCreatorMouseDown = (dateIdx: number, timeIdx: number) => {
+      if (isMobile) {
+        toggleCreatorSlot(dateIdx, timeIdx);
+        return;
+      }
+      setIsSelecting(true);
+      setSelectionStart({ date: dateIdx, time: timeIdx });
+      toggleCreatorSlot(dateIdx, timeIdx);
+    };
+
+    const handleCreatorMouseEnter = (dateIdx: number, timeIdx: number) => {
+      if (isMobile || !isSelecting || !selectionStart) return;
+      const key = `${dateIdx}-${timeIdx}`;
+      const startKey = `${selectionStart.date}-${selectionStart.time}`;
+      const shouldSelect = creatorSelectedSlots.includes(startKey);
+
+      setCreatorSelectedSlots(prev => {
+        if (shouldSelect && !prev.includes(key)) return [...prev, key];
+        if (!shouldSelect && prev.includes(key)) return prev.filter(k => k !== key);
+        return prev;
+      });
+    };
+
+    const handleCreatorMouseUp = () => {
+      setIsSelecting(false);
+      setSelectionStart(null);
     };
 
     // Select all slots
@@ -503,8 +532,14 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
                   <span className="text-xs text-gray-600">Available for selection</span>
                 </div>
               </div>
-              <p className="text-sm text-gray-600 mb-4 md:hidden">Scroll horizontally to see all dates →</p>
-              <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+              <p className="text-sm text-gray-600 mb-4">
+                {isMobile ? (
+                  <><strong>Tap</strong> time slots to select. Scroll horizontally to see all dates →</>
+                ) : (
+                  <><strong>Click and drag</strong> to select multiple slots at once</>
+                )}
+              </p>
+              <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0" onMouseUp={handleCreatorMouseUp} onMouseLeave={handleCreatorMouseUp}>
                 <div className="inline-block min-w-full select-none">
                   <div className="grid" style={{ gridTemplateColumns: `${schedulingMode === 'group' ? '140px' : '80px'} repeat(${dates.length}, ${schedulingMode === 'group' ? '90px' : '80px'})` }}>
                     <div className="p-2 bg-gray-50 border-b-2"></div>
@@ -516,9 +551,11 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
                           const slotKey = `${di}-${ti}`;
                           const isSelected = creatorSelectedSlots.includes(slotKey);
                           return (
-                            <button
+                            <div
                               key={slotKey}
-                              onClick={() => toggleCreatorSlot(di, ti)}
+                              onMouseDown={() => handleCreatorMouseDown(di, ti)}
+                              onMouseEnter={() => handleCreatorMouseEnter(di, ti)}
+                              onTouchStart={() => toggleCreatorSlot(di, ti)}
                               className={`p-2 md:p-3 border-r border-b transition-colors cursor-pointer ${
                                 isSelected
                                   ? 'bg-green-400 hover:bg-green-500'
