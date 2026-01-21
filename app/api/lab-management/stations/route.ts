@@ -29,10 +29,6 @@ export async function GET(request: NextRequest) {
             cohort_number,
             program:programs(abbreviation)
           )
-        ),
-        station_skills(
-          id,
-          skill:skills(id, name, category)
         )
       `)
       .order('station_number');
@@ -54,7 +50,15 @@ export async function GET(request: NextRequest) {
 
     const { data, error } = await query;
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase GET error:', error.code, error.message, error.details, error.hint);
+      return NextResponse.json({
+        success: false,
+        error: `Database error: ${error.message}`,
+        code: error.code,
+        hint: error.hint
+      }, { status: 500 });
+    }
 
     let filteredData = data || [];
     
@@ -123,11 +127,20 @@ export async function POST(request: NextRequest) {
       `)
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase POST error:', error.code, error.message, error.details, error.hint);
+      return NextResponse.json({
+        success: false,
+        error: `Database error: ${error.message}`,
+        code: error.code,
+        hint: error.hint
+      }, { status: 500 });
+    }
 
     return NextResponse.json({ success: true, station: data });
   } catch (error) {
     console.error('Error creating station:', error);
-    return NextResponse.json({ success: false, error: 'Failed to create station' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Failed to create station';
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }
