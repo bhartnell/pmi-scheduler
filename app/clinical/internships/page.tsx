@@ -200,6 +200,14 @@ export default function InternshipTrackerPage() {
     notes: '',
   });
 
+  // Quick add modals
+  const [showAddAgencyModal, setShowAddAgencyModal] = useState(false);
+  const [showAddPreceptorModal, setShowAddPreceptorModal] = useState(false);
+  const [savingAgency, setSavingAgency] = useState(false);
+  const [savingPreceptor, setSavingPreceptor] = useState(false);
+  const [newAgency, setNewAgency] = useState({ name: '', abbreviation: '', type: 'fire_department' });
+  const [newPreceptor, setNewPreceptor] = useState({ first_name: '', last_name: '', email: '', agency_id: '', station: '' });
+
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/signin');
@@ -342,6 +350,73 @@ export default function InternshipTrackerPage() {
   const closeEditModal = () => {
     setEditingStudent(null);
     setEditingInternship(null);
+  };
+
+  // Add new agency handler
+  const handleAddAgency = async () => {
+    if (!newAgency.name.trim()) {
+      alert('Agency name is required');
+      return;
+    }
+    setSavingAgency(true);
+    try {
+      const res = await fetch('/api/clinical/agencies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newAgency),
+      });
+      const data = await res.json();
+      if (data.success) {
+        // Add to agencies list and auto-select
+        setAgencies([...agencies, data.agency]);
+        setFormData({ ...formData, agency_id: data.agency.id });
+        setShowAddAgencyModal(false);
+        setNewAgency({ name: '', abbreviation: '', type: 'fire_department' });
+      } else {
+        alert(data.error || 'Failed to add agency');
+      }
+    } catch (error) {
+      console.error('Error adding agency:', error);
+      alert('Failed to add agency');
+    }
+    setSavingAgency(false);
+  };
+
+  // Add new preceptor handler
+  const handleAddPreceptor = async () => {
+    if (!newPreceptor.first_name.trim() || !newPreceptor.last_name.trim()) {
+      alert('First and last name are required');
+      return;
+    }
+    setSavingPreceptor(true);
+    try {
+      const res = await fetch('/api/clinical/preceptors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...newPreceptor,
+          agency_id: newPreceptor.agency_id || formData.agency_id || null,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        // Add to preceptors list and auto-select
+        const newPreceptorData = {
+          ...data.preceptor,
+          agency_name: agencies.find(a => a.id === (newPreceptor.agency_id || formData.agency_id))?.name || null,
+        };
+        setPreceptors([...preceptors, newPreceptorData]);
+        setFormData({ ...formData, preceptor_id: data.preceptor.id });
+        setShowAddPreceptorModal(false);
+        setNewPreceptor({ first_name: '', last_name: '', email: '', agency_id: '', station: '' });
+      } else {
+        alert(data.error || 'Failed to add preceptor');
+      }
+    } catch (error) {
+      console.error('Error adding preceptor:', error);
+      alert('Failed to add preceptor');
+    }
+    setSavingPreceptor(false);
   };
 
   const handleSaveInternship = async () => {
@@ -1138,9 +1213,19 @@ export default function InternshipTrackerPage() {
             <div className="p-4 space-y-4">
               {/* Agency */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Agency
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Agency
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddAgencyModal(true)}
+                    className="text-xs text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1"
+                  >
+                    <Plus className="w-3 h-3" />
+                    Add New
+                  </button>
+                </div>
                 <select
                   value={formData.agency_id}
                   onChange={(e) => setFormData({ ...formData, agency_id: e.target.value })}
@@ -1157,9 +1242,22 @@ export default function InternshipTrackerPage() {
 
               {/* Preceptor */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Preceptor
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Preceptor
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewPreceptor({ ...newPreceptor, agency_id: formData.agency_id });
+                      setShowAddPreceptorModal(true);
+                    }}
+                    className="text-xs text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1"
+                  >
+                    <Plus className="w-3 h-3" />
+                    Add New
+                  </button>
+                </div>
                 <select
                   value={formData.preceptor_id}
                   onChange={(e) => setFormData({ ...formData, preceptor_id: e.target.value })}
@@ -1245,6 +1343,7 @@ export default function InternshipTrackerPage() {
                   className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
                 >
                   <option value="12_hour">12-Hour Shifts</option>
+                  <option value="14_hour">14-Hour Shifts</option>
                   <option value="24_hour">24-Hour Shifts</option>
                   <option value="48_hour">48-Hour Shifts</option>
                   <option value="mixed">Mixed Schedule</option>
@@ -1284,6 +1383,178 @@ export default function InternshipTrackerPage() {
                     {editingInternship ? 'Save Changes' : 'Create Record'}
                   </>
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Agency Modal */}
+      {showAddAgencyModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md mx-4">
+            <div className="p-4 border-b dark:border-gray-700 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Add New Agency</h3>
+              <button
+                onClick={() => setShowAddAgencyModal(false)}
+                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Agency Name *
+                </label>
+                <input
+                  type="text"
+                  value={newAgency.name}
+                  onChange={(e) => setNewAgency({ ...newAgency, name: e.target.value })}
+                  placeholder="e.g., Clark County Fire Department"
+                  className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Abbreviation
+                </label>
+                <input
+                  type="text"
+                  value={newAgency.abbreviation}
+                  onChange={(e) => setNewAgency({ ...newAgency, abbreviation: e.target.value })}
+                  placeholder="e.g., CCFD"
+                  className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Type
+                </label>
+                <select
+                  value={newAgency.type}
+                  onChange={(e) => setNewAgency({ ...newAgency, type: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                >
+                  <option value="fire_department">Fire Department</option>
+                  <option value="ambulance">Ambulance Service</option>
+                  <option value="hospital">Hospital</option>
+                  <option value="private_ems">Private EMS</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+            </div>
+            <div className="p-4 border-t dark:border-gray-700 flex justify-end gap-3">
+              <button
+                onClick={() => setShowAddAgencyModal(false)}
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddAgency}
+                disabled={savingAgency}
+                className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:bg-gray-400"
+              >
+                {savingAgency ? 'Adding...' : 'Add Agency'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Preceptor Modal */}
+      {showAddPreceptorModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md mx-4">
+            <div className="p-4 border-b dark:border-gray-700 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Add New Preceptor</h3>
+              <button
+                onClick={() => setShowAddPreceptorModal(false)}
+                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <div className="p-4 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    First Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={newPreceptor.first_name}
+                    onChange={(e) => setNewPreceptor({ ...newPreceptor, first_name: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Last Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={newPreceptor.last_name}
+                    onChange={(e) => setNewPreceptor({ ...newPreceptor, last_name: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={newPreceptor.email}
+                  onChange={(e) => setNewPreceptor({ ...newPreceptor, email: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Agency
+                </label>
+                <select
+                  value={newPreceptor.agency_id}
+                  onChange={(e) => setNewPreceptor({ ...newPreceptor, agency_id: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                >
+                  <option value="">Select Agency</option>
+                  {agencies.map(a => (
+                    <option key={a.id} value={a.id}>
+                      {a.name} {a.abbreviation ? `(${a.abbreviation})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Station
+                </label>
+                <input
+                  type="text"
+                  value={newPreceptor.station}
+                  onChange={(e) => setNewPreceptor({ ...newPreceptor, station: e.target.value })}
+                  placeholder="e.g., Station 32"
+                  className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                />
+              </div>
+            </div>
+            <div className="p-4 border-t dark:border-gray-700 flex justify-end gap-3">
+              <button
+                onClick={() => setShowAddPreceptorModal(false)}
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddPreceptor}
+                disabled={savingPreceptor}
+                className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:bg-gray-400"
+              >
+                {savingPreceptor ? 'Adding...' : 'Add Preceptor'}
               </button>
             </div>
           </div>
