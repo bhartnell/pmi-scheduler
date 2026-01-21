@@ -753,18 +753,20 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
                         const isSelected = studentData.availability.includes(slotKey);
                         const isAvailable = isSlotAvailable(di, ti);
 
+                        // Hide unavailable slots - render empty cell to maintain grid
+                        if (!isAvailable) {
+                          return <div key={slotKey} className="border-r border-b" />;
+                        }
+
                         return (
                           <button
                             key={slotKey}
-                            onMouseDown={() => isAvailable && handleMouseDown(di, ti)}
-                            onMouseEnter={() => isAvailable && handleMouseEnter(di, ti)}
-                            disabled={!isAvailable}
-                            className={`p-3 border-r border-b transition-colors ${
-                              !isAvailable
-                                ? 'bg-gray-100 cursor-not-allowed'
-                                : isSelected
-                                  ? 'bg-green-400'
-                                  : 'bg-white hover:bg-blue-50 cursor-pointer'
+                            onMouseDown={() => handleMouseDown(di, ti)}
+                            onMouseEnter={() => handleMouseEnter(di, ti)}
+                            className={`p-3 border-r border-b transition-colors cursor-pointer ${
+                              isSelected
+                                ? 'bg-green-400 hover:bg-green-500'
+                                : 'bg-white hover:bg-blue-50'
                             }`}
                           />
                         );
