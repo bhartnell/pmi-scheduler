@@ -31,7 +31,16 @@ interface Cohort {
   is_active: boolean;
   student_count: number;
   program: Program;
+  semester: string | null;
 }
+
+// Semester options for PM cohorts
+const PM_SEMESTERS = [
+  { value: 'S1', label: 'S1 - Didactic' },
+  { value: 'S2', label: 'S2 - Compliance' },
+  { value: 'S3', label: 'S3 - Clinicals' },
+  { value: 'S4', label: 'S4 - Internship' },
+];
 
 export default function CohortManagementPage() {
   const { data: session, status } = useSession();
@@ -48,14 +57,22 @@ export default function CohortManagementPage() {
   const [createCohortNumber, setCreateCohortNumber] = useState('');
   const [createStartDate, setCreateStartDate] = useState('');
   const [createEndDate, setCreateEndDate] = useState('');
+  const [createSemester, setCreateSemester] = useState('');
   const [creating, setCreating] = useState(false);
 
   // Edit state
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editStartDate, setEditStartDate] = useState('');
   const [editEndDate, setEditEndDate] = useState('');
+  const [editSemester, setEditSemester] = useState('');
   const [saving, setSaving] = useState(false);
   const [userRole, setUserRole] = useState<Role | null>(null);
+
+  // Helper to check if program is PM
+  const isPMProgram = (programId: string) => {
+    const program = programs.find(p => p.id === programId);
+    return program?.abbreviation === 'PM' || program?.abbreviation === 'PMD';
+  };
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -124,6 +141,7 @@ export default function CohortManagementPage() {
           cohort_number: parseInt(createCohortNumber),
           start_date: createStartDate || null,
           expected_end_date: createEndDate || null,
+          semester: isPMProgram(createProgramId) ? (createSemester || null) : null,
         }),
       });
 
@@ -134,6 +152,7 @@ export default function CohortManagementPage() {
         setCreateCohortNumber('');
         setCreateStartDate('');
         setCreateEndDate('');
+        setCreateSemester('');
       } else {
         alert('Failed to create cohort: ' + data.error);
       }
@@ -148,23 +167,29 @@ export default function CohortManagementPage() {
     setEditingId(cohort.id);
     setEditStartDate(cohort.start_date || '');
     setEditEndDate(cohort.expected_end_date || '');
+    setEditSemester(cohort.semester || '');
   };
 
   const cancelEdit = () => {
     setEditingId(null);
     setEditStartDate('');
     setEditEndDate('');
+    setEditSemester('');
   };
 
   const handleSaveEdit = async (cohortId: string) => {
     setSaving(true);
     try {
+      const cohort = cohorts.find(c => c.id === cohortId);
+      const isPM = cohort && (cohort.program.abbreviation === 'PM' || cohort.program.abbreviation === 'PMD');
+
       const res = await fetch(`/api/lab-management/cohorts/${cohortId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           start_date: editStartDate || null,
           expected_end_date: editEndDate || null,
+          semester: isPM ? (editSemester || null) : null,
         }),
       });
 
@@ -282,12 +307,15 @@ export default function CohortManagementPage() {
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Create New Cohort</h2>
             <form onSubmit={handleCreate} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Program</label>
                   <select
                     value={createProgramId}
-                    onChange={(e) => setCreateProgramId(e.target.value)}
+                    onChange={(e) => {
+                      setCreateProgramId(e.target.value);
+                      if (!isPMProgram(e.target.value)) setCreateSemester('');
+                    }}
                     className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                   >
                     {programs.map(p => (
@@ -306,6 +334,25 @@ export default function CohortManagementPage() {
                     required
                     className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                   />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Semester</label>
+                  {isPMProgram(createProgramId) ? (
+                    <select
+                      value={createSemester}
+                      onChange={(e) => setCreateSemester(e.target.value)}
+                      className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                    >
+                      <option value="">Select...</option>
+                      {PM_SEMESTERS.map(s => (
+                        <option key={s.value} value={s.value}>{s.label}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-400">
+                      N/A
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
@@ -380,7 +427,23 @@ export default function CohortManagementPage() {
                         <div className="font-medium text-gray-900 dark:text-white min-w-[120px]">
                           {program.abbreviation} Group {cohort.cohort_number}
                         </div>
-                        <div className="flex flex-wrap gap-2 flex-1">
+                        <div className="flex flex-wrap gap-2 flex-1 items-center">
+                          {(program.abbreviation === 'PM' || program.abbreviation === 'PMD') ? (
+                            <select
+                              value={editSemester}
+                              onChange={(e) => setEditSemester(e.target.value)}
+                              className="px-2 py-1 border dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                            >
+                              <option value="">No Semester</option>
+                              {PM_SEMESTERS.map(s => (
+                                <option key={s.value} value={s.value}>{s.label}</option>
+                              ))}
+                            </select>
+                          ) : (
+                            <span className="px-2 py-1 text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-600 rounded">
+                              N/A
+                            </span>
+                          )}
                           <input
                             type="date"
                             value={editStartDate}
@@ -418,10 +481,20 @@ export default function CohortManagementPage() {
                       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
                         <div className="flex items-center gap-4">
                           <div>
-                            <div className="font-medium text-gray-900 dark:text-white">
+                            <div className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
                               {program.abbreviation} Group {cohort.cohort_number}
+                              {(program.abbreviation === 'PM' || program.abbreviation === 'PMD') && cohort.semester && (
+                                <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 text-xs rounded font-semibold">
+                                  {cohort.semester}
+                                </span>
+                              )}
+                              {(program.abbreviation !== 'PM' && program.abbreviation !== 'PMD') && (
+                                <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-xs rounded">
+                                  N/A
+                                </span>
+                              )}
                               {!cohort.is_active && (
-                                <span className="ml-2 px-2 py-0.5 bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 text-xs rounded">
+                                <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 text-xs rounded">
                                   Inactive
                                 </span>
                               )}

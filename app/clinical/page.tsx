@@ -18,7 +18,9 @@ import {
   Clock,
   FileCheck,
   BookOpen,
-  LayoutDashboard
+  LayoutDashboard,
+  GraduationCap,
+  Settings
 } from 'lucide-react';
 import { canAccessClinical, type Role } from '@/lib/permissions';
 
@@ -209,6 +211,28 @@ export default function ClinicalDashboardPage() {
                 </p>
                 <div className="flex items-center text-white text-sm font-medium">
                   View Dashboard
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </div>
+              </div>
+            </div>
+          </Link>
+
+          {/* Cohort Manager - Secondary Prominent */}
+          <Link
+            href="/lab-management/admin/cohorts"
+            className="bg-gradient-to-br from-purple-500 to-indigo-600 dark:from-purple-600 dark:to-indigo-700 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
+          >
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-white/20 rounded-xl group-hover:bg-white/30 transition-colors">
+                <GraduationCap className="w-6 h-6 text-white" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-white mb-1">Cohort Manager</h3>
+                <p className="text-sm text-purple-100 mb-3">
+                  Manage cohorts, semesters, and dates
+                </p>
+                <div className="flex items-center text-white text-sm font-medium">
+                  Manage Cohorts
                   <ChevronRight className="w-4 h-4 ml-1" />
                 </div>
               </div>

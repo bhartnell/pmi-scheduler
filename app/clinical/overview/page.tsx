@@ -6,34 +6,22 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   ChevronRight,
-  ChevronDown,
   Home,
   LayoutDashboard,
   Users,
   AlertTriangle,
   AlertCircle,
-  Info,
   CheckCircle2,
   Clock,
   FileCheck,
-  BookOpen,
   ClipboardList,
-  TrendingUp,
   ExternalLink,
   RefreshCw,
-  Search,
-  Filter,
+  Stethoscope,
+  Ambulance,
   GraduationCap
 } from 'lucide-react';
 import { canAccessClinical, type Role } from '@/lib/permissions';
-
-interface CohortOption {
-  id: string;
-  cohort_number: number;
-  program: { abbreviation: string };
-  semester: string | null;
-  start_date: string | null;
-}
 
 interface StudentOverview {
   id: string;
@@ -44,17 +32,13 @@ interface StudentOverview {
   program: string;
   cohort_number: number | null;
   semester: string | null;
-  // Derived status
   clinicalStatus: 'active_internship' | 'active_clinicals' | 'preparing' | 'completed' | 'not_started';
-  // Internship data (PM only)
   internshipId: string | null;
   internshipStatus: string | null;
   internshipPhase: string | null;
-  internshipStartDate: string | null;
   clearedForNremt: boolean;
   nextDueDate: string | null;
   nextDueType: string | null;
-  // EMT/AEMT tracking
   emtTrackingComplete: boolean;
   aemtTrackingComplete: boolean;
 }
@@ -65,57 +49,30 @@ interface Alert {
   message: string;
   details: string;
   link: string;
+  program?: string;
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  active_internship: 'Active Internship',
-  active_clinicals: 'Active Clinicals',
-  preparing: 'Preparing',
-  completed: 'Completed',
-  not_started: 'Not Started',
-};
-
-const STATUS_COLORS: Record<string, string> = {
-  active_internship: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
-  active_clinicals: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
-  preparing: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-  completed: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-  not_started: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400',
-};
-
-const PHASE_LABELS: Record<string, string> = {
-  pre_internship: 'Pre',
-  phase_1_mentorship: 'P1',
-  phase_2_evaluation: 'P2',
-  completed: 'Done',
+// PM Semester definitions
+const PM_SEMESTER_CONFIG: Record<string, { label: string; description: string; color: string; bgColor: string; trackerLink: string }> = {
+  'S4': { label: 'S4 - Internship', description: 'Field internship phase', color: 'text-purple-700 dark:text-purple-400', bgColor: 'bg-purple-100 dark:bg-purple-900/30', trackerLink: '/clinical/internships' },
+  'S3': { label: 'S3 - Clinicals', description: 'Hospital clinical rotations', color: 'text-blue-700 dark:text-blue-400', bgColor: 'bg-blue-100 dark:bg-blue-900/30', trackerLink: '/clinical/hours' },
+  'S2': { label: 'S2 - Compliance', description: 'Pre-clinical compliance docs', color: 'text-green-700 dark:text-green-400', bgColor: 'bg-green-100 dark:bg-green-900/30', trackerLink: '/clinical/compliance' },
+  'S1': { label: 'S1 - Didactic', description: 'Classroom phase', color: 'text-gray-700 dark:text-gray-400', bgColor: 'bg-gray-100 dark:bg-gray-700', trackerLink: '/lab-management' },
 };
 
 export default function ClinicalOverviewPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
-  const [cohorts, setCohorts] = useState<CohortOption[]>([]);
   const [students, setStudents] = useState<StudentOverview[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [userRole, setUserRole] = useState<Role | null>(null);
-
-  // Filters
-  const [filterProgram, setFilterProgram] = useState<string>('all');
-  const [filterStatus, setFilterStatus] = useState<string>('all');
-  const [filterCohort, setFilterCohort] = useState<string>('all');
-  const [searchQuery, setSearchQuery] = useState('');
-
-  // Alerts
   const [alerts, setAlerts] = useState<{ critical: Alert[]; warning: Alert[]; info: Alert[] }>({
     critical: [],
     warning: [],
     info: [],
   });
-
-  // Semester grouping state
-  const [expandedSemesters, setExpandedSemesters] = useState<Set<string>>(new Set(['current']));
-  const [viewMode, setViewMode] = useState<'all' | 'by-semester'>('by-semester');
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -142,14 +99,6 @@ export default function ClinicalOverviewPage() {
         }
       }
 
-      // Fetch cohorts
-      const cohortsRes = await fetch('/api/lab-management/cohorts?activeOnly=true');
-      const cohortsData = await cohortsRes.json();
-      if (cohortsData.success) {
-        setCohorts(cohortsData.cohorts || []);
-      }
-
-      // Fetch all students overview data
       await fetchOverviewData();
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -176,127 +125,60 @@ export default function ClinicalOverviewPage() {
     fetchOverviewData(true);
   };
 
-  // Filter students
-  const filteredStudents = students.filter(student => {
-    // Program filter
-    if (filterProgram !== 'all' && student.program !== filterProgram) {
-      return false;
-    }
-
-    // Status filter
-    if (filterStatus !== 'all' && student.clinicalStatus !== filterStatus) {
-      return false;
-    }
-
-    // Cohort filter
-    if (filterCohort !== 'all' && student.cohort_id !== filterCohort) {
-      return false;
-    }
-
-    // Search
-    if (searchQuery) {
-      const search = searchQuery.toLowerCase();
-      const name = `${student.first_name} ${student.last_name}`.toLowerCase();
-      if (!name.includes(search)) {
-        return false;
-      }
-    }
-
-    return true;
-  });
-
-  // Get unique programs from cohorts
-  const programs = [...new Set(cohorts.map(c => c.program?.abbreviation).filter(Boolean))];
-
-  // Helper to get semester for a student (uses cohort's semester or derives from cohort number)
-  const getSemester = (student: StudentOverview): string => {
-    if (student.semester) return student.semester;
-    // Fallback: derive from cohort - use a generic label
-    if (student.cohort_number) {
-      // This is a fallback - ideally the cohort has a semester assigned
-      return `Group ${student.cohort_number}`;
-    }
-    return 'Unassigned';
-  };
+  // Group students by program
+  const emtStudents = students.filter(s => s.program === 'EMT');
+  const aemtStudents = students.filter(s => s.program === 'AEMT');
+  const pmStudents = students.filter(s => s.program === 'PM' || s.program === 'PMD');
 
   // Group PM students by semester
-  const pmStudentsBySemester = filteredStudents
-    .filter(s => s.program === 'PM')
-    .reduce((acc, student) => {
-      const semester = getSemester(student);
-      if (!acc[semester]) {
-        acc[semester] = [];
-      }
-      acc[semester].push(student);
-      return acc;
-    }, {} as Record<string, StudentOverview[]>);
+  const pmBySemester = pmStudents.reduce((acc, student) => {
+    const semester = student.semester || 'Unassigned';
+    if (!acc[semester]) acc[semester] = [];
+    acc[semester].push(student);
+    return acc;
+  }, {} as Record<string, StudentOverview[]>);
 
-  // Sort semesters (most recent first)
-  const sortedSemesters = Object.keys(pmStudentsBySemester).sort((a, b) => {
-    // Try to sort by year then season (Fall before Spring of same year)
-    const getOrder = (s: string) => {
-      const match = s.match(/(Spring|Summer|Fall)\s*(\d{4})/i);
-      if (match) {
-        const year = parseInt(match[2]);
-        const season = match[1].toLowerCase();
-        const seasonOrder = season === 'spring' ? 0 : season === 'summer' ? 1 : 2;
-        return year * 10 + seasonOrder;
-      }
-      return 0;
+  // Calculate stats for each program
+  const emtStats = {
+    total: emtStudents.length,
+    active: emtStudents.filter(s => s.clinicalStatus === 'active_clinicals').length,
+    completed: emtStudents.filter(s => s.emtTrackingComplete).length,
+    preparing: emtStudents.filter(s => s.clinicalStatus === 'preparing').length,
+  };
+
+  const aemtStats = {
+    total: aemtStudents.length,
+    active: aemtStudents.filter(s => s.clinicalStatus === 'active_clinicals').length,
+    completed: aemtStudents.filter(s => s.aemtTrackingComplete).length,
+    preparing: aemtStudents.filter(s => s.clinicalStatus === 'preparing').length,
+  };
+
+  // Calculate PM stats by semester
+  const getPmSemesterStats = (semester: string) => {
+    const semesterStudents = pmBySemester[semester] || [];
+    return {
+      total: semesterStudents.length,
+      active: semesterStudents.filter(s => s.clinicalStatus === 'active_internship' || s.clinicalStatus === 'active_clinicals').length,
+      completed: semesterStudents.filter(s => s.clinicalStatus === 'completed' || s.clearedForNremt).length,
+      preparing: semesterStudents.filter(s => s.clinicalStatus === 'preparing' || s.clinicalStatus === 'not_started').length,
     };
-    return getOrder(b) - getOrder(a);
-  });
-
-  // Non-PM students (EMT, AEMT, etc.)
-  const nonPmStudents = filteredStudents.filter(s => s.program !== 'PM');
-
-  // Toggle semester expansion
-  const toggleSemester = (semester: string) => {
-    setExpandedSemesters(prev => {
-      const next = new Set(prev);
-      if (next.has(semester)) {
-        next.delete(semester);
-      } else {
-        next.add(semester);
-      }
-      return next;
-    });
   };
 
-  // Calculate stats
-  const stats = {
-    total: filteredStudents.length,
-    activeInternship: filteredStudents.filter(s => s.clinicalStatus === 'active_internship').length,
-    activeClinicals: filteredStudents.filter(s => s.clinicalStatus === 'active_clinicals').length,
-    preparing: filteredStudents.filter(s => s.clinicalStatus === 'preparing').length,
-    completed: filteredStudents.filter(s => s.clinicalStatus === 'completed').length,
+  // Filter alerts by program
+  const getAlertsForProgram = (program: string) => {
+    return {
+      critical: alerts.critical.filter(a => {
+        const student = students.find(s => s.id === a.student.id);
+        return student?.program === program || student?.program === 'PMD';
+      }),
+      warning: alerts.warning.filter(a => {
+        const student = students.find(s => s.id === a.student.id);
+        return student?.program === program || student?.program === 'PMD';
+      }),
+    };
   };
 
-  // Filter alerts based on current filters
-  const filteredAlerts = {
-    critical: alerts.critical.filter(a => {
-      const student = students.find(s => s.id === a.student.id);
-      if (!student) return false;
-      if (filterProgram !== 'all' && student.program !== filterProgram) return false;
-      if (filterCohort !== 'all' && student.cohort_id !== filterCohort) return false;
-      return true;
-    }),
-    warning: alerts.warning.filter(a => {
-      const student = students.find(s => s.id === a.student.id);
-      if (!student) return false;
-      if (filterProgram !== 'all' && student.program !== filterProgram) return false;
-      if (filterCohort !== 'all' && student.cohort_id !== filterCohort) return false;
-      return true;
-    }),
-    info: alerts.info,
-  };
-
-  const totalAlerts = filteredAlerts.critical.length + filteredAlerts.warning.length;
-
-  const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  };
+  const totalAlerts = alerts.critical.length + alerts.warning.length;
 
   if (status === 'loading' || loading) {
     return (
@@ -307,6 +189,225 @@ export default function ClinicalOverviewPage() {
   }
 
   if (!session) return null;
+
+  // Program Section Component
+  const ProgramSection = ({
+    title,
+    icon: Icon,
+    iconColor,
+    bgColor,
+    stats,
+    trackerLink,
+    trackerLabel,
+    alerts: programAlerts,
+  }: {
+    title: string;
+    icon: any;
+    iconColor: string;
+    bgColor: string;
+    stats: { total: number; active: number; completed: number; preparing: number };
+    trackerLink: string;
+    trackerLabel: string;
+    alerts: { critical: Alert[]; warning: Alert[] };
+  }) => (
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
+      <div className={`px-4 py-3 border-b border-gray-200 dark:border-gray-700 ${bgColor}`}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Icon className={`w-5 h-5 ${iconColor}`} />
+            <h2 className="font-semibold text-gray-900 dark:text-white">{title}</h2>
+            <span className="text-sm text-gray-600 dark:text-gray-400">
+              {stats.total} students
+            </span>
+          </div>
+          <Link
+            href={trackerLink}
+            className={`text-sm font-medium ${iconColor} hover:underline flex items-center gap-1`}
+          >
+            {trackerLabel}
+            <ChevronRight className="w-4 h-4" />
+          </Link>
+        </div>
+      </div>
+
+      <div className="p-4">
+        {/* Stats Row */}
+        <div className="grid grid-cols-4 gap-4 mb-4">
+          <div className="text-center">
+            <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">Total</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.active}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">Active</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{stats.preparing}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">Preparing</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.completed}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">Complete</div>
+          </div>
+        </div>
+
+        {/* Alerts for this program */}
+        {(programAlerts.critical.length > 0 || programAlerts.warning.length > 0) && (
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-3 mt-3">
+            <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase mb-2">Alerts</div>
+            <div className="space-y-1 max-h-32 overflow-y-auto">
+              {programAlerts.critical.map((alert, idx) => (
+                <div key={`critical-${idx}`} className="flex items-center justify-between text-sm p-1.5 bg-red-50 dark:bg-red-900/20 rounded">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+                    <span className="text-gray-900 dark:text-white">{alert.student.first_name} {alert.student.last_name}</span>
+                    <span className="text-red-600 dark:text-red-400 text-xs">{alert.message}</span>
+                  </div>
+                  <Link href={alert.link} className="text-red-600 dark:text-red-400 hover:underline text-xs">
+                    View
+                  </Link>
+                </div>
+              ))}
+              {programAlerts.warning.map((alert, idx) => (
+                <div key={`warning-${idx}`} className="flex items-center justify-between text-sm p-1.5 bg-yellow-50 dark:bg-yellow-900/20 rounded">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-yellow-500 flex-shrink-0" />
+                    <span className="text-gray-900 dark:text-white">{alert.student.first_name} {alert.student.last_name}</span>
+                    <span className="text-yellow-600 dark:text-yellow-400 text-xs">{alert.message}</span>
+                  </div>
+                  <Link href={alert.link} className="text-yellow-600 dark:text-yellow-400 hover:underline text-xs">
+                    View
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {programAlerts.critical.length === 0 && programAlerts.warning.length === 0 && (
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-3 mt-3 flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+            <CheckCircle2 className="w-4 h-4" />
+            No alerts
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  // PM Semester Section Component
+  const PMSemesterSection = ({ semester }: { semester: string }) => {
+    const config = PM_SEMESTER_CONFIG[semester] || {
+      label: semester,
+      description: 'Unknown semester',
+      color: 'text-gray-700 dark:text-gray-400',
+      bgColor: 'bg-gray-100 dark:bg-gray-700',
+      trackerLink: '/clinical',
+    };
+    const stats = getPmSemesterStats(semester);
+    const semesterStudents = pmBySemester[semester] || [];
+
+    // Get alerts for this semester
+    const semesterAlerts = {
+      critical: alerts.critical.filter(a => {
+        const student = students.find(s => s.id === a.student.id);
+        return student && (student.program === 'PM' || student.program === 'PMD') && student.semester === semester;
+      }),
+      warning: alerts.warning.filter(a => {
+        const student = students.find(s => s.id === a.student.id);
+        return student && (student.program === 'PM' || student.program === 'PMD') && student.semester === semester;
+      }),
+    };
+
+    if (semesterStudents.length === 0) return null;
+
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
+        <div className={`px-4 py-3 border-b border-gray-200 dark:border-gray-700 ${config.bgColor}`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <GraduationCap className={`w-5 h-5 ${config.color}`} />
+              <div>
+                <h2 className="font-semibold text-gray-900 dark:text-white">{config.label}</h2>
+                <p className="text-xs text-gray-600 dark:text-gray-400">{config.description}</p>
+              </div>
+              <span className="text-sm text-gray-600 dark:text-gray-400">
+                {stats.total} students
+              </span>
+            </div>
+            <Link
+              href={config.trackerLink}
+              className={`text-sm font-medium ${config.color} hover:underline flex items-center gap-1`}
+            >
+              View Tracker
+              <ChevronRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </div>
+
+        <div className="p-4">
+          {/* Stats Row */}
+          <div className="grid grid-cols-4 gap-4 mb-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total}</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">Total</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.active}</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">Active</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{stats.preparing}</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">Preparing</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600 dark:text-green-400">{stats.completed}</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">Complete</div>
+            </div>
+          </div>
+
+          {/* Alerts */}
+          {(semesterAlerts.critical.length > 0 || semesterAlerts.warning.length > 0) && (
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-3 mt-3">
+              <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase mb-2">Alerts</div>
+              <div className="space-y-1 max-h-32 overflow-y-auto">
+                {semesterAlerts.critical.map((alert, idx) => (
+                  <div key={`critical-${idx}`} className="flex items-center justify-between text-sm p-1.5 bg-red-50 dark:bg-red-900/20 rounded">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+                      <span className="text-gray-900 dark:text-white">{alert.student.first_name} {alert.student.last_name}</span>
+                      <span className="text-red-600 dark:text-red-400 text-xs">{alert.message}</span>
+                    </div>
+                    <Link href={alert.link} className="text-red-600 dark:text-red-400 hover:underline text-xs">
+                      View
+                    </Link>
+                  </div>
+                ))}
+                {semesterAlerts.warning.map((alert, idx) => (
+                  <div key={`warning-${idx}`} className="flex items-center justify-between text-sm p-1.5 bg-yellow-50 dark:bg-yellow-900/20 rounded">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 text-yellow-500 flex-shrink-0" />
+                      <span className="text-gray-900 dark:text-white">{alert.student.first_name} {alert.student.last_name}</span>
+                      <span className="text-yellow-600 dark:text-yellow-400 text-xs">{alert.message}</span>
+                    </div>
+                    <Link href={alert.link} className="text-yellow-600 dark:text-yellow-400 hover:underline text-xs">
+                      View
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {semesterAlerts.critical.length === 0 && semesterAlerts.warning.length === 0 && (
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-3 mt-3 flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+              <CheckCircle2 className="w-4 h-4" />
+              No alerts
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50 to-cyan-100 dark:from-gray-900 dark:to-gray-800">
@@ -330,91 +431,38 @@ export default function ClinicalOverviewPage() {
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Clinical Overview</h1>
-                <p className="text-gray-600 dark:text-gray-400">All students across all programs</p>
+                <p className="text-gray-600 dark:text-gray-400">All programs at a glance</p>
               </div>
             </div>
-            <button
-              onClick={handleRefresh}
-              disabled={refreshing}
-              className="p-2 text-gray-500 hover:text-teal-600 dark:text-gray-400 dark:hover:text-teal-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-              title="Refresh data"
-            >
-              <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
-            </button>
+            <div className="flex items-center gap-3">
+              {totalAlerts > 0 && (
+                <span className="px-3 py-1 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-full text-sm font-medium">
+                  {totalAlerts} alerts
+                </span>
+              )}
+              <button
+                onClick={handleRefresh}
+                disabled={refreshing}
+                className="p-2 text-gray-500 hover:text-teal-600 dark:text-gray-400 dark:hover:text-teal-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                title="Refresh data"
+              >
+                <RefreshCw className={`w-5 h-5 ${refreshing ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
       <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
-        {/* Filters */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-4">
-          <div className="flex flex-wrap gap-4 items-center">
-            {/* Search */}
-            <div className="flex-1 min-w-[200px] relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by name..."
-                className="w-full pl-10 pr-4 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-              />
-            </div>
-
-            {/* Program Filter */}
-            <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-gray-400" />
-              <select
-                value={filterProgram}
-                onChange={(e) => setFilterProgram(e.target.value)}
-                className="px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-              >
-                <option value="all">All Programs</option>
-                {programs.map(p => (
-                  <option key={p} value={p}>{p}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Status Filter */}
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-            >
-              <option value="all">All Statuses</option>
-              <option value="active_internship">Active Internship</option>
-              <option value="active_clinicals">Active Clinicals</option>
-              <option value="preparing">Preparing</option>
-              <option value="completed">Completed</option>
-              <option value="not_started">Not Started</option>
-            </select>
-
-            {/* Cohort Filter */}
-            <select
-              value={filterCohort}
-              onChange={(e) => setFilterCohort(e.target.value)}
-              className="px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-            >
-              <option value="all">All Cohorts</option>
-              {cohorts.map(c => (
-                <option key={c.id} value={c.id}>
-                  {c.program?.abbreviation} Group {c.cohort_number}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        {/* Summary Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
                 <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total}</div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">{students.length}</div>
                 <div className="text-xs text-gray-500 dark:text-gray-400">Total Students</div>
               </div>
             </div>
@@ -422,12 +470,24 @@ export default function ClinicalOverviewPage() {
 
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                <ClipboardList className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              <div className="p-2 bg-teal-100 dark:bg-teal-900/30 rounded-lg">
+                <Ambulance className="w-5 h-5 text-teal-600 dark:text-teal-400" />
               </div>
               <div>
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.activeInternship}</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">Active Internship</div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">{emtStudents.length}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">EMT</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
+                <Stethoscope className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">{aemtStudents.length}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">AEMT</div>
               </div>
             </div>
           </div>
@@ -435,343 +495,77 @@ export default function ClinicalOverviewPage() {
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                <Clock className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                <GraduationCap className="w-5 h-5 text-purple-600 dark:text-purple-400" />
               </div>
               <div>
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.activeClinicals}</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">Active Clinicals</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg">
-                <FileCheck className="w-5 h-5 text-yellow-600 dark:text-yellow-400" />
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.preparing}</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">Preparing</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-4">
-            <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-lg ${totalAlerts > 0 ? 'bg-red-100 dark:bg-red-900/30' : 'bg-green-100 dark:bg-green-900/30'}`}>
-                {totalAlerts > 0 ? (
-                  <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
-                ) : (
-                  <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
-                )}
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">{totalAlerts}</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">Alerts</div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">{pmStudents.length}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">Paramedic</div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Alerts Section */}
-        {(filteredAlerts.critical.length > 0 || filteredAlerts.warning.length > 0) && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-red-50 dark:bg-red-900/20">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
-                <h2 className="font-semibold text-red-900 dark:text-red-300">Action Required</h2>
-                <span className="ml-auto text-sm text-red-700 dark:text-red-400">
-                  {filteredAlerts.critical.length + filteredAlerts.warning.length} items need attention
-                </span>
-              </div>
-            </div>
-            <div className="divide-y divide-gray-100 dark:divide-gray-700 max-h-60 overflow-y-auto">
-              {filteredAlerts.critical.map((alert, idx) => (
-                <div key={`critical-${idx}`} className="flex items-center justify-between p-3 bg-red-50/50 dark:bg-red-900/10 hover:bg-red-50 dark:hover:bg-red-900/20">
-                  <div className="flex items-center gap-3">
-                    <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-                    <div>
-                      <div className="font-medium text-gray-900 dark:text-white">
-                        {alert.student.first_name} {alert.student.last_name}
-                      </div>
-                      <div className="text-sm text-red-600 dark:text-red-400">{alert.message}</div>
-                    </div>
-                  </div>
-                  <Link
-                    href={alert.link}
-                    className="flex items-center gap-1 px-3 py-1.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 rounded"
-                  >
-                    View <ExternalLink className="w-3 h-3" />
-                  </Link>
-                </div>
-              ))}
-              {filteredAlerts.warning.map((alert, idx) => (
-                <div key={`warning-${idx}`} className="flex items-center justify-between p-3 bg-yellow-50/50 dark:bg-yellow-900/10 hover:bg-yellow-50 dark:hover:bg-yellow-900/20">
-                  <div className="flex items-center gap-3">
-                    <AlertTriangle className="w-5 h-5 text-yellow-500 flex-shrink-0" />
-                    <div>
-                      <div className="font-medium text-gray-900 dark:text-white">
-                        {alert.student.first_name} {alert.student.last_name}
-                      </div>
-                      <div className="text-sm text-yellow-600 dark:text-yellow-400">{alert.message}</div>
-                    </div>
-                  </div>
-                  <Link
-                    href={alert.link}
-                    className="flex items-center gap-1 px-3 py-1.5 text-sm text-yellow-600 dark:text-yellow-400 hover:bg-yellow-100 dark:hover:bg-yellow-900/30 rounded"
-                  >
-                    View <ExternalLink className="w-3 h-3" />
-                  </Link>
-                </div>
-              ))}
-            </div>
-          </div>
+        {/* EMT Section */}
+        {emtStudents.length > 0 && (
+          <ProgramSection
+            title="EMT Program"
+            icon={Ambulance}
+            iconColor="text-teal-600 dark:text-teal-400"
+            bgColor="bg-teal-50 dark:bg-teal-900/20"
+            stats={emtStats}
+            trackerLink="/clinical/emt-tracking"
+            trackerLabel="View EMT Tracker"
+            alerts={getAlertsForProgram('EMT')}
+          />
         )}
 
-        {/* View Mode Toggle */}
-        {filterProgram === 'PM' || filterProgram === 'all' ? (
-          <div className="flex items-center gap-2 bg-white dark:bg-gray-800 rounded-lg shadow px-4 py-2">
-            <span className="text-sm text-gray-600 dark:text-gray-400">View:</span>
-            <button
-              onClick={() => setViewMode('by-semester')}
-              className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                viewMode === 'by-semester'
-                  ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400'
-                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-              }`}
-            >
-              By Semester
-            </button>
-            <button
-              onClick={() => setViewMode('all')}
-              className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                viewMode === 'all'
-                  ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400'
-                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-              }`}
-            >
-              All Students
-            </button>
-          </div>
-        ) : null}
+        {/* AEMT Section */}
+        {aemtStudents.length > 0 && (
+          <ProgramSection
+            title="AEMT Program"
+            icon={Stethoscope}
+            iconColor="text-indigo-600 dark:text-indigo-400"
+            bgColor="bg-indigo-50 dark:bg-indigo-900/20"
+            stats={aemtStats}
+            trackerLink="/clinical/aemt-tracking"
+            trackerLabel="View AEMT Tracker"
+            alerts={getAlertsForProgram('AEMT')}
+          />
+        )}
 
-        {/* PM Students Grouped by Semester */}
-        {viewMode === 'by-semester' && (filterProgram === 'PM' || filterProgram === 'all') && sortedSemesters.length > 0 && (
+        {/* Paramedic Sections by Semester */}
+        {pmStudents.length > 0 && (
           <div className="space-y-4">
             <div className="flex items-center gap-2">
               <GraduationCap className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Paramedic Students by Semester</h2>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Paramedic Program</h2>
+              <span className="text-sm text-gray-500 dark:text-gray-400">by Semester</span>
             </div>
 
-            {sortedSemesters.map(semester => {
-              const semesterStudents = pmStudentsBySemester[semester] || [];
-              const isExpanded = expandedSemesters.has(semester);
-              const activeCount = semesterStudents.filter(s => s.clinicalStatus === 'active_internship').length;
-              const completedCount = semesterStudents.filter(s => s.clinicalStatus === 'completed').length;
+            {/* S4 - Internship */}
+            <PMSemesterSection semester="S4" />
 
-              return (
-                <div key={semester} className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
-                  {/* Semester Header - Clickable */}
-                  <button
-                    onClick={() => toggleSemester(semester)}
-                    className="w-full px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-purple-50 dark:bg-purple-900/20 flex items-center justify-between hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      {isExpanded ? (
-                        <ChevronDown className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                      ) : (
-                        <ChevronRight className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                      )}
-                      <h3 className="font-semibold text-purple-900 dark:text-purple-300">{semester}</h3>
-                      <span className="text-sm text-purple-700 dark:text-purple-400">
-                        {semesterStudents.length} students
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded text-xs">
-                        {activeCount} active
-                      </span>
-                      <span className="px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded text-xs">
-                        {completedCount} completed
-                      </span>
-                    </div>
-                  </button>
+            {/* S3 - Clinicals */}
+            <PMSemesterSection semester="S3" />
 
-                  {/* Semester Students Table */}
-                  {isExpanded && (
-                    <div className="overflow-x-auto">
-                      <table className="w-full">
-                        <thead className="bg-gray-50 dark:bg-gray-700">
-                          <tr>
-                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Student</th>
-                            <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Cohort</th>
-                            <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</th>
-                            <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Phase</th>
-                            <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Next Due</th>
-                            <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                          {semesterStudents.map(student => (
-                            <tr key={student.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                              <td className="px-4 py-2">
-                                <div className="font-medium text-gray-900 dark:text-white text-sm">
-                                  {student.first_name} {student.last_name}
-                                </div>
-                              </td>
-                              <td className="px-4 py-2 text-gray-600 dark:text-gray-400 text-sm">
-                                {student.cohort_number ? `Group ${student.cohort_number}` : '-'}
-                              </td>
-                              <td className="px-4 py-2 text-center">
-                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[student.clinicalStatus]}`}>
-                                  {STATUS_LABELS[student.clinicalStatus]}
-                                </span>
-                              </td>
-                              <td className="px-4 py-2 text-center">
-                                {student.internshipPhase ? (
-                                  <span className="text-sm text-gray-700 dark:text-gray-300">
-                                    {PHASE_LABELS[student.internshipPhase] || student.internshipPhase}
-                                  </span>
-                                ) : (
-                                  <span className="text-gray-400">-</span>
-                                )}
-                              </td>
-                              <td className="px-4 py-2 text-center">
-                                {student.nextDueDate ? (
-                                  <div className="text-sm">
-                                    <div className="text-gray-900 dark:text-white">{formatDate(student.nextDueDate)}</div>
-                                    <div className="text-xs text-gray-500 dark:text-gray-400">{student.nextDueType}</div>
-                                  </div>
-                                ) : (
-                                  <span className="text-gray-400">-</span>
-                                )}
-                              </td>
-                              <td className="px-4 py-2 text-right">
-                                {student.internshipId ? (
-                                  <Link
-                                    href={`/clinical/internships/${student.internshipId}`}
-                                    className="text-sm text-teal-600 dark:text-teal-400 hover:underline"
-                                  >
-                                    View
-                                  </Link>
-                                ) : (
-                                  <Link
-                                    href={`/lab-management/students/${student.id}`}
-                                    className="text-sm text-gray-500 dark:text-gray-400 hover:underline"
-                                  >
-                                    Profile
-                                  </Link>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+            {/* S2 - Compliance */}
+            <PMSemesterSection semester="S2" />
+
+            {/* S1 - Didactic */}
+            <PMSemesterSection semester="S1" />
+
+            {/* Unassigned PM students */}
+            {pmBySemester['Unassigned']?.length > 0 && (
+              <PMSemesterSection semester="Unassigned" />
+            )}
           </div>
         )}
 
-        {/* Non-PM Students or All View */}
-        {(viewMode === 'all' || filterProgram !== 'PM') && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-                <h2 className="font-semibold text-gray-900 dark:text-white">
-                  {viewMode === 'all' ? 'All Students' : `${filterProgram || 'Non-PM'} Students`}
-                </h2>
-                <span className="ml-auto text-sm text-gray-500 dark:text-gray-400">
-                  {viewMode === 'all' ? filteredStudents.length : nonPmStudents.length} students
-                </span>
-              </div>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50 dark:bg-gray-700">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Student</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Program</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Cohort</th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Phase</th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Next Due</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                  {(viewMode === 'all' ? filteredStudents : nonPmStudents).length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
-                        No students match your filters
-                      </td>
-                    </tr>
-                  ) : (
-                    (viewMode === 'all' ? filteredStudents : nonPmStudents).map(student => (
-                      <tr key={student.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                        <td className="px-4 py-3">
-                          <div className="font-medium text-gray-900 dark:text-white">
-                            {student.first_name} {student.last_name}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded text-xs">
-                            {student.program}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-gray-600 dark:text-gray-400 text-sm">
-                          {student.cohort_number ? `Group ${student.cohort_number}` : '-'}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[student.clinicalStatus]}`}>
-                            {STATUS_LABELS[student.clinicalStatus]}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          {student.internshipPhase ? (
-                            <span className="text-sm text-gray-700 dark:text-gray-300">
-                              {PHASE_LABELS[student.internshipPhase] || student.internshipPhase}
-                            </span>
-                          ) : (
-                            <span className="text-gray-400">-</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          {student.nextDueDate ? (
-                            <div className="text-sm">
-                              <div className="text-gray-900 dark:text-white">{formatDate(student.nextDueDate)}</div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400">{student.nextDueType}</div>
-                            </div>
-                          ) : (
-                            <span className="text-gray-400">-</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          {student.internshipId ? (
-                            <Link
-                              href={`/clinical/internships/${student.internshipId}`}
-                              className="text-sm text-teal-600 dark:text-teal-400 hover:underline"
-                            >
-                              View
-                            </Link>
-                          ) : (
-                            <Link
-                              href={`/lab-management/students/${student.id}`}
-                              className="text-sm text-gray-500 dark:text-gray-400 hover:underline"
-                            >
-                              Profile
-                            </Link>
-                          )}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+        {/* Empty State */}
+        {students.length === 0 && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-8 text-center">
+            <Users className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+            <p className="text-gray-500 dark:text-gray-400">No students found</p>
           </div>
         )}
       </main>
