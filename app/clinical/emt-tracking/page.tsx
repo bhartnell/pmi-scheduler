@@ -15,6 +15,8 @@ import {
   Loader2
 } from 'lucide-react';
 import { canAccessClinical, canEditClinical, type Role } from '@/lib/permissions';
+import ExportDropdown from '@/components/ExportDropdown';
+import type { ExportConfig } from '@/lib/export-utils';
 
 interface Student {
   id: string;
@@ -199,6 +201,37 @@ export default function EMTTrackingPage() {
 
   const canEdit = userRole && canEditClinical(userRole);
 
+  // Get selected cohort details for export
+  const selectedCohortDetails = cohorts.find(c => c.id === selectedCohort);
+  const cohortLabel = selectedCohortDetails
+    ? `EMT Group ${selectedCohortDetails.cohort_number}`
+    : 'EMT';
+
+  // Export configuration
+  const exportConfig: ExportConfig = {
+    title: 'EMT Student Tracking Roster',
+    subtitle: selectedCohortDetails ? cohortLabel : undefined,
+    filename: `emt-tracking-${cohortLabel.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}`,
+    columns: [
+      { key: 'name', label: 'Student Name', getValue: (row) => `${row.first_name} ${row.last_name}` },
+      { key: 'email', label: 'Email', getValue: (row) => row.email || '' },
+      ...TRACKING_COLUMNS.map(col => ({
+        key: col.key,
+        label: col.label,
+        getValue: (row: any) => getTrackingStatus(row.id, col.key)
+      })),
+      {
+        key: 'progress',
+        label: 'Progress',
+        getValue: (row: any) => {
+          const completed = TRACKING_COLUMNS.filter(col => getTrackingStatus(row.id, col.key)).length;
+          return `${Math.round((completed / TRACKING_COLUMNS.length) * 100)}%`;
+        }
+      }
+    ],
+    data: filteredStudents
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50 to-cyan-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
@@ -224,9 +257,12 @@ export default function EMTTrackingPage() {
                 <p className="text-gray-600 dark:text-gray-400">Track mCE, vaccinations, ride-alongs, and vitals</p>
               </div>
             </div>
-            <div className="text-right">
-              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{completionPercent}%</div>
-              <div className="text-sm text-gray-500 dark:text-gray-400">Complete</div>
+            <div className="flex items-center gap-4">
+              <div className="text-right">
+                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{completionPercent}%</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">Complete</div>
+              </div>
+              <ExportDropdown config={exportConfig} disabled={!selectedCohort || filteredStudents.length === 0} />
             </div>
           </div>
         </div>
