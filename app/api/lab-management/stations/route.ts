@@ -15,15 +15,17 @@ export async function GET(request: NextRequest) {
   const stationType = searchParams.get('stationType');
 
   try {
+    // Note: Using simpler query to avoid 400 errors from non-existent columns
+    // The instructor_notes column may not exist in scenarios table
+    // The title column may not exist in lab_days table
     let query = supabase
       .from('lab_stations')
       .select(`
         *,
-        scenario:scenarios(id, title, category, difficulty, instructor_notes),
+        scenario:scenarios(id, title, category, difficulty),
         lab_day:lab_days(
           id,
           date,
-          title,
           cohort:cohorts(
             id,
             cohort_number,
