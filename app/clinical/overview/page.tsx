@@ -31,7 +31,7 @@ interface StudentOverview {
   cohort_id: string | null;
   program: string;
   cohort_number: number | null;
-  semester: string | null;
+  current_semester: number | null;
   clinicalStatus: 'active_internship' | 'active_clinicals' | 'preparing' | 'completed' | 'not_started';
   internshipId: string | null;
   internshipStatus: string | null;
@@ -52,12 +52,12 @@ interface Alert {
   program?: string;
 }
 
-// PM Semester definitions
-const PM_SEMESTER_CONFIG: Record<string, { label: string; description: string; color: string; bgColor: string; trackerLink: string }> = {
-  'S4': { label: 'S4 - Internship', description: 'Field internship phase', color: 'text-purple-700 dark:text-purple-400', bgColor: 'bg-purple-100 dark:bg-purple-900/30', trackerLink: '/clinical/internships' },
-  'S3': { label: 'S3 - Clinicals', description: 'Hospital clinical rotations', color: 'text-blue-700 dark:text-blue-400', bgColor: 'bg-blue-100 dark:bg-blue-900/30', trackerLink: '/clinical/hours' },
-  'S2': { label: 'S2 - Compliance', description: 'Pre-clinical compliance docs', color: 'text-green-700 dark:text-green-400', bgColor: 'bg-green-100 dark:bg-green-900/30', trackerLink: '/clinical/compliance' },
-  'S1': { label: 'S1 - Didactic', description: 'Classroom phase', color: 'text-gray-700 dark:text-gray-400', bgColor: 'bg-gray-100 dark:bg-gray-700', trackerLink: '/lab-management' },
+// PM Semester definitions (keyed by integer 1-4)
+const PM_SEMESTER_CONFIG: Record<number, { label: string; description: string; color: string; bgColor: string; trackerLink: string }> = {
+  4: { label: 'S4 - Internship', description: 'Field internship phase', color: 'text-purple-700 dark:text-purple-400', bgColor: 'bg-purple-100 dark:bg-purple-900/30', trackerLink: '/clinical/internships' },
+  3: { label: 'S3 - Clinicals', description: 'Hospital clinical rotations', color: 'text-blue-700 dark:text-blue-400', bgColor: 'bg-blue-100 dark:bg-blue-900/30', trackerLink: '/clinical/hours' },
+  2: { label: 'S2 - Compliance', description: 'Pre-clinical compliance docs', color: 'text-green-700 dark:text-green-400', bgColor: 'bg-green-100 dark:bg-green-900/30', trackerLink: '/clinical/compliance' },
+  1: { label: 'S1 - Didactic', description: 'Classroom phase', color: 'text-gray-700 dark:text-gray-400', bgColor: 'bg-gray-100 dark:bg-gray-700', trackerLink: '/lab-management' },
 };
 
 export default function ClinicalOverviewPage() {
@@ -132,9 +132,10 @@ export default function ClinicalOverviewPage() {
 
   // Group PM students by semester
   const pmBySemester = pmStudents.reduce((acc, student) => {
-    const semester = student.semester || 'Unassigned';
-    if (!acc[semester]) acc[semester] = [];
-    acc[semester].push(student);
+    const semester = student.current_semester ?? 'Unassigned';
+    const key = String(semester);
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(student);
     return acc;
   }, {} as Record<string, StudentOverview[]>);
 
@@ -296,9 +297,10 @@ export default function ClinicalOverviewPage() {
 
   // PM Semester Section Component
   const PMSemesterSection = ({ semester }: { semester: string }) => {
-    const config = PM_SEMESTER_CONFIG[semester] || {
-      label: semester,
-      description: 'Unknown semester',
+    const semesterNum = parseInt(semester);
+    const config = PM_SEMESTER_CONFIG[semesterNum] || {
+      label: semester === 'Unassigned' ? 'Unassigned' : `S${semester}`,
+      description: semester === 'Unassigned' ? 'No semester assigned' : 'Unknown semester',
       color: 'text-gray-700 dark:text-gray-400',
       bgColor: 'bg-gray-100 dark:bg-gray-700',
       trackerLink: '/clinical',
@@ -310,11 +312,11 @@ export default function ClinicalOverviewPage() {
     const semesterAlerts = {
       critical: alerts.critical.filter(a => {
         const student = students.find(s => s.id === a.student.id);
-        return student && (student.program === 'PM' || student.program === 'PMD') && student.semester === semester;
+        return student && (student.program === 'PM' || student.program === 'PMD') && String(student.current_semester ?? 'Unassigned') === semester;
       }),
       warning: alerts.warning.filter(a => {
         const student = students.find(s => s.id === a.student.id);
-        return student && (student.program === 'PM' || student.program === 'PMD') && student.semester === semester;
+        return student && (student.program === 'PM' || student.program === 'PMD') && String(student.current_semester ?? 'Unassigned') === semester;
       }),
     };
 
@@ -543,16 +545,16 @@ export default function ClinicalOverviewPage() {
             </div>
 
             {/* S4 - Internship */}
-            <PMSemesterSection semester="S4" />
+            <PMSemesterSection semester="4" />
 
             {/* S3 - Clinicals */}
-            <PMSemesterSection semester="S3" />
+            <PMSemesterSection semester="3" />
 
             {/* S2 - Compliance */}
-            <PMSemesterSection semester="S2" />
+            <PMSemesterSection semester="2" />
 
             {/* S1 - Didactic */}
-            <PMSemesterSection semester="S1" />
+            <PMSemesterSection semester="1" />
 
             {/* Unassigned PM students */}
             {pmBySemester['Unassigned']?.length > 0 && (

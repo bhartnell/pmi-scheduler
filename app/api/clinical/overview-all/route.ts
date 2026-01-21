@@ -194,7 +194,7 @@ export async function GET(request: NextRequest) {
         cohort_id: student.cohort_id,
         program,
         cohort_number: cohort?.cohort_number || null,
-        semester: cohort?.semester || null,
+        current_semester: cohort?.current_semester || null,
         clinicalStatus,
         internshipId: internship?.id || null,
         internshipStatus: internship?.status || null,

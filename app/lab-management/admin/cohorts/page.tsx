@@ -31,15 +31,15 @@ interface Cohort {
   is_active: boolean;
   student_count: number;
   program: Program;
-  semester: string | null;
+  current_semester: number | null;
 }
 
-// Semester options for PM cohorts
+// Semester options for PM cohorts (integer values 1-4)
 const PM_SEMESTERS = [
-  { value: 'S1', label: 'S1 - Didactic' },
-  { value: 'S2', label: 'S2 - Compliance' },
-  { value: 'S3', label: 'S3 - Clinicals' },
-  { value: 'S4', label: 'S4 - Internship' },
+  { value: 1, label: '1 - Didactic/Lab' },
+  { value: 2, label: '2 - Clinical Prep' },
+  { value: 3, label: '3 - Clinicals' },
+  { value: 4, label: '4 - Internship' },
 ];
 
 export default function CohortManagementPage() {
@@ -57,14 +57,14 @@ export default function CohortManagementPage() {
   const [createCohortNumber, setCreateCohortNumber] = useState('');
   const [createStartDate, setCreateStartDate] = useState('');
   const [createEndDate, setCreateEndDate] = useState('');
-  const [createSemester, setCreateSemester] = useState('');
+  const [createSemester, setCreateSemester] = useState<number | ''>('');
   const [creating, setCreating] = useState(false);
 
   // Edit state
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editStartDate, setEditStartDate] = useState('');
   const [editEndDate, setEditEndDate] = useState('');
-  const [editSemester, setEditSemester] = useState('');
+  const [editSemester, setEditSemester] = useState<number | ''>('');
   const [saving, setSaving] = useState(false);
   const [userRole, setUserRole] = useState<Role | null>(null);
 
@@ -141,7 +141,7 @@ export default function CohortManagementPage() {
           cohort_number: parseInt(createCohortNumber),
           start_date: createStartDate || null,
           expected_end_date: createEndDate || null,
-          semester: isPMProgram(createProgramId) ? (createSemester || null) : null,
+          current_semester: isPMProgram(createProgramId) && createSemester !== '' ? createSemester : null,
         }),
       });
 
@@ -167,7 +167,7 @@ export default function CohortManagementPage() {
     setEditingId(cohort.id);
     setEditStartDate(cohort.start_date || '');
     setEditEndDate(cohort.expected_end_date || '');
-    setEditSemester(cohort.semester || '');
+    setEditSemester(cohort.current_semester ?? '');
   };
 
   const cancelEdit = () => {
@@ -189,7 +189,7 @@ export default function CohortManagementPage() {
         body: JSON.stringify({
           start_date: editStartDate || null,
           expected_end_date: editEndDate || null,
-          semester: isPM ? (editSemester || null) : null,
+          current_semester: isPM && editSemester !== '' ? editSemester : null,
         }),
       });
 
@@ -340,7 +340,7 @@ export default function CohortManagementPage() {
                   {isPMProgram(createProgramId) ? (
                     <select
                       value={createSemester}
-                      onChange={(e) => setCreateSemester(e.target.value)}
+                      onChange={(e) => setCreateSemester(e.target.value ? parseInt(e.target.value) : '')}
                       className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                     >
                       <option value="">Select...</option>
@@ -431,7 +431,7 @@ export default function CohortManagementPage() {
                           {(program.abbreviation === 'PM' || program.abbreviation === 'PMD') ? (
                             <select
                               value={editSemester}
-                              onChange={(e) => setEditSemester(e.target.value)}
+                              onChange={(e) => setEditSemester(e.target.value ? parseInt(e.target.value) : '')}
                               className="px-2 py-1 border dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                             >
                               <option value="">No Semester</option>
@@ -483,9 +483,9 @@ export default function CohortManagementPage() {
                           <div>
                             <div className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
                               {program.abbreviation} Group {cohort.cohort_number}
-                              {(program.abbreviation === 'PM' || program.abbreviation === 'PMD') && cohort.semester && (
+                              {(program.abbreviation === 'PM' || program.abbreviation === 'PMD') && cohort.current_semester && (
                                 <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 text-xs rounded font-semibold">
-                                  {cohort.semester}
+                                  S{cohort.current_semester}
                                 </span>
                               )}
                               {(program.abbreviation !== 'PM' && program.abbreviation !== 'PMD') && (

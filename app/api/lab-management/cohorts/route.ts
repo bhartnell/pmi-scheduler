@@ -56,6 +56,7 @@ export async function POST(request: NextRequest) {
         cohort_number: body.cohort_number,
         start_date: body.start_date || null,
         expected_end_date: body.expected_end_date || null,
+        current_semester: body.current_semester || null,
       })
       .select(`
         *,
