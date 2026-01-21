@@ -15,24 +15,11 @@ export async function GET(request: NextRequest) {
   const stationType = searchParams.get('stationType');
 
   try {
-    // Note: Using simpler query to avoid 400 errors from non-existent columns
-    // The instructor_notes column may not exist in scenarios table
-    // The title column may not exist in lab_days table
+    // Simple query first - fetch stations with basic joins
+    // Avoid complex nested aliases that can cause 400 errors
     let query = supabase
       .from('lab_stations')
-      .select(`
-        *,
-        scenario:scenarios(id, title, category, difficulty),
-        lab_day:lab_days(
-          id,
-          date,
-          cohort:cohorts(
-            id,
-            cohort_number,
-            program:programs(abbreviation)
-          )
-        )
-      `)
+      .select('*')
       .order('station_number');
 
     if (labDayId) {
@@ -47,10 +34,7 @@ export async function GET(request: NextRequest) {
       query = query.eq('station_type', stationType);
     }
 
-    // Note: open stations filter is handled after query execution
-    // to properly check for null/empty instructor_email
-
-    const { data, error } = await query;
+    const { data: stations, error } = await query;
 
     if (error) {
       console.error('Supabase GET error:', error.code, error.message, error.details, error.hint);
@@ -60,6 +44,94 @@ export async function GET(request: NextRequest) {
         code: error.code,
         hint: error.hint
       }, { status: 500 });
+    }
+
+    // Fetch related data separately to avoid complex join issues
+    let data = stations || [];
+
+    if (data.length > 0) {
+      // Get unique scenario IDs and lab_day IDs
+      const scenarioIds = [...new Set(data.map((s: any) => s.scenario_id).filter(Boolean))];
+      const labDayIds = [...new Set(data.map((s: any) => s.lab_day_id).filter(Boolean))];
+
+      // Fetch scenarios
+      let scenariosMap: Record<string, any> = {};
+      if (scenarioIds.length > 0) {
+        const { data: scenarios } = await supabase
+          .from('scenarios')
+          .select('id, title, category, difficulty')
+          .in('id', scenarioIds);
+        if (scenarios) {
+          scenariosMap = Object.fromEntries(scenarios.map((s: any) => [s.id, s]));
+        }
+      }
+
+      // Fetch lab_days with cohort info
+      let labDaysMap: Record<string, any> = {};
+      if (labDayIds.length > 0) {
+        const { data: labDays } = await supabase
+          .from('lab_days')
+          .select('id, date, cohort_id')
+          .in('id', labDayIds);
+
+        if (labDays) {
+          // Get cohort IDs
+          const cohortIds = [...new Set(labDays.map((ld: any) => ld.cohort_id).filter(Boolean))];
+
+          // Fetch cohorts with programs
+          let cohortsMap: Record<string, any> = {};
+          if (cohortIds.length > 0) {
+            const { data: cohorts } = await supabase
+              .from('cohorts')
+              .select('id, cohort_number, program_id')
+              .in('id', cohortIds);
+
+            if (cohorts) {
+              // Get program IDs
+              const programIds = [...new Set(cohorts.map((c: any) => c.program_id).filter(Boolean))];
+
+              // Fetch programs
+              let programsMap: Record<string, any> = {};
+              if (programIds.length > 0) {
+                const { data: programs } = await supabase
+                  .from('programs')
+                  .select('id, abbreviation')
+                  .in('id', programIds);
+                if (programs) {
+                  programsMap = Object.fromEntries(programs.map((p: any) => [p.id, p]));
+                }
+              }
+
+              // Build cohorts with programs
+              cohortsMap = Object.fromEntries(cohorts.map((c: any) => [
+                c.id,
+                {
+                  id: c.id,
+                  cohort_number: c.cohort_number,
+                  program: programsMap[c.program_id] || null
+                }
+              ]));
+            }
+          }
+
+          // Build lab_days with cohorts
+          labDaysMap = Object.fromEntries(labDays.map((ld: any) => [
+            ld.id,
+            {
+              id: ld.id,
+              date: ld.date,
+              cohort: cohortsMap[ld.cohort_id] || null
+            }
+          ]));
+        }
+      }
+
+      // Attach related data to stations
+      data = data.map((station: any) => ({
+        ...station,
+        scenario: station.scenario_id ? scenariosMap[station.scenario_id] || null : null,
+        lab_day: station.lab_day_id ? labDaysMap[station.lab_day_id] || null : null
+      }));
     }
 
     let filteredData = data || [];
