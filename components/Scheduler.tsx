@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Calendar, Clock, Users, CheckCircle, Send, UserCheck, UsersRound, ExternalLink, Copy, Eye, ArrowLeft, X, Sparkles, Filter, ChevronLeft, ChevronRight, Menu, List } from 'lucide-react';
+import { Calendar, Clock, Users, CheckCircle, Send, UserCheck, UsersRound, ExternalLink, Copy, Eye, ArrowLeft, X, Sparkles, Filter, ChevronLeft, ChevronRight, Menu, List, GraduationCap, BadgeCheck, Building2, School, HelpCircle } from 'lucide-react';
 
 interface SchedulerProps {
   mode: 'create' | 'participant' | 'admin-view';
@@ -13,7 +13,7 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
   const [schedulingMode, setSchedulingMode] = useState<'individual' | 'group' | null>(pollData?.mode || null);
   const [view, setView] = useState(mode === 'create' ? 'mode-select' : mode === 'participant' ? 'participant-form' : 'admin-results');
   const [studentData, setStudentData] = useState({
-    name: '', email: '', agency: '', meetingType: 'initial', availability: [] as string[]
+    name: '', email: '', agency: '', role: 'student', availability: [] as string[]
   });
   const [pollConfig, setPollConfig] = useState({
     title: pollData?.title || '',
@@ -35,7 +35,7 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
   // Admin view state
   const [selectedRespondents, setSelectedRespondents] = useState<string[]>([]);
   const [hoveredCell, setHoveredCell] = useState<string | null>(null);
-  const [meetingTypeFilter, setMeetingTypeFilter] = useState<string>('all');
+  const [roleFilter, setRoleFilter] = useState<string>('all');
   const [showBestTimes, setShowBestTimes] = useState(false);
   
   // Mobile-specific state
@@ -55,18 +55,18 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
   }, []);
 
   const agencies = ['Las Vegas Fire & Rescue', 'AMR', 'MedicWest', 'Community Ambulance', 'Henderson Fire', 'Pima Paramedic Program (Instructors/Staff)', 'Other'];
-  const meetingTypes = [
-    { value: 'initial', label: 'Initial Meeting' },
-    { value: 'midpoint', label: 'Mid-Point Check-In' },
-    { value: 'final', label: 'Final Evaluation' },
-    { value: 'other', label: 'Other Meeting' }
+
+  // Respondent roles
+  const respondentRoles = [
+    { value: 'student', label: 'Student/Intern', icon: GraduationCap, color: 'text-blue-600', bgColor: 'bg-blue-100' },
+    { value: 'fto', label: 'FTO/Preceptor', icon: BadgeCheck, color: 'text-green-600', bgColor: 'bg-green-100' },
+    { value: 'agency', label: 'Agency Clinical Dept', icon: Building2, color: 'text-purple-600', bgColor: 'bg-purple-100' },
+    { value: 'school', label: 'School Representative', icon: School, color: 'text-orange-600', bgColor: 'bg-orange-100' },
+    { value: 'other', label: 'Other', icon: HelpCircle, color: 'text-gray-600', bgColor: 'bg-gray-100' },
   ];
-  const groupSessionTypes = [
-    { value: 'capstone', label: 'Capstone Skills Testing' },
-    { value: 'competency', label: 'Competency Assessment' },
-    { value: 'remediation', label: 'Group Remediation' },
-    { value: 'orientation', label: 'Internship Orientation' }
-  ];
+
+  // Required roles for a complete meeting
+  const requiredRoles = ['student', 'fto', 'school'];
 
   useEffect(() => {
     if (mode === 'admin-view' && pollData) {
@@ -121,11 +121,11 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
   const timeSlots = generateTimeSlots();
   const dates = generateDates();
 
-  // Filter submissions by meeting type
+  // Filter submissions by role
   const filteredSubmissions = useMemo(() => {
-    if (meetingTypeFilter === 'all') return submissions;
-    return submissions.filter(sub => sub.meeting_type === meetingTypeFilter);
-  }, [submissions, meetingTypeFilter]);
+    if (roleFilter === 'all') return submissions;
+    return submissions.filter(sub => (sub.respondent_role || sub.meeting_type) === roleFilter);
+  }, [submissions, roleFilter]);
 
   // Get respondents to show (either selected or all filtered)
   const activeRespondents = useMemo(() => {
@@ -224,7 +224,7 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
           name: studentData.name,
           email: studentData.email,
           agency: studentData.agency,
-          meetingType: studentData.meetingType,
+          respondentRole: studentData.role,
           availability: studentData.availability,
         }),
       });
@@ -271,10 +271,22 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
     setTimeout(() => setLinksCopied(p => ({ ...p, [type]: false })), 2000);
   };
 
-  const getMeetingTypeLabel = (value: string) => {
-    const type = [...meetingTypes, ...groupSessionTypes].find(t => t.value === value);
-    return type?.label || value;
+  const getRoleConfig = (value: string) => {
+    return respondentRoles.find(r => r.value === value) || respondentRoles[4]; // Default to 'other'
   };
+
+  // Calculate which required roles have been filled
+  const getRolesStatus = useMemo(() => {
+    const rolesCovered: Record<string, { filled: boolean; names: string[] }> = {};
+    requiredRoles.forEach(role => {
+      const matching = filteredSubmissions.filter(sub => (sub.respondent_role || sub.meeting_type) === role);
+      rolesCovered[role] = {
+        filled: matching.length > 0,
+        names: matching.map(s => s.name)
+      };
+    });
+    return rolesCovered;
+  }, [filteredSubmissions]);
 
   // Navigation for mobile day view
   const goToPreviousDay = () => setCurrentDayIndex(Math.max(0, currentDayIndex - 1));
@@ -629,11 +641,12 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
               {agencies.map(a => <option key={a} value={a}>{a}</option>)}
             </select>
             <select
-              value={studentData.meetingType}
-              onChange={(e) => setStudentData(p => ({ ...p, meetingType: e.target.value }))}
+              value={studentData.role}
+              onChange={(e) => setStudentData(p => ({ ...p, role: e.target.value }))}
               className="px-3 py-3 md:py-2 border rounded-md text-gray-900 bg-white text-base"
             >
-              {(schedulingMode === 'individual' ? meetingTypes : groupSessionTypes).map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+              <option value="">Select your role</option>
+              {respondentRoles.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
             </select>
           </div>
         </div>
@@ -842,8 +855,51 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
             <p className="text-xs text-purple-700">Keep private - admin only</p>
           </div>
         </div>
-        <div className="bg-green-50 p-3 rounded-lg">
+        <div className="bg-green-50 p-3 rounded-lg mb-4">
           <p className="text-sm text-green-800"><strong>Total Responses: {submissions.length}</strong></p>
+        </div>
+
+        {/* Required Roles Status */}
+        <div className="border rounded-lg p-3 md:p-4">
+          <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            <Users className="w-4 h-4" />
+            Required Roles Status
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            {requiredRoles.map(role => {
+              const roleConfig = getRoleConfig(role);
+              const status = getRolesStatus[role];
+              const RoleIcon = roleConfig.icon;
+              return (
+                <div
+                  key={role}
+                  className={`flex items-center gap-2 p-2 rounded-lg border ${
+                    status?.filled
+                      ? 'border-green-300 bg-green-50'
+                      : 'border-red-200 bg-red-50'
+                  }`}
+                >
+                  <div className={`p-1.5 rounded ${status?.filled ? 'bg-green-200' : 'bg-red-200'}`}>
+                    {status?.filled ? (
+                      <CheckCircle className="w-4 h-4 text-green-600" />
+                    ) : (
+                      <RoleIcon className="w-4 h-4 text-red-500" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className={`text-xs font-medium ${status?.filled ? 'text-green-800' : 'text-red-800'}`}>
+                      {roleConfig.label}
+                    </div>
+                    {status?.filled ? (
+                      <div className="text-xs text-green-600 truncate">{status.names.join(', ')}</div>
+                    ) : (
+                      <div className="text-xs text-red-500">Missing</div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -872,17 +928,17 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
               )}
             </div>
             
-            {/* Filter by meeting type */}
+            {/* Filter by role */}
             <div className="mb-4">
-              <label className="text-xs font-medium text-gray-600 mb-1 block">Filter by type:</label>
-              <select 
-                value={meetingTypeFilter} 
-                onChange={(e) => setMeetingTypeFilter(e.target.value)}
+              <label className="text-xs font-medium text-gray-600 mb-1 block">Filter by role:</label>
+              <select
+                value={roleFilter}
+                onChange={(e) => setRoleFilter(e.target.value)}
                 className="w-full px-2 py-2 border rounded text-sm text-gray-900 bg-white"
               >
-                <option value="all">All Types</option>
-                {meetingTypes.map(t => (
-                  <option key={t.value} value={t.value}>{t.label}</option>
+                <option value="all">All Roles</option>
+                {respondentRoles.map(r => (
+                  <option key={r.value} value={r.value}>{r.label}</option>
                 ))}
               </select>
             </div>
@@ -895,20 +951,29 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
                 filteredSubmissions.map((sub) => {
                   const isSelected = selectedRespondents.includes(sub.id);
                   const avail = getAvailability(sub);
+                  const roleConfig = getRoleConfig(sub.respondent_role || sub.meeting_type);
+                  const RoleIcon = roleConfig.icon;
                   return (
                     <button
                       key={sub.id}
                       onClick={() => toggleRespondentSelection(sub.id)}
                       className={`w-full text-left p-3 rounded-lg border-2 transition-all ${
-                        isSelected 
-                          ? 'border-blue-500 bg-blue-50' 
+                        isSelected
+                          ? 'border-blue-500 bg-blue-50'
                           : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                       }`}
                     >
-                      <div className="font-medium text-gray-900 text-sm">{sub.name}</div>
-                      <div className="text-xs text-gray-500 truncate">{sub.email}</div>
+                      <div className="flex items-center gap-2">
+                        <div className={`p-1 rounded ${roleConfig.bgColor}`}>
+                          <RoleIcon className={`w-3 h-3 ${roleConfig.color}`} />
+                        </div>
+                        <div className="font-medium text-gray-900 text-sm">{sub.name}</div>
+                      </div>
+                      <div className="text-xs text-gray-500 truncate mt-1">{sub.email}</div>
                       <div className="flex items-center justify-between mt-1">
-                        <span className="text-xs text-gray-600">{getMeetingTypeLabel(sub.meeting_type)}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded ${roleConfig.bgColor} ${roleConfig.color}`}>
+                          {roleConfig.label}
+                        </span>
                         <span className="text-xs bg-gray-100 px-2 py-0.5 rounded text-gray-700">{avail.length} slots</span>
                       </div>
                     </button>

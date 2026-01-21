@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { pollId, name, email, agency, meetingType, availability } = body;
+    const { pollId, name, email, agency, meetingType, respondentRole, availability } = body;
 
     // Check if submission already exists
     const { data: existing } = await supabase
@@ -21,7 +21,8 @@ export async function POST(request: NextRequest) {
         .update({
           name,
           agency,
-          meeting_type: meetingType,
+          meeting_type: meetingType || null, // Keep for backwards compatibility
+          respondent_role: respondentRole || null,
           availability,
           updated_at: new Date().toISOString(),
         })
@@ -40,7 +41,8 @@ export async function POST(request: NextRequest) {
           name,
           email,
           agency,
-          meeting_type: meetingType,
+          meeting_type: meetingType || null, // Keep for backwards compatibility
+          respondent_role: respondentRole || null,
           availability,
         })
         .select()
