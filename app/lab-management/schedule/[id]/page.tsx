@@ -177,9 +177,11 @@ export default function LabDayPage() {
   };
 
   const getStationTitle = (station: Station) => {
+    // Prioritize custom_title as it contains the full descriptive name
+    if (station.custom_title) return station.custom_title;
+    // Fallback to scenario title or skill name
     if (station.scenario) return station.scenario.title;
     if (station.skill_name) return station.skill_name;
-    if (station.custom_title) return station.custom_title;
     return `Station ${station.station_number}`;
   };
 

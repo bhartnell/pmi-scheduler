@@ -35,6 +35,7 @@ interface DashboardStats {
 interface StationAssignment {
   id: string;
   station_number: number;
+  custom_title: string | null;
   instructor_name: string | null;
   instructor_email: string | null;
   scenario: {
@@ -279,7 +280,7 @@ export default function LabManagementDashboard() {
                   </div>
 
                   <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
-                    {assignment.scenario?.title || 'No scenario assigned'}
+                    {assignment.custom_title || assignment.scenario?.title || `Station ${assignment.station_number}`}
                   </h3>
 
                   <div className="text-sm text-gray-600 dark:text-gray-400 mb-3">
@@ -345,7 +346,7 @@ export default function LabManagementDashboard() {
                   </div>
 
                   <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
-                    {station.scenario?.title || 'No scenario assigned'}
+                    {station.custom_title || station.scenario?.title || `Station ${station.station_number}`}
                   </h3>
 
                   <div className="text-sm text-gray-600 dark:text-gray-400 mb-3">

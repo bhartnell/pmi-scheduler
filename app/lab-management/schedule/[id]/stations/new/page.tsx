@@ -176,6 +176,49 @@ export default function NewStationPage() {
     setCustomSkills(customSkills.filter((_, i) => i !== index));
   };
 
+  // Generate descriptive station name with cohort, date, and content
+  const generateStationName = () => {
+    if (!labDay) return null;
+
+    // Build cohort abbreviation (e.g., "PM14", "AEMT3", "EMT5")
+    const cohortAbbrev = `${labDay.cohort?.program?.abbreviation || 'Unknown'}${labDay.cohort?.cohort_number || ''}`;
+
+    // Format date (e.g., "01/26/26")
+    const dateStr = new Date(labDay.date + 'T12:00:00').toLocaleDateString('en-US', {
+      month: '2-digit',
+      day: '2-digit',
+      year: '2-digit'
+    });
+
+    // Get content name based on station type
+    let contentName = '';
+    if (stationType === 'scenario') {
+      const scenario = scenarios.find(s => s.id === scenarioId);
+      if (scenario) {
+        contentName = scenario.title;
+      } else {
+        contentName = 'Scenario';
+      }
+    } else if (stationType === 'skills') {
+      const skillNames = selectedSkills
+        .map(skillId => skills.find(s => s.id === skillId)?.name)
+        .filter(Boolean) as string[];
+      const allSkillNames = [...skillNames, ...customSkills.filter(s => s.trim())];
+      if (allSkillNames.length > 0) {
+        contentName = allSkillNames.slice(0, 2).join(', ');
+        if (allSkillNames.length > 2) {
+          contentName += '...';
+        }
+      } else {
+        contentName = 'Skills';
+      }
+    } else if (stationType === 'documentation') {
+      contentName = 'Documentation';
+    }
+
+    return `${cohortAbbrev} ${dateStr} - ${contentName}`;
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -184,25 +227,8 @@ export default function NewStationPage() {
         ? Math.max(...existingStations.map(s => s.station_number)) + 1
         : 1;
 
-      // Generate custom_title for skills stations from selected skills
-      let customTitle: string | null = null;
-      if (stationType === 'skills') {
-        const skillNames = selectedSkills
-          .map(skillId => skills.find(s => s.id === skillId)?.name)
-          .filter(Boolean);
-        const allSkillNames = [...skillNames, ...customSkills.filter(s => s.trim())];
-        if (allSkillNames.length > 0) {
-          // Use first 2-3 skill names, or all if fewer
-          customTitle = allSkillNames.slice(0, 3).join(', ');
-          if (allSkillNames.length > 3) {
-            customTitle += ` (+${allSkillNames.length - 3} more)`;
-          }
-        } else {
-          customTitle = 'Skills Station';
-        }
-      } else if (stationType === 'documentation') {
-        customTitle = 'Documentation Station';
-      }
+      // Generate descriptive station name
+      const customTitle = generateStationName();
 
       // Create station
       const stationRes = await fetch('/api/lab-management/stations', {
