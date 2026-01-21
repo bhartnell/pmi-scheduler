@@ -184,6 +184,26 @@ export default function NewStationPage() {
         ? Math.max(...existingStations.map(s => s.station_number)) + 1
         : 1;
 
+      // Generate custom_title for skills stations from selected skills
+      let customTitle: string | null = null;
+      if (stationType === 'skills') {
+        const skillNames = selectedSkills
+          .map(skillId => skills.find(s => s.id === skillId)?.name)
+          .filter(Boolean);
+        const allSkillNames = [...skillNames, ...customSkills.filter(s => s.trim())];
+        if (allSkillNames.length > 0) {
+          // Use first 2-3 skill names, or all if fewer
+          customTitle = allSkillNames.slice(0, 3).join(', ');
+          if (allSkillNames.length > 3) {
+            customTitle += ` (+${allSkillNames.length - 3} more)`;
+          }
+        } else {
+          customTitle = 'Skills Station';
+        }
+      } else if (stationType === 'documentation') {
+        customTitle = 'Documentation Station';
+      }
+
       // Create station
       const stationRes = await fetch('/api/lab-management/stations', {
         method: 'POST',
@@ -193,6 +213,7 @@ export default function NewStationPage() {
           station_number: nextStationNumber,
           station_type: stationType,
           scenario_id: stationType === 'scenario' ? scenarioId || null : null,
+          custom_title: customTitle,
           instructor_name: instructorName || null,
           instructor_email: instructorEmail || null,
           room: room || null,

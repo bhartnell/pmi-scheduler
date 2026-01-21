@@ -172,11 +172,12 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    
+
     if (!body.lab_day_id) {
       return NextResponse.json({ success: false, error: 'lab_day_id is required' }, { status: 400 });
     }
 
+    // Insert station with simple select to avoid join issues
     const { data, error } = await supabase
       .from('lab_stations')
       .insert({
@@ -184,6 +185,7 @@ export async function POST(request: NextRequest) {
         station_number: body.station_number || 1,
         station_type: body.station_type || 'scenario',
         scenario_id: body.scenario_id || null,
+        custom_title: body.custom_title || null,
         instructor_name: body.instructor_name || null,
         instructor_email: body.instructor_email || null,
         room: body.room || null,
@@ -195,10 +197,7 @@ export async function POST(request: NextRequest) {
         instructions_url: body.instructions_url || null,
         station_notes: body.station_notes || null
       })
-      .select(`
-        *,
-        scenario:scenarios(id, title, category)
-      `)
+      .select('*')
       .single();
 
     if (error) {
@@ -211,7 +210,18 @@ export async function POST(request: NextRequest) {
       }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, station: data });
+    // Fetch scenario separately if needed
+    let station = data;
+    if (data && data.scenario_id) {
+      const { data: scenario } = await supabase
+        .from('scenarios')
+        .select('id, title, category')
+        .eq('id', data.scenario_id)
+        .single();
+      station = { ...data, scenario };
+    }
+
+    return NextResponse.json({ success: true, station });
   } catch (error) {
     console.error('Error creating station:', error);
     const message = error instanceof Error ? error.message : 'Failed to create station';

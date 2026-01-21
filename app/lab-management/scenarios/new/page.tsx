@@ -1,8 +1,8 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
-import { useRouter, useParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
+import { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import {
   ChevronRight,
@@ -595,12 +595,14 @@ function VitalsEditor({
 }
 
 // Main Component
-export default function ScenarioEditorPage() {
+function ScenarioEditorContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const scenarioId = params?.id as string | undefined;
   const isEditing = !!scenarioId && scenarioId !== 'new';
+  const returnTo = searchParams.get('returnTo');
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -802,8 +804,8 @@ export default function ScenarioEditorPage() {
           // Scroll to top
           window.scrollTo({ top: 0, behavior: 'smooth' });
         } else {
-          // Redirect to scenarios list
-          router.push('/lab-management/scenarios');
+          // Redirect to returnTo or scenarios list
+          router.push(returnTo || '/lab-management/scenarios');
         }
       } else {
         alert('Failed to save scenario: ' + (data.error || 'Unknown error'));
@@ -1486,5 +1488,17 @@ function X({ className }: { className?: string }) {
     <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M18 6L6 18M6 6l12 12" />
     </svg>
+  );
+}
+
+export default function ScenarioEditorPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    }>
+      <ScenarioEditorContent />
+    </Suspense>
   );
 }

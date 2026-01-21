@@ -287,14 +287,14 @@ export default function CohortHubPage() {
 
             <div className="flex gap-2">
               <Link
-                href={`/lab-management/students/new?cohortId=${cohortId}`}
+                href={`/lab-management/students/new?cohortId=${cohortId}&returnTo=${encodeURIComponent(`/lab-management/cohorts/${cohortId}`)}`}
                 className="inline-flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-700 border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 text-sm text-gray-700 dark:text-gray-200"
               >
                 <UserPlus className="w-4 h-4" />
                 Add Student
               </Link>
               <Link
-                href={`/lab-management/students/import?cohortId=${cohortId}`}
+                href={`/lab-management/students/import?cohortId=${cohortId}&returnTo=${encodeURIComponent(`/lab-management/cohorts/${cohortId}`)}`}
                 className="inline-flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-700 border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 text-sm text-gray-700 dark:text-gray-200"
               >
                 <Upload className="w-4 h-4" />
@@ -447,7 +447,7 @@ export default function CohortHubPage() {
               <Users className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
               <p className="text-gray-500 dark:text-gray-400 mb-4">No students in this cohort yet</p>
               <Link
-                href={`/lab-management/students/new?cohortId=${cohortId}`}
+                href={`/lab-management/students/new?cohortId=${cohortId}&returnTo=${encodeURIComponent(`/lab-management/cohorts/${cohortId}`)}`}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               >
                 <Plus className="w-4 h-4" />

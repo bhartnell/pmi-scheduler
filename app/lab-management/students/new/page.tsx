@@ -1,8 +1,8 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { ChevronRight, Save, UserPlus } from 'lucide-react';
 
@@ -12,9 +12,14 @@ interface Cohort {
   program: { abbreviation: string };
 }
 
-export default function NewStudentPage() {
+function NewStudentContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Get returnTo and cohortId from URL params
+  const returnTo = searchParams.get('returnTo');
+  const preselectedCohortId = searchParams.get('cohortId');
 
   const [cohorts, setCohorts] = useState<Cohort[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,7 +29,7 @@ export default function NewStudentPage() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
-  const [cohortId, setCohortId] = useState('');
+  const [cohortId, setCohortId] = useState(preselectedCohortId || '');
   const [agency, setAgency] = useState('');
   const [notes, setNotes] = useState('');
 
@@ -39,6 +44,13 @@ export default function NewStudentPage() {
       fetchCohorts();
     }
   }, [session]);
+
+  // Pre-select cohort if provided in URL
+  useEffect(() => {
+    if (preselectedCohortId && !cohortId) {
+      setCohortId(preselectedCohortId);
+    }
+  }, [preselectedCohortId]);
 
   const fetchCohorts = async () => {
     try {
@@ -78,7 +90,8 @@ export default function NewStudentPage() {
 
       const data = await res.json();
       if (data.success) {
-        router.push(`/lab-management/students/${data.student.id}`);
+        // Redirect to returnTo if provided, otherwise to student detail page
+        router.push(returnTo || `/lab-management/students/${data.student.id}`);
       } else {
         alert('Failed to create student: ' + data.error);
       }
@@ -215,7 +228,7 @@ export default function NewStudentPage() {
 
           <div className="flex gap-3 pt-4 border-t dark:border-gray-700">
             <Link
-              href="/lab-management/students"
+              href={returnTo || '/lab-management/students'}
               className="px-6 py-2 border dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
             >
               Cancel
@@ -252,5 +265,17 @@ export default function NewStudentPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function NewStudentPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    }>
+      <NewStudentContent />
+    </Suspense>
   );
 }

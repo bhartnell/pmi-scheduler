@@ -1,8 +1,8 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { 
   ChevronRight,
@@ -28,12 +28,17 @@ interface ParsedStudent {
   error?: string;
 }
 
-export default function ImportStudentsPage() {
+function ImportStudentsContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Get returnTo and cohortId from URL params
+  const returnTo = searchParams.get('returnTo');
+  const preselectedCohortId = searchParams.get('cohortId');
 
   const [cohorts, setCohorts] = useState<Cohort[]>([]);
-  const [selectedCohort, setSelectedCohort] = useState('');
+  const [selectedCohort, setSelectedCohort] = useState(preselectedCohortId || '');
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
   
@@ -60,7 +65,10 @@ export default function ImportStudentsPage() {
       const data = await res.json();
       if (data.success) {
         setCohorts(data.cohorts);
-        if (data.cohorts.length > 0) {
+        // Use preselected cohort from URL, or first cohort as default
+        if (preselectedCohortId && data.cohorts.find((c: Cohort) => c.id === preselectedCohortId)) {
+          setSelectedCohort(preselectedCohortId);
+        } else if (data.cohorts.length > 0 && !selectedCohort) {
           setSelectedCohort(data.cohorts[0].id);
         }
       }
@@ -238,10 +246,10 @@ export default function ImportStudentsPage() {
                 {importResult.skipped > 0 && ` ${importResult.skipped} skipped due to missing data.`}
               </p>
               <Link
-                href={`/lab-management/students`}
+                href={returnTo || '/lab-management/students'}
                 className="text-green-800 dark:text-green-300 font-medium hover:underline mt-2 inline-block"
               >
-                View Students →
+                {returnTo ? 'Return to Cohort →' : 'View Students →'}
               </Link>
             </div>
           </div>
@@ -382,7 +390,7 @@ export default function ImportStudentsPage() {
         {parsedStudents.length > 0 && validCount > 0 && (
           <div className="flex gap-3">
             <Link
-              href="/lab-management/students"
+              href={returnTo || '/lab-management/students'}
               className="px-6 py-3 border dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
             >
               Cancel
@@ -421,5 +429,17 @@ export default function ImportStudentsPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function ImportStudentsPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    }>
+      <ImportStudentsContent />
+    </Suspense>
   );
 }
