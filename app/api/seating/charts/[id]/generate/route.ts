@@ -156,170 +156,134 @@ function generateSeating(
     });
   };
 
-  // Helper to sort students by social preference
-  // Independent -> left tables, Social -> right tables
-  const sortBySocialPreference = (studentList: Student[]): { left: Student[], right: Student[], neutral: Student[] } => {
-    const left: Student[] = [];
-    const right: Student[] = [];
-    const neutral: Student[] = [];
+  // Priority-based seating interface and functions
+  interface PrioritizedStudent {
+    tier: number;
+    student: Student;
+    preferredSide: 'left' | 'right' | 'any';
+    primary: string | null;
+    social: string | null;
+  }
 
-    studentList.forEach(student => {
-      const ls = styleMap.get(student.id);
-      if (ls?.social_style === 'independent') {
-        left.push(student);
-      } else if (ls?.social_style === 'social') {
-        right.push(student);
-      } else {
-        neutral.push(student);
-      }
-    });
-
-    return { left, right, neutral };
-  };
-
-  // Place students in their preferred rows based on learning style
-  const placeStudentGroup = (
+  // Prioritize students by learning style tiers
+  const prioritizeStudents = (
     studentList: Student[],
-    preferredTables: number[],
-    rowNum: number
-  ) => {
-    const { left, right, neutral } = sortBySocialPreference(studentList);
+    styleMap: Map<string, LearningStyle>
+  ): PrioritizedStudent[] => {
+    const prioritized: PrioritizedStudent[] = [];
 
-    // Get left and right tables from preferred tables
-    const leftTables = preferredTables.filter(t => LAYOUT.leftTables.includes(t));
-    const rightTables = preferredTables.filter(t => LAYOUT.rightTables.includes(t));
+    for (const student of studentList) {
+      const ls = styleMap.get(student.id);
+      const primary = ls?.primary_style || null;
+      const social = ls?.social_style || null;
 
-    // Place independent learners on left side tables
-    for (const student of left) {
-      if (studentPlaced.has(student.id)) continue;
+      let tier = 7; // Default for unassessed
+      let preferredSide: 'left' | 'right' | 'any' = 'any';
 
-      let placed = false;
-      // Try left tables first
-      for (const tableNum of leftTables) {
-        const availableSeats = getAvailableSeats(tableNum);
-        if (availableSeats.length === 0) continue;
-        if (hasAgencyConflict(student, tableNum)) continue;
-        if (hasAvoidanceConflict(student.id, tableNum)) continue;
-
-        placeStudent(student, tableNum, availableSeats[0], rowNum);
-        placed = true;
-        break;
+      // Determine preferred side based on social style
+      if (social === 'independent') {
+        preferredSide = 'left';
+      } else if (social === 'social') {
+        preferredSide = 'right';
       }
 
-      // Fall back to right tables if needed
-      if (!placed) {
-        for (const tableNum of rightTables) {
-          const availableSeats = getAvailableSeats(tableNum);
-          if (availableSeats.length === 0) continue;
-          if (hasAgencyConflict(student, tableNum)) continue;
-          if (hasAvoidanceConflict(student.id, tableNum)) continue;
-
-          placeStudent(student, tableNum, availableSeats[0], rowNum);
-          placed = true;
-          break;
-        }
+      // Determine tier based on primary + social learning styles
+      // Tier 1: Audio + Independent (highest priority for front/sides)
+      // Tier 2: Audio + Social (front center)
+      // Tier 3: Visual + Independent (front overflow, then middle sides)
+      // Tier 4: Visual + Social (middle center)
+      // Tier 5: Kinesthetic + Independent (side seats)
+      // Tier 6: Kinesthetic + Social (back center)
+      // Tier 7: Unassessed (any remaining)
+      if (primary === 'audio' && social === 'independent') {
+        tier = 1;
+      } else if (primary === 'audio') {
+        tier = 2;
+      } else if (primary === 'visual' && social === 'independent') {
+        tier = 3;
+      } else if (primary === 'visual') {
+        tier = 4;
+      } else if (primary === 'kinesthetic' && social === 'independent') {
+        tier = 5;
+      } else if (primary === 'kinesthetic') {
+        tier = 6;
       }
+
+      prioritized.push({ tier, student, preferredSide, primary, social });
     }
 
-    // Place social learners on right side tables
-    for (const student of right) {
-      if (studentPlaced.has(student.id)) continue;
+    // Sort by tier (ascending) - lower tier = higher priority
+    prioritized.sort((a, b) => a.tier - b.tier);
 
-      let placed = false;
-      // Try right tables first
-      for (const tableNum of rightTables) {
-        const availableSeats = getAvailableSeats(tableNum);
-        if (availableSeats.length === 0) continue;
-        if (hasAgencyConflict(student, tableNum)) continue;
-        if (hasAvoidanceConflict(student.id, tableNum)) continue;
-
-        placeStudent(student, tableNum, availableSeats[0], rowNum);
-        placed = true;
-        break;
-      }
-
-      // Fall back to left tables if needed
-      if (!placed) {
-        for (const tableNum of leftTables) {
-          const availableSeats = getAvailableSeats(tableNum);
-          if (availableSeats.length === 0) continue;
-          if (hasAgencyConflict(student, tableNum)) continue;
-          if (hasAvoidanceConflict(student.id, tableNum)) continue;
-
-          placeStudent(student, tableNum, availableSeats[0], rowNum);
-          placed = true;
-          break;
-        }
-      }
-    }
-
-    // Place neutral students in any available seat
-    for (const student of neutral) {
-      if (studentPlaced.has(student.id)) continue;
-
-      let placed = false;
-      for (const tableNum of preferredTables) {
-        const availableSeats = getAvailableSeats(tableNum);
-        if (availableSeats.length === 0) continue;
-        if (hasAgencyConflict(student, tableNum)) continue;
-        if (hasAvoidanceConflict(student.id, tableNum)) continue;
-
-        placeStudent(student, tableNum, availableSeats[0], rowNum);
-        placed = true;
-        break;
-      }
-    }
+    return prioritized;
   };
 
-  // Phase 1: Place students in their preferred learning style rows
-  // Audio learners -> Row 1 (tables 1, 2)
-  placeStudentGroup(audioStudents, [1, 2], 1);
+  // Place students by priority, filling front-to-back
+  const placeByPriority = (prioritizedList: PrioritizedStudent[]) => {
+    for (const ps of prioritizedList) {
+      if (studentPlaced.has(ps.student.id)) continue;
 
-  // Visual learners -> Rows 2-3 (tables 3, 4, 5, 6)
-  placeStudentGroup(visualStudents, [3, 4, 5, 6], 2);
-
-  // Kinesthetic learners -> Row 4 (tables 7, 8)
-  placeStudentGroup(kinestheticStudents, [7, 8], 4);
-
-  // Phase 2: Place remaining students (those who couldn't fit in preferred rows)
-  const remainingStudents = [...audioStudents, ...visualStudents, ...kinestheticStudents, ...unassessedStudents]
-    .filter(s => !studentPlaced.has(s.id));
-
-  // Try to place in any available seat, respecting agency and avoidance constraints
-  for (const student of remainingStudents) {
-    let placed = false;
-
-    // Try all tables in order
-    for (let tableNum = 1; tableNum <= 8 && !placed; tableNum++) {
-      const availableSeats = getAvailableSeats(tableNum);
-      if (availableSeats.length === 0) continue;
-
-      // Try to avoid agency conflicts but allow if necessary
-      if (!hasAgencyConflict(student, tableNum) && !hasAvoidanceConflict(student.id, tableNum)) {
-        const rowNum = tableNum <= 2 ? 1 : tableNum <= 4 ? 2 : tableNum <= 6 ? 3 : 4;
-        placeStudent(student, tableNum, availableSeats[0], rowNum);
-        placed = true;
+      // Determine table order based on preferred side
+      let tableOrder: number[];
+      if (ps.preferredSide === 'left') {
+        // Independent learners: try left side tables first (1,3,5,7), then right (2,4,6,8)
+        tableOrder = [1, 3, 5, 7, 2, 4, 6, 8];
+      } else if (ps.preferredSide === 'right') {
+        // Social learners: try right side tables first (2,4,6,8), then left (1,3,5,7)
+        tableOrder = [2, 4, 6, 8, 1, 3, 5, 7];
+      } else {
+        // No preference: fill front to back
+        tableOrder = [1, 2, 3, 4, 5, 6, 7, 8];
       }
-    }
 
-    // If still not placed, allow agency conflicts
-    if (!placed) {
-      for (let tableNum = 1; tableNum <= 8 && !placed; tableNum++) {
+      let placed = false;
+
+      // Try to place without agency conflicts
+      for (const tableNum of tableOrder) {
+        if (placed) break;
+
         const availableSeats = getAvailableSeats(tableNum);
         if (availableSeats.length === 0) continue;
-        if (!hasAvoidanceConflict(student.id, tableNum)) {
+
+        if (!hasAgencyConflict(ps.student, tableNum) && !hasAvoidanceConflict(ps.student.id, tableNum)) {
           const rowNum = tableNum <= 2 ? 1 : tableNum <= 4 ? 2 : tableNum <= 6 ? 3 : 4;
-          placeStudent(student, tableNum, availableSeats[0], rowNum);
+          placeStudent(ps.student, tableNum, availableSeats[0], rowNum);
           placed = true;
-          if (hasAgencyConflict(student, tableNum)) {
-            warnings.push(`${student.first_name} ${student.last_name} placed at table with same agency (${student.agency})`);
+        }
+      }
+
+      // If not placed, try again allowing agency conflicts
+      if (!placed) {
+        for (const tableNum of tableOrder) {
+          if (placed) break;
+
+          const availableSeats = getAvailableSeats(tableNum);
+          if (availableSeats.length === 0) continue;
+
+          if (!hasAvoidanceConflict(ps.student.id, tableNum)) {
+            const rowNum = tableNum <= 2 ? 1 : tableNum <= 4 ? 2 : tableNum <= 6 ? 3 : 4;
+            placeStudent(ps.student, tableNum, availableSeats[0], rowNum);
+            placed = true;
+            // Warning for agency conflict will be generated later
           }
         }
       }
     }
-  }
+  };
 
-  // Phase 3: Place remaining students in overflow seats
+  // Phase 1: Prioritize all students and place front-to-back
+  // Using priority tiers based on learning style combinations:
+  // Tier 1: Audio + Independent (front/sides priority)
+  // Tier 2: Audio + Social (front center)
+  // Tier 3: Visual + Independent (front overflow, then middle sides)
+  // Tier 4: Visual + Social (middle center)
+  // Tier 5: Kinesthetic + Independent (side seats)
+  // Tier 6: Kinesthetic + Social (back center)
+  // Tier 7: Unassessed (any remaining)
+  const prioritizedStudents = prioritizeStudents(students, styleMap);
+  placeByPriority(prioritizedStudents);
+
+  // Phase 2: Place remaining students in overflow seats
   const stillUnplaced = students.filter(s => !studentPlaced.has(s.id));
 
   for (let i = 0; i < stillUnplaced.length && i < 3; i++) {
@@ -359,6 +323,29 @@ function generateSeating(
         const student = students.find(s => s.id === assignment.student_id);
         const other = students.find(s => s.id === tablemate.student_id);
         warnings.push(`Conflict: ${student?.first_name} should avoid ${other?.first_name} but seated at same table`);
+      }
+    }
+  }
+
+  // Check for agency conflicts in final assignments
+  for (const assignment of assignments) {
+    if (assignment.is_overflow) continue;
+
+    const student = students.find(s => s.id === assignment.student_id);
+    if (!student?.agency) continue;
+
+    // Find other students at same table with same agency
+    const tablemates = assignments.filter(
+      a => a.table_number === assignment.table_number &&
+           a.student_id !== assignment.student_id &&
+           !a.is_overflow
+    );
+
+    for (const tablemate of tablemates) {
+      const other = students.find(s => s.id === tablemate.student_id);
+      if (other?.agency === student.agency) {
+        warnings.push(`${student.first_name} ${student.last_name} placed at table with same agency (${student.agency})`);
+        break; // Only warn once per student
       }
     }
   }
