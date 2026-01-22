@@ -23,7 +23,23 @@ export async function GET(
           program:programs(name, abbreviation)
         ),
         stations:lab_stations(
-          *,
+          id,
+          station_number,
+          station_type,
+          scenario_id,
+          skill_name,
+          custom_title,
+          instructor_name,
+          instructor_email,
+          room,
+          notes,
+          rotation_minutes,
+          num_rotations,
+          documentation_required,
+          platinum_required,
+          skill_sheet_url,
+          instructions_url,
+          station_notes,
           scenario:scenarios(id, title, category, difficulty)
         )
       `)

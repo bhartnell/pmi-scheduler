@@ -334,7 +334,7 @@ export default function NewLabDayPage() {
 
   if (status === 'loading' || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
@@ -345,24 +345,24 @@ export default function NewLabDayPage() {
   const openStationsCount = stations.filter(s => !s.instructor_email).length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
-      <div className="bg-white shadow-sm sticky top-0 z-10">
+      <div className="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-            <Link href="/" className="hover:text-blue-600 flex items-center gap-1">
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
+            <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1">
               <Home className="w-3 h-3" />
               Home
             </Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management" className="hover:text-blue-600">Lab Management</Link>
+            <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management/schedule" className="hover:text-blue-600">Schedule</Link>
+            <Link href="/lab-management/schedule" className="hover:text-blue-600 dark:hover:text-blue-400">Schedule</Link>
             <ChevronRight className="w-4 h-4" />
-            <span>New Lab Day</span>
+            <span className="dark:text-gray-300">New Lab Day</span>
           </div>
           <div className="flex items-center justify-between">
-            <h1 className="text-xl font-bold text-gray-900">Schedule New Lab Day</h1>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white">Schedule New Lab Day</h1>
             <button
               onClick={handleSave}
               disabled={saving}
@@ -381,21 +381,21 @@ export default function NewLabDayPage() {
 
       <main className="max-w-4xl mx-auto px-4 py-6 space-y-6">
         {/* Basic Info */}
-        <div className="bg-white rounded-lg shadow p-4">
-          <h2 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-blue-600" />
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+          <h2 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
             Lab Day Details
           </h2>
-          
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Cohort <span className="text-red-500">*</span>
               </label>
               <select
                 value={selectedCohort}
                 onChange={(e) => setSelectedCohort(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
               >
                 <option value="">Select cohort...</option>
                 {cohorts.map(cohort => (
@@ -407,19 +407,19 @@ export default function NewLabDayPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Date <span className="text-red-500">*</span>
               </label>
               <input
                 type="date"
                 value={labDate}
                 onChange={(e) => setLabDate(e.target.value)}
-                className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Title (optional)
               </label>
               <input
@@ -427,12 +427,12 @@ export default function NewLabDayPage() {
                 value={labTitle}
                 onChange={(e) => setLabTitle(e.target.value)}
                 placeholder="e.g., Cardiac Day, Trauma Scenarios"
-                className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Notes (optional)
               </label>
               <input
@@ -440,22 +440,22 @@ export default function NewLabDayPage() {
                 value={labNotes}
                 onChange={(e) => setLabNotes(e.target.value)}
                 placeholder="Any special instructions..."
-                className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
               />
             </div>
           </div>
         </div>
 
         {/* Stations */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="p-4 border-b flex items-center justify-between">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+          <div className="p-4 border-b dark:border-gray-700 flex items-center justify-between">
             <div>
-              <h2 className="font-semibold text-gray-900 flex items-center gap-2">
-                <BookOpen className="w-5 h-5 text-purple-600" />
+              <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <BookOpen className="w-5 h-5 text-purple-600 dark:text-purple-400" />
                 Stations ({stations.length})
               </h2>
               {openStationsCount > 0 && (
-                <p className="text-sm text-yellow-600 mt-1">
+                <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-1">
                   <AlertCircle className="w-4 h-4 inline mr-1" />
                   {openStationsCount} station{openStationsCount > 1 ? 's' : ''} need{openStationsCount === 1 ? 's' : ''} instructor
                 </p>
@@ -464,7 +464,7 @@ export default function NewLabDayPage() {
             <button
               type="button"
               onClick={addStation}
-              className="flex items-center gap-1 px-3 py-2 text-sm bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200"
+              className="flex items-center gap-1 px-3 py-2 text-sm bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-lg hover:bg-purple-200 dark:hover:bg-purple-900/50"
             >
               <Plus className="w-4 h-4" /> Add Station
             </button>
@@ -476,21 +476,21 @@ export default function NewLabDayPage() {
               const TypeIcon = stationType?.icon || Stethoscope;
               
               return (
-                <div key={station.id} className="border rounded-lg">
+                <div key={station.id} className="border dark:border-gray-700 rounded-lg">
                   {/* Station Header with Type Selection */}
-                  <div className="px-4 py-3 bg-gray-50 flex items-center justify-between rounded-t-lg">
+                  <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700 flex items-center justify-between rounded-t-lg">
                     <div className="flex items-center gap-3">
                       <div className={`p-2 rounded-lg ${stationType?.color || 'bg-gray-500'}`}>
                         <TypeIcon className="w-4 h-4 text-white" />
                       </div>
                       <div>
-                        <h3 className="font-medium text-gray-900">Station {station.station_number}</h3>
+                        <h3 className="font-medium text-gray-900 dark:text-white">Station {station.station_number}</h3>
                         <div className="flex gap-1 mt-1">
                           {STATION_TYPES.map(type => (
                             <button
                               key={type.value}
                               type="button"
-                              onClick={() => updateStation(index, { 
+                              onClick={() => updateStation(index, {
                                 station_type: type.value as any,
                                 scenario_id: '',
                                 selected_skills: [],
@@ -499,7 +499,7 @@ export default function NewLabDayPage() {
                               className={`px-2 py-0.5 text-xs rounded ${
                                 station.station_type === type.value
                                   ? `${type.color} text-white`
-                                  : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                                  : 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-500'
                               }`}
                             >
                               {type.label}
@@ -512,7 +512,7 @@ export default function NewLabDayPage() {
                       <button
                         type="button"
                         onClick={() => removeStation(index)}
-                        className="p-1 text-red-500 hover:text-red-700"
+                        className="p-1 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -523,42 +523,42 @@ export default function NewLabDayPage() {
                     {/* Scenario Selection (only for scenario type) */}
                     {station.station_type === 'scenario' && (
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                           Scenario
                         </label>
                         <button
                           type="button"
                           onClick={() => setScenarioModalStation(index)}
-                          className="w-full px-3 py-2 border rounded-lg text-left hover:bg-gray-50 transition-colors"
+                          className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                         >
                           {station.scenario_id ? (
                             (() => {
                               const selectedScenario = scenarios.find(s => s.id === station.scenario_id);
                               return selectedScenario ? (
                                 <div>
-                                  <div className="font-medium text-gray-900">{selectedScenario.title}</div>
-                                  <div className="text-sm text-gray-500 flex items-center gap-2 mt-1">
-                                    <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs">
+                                  <div className="font-medium text-gray-900 dark:text-white">{selectedScenario.title}</div>
+                                  <div className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2 mt-1">
+                                    <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-xs">
                                       {selectedScenario.category}
                                     </span>
                                     <span className={`px-2 py-0.5 rounded text-xs ${
-                                      selectedScenario.difficulty === 'basic' ? 'bg-green-100 text-green-700' :
-                                      selectedScenario.difficulty === 'intermediate' ? 'bg-yellow-100 text-yellow-700' :
-                                      'bg-red-100 text-red-700'
+                                      selectedScenario.difficulty === 'basic' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
+                                      selectedScenario.difficulty === 'intermediate' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300' :
+                                      'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
                                     }`}>
                                       {selectedScenario.difficulty}
                                     </span>
                                     {selectedScenario.chief_complaint && (
-                                      <span className="text-gray-400">• {selectedScenario.chief_complaint}</span>
+                                      <span className="text-gray-400 dark:text-gray-500">• {selectedScenario.chief_complaint}</span>
                                     )}
                                   </div>
                                 </div>
                               ) : (
-                                <span className="text-gray-500">Scenario not found</span>
+                                <span className="text-gray-500 dark:text-gray-400">Scenario not found</span>
                               );
                             })()
                           ) : (
-                            <div className="flex items-center gap-2 text-gray-500">
+                            <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
                               <Search className="w-4 h-4" />
                               <span>Search and select a scenario... ({scenarios.length} available)</span>
                             </div>
@@ -571,13 +571,13 @@ export default function NewLabDayPage() {
                     {station.station_type === 'skills' && (
                       <div className="space-y-3">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                             Skills from Library ({station.selected_skills.length} selected)
                           </label>
                           <button
                             type="button"
                             onClick={() => setSkillsModalStation(index)}
-                            className="w-full px-3 py-2 border border-dashed rounded-lg text-gray-600 hover:bg-gray-50 text-left"
+                            className="w-full px-3 py-2 border border-dashed dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 text-left"
                           >
                             {station.selected_skills.length === 0 ? (
                               <span className="flex items-center gap-2">
@@ -588,7 +588,7 @@ export default function NewLabDayPage() {
                                 {station.selected_skills.map(skillId => {
                                   const skill = skills.find(s => s.id === skillId);
                                   return skill ? (
-                                    <span key={skillId} className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded">
+                                    <span key={skillId} className="px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs rounded">
                                       {skill.name}
                                     </span>
                                   ) : null;
@@ -597,10 +597,10 @@ export default function NewLabDayPage() {
                             )}
                           </button>
                         </div>
-                        
+
                         {/* Custom/Other Skills */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                             Custom Skills (freetext)
                           </label>
                           <div className="space-y-2">
@@ -614,7 +614,7 @@ export default function NewLabDayPage() {
                                     newCustomSkills[skillIndex] = e.target.value;
                                     updateStation(index, { custom_skills: newCustomSkills });
                                   }}
-                                  className="flex-1 px-3 py-2 border rounded-lg text-sm text-gray-900 bg-white"
+                                  className="flex-1 px-3 py-2 border dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                                   placeholder="Enter custom skill..."
                                 />
                                 <button
@@ -623,7 +623,7 @@ export default function NewLabDayPage() {
                                     const newCustomSkills = station.custom_skills.filter((_, i) => i !== skillIndex);
                                     updateStation(index, { custom_skills: newCustomSkills });
                                   }}
-                                  className="p-2 text-red-500 hover:text-red-700"
+                                  className="p-2 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </button>
@@ -634,7 +634,7 @@ export default function NewLabDayPage() {
                               onClick={() => {
                                 updateStation(index, { custom_skills: [...station.custom_skills, ''] });
                               }}
-                              className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800"
+                              className="flex items-center gap-1 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
                             >
                               <Plus className="w-4 h-4" /> Add custom skill
                             </button>
@@ -645,55 +645,55 @@ export default function NewLabDayPage() {
 
                     {/* Documentation Station Notes */}
                     {station.station_type === 'documentation' && (
-                      <div className="p-3 bg-blue-50 rounded-lg">
-                        <p className="text-sm text-blue-800">
+                      <div className="p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+                        <p className="text-sm text-blue-800 dark:text-blue-300">
                           Documentation station for PCR practice and review. Instructor assignment is optional.
                         </p>
                       </div>
                     )}
 
                     {/* Instructor Section */}
-                    <div className="p-3 bg-gray-50 rounded-lg">
+                    <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                       <div className="flex items-center justify-between mb-2">
-                        <label className="block text-sm font-medium text-gray-700 flex items-center gap-1">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                           <User className="w-4 h-4" />
                           Instructor
                         </label>
                         {!station.instructor_email && (
-                          <span className="text-xs px-2 py-1 bg-yellow-100 text-yellow-700 rounded-full">
+                          <span className="text-xs px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 rounded-full">
                             Open - Needs Instructor
                           </span>
                         )}
                       </div>
-                      
+
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                          <label className="block text-xs text-gray-500 mb-1">Name</label>
+                          <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Name</label>
                           <input
                             type="text"
                             value={station.instructor_name}
                             onChange={(e) => updateStation(index, { instructor_name: e.target.value })}
                             placeholder="Optional"
-                            className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white text-sm"
+                            className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 text-sm"
                           />
                         </div>
                         <div>
-                          <label className="block text-xs text-gray-500 mb-1">Email</label>
+                          <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Email</label>
                           <input
                             type="email"
                             value={station.instructor_email}
                             onChange={(e) => updateStation(index, { instructor_email: e.target.value })}
                             placeholder="Optional"
-                            className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white text-sm"
+                            className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 text-sm"
                           />
                         </div>
                       </div>
-                      
+
                       {!station.instructor_email && (
                         <button
                           type="button"
                           onClick={() => assignSelfToStation(index)}
-                          className="mt-2 text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                          className="mt-2 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 flex items-center gap-1"
                         >
                           <User className="w-4 h-4" />
                           Assign myself
@@ -704,21 +704,21 @@ export default function NewLabDayPage() {
                     {/* Room and Rotation Settings */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Room</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Room</label>
                         <input
                           type="text"
                           value={station.room}
                           onChange={(e) => updateStation(index, { room: e.target.value })}
                           placeholder="e.g., Sim Lab A"
-                          className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                          className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Rotations</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Rotations</label>
                         <select
                           value={station.num_rotations}
                           onChange={(e) => updateStation(index, { num_rotations: parseInt(e.target.value) })}
-                          className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                          className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                         >
                           {[2, 3, 4, 5, 6].map(n => (
                             <option key={n} value={n}>{n} rotations</option>
@@ -726,11 +726,11 @@ export default function NewLabDayPage() {
                         </select>
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Minutes</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Minutes</label>
                         <select
                           value={station.rotation_minutes}
                           onChange={(e) => updateStation(index, { rotation_minutes: parseInt(e.target.value) })}
-                          className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                          className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                         >
                           {[15, 20, 25, 30, 45, 60].map(n => (
                             <option key={n} value={n}>{n} min</option>
@@ -741,13 +741,13 @@ export default function NewLabDayPage() {
 
                     {/* Notes */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>
                       <textarea
                         value={station.notes}
                         onChange={(e) => updateStation(index, { notes: e.target.value })}
                         placeholder="Special setup, equipment needed, etc."
                         rows={2}
-                        className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                        className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                       />
                     </div>
                   </div>
@@ -768,7 +768,7 @@ export default function NewLabDayPage() {
               }
               setStations([...stations, ...newStations]);
             }}
-            className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 text-gray-700"
+            className="px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
           >
             + Add 4 Stations
           </button>
@@ -778,7 +778,7 @@ export default function NewLabDayPage() {
         <div className="flex justify-end gap-3 pt-4">
           <Link
             href="/lab-management/schedule"
-            className="px-6 py-2 border text-gray-700 rounded-lg hover:bg-gray-50"
+            className="px-6 py-2 border dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             Cancel
           </Link>
@@ -800,19 +800,19 @@ export default function NewLabDayPage() {
       {/* Skills Selection Modal */}
       {skillsModalStation !== null && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden">
-            <div className="p-4 border-b flex items-center justify-between">
-              <h3 className="font-semibold text-gray-900">Select Skills for Station {skillsModalStation + 1}</h3>
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden">
+            <div className="p-4 border-b dark:border-gray-700 flex items-center justify-between">
+              <h3 className="font-semibold text-gray-900 dark:text-white">Select Skills for Station {skillsModalStation + 1}</h3>
               <button
                 onClick={() => setSkillsModalStation(null)}
-                className="p-1 hover:bg-gray-100 rounded"
+                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
               >
-                <X className="w-5 h-5" />
+                <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
               </button>
             </div>
-            
+
             {/* Search */}
-            <div className="p-4 border-b">
+            <div className="p-4 border-b dark:border-gray-700">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
@@ -820,19 +820,19 @@ export default function NewLabDayPage() {
                   value={skillSearch}
                   onChange={(e) => setSkillSearch(e.target.value)}
                   placeholder="Search skills..."
-                  className="w-full pl-10 pr-4 py-2 border rounded-lg text-gray-900 bg-white"
+                  className="w-full pl-10 pr-4 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                 />
               </div>
-              <p className="text-xs text-gray-500 mt-2">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                 Showing skills for {programLevel || 'all levels'} • {stations[skillsModalStation]?.selected_skills.length || 0} selected
               </p>
             </div>
-            
+
             {/* Skills List */}
             <div className="p-4 overflow-y-auto max-h-[50vh]">
               {Object.entries(skillsByCategory).map(([category, categorySkills]) => (
                 <div key={category} className="mb-4">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">{category}</h4>
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{category}</h4>
                   <div className="space-y-1">
                     {categorySkills.map(skill => {
                       const isSelected = stations[skillsModalStation]?.selected_skills.includes(skill.id);
@@ -840,7 +840,7 @@ export default function NewLabDayPage() {
                         <label
                           key={skill.id}
                           className={`flex items-center gap-3 p-2 rounded cursor-pointer ${
-                            isSelected ? 'bg-green-50' : 'hover:bg-gray-50'
+                            isSelected ? 'bg-green-50 dark:bg-green-900/30' : 'hover:bg-gray-50 dark:hover:bg-gray-700'
                           }`}
                         >
                           <input
@@ -849,10 +849,10 @@ export default function NewLabDayPage() {
                             onChange={() => toggleSkill(skillsModalStation, skill.id)}
                             className="w-4 h-4 text-green-600"
                           />
-                          <span className="text-sm text-gray-900">{skill.name}</span>
+                          <span className="text-sm text-gray-900 dark:text-white">{skill.name}</span>
                           <div className="flex gap-1 ml-auto">
                             {skill.certification_levels.map(level => (
-                              <span key={level} className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded">
+                              <span key={level} className="text-xs px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded">
                                 {level}
                               </span>
                             ))}
@@ -864,9 +864,9 @@ export default function NewLabDayPage() {
                 </div>
               ))}
             </div>
-            
+
             {/* Done Button */}
-            <div className="p-4 border-t">
+            <div className="p-4 border-t dark:border-gray-700">
               <button
                 onClick={() => setSkillsModalStation(null)}
                 className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
@@ -881,23 +881,23 @@ export default function NewLabDayPage() {
       {/* Scenario Selection Modal */}
       {scenarioModalStation !== null && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[85vh] overflow-hidden flex flex-col">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[85vh] overflow-hidden flex flex-col">
             {/* Header */}
-            <div className="p-4 border-b flex items-center justify-between flex-shrink-0">
+            <div className="p-4 border-b dark:border-gray-700 flex items-center justify-between flex-shrink-0">
               <div>
-                <h3 className="font-semibold text-gray-900">Select Scenario for Station {scenarioModalStation + 1}</h3>
-                <p className="text-sm text-gray-500">{filteredScenarios.length} of {scenarios.length} scenarios</p>
+                <h3 className="font-semibold text-gray-900 dark:text-white">Select Scenario for Station {scenarioModalStation + 1}</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{filteredScenarios.length} of {scenarios.length} scenarios</p>
               </div>
               <button
                 onClick={() => setScenarioModalStation(null)}
-                className="p-1 hover:bg-gray-100 rounded"
+                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
               >
-                <X className="w-5 h-5" />
+                <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
               </button>
             </div>
 
             {/* Search and Filters */}
-            <div className="p-4 border-b space-y-3 flex-shrink-0">
+            <div className="p-4 border-b dark:border-gray-700 space-y-3 flex-shrink-0">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
@@ -905,7 +905,7 @@ export default function NewLabDayPage() {
                   value={scenarioSearch}
                   onChange={(e) => setScenarioSearch(e.target.value)}
                   placeholder="Search by title, chief complaint, patient name..."
-                  className="w-full pl-10 pr-4 py-2 border rounded-lg text-gray-900 bg-white"
+                  className="w-full pl-10 pr-4 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                   autoFocus
                 />
               </div>
@@ -914,7 +914,7 @@ export default function NewLabDayPage() {
                 <select
                   value={scenarioFilterProgram}
                   onChange={(e) => setScenarioFilterProgram(e.target.value)}
-                  className="px-3 py-1.5 border rounded-lg text-sm text-gray-700 bg-white"
+                  className="px-3 py-1.5 border dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700"
                 >
                   <option value="">All Programs</option>
                   {scenarioPrograms.map(prog => (
@@ -925,7 +925,7 @@ export default function NewLabDayPage() {
                 <select
                   value={scenarioFilterCategory}
                   onChange={(e) => setScenarioFilterCategory(e.target.value)}
-                  className="px-3 py-1.5 border rounded-lg text-sm text-gray-700 bg-white"
+                  className="px-3 py-1.5 border dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700"
                 >
                   <option value="">All Categories</option>
                   {scenarioCategories.map(cat => (
@@ -936,7 +936,7 @@ export default function NewLabDayPage() {
                 <select
                   value={scenarioFilterDifficulty}
                   onChange={(e) => setScenarioFilterDifficulty(e.target.value)}
-                  className="px-3 py-1.5 border rounded-lg text-sm text-gray-700 bg-white"
+                  className="px-3 py-1.5 border dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700"
                 >
                   <option value="">All Difficulties</option>
                   {scenarioDifficulties.map(diff => (
@@ -952,7 +952,7 @@ export default function NewLabDayPage() {
                       setScenarioFilterCategory('');
                       setScenarioFilterDifficulty('');
                     }}
-                    className="px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 rounded-lg"
+                    className="px-3 py-1.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg"
                   >
                     Clear Filters
                   </button>
@@ -964,8 +964,8 @@ export default function NewLabDayPage() {
             <div className="flex-1 overflow-y-auto p-4">
               {filteredScenarios.length === 0 ? (
                 <div className="text-center py-8">
-                  <Stethoscope className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500">No scenarios match your filters</p>
+                  <Stethoscope className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                  <p className="text-gray-500 dark:text-gray-400">No scenarios match your filters</p>
                   <button
                     onClick={() => {
                       setScenarioSearch('');
@@ -973,7 +973,7 @@ export default function NewLabDayPage() {
                       setScenarioFilterCategory('');
                       setScenarioFilterDifficulty('');
                     }}
-                    className="mt-2 text-sm text-blue-600 hover:text-blue-800"
+                    className="mt-2 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
                   >
                     Clear all filters
                   </button>
@@ -982,7 +982,7 @@ export default function NewLabDayPage() {
                 <div className="space-y-4">
                   {Object.entries(scenariosByCategory).sort(([a], [b]) => a.localeCompare(b)).map(([category, categoryScenarios]) => (
                     <div key={category}>
-                      <h4 className="text-sm font-medium text-gray-700 mb-2 sticky top-0 bg-white py-1">
+                      <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 sticky top-0 bg-white dark:bg-gray-800 py-1">
                         {category} ({categoryScenarios.length})
                       </h4>
                       <div className="space-y-1">
@@ -997,35 +997,35 @@ export default function NewLabDayPage() {
                                 setScenarioModalStation(null);
                               }}
                               className={`w-full text-left p-3 rounded-lg border transition-colors ${
-                                isSelected ? 'bg-purple-50 border-purple-300' : 'hover:bg-gray-50 border-gray-200'
+                                isSelected ? 'bg-purple-50 dark:bg-purple-900/30 border-purple-300 dark:border-purple-700' : 'hover:bg-gray-50 dark:hover:bg-gray-700 border-gray-200 dark:border-gray-700'
                               }`}
                             >
                               <div className="flex items-start justify-between gap-2">
                                 <div className="flex-1 min-w-0">
-                                  <div className="font-medium text-gray-900">{scenario.title}</div>
+                                  <div className="font-medium text-gray-900 dark:text-white">{scenario.title}</div>
                                   {scenario.chief_complaint && (
-                                    <div className="text-sm text-gray-600 mt-0.5">CC: {scenario.chief_complaint}</div>
+                                    <div className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">CC: {scenario.chief_complaint}</div>
                                   )}
                                   {scenario.patient_name && scenario.patient_age && (
-                                    <div className="text-xs text-gray-500 mt-0.5">
+                                    <div className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">
                                       Patient: {scenario.patient_name}, {scenario.patient_age}
                                     </div>
                                   )}
                                 </div>
                                 <div className="flex flex-col items-end gap-1 flex-shrink-0">
                                   <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                                    scenario.difficulty === 'basic' ? 'bg-green-100 text-green-700' :
-                                    scenario.difficulty === 'intermediate' ? 'bg-yellow-100 text-yellow-700' :
-                                    'bg-red-100 text-red-700'
+                                    scenario.difficulty === 'basic' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
+                                    scenario.difficulty === 'intermediate' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300' :
+                                    'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
                                   }`}>
                                     {scenario.difficulty}
                                   </span>
                                   {scenario.estimated_duration && (
-                                    <span className="text-xs text-gray-400">~{scenario.estimated_duration} min</span>
+                                    <span className="text-xs text-gray-400 dark:text-gray-500">~{scenario.estimated_duration} min</span>
                                   )}
                                   <div className="flex gap-0.5">
                                     {scenario.applicable_programs?.map(prog => (
-                                      <span key={prog} className="text-xs px-1 py-0.5 bg-gray-100 text-gray-600 rounded">
+                                      <span key={prog} className="text-xs px-1 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded">
                                         {prog}
                                       </span>
                                     ))}
@@ -1043,10 +1043,10 @@ export default function NewLabDayPage() {
             </div>
 
             {/* Footer */}
-            <div className="p-4 border-t flex justify-between items-center flex-shrink-0">
-              <div className="text-sm text-gray-500">
+            <div className="p-4 border-t dark:border-gray-700 flex justify-between items-center flex-shrink-0">
+              <div className="text-sm text-gray-500 dark:text-gray-400">
                 {stations[scenarioModalStation]?.scenario_id ? (
-                  <span>Selected: <strong>{scenarios.find(s => s.id === stations[scenarioModalStation]?.scenario_id)?.title}</strong></span>
+                  <span>Selected: <strong className="text-gray-900 dark:text-white">{scenarios.find(s => s.id === stations[scenarioModalStation]?.scenario_id)?.title}</strong></span>
                 ) : (
                   <span>No scenario selected</span>
                 )}
@@ -1055,7 +1055,7 @@ export default function NewLabDayPage() {
                 {stations[scenarioModalStation]?.scenario_id && (
                   <button
                     onClick={() => updateStation(scenarioModalStation, { scenario_id: '' })}
-                    className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg"
+                    className="px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                   >
                     Clear Selection
                   </button>
