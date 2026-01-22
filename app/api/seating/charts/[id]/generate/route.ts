@@ -224,15 +224,18 @@ function generateSeating(
       if (studentPlaced.has(ps.student.id)) continue;
 
       // Determine table order based on preferred side
+      // Balance left/right distribution while maintaining side preferences
       let tableOrder: number[];
       if (ps.preferredSide === 'left') {
-        // Independent learners: try left side tables first (1,3,5,7), then right (2,4,6,8)
-        tableOrder = [1, 3, 5, 7, 2, 4, 6, 8];
+        // Independent learners: start left, alternate right, for balanced distribution
+        // Front-to-back alternating: left, right, left, right...
+        tableOrder = [1, 2, 3, 4, 5, 6, 7, 8];
       } else if (ps.preferredSide === 'right') {
-        // Social learners: try right side tables first (2,4,6,8), then left (1,3,5,7)
-        tableOrder = [2, 4, 6, 8, 1, 3, 5, 7];
+        // Social learners: start right, alternate left, for balanced distribution
+        // Pattern: right then left, by row (2,1, 4,3, 6,5, 8,7)
+        tableOrder = [2, 1, 4, 3, 6, 5, 8, 7];
       } else {
-        // No preference: fill front to back
+        // No preference: fill front to back, naturally alternates
         tableOrder = [1, 2, 3, 4, 5, 6, 7, 8];
       }
 
