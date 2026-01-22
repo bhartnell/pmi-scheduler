@@ -558,7 +558,7 @@ export default function SeatingChartBuilderPage() {
                                 key={seat}
                                 onDragOver={handleDragOver}
                                 onDrop={() => handleDrop(tableNum, seat, row)}
-                                className={`w-24 h-28 rounded-lg border-2 border-dashed flex flex-col items-center justify-center p-1 transition-colors ${
+                                className={`w-24 h-36 print:h-auto rounded-lg border-2 border-dashed flex flex-col items-center justify-center p-1 transition-colors ${
                                   student
                                     ? 'border-solid border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700'
                                     : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30'
@@ -582,15 +582,15 @@ export default function SeatingChartBuilderPage() {
                                     </div>
 
                                     {/* Name */}
-                                    <div className="text-xs font-medium text-gray-900 dark:text-white text-center truncate w-full">
+                                    <div className="text-xs print:text-sm font-medium text-gray-900 dark:text-white print:text-black text-center truncate print:whitespace-normal w-full">
                                       {student.first_name}
                                     </div>
-                                    <div className="text-xs text-gray-500 dark:text-gray-400 text-center truncate w-full">
+                                    <div className="text-xs print:text-sm text-gray-500 dark:text-gray-400 print:text-black text-center truncate print:whitespace-normal w-full">
                                       {student.last_name}
                                     </div>
 
                                     {/* Badges */}
-                                    <div className="flex gap-0.5 mt-1">
+                                    <div className="flex gap-0.5 mt-1 print:hidden">
                                       {ls?.primary_style && (
                                         <span className={`w-4 h-4 rounded text-xs flex items-center justify-center ${STYLE_BADGES[ls.primary_style]?.bg} ${STYLE_BADGES[ls.primary_style]?.text}`}>
                                           {STYLE_BADGES[ls.primary_style]?.label}
@@ -636,7 +636,7 @@ export default function SeatingChartBuilderPage() {
                         key={seat}
                         onDragOver={handleDragOver}
                         onDrop={() => handleDrop(0, seat, 5, true)}
-                        className={`w-24 h-28 rounded-lg border-2 border-dashed flex flex-col items-center justify-center p-1 transition-colors ${
+                        className={`w-24 h-36 print:h-auto rounded-lg border-2 border-dashed flex flex-col items-center justify-center p-1 transition-colors ${
                           student
                             ? 'border-solid border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700'
                             : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30'
@@ -657,13 +657,13 @@ export default function SeatingChartBuilderPage() {
                                 </div>
                               )}
                             </div>
-                            <div className="text-xs font-medium text-gray-900 dark:text-white text-center truncate w-full">
+                            <div className="text-xs print:text-sm font-medium text-gray-900 dark:text-white print:text-black text-center truncate print:whitespace-normal w-full">
                               {student.first_name}
                             </div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400 text-center truncate w-full">
+                            <div className="text-xs print:text-sm text-gray-500 dark:text-gray-400 print:text-black text-center truncate print:whitespace-normal w-full">
                               {student.last_name}
                             </div>
-                            <div className="flex gap-0.5 mt-1">
+                            <div className="flex gap-0.5 mt-1 print:hidden">
                               {ls?.primary_style && (
                                 <span className={`w-4 h-4 rounded text-xs flex items-center justify-center ${STYLE_BADGES[ls.primary_style]?.bg} ${STYLE_BADGES[ls.primary_style]?.text}`}>
                                   {STYLE_BADGES[ls.primary_style]?.label}
