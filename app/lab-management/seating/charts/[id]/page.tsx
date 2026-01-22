@@ -571,7 +571,7 @@ export default function SeatingChartBuilderPage() {
                                     className="w-full h-full flex flex-col items-center justify-center cursor-move"
                                   >
                                     {/* Photo or Initials */}
-                                    <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 mb-1 flex-shrink-0">
+                                    <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 mb-1 flex-shrink-0">
                                       {student.photo_url ? (
                                         <img src={student.photo_url} alt="" className="w-full h-full object-cover" />
                                       ) : (
@@ -648,7 +648,7 @@ export default function SeatingChartBuilderPage() {
                             onDragStart={() => handleDragStart(student, { table: 0, seat })}
                             className="w-full h-full flex flex-col items-center justify-center cursor-move"
                           >
-                            <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 mb-1">
+                            <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 mb-1">
                               {student.photo_url ? (
                                 <img src={student.photo_url} alt="" className="w-full h-full object-cover" />
                               ) : (
@@ -714,7 +714,7 @@ export default function SeatingChartBuilderPage() {
                         onDragStart={() => handleDragStart(student, 'unassigned')}
                         className="flex items-center gap-2 p-2 rounded-lg border dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-move"
                       >
-                        <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 flex-shrink-0">
+                        <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 flex-shrink-0">
                           {student.photo_url ? (
                             <img src={student.photo_url} alt="" className="w-full h-full object-cover" />
                           ) : (

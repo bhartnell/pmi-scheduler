@@ -731,7 +731,7 @@ export default function GradeStationPage() {
                         : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
                     }`}
                   >
-                    <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center overflow-hidden shrink-0">
+                    <div className="w-20 h-20 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center overflow-hidden shrink-0">
                       {member.student.photo_url ? (
                         <img src={member.student.photo_url} alt="" className="w-full h-full object-cover" />
                       ) : (

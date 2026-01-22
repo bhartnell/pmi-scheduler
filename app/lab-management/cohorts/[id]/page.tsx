@@ -484,7 +484,7 @@ export default function CohortHubPage() {
                     className="flex items-center gap-4 p-4 hover:bg-gray-50 dark:hover:bg-gray-700"
                   >
                     {/* Photo */}
-                    <div className="w-10 h-10 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 flex-shrink-0">
+                    <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 flex-shrink-0">
                       {student.photo_url ? (
                         <img src={student.photo_url} alt="" className="w-full h-full object-cover" />
                       ) : (
