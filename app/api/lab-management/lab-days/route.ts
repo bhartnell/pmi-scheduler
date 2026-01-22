@@ -53,25 +53,35 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { stations, ...labDayData } = body;
-    
+
     // Create lab day
+    const insertData = {
+      date: labDayData.date,
+      cohort_id: labDayData.cohort_id,
+      title: labDayData.title || null,
+      week_number: labDayData.week_number || null,
+      day_number: labDayData.day_number || null,
+      num_rotations: labDayData.num_rotations || 4,
+      rotation_duration: labDayData.rotation_duration || 30,
+      notes: labDayData.notes || null,
+    };
+
     const { data: labDay, error: labDayError } = await supabase
       .from('lab_days')
-      .insert({
-        date: labDayData.date,
-        cohort_id: labDayData.cohort_id,
-        week_number: labDayData.week_number || null,
-        day_number: labDayData.day_number || null,
-        num_rotations: labDayData.num_rotations || 4,
-        rotation_duration: labDayData.rotation_duration || 30,
-        notes: labDayData.notes || null,
-      })
+      .insert(insertData)
       .select()
       .single();
 
-    if (labDayError) throw labDayError;
+    if (labDayError) {
+      console.error('Supabase lab_days insert error:', labDayError.code, labDayError.message, labDayError.details);
+      return NextResponse.json({
+        success: false,
+        error: `Database error: ${labDayError.message}`,
+        code: labDayError.code
+      }, { status: 500 });
+    }
 
-    // Create stations if provided
+    // Create stations if provided (legacy support)
     if (stations && stations.length > 0) {
       const stationsToInsert = stations.map((s: any) => ({
         lab_day_id: labDay.id,
@@ -80,8 +90,10 @@ export async function POST(request: NextRequest) {
         scenario_id: s.scenario_id || null,
         skill_name: s.skill_name || null,
         custom_title: s.custom_title || null,
-        instructor_id: s.instructor_id || null,
-        location: s.location || null,
+        instructor_name: s.instructor_name || null,
+        instructor_email: s.instructor_email || null,
+        room: s.room || null,
+        notes: s.notes || null,
         documentation_required: s.documentation_required || false,
         platinum_required: s.platinum_required || false,
       }));
@@ -90,12 +102,21 @@ export async function POST(request: NextRequest) {
         .from('lab_stations')
         .insert(stationsToInsert);
 
-      if (stationsError) throw stationsError;
+      if (stationsError) {
+        console.error('Supabase lab_stations insert error:', stationsError.code, stationsError.message, stationsError.details);
+        // Lab day was created, but stations failed - return partial success
+        return NextResponse.json({
+          success: true,
+          labDay,
+          warning: `Lab day created but stations failed: ${stationsError.message}`
+        });
+      }
     }
 
     return NextResponse.json({ success: true, labDay });
   } catch (error) {
     console.error('Error creating lab day:', error);
-    return NextResponse.json({ success: false, error: 'Failed to create lab day' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Failed to create lab day';
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }

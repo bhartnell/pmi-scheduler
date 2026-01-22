@@ -27,16 +27,27 @@ export async function GET(
       .eq('cohort_id', cohortId)
       .eq('status', 'active');
 
-    if (studentsError) throw studentsError;
+    if (studentsError) {
+      console.error('Error fetching students:', studentsError.code, studentsError.message);
+      throw studentsError;
+    }
 
-    // Fetch learning styles for these students
+    // Fetch learning styles for these students (only if we have students)
     const studentIds = students?.map(s => s.id) || [];
-    const { data: learningStyles, error: lsError } = await supabase
-      .from('student_learning_styles')
-      .select('student_id, primary_style, social_style')
-      .in('student_id', studentIds);
+    let learningStyles: any[] = [];
+    if (studentIds.length > 0) {
+      const { data: lsData, error: lsError } = await supabase
+        .from('student_learning_styles')
+        .select('student_id, primary_style, social_style')
+        .in('student_id', studentIds);
 
-    if (lsError) throw lsError;
+      if (lsError) {
+        console.error('Error fetching learning styles:', lsError.code, lsError.message);
+        // Non-fatal - continue without learning styles
+      } else {
+        learningStyles = lsData || [];
+      }
+    }
 
     // Fetch student groups in cohort
     const { data: groups, error: groupsError } = await supabase
@@ -45,7 +56,10 @@ export async function GET(
       .eq('cohort_id', cohortId)
       .eq('is_active', true);
 
-    if (groupsError) throw groupsError;
+    if (groupsError) {
+      console.error('Error fetching groups:', groupsError.code, groupsError.message);
+      throw groupsError;
+    }
 
     // Fetch seating charts for cohort
     const { data: seatingCharts, error: chartsError } = await supabase
@@ -54,7 +68,10 @@ export async function GET(
       .eq('cohort_id', cohortId)
       .eq('is_active', true);
 
-    if (chartsError) throw chartsError;
+    if (chartsError) {
+      console.error('Error fetching seating charts:', chartsError.code, chartsError.message);
+      throw chartsError;
+    }
 
     // Fetch upcoming lab days for cohort
     const today = new Date().toISOString().split('T')[0];
@@ -66,13 +83,16 @@ export async function GET(
       .order('date')
       .limit(5);
 
-    if (labsError) throw labsError;
+    if (labsError) {
+      console.error('Error fetching lab days:', labsError.code, labsError.message);
+      throw labsError;
+    }
 
     // Calculate stats
     const totalStudents = students?.length || 0;
     const withPhotos = students?.filter(s => s.photo_url).length || 0;
     const withAgency = students?.filter(s => s.agency).length || 0;
-    const withLearningStyles = learningStyles?.length || 0;
+    const withLearningStyles = learningStyles.length;
 
     // Agency breakdown
     const agencyMap: Record<string, number> = {};
@@ -87,7 +107,7 @@ export async function GET(
 
     // Learning style breakdown
     const lsMap: Record<string, number> = {};
-    learningStyles?.forEach(ls => {
+    learningStyles.forEach(ls => {
       if (ls.primary_style) {
         lsMap[ls.primary_style] = (lsMap[ls.primary_style] || 0) + 1;
       }
@@ -98,7 +118,7 @@ export async function GET(
 
     // Social style breakdown
     const socialMap: Record<string, number> = {};
-    learningStyles?.forEach(ls => {
+    learningStyles.forEach(ls => {
       if (ls.social_style) {
         socialMap[ls.social_style] = (socialMap[ls.social_style] || 0) + 1;
       }
@@ -129,6 +149,7 @@ export async function GET(
     });
   } catch (error) {
     console.error('Error fetching cohort stats:', error);
-    return NextResponse.json({ success: false, error: 'Failed to fetch cohort stats' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Failed to fetch cohort stats';
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }
