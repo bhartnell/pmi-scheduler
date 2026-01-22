@@ -129,6 +129,7 @@ export default function LabDayPage() {
     station_type: 'scenario' as string,
     scenario_id: '',
     selectedSkills: [] as string[],
+    custom_title: '',
     instructor_name: '',
     instructor_email: '',
     room: '',
@@ -268,6 +269,7 @@ export default function LabDayPage() {
       station_type: station.station_type || 'scenario',
       scenario_id: station.scenario?.id || '',
       selectedSkills: stationSkillIds,
+      custom_title: station.custom_title || '',
       instructor_name: station.instructor_name || '',
       instructor_email: station.instructor_email || '',
       room: station.room || '',
@@ -326,6 +328,7 @@ export default function LabDayPage() {
         body: JSON.stringify({
           station_type: editForm.station_type,
           scenario_id: editForm.station_type === 'scenario' ? (editForm.scenario_id || null) : null,
+          custom_title: editForm.custom_title || null,
           instructor_name: editForm.instructor_name || null,
           instructor_email: editForm.instructor_email || null,
           room: editForm.room || null,
@@ -682,6 +685,23 @@ export default function LabDayPage() {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Station Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Station Name
+                </label>
+                <input
+                  type="text"
+                  value={editForm.custom_title}
+                  onChange={(e) => setEditForm({ ...editForm, custom_title: e.target.value })}
+                  placeholder="e.g., PM14 01/23/26 - Chest Pain Scenario"
+                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Descriptive name shown on dashboard and schedule
+                </p>
               </div>
 
               {/* Scenario Selection (for scenario type) */}

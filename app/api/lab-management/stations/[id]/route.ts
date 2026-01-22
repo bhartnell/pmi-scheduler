@@ -87,6 +87,7 @@ export async function PATCH(
 
     if (body.station_type !== undefined) updateData.station_type = body.station_type;
     if (body.scenario_id !== undefined) updateData.scenario_id = body.scenario_id;
+    if (body.custom_title !== undefined) updateData.custom_title = body.custom_title;
     if (body.instructor_name !== undefined) updateData.instructor_name = body.instructor_name;
     if (body.instructor_email !== undefined) updateData.instructor_email = body.instructor_email;
     if (body.room !== undefined) updateData.room = body.room;
