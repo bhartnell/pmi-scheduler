@@ -12,6 +12,8 @@ import {
   Users,
   Star
 } from 'lucide-react';
+import ExportDropdown from '@/components/ExportDropdown';
+import type { ExportConfig } from '@/lib/export-utils';
 
 interface Student {
   id: string;
@@ -112,6 +114,26 @@ export default function StudentsPage() {
     );
   });
 
+  // Export configuration
+  const selectedCohortDetails = cohorts.find(c => c.id === selectedCohort);
+  const subtitle = selectedCohortDetails
+    ? `${selectedCohortDetails.program.abbreviation} Group ${selectedCohortDetails.cohort_number}`
+    : 'All Students';
+  const exportConfig: ExportConfig = {
+    title: 'Student Roster',
+    subtitle: subtitle,
+    filename: `student-roster-${subtitle.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}`,
+    columns: [
+      { key: 'last_name', label: 'Last Name', getValue: (row) => row.last_name },
+      { key: 'first_name', label: 'First Name', getValue: (row) => row.first_name },
+      { key: 'cohort', label: 'Cohort', getValue: (row) => row.cohort ? `${row.cohort.program.abbreviation} G${row.cohort.cohort_number}` : '' },
+      { key: 'email', label: 'Email', getValue: (row) => row.email || '' },
+      { key: 'status', label: 'Status', getValue: (row) => row.status },
+      { key: 'agency', label: 'Agency', getValue: (row) => row.agency || '' }
+    ],
+    data: filteredStudents
+  };
+
   if (status === 'loading') {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
@@ -135,6 +157,7 @@ export default function StudentsPage() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Student Roster</h1>
             <div className="flex gap-2">
+              <ExportDropdown config={exportConfig} disabled={filteredStudents.length === 0} />
               <Link
                 href="/lab-management/students/import"
                 className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"

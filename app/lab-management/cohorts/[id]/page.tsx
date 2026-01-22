@@ -23,6 +23,8 @@ import {
   UserPlus,
   Edit2
 } from 'lucide-react';
+import ExportDropdown from '@/components/ExportDropdown';
+import type { ExportConfig } from '@/lib/export-utils';
 
 interface Cohort {
   id: string;
@@ -88,9 +90,9 @@ function ProgressBar({ label, current, total, href }: { label: string; current: 
         <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{label}</span>
         <div className="flex items-center gap-2">
           <span className="text-sm text-gray-500 dark:text-gray-400">{current}/{total} ({percent}%)</span>
-          {href && percent < 100 && (
+          {href && (
             <Link href={href} className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300">
-              + Add
+              {percent < 100 ? 'Manage' : 'View All'}
             </Link>
           )}
         </div>
@@ -246,6 +248,22 @@ export default function CohortHubPage() {
 
   const missingLearningStyles = (stats?.totalStudents || 0) - (stats?.withLearningStyles || 0);
 
+  // Export configuration
+  const cohortLabel = cohort ? `${cohort.program.abbreviation} Group ${cohort.cohort_number}` : '';
+  const exportConfig: ExportConfig = {
+    title: 'Student Roster',
+    subtitle: cohortLabel,
+    filename: `roster-${cohortLabel.replace(/\s+/g, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}`,
+    columns: [
+      { key: 'last_name', label: 'Last Name', getValue: (row) => row.last_name },
+      { key: 'first_name', label: 'First Name', getValue: (row) => row.first_name },
+      { key: 'email', label: 'Email', getValue: (row) => row.email || '' },
+      { key: 'status', label: 'Status', getValue: (row) => row.status },
+      { key: 'agency', label: 'Agency', getValue: (row) => row.agency || '' }
+    ],
+    data: students
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
@@ -307,6 +325,7 @@ export default function CohortHubPage() {
                 <Edit2 className="w-4 h-4" />
                 Edit
               </Link>
+              <ExportDropdown config={exportConfig} disabled={students.length === 0} />
             </div>
           </div>
         </div>
