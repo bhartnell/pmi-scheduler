@@ -60,6 +60,8 @@ interface UpcomingLab {
   id: string;
   date: string;
   title: string;
+  start_time: string | null;
+  end_time: string | null;
   cohort: {
     cohort_number: number;
     program: { abbreviation: string };
@@ -219,6 +221,16 @@ export default function LabManagementDashboard() {
     } else {
       return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
     }
+  };
+
+  // Format time for display (12-hour format)
+  const formatTime = (timeString: string | null) => {
+    if (!timeString) return null;
+    const [hours, minutes] = timeString.split(':');
+    const hour = parseInt(hours, 10);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const hour12 = hour % 12 || 12;
+    return `${hour12}:${minutes} ${ampm}`;
   };
 
   // Check if date is today or tomorrow (timezone-safe)
@@ -486,7 +498,10 @@ export default function LabManagementDashboard() {
                           {lab.cohort.program.abbreviation} Group {lab.cohort.cohort_number}
                         </div>
                         <div className="text-sm text-gray-500 dark:text-gray-400">
-                          {formatDate(lab.date)} • {lab.stations_count || 0} stations
+                          {formatDate(lab.date)}
+                          {lab.start_time && ` • ${formatTime(lab.start_time)}`}
+                          {lab.start_time && lab.end_time && ` - ${formatTime(lab.end_time)}`}
+                          {' • '}{lab.stations_count || 0} stations
                         </div>
                       </div>
                       <ChevronRight className="w-5 h-5 text-gray-400 dark:text-gray-500" />

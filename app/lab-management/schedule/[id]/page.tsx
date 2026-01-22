@@ -27,6 +27,9 @@ import {
 interface LabDay {
   id: string;
   date: string;
+  title: string | null;
+  start_time: string | null;
+  end_time: string | null;
   week_number: number | null;
   day_number: number | null;
   num_rotations: number;
@@ -175,6 +178,16 @@ export default function LabDayPage() {
       day: 'numeric',
       year: 'numeric'
     });
+  };
+
+  const formatTime = (timeString: string | null) => {
+    if (!timeString) return null;
+    // timeString is in "HH:MM" or "HH:MM:SS" format
+    const [hours, minutes] = timeString.split(':');
+    const hour = parseInt(hours, 10);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const hour12 = hour % 12 || 12;
+    return `${hour12}:${minutes} ${ampm}`;
   };
 
   const getStationTitle = (station: Station) => {
@@ -445,6 +458,9 @@ export default function LabDayPage() {
           <div>
             <p><strong>Cohort:</strong> {labDay.cohort.program.abbreviation} Group {labDay.cohort.cohort_number}</p>
             <p><strong>Date:</strong> {formatDate(labDay.date)}</p>
+            {(labDay.start_time || labDay.end_time) && (
+              <p><strong>Time:</strong> {formatTime(labDay.start_time)}{labDay.end_time ? ` - ${formatTime(labDay.end_time)}` : ''}</p>
+            )}
           </div>
           <div className="text-right">
             {labDay.week_number && labDay.day_number && (
@@ -470,7 +486,13 @@ export default function LabDayPage() {
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
                 {formatDate(labDay.date)}
               </h1>
-              <div className="flex items-center gap-4 mt-2 text-sm text-gray-600 dark:text-gray-400">
+              <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-gray-600 dark:text-gray-400">
+                {(labDay.start_time || labDay.end_time) && (
+                  <span className="flex items-center gap-1 font-medium text-gray-700 dark:text-gray-300">
+                    <Clock className="w-4 h-4" />
+                    {formatTime(labDay.start_time)}{labDay.end_time ? ` - ${formatTime(labDay.end_time)}` : ''}
+                  </span>
+                )}
                 {labDay.week_number && labDay.day_number && (
                   <span className="flex items-center gap-1">
                     <Calendar className="w-4 h-4" />
@@ -478,7 +500,6 @@ export default function LabDayPage() {
                   </span>
                 )}
                 <span className="flex items-center gap-1">
-                  <Clock className="w-4 h-4" />
                   {labDay.num_rotations} rotations × {labDay.rotation_duration} min
                 </span>
               </div>

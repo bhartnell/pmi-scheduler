@@ -4,12 +4,13 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { 
+import {
   ChevronRight,
   Plus,
   Trash2,
   Save,
   Calendar,
+  Clock,
   BookOpen,
   AlertCircle,
   User,
@@ -81,6 +82,8 @@ export default function NewLabDayPage() {
   // Form state
   const [selectedCohort, setSelectedCohort] = useState('');
   const [labDate, setLabDate] = useState('');
+  const [startTime, setStartTime] = useState('08:00');
+  const [endTime, setEndTime] = useState('12:00');
   const [labTitle, setLabTitle] = useState('');
   const [labNotes, setLabNotes] = useState('');
   const [stations, setStations] = useState<Station[]>([
@@ -213,6 +216,8 @@ export default function NewLabDayPage() {
         body: JSON.stringify({
           cohort_id: selectedCohort,
           date: labDate,
+          start_time: startTime || null,
+          end_time: endTime || null,
           title: labTitle || null,
           notes: labNotes || null
         })
@@ -414,6 +419,32 @@ export default function NewLabDayPage() {
                 type="date"
                 value={labDate}
                 onChange={(e) => setLabDate(e.target.value)}
+                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <Clock className="w-4 h-4 inline mr-1" />
+                Start Time
+              </label>
+              <input
+                type="time"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <Clock className="w-4 h-4 inline mr-1" />
+                End Time
+              </label>
+              <input
+                type="time"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
                 className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
               />
             </div>
