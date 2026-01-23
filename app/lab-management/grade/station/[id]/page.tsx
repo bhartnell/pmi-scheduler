@@ -150,12 +150,14 @@ export default function GradeStationPage() {
 
   const [station, setStation] = useState<Station | null>(null);
   const [labGroups, setLabGroups] = useState<LabGroup[]>([]);
+  const [allStudents, setAllStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  
+
   // Grading state
   const [selectedGroupId, setSelectedGroupId] = useState<string>('');
   const [teamLeaderId, setTeamLeaderId] = useState<string>('');
+  const [selectedStudentId, setSelectedStudentId] = useState<string>(''); // For skills stations
   const [rotationNumber, setRotationNumber] = useState<number>(1);
   const [criticalActions, setCriticalActions] = useState<Record<string, boolean>>({});
   const [criteriaRatings, setCriteriaRatings] = useState<CriteriaRating[]>([]);
@@ -201,6 +203,10 @@ export default function GradeStationPage() {
   useEffect(() => {
     if (station?.lab_day?.cohort?.id) {
       fetchLabGroups(station.lab_day.cohort.id);
+      // Also fetch all students for skills station dropdown
+      if (station.station_type === 'skills') {
+        fetchAllStudents(station.lab_day.cohort.id);
+      }
     }
   }, [station]);
 
@@ -274,9 +280,32 @@ export default function GradeStationPage() {
     }
   };
 
+  const fetchAllStudents = async (cohortId: string) => {
+    try {
+      const res = await fetch(`/api/lab-management/students?cohortId=${cohortId}`);
+      const data = await res.json();
+      if (data.success && data.students) {
+        setAllStudents(data.students.map((s: any) => ({
+          id: s.id,
+          first_name: s.first_name,
+          last_name: s.last_name,
+          photo_url: s.photo_url
+        })));
+      }
+    } catch (error) {
+      console.error('Error fetching students:', error);
+    }
+  };
+
   const updateRating = (criteriaId: string, rating: 'S' | 'NI' | 'U') => {
-    setCriteriaRatings(prev => 
-      prev.map(r => r.criteria_id === criteriaId ? { ...r, rating } : r)
+    setCriteriaRatings(prev =>
+      prev.map(r => {
+        if (r.criteria_id === criteriaId) {
+          // Toggle behavior: clicking selected rating deselects it
+          return { ...r, rating: r.rating === rating ? null : rating };
+        }
+        return r;
+      })
     );
   };
 
@@ -287,27 +316,37 @@ export default function GradeStationPage() {
   };
 
   const handleSave = async () => {
-    // Validation
-    if (!selectedGroupId) {
-      alert('Please select a lab group');
-      return;
-    }
-    if (!teamLeaderId) {
-      alert('Please select a team leader');
-      return;
-    }
-    if (!allRated) {
-      alert(`Please rate all ${criteriaRatings.length} criteria`);
-      return;
-    }
+    // Validation - different for skills vs scenario stations
+    if (isSkillsStation) {
+      // Skills station: just need a student selected
+      if (!selectedStudentId) {
+        alert('Please select a student');
+        return;
+      }
+      // Ratings are optional for skills stations
+    } else {
+      // Scenario station: need group, team lead, and all ratings
+      if (!selectedGroupId) {
+        alert('Please select a lab group');
+        return;
+      }
+      if (!teamLeaderId) {
+        alert('Please select a team leader');
+        return;
+      }
+      if (!allRated) {
+        alert(`Please rate all ${criteriaRatings.length} criteria`);
+        return;
+      }
 
-    // Check if NI or U ratings have notes
-    const missingNotes = criteriaRatings.filter(
-      r => (r.rating === 'NI' || r.rating === 'U') && !r.notes.trim()
-    );
-    if (missingNotes.length > 0) {
-      alert(`Please add notes for: ${missingNotes.map(r => r.criteria_name).join(', ')}`);
-      return;
+      // Check if NI or U ratings have notes (only for scenario stations)
+      const missingNotes = criteriaRatings.filter(
+        r => (r.rating === 'NI' || r.rating === 'U') && !r.notes.trim()
+      );
+      if (missingNotes.length > 0) {
+        alert(`Please add notes for: ${missingNotes.map(r => r.criteria_name).join(', ')}`);
+        return;
+      }
     }
 
     setSaving(true);
@@ -315,8 +354,9 @@ export default function GradeStationPage() {
       const payload = {
         station_id: stationId,
         scenario_id: station?.scenario?.id,
-        lab_group_id: selectedGroupId,
-        team_lead_id: teamLeaderId,
+        lab_group_id: isSkillsStation ? null : selectedGroupId,
+        team_lead_id: isSkillsStation ? null : teamLeaderId,
+        student_id: isSkillsStation ? selectedStudentId : null,
         rotation_number: rotationNumber,
         criteria_ratings: criteriaRatings,
         critical_actions_completed: criticalActions,
@@ -339,19 +379,21 @@ export default function GradeStationPage() {
 
       const data = await res.json();
       if (data.success) {
-        // Also log team lead
-        await fetch('/api/lab-management/team-leads', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            student_id: teamLeaderId,
-            lab_station_id: stationId,
-            scenario_type: station?.scenario?.category || 'General',
-            date: station?.lab_day?.date,
-            performance_score: satisfactoryCount,
-            notes: `Rotation ${rotationNumber}: ${satisfactoryCount}/8 S ratings`
-          })
-        });
+        // Only log team lead for scenario stations
+        if (!isSkillsStation && teamLeaderId) {
+          await fetch('/api/lab-management/team-leads', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              student_id: teamLeaderId,
+              lab_station_id: stationId,
+              scenario_type: station?.scenario?.category || 'General',
+              date: station?.lab_day?.date,
+              performance_score: satisfactoryCount,
+              notes: `Rotation ${rotationNumber}: ${satisfactoryCount}/8 S ratings`
+            })
+          });
+        }
 
         alert('Assessment saved successfully!');
         router.push(`/lab-management/schedule/${station?.lab_day?.id}`);
@@ -426,7 +468,7 @@ export default function GradeStationPage() {
             </div>
             <button
               onClick={handleSave}
-              disabled={saving || !allRated || !selectedGroupId || !teamLeaderId}
+              disabled={saving || (isSkillsStation ? !selectedStudentId : (!allRated || !selectedGroupId || !teamLeaderId))}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
               {saving ? (
@@ -729,113 +771,172 @@ export default function GradeStationPage() {
           </div>
         )}
 
-        {/* Group & Team Lead Selection */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 space-y-4">
-          <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-            <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-            Select Group & Team Lead
-          </h2>
+        {/* Student/Group Selection - Different UI for skills vs scenario */}
+        {isSkillsStation ? (
+          /* Skills Station: Simple student dropdown */
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 space-y-4">
+            <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <Users className="w-5 h-5 text-green-600 dark:text-green-400" />
+              Select Student
+            </h2>
 
-          {/* Rotation Number */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Rotation Number</label>
-            <div className="flex gap-2">
-              {[1, 2, 3, 4].map(num => (
-                <button
-                  key={num}
-                  type="button"
-                  onClick={() => setRotationNumber(num)}
-                  className={`w-12 h-12 rounded-lg font-medium ${
-                    rotationNumber === num
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
-                  }`}
+            {/* Student Selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Student</label>
+              {allStudents.length === 0 ? (
+                <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                  <p className="text-sm text-yellow-800 dark:text-yellow-300">
+                    Loading students...
+                  </p>
+                </div>
+              ) : (
+                <select
+                  value={selectedStudentId}
+                  onChange={(e) => setSelectedStudentId(e.target.value)}
+                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                 >
-                  {num}
-                </button>
-              ))}
+                  <option value="">Select a student...</option>
+                  {allStudents.map(student => (
+                    <option key={student.id} value={student.id}>
+                      {student.first_name} {student.last_name}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
-          </div>
 
-          {/* Lab Group Selection */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Lab Group</label>
-            {labGroups.length === 0 ? (
-              <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-                <p className="text-sm text-yellow-800 dark:text-yellow-300">
-                  No lab groups found for this cohort.
-                  <Link href={`/lab-management/cohorts/${station.lab_day.cohort.id}/groups`} className="underline ml-1">
-                    Create groups first
-                  </Link>
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {labGroups.map(group => (
+            {/* Rotation Number (optional for skills) */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Rotation <span className="text-gray-400 font-normal">(optional)</span>
+              </label>
+              <div className="flex gap-2">
+                {[1, 2, 3, 4].map(num => (
                   <button
-                    key={group.id}
+                    key={num}
                     type="button"
-                    onClick={() => {
-                      setSelectedGroupId(group.id);
-                      setTeamLeaderId('');
-                    }}
-                    className={`p-3 rounded-lg border-2 text-left ${
-                      selectedGroupId === group.id
-                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
-                        : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
+                    onClick={() => setRotationNumber(num)}
+                    className={`w-12 h-12 rounded-lg font-medium ${
+                      rotationNumber === num
+                        ? 'bg-green-600 text-white'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
                     }`}
                   >
-                    <div className="font-medium text-gray-900 dark:text-white">{group.name}</div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">{group.members?.length || 0} students</div>
+                    {num}
                   </button>
                 ))}
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* Scenario Station: Group & Team Lead Selection */
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 space-y-4">
+            <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              Select Group & Team Lead
+            </h2>
+
+            {/* Rotation Number */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Rotation Number</label>
+              <div className="flex gap-2">
+                {[1, 2, 3, 4].map(num => (
+                  <button
+                    key={num}
+                    type="button"
+                    onClick={() => setRotationNumber(num)}
+                    className={`w-12 h-12 rounded-lg font-medium ${
+                      rotationNumber === num
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
+                    }`}
+                  >
+                    {num}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Lab Group Selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Lab Group</label>
+              {labGroups.length === 0 ? (
+                <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                  <p className="text-sm text-yellow-800 dark:text-yellow-300">
+                    No lab groups found for this cohort.
+                    <Link href={`/lab-management/cohorts/${station.lab_day.cohort.id}/groups`} className="underline ml-1">
+                      Create groups first
+                    </Link>
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {labGroups.map(group => (
+                    <button
+                      key={group.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedGroupId(group.id);
+                        setTeamLeaderId('');
+                      }}
+                      className={`p-3 rounded-lg border-2 text-left ${
+                        selectedGroupId === group.id
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
+                          : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
+                      }`}
+                    >
+                      <div className="font-medium text-gray-900 dark:text-white">{group.name}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">{group.members?.length || 0} students</div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Team Lead Selection */}
+            {selectedGroup && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Team Leader <Star className="w-4 h-4 inline text-yellow-500" />
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {selectedGroup.members?.map(member => (
+                    <button
+                      key={member.student.id}
+                      type="button"
+                      onClick={() => setTeamLeaderId(member.student.id)}
+                      className={`flex items-center gap-3 p-3 rounded-lg border-2 ${
+                        teamLeaderId === member.student.id
+                          ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/30'
+                          : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
+                      }`}
+                    >
+                      <div className="w-20 h-20 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center overflow-hidden shrink-0">
+                        {member.student.photo_url ? (
+                          <img src={member.student.photo_url} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                            {member.student.first_name[0]}{member.student.last_name[0]}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-left">
+                        <div className="font-medium text-gray-900 dark:text-white text-sm">
+                          {member.student.first_name} {member.student.last_name}
+                        </div>
+                        {teamLeaderId === member.student.id && (
+                          <div className="text-xs text-yellow-600 dark:text-yellow-400 flex items-center gap-1">
+                            <Star className="w-3 h-3" /> Team Lead
+                          </div>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>
-
-          {/* Team Lead Selection */}
-          {selectedGroup && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Team Leader <Star className="w-4 h-4 inline text-yellow-500" />
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                {selectedGroup.members?.map(member => (
-                  <button
-                    key={member.student.id}
-                    type="button"
-                    onClick={() => setTeamLeaderId(member.student.id)}
-                    className={`flex items-center gap-3 p-3 rounded-lg border-2 ${
-                      teamLeaderId === member.student.id
-                        ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/30'
-                        : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
-                    }`}
-                  >
-                    <div className="w-20 h-20 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center overflow-hidden shrink-0">
-                      {member.student.photo_url ? (
-                        <img src={member.student.photo_url} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                          {member.student.first_name[0]}{member.student.last_name[0]}
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-left">
-                      <div className="font-medium text-gray-900 dark:text-white text-sm">
-                        {member.student.first_name} {member.student.last_name}
-                      </div>
-                      {teamLeaderId === member.student.id && (
-                        <div className="text-xs text-yellow-600 dark:text-yellow-400 flex items-center gap-1">
-                          <Star className="w-3 h-3" /> Team Lead
-                        </div>
-                      )}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+        )}
 
         {/* Critical Actions */}
         {scenario?.critical_actions && scenario.critical_actions.length > 0 && (
@@ -1159,7 +1260,7 @@ export default function GradeStationPage() {
         <div className="sticky bottom-4">
           <button
             onClick={handleSave}
-            disabled={saving || !allRated || !selectedGroupId || !teamLeaderId}
+            disabled={saving || (isSkillsStation ? !selectedStudentId : (!allRated || !selectedGroupId || !teamLeaderId))}
             className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed shadow-lg"
           >
             {saving ? (
@@ -1169,12 +1270,20 @@ export default function GradeStationPage() {
             )}
             {saving ? 'Saving Assessment...' : 'Save Assessment'}
           </button>
-          {(!selectedGroupId || !teamLeaderId || !allRated) && (
-            <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-2">
-              {!selectedGroupId ? 'Select a lab group' :
-               !teamLeaderId ? 'Select a team leader' :
-               `Rate all ${totalCriteria} criteria to save`}
-            </p>
+          {isSkillsStation ? (
+            !selectedStudentId && (
+              <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-2">
+                Select a student to save
+              </p>
+            )
+          ) : (
+            (!selectedGroupId || !teamLeaderId || !allRated) && (
+              <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-2">
+                {!selectedGroupId ? 'Select a lab group' :
+                 !teamLeaderId ? 'Select a team leader' :
+                 `Rate all ${totalCriteria} criteria to save`}
+              </p>
+            )
           )}
         </div>
       </main>
