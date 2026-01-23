@@ -58,6 +58,9 @@ interface Station {
   id: string;
   station_number: number;
   station_type: string;
+  skill_name: string | null;
+  custom_title: string | null;
+  station_details: string | null;
   skill_sheet_url: string | null;
   instructions_url: string | null;
   station_notes: string | null;
@@ -117,6 +120,14 @@ const EVALUATION_CRITERIA = [
   { id: '8', name: 'Skills', description: 'Technical proficiency, proper technique' }
 ];
 
+// Simplified criteria for skills stations
+const SKILLS_EVALUATION_CRITERIA = [
+  { id: 's1', name: 'Technique/Procedure', description: 'Proper steps followed in correct sequence' },
+  { id: 's2', name: 'Safety', description: 'BSI, patient safety, scene awareness maintained' },
+  { id: 's3', name: 'Completion', description: 'Skill completed successfully within appropriate time' },
+  { id: 's4', name: 'Overall Competency', description: 'Demonstrates understanding and ability to perform skill' }
+];
+
 const RATING_COLORS = {
   'S': 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border-green-300 dark:border-green-700',
   'NI': 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border-yellow-300 dark:border-yellow-700',
@@ -146,11 +157,13 @@ export default function GradeStationPage() {
   const [teamLeaderId, setTeamLeaderId] = useState<string>('');
   const [rotationNumber, setRotationNumber] = useState<number>(1);
   const [criticalActions, setCriticalActions] = useState<Record<string, boolean>>({});
-  const [criteriaRatings, setCriteriaRatings] = useState<CriteriaRating[]>(
-    EVALUATION_CRITERIA.map(c => ({ criteria_id: c.id, criteria_name: c.name, rating: null, notes: '' }))
-  );
+  const [criteriaRatings, setCriteriaRatings] = useState<CriteriaRating[]>([]);
   const [overallComments, setOverallComments] = useState('');
   const [showScenarioDetails, setShowScenarioDetails] = useState(false);
+
+  // Determine which criteria to use based on station type
+  const isSkillsStation = station?.station_type === 'skills';
+  const activeCriteria = isSkillsStation ? SKILLS_EVALUATION_CRITERIA : EVALUATION_CRITERIA;
 
   // Flagging state
   const [issueLevel, setIssueLevel] = useState<'none' | 'minor' | 'needs_followup'>('none');
@@ -161,11 +174,16 @@ export default function GradeStationPage() {
   const satisfactoryCount = criteriaRatings.filter(r => r.rating === 'S').length;
   const needsImprovementCount = criteriaRatings.filter(r => r.rating === 'NI').length;
   const unsatisfactoryCount = criteriaRatings.filter(r => r.rating === 'U').length;
-  const allRated = criteriaRatings.every(r => r.rating !== null);
-  
-  // Pass calculation (Phase 1: 6/8, Phase 2: 7/8)
-  const phase1Pass = satisfactoryCount >= 6;
-  const phase2Pass = satisfactoryCount >= 7;
+  const allRated = criteriaRatings.length > 0 && criteriaRatings.every(r => r.rating !== null);
+  const totalCriteria = criteriaRatings.length;
+
+  // Pass calculation - different for skills vs scenario
+  // Skills: Pass (4/4), Needs Practice (3/4), Fail (<3/4)
+  // Scenario: Phase 1 (6/8), Phase 2 (7/8)
+  const skillsPass = satisfactoryCount === 4;
+  const skillsNeedsPractice = satisfactoryCount >= 3 && satisfactoryCount < 4;
+  const phase1Pass = isSkillsStation ? skillsPass : satisfactoryCount >= 6;
+  const phase2Pass = isSkillsStation ? skillsPass : satisfactoryCount >= 7;
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -195,6 +213,19 @@ export default function GradeStationPage() {
       setCriticalActions(initial);
     }
   }, [station?.scenario?.critical_actions]);
+
+  useEffect(() => {
+    // Initialize criteria ratings based on station type
+    if (station) {
+      const criteria = station.station_type === 'skills' ? SKILLS_EVALUATION_CRITERIA : EVALUATION_CRITERIA;
+      setCriteriaRatings(criteria.map(c => ({
+        criteria_id: c.id,
+        criteria_name: c.name,
+        rating: null,
+        notes: ''
+      })));
+    }
+  }, [station?.station_type]);
 
   const fetchStation = async () => {
     try {
@@ -244,7 +275,7 @@ export default function GradeStationPage() {
       return;
     }
     if (!allRated) {
-      alert('Please rate all 8 criteria');
+      alert(`Please rate all ${criteriaRatings.length} criteria`);
       return;
     }
 
@@ -380,49 +411,66 @@ export default function GradeStationPage() {
       </div>
 
       <main className="max-w-2xl mx-auto px-4 py-4 space-y-4">
-        {/* Skills Station Materials */}
-        {station.station_type === 'skills' && (station.skill_sheet_url || station.instructions_url || station.station_notes) && (
+        {/* Skills Station Header & Materials */}
+        {station.station_type === 'skills' && (
           <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-            <h2 className="font-semibold text-green-800 dark:text-green-300 flex items-center gap-2 mb-3">
-              <ClipboardCheck className="w-5 h-5" />
-              Station Materials
-            </h2>
-            <div className="space-y-3">
-              {station.skill_sheet_url && (
-                <div className="flex items-center gap-3">
-                  <FileText className="w-5 h-5 text-green-600 dark:text-green-400" />
+            <div className="flex items-start justify-between mb-3">
+              <div>
+                <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400 mb-1">
+                  <ClipboardCheck className="w-4 h-4" />
+                  <span>Skills Station</span>
+                </div>
+                <h2 className="text-xl font-bold text-green-900 dark:text-green-100">
+                  {station.skill_name || station.custom_title || 'Skills Practice'}
+                </h2>
+              </div>
+            </div>
+
+            {/* Station Details/Instructions */}
+            {station.station_details && (
+              <div className="mb-4 p-3 bg-white dark:bg-gray-800 rounded-lg border border-green-200 dark:border-green-700">
+                <div className="text-sm font-medium text-green-700 dark:text-green-400 mb-1">Instructions:</div>
+                <div className="text-sm text-green-800 dark:text-green-300 whitespace-pre-wrap">{station.station_details}</div>
+              </div>
+            )}
+
+            {/* Resource Links */}
+            {(station.skill_sheet_url || station.instructions_url) && (
+              <div className="flex flex-wrap gap-3 mb-3">
+                {station.skill_sheet_url && (
                   <a
                     href={station.skill_sheet_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-green-700 dark:text-green-300 hover:underline flex items-center gap-1"
+                    className="inline-flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
                   >
-                    Skill Sheet
-                    <ExternalLink className="w-4 h-4" />
+                    <FileText className="w-4 h-4" />
+                    View Skill Sheet
+                    <ExternalLink className="w-3 h-3" />
                   </a>
-                </div>
-              )}
-              {station.instructions_url && (
-                <div className="flex items-center gap-3">
-                  <FileText className="w-5 h-5 text-green-600 dark:text-green-400" />
+                )}
+                {station.instructions_url && (
                   <a
                     href={station.instructions_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-green-700 dark:text-green-300 hover:underline flex items-center gap-1"
+                    className="inline-flex items-center gap-2 px-3 py-2 bg-green-100 dark:bg-green-800 text-green-700 dark:text-green-200 rounded-lg hover:bg-green-200 dark:hover:bg-green-700 text-sm border border-green-300 dark:border-green-600"
                   >
-                    Station Instructions
-                    <ExternalLink className="w-4 h-4" />
+                    <FileText className="w-4 h-4" />
+                    View Instructions
+                    <ExternalLink className="w-3 h-3" />
                   </a>
-                </div>
-              )}
-              {station.station_notes && (
-                <div className="mt-2 p-3 bg-white dark:bg-gray-800 rounded-lg">
-                  <div className="text-sm font-medium text-green-700 dark:text-green-400 mb-1">Notes:</div>
-                  <div className="text-sm text-green-800 dark:text-green-300 whitespace-pre-wrap">{station.station_notes}</div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
+
+            {/* Station Notes */}
+            {station.station_notes && (
+              <div className="p-3 bg-white dark:bg-gray-800 rounded-lg border border-green-200 dark:border-green-700">
+                <div className="text-sm font-medium text-green-700 dark:text-green-400 mb-1">Instructor Notes:</div>
+                <div className="text-sm text-green-800 dark:text-green-300 whitespace-pre-wrap">{station.station_notes}</div>
+              </div>
+            )}
           </div>
         )}
 
@@ -623,16 +671,18 @@ export default function GradeStationPage() {
               </div>
             )}
           </div>
-        ) : station.station_type === 'skills' ? (
+        ) : station.station_type === 'skills' && !station.skill_name && !station.custom_title && !station.station_details ? (
           <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
             <h2 className="font-semibold text-green-800 dark:text-green-300 flex items-center gap-2">
               <ClipboardCheck className="w-5 h-5" />
               Skills Station
             </h2>
             <p className="text-green-700 dark:text-green-400 text-sm mt-1">
-              This is a skills practice station. Grade based on skill performance criteria.
+              This is a skills practice station. Grade using the simplified skill criteria below.
             </p>
           </div>
+        ) : station.station_type === 'skills' ? (
+          null // Skills station with details is handled above
         ) : station.station_type === 'documentation' ? (
           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
             <h2 className="font-semibold text-blue-800 dark:text-blue-300 flex items-center gap-2">
@@ -797,12 +847,21 @@ export default function GradeStationPage() {
           </div>
         )}
 
-        {/* 8 Criteria Grading */}
+        {/* Evaluation Criteria - different for skills vs scenarios */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-              <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-              Evaluation Criteria
+              {isSkillsStation ? (
+                <>
+                  <ClipboardCheck className="w-5 h-5 text-green-600 dark:text-green-400" />
+                  Skill Evaluation
+                </>
+              ) : (
+                <>
+                  <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  Evaluation Criteria
+                </>
+              )}
             </h2>
             <div className="text-sm">
               <span className="text-green-600 dark:text-green-400 font-medium">{satisfactoryCount} S</span>
@@ -816,7 +875,7 @@ export default function GradeStationPage() {
           </div>
 
           <div className="space-y-4">
-            {EVALUATION_CRITERIA.map((criteria, index) => {
+            {activeCriteria.map((criteria, index) => {
               const rating = criteriaRatings.find(r => r.criteria_id === criteria.id);
               const needsNotes = rating?.rating === 'NI' || rating?.rating === 'U';
 
@@ -872,34 +931,68 @@ export default function GradeStationPage() {
           {/* Pass/Fail Summary */}
           {allRated && (
             <div className={`mt-4 p-4 rounded-lg ${
-              phase2Pass ? 'bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700' :
-              phase1Pass ? 'bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700' :
-              'bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700'
+              isSkillsStation ? (
+                skillsPass ? 'bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700' :
+                skillsNeedsPractice ? 'bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700' :
+                'bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700'
+              ) : (
+                phase2Pass ? 'bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700' :
+                phase1Pass ? 'bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700' :
+                'bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700'
+              )
             }`}>
               <div className="flex items-center gap-3">
-                {phase2Pass ? (
-                  <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
-                ) : phase1Pass ? (
-                  <AlertTriangle className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+                {isSkillsStation ? (
+                  skillsPass ? (
+                    <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
+                  ) : skillsNeedsPractice ? (
+                    <AlertTriangle className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+                  ) : (
+                    <XCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
+                  )
                 ) : (
-                  <XCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
+                  phase2Pass ? (
+                    <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
+                  ) : phase1Pass ? (
+                    <AlertTriangle className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+                  ) : (
+                    <XCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
+                  )
                 )}
                 <div>
                   <div className={`font-medium ${
-                    phase2Pass ? 'text-green-800 dark:text-green-300' :
-                    phase1Pass ? 'text-yellow-800 dark:text-yellow-300' :
-                    'text-red-800 dark:text-red-300'
+                    isSkillsStation ? (
+                      skillsPass ? 'text-green-800 dark:text-green-300' :
+                      skillsNeedsPractice ? 'text-yellow-800 dark:text-yellow-300' :
+                      'text-red-800 dark:text-red-300'
+                    ) : (
+                      phase2Pass ? 'text-green-800 dark:text-green-300' :
+                      phase1Pass ? 'text-yellow-800 dark:text-yellow-300' :
+                      'text-red-800 dark:text-red-300'
+                    )
                   }`}>
-                    {satisfactoryCount}/8 Satisfactory
+                    {satisfactoryCount}/{totalCriteria} Satisfactory
                   </div>
                   <div className={`text-sm ${
-                    phase2Pass ? 'text-green-700 dark:text-green-400' :
-                    phase1Pass ? 'text-yellow-700 dark:text-yellow-400' :
-                    'text-red-700 dark:text-red-400'
+                    isSkillsStation ? (
+                      skillsPass ? 'text-green-700 dark:text-green-400' :
+                      skillsNeedsPractice ? 'text-yellow-700 dark:text-yellow-400' :
+                      'text-red-700 dark:text-red-400'
+                    ) : (
+                      phase2Pass ? 'text-green-700 dark:text-green-400' :
+                      phase1Pass ? 'text-yellow-700 dark:text-yellow-400' :
+                      'text-red-700 dark:text-red-400'
+                    )
                   }`}>
-                    {phase2Pass ? 'Phase 2 Pass (7/8 required)' :
-                     phase1Pass ? 'Phase 1 Pass (6/8 required) - Does not meet Phase 2' :
-                     'Does not meet Phase 1 or Phase 2 requirements'}
+                    {isSkillsStation ? (
+                      skillsPass ? 'Pass - Skill demonstrated competently' :
+                      skillsNeedsPractice ? 'Needs Practice - Additional training recommended' :
+                      'Unsatisfactory - Remediation required'
+                    ) : (
+                      phase2Pass ? 'Phase 2 Pass (7/8 required)' :
+                      phase1Pass ? 'Phase 1 Pass (6/8 required) - Does not meet Phase 2' :
+                      'Does not meet Phase 1 or Phase 2 requirements'
+                    )}
                   </div>
                 </div>
               </div>
@@ -1050,7 +1143,7 @@ export default function GradeStationPage() {
             <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-2">
               {!selectedGroupId ? 'Select a lab group' :
                !teamLeaderId ? 'Select a team leader' :
-               'Rate all 8 criteria to save'}
+               `Rate all ${totalCriteria} criteria to save`}
             </p>
           )}
         </div>
