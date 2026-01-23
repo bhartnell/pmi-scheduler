@@ -45,6 +45,13 @@ interface Skill {
   certification_levels: string[];
 }
 
+interface Instructor {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
 const STATION_TYPES = [
   { value: 'scenario', label: 'Scenario', icon: Stethoscope, color: 'bg-purple-500', description: 'Full scenario with grading' },
   { value: 'skills', label: 'Skills', icon: ClipboardCheck, color: 'bg-green-500', description: 'Skills practice station' },
@@ -60,6 +67,7 @@ export default function AddStationPage() {
   const [labDay, setLabDay] = useState<LabDay | null>(null);
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
+  const [instructors, setInstructors] = useState<Instructor[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -70,6 +78,8 @@ export default function AddStationPage() {
   const [customSkills, setCustomSkills] = useState<string[]>([]);
   const [instructorName, setInstructorName] = useState('');
   const [instructorEmail, setInstructorEmail] = useState('');
+  const [selectedInstructor, setSelectedInstructor] = useState('');
+  const [isCustomInstructor, setIsCustomInstructor] = useState(false);
   const [room, setRoom] = useState('');
   const [notes, setNotes] = useState('');
 
@@ -111,6 +121,13 @@ export default function AddStationPage() {
       if (skillsData.success) {
         setSkills(skillsData.skills || []);
       }
+
+      // Fetch instructors
+      const instructorsRes = await fetch('/api/lab-management/instructors');
+      const instructorsData = await instructorsRes.json();
+      if (instructorsData.success) {
+        setInstructors(instructorsData.instructors || []);
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
     }
@@ -148,6 +165,27 @@ export default function AddStationPage() {
   const assignSelf = () => {
     setInstructorName(session?.user?.name || '');
     setInstructorEmail(session?.user?.email || '');
+    setSelectedInstructor(`${session?.user?.name}|${session?.user?.email}`);
+    setIsCustomInstructor(false);
+  };
+
+  const handleInstructorChange = (value: string) => {
+    setSelectedInstructor(value);
+
+    if (value === 'custom') {
+      setIsCustomInstructor(true);
+      setInstructorName('');
+      setInstructorEmail('');
+    } else if (value === '') {
+      setIsCustomInstructor(false);
+      setInstructorName('');
+      setInstructorEmail('');
+    } else {
+      setIsCustomInstructor(false);
+      const [name, email] = value.split('|');
+      setInstructorName(name);
+      setInstructorEmail(email);
+    }
   };
 
   const handleSave = async () => {
@@ -409,23 +447,40 @@ export default function AddStationPage() {
           {/* Instructor */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Instructor</label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <input
-                type="text"
-                value={instructorName}
-                onChange={(e) => setInstructorName(e.target.value)}
-                placeholder="Name (optional)"
-                className="px-3 py-2 border rounded-lg text-gray-900 bg-white"
-              />
-              <input
-                type="email"
-                value={instructorEmail}
-                onChange={(e) => setInstructorEmail(e.target.value)}
-                placeholder="Email (optional)"
-                className="px-3 py-2 border rounded-lg text-gray-900 bg-white"
-              />
-            </div>
-            {!instructorEmail && (
+            <select
+              value={selectedInstructor}
+              onChange={(e) => handleInstructorChange(e.target.value)}
+              className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+            >
+              <option value="">Select instructor...</option>
+              {instructors.map((instructor) => (
+                <option key={instructor.id} value={`${instructor.name}|${instructor.email}`}>
+                  {instructor.name} ({instructor.email})
+                </option>
+              ))}
+              <option value="custom">+ Add custom name...</option>
+            </select>
+
+            {isCustomInstructor && (
+              <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <input
+                  type="text"
+                  value={instructorName}
+                  onChange={(e) => setInstructorName(e.target.value)}
+                  placeholder="Name (required for custom)"
+                  className="px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                />
+                <input
+                  type="email"
+                  value={instructorEmail}
+                  onChange={(e) => setInstructorEmail(e.target.value)}
+                  placeholder="Email (optional)"
+                  className="px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                />
+              </div>
+            )}
+
+            {!selectedInstructor && !instructorEmail && (
               <button
                 type="button"
                 onClick={assignSelf}

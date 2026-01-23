@@ -87,6 +87,13 @@ interface Skill {
   category: string;
 }
 
+interface Instructor {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
 const STATION_TYPES = [
   { value: 'scenario', label: 'Scenario', description: 'Full scenario with grading' },
   { value: 'skills', label: 'Skills', description: 'Skills practice station' },
@@ -124,6 +131,9 @@ export default function LabDayPage() {
   const [editingStation, setEditingStation] = useState<Station | null>(null);
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
+  const [instructors, setInstructors] = useState<Instructor[]>([]);
+  const [selectedInstructor, setSelectedInstructor] = useState('');
+  const [isCustomInstructor, setIsCustomInstructor] = useState(false);
   const [savingStation, setSavingStation] = useState(false);
   const [deletingStation, setDeletingStation] = useState(false);
   const [skillsModalOpen, setSkillsModalOpen] = useState(false);
@@ -154,13 +164,22 @@ export default function LabDayPage() {
   const fetchLabDay = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/lab-management/lab-days/${labDayId}`);
-      const data = await res.json();
-      
-      if (data.success) {
-        setLabDay(data.labDay);
+      const [labDayRes, instructorsRes] = await Promise.all([
+        fetch(`/api/lab-management/lab-days/${labDayId}`),
+        fetch('/api/lab-management/instructors')
+      ]);
+
+      const labDayData = await labDayRes.json();
+      const instructorsData = await instructorsRes.json();
+
+      if (labDayData.success) {
+        setLabDay(labDayData.labDay);
       } else {
-        console.error('Failed to fetch lab day:', data.error);
+        console.error('Failed to fetch lab day:', labDayData.error);
+      }
+
+      if (instructorsData.success) {
+        setInstructors(instructorsData.instructors || []);
       }
     } catch (error) {
       console.error('Error fetching lab day:', error);
@@ -289,6 +308,28 @@ export default function LabDayPage() {
       notes: station.notes || ''
     });
 
+    // Set selectedInstructor based on existing instructor data
+    if (station.instructor_name && station.instructor_email) {
+      const matchingInstructor = instructors.find(
+        (i) => i.name === station.instructor_name && i.email === station.instructor_email
+      );
+      if (matchingInstructor) {
+        setSelectedInstructor(`${matchingInstructor.name}|${matchingInstructor.email}`);
+        setIsCustomInstructor(false);
+      } else {
+        // Custom instructor not in the list
+        setSelectedInstructor('custom');
+        setIsCustomInstructor(true);
+      }
+    } else if (station.instructor_name) {
+      // Only has name, no email
+      setSelectedInstructor('custom');
+      setIsCustomInstructor(true);
+    } else {
+      setSelectedInstructor('');
+      setIsCustomInstructor(false);
+    }
+
     // Fetch scenarios and skills if not already loaded
     if (scenarios.length === 0 || skills.length === 0) {
       fetchScenariosAndSkills();
@@ -310,6 +351,36 @@ export default function LabDayPage() {
       instructor_name: session?.user?.name || '',
       instructor_email: session?.user?.email || ''
     }));
+    setSelectedInstructor(`${session?.user?.name}|${session?.user?.email}`);
+    setIsCustomInstructor(false);
+  };
+
+  const handleInstructorChange = (value: string) => {
+    setSelectedInstructor(value);
+
+    if (value === 'custom') {
+      setIsCustomInstructor(true);
+      setEditForm(prev => ({
+        ...prev,
+        instructor_name: '',
+        instructor_email: ''
+      }));
+    } else if (value === '') {
+      setIsCustomInstructor(false);
+      setEditForm(prev => ({
+        ...prev,
+        instructor_name: '',
+        instructor_email: ''
+      }));
+    } else {
+      setIsCustomInstructor(false);
+      const [name, email] = value.split('|');
+      setEditForm(prev => ({
+        ...prev,
+        instructor_name: name,
+        instructor_email: email
+      }));
+    }
   };
 
   // Group skills by category for the modal
@@ -792,23 +863,40 @@ export default function LabDayPage() {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Instructor
                 </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    type="text"
-                    value={editForm.instructor_name}
-                    onChange={(e) => setEditForm({ ...editForm, instructor_name: e.target.value })}
-                    placeholder="Name (optional)"
-                    className="px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
-                  />
-                  <input
-                    type="email"
-                    value={editForm.instructor_email}
-                    onChange={(e) => setEditForm({ ...editForm, instructor_email: e.target.value })}
-                    placeholder="Email (optional)"
-                    className="px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
-                  />
-                </div>
-                {!editForm.instructor_email && (
+                <select
+                  value={selectedInstructor}
+                  onChange={(e) => handleInstructorChange(e.target.value)}
+                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                >
+                  <option value="">Select instructor...</option>
+                  {instructors.map((instructor) => (
+                    <option key={instructor.id} value={`${instructor.name}|${instructor.email}`}>
+                      {instructor.name} ({instructor.email})
+                    </option>
+                  ))}
+                  <option value="custom">+ Add custom name...</option>
+                </select>
+
+                {isCustomInstructor && (
+                  <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <input
+                      type="text"
+                      value={editForm.instructor_name}
+                      onChange={(e) => setEditForm({ ...editForm, instructor_name: e.target.value })}
+                      placeholder="Name (required for custom)"
+                      className="px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                    />
+                    <input
+                      type="email"
+                      value={editForm.instructor_email}
+                      onChange={(e) => setEditForm({ ...editForm, instructor_email: e.target.value })}
+                      placeholder="Email (optional)"
+                      className="px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                    />
+                  </div>
+                )}
+
+                {!selectedInstructor && !editForm.instructor_email && (
                   <button
                     type="button"
                     onClick={assignSelf}
