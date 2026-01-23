@@ -40,6 +40,10 @@ interface Student {
   created_at: string;
   team_lead_count: number;
   last_team_lead_date: string | null;
+  prior_cert_level: string | null;
+  years_ems_experience: number | null;
+  prior_work_setting: string | null;
+  prior_employer: string | null;
   cohort?: {
     id: string;
     cohort_number: number;
@@ -155,6 +159,10 @@ export default function StudentDetailPage() {
   const [editAgency, setEditAgency] = useState('');
   const [editStatus, setEditStatus] = useState('active');
   const [editNotes, setEditNotes] = useState('');
+  const [editPriorCertLevel, setEditPriorCertLevel] = useState('');
+  const [editYearsEmsExperience, setEditYearsEmsExperience] = useState('');
+  const [editPriorWorkSetting, setEditPriorWorkSetting] = useState('');
+  const [editPriorEmployer, setEditPriorEmployer] = useState('');
 
   // Learning style state
   const [learningStyle, setLearningStyle] = useState<LearningStyle | null>(null);
@@ -235,6 +243,10 @@ export default function StudentDetailPage() {
         setEditAgency(data.student.agency || '');
         setEditStatus(data.student.status);
         setEditNotes(data.student.notes || '');
+        setEditPriorCertLevel(data.student.prior_cert_level || '');
+        setEditYearsEmsExperience(data.student.years_ems_experience?.toString() || '');
+        setEditPriorWorkSetting(data.student.prior_work_setting || '');
+        setEditPriorEmployer(data.student.prior_employer || '');
       }
     } catch (error) {
       console.error('Error fetching student:', error);
@@ -420,6 +432,10 @@ export default function StudentDetailPage() {
           agency: editAgency || null,
           status: editStatus,
           notes: editNotes || null,
+          prior_cert_level: editPriorCertLevel || null,
+          years_ems_experience: editYearsEmsExperience ? parseFloat(editYearsEmsExperience) : null,
+          prior_work_setting: editPriorWorkSetting || null,
+          prior_employer: editPriorEmployer || null,
         }),
       });
       
@@ -591,6 +607,60 @@ export default function StudentDetailPage() {
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>
                     <textarea value={editNotes} onChange={e => setEditNotes(e.target.value)} rows={2} className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700" />
                   </div>
+
+                  {/* EMS Background (Optional) */}
+                  <div className="pt-4 border-t dark:border-gray-600">
+                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">EMS Background (Optional)</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Prior Certification Level</label>
+                        <select value={editPriorCertLevel} onChange={e => setEditPriorCertLevel(e.target.value)} className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700">
+                          <option value="">Not specified</option>
+                          <option value="emt">EMT-Basic</option>
+                          <option value="aemt">AEMT</option>
+                          <option value="other">Other</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Years of EMS Experience</label>
+                        <input
+                          type="number"
+                          step="0.5"
+                          min="0"
+                          max="50"
+                          value={editYearsEmsExperience}
+                          onChange={e => setEditYearsEmsExperience(e.target.value)}
+                          placeholder="0"
+                          className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 mt-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Primary Work Setting</label>
+                        <select value={editPriorWorkSetting} onChange={e => setEditPriorWorkSetting(e.target.value)} className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700">
+                          <option value="">Not specified</option>
+                          <option value="911">911/Fire</option>
+                          <option value="ift">Private/IFT</option>
+                          <option value="hospital">Hospital</option>
+                          <option value="flight">Flight/Critical Care</option>
+                          <option value="volunteer">Volunteer</option>
+                          <option value="none">Not currently working in EMS</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Prior Employer</label>
+                        <input
+                          type="text"
+                          value={editPriorEmployer}
+                          onChange={e => setEditPriorEmployer(e.target.value)}
+                          placeholder="Optional"
+                          className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="flex gap-2">
                     <button onClick={() => setEditing(false)} className="px-4 py-2 border dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</button>
                     <button onClick={handleSave} disabled={saving} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400">
@@ -689,6 +759,55 @@ export default function StudentDetailPage() {
             </div>
           </div>
         </div>
+
+        {/* EMS Background Section */}
+        {(student.prior_cert_level || student.years_ems_experience || student.prior_work_setting || student.prior_employer) && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
+              <Briefcase className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              EMS Background
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {student.prior_cert_level && (
+                <div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Prior Certification</div>
+                  <div className="text-gray-900 dark:text-white font-medium">
+                    {student.prior_cert_level === 'emt' && 'EMT-Basic'}
+                    {student.prior_cert_level === 'aemt' && 'AEMT'}
+                    {student.prior_cert_level === 'other' && 'Other'}
+                  </div>
+                </div>
+              )}
+              {student.years_ems_experience !== null && (
+                <div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">EMS Experience</div>
+                  <div className="text-gray-900 dark:text-white font-medium">
+                    {student.years_ems_experience} {student.years_ems_experience === 1 ? 'year' : 'years'}
+                  </div>
+                </div>
+              )}
+              {student.prior_work_setting && (
+                <div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Work Setting</div>
+                  <div className="text-gray-900 dark:text-white font-medium">
+                    {student.prior_work_setting === '911' && '911/Fire'}
+                    {student.prior_work_setting === 'ift' && 'Private/IFT'}
+                    {student.prior_work_setting === 'hospital' && 'Hospital'}
+                    {student.prior_work_setting === 'flight' && 'Flight/Critical Care'}
+                    {student.prior_work_setting === 'volunteer' && 'Volunteer'}
+                    {student.prior_work_setting === 'none' && 'Not currently working in EMS'}
+                  </div>
+                </div>
+              )}
+              {student.prior_employer && (
+                <div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Prior Employer</div>
+                  <div className="text-gray-900 dark:text-white font-medium">{student.prior_employer}</div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Learning Styles Section */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
