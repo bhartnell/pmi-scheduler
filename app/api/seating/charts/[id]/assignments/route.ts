@@ -59,10 +59,12 @@ export async function PUT(
     }
 
     // Delete all existing assignments for this chart
-    await supabase
+    const { error: deleteError } = await supabase
       .from('seat_assignments')
       .delete()
       .eq('seating_chart_id', chartId);
+
+    if (deleteError) throw deleteError;
 
     // Insert new assignments if any
     if (assignments.length > 0) {

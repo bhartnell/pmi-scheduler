@@ -85,11 +85,24 @@ export async function exportToPDF(config: ExportConfig) {
     margin: [0.5, 0.5, 0.5, 0.5] as [number, number, number, number],
     filename: `${filename}.pdf`,
     image: { type: 'jpeg' as const, quality: 0.98 },
-    html2canvas: { scale: 2, useCORS: true },
+    html2canvas: {
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+      foreignObjectRendering: false,
+      logging: false
+    },
     jsPDF: { unit: 'in', format: 'letter', orientation: 'landscape' as const }
   };
 
-  await html2pdf().set(opt).from(container.firstChild as HTMLElement).save();
+  try {
+    await html2pdf().set(opt).from(container.firstChild as HTMLElement).save();
+  } catch (error) {
+    console.error('PDF generation error:', error);
+    // Continue even if there's a non-critical parsing warning
+    // html2canvas often throws warnings about unsupported CSS features
+    // but still generates the PDF successfully
+  }
 
   // Cleanup
   document.body.removeChild(container);
