@@ -1,0 +1,196 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
+// GET - Get timer state for a lab day
+export async function GET(request: NextRequest) {
+  const searchParams = request.nextUrl.searchParams;
+  const labDayId = searchParams.get('labDayId');
+
+  if (!labDayId) {
+    return NextResponse.json({ success: false, error: 'labDayId is required' }, { status: 400 });
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('lab_timer_state')
+      .select('*')
+      .eq('lab_day_id', labDayId)
+      .single();
+
+    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+      throw error;
+    }
+
+    return NextResponse.json({
+      success: true,
+      timer: data || null,
+      serverTime: new Date().toISOString() // Include server time for sync
+    });
+  } catch (error) {
+    console.error('Error fetching timer state:', error);
+    return NextResponse.json({ success: false, error: 'Failed to fetch timer state' }, { status: 500 });
+  }
+}
+
+// POST - Create or reset timer state for a lab day
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { labDayId, durationSeconds, debriefSeconds, mode } = body;
+
+    if (!labDayId || !durationSeconds) {
+      return NextResponse.json({
+        success: false,
+        error: 'labDayId and durationSeconds are required'
+      }, { status: 400 });
+    }
+
+    // Upsert timer state
+    const { data, error } = await supabase
+      .from('lab_timer_state')
+      .upsert({
+        lab_day_id: labDayId,
+        rotation_number: 1,
+        status: 'stopped',
+        started_at: null,
+        paused_at: null,
+        elapsed_when_paused: 0,
+        duration_seconds: durationSeconds,
+        debrief_seconds: debriefSeconds || 300,
+        mode: mode || 'countdown'
+      }, {
+        onConflict: 'lab_day_id'
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return NextResponse.json({ success: true, timer: data });
+  } catch (error) {
+    console.error('Error creating timer state:', error);
+    return NextResponse.json({ success: false, error: 'Failed to create timer state' }, { status: 500 });
+  }
+}
+
+// PATCH - Update timer state (start, pause, stop, next rotation)
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { labDayId, action, ...updates } = body;
+
+    if (!labDayId) {
+      return NextResponse.json({ success: false, error: 'labDayId is required' }, { status: 400 });
+    }
+
+    // Get current state
+    const { data: currentState, error: fetchError } = await supabase
+      .from('lab_timer_state')
+      .select('*')
+      .eq('lab_day_id', labDayId)
+      .single();
+
+    if (fetchError) {
+      return NextResponse.json({ success: false, error: 'Timer not found' }, { status: 404 });
+    }
+
+    let updateData: any = {};
+
+    switch (action) {
+      case 'start':
+        // Start or resume the timer
+        if (currentState.status === 'paused') {
+          // Resume from pause - calculate new start time
+          const pausedDuration = currentState.elapsed_when_paused || 0;
+          const newStartTime = new Date(Date.now() - pausedDuration * 1000);
+          updateData = {
+            status: 'running',
+            started_at: newStartTime.toISOString(),
+            paused_at: null
+          };
+        } else {
+          // Fresh start
+          updateData = {
+            status: 'running',
+            started_at: new Date().toISOString(),
+            paused_at: null,
+            elapsed_when_paused: 0
+          };
+        }
+        break;
+
+      case 'pause':
+        if (currentState.status === 'running' && currentState.started_at) {
+          const elapsed = Math.floor((Date.now() - new Date(currentState.started_at).getTime()) / 1000);
+          updateData = {
+            status: 'paused',
+            paused_at: new Date().toISOString(),
+            elapsed_when_paused: elapsed
+          };
+        }
+        break;
+
+      case 'stop':
+        updateData = {
+          status: 'stopped',
+          started_at: null,
+          paused_at: null,
+          elapsed_when_paused: 0
+        };
+        break;
+
+      case 'next':
+        // Move to next rotation
+        const nextRotation = (currentState.rotation_number || 1) + 1;
+        updateData = {
+          rotation_number: nextRotation,
+          status: 'stopped',
+          started_at: null,
+          paused_at: null,
+          elapsed_when_paused: 0
+        };
+        break;
+
+      case 'reset':
+        // Reset current rotation
+        updateData = {
+          status: 'stopped',
+          started_at: null,
+          paused_at: null,
+          elapsed_when_paused: 0
+        };
+        break;
+
+      case 'update':
+        // Direct updates (for settings changes)
+        updateData = updates;
+        break;
+
+      default:
+        return NextResponse.json({ success: false, error: 'Invalid action' }, { status: 400 });
+    }
+
+    const { data, error } = await supabase
+      .from('lab_timer_state')
+      .update(updateData)
+      .eq('lab_day_id', labDayId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    return NextResponse.json({
+      success: true,
+      timer: data,
+      serverTime: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Error updating timer state:', error);
+    return NextResponse.json({ success: false, error: 'Failed to update timer state' }, { status: 500 });
+  }
+}

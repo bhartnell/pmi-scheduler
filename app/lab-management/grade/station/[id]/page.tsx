@@ -19,6 +19,7 @@ import {
   ExternalLink,
   ClipboardCheck
 } from 'lucide-react';
+import TimerBanner from '@/components/TimerBanner';
 
 // Types
 interface Student {
@@ -392,6 +393,14 @@ export default function GradeStationPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+      {/* Timer Banner - shows synchronized timer for all instructors */}
+      {station?.lab_day?.id && (
+        <TimerBanner
+          labDayId={station.lab_day.id}
+          numRotations={4}
+        />
+      )}
+
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-10">
         <div className="max-w-2xl mx-auto px-4 py-3">
@@ -431,7 +440,7 @@ export default function GradeStationPage() {
         </div>
       </div>
 
-      <main className="max-w-2xl mx-auto px-4 py-4 space-y-4">
+      <main className="max-w-2xl mx-auto px-4 py-4 space-y-4 pb-20">
         {/* Skills Station Header & Materials */}
         {station.station_type === 'skills' && (
           <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">

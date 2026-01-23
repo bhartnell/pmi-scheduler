@@ -1147,9 +1147,11 @@ export default function LabDayPage() {
       {/* Lab Timer */}
       {showTimer && (
         <LabTimer
+          labDayId={labDayId}
           numRotations={labDay.num_rotations}
           rotationMinutes={labDay.rotation_duration}
           onClose={() => setShowTimer(false)}
+          isController={true}
         />
       )}
 
