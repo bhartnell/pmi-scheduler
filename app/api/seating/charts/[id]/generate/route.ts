@@ -218,26 +218,41 @@ function generateSeating(
     return prioritized;
   };
 
-  // Place students by priority, filling front-to-back
+  // Helper to count students at a table
+  const getTableOccupancy = (tableNum: number): number => {
+    return 3 - getAvailableSeats(tableNum).length;
+  };
+
+  // Place students by priority, spreading across tables to avoid clustering
   const placeByPriority = (prioritizedList: PrioritizedStudent[]) => {
     for (const ps of prioritizedList) {
       if (studentPlaced.has(ps.student.id)) continue;
 
-      // Determine table order based on preferred side
-      // Balance left/right distribution while maintaining side preferences
-      let tableOrder: number[];
+      // Determine base table order based on preferred side
+      let baseTableOrder: number[];
       if (ps.preferredSide === 'left') {
-        // Independent learners: start left, alternate right, for balanced distribution
-        // Front-to-back alternating: left, right, left, right...
-        tableOrder = [1, 2, 3, 4, 5, 6, 7, 8];
+        // Independent learners: start left, alternate right
+        baseTableOrder = [1, 2, 3, 4, 5, 6, 7, 8];
       } else if (ps.preferredSide === 'right') {
-        // Social learners: start right, alternate left, for balanced distribution
-        // Pattern: right then left, by row (2,1, 4,3, 6,5, 8,7)
-        tableOrder = [2, 1, 4, 3, 6, 5, 8, 7];
+        // Social learners: start right, alternate left
+        baseTableOrder = [2, 1, 4, 3, 6, 5, 8, 7];
       } else {
-        // No preference: fill front to back, naturally alternates
-        tableOrder = [1, 2, 3, 4, 5, 6, 7, 8];
+        // No preference: fill front to back
+        baseTableOrder = [1, 2, 3, 4, 5, 6, 7, 8];
       }
+
+      // Sort tables by occupancy (prefer tables with fewer students to spread out)
+      // This prevents clustering of same-type students
+      const tableOrder = [...baseTableOrder].sort((a, b) => {
+        const occA = getTableOccupancy(a);
+        const occB = getTableOccupancy(b);
+        // If occupancy is same, maintain base order
+        if (occA === occB) {
+          return baseTableOrder.indexOf(a) - baseTableOrder.indexOf(b);
+        }
+        // Otherwise, prefer less occupied tables
+        return occA - occB;
+      });
 
       let placed = false;
 

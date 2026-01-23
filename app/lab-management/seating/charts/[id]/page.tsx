@@ -94,6 +94,7 @@ export default function SeatingChartBuilderPage() {
   const [hasChanges, setHasChanges] = useState(false);
   const [draggedStudent, setDraggedStudent] = useState<Student | null>(null);
   const [dragSource, setDragSource] = useState<{ table: number; seat: number } | 'unassigned' | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ student: Student; x: number; y: number } | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [showWarnings, setShowWarnings] = useState(false);
   const [generationStats, setGenerationStats] = useState<any>(null);
@@ -109,6 +110,15 @@ export default function SeatingChartBuilderPage() {
       fetchChart();
     }
   }, [session, chartId]);
+
+  // Close context menu on click elsewhere
+  useEffect(() => {
+    const handleClick = () => setContextMenu(null);
+    if (contextMenu) {
+      document.addEventListener('click', handleClick);
+      return () => document.removeEventListener('click', handleClick);
+    }
+  }, [contextMenu]);
 
   const fetchChart = async () => {
     setLoading(true);
@@ -172,22 +182,47 @@ export default function SeatingChartBuilderPage() {
   const handleDrop = (tableNumber: number, seatPosition: number, rowNumber: number, isOverflow: boolean = false) => {
     if (!draggedStudent) return;
 
-    // Remove student from previous position
-    let newAssignments = assignments.filter(a => a.student_id !== draggedStudent.id);
-
-    // Remove any student currently in target seat
+    // Get the student currently at target seat (if any)
     const existingStudent = getStudentAtSeat(tableNumber, seatPosition, isOverflow);
+
+    // Start with all assignments except the dragged student
+    let newAssignments = assignments.filter(a => a.student_id !== draggedStudent.id);
+    let newUnassigned = [...unassignedStudents];
+
+    // Handle SWAP or DISPLACEMENT
     if (existingStudent) {
+      // Remove existing student from target seat
       newAssignments = newAssignments.filter(
         a => !(a.table_number === tableNumber && a.seat_position === seatPosition && a.is_overflow === isOverflow)
       );
-      // Add displaced student to unassigned
-      if (!unassignedStudents.find(s => s.id === existingStudent.id)) {
-        setUnassignedStudents([...unassignedStudents, existingStudent]);
+
+      // If dragged student came from a seat, SWAP them
+      if (dragSource && dragSource !== 'unassigned') {
+        const sourceTable = dragSource.table;
+        const sourceSeat = dragSource.seat;
+
+        // Find source row (for regular tables)
+        const sourceRow = sourceTable === 0 ? 5 : sourceTable <= 2 ? 1 : sourceTable <= 4 ? 2 : sourceTable <= 6 ? 3 : 4;
+        const sourceIsOverflow = sourceTable === 0;
+
+        // Put displaced student in dragged student's original seat
+        newAssignments.push({
+          student_id: existingStudent.id,
+          table_number: sourceTable,
+          seat_position: sourceSeat,
+          row_number: sourceRow,
+          is_overflow: sourceIsOverflow,
+          student: existingStudent,
+        });
+      } else {
+        // Dragged from unassigned - move displaced student to unassigned
+        if (!newUnassigned.find(s => s.id === existingStudent.id)) {
+          newUnassigned.push(existingStudent);
+        }
       }
     }
 
-    // Add new assignment
+    // Place dragged student at target seat
     newAssignments.push({
       student_id: draggedStudent.id,
       table_number: tableNumber,
@@ -197,11 +232,11 @@ export default function SeatingChartBuilderPage() {
       student: draggedStudent,
     });
 
+    // Remove dragged student from unassigned if it was there
+    newUnassigned = newUnassigned.filter(s => s.id !== draggedStudent.id);
+
     setAssignments(newAssignments);
-
-    // Remove from unassigned if it was there
-    setUnassignedStudents(unassignedStudents.filter(s => s.id !== draggedStudent.id));
-
+    setUnassignedStudents(newUnassigned);
     setHasChanges(true);
     setDraggedStudent(null);
     setDragSource(null);
@@ -221,6 +256,24 @@ export default function SeatingChartBuilderPage() {
     setHasChanges(true);
     setDraggedStudent(null);
     setDragSource(null);
+  };
+
+  const handleContextMenu = (e: React.MouseEvent, student: Student) => {
+    e.preventDefault();
+    setContextMenu({ student, x: e.clientX, y: e.clientY });
+  };
+
+  const handleUnassignFromContextMenu = (student: Student) => {
+    // Remove from assignments
+    setAssignments(assignments.filter(a => a.student_id !== student.id));
+
+    // Add to unassigned
+    if (!unassignedStudents.find(s => s.id === student.id)) {
+      setUnassignedStudents([...unassignedStudents, student]);
+    }
+
+    setHasChanges(true);
+    setContextMenu(null);
   };
 
   const handleSave = async () => {
@@ -568,6 +621,7 @@ export default function SeatingChartBuilderPage() {
                                   <div
                                     draggable
                                     onDragStart={() => handleDragStart(student, { table: tableNum, seat })}
+                                    onContextMenu={(e) => handleContextMenu(e, student)}
                                     className="w-full h-full flex flex-col items-center justify-center cursor-move"
                                   >
                                     {/* Photo or Initials */}
@@ -646,6 +700,7 @@ export default function SeatingChartBuilderPage() {
                           <div
                             draggable
                             onDragStart={() => handleDragStart(student, { table: 0, seat })}
+                            onContextMenu={(e) => handleContextMenu(e, student)}
                             className="w-full h-full flex flex-col items-center justify-center cursor-move"
                           >
                             <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 mb-1">
@@ -783,6 +838,22 @@ export default function SeatingChartBuilderPage() {
           </div>
         </div>
       </main>
+
+      {/* Context Menu */}
+      {contextMenu && (
+        <div
+          className="fixed bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg py-1 z-50"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+        >
+          <button
+            onClick={() => handleUnassignFromContextMenu(contextMenu.student)}
+            className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+          >
+            <X className="w-4 h-4" />
+            Unassign {contextMenu.student.first_name} {contextMenu.student.last_name}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
