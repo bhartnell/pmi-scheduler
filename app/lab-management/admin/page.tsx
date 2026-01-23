@@ -121,13 +121,6 @@ export default function AdminPage() {
       color: 'bg-blue-500'
     },
     {
-      href: '/lab-management/admin/lab-groups',
-      icon: Users,
-      title: 'Lab Groups',
-      description: 'Organize students into lab groups (Group A, B, C, D) for grading',
-      color: 'bg-green-500'
-    },
-    {
       href: '/lab-management/students',
       icon: UserCog,
       title: 'Student Roster',

@@ -245,12 +245,6 @@ export default function AdminPage() {
               Manage Cohorts
             </Link>
             <Link
-              href="/lab-management/admin/lab-groups"
-              className="px-3 py-1.5 bg-white dark:bg-gray-800 rounded-lg shadow text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
-            >
-              Lab Groups
-            </Link>
-            <Link
               href="/lab-management/students"
               className="px-3 py-1.5 bg-white dark:bg-gray-800 rounded-lg shadow text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
             >
