@@ -31,9 +31,21 @@ export async function GET(request: NextRequest) {
       timer: data || null,
       serverTime: new Date().toISOString() // Include server time for sync
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching timer state:', error);
-    return NextResponse.json({ success: false, error: 'Failed to fetch timer state' }, { status: 500 });
+    // Check if table doesn't exist
+    if (error?.code === '42P01' || error?.message?.includes('does not exist')) {
+      return NextResponse.json({
+        success: true,
+        timer: null,
+        tableExists: false,
+        error: 'Timer table not yet created - run migration'
+      });
+    }
+    return NextResponse.json({
+      success: false,
+      error: error?.message || 'Failed to fetch timer state'
+    }, { status: 500 });
   }
 }
 

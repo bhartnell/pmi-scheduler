@@ -42,6 +42,7 @@ export default function TimerBanner({
   const [debriefAlertShown, setDebriefAlertShown] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const [settingReady, setSettingReady] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -125,15 +126,22 @@ export default function TimerBanner({
 
       if (data.success) {
         setIsConnected(true);
+        setConnectionError(null);
         if (data.timer) {
           setTimerState(data.timer);
+        } else {
+          // No timer record yet - that's OK, waiting for coordinator to start
+          setTimerState(null);
         }
       } else {
         setIsConnected(false);
+        setConnectionError(data.error || 'API returned error');
+        console.error('Timer API error:', data.error);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching timer:', error);
       setIsConnected(false);
+      setConnectionError(error?.message || 'Network error');
     }
   }, [labDayId]);
 
@@ -350,20 +358,26 @@ export default function TimerBanner({
   // Show waiting state if timer hasn't started
   if (hasNotStarted || !timerState) {
     return (
-      <div className="fixed bottom-0 left-0 right-0 z-50 bg-gray-800 text-white shadow-lg">
+      <div className={`fixed bottom-0 left-0 right-0 z-50 shadow-lg ${isConnected ? 'bg-gray-800' : 'bg-red-900'} text-white`}>
         <div className="max-w-2xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-3">
             {/* Left: Waiting message */}
             <div className="flex items-center gap-3">
               <Clock className="w-6 h-6 text-gray-400" />
               <div>
-                <div className="font-semibold text-lg">WAITING FOR LAB TO START</div>
-                <div className="text-sm text-gray-400">Lab coordinator will start the timer</div>
+                <div className="font-semibold text-lg">
+                  {isConnected ? 'WAITING FOR LAB TO START' : 'CONNECTION ISSUE'}
+                </div>
+                <div className="text-sm text-gray-400">
+                  {isConnected
+                    ? 'Lab coordinator will start the timer'
+                    : connectionError || 'Unable to connect to timer server'}
+                </div>
               </div>
             </div>
 
-            {/* Right: Ready toggle */}
-            {stationId && userEmail && (
+            {/* Right: Ready toggle - only show if connected */}
+            {isConnected && stationId && userEmail && (
               <div className="flex items-center gap-3">
                 <span className="text-sm text-gray-400">Your Status:</span>
                 <button
@@ -392,7 +406,17 @@ export default function TimerBanner({
 
             {/* Connection status */}
             <div className={`flex items-center gap-1 text-sm ${isConnected ? 'text-green-400' : 'text-red-400'}`}>
-              {isConnected ? <Wifi className="w-4 h-4" /> : <WifiOff className="w-4 h-4" />}
+              {isConnected ? (
+                <>
+                  <Wifi className="w-4 h-4" />
+                  <span>Connected</span>
+                </>
+              ) : (
+                <>
+                  <WifiOff className="w-4 h-4" />
+                  <span>Disconnected</span>
+                </>
+              )}
             </div>
           </div>
         </div>

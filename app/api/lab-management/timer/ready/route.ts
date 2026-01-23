@@ -41,9 +41,21 @@ export async function GET(request: NextRequest) {
       readyStatuses: data || [],
       allStations: allStations || []
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching ready statuses:', error);
-    return NextResponse.json({ success: false, error: 'Failed to fetch ready statuses' }, { status: 500 });
+    // Handle table not existing
+    if (error?.code === '42P01' || error?.message?.includes('does not exist')) {
+      return NextResponse.json({
+        success: true,
+        readyStatuses: [],
+        allStations: [],
+        tableExists: false
+      });
+    }
+    return NextResponse.json({
+      success: false,
+      error: error?.message || 'Failed to fetch ready statuses'
+    }, { status: 500 });
   }
 }
 

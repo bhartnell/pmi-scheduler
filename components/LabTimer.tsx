@@ -172,8 +172,13 @@ export default function LabTimer({
         if (data.timer) {
           setTimerState(data.timer);
         }
+        // Log if table doesn't exist yet
+        if (data.tableExists === false) {
+          console.warn('Timer table not created - run migration: 20260123_lab_timer_state.sql');
+        }
       } else {
         setIsConnected(false);
+        console.error('Timer API error:', data.error);
       }
     } catch (error) {
       console.error('Error fetching timer:', error);
