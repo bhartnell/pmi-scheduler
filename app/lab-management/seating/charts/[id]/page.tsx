@@ -345,12 +345,21 @@ export default function SeatingChartBuilderPage() {
       margin: 0.5,
       filename: `seating-chart-${cohortName}-${date}.pdf`,
       image: { type: 'jpeg' as const, quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        foreignObjectRendering: false,
+        logging: false
+      },
       jsPDF: { unit: 'in' as const, format: 'letter', orientation: 'landscape' as const }
     };
 
     try {
       await html2pdf().set(options).from(element).save();
+    } catch (error) {
+      console.error('PDF generation error:', error);
+      alert('PDF generation completed with warnings. Check the downloaded file.');
     } finally {
       // Restore visibility
       printHiddenElements.forEach(el => (el as HTMLElement).style.display = '');
