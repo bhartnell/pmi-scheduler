@@ -21,8 +21,10 @@ import {
   Download,
   X,
   Save,
-  Trash2
+  Trash2,
+  Timer
 } from 'lucide-react';
+import LabTimer from '@/components/LabTimer';
 
 interface LabDay {
   id: string;
@@ -129,6 +131,7 @@ export default function LabDayPage() {
 
   const [labDay, setLabDay] = useState<LabDay | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showTimer, setShowTimer] = useState(false);
 
   // Edit station modal state
   const [editingStation, setEditingStation] = useState<Station | null>(null);
@@ -641,6 +644,13 @@ export default function LabDayPage() {
             </div>
             <div className="flex gap-2 print:hidden">
               <button
+                onClick={() => setShowTimer(true)}
+                className="inline-flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+              >
+                <Timer className="w-4 h-4" />
+                Start Timer
+              </button>
+              <button
                 onClick={handlePrint}
                 className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
               >
@@ -1132,6 +1142,15 @@ export default function LabDayPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Lab Timer */}
+      {showTimer && (
+        <LabTimer
+          numRotations={labDay.num_rotations}
+          rotationMinutes={labDay.rotation_duration}
+          onClose={() => setShowTimer(false)}
+        />
       )}
 
       {/* Skills Selection Modal */}
