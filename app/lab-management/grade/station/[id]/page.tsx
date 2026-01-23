@@ -242,10 +242,31 @@ export default function GradeStationPage() {
 
   const fetchLabGroups = async (cohortId: string) => {
     try {
-      const res = await fetch(`/api/lab-management/lab-groups?cohortId=${cohortId}`);
+      // Fetch groups from student_groups (created in Cohort Manager)
+      const res = await fetch(`/api/lab-management/groups?cohortId=${cohortId}`);
       const data = await res.json();
-      if (data.success) {
-        setLabGroups(data.groups || []);
+      if (data.success && data.groups) {
+        // Fetch members for each group
+        const groupsWithMembers = await Promise.all(
+          data.groups.map(async (group: any) => {
+            const membersRes = await fetch(`/api/lab-management/groups/${group.id}/members`);
+            const membersData = await membersRes.json();
+            return {
+              id: group.id,
+              name: group.name,
+              members: (membersData.members || []).map((m: any) => ({
+                id: m.id,
+                student: {
+                  id: m.id,
+                  first_name: m.first_name,
+                  last_name: m.last_name,
+                  photo_url: m.photo_url
+                }
+              }))
+            };
+          })
+        );
+        setLabGroups(groupsWithMembers);
       }
     } catch (error) {
       console.error('Error fetching lab groups:', error);
@@ -734,7 +755,7 @@ export default function GradeStationPage() {
               <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
                 <p className="text-sm text-yellow-800 dark:text-yellow-300">
                   No lab groups found for this cohort.
-                  <Link href="/lab-management/admin/lab-groups" className="underline ml-1">
+                  <Link href={`/lab-management/cohorts/${station.lab_day.cohort.id}/groups`} className="underline ml-1">
                     Create groups first
                   </Link>
                 </p>
