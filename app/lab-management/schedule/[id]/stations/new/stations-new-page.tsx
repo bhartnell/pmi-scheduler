@@ -73,9 +73,13 @@ export default function AddStationPage() {
 
   // Form state
   const [stationType, setStationType] = useState<'scenario' | 'skills' | 'documentation'>('scenario');
+  const [customTitle, setCustomTitle] = useState('');
   const [scenarioId, setScenarioId] = useState('');
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [customSkills, setCustomSkills] = useState<string[]>([]);
+  const [skillSheetUrl, setSkillSheetUrl] = useState('');
+  const [instructionsUrl, setInstructionsUrl] = useState('');
+  const [stationNotes, setStationNotes] = useState('');
   const [instructorName, setInstructorName] = useState('');
   const [instructorEmail, setInstructorEmail] = useState('');
   const [selectedInstructor, setSelectedInstructor] = useState('');
@@ -200,6 +204,10 @@ export default function AddStationPage() {
           station_number: getNextStationNumber(),
           station_type: stationType,
           scenario_id: stationType === 'scenario' ? scenarioId || null : null,
+          custom_title: customTitle || null,
+          skill_sheet_url: skillSheetUrl || null,
+          instructions_url: instructionsUrl || null,
+          station_notes: stationNotes || null,
           instructor_name: instructorName || null,
           instructor_email: instructorEmail || null,
           room: room || null,
@@ -351,6 +359,23 @@ export default function AddStationPage() {
             </div>
           </div>
 
+          {/* Station Name */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Station Name
+            </label>
+            <input
+              type="text"
+              value={customTitle}
+              onChange={(e) => setCustomTitle(e.target.value)}
+              placeholder="e.g., PM14 01/23/26 - Chest Pain Scenario"
+              className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Descriptive name shown on dashboard and schedule (optional - auto-generates if left blank)
+            </p>
+          </div>
+
           {/* Scenario Selection (for scenario type) */}
           {stationType === 'scenario' && (
             <div>
@@ -443,6 +468,62 @@ export default function AddStationPage() {
               </p>
             </div>
           )}
+
+          {/* Station Documentation Section */}
+          <div className="space-y-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="flex items-center gap-2 mb-2">
+              <FileText className="w-5 h-5 text-gray-600" />
+              <h3 className="text-sm font-semibold text-gray-900">Station Documentation</h3>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Skill Sheet URL
+              </label>
+              <input
+                type="url"
+                value={skillSheetUrl}
+                onChange={(e) => setSkillSheetUrl(e.target.value)}
+                placeholder="https://drive.google.com/..."
+                className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Link to skill sheet or reference document
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Instructions URL
+              </label>
+              <input
+                type="url"
+                value={instructionsUrl}
+                onChange={(e) => setInstructionsUrl(e.target.value)}
+                placeholder="https://drive.google.com/..."
+                className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Link to instructor instructions or setup guide
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Station Notes
+              </label>
+              <textarea
+                value={stationNotes}
+                onChange={(e) => setStationNotes(e.target.value)}
+                placeholder="Equipment needed, setup instructions, special considerations..."
+                rows={3}
+                className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Internal notes about station setup, equipment, or special requirements
+              </p>
+            </div>
+          </div>
 
           {/* Instructor */}
           <div>

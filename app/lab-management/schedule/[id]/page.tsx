@@ -58,6 +58,9 @@ interface Station {
   };
   skill_name: string | null;
   custom_title: string | null;
+  skill_sheet_url: string | null;
+  instructions_url: string | null;
+  station_notes: string | null;
   instructor_name: string | null;
   instructor_email: string | null;
   room: string | null;
@@ -138,11 +141,15 @@ export default function LabDayPage() {
   const [deletingStation, setDeletingStation] = useState(false);
   const [skillsModalOpen, setSkillsModalOpen] = useState(false);
   const [skillSearch, setSkillSearch] = useState('');
+  const [editCustomSkills, setEditCustomSkills] = useState<string[]>([]);
   const [editForm, setEditForm] = useState({
     station_type: 'scenario' as string,
     scenario_id: '',
     selectedSkills: [] as string[],
     custom_title: '',
+    skill_sheet_url: '',
+    instructions_url: '',
+    station_notes: '',
     instructor_name: '',
     instructor_email: '',
     room: '',
@@ -280,10 +287,13 @@ export default function LabDayPage() {
   const openEditModal = async (station: Station) => {
     setEditingStation(station);
 
-    // Fetch station skills if it's a skills station
+    // Fetch station skills and custom skills if it's a skills station
     let stationSkillIds: string[] = [];
+    let customSkillsList: string[] = [];
+
     if (station.station_type === 'skills') {
       try {
+        // Fetch library skills
         const res = await fetch(`/api/lab-management/stations?labDayId=${labDayId}`);
         const data = await res.json();
         if (data.success) {
@@ -291,6 +301,13 @@ export default function LabDayPage() {
           if (fullStation?.station_skills) {
             stationSkillIds = fullStation.station_skills.map((ss: any) => ss.skill?.id).filter(Boolean);
           }
+        }
+
+        // Fetch custom skills
+        const customRes = await fetch(`/api/lab-management/custom-skills?stationId=${station.id}`);
+        const customData = await customRes.json();
+        if (customData.success && customData.customSkills) {
+          customSkillsList = customData.customSkills.map((cs: any) => cs.name);
         }
       } catch (error) {
         console.error('Error fetching station skills:', error);
@@ -302,11 +319,16 @@ export default function LabDayPage() {
       scenario_id: station.scenario?.id || '',
       selectedSkills: stationSkillIds,
       custom_title: station.custom_title || '',
+      skill_sheet_url: station.skill_sheet_url || '',
+      instructions_url: station.instructions_url || '',
+      station_notes: station.station_notes || '',
       instructor_name: station.instructor_name || '',
       instructor_email: station.instructor_email || '',
       room: station.room || '',
       notes: station.notes || ''
     });
+
+    setEditCustomSkills(customSkillsList);
 
     // Set selectedInstructor based on existing instructor data
     if (station.instructor_name && station.instructor_email) {
@@ -383,6 +405,20 @@ export default function LabDayPage() {
     }
   };
 
+  const addEditCustomSkill = () => {
+    setEditCustomSkills([...editCustomSkills, '']);
+  };
+
+  const updateEditCustomSkill = (index: number, value: string) => {
+    const updated = [...editCustomSkills];
+    updated[index] = value;
+    setEditCustomSkills(updated);
+  };
+
+  const removeEditCustomSkill = (index: number) => {
+    setEditCustomSkills(editCustomSkills.filter((_, i) => i !== index));
+  };
+
   // Group skills by category for the modal
   const filteredSkills = skills.filter(skill =>
     !skillSearch ||
@@ -413,6 +449,9 @@ export default function LabDayPage() {
           station_type: editForm.station_type,
           scenario_id: editForm.station_type === 'scenario' ? (editForm.scenario_id || null) : null,
           custom_title: editForm.custom_title || null,
+          skill_sheet_url: editForm.skill_sheet_url || null,
+          instructions_url: editForm.instructions_url || null,
+          station_notes: editForm.station_notes || null,
           instructor_name: editForm.instructor_name || null,
           instructor_email: editForm.instructor_email || null,
           room: editForm.room || null,
@@ -427,7 +466,7 @@ export default function LabDayPage() {
         return;
       }
 
-      // If skills station, update skill links
+      // If skills station, update skill links and custom skills
       if (editForm.station_type === 'skills') {
         // Delete existing skill links
         await fetch(`/api/lab-management/station-skills?stationId=${editingStation.id}`, {
@@ -444,6 +483,31 @@ export default function LabDayPage() {
               skill_id: skillId
             })
           });
+        }
+
+        // Delete existing custom skills
+        const customSkillsRes = await fetch(`/api/lab-management/custom-skills?stationId=${editingStation.id}`);
+        const customSkillsData = await customSkillsRes.json();
+        if (customSkillsData.success && customSkillsData.customSkills) {
+          for (const customSkill of customSkillsData.customSkills) {
+            await fetch(`/api/lab-management/custom-skills?id=${customSkill.id}`, {
+              method: 'DELETE'
+            });
+          }
+        }
+
+        // Add new custom skills
+        for (const customSkill of editCustomSkills) {
+          if (customSkill.trim()) {
+            await fetch('/api/lab-management/custom-skills', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                station_id: editingStation.id,
+                name: customSkill.trim()
+              })
+            });
+          }
         }
       }
 
@@ -819,33 +883,70 @@ export default function LabDayPage() {
 
               {/* Skills Selection (for skills type) */}
               {editForm.station_type === 'skills' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Skills
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setSkillsModalOpen(true)}
-                    className="w-full px-4 py-3 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:border-blue-400 hover:text-blue-600 transition-colors"
-                  >
-                    <ClipboardCheck className="w-5 h-5 mx-auto mb-1" />
-                    {editForm.selectedSkills.length > 0
-                      ? `${editForm.selectedSkills.length} skills selected - Click to modify`
-                      : 'Click to select skills from library'
-                    }
-                  </button>
-                  {editForm.selectedSkills.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {editForm.selectedSkills.map(skillId => {
-                        const skill = skills.find(s => s.id === skillId);
-                        return skill ? (
-                          <span key={skillId} className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-sm rounded">
-                            {skill.name}
-                          </span>
-                        ) : null;
-                      })}
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Skills from Library
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setSkillsModalOpen(true)}
+                      className="w-full px-4 py-3 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:border-blue-400 hover:text-blue-600 transition-colors"
+                    >
+                      <ClipboardCheck className="w-5 h-5 mx-auto mb-1" />
+                      {editForm.selectedSkills.length > 0
+                        ? `${editForm.selectedSkills.length} skills selected - Click to modify`
+                        : 'Click to select skills from library'
+                      }
+                    </button>
+                    {editForm.selectedSkills.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {editForm.selectedSkills.map(skillId => {
+                          const skill = skills.find(s => s.id === skillId);
+                          return skill ? (
+                            <span key={skillId} className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 text-sm rounded">
+                              {skill.name}
+                            </span>
+                          ) : null;
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Custom Skills */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Custom Skills
+                    </label>
+                    <div className="space-y-2">
+                      {editCustomSkills.map((skill, index) => (
+                        <div key={index} className="flex gap-2">
+                          <input
+                            type="text"
+                            value={skill}
+                            onChange={(e) => updateEditCustomSkill(index, e.target.value)}
+                            placeholder="Enter custom skill name"
+                            className="flex-1 px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeEditCustomSkill(index)}
+                            className="px-3 py-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={addEditCustomSkill}
+                        className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 flex items-center gap-1"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Add custom skill
+                      </button>
                     </div>
-                  )}
+                  </div>
                 </div>
               )}
 
@@ -857,6 +958,62 @@ export default function LabDayPage() {
                   </p>
                 </div>
               )}
+
+              {/* Station Documentation Section */}
+              <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-2 mb-2">
+                  <FileText className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Station Documentation</h3>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Skill Sheet URL
+                  </label>
+                  <input
+                    type="url"
+                    value={editForm.skill_sheet_url}
+                    onChange={(e) => setEditForm({ ...editForm, skill_sheet_url: e.target.value })}
+                    placeholder="https://drive.google.com/..."
+                    className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Link to skill sheet or reference document
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Instructions URL
+                  </label>
+                  <input
+                    type="url"
+                    value={editForm.instructions_url}
+                    onChange={(e) => setEditForm({ ...editForm, instructions_url: e.target.value })}
+                    placeholder="https://drive.google.com/..."
+                    className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Link to instructor instructions or setup guide
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Station Notes
+                  </label>
+                  <textarea
+                    value={editForm.station_notes}
+                    onChange={(e) => setEditForm({ ...editForm, station_notes: e.target.value })}
+                    placeholder="Equipment needed, setup instructions, special considerations..."
+                    rows={3}
+                    className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  />
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Internal notes about station setup, equipment, or special requirements
+                  </p>
+                </div>
+              </div>
 
               {/* Instructor */}
               <div>
