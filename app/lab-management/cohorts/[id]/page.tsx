@@ -375,7 +375,7 @@ export default function CohortHubPage() {
             />
             <ToolCard
               icon={Users}
-              title="Study Groups"
+              title="Lab Groups"
               status={stats?.groupsCount ? `${stats.groupsCount} groups` : 'Not created'}
               warning={missingLearningStyles > 0 ? `Need ${missingLearningStyles} more learning styles` : null}
               actionLabel={stats?.groupsCount ? 'View Groups' : 'Create Groups'}

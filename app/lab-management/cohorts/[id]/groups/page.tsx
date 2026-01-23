@@ -60,7 +60,7 @@ const STYLE_BADGES: Record<string, { bg: string; text: string; label: string }> 
   independent: { bg: 'bg-gray-500', text: 'text-white', label: 'I' },
 };
 
-export default function StudyGroupsPage() {
+export default function LabGroupsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const params = useParams();
@@ -470,7 +470,7 @@ export default function StudyGroupsPage() {
               {cohort.program.abbreviation} {cohort.cohort_number}
             </Link>
             <ChevronRight className="w-4 h-4" />
-            <span>Study Groups</span>
+            <span>Lab Groups</span>
           </div>
 
           <div className="flex items-center justify-between">
@@ -479,7 +479,7 @@ export default function StudyGroupsPage() {
                 <Users className="w-6 h-6 text-green-600 dark:text-green-400" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white">Study Groups</h1>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">Lab Groups</h1>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
                   {cohort.program.abbreviation} Group {cohort.cohort_number} • {allStudents.length} students
                 </p>
@@ -552,7 +552,7 @@ export default function StudyGroupsPage() {
         <div className="hidden print:block mb-6">
           <div className="flex justify-between items-start border-b-2 border-gray-800 pb-3">
             <div>
-              <h1 className="text-2xl font-bold">Study Groups</h1>
+              <h1 className="text-2xl font-bold">Lab Groups</h1>
               <p className="text-gray-600">
                 {cohort?.program.abbreviation} Group {cohort?.cohort_number} • {allStudents.length} students
               </p>
@@ -623,7 +623,7 @@ export default function StudyGroupsPage() {
             {groups.length === 0 ? (
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
                 <Users className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-                <p className="text-gray-500 dark:text-gray-400 mb-4">No study groups created yet</p>
+                <p className="text-gray-500 dark:text-gray-400 mb-4">No lab groups created yet</p>
                 <button
                   onClick={handleCreateGroup}
                   className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"

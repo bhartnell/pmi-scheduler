@@ -66,7 +66,7 @@ interface UpcomingLab {
     cohort_number: number;
     program: { abbreviation: string };
   };
-  stations_count: number;
+  stations: { id: string }[];
 }
 
 interface CurrentUser {
@@ -501,7 +501,7 @@ export default function LabManagementDashboard() {
                           {formatDate(lab.date)}
                           {lab.start_time && ` • ${formatTime(lab.start_time)}`}
                           {lab.start_time && lab.end_time && ` - ${formatTime(lab.end_time)}`}
-                          {' • '}{lab.stations_count || 0} stations
+                          {' • '}{lab.stations?.length || 0} stations
                         </div>
                       </div>
                       <ChevronRight className="w-5 h-5 text-gray-400 dark:text-gray-500" />
