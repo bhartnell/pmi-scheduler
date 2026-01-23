@@ -15,7 +15,10 @@ import {
   X,
   ChevronDown,
   Wifi,
-  WifiOff
+  WifiOff,
+  CheckCircle,
+  Circle,
+  Users
 } from 'lucide-react';
 
 interface LabTimerProps {
@@ -23,7 +26,7 @@ interface LabTimerProps {
   numRotations: number;
   rotationMinutes: number;
   onClose: () => void;
-  isController?: boolean; // If true, shows controls. If false, display only.
+  isController?: boolean;
 }
 
 interface TimerState {
@@ -38,6 +41,27 @@ interface TimerState {
   debrief_seconds: number;
   mode: 'countdown' | 'countup';
   updated_at: string;
+}
+
+interface ReadyStatus {
+  id: string;
+  station_id: string;
+  user_email: string;
+  user_name: string;
+  is_ready: boolean;
+  station?: {
+    id: string;
+    station_number: number;
+    station_type: string;
+    room_assignment: string | null;
+  };
+}
+
+interface Station {
+  id: string;
+  station_number: number;
+  station_type: string;
+  room_assignment: string | null;
 }
 
 export default function LabTimer({
@@ -57,6 +81,8 @@ export default function LabTimer({
   const [showRotateAlert, setShowRotateAlert] = useState(false);
   const [lastAlertRotation, setLastAlertRotation] = useState(0);
   const [debriefAlertShown, setDebriefAlertShown] = useState(false);
+  const [readyStatuses, setReadyStatuses] = useState<ReadyStatus[]>([]);
+  const [allStations, setAllStations] = useState<Station[]>([]);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -64,8 +90,45 @@ export default function LabTimer({
 
   const totalSeconds = rotationMinutes * 60;
 
-  // Play a beep sound
-  const playBeep = useCallback((frequency: number = 800, duration: number = 200, count: number = 1) => {
+  // Play a LOUD alert sound for rotation end
+  const playLoudAlert = useCallback(() => {
+    if (!soundEnabled) return;
+
+    try {
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      }
+
+      const ctx = audioContextRef.current;
+
+      // Play a series of loud beeps
+      const frequencies = [880, 1100, 880, 1100, 880];
+      frequencies.forEach((freq, i) => {
+        setTimeout(() => {
+          const oscillator = ctx.createOscillator();
+          const gainNode = ctx.createGain();
+
+          oscillator.connect(gainNode);
+          gainNode.connect(ctx.destination);
+
+          oscillator.frequency.value = freq;
+          oscillator.type = 'square'; // Harsher, louder sound
+
+          // LOUD - max volume
+          gainNode.gain.setValueAtTime(0.8, ctx.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.1, ctx.currentTime + 0.4);
+
+          oscillator.start(ctx.currentTime);
+          oscillator.stop(ctx.currentTime + 0.4);
+        }, i * 450);
+      });
+    } catch (e) {
+      console.warn('Audio not available:', e);
+    }
+  }, [soundEnabled]);
+
+  // Play a medium beep for warnings
+  const playWarningBeep = useCallback((count: number = 1) => {
     if (!soundEnabled) return;
 
     try {
@@ -83,15 +146,15 @@ export default function LabTimer({
           oscillator.connect(gainNode);
           gainNode.connect(ctx.destination);
 
-          oscillator.frequency.value = frequency;
+          oscillator.frequency.value = 600;
           oscillator.type = 'sine';
 
-          gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
-          gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration / 1000);
+          gainNode.gain.setValueAtTime(0.5, ctx.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
 
           oscillator.start(ctx.currentTime);
-          oscillator.stop(ctx.currentTime + duration / 1000);
-        }, i * (duration + 100));
+          oscillator.stop(ctx.currentTime + 0.3);
+        }, i * 400);
       }
     } catch (e) {
       console.warn('Audio not available:', e);
@@ -118,6 +181,21 @@ export default function LabTimer({
     }
   }, [labDayId]);
 
+  // Fetch ready statuses
+  const fetchReadyStatuses = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/lab-management/timer/ready?labDayId=${labDayId}`);
+      const data = await res.json();
+
+      if (data.success) {
+        setReadyStatuses(data.readyStatuses || []);
+        setAllStations(data.allStations || []);
+      }
+    } catch (error) {
+      console.error('Error fetching ready statuses:', error);
+    }
+  }, [labDayId]);
+
   // Initialize timer
   const initializeTimer = useCallback(async () => {
     try {
@@ -127,7 +205,7 @@ export default function LabTimer({
         body: JSON.stringify({
           labDayId,
           durationSeconds: totalSeconds,
-          debriefSeconds: 300, // 5 minutes default
+          debriefSeconds: 300,
           mode: 'countdown'
         })
       });
@@ -153,7 +231,6 @@ export default function LabTimer({
       const data = await res.json();
       if (data.success) {
         setTimerState(data.timer);
-        // Reset alert states on certain actions
         if (action === 'next' || action === 'reset' || action === 'stop') {
           setShowRotateAlert(false);
           setShowDebriefAlert(false);
@@ -169,7 +246,7 @@ export default function LabTimer({
   useEffect(() => {
     const init = async () => {
       await fetchTimerState();
-      // If no timer exists, create one (only if controller)
+      await fetchReadyStatuses();
       const res = await fetch(`/api/lab-management/timer?labDayId=${labDayId}`);
       const data = await res.json();
       if (data.success && !data.timer && isController) {
@@ -177,17 +254,20 @@ export default function LabTimer({
       }
     };
     init();
-  }, [labDayId, fetchTimerState, initializeTimer, isController]);
+  }, [labDayId, fetchTimerState, fetchReadyStatuses, initializeTimer, isController]);
 
   // Poll for updates
   useEffect(() => {
-    pollIntervalRef.current = setInterval(fetchTimerState, 1000);
+    pollIntervalRef.current = setInterval(() => {
+      fetchTimerState();
+      fetchReadyStatuses();
+    }, 1000);
     return () => {
       if (pollIntervalRef.current) {
         clearInterval(pollIntervalRef.current);
       }
     };
-  }, [fetchTimerState]);
+  }, [fetchTimerState, fetchReadyStatuses]);
 
   // Calculate display time from timer state
   useEffect(() => {
@@ -214,55 +294,54 @@ export default function LabTimer({
         const remaining = Math.max(0, duration - elapsed);
         setDisplaySeconds(remaining);
 
-        // Check for alerts
         const debriefTime = timerState.debrief_seconds || 300;
 
         // Debrief alert
         if (remaining <= debriefTime && remaining > 0 && !debriefAlertShown && timerState.status === 'running') {
           setShowDebriefAlert(true);
           setDebriefAlertShown(true);
-          playBeep(600, 300, 2);
+          playWarningBeep(2);
           setTimeout(() => setShowDebriefAlert(false), 5000);
         }
 
-        // Rotation end alert
+        // Rotation end alert - LOUD
         if (remaining <= 0 && timerState.status === 'running' && lastAlertRotation !== timerState.rotation_number) {
           setShowRotateAlert(true);
           setLastAlertRotation(timerState.rotation_number);
-          playBeep(1000, 500, 3);
+          playLoudAlert();
         }
 
         // Warning beeps
-        if (timerState.status === 'running' && [30, 10, 5].includes(remaining)) {
-          playBeep(500, 150, 1);
+        if (timerState.status === 'running') {
+          if (remaining === 60) playWarningBeep(1);
+          if (remaining === 30) playWarningBeep(2);
+          if (remaining === 10) playWarningBeep(3);
         }
       } else {
         setDisplaySeconds(Math.min(elapsed, duration));
 
-        // Count-up alerts
         const debriefTime = duration - (timerState.debrief_seconds || 300);
 
         if (elapsed >= debriefTime && !debriefAlertShown && timerState.status === 'running') {
           setShowDebriefAlert(true);
           setDebriefAlertShown(true);
-          playBeep(600, 300, 2);
+          playWarningBeep(2);
           setTimeout(() => setShowDebriefAlert(false), 5000);
         }
 
         if (elapsed >= duration && timerState.status === 'running' && lastAlertRotation !== timerState.rotation_number) {
           setShowRotateAlert(true);
           setLastAlertRotation(timerState.rotation_number);
-          playBeep(1000, 500, 3);
+          playLoudAlert();
         }
       }
     };
 
-    // Update immediately and then every 100ms for smooth display
     updateDisplay();
     const displayInterval = setInterval(updateDisplay, 100);
 
     return () => clearInterval(displayInterval);
-  }, [timerState, playBeep, debriefAlertShown, lastAlertRotation]);
+  }, [timerState, playWarningBeep, playLoudAlert, debriefAlertShown, lastAlertRotation]);
 
   // Reset debrief alert shown flag when rotation changes
   useEffect(() => {
@@ -353,16 +432,36 @@ export default function LabTimer({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isFullscreen, timerState, numRotations, isController]);
 
-  // Alert colors
+  // Get background color based on time/alerts
   const getBackgroundClass = () => {
     if (showRotateAlert) return 'bg-red-600 animate-pulse';
-    if (showDebriefAlert) return 'bg-yellow-500 animate-pulse';
+    if (showDebriefAlert) return 'bg-yellow-500';
+
+    if (!timerState || timerState.status === 'stopped') {
+      return 'bg-gray-900';
+    }
+
+    // Color based on time remaining
+    const remaining = timerState.mode === 'countdown' ? displaySeconds : (timerState.duration_seconds - displaySeconds);
+    if (remaining <= 60) return 'bg-red-700';
+    if (remaining <= 300) return 'bg-yellow-600';
     return 'bg-gray-900';
   };
+
+  // Get station ready status info
+  const getStationStatus = (station: Station) => {
+    const status = readyStatuses.find(s => s.station_id === station.id);
+    return status;
+  };
+
+  const readyCount = readyStatuses.filter(s => s.is_ready).length;
+  const totalStations = allStations.length;
+  const allReady = totalStations > 0 && readyCount === totalStations;
 
   const currentRotation = timerState?.rotation_number || 1;
   const isRunning = timerState?.status === 'running';
   const isPaused = timerState?.status === 'paused';
+  const isStopped = !timerState || timerState.status === 'stopped';
 
   return (
     <div
@@ -376,7 +475,6 @@ export default function LabTimer({
           <span className="text-lg font-medium">
             {isController ? 'Lab Timer (Controller)' : 'Lab Timer'}
           </span>
-          {/* Connection status */}
           <div className={`flex items-center gap-1 text-sm ${isConnected ? 'text-green-400' : 'text-red-400'}`}>
             {isConnected ? <Wifi className="w-4 h-4" /> : <WifiOff className="w-4 h-4" />}
             {isConnected ? 'Synced' : 'Disconnected'}
@@ -409,6 +507,68 @@ export default function LabTimer({
 
       {/* Main Timer Display */}
       <div className="flex-1 flex flex-col items-center justify-center p-8">
+        {/* Station Ready Status - Show when stopped/not started */}
+        {isController && isStopped && allStations.length > 0 && (
+          <div className="mb-8 w-full max-w-xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="flex items-center gap-2 text-lg font-medium">
+                <Users className="w-5 h-5" />
+                Station Status
+              </h3>
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                allReady ? 'bg-green-600' : 'bg-yellow-600'
+              }`}>
+                {readyCount} of {totalStations} ready
+              </span>
+            </div>
+            <div className="bg-gray-800 rounded-lg p-4 space-y-2">
+              {allStations.map(station => {
+                const status = getStationStatus(station);
+                const isStationReady = status?.is_ready;
+                return (
+                  <div
+                    key={station.id}
+                    className={`flex items-center justify-between p-3 rounded-lg ${
+                      isStationReady ? 'bg-green-900/30' : 'bg-red-900/30'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      {isStationReady ? (
+                        <CheckCircle className="w-5 h-5 text-green-500" />
+                      ) : (
+                        <Circle className="w-5 h-5 text-red-500" />
+                      )}
+                      <div>
+                        <div className="font-medium">
+                          Station {station.station_number}
+                          {station.room_assignment && (
+                            <span className="text-sm opacity-70 ml-2">({station.room_assignment})</span>
+                          )}
+                        </div>
+                        <div className="text-sm opacity-70">
+                          {station.station_type}
+                        </div>
+                      </div>
+                    </div>
+                    <div className={`text-sm ${isStationReady ? 'text-green-400' : 'text-red-400'}`}>
+                      {isStationReady ? (
+                        <span>Ready - {status?.user_name || status?.user_email?.split('@')[0]}</span>
+                      ) : (
+                        <span>Not Ready</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+              {allStations.length === 0 && (
+                <div className="text-center text-gray-400 py-4">
+                  No stations found for this lab day
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Alert Messages */}
         {showRotateAlert && (
           <div className="absolute top-1/4 text-6xl md:text-8xl font-bold text-white animate-bounce">

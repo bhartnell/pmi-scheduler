@@ -439,6 +439,9 @@ export default function GradeStationPage() {
       {station?.lab_day?.id && (
         <TimerBanner
           labDayId={station.lab_day.id}
+          stationId={stationId}
+          userEmail={session?.user?.email || undefined}
+          userName={session?.user?.name || undefined}
           numRotations={4}
         />
       )}
