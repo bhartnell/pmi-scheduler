@@ -143,6 +143,7 @@ export default function StudentDetailPage() {
   const [clinicalTasks, setClinicalTasks] = useState<ClinicalTasks | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [userRole, setUserRole] = useState<Role | null>(null);
@@ -179,6 +180,35 @@ export default function StudentDetailPage() {
       fetchLearningStyle();
     }
   }, [session, studentId]);
+
+  // Paste from clipboard event listener
+  useEffect(() => {
+    const handlePaste = async (e: ClipboardEvent) => {
+      // Only handle paste if we're not in an input/textarea
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+        return;
+      }
+
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.type.startsWith('image/')) {
+          e.preventDefault();
+          const file = item.getAsFile();
+          if (file) {
+            await uploadPhotoFile(file);
+          }
+          break;
+        }
+      }
+    };
+
+    document.addEventListener('paste', handlePaste);
+    return () => document.removeEventListener('paste', handlePaste);
+  }, [studentId]); // Re-attach if studentId changes
 
   const fetchCurrentUser = async () => {
     try {
@@ -309,10 +339,8 @@ export default function StudentDetailPage() {
     fileInputRef.current?.click();
   };
 
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  // Upload photo from File object (used by file input, drag-drop, and paste)
+  const uploadPhotoFile = async (file: File) => {
     // Validate file type
     const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
     if (!validTypes.includes(file.type)) {
@@ -347,6 +375,36 @@ export default function StudentDetailPage() {
       alert('Failed to upload photo');
     }
     setUploading(false);
+  };
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await uploadPhotoFile(file);
+  };
+
+  // Drag and drop handlers
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      await uploadPhotoFile(file);
+    }
   };
 
   const handleSave = async () => {
@@ -444,7 +502,14 @@ export default function StudentDetailPage() {
             <div className="flex flex-col items-center">
               <div
                 onClick={handlePhotoClick}
-                className="relative w-32 h-32 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 cursor-pointer group"
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                className={`relative w-32 h-32 rounded-full overflow-hidden cursor-pointer group transition-all ${
+                  dragActive
+                    ? 'bg-blue-100 dark:bg-blue-900 border-4 border-blue-500 border-dashed scale-105'
+                    : 'bg-gray-200 dark:bg-gray-700'
+                }`}
               >
                 {student.photo_url ? (
                   <img src={student.photo_url} alt="" className="w-full h-full object-cover" />
@@ -455,9 +520,16 @@ export default function StudentDetailPage() {
                     </span>
                   </div>
                 )}
-                <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className={`absolute inset-0 bg-black bg-opacity-50 flex flex-col items-center justify-center transition-opacity ${
+                  dragActive || uploading ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                }`}>
                   {uploading ? (
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                  ) : dragActive ? (
+                    <>
+                      <Upload className="w-8 h-8 text-white mb-1" />
+                      <span className="text-white text-xs font-medium">Drop photo</span>
+                    </>
                   ) : (
                     <Camera className="w-8 h-8 text-white" />
                   )}
@@ -477,6 +549,9 @@ export default function StudentDetailPage() {
                 <Upload className="w-4 h-4" />
                 {student.photo_url ? 'Change Photo' : 'Add Photo'}
               </button>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 text-center">
+                Drag & drop, paste (Ctrl+V), or click
+              </p>
             </div>
 
             {/* Info */}
