@@ -195,6 +195,9 @@ export default function InternshipDetailPage() {
   const [hasChanges, setHasChanges] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showAddPreceptorModal, setShowAddPreceptorModal] = useState(false);
+  const [newPreceptor, setNewPreceptor] = useState({ first_name: '', last_name: '', email: '', phone: '', agency_name: '' });
+  const [addingPreceptor, setAddingPreceptor] = useState(false);
 
   // Form state with all fields
   const [formData, setFormData] = useState<Record<string, any>>({});
@@ -373,6 +376,45 @@ export default function InternshipDetailPage() {
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleAddPreceptor = async () => {
+    if (!newPreceptor.first_name.trim() || !newPreceptor.last_name.trim()) {
+      showToast('First and last name are required', 'error');
+      return;
+    }
+
+    setAddingPreceptor(true);
+    try {
+      const res = await fetch('/api/clinical/preceptors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          first_name: newPreceptor.first_name.trim(),
+          last_name: newPreceptor.last_name.trim(),
+          email: newPreceptor.email.trim() || null,
+          phone: newPreceptor.phone.trim() || null,
+          agency_name: newPreceptor.agency_name.trim() || null,
+          is_active: true,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success && data.preceptor) {
+        // Add to list and auto-select
+        setPreceptors([...preceptors, data.preceptor]);
+        handleInputChange('preceptor_id', data.preceptor.id);
+        setShowAddPreceptorModal(false);
+        setNewPreceptor({ first_name: '', last_name: '', email: '', phone: '', agency_name: '' });
+        showToast('Preceptor added successfully', 'success');
+      } else {
+        showToast(data.error || 'Failed to add preceptor', 'error');
+      }
+    } catch (error) {
+      console.error('Error adding preceptor:', error);
+      showToast('Failed to add preceptor', 'error');
+    }
+    setAddingPreceptor(false);
   };
 
   // Calculate progress
@@ -803,6 +845,13 @@ export default function InternshipDetailPage() {
                           <option key={p.id} value={p.id}>{p.first_name} {p.last_name}</option>
                         ))}
                       </select>
+                      <button
+                        type="button"
+                        onClick={() => setShowAddPreceptorModal(true)}
+                        className="mt-1 text-xs text-teal-600 dark:text-teal-400 hover:text-teal-800 dark:hover:text-teal-300"
+                      >
+                        + Add New Preceptor
+                      </button>
                     </div>
                   </div>
                 )}
@@ -1242,6 +1291,89 @@ export default function InternshipDetailPage() {
           />
         </div>
       </main>
+
+      {/* Add Preceptor Modal */}
+      {showAddPreceptorModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-4 border-b dark:border-gray-700">
+              <h3 className="font-semibold text-gray-900 dark:text-white">Add New Preceptor</h3>
+            </div>
+            <div className="p-4 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">First Name *</label>
+                  <input
+                    type="text"
+                    value={newPreceptor.first_name}
+                    onChange={(e) => setNewPreceptor({ ...newPreceptor, first_name: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                    placeholder="First name"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Last Name *</label>
+                  <input
+                    type="text"
+                    value={newPreceptor.last_name}
+                    onChange={(e) => setNewPreceptor({ ...newPreceptor, last_name: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                    placeholder="Last name"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Email</label>
+                <input
+                  type="email"
+                  value={newPreceptor.email}
+                  onChange={(e) => setNewPreceptor({ ...newPreceptor, email: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                  placeholder="email@example.com"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Phone</label>
+                <input
+                  type="tel"
+                  value={newPreceptor.phone}
+                  onChange={(e) => setNewPreceptor({ ...newPreceptor, phone: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                  placeholder="(702) 555-1234"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Agency Name</label>
+                <input
+                  type="text"
+                  value={newPreceptor.agency_name}
+                  onChange={(e) => setNewPreceptor({ ...newPreceptor, agency_name: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                  placeholder="Agency name"
+                />
+              </div>
+            </div>
+            <div className="p-4 border-t dark:border-gray-700 flex justify-end gap-2">
+              <button
+                onClick={() => {
+                  setShowAddPreceptorModal(false);
+                  setNewPreceptor({ first_name: '', last_name: '', email: '', phone: '', agency_name: '' });
+                }}
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddPreceptor}
+                disabled={addingPreceptor}
+                className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:bg-gray-400"
+              >
+                {addingPreceptor ? 'Adding...' : 'Add Preceptor'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -24,7 +24,12 @@ export async function GET(request: NextRequest) {
       .order('name');
 
     if (type) {
-      query = query.eq('type', type);
+      // 'ems' includes all EMS-related types (fire departments, ambulance, etc.)
+      if (type === 'ems') {
+        query = query.neq('type', 'hospital');
+      } else {
+        query = query.eq('type', type);
+      }
     }
 
     if (activeOnly) {
