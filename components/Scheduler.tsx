@@ -1281,19 +1281,24 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
                     return (
                       <div
                         key={ti}
-                        className={`p-4 rounded-lg border ${bgColor}`}
+                        onClick={() => openMeetingModal(currentDayIndex, ti)}
+                        className={`p-4 rounded-lg border ${bgColor} cursor-pointer hover:ring-2 hover:ring-green-500 transition-all`}
                       >
                         <div className="flex items-center justify-between mb-2">
                           <span className="font-medium text-gray-900">{t}</span>
-                          <span className={`text-sm font-semibold ${count === total && total > 0 ? 'text-green-800' : 'text-gray-700'}`}>
-                            {count}/{total} available
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-sm font-semibold ${count === total && total > 0 ? 'text-green-800' : 'text-gray-700'}`}>
+                              {count}/{total} available
+                            </span>
+                            <CalendarPlus className="w-4 h-4 text-green-600" />
+                          </div>
                         </div>
                         {count > 0 && (
                           <div className="text-xs text-gray-600">
                             {available.map(s => s.name).join(', ')}
                           </div>
                         )}
+                        <div className="text-xs text-green-600 mt-2">Tap to create meeting</div>
                       </div>
                     );
                   })}
@@ -1319,21 +1324,23 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
                           const isHovered = hoveredCell === cellKey;
                           
                           return (
-                            <div 
-                              key={cellKey} 
-                              className={`relative p-2 border-r border-b flex items-center justify-center text-xs font-semibold cursor-pointer transition-all ${getCellColor(di, ti)} ${isHovered ? 'ring-2 ring-blue-500 ring-inset z-10' : ''}`}
+                            <div
+                              key={cellKey}
+                              className={`relative p-2 border-r border-b flex items-center justify-center text-xs font-semibold cursor-pointer transition-all ${getCellColor(di, ti)} ${isHovered ? 'ring-2 ring-blue-500 ring-inset z-10' : ''} hover:ring-2 hover:ring-green-500`}
                               onMouseEnter={() => setHoveredCell(cellKey)}
                               onMouseLeave={() => setHoveredCell(null)}
+                              onClick={() => openMeetingModal(di, ti)}
+                              title="Click to create meeting"
                             >
                               {total > 0 && (
                                 <span className={count === total ? 'text-green-800' : count > 0 ? 'text-gray-700' : 'text-gray-400'}>
                                   {count}/{total}
                                 </span>
                               )}
-                              
+
                               {/* Tooltip */}
                               {isHovered && count > 0 && (
-                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 z-50">
+                                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 z-50 pointer-events-none">
                                   <div className="bg-gray-900 text-white text-xs rounded-lg py-2 px-3 shadow-lg whitespace-nowrap">
                                     <div className="font-semibold mb-1">{dates[di]?.display} @ {timeSlots[ti]}</div>
                                     <div className="text-green-300 mb-1">{count} available:</div>
@@ -1343,6 +1350,7 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
                                     {total - count > 0 && (
                                       <div className="text-red-300 mt-1">{total - count} unavailable</div>
                                     )}
+                                    <div className="text-blue-300 mt-2 text-center">Click to create meeting</div>
                                   </div>
                                   <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
                                 </div>
