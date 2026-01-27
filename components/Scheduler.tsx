@@ -670,6 +670,28 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
             )}
           </p>
 
+          {/* Legend for desktop */}
+          {!isMobile && hasSlotRestrictions && (
+            <div className="flex items-center gap-4 mb-4 p-3 bg-gray-50 rounded-lg">
+              <span className="text-sm font-medium text-gray-700">Legend:</span>
+              <div className="flex items-center gap-1">
+                <div className="w-5 h-5 bg-white border-2 border-gray-300 rounded"></div>
+                <span className="text-xs text-gray-600">Available</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-5 h-5 bg-green-400 border-2 border-green-500 rounded"></div>
+                <span className="text-xs text-gray-600">Selected</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div
+                  className="w-5 h-5 bg-gray-200 border rounded"
+                  style={{ backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(156, 163, 175, 0.4) 3px, rgba(156, 163, 175, 0.4) 6px)' }}
+                ></div>
+                <span className="text-xs text-gray-600">Not available</span>
+              </div>
+            </div>
+          )}
+
           {/* Mobile: Day-by-day view */}
           {isMobile ? (
             <div>
@@ -766,9 +788,18 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
                         const isSelected = studentData.availability.includes(slotKey);
                         const isAvailable = isSlotAvailable(di, ti);
 
-                        // Hide unavailable slots - render empty cell to maintain grid
+                        // Show unavailable slots with distinct striped pattern
                         if (!isAvailable) {
-                          return <div key={slotKey} className="border-r border-b" />;
+                          return (
+                            <div
+                              key={slotKey}
+                              className="border-r border-b bg-gray-200"
+                              style={{
+                                backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(156, 163, 175, 0.4) 5px, rgba(156, 163, 175, 0.4) 10px)'
+                              }}
+                              title="Not available for this poll"
+                            />
+                          );
                         }
 
                         return (

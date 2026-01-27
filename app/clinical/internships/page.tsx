@@ -205,7 +205,7 @@ export default function InternshipTrackerPage() {
   const [showAddPreceptorModal, setShowAddPreceptorModal] = useState(false);
   const [savingAgency, setSavingAgency] = useState(false);
   const [savingPreceptor, setSavingPreceptor] = useState(false);
-  const [newAgency, setNewAgency] = useState({ name: '', abbreviation: '', type: 'fire_department' });
+  const [newAgency, setNewAgency] = useState({ name: '', abbreviation: '', type: 'ems' });
   const [newPreceptor, setNewPreceptor] = useState({ first_name: '', last_name: '', email: '', agency_id: '', station: '' });
 
   useEffect(() => {
@@ -371,7 +371,7 @@ export default function InternshipTrackerPage() {
         setAgencies([...agencies, data.agency]);
         setFormData({ ...formData, agency_id: data.agency.id });
         setShowAddAgencyModal(false);
-        setNewAgency({ name: '', abbreviation: '', type: 'fire_department' });
+        setNewAgency({ name: '', abbreviation: '', type: 'ems' });
       } else {
         alert(data.error || 'Failed to add agency');
       }
@@ -1436,11 +1436,8 @@ export default function InternshipTrackerPage() {
                   onChange={(e) => setNewAgency({ ...newAgency, type: e.target.value })}
                   className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
                 >
-                  <option value="fire_department">Fire Department</option>
-                  <option value="ambulance">Ambulance Service</option>
+                  <option value="ems">EMS Agency (Fire, Ambulance, Private)</option>
                   <option value="hospital">Hospital</option>
-                  <option value="private_ems">Private EMS</option>
-                  <option value="other">Other</option>
                 </select>
               </div>
             </div>
