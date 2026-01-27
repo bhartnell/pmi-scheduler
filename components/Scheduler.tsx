@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Calendar, Clock, Users, CheckCircle, Send, UserCheck, UsersRound, ExternalLink, Copy, Eye, ArrowLeft, X, Sparkles, Filter, ChevronLeft, ChevronRight, Menu, List, GraduationCap, BadgeCheck, Building2, School, HelpCircle } from 'lucide-react';
+import { Calendar, Clock, Users, CheckCircle, Send, UserCheck, UsersRound, ExternalLink, Copy, Eye, ArrowLeft, X, Sparkles, Filter, ChevronLeft, ChevronRight, Menu, List, GraduationCap, BadgeCheck, Building2, School, HelpCircle, CalendarPlus, Loader2, MapPin } from 'lucide-react';
 
 interface SchedulerProps {
   mode: 'create' | 'participant' | 'admin-view';
@@ -43,6 +43,18 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
   const [mobileViewMode, setMobileViewMode] = useState<'day' | 'week'>('day');
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+
+  // Create Meeting modal state
+  const [showMeetingModal, setShowMeetingModal] = useState(false);
+  const [selectedMeetingSlot, setSelectedMeetingSlot] = useState<{ dateIndex: number; timeIndex: number } | null>(null);
+  const [meetingForm, setMeetingForm] = useState({
+    title: '',
+    location: '',
+    description: '',
+    duration: 60, // minutes
+  });
+  const [creatingMeeting, setCreatingMeeting] = useState(false);
+  const [meetingResult, setMeetingResult] = useState<{ success: boolean; message: string; link?: string } | null>(null);
 
   // Check for mobile viewport
   useEffect(() => {
@@ -273,6 +285,101 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
 
   const getRoleConfig = (value: string) => {
     return respondentRoles.find(r => r.value === value) || respondentRoles[4]; // Default to 'other'
+  };
+
+  // Open meeting modal for a specific time slot
+  const openMeetingModal = (dateIndex: number, timeIndex: number) => {
+    setSelectedMeetingSlot({ dateIndex, timeIndex });
+    setMeetingForm({
+      title: pollData?.title || '',
+      location: '',
+      description: pollData?.description || '',
+      duration: schedulingMode === 'group' ? 240 : 60, // 4 hours for group, 1 hour for individual
+    });
+    setMeetingResult(null);
+    setShowMeetingModal(true);
+  };
+
+  // Create Google Calendar meeting
+  const handleCreateMeeting = async () => {
+    if (!selectedMeetingSlot) return;
+
+    setCreatingMeeting(true);
+    setMeetingResult(null);
+
+    try {
+      const { dateIndex, timeIndex } = selectedMeetingSlot;
+      const date = dates[dateIndex];
+      const timeSlot = timeSlots[timeIndex];
+
+      // Parse the time slot to get start hour
+      let startHour = 0;
+      if (schedulingMode === 'group') {
+        // Group mode: "Morning (8 AM-12 PM)", "Afternoon (1-5 PM)", "Full Day (8 AM-5 PM)"
+        if (timeSlot.includes('Morning')) startHour = 8;
+        else if (timeSlot.includes('Afternoon')) startHour = 13;
+        else startHour = 8; // Full day
+      } else {
+        // Individual mode: "6:00 AM", "1:00 PM", etc.
+        const match = timeSlot.match(/(\d+):00\s*(AM|PM)/);
+        if (match) {
+          startHour = parseInt(match[1]);
+          if (match[2] === 'PM' && startHour !== 12) startHour += 12;
+          if (match[2] === 'AM' && startHour === 12) startHour = 0;
+        }
+      }
+
+      // Create start and end times
+      const startDate = new Date(date.full);
+      startDate.setHours(startHour, 0, 0, 0);
+
+      const endDate = new Date(startDate);
+      endDate.setMinutes(endDate.getMinutes() + meetingForm.duration);
+
+      // Get attendees from active respondents
+      const attendees = activeRespondents.map(sub => ({
+        email: sub.email,
+        name: sub.name,
+      }));
+
+      const response = await fetch('/api/calendar/create-event', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: meetingForm.title,
+          description: meetingForm.description,
+          location: meetingForm.location,
+          startTime: startDate.toISOString(),
+          endTime: endDate.toISOString(),
+          attendees,
+          sendNotifications: true,
+          pollId: pollData?.id,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setMeetingResult({
+          success: true,
+          message: `Meeting created! Invites sent to ${attendees.length} attendee(s).`,
+          link: result.event?.htmlLink,
+        });
+      } else {
+        setMeetingResult({
+          success: false,
+          message: result.error || 'Failed to create meeting',
+        });
+      }
+    } catch (error: any) {
+      console.error('Error creating meeting:', error);
+      setMeetingResult({
+        success: false,
+        message: error?.message || 'Failed to create meeting',
+      });
+    }
+
+    setCreatingMeeting(false);
   };
 
   // Calculate which required roles have been filled
@@ -1073,19 +1180,26 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
                   <Sparkles className="w-4 h-4" />
                   Best Times ({bestTimes.length} slots)
                 </h3>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 mb-3">
                   {bestTimes.slice(0, isMobile ? 5 : 10).map((bt, idx) => {
                     const [di, ti] = bt.key.split('-').map(Number);
                     return (
-                      <span key={idx} className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs md:text-sm">
+                      <button
+                        key={idx}
+                        onClick={() => openMeetingModal(di, ti)}
+                        className="px-2 py-1 bg-green-100 text-green-800 rounded text-xs md:text-sm hover:bg-green-200 transition-colors flex items-center gap-1"
+                        title="Click to create meeting"
+                      >
                         {dates[di]?.shortDisplay} @ {timeSlots[ti]}
-                      </span>
+                        <CalendarPlus className="w-3 h-3" />
+                      </button>
                     );
                   })}
                   {bestTimes.length > (isMobile ? 5 : 10) && (
                     <span className="px-2 py-1 text-green-700 text-xs md:text-sm">+{bestTimes.length - (isMobile ? 5 : 10)} more</span>
                   )}
                 </div>
+                <p className="text-xs text-green-600">Click a time slot to create a Google Calendar meeting and send invites</p>
               </div>
             )}
 
@@ -1245,6 +1359,177 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
           </div>
         </div>
       </div>
+
+      {/* Create Meeting Modal */}
+      {showMeetingModal && selectedMeetingSlot && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-4 border-b dark:border-gray-700 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CalendarPlus className="w-5 h-5 text-green-600" />
+                <h3 className="font-semibold text-gray-900 dark:text-white">Create Meeting & Send Invites</h3>
+              </div>
+              <button
+                onClick={() => setShowMeetingModal(false)}
+                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              {/* Selected Time */}
+              <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg">
+                <div className="text-sm text-green-800 dark:text-green-300 font-medium">Selected Time:</div>
+                <div className="text-lg text-green-900 dark:text-green-200 font-semibold">
+                  {dates[selectedMeetingSlot.dateIndex]?.fullDate} @ {timeSlots[selectedMeetingSlot.timeIndex]}
+                </div>
+              </div>
+
+              {/* Meeting Title */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Meeting Title *
+                </label>
+                <input
+                  type="text"
+                  value={meetingForm.title}
+                  onChange={(e) => setMeetingForm({ ...meetingForm, title: e.target.value })}
+                  placeholder="e.g., John Smith - Phase 1 Meeting"
+                  className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                />
+              </div>
+
+              {/* Location */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <MapPin className="w-4 h-4 inline mr-1" />
+                  Location
+                </label>
+                <input
+                  type="text"
+                  value={meetingForm.location}
+                  onChange={(e) => setMeetingForm({ ...meetingForm, location: e.target.value })}
+                  placeholder="e.g., PMI Campus Room 101 or Google Meet link"
+                  className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                />
+              </div>
+
+              {/* Duration */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Duration
+                </label>
+                <select
+                  value={meetingForm.duration}
+                  onChange={(e) => setMeetingForm({ ...meetingForm, duration: parseInt(e.target.value) })}
+                  className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                >
+                  <option value={30}>30 minutes</option>
+                  <option value={60}>1 hour</option>
+                  <option value={90}>1.5 hours</option>
+                  <option value={120}>2 hours</option>
+                  <option value={180}>3 hours</option>
+                  <option value={240}>4 hours</option>
+                </select>
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Description
+                </label>
+                <textarea
+                  value={meetingForm.description}
+                  onChange={(e) => setMeetingForm({ ...meetingForm, description: e.target.value })}
+                  placeholder="Additional details about the meeting..."
+                  rows={2}
+                  className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                />
+              </div>
+
+              {/* Attendees */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <Users className="w-4 h-4 inline mr-1" />
+                  Attendees ({activeRespondents.length})
+                </label>
+                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 max-h-32 overflow-y-auto">
+                  {activeRespondents.length === 0 ? (
+                    <p className="text-sm text-gray-500 dark:text-gray-400">No respondents selected</p>
+                  ) : (
+                    <div className="space-y-1">
+                      {activeRespondents.map((sub, idx) => (
+                        <div key={idx} className="text-sm text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                          <CheckCircle className="w-3 h-3 text-green-500" />
+                          <span>{sub.name}</span>
+                          <span className="text-gray-400 text-xs">({sub.email})</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Google Calendar will send invites to all attendees automatically
+                </p>
+              </div>
+
+              {/* Result Message */}
+              {meetingResult && (
+                <div className={`p-3 rounded-lg ${
+                  meetingResult.success
+                    ? 'bg-green-100 dark:bg-green-900/30 border border-green-300'
+                    : 'bg-red-100 dark:bg-red-900/30 border border-red-300'
+                }`}>
+                  <p className={`text-sm ${meetingResult.success ? 'text-green-800 dark:text-green-300' : 'text-red-800 dark:text-red-300'}`}>
+                    {meetingResult.message}
+                  </p>
+                  {meetingResult.link && (
+                    <a
+                      href={meetingResult.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-2 inline-flex items-center gap-1 text-sm text-green-700 dark:text-green-400 hover:underline"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      Open in Google Calendar
+                    </a>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="p-4 border-t dark:border-gray-700 flex justify-end gap-2">
+              <button
+                onClick={() => setShowMeetingModal(false)}
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+              >
+                {meetingResult?.success ? 'Close' : 'Cancel'}
+              </button>
+              {!meetingResult?.success && (
+                <button
+                  onClick={handleCreateMeeting}
+                  disabled={creatingMeeting || !meetingForm.title || activeRespondents.length === 0}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                >
+                  {creatingMeeting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <CalendarPlus className="w-4 h-4" />
+                      Create Meeting & Send Invites
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

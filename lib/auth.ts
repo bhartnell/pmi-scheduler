@@ -15,9 +15,25 @@ export const authOptions: NextAuthOptions = {
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      authorization: {
+        params: {
+          scope: 'openid email profile https://www.googleapis.com/auth/calendar.events',
+          access_type: 'offline',
+          prompt: 'consent',
+        },
+      },
     }),
   ],
   callbacks: {
+    async jwt({ token, account }) {
+      // Persist the OAuth access_token and refresh_token to the token right after signin
+      if (account) {
+        token.accessToken = account.access_token;
+        token.refreshToken = account.refresh_token;
+        token.accessTokenExpires = account.expires_at ? account.expires_at * 1000 : 0;
+      }
+      return token;
+    },
     async signIn({ user }) {
       // Allow any @pmi.edu email
       if (!user.email || !user.email.endsWith('@pmi.edu')) {
@@ -69,7 +85,10 @@ export const authOptions: NextAuthOptions = {
         return true;
       }
     },
-    async session({ session }) {
+    async session({ session, token }) {
+      // Send properties to the client
+      session.accessToken = token.accessToken as string | undefined;
+      session.refreshToken = token.refreshToken as string | undefined;
       return session;
     },
   },
