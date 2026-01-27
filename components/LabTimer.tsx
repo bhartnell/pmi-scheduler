@@ -88,7 +88,8 @@ export default function LabTimer({
   const audioContextRef = useRef<AudioContext | null>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const totalSeconds = rotationMinutes * 60;
+  // Default to 15 minutes if rotationMinutes is not set
+  const totalSeconds = (rotationMinutes || 15) * 60;
 
   // Play a LOUD alert sound for rotation end
   const playLoudAlert = useCallback(() => {

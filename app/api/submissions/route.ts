@@ -6,13 +6,20 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { pollId, name, email, agency, meetingType, respondentRole, availability } = body;
 
+    console.log('POST submission - received:', { pollId, name, email, agency });
+
     // Check if submission already exists
-    const { data: existing } = await supabase
+    const { data: existing, error: checkError } = await supabase
       .from('submissions')
       .select('id')
       .eq('poll_id', pollId)
       .eq('email', email)
       .single();
+
+    // Ignore "no rows" error (PGRST116) - that just means no existing submission
+    if (checkError && checkError.code !== 'PGRST116') {
+      console.error('Error checking existing submission:', checkError);
+    }
 
     if (existing) {
       // Update existing submission
@@ -21,7 +28,7 @@ export async function POST(request: NextRequest) {
         .update({
           name,
           agency,
-          meeting_type: meetingType || null, // Keep for backwards compatibility
+          meeting_type: meetingType || null,
           respondent_role: respondentRole || null,
           availability,
           updated_at: new Date().toISOString(),
@@ -30,7 +37,13 @@ export async function POST(request: NextRequest) {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase update error:', error);
+        return NextResponse.json({
+          success: false,
+          error: error.message || 'Failed to update submission'
+        }, { status: 500 });
+      }
       return NextResponse.json({ success: true, submission: data, isUpdate: true });
     } else {
       // Create new submission
@@ -41,19 +54,28 @@ export async function POST(request: NextRequest) {
           name,
           email,
           agency,
-          meeting_type: meetingType || null, // Keep for backwards compatibility
+          meeting_type: meetingType || null,
           respondent_role: respondentRole || null,
           availability,
         })
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase insert error:', error);
+        return NextResponse.json({
+          success: false,
+          error: error.message || 'Failed to create submission'
+        }, { status: 500 });
+      }
       return NextResponse.json({ success: true, submission: data, isUpdate: false });
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error saving submission:', error);
-    return NextResponse.json({ success: false, error: 'Failed to save submission' }, { status: 500 });
+    return NextResponse.json({
+      success: false,
+      error: error?.message || 'Failed to save submission'
+    }, { status: 500 });
   }
 }
 

@@ -55,10 +55,12 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { labDayId, durationSeconds, debriefSeconds, mode } = body;
 
+    console.log('POST timer - received:', { labDayId, durationSeconds, debriefSeconds, mode });
+
     if (!labDayId || !durationSeconds) {
       return NextResponse.json({
         success: false,
-        error: 'labDayId and durationSeconds are required'
+        error: `labDayId and durationSeconds are required. Got: labDayId=${labDayId}, durationSeconds=${durationSeconds}`
       }, { status: 400 });
     }
 
@@ -81,12 +83,18 @@ export async function POST(request: NextRequest) {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase upsert error:', error);
+      throw error;
+    }
 
     return NextResponse.json({ success: true, timer: data });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating timer state:', error);
-    return NextResponse.json({ success: false, error: 'Failed to create timer state' }, { status: 500 });
+    return NextResponse.json({
+      success: false,
+      error: error?.message || 'Failed to create timer state'
+    }, { status: 500 });
   }
 }
 
