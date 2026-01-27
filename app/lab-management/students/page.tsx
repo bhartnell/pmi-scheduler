@@ -24,6 +24,8 @@ interface Student {
   status: string;
   agency: string | null;
   team_lead_count: number;
+  scrub_top_size: string | null;
+  scrub_bottom_size: string | null;
   cohort?: {
     id: string;
     cohort_number: number;
@@ -129,7 +131,9 @@ export default function StudentsPage() {
       { key: 'cohort', label: 'Cohort', getValue: (row) => row.cohort ? `${row.cohort.program.abbreviation} G${row.cohort.cohort_number}` : '' },
       { key: 'email', label: 'Email', getValue: (row) => row.email || '' },
       { key: 'status', label: 'Status', getValue: (row) => row.status },
-      { key: 'agency', label: 'Agency', getValue: (row) => row.agency || '' }
+      { key: 'agency', label: 'Agency', getValue: (row) => row.agency || '' },
+      { key: 'scrub_top_size', label: 'Scrub Top', getValue: (row) => row.scrub_top_size || '' },
+      { key: 'scrub_bottom_size', label: 'Scrub Bottom', getValue: (row) => row.scrub_bottom_size || '' }
     ],
     data: filteredStudents
   };

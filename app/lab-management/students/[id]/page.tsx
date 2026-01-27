@@ -44,6 +44,8 @@ interface Student {
   years_ems_experience: number | null;
   prior_work_setting: string | null;
   prior_employer: string | null;
+  scrub_top_size: string | null;
+  scrub_bottom_size: string | null;
   cohort?: {
     id: string;
     cohort_number: number;
@@ -163,6 +165,8 @@ export default function StudentDetailPage() {
   const [editYearsEmsExperience, setEditYearsEmsExperience] = useState('');
   const [editPriorWorkSetting, setEditPriorWorkSetting] = useState('');
   const [editPriorEmployer, setEditPriorEmployer] = useState('');
+  const [editScrubTopSize, setEditScrubTopSize] = useState('');
+  const [editScrubBottomSize, setEditScrubBottomSize] = useState('');
 
   // Learning style state
   const [learningStyle, setLearningStyle] = useState<LearningStyle | null>(null);
@@ -247,6 +251,8 @@ export default function StudentDetailPage() {
         setEditYearsEmsExperience(data.student.years_ems_experience?.toString() || '');
         setEditPriorWorkSetting(data.student.prior_work_setting || '');
         setEditPriorEmployer(data.student.prior_employer || '');
+        setEditScrubTopSize(data.student.scrub_top_size || '');
+        setEditScrubBottomSize(data.student.scrub_bottom_size || '');
       }
     } catch (error) {
       console.error('Error fetching student:', error);
@@ -436,6 +442,8 @@ export default function StudentDetailPage() {
           years_ems_experience: editYearsEmsExperience ? parseFloat(editYearsEmsExperience) : null,
           prior_work_setting: editPriorWorkSetting || null,
           prior_employer: editPriorEmployer || null,
+          scrub_top_size: editScrubTopSize || null,
+          scrub_bottom_size: editScrubBottomSize || null,
         }),
       });
       
@@ -661,6 +669,41 @@ export default function StudentDetailPage() {
                     </div>
                   </div>
 
+                  {/* Scrub Sizes */}
+                  <div className="pt-4 border-t dark:border-gray-600">
+                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Scrub Sizes</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Top Size</label>
+                        <select value={editScrubTopSize} onChange={e => setEditScrubTopSize(e.target.value)} className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700">
+                          <option value="">Not specified</option>
+                          <option value="XS">XS</option>
+                          <option value="S">S</option>
+                          <option value="M">M</option>
+                          <option value="L">L</option>
+                          <option value="XL">XL</option>
+                          <option value="2XL">2XL</option>
+                          <option value="3XL">3XL</option>
+                          <option value="4XL">4XL</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Bottom Size</label>
+                        <select value={editScrubBottomSize} onChange={e => setEditScrubBottomSize(e.target.value)} className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700">
+                          <option value="">Not specified</option>
+                          <option value="XS">XS</option>
+                          <option value="S">S</option>
+                          <option value="M">M</option>
+                          <option value="L">L</option>
+                          <option value="XL">XL</option>
+                          <option value="2XL">2XL</option>
+                          <option value="3XL">3XL</option>
+                          <option value="4XL">4XL</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="flex gap-2">
                     <button onClick={() => setEditing(false)} className="px-4 py-2 border dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">Cancel</button>
                     <button onClick={handleSave} disabled={saving} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400">
@@ -805,6 +848,30 @@ export default function StudentDetailPage() {
                   <div className="text-gray-900 dark:text-white font-medium">{student.prior_employer}</div>
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Scrub Sizes Section */}
+        {(student.scrub_top_size || student.scrub_bottom_size) && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
+              <span className="text-lg">👕</span>
+              Scrub Sizes
+            </h2>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Top Size</div>
+                <div className="text-gray-900 dark:text-white font-medium">
+                  {student.scrub_top_size || '—'}
+                </div>
+              </div>
+              <div>
+                <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Bottom Size</div>
+                <div className="text-gray-900 dark:text-white font-medium">
+                  {student.scrub_bottom_size || '—'}
+                </div>
+              </div>
             </div>
           </div>
         )}
