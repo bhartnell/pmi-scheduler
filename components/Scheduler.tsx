@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Calendar, Clock, Users, CheckCircle, Send, UserCheck, UsersRound, ExternalLink, Copy, Eye, ArrowLeft, X, Sparkles, Filter, ChevronLeft, ChevronRight, Menu, List, GraduationCap, BadgeCheck, Building2, School, HelpCircle, CalendarPlus, Loader2, MapPin } from 'lucide-react';
+import { Calendar, Clock, Users, CheckCircle, Send, UserCheck, UsersRound, ExternalLink, Copy, Eye, ArrowLeft, X, Sparkles, Filter, ChevronLeft, ChevronRight, Menu, List, GraduationCap, BadgeCheck, Building2, School, HelpCircle, CalendarPlus, Loader2, MapPin, Mail } from 'lucide-react';
 
 interface SchedulerProps {
   mode: 'create' | 'participant' | 'admin-view';
@@ -55,6 +55,15 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
   });
   const [creatingMeeting, setCreatingMeeting] = useState(false);
   const [meetingResult, setMeetingResult] = useState<{ success: boolean; message: string; link?: string } | null>(null);
+
+  // Send Email modal state
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [emailForm, setEmailForm] = useState({
+    subject: '',
+    body: '',
+  });
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailResult, setEmailResult] = useState<{ success: boolean; message: string } | null>(null);
 
   // Check for mobile viewport
   useEffect(() => {
@@ -380,6 +389,72 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
     }
 
     setCreatingMeeting(false);
+  };
+
+  // Open email modal
+  const openEmailModal = () => {
+    setEmailForm({
+      subject: pollData?.title ? `Regarding: ${pollData.title}` : '',
+      body: '',
+    });
+    setEmailResult(null);
+    setShowEmailModal(true);
+  };
+
+  // Send email to selected respondents
+  const handleSendEmail = async () => {
+    if (!emailForm.subject || !emailForm.body) return;
+
+    setSendingEmail(true);
+    setEmailResult(null);
+
+    try {
+      const recipients = activeRespondents.map(sub => ({
+        email: sub.email,
+        name: sub.name,
+      }));
+
+      // Convert plain text to HTML (preserve line breaks)
+      const htmlBody = emailForm.body
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\n/g, '<br>');
+
+      const response = await fetch('/api/notifications/send-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: recipients,
+          subject: emailForm.subject,
+          body: `<div style="font-family: Arial, sans-serif; font-size: 14px; line-height: 1.6;">${htmlBody}</div>`,
+          plainText: emailForm.body,
+          pollId: pollData?.id,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setEmailResult({
+          success: true,
+          message: `Email sent to ${result.recipientCount} recipient(s)!`,
+        });
+      } else {
+        setEmailResult({
+          success: false,
+          message: result.error || 'Failed to send email',
+        });
+      }
+    } catch (error: any) {
+      console.error('Error sending email:', error);
+      setEmailResult({
+        success: false,
+        message: error?.message || 'Failed to send email',
+      });
+    }
+
+    setSendingEmail(false);
   };
 
   // Calculate which required roles have been filled
@@ -1135,17 +1210,28 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
           <div className="bg-white rounded-lg shadow-lg p-4 md:p-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
               <h2 className="text-lg md:text-xl font-semibold text-gray-900">Availability Results</h2>
-              <button
-                onClick={() => setShowBestTimes(!showBestTimes)}
-                className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  showBestTimes 
-                    ? 'bg-green-600 text-white' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                <Sparkles className="w-4 h-4" />
-                {showBestTimes ? 'Highlighting Best' : 'Find Best Times'}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={openEmailModal}
+                  disabled={activeRespondents.length === 0}
+                  className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                  title={activeRespondents.length === 0 ? 'Select respondents first' : 'Send email to selected respondents'}
+                >
+                  <Mail className="w-4 h-4" />
+                  Email ({activeRespondents.length})
+                </button>
+                <button
+                  onClick={() => setShowBestTimes(!showBestTimes)}
+                  className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    showBestTimes
+                      ? 'bg-green-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  <Sparkles className="w-4 h-4" />
+                  {showBestTimes ? 'Highlighting Best' : 'Find Best Times'}
+                </button>
+              </div>
             </div>
 
             {/* Legend - responsive */}
@@ -1530,6 +1616,119 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
                     <>
                       <CalendarPlus className="w-4 h-4" />
                       Create Meeting & Send Invites
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Send Email Modal */}
+      {showEmailModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-4 border-b dark:border-gray-700 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Mail className="w-5 h-5 text-blue-600" />
+                <h3 className="font-semibold text-gray-900 dark:text-white">Send Email</h3>
+              </div>
+              <button
+                onClick={() => setShowEmailModal(false)}
+                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              {/* Recipients */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <Users className="w-4 h-4 inline mr-1" />
+                  To ({activeRespondents.length} recipients)
+                </label>
+                <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 max-h-24 overflow-y-auto">
+                  {activeRespondents.length === 0 ? (
+                    <p className="text-sm text-gray-500 dark:text-gray-400">No respondents selected</p>
+                  ) : (
+                    <div className="flex flex-wrap gap-1">
+                      {activeRespondents.map((sub, idx) => (
+                        <span key={idx} className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                          {sub.name}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Subject */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Subject *
+                </label>
+                <input
+                  type="text"
+                  value={emailForm.subject}
+                  onChange={(e) => setEmailForm({ ...emailForm, subject: e.target.value })}
+                  placeholder="Email subject line"
+                  className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                />
+              </div>
+
+              {/* Body */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Message *
+                </label>
+                <textarea
+                  value={emailForm.body}
+                  onChange={(e) => setEmailForm({ ...emailForm, body: e.target.value })}
+                  placeholder="Type your message here..."
+                  rows={8}
+                  className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                />
+              </div>
+
+              {/* Result Message */}
+              {emailResult && (
+                <div className={`p-3 rounded-lg ${
+                  emailResult.success
+                    ? 'bg-green-100 dark:bg-green-900/30 border border-green-300'
+                    : 'bg-red-100 dark:bg-red-900/30 border border-red-300'
+                }`}>
+                  <p className={`text-sm ${emailResult.success ? 'text-green-800 dark:text-green-300' : 'text-red-800 dark:text-red-300'}`}>
+                    {emailResult.message}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="p-4 border-t dark:border-gray-700 flex justify-end gap-2">
+              <button
+                onClick={() => setShowEmailModal(false)}
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+              >
+                {emailResult?.success ? 'Close' : 'Cancel'}
+              </button>
+              {!emailResult?.success && (
+                <button
+                  onClick={handleSendEmail}
+                  disabled={sendingEmail || !emailForm.subject || !emailForm.body || activeRespondents.length === 0}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                >
+                  {sendingEmail ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4" />
+                      Send Email
                     </>
                   )}
                 </button>
