@@ -123,8 +123,8 @@ export async function POST(request: NextRequest) {
         event_end_time: endTime,
         poll_id: body.pollId || null,
         status: 'sent',
-        sent_by_email: session.user.email,
-        sent_by_name: session.user.name || null,
+        sent_by_email: session.user?.email || '',
+        sent_by_name: session.user?.name || null,
       }));
 
       await supabase.from('notifications_log').insert(notificationLogs);
