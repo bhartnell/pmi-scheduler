@@ -16,7 +16,8 @@ import {
   BookOpen,
   Settings,
   UserPlus,
-  Briefcase
+  Briefcase,
+  Building2
 } from 'lucide-react';
 import { canAccessAdmin, canAccessClinical, getRoleLabel, getRoleBadgeClasses, type Role } from '@/lib/permissions';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -281,6 +282,15 @@ export default function HomePage() {
               <ClipboardList className="w-6 h-6 text-gray-600 dark:text-gray-400 mb-2" />
               <span className="text-sm text-gray-700 dark:text-gray-300">Cohorts</span>
             </Link>
+            {currentUser && canAccessClinical(currentUser.role) && (
+              <Link
+                href="/clinical/site-visits"
+                className="flex flex-col items-center p-4 bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-md transition-shadow"
+              >
+                <Building2 className="w-6 h-6 text-teal-600 dark:text-teal-400 mb-2" />
+                <span className="text-sm text-gray-700 dark:text-gray-300">Site Visits</span>
+              </Link>
+            )}
           </div>
         </div>
       </main>

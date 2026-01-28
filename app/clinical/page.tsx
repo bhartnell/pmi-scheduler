@@ -393,6 +393,28 @@ export default function ClinicalDashboardPage() {
             </div>
           </Link>
 
+          {/* Site Visits */}
+          <Link
+            href="/clinical/site-visits"
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
+          >
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-cyan-100 dark:bg-cyan-900/30 rounded-xl group-hover:bg-cyan-200 dark:group-hover:bg-cyan-900/50 transition-colors">
+                <Building2 className="w-6 h-6 text-cyan-600 dark:text-cyan-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Site Visits</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                  Log and track instructor visits to clinical sites
+                </p>
+                <div className="flex items-center text-cyan-600 dark:text-cyan-400 text-sm font-medium">
+                  Log visit
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </div>
+              </div>
+            </div>
+          </Link>
+
           {/* Meetings - Coming Soon */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 opacity-60">
             <div className="flex items-start gap-4">
