@@ -14,12 +14,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Fetch users with instructor role or higher (instructor, lead_instructor, admin)
+    // Fetch users with instructor role or higher
+    // Include all roles that can grade/teach at stations
     const { data, error } = await supabase
       .from('lab_users')
-      .select('id, name, email, role')
-      .in('role', ['instructor', 'lead_instructor', 'admin'])
-      .eq('is_active', true)
+      .select('id, name, email, role, is_active')
+      .in('role', ['instructor', 'lead_instructor', 'admin', 'superadmin'])
       .order('name');
 
     if (error) throw error;
