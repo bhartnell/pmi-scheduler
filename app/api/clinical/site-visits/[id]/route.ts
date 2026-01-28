@@ -24,7 +24,7 @@ export async function GET(
       .select(`
         *,
         site:clinical_sites(id, name, abbreviation, system),
-        cohort:cohorts(id, name, program_type),
+        cohort:cohorts(id, cohort_number, program:programs(id, name, abbreviation)),
         visitor:lab_users(id, name, email),
         students:clinical_visit_students(
           student:students(id, first_name, last_name)
@@ -105,7 +105,7 @@ export async function PUT(
       .select(`
         *,
         site:clinical_sites(id, name, abbreviation, system),
-        cohort:cohorts(id, name, program_type),
+        cohort:cohorts(id, cohort_number, program:programs(id, name, abbreviation)),
         visitor:lab_users(id, name, email),
         students:clinical_visit_students(
           student:students(id, first_name, last_name)

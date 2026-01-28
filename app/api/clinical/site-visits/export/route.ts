@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
       .select(`
         *,
         site:clinical_sites(id, name, abbreviation, system),
-        cohort:cohorts(id, name, program_type),
+        cohort:cohorts(id, cohort_number, program:programs(id, name, abbreviation)),
         visitor:lab_users(id, name, email),
         students:clinical_visit_students(
           student:students(id, first_name, last_name)
@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
         visit.site?.system || '',
         visit.departments?.join(', ') || '',
         visit.visitor_name,
-        visit.cohort?.name || '',
+        visit.cohort ? `${visit.cohort.program?.abbreviation || ''} ${visit.cohort.cohort_number}` : '',
         studentNames,
         visit.entire_class ? 'Yes' : 'No',
         visit.comments || '',

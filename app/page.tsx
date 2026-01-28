@@ -17,7 +17,8 @@ import {
   Settings,
   UserPlus,
   Briefcase,
-  Building2
+  Building2,
+  Plus
 } from 'lucide-react';
 import { canAccessAdmin, canAccessClinical, getRoleLabel, getRoleBadgeClasses, type Role } from '@/lib/permissions';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -243,8 +244,34 @@ export default function HomePage() {
           )}
         </div>
 
+        {/* Quick Action - Site Visit Check-In (for clinical users) */}
+        {currentUser && canAccessClinical(currentUser.role) && (
+          <div className="mt-8 max-w-5xl mx-auto">
+            <Link
+              href="/clinical/site-visits"
+              className="block bg-gradient-to-r from-cyan-500 to-teal-500 dark:from-cyan-600 dark:to-teal-600 rounded-2xl shadow-lg hover:shadow-xl transition-all hover:scale-[1.02] p-6 group"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center group-hover:bg-white/30 transition-colors">
+                    <Building2 className="w-7 h-7 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-white">Site Visit Check-In</h3>
+                    <p className="text-cyan-100 text-sm">Log your clinical site visit</p>
+                  </div>
+                </div>
+                <div className="hidden sm:flex items-center gap-2 bg-white/20 px-4 py-2 rounded-lg text-white font-medium">
+                  <Plus className="w-5 h-5" />
+                  Log Visit
+                </div>
+              </div>
+            </Link>
+          </div>
+        )}
+
         {/* Quick Links */}
-        <div className="mt-12 max-w-5xl mx-auto">
+        <div className="mt-8 max-w-5xl mx-auto">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 text-center">Quick Links</h3>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <Link

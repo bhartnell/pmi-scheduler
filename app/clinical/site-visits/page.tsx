@@ -35,10 +35,19 @@ interface ClinicalSite {
   departments?: { id: string; department: string; is_active: boolean }[];
 }
 
-interface Cohort {
+interface Program {
   id: string;
   name: string;
-  program_type: string;
+  abbreviation: string;
+}
+
+interface Cohort {
+  id: string;
+  cohort_number: number;
+  program: Program;
+  is_active: boolean;
+  // Computed display name
+  displayName: string;
 }
 
 interface Student {
@@ -73,8 +82,12 @@ interface SiteVisit {
   };
   cohort: {
     id: string;
-    name: string;
-    program_type: string;
+    cohort_number: number;
+    program: {
+      id: string;
+      name: string;
+      abbreviation: string;
+    };
   } | null;
   visitor: {
     id: string;
@@ -199,7 +212,7 @@ export default function SiteVisitsPage() {
       // Fetch all reference data in parallel
       const [sitesRes, cohortsRes, instructorsRes] = await Promise.all([
         fetch('/api/clinical/sites?includeDepartments=true'),
-        fetch('/api/lab-management/cohorts?activeOnly=true'),
+        fetch('/api/lab-management/cohorts'), // Get all cohorts, not just active
         fetch('/api/lab-management/instructors'),
       ]);
 
@@ -208,7 +221,14 @@ export default function SiteVisitsPage() {
       const instructorsData = await instructorsRes.json();
 
       if (sitesData.success) setSites(sitesData.sites || []);
-      if (cohortsData.success) setCohorts(cohortsData.cohorts || []);
+      if (cohortsData.success) {
+        // Transform cohorts to add displayName
+        const transformedCohorts = (cohortsData.cohorts || []).map((c: any) => ({
+          ...c,
+          displayName: `${c.program?.abbreviation || 'Unknown'} ${c.cohort_number}`,
+        }));
+        setCohorts(transformedCohorts);
+      }
       if (instructorsData.success) setInstructors(instructorsData.instructors || []);
 
       // Fetch visits
@@ -504,7 +524,7 @@ export default function SiteVisitsPage() {
                     <option value="">All Cohorts</option>
                     {cohorts.map(cohort => (
                       <option key={cohort.id} value={cohort.id}>
-                        {cohort.name}
+                        {cohort.displayName}
                       </option>
                     ))}
                   </select>
@@ -638,7 +658,7 @@ export default function SiteVisitsPage() {
                         {visit.cohort && (
                           <div className="flex items-center gap-1">
                             <Users className="w-4 h-4" />
-                            {visit.cohort.name}
+                            {visit.cohort.program?.abbreviation} {visit.cohort.cohort_number}
                             {visit.entire_class && ' (Entire Class)'}
                           </div>
                         )}
@@ -847,7 +867,7 @@ export default function SiteVisitsPage() {
                   <option value="">Select cohort...</option>
                   {cohorts.map(cohort => (
                     <option key={cohort.id} value={cohort.id}>
-                      {cohort.name} ({cohort.program_type})
+                      {cohort.displayName}
                     </option>
                   ))}
                 </select>
