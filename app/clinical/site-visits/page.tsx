@@ -281,11 +281,14 @@ export default function SiteVisitsPage() {
     setFormVisitorId(currentUser?.id || '');
     setFormVisitorName(currentUser?.name || '');
     setFormVisitDate(new Date().toISOString().split('T')[0]);
-    setFormVisitTime('');
+    // Auto-fill current time in HH:MM format
+    const now = new Date();
+    setFormVisitTime(`${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`);
     setFormCohortId('');
     setFormEntireClass(true);
     setFormStudentIds([]);
-    setFormComments('');
+    // Default comment for quick logging
+    setFormComments('Observed student(s) interaction with staff and patients.');
     setEditingVisit(null);
   };
 
@@ -820,37 +823,29 @@ export default function SiteVisitsPage() {
                 </div>
               </div>
 
-              {/* Visitor */}
-              <div className="grid md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Visitor (Instructor)
-                  </label>
-                  <select
-                    value={formVisitorId}
-                    onChange={(e) => setFormVisitorId(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              {/* Visitor - Simplified display */}
+              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <User className="w-5 h-5 text-teal-600 dark:text-teal-400" />
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Visiting as:</span>
+                    <span className="font-medium text-gray-900 dark:text-white">{formVisitorName || 'Unknown'}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newName = prompt('Enter visitor name:', formVisitorName);
+                      if (newName !== null) {
+                        setFormVisitorName(newName);
+                        // Clear visitor ID if name doesn't match any instructor
+                        const matchingInstructor = instructors.find(i => i.name === newName);
+                        setFormVisitorId(matchingInstructor?.id || '');
+                      }
+                    }}
+                    className="text-sm text-teal-600 dark:text-teal-400 hover:underline"
                   >
-                    <option value="">Select instructor...</option>
-                    {instructors.map(instructor => (
-                      <option key={instructor.id} value={instructor.id}>
-                        {instructor.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Visitor Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={formVisitorName}
-                    onChange={(e) => setFormVisitorName(e.target.value)}
-                    required
-                    placeholder="Enter visitor name"
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  />
+                    Change
+                  </button>
                 </div>
               </div>
 
@@ -928,17 +923,17 @@ export default function SiteVisitsPage() {
                 </div>
               )}
 
-              {/* Comments */}
+              {/* Comments - Pre-filled with default */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Comments
+                  Comments <span className="text-gray-400 font-normal">(tap to edit)</span>
                 </label>
                 <textarea
                   value={formComments}
                   onChange={(e) => setFormComments(e.target.value)}
-                  rows={3}
-                  placeholder="Any notes about the visit..."
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  rows={2}
+                  placeholder="Notes about the visit..."
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                 />
               </div>
 
