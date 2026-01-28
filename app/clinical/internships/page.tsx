@@ -712,10 +712,12 @@ export default function InternshipTrackerPage() {
                 onChange={(e) => setSelectedCohort(e.target.value)}
                 className="px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 min-w-[200px]"
               >
-                <option value="">Select Cohort</option>
-                {cohorts.map(c => (
+                <option value="">Select PM Cohort</option>
+                {cohorts
+                  .filter(c => c.program?.abbreviation === 'PM')
+                  .map(c => (
                   <option key={c.id} value={c.id}>
-                    {c.program?.abbreviation || 'PMD'} Group {c.cohort_number}
+                    PM Group {c.cohort_number}
                   </option>
                 ))}
               </select>
@@ -783,8 +785,8 @@ export default function InternshipTrackerPage() {
                     <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalStudents}</div>
                     <div className="text-sm text-gray-500 dark:text-gray-400">Total Students</div>
                   </div>
-                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 text-center border-2 border-orange-200 dark:border-orange-800">
-                    <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">{stats.needsPlacement}</div>
+                  <div className={`bg-white dark:bg-gray-800 rounded-lg shadow p-4 text-center ${stats.needsPlacement > 0 ? 'border-2 border-orange-200 dark:border-orange-800' : ''}`}>
+                    <div className={`text-2xl font-bold ${stats.needsPlacement > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-gray-900 dark:text-white'}`}>{stats.needsPlacement}</div>
                     <div className="text-sm text-gray-500 dark:text-gray-400">Needs Placement</div>
                   </div>
                 </>
