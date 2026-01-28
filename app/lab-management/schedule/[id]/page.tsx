@@ -145,6 +145,7 @@ export default function LabDayPage() {
   const [skillsModalOpen, setSkillsModalOpen] = useState(false);
   const [skillSearch, setSkillSearch] = useState('');
   const [editCustomSkills, setEditCustomSkills] = useState<string[]>([]);
+  const [stationInstructors, setStationInstructors] = useState<{id?: string; user_email: string; user_name: string; is_primary: boolean}[]>([]);
   const [editForm, setEditForm] = useState({
     station_type: 'scenario' as string,
     scenario_id: '',
@@ -333,6 +334,38 @@ export default function LabDayPage() {
 
     setEditCustomSkills(customSkillsList);
 
+    // Fetch station instructors
+    try {
+      const instructorsRes = await fetch(`/api/lab-management/station-instructors?stationId=${station.id}`);
+      const instructorsData = await instructorsRes.json();
+      if (instructorsData.success && instructorsData.instructors) {
+        setStationInstructors(instructorsData.instructors);
+      } else {
+        // Fallback to primary instructor from station
+        if (station.instructor_name && station.instructor_email) {
+          setStationInstructors([{
+            user_email: station.instructor_email,
+            user_name: station.instructor_name,
+            is_primary: true
+          }]);
+        } else {
+          setStationInstructors([]);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching station instructors:', error);
+      // Fallback to primary instructor
+      if (station.instructor_name && station.instructor_email) {
+        setStationInstructors([{
+          user_email: station.instructor_email,
+          user_name: station.instructor_name,
+          is_primary: true
+        }]);
+      } else {
+        setStationInstructors([]);
+      }
+    }
+
     // Set selectedInstructor based on existing instructor data
     if (station.instructor_name && station.instructor_email) {
       const matchingInstructor = instructors.find(
@@ -408,6 +441,44 @@ export default function LabDayPage() {
     }
   };
 
+  // Add instructor to station
+  const addStationInstructor = async (name: string, email: string, isPrimary: boolean = false) => {
+    if (!editingStation || !email.trim()) return;
+
+    // Add to local state immediately for responsiveness
+    const newInstructor = { user_email: email.trim(), user_name: name.trim() || email.split('@')[0], is_primary: isPrimary };
+
+    // If setting as primary, unset existing primaries
+    if (isPrimary) {
+      setStationInstructors(prev => prev.map(i => ({ ...i, is_primary: false })));
+    }
+
+    // Check if already exists
+    if (stationInstructors.some(i => i.user_email === email.trim())) {
+      return;
+    }
+
+    setStationInstructors(prev => [...prev, newInstructor]);
+
+    // Clear the form fields
+    setEditForm(prev => ({ ...prev, instructor_name: '', instructor_email: '' }));
+    setSelectedInstructor('');
+    setIsCustomInstructor(false);
+  };
+
+  // Remove instructor from station
+  const removeStationInstructor = (email: string) => {
+    setStationInstructors(prev => prev.filter(i => i.user_email !== email));
+  };
+
+  // Set instructor as primary
+  const setPrimaryInstructor = (email: string) => {
+    setStationInstructors(prev => prev.map(i => ({
+      ...i,
+      is_primary: i.user_email === email
+    })));
+  };
+
   const addEditCustomSkill = () => {
     setEditCustomSkills([...editCustomSkills, '']);
   };
@@ -444,6 +515,9 @@ export default function LabDayPage() {
 
     setSavingStation(true);
     try {
+      // Get primary instructor for backwards compatibility
+      const primaryInstructor = stationInstructors.find(i => i.is_primary) || stationInstructors[0];
+
       // Update station basic info
       const res = await fetch(`/api/lab-management/stations/${editingStation.id}`, {
         method: 'PATCH',
@@ -455,8 +529,8 @@ export default function LabDayPage() {
           skill_sheet_url: editForm.skill_sheet_url || null,
           instructions_url: editForm.instructions_url || null,
           station_notes: editForm.station_notes || null,
-          instructor_name: editForm.instructor_name || null,
-          instructor_email: editForm.instructor_email || null,
+          instructor_name: primaryInstructor?.user_name || null,
+          instructor_email: primaryInstructor?.user_email || null,
           room: editForm.room || null,
           notes: editForm.notes || null
         })
@@ -512,6 +586,35 @@ export default function LabDayPage() {
             });
           }
         }
+      }
+
+      // Save station instructors
+      // First, get existing instructors to compare
+      const existingRes = await fetch(`/api/lab-management/station-instructors?stationId=${editingStation.id}`);
+      const existingData = await existingRes.json();
+      const existingEmails = existingData.success ? existingData.instructors.map((i: any) => i.user_email) : [];
+
+      // Remove instructors that are no longer in the list
+      for (const email of existingEmails) {
+        if (!stationInstructors.some(i => i.user_email === email)) {
+          await fetch(`/api/lab-management/station-instructors?stationId=${editingStation.id}&userEmail=${encodeURIComponent(email)}`, {
+            method: 'DELETE'
+          });
+        }
+      }
+
+      // Add or update instructors
+      for (const instructor of stationInstructors) {
+        await fetch('/api/lab-management/station-instructors', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            stationId: editingStation.id,
+            userEmail: instructor.user_email,
+            userName: instructor.user_name,
+            isPrimary: instructor.is_primary
+          })
+        });
       }
 
       closeEditModal();
@@ -1025,48 +1128,128 @@ export default function LabDayPage() {
                 </div>
               </div>
 
-              {/* Instructor */}
+              {/* Instructors */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Instructor
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Instructors
                 </label>
-                <select
-                  value={selectedInstructor}
-                  onChange={(e) => handleInstructorChange(e.target.value)}
-                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
-                >
-                  <option value="">Select instructor...</option>
-                  {instructors.map((instructor) => (
-                    <option key={instructor.id} value={`${instructor.name}|${instructor.email}`}>
-                      {instructor.name} ({instructor.email})
-                    </option>
-                  ))}
-                  <option value="custom">+ Add custom name...</option>
-                </select>
+
+                {/* Current instructors list */}
+                {stationInstructors.length > 0 && (
+                  <div className="space-y-2 mb-3">
+                    {stationInstructors.map((instructor) => (
+                      <div
+                        key={instructor.user_email}
+                        className={`flex items-center justify-between p-2 rounded-lg ${
+                          instructor.is_primary
+                            ? 'bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700'
+                            : 'bg-gray-50 dark:bg-gray-700/50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <Users className="w-4 h-4 text-gray-400" />
+                          <span className="font-medium text-gray-900 dark:text-white">{instructor.user_name}</span>
+                          {instructor.is_primary && (
+                            <span className="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-200 rounded">
+                              Primary
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {!instructor.is_primary && stationInstructors.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => setPrimaryInstructor(instructor.user_email)}
+                              className="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
+                              title="Set as primary"
+                            >
+                              <Check className="w-4 h-4" />
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => removeStationInstructor(instructor.user_email)}
+                            className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400"
+                            title="Remove instructor"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Add instructor dropdown */}
+                <div className="flex gap-2">
+                  <select
+                    value={selectedInstructor}
+                    onChange={(e) => handleInstructorChange(e.target.value)}
+                    className="flex-1 px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  >
+                    <option value="">Add instructor...</option>
+                    {instructors
+                      .filter(i => !stationInstructors.some(si => si.user_email === i.email))
+                      .map((instructor) => (
+                        <option key={instructor.id} value={`${instructor.name}|${instructor.email}`}>
+                          {instructor.name}
+                        </option>
+                      ))}
+                    <option value="custom">+ Custom name...</option>
+                  </select>
+                  {selectedInstructor && selectedInstructor !== 'custom' && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const [name, email] = selectedInstructor.split('|');
+                        addStationInstructor(name, email, stationInstructors.length === 0);
+                      }}
+                      className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                    >
+                      <Plus className="w-5 h-5" />
+                    </button>
+                  )}
+                </div>
 
                 {isCustomInstructor && (
-                  <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="mt-3 flex gap-2">
                     <input
                       type="text"
                       value={editForm.instructor_name}
                       onChange={(e) => setEditForm({ ...editForm, instructor_name: e.target.value })}
-                      placeholder="Name (required for custom)"
-                      className="px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                      placeholder="Name"
+                      className="flex-1 px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                     />
                     <input
                       type="email"
                       value={editForm.instructor_email}
                       onChange={(e) => setEditForm({ ...editForm, instructor_email: e.target.value })}
-                      placeholder="Email (optional)"
-                      className="px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                      placeholder="Email"
+                      className="flex-1 px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                     />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (editForm.instructor_email) {
+                          addStationInstructor(editForm.instructor_name, editForm.instructor_email, stationInstructors.length === 0);
+                        }
+                      }}
+                      disabled={!editForm.instructor_email}
+                      className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                    >
+                      <Plus className="w-5 h-5" />
+                    </button>
                   </div>
                 )}
 
-                {!selectedInstructor && !editForm.instructor_email && (
+                {stationInstructors.length === 0 && (
                   <button
                     type="button"
-                    onClick={assignSelf}
+                    onClick={() => {
+                      if (session?.user?.email && session?.user?.name) {
+                        addStationInstructor(session.user.name, session.user.email, true);
+                      }
+                    }}
                     className="mt-2 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 flex items-center gap-1"
                   >
                     <Users className="w-4 h-4" />
@@ -1149,7 +1332,7 @@ export default function LabDayPage() {
         <LabTimer
           labDayId={labDayId}
           numRotations={labDay.num_rotations}
-          rotationMinutes={labDay.rotation_minutes}
+          rotationMinutes={labDay.rotation_duration}
           onClose={() => setShowTimer(false)}
           isController={true}
         />

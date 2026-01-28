@@ -275,6 +275,17 @@ export default function LabTimer({
     };
   }, [fetchTimerState, fetchReadyStatuses]);
 
+  // Sync timer duration when lab day settings change
+  useEffect(() => {
+    if (!timerState || !isController) return;
+
+    // Only sync if the duration has changed and timer is stopped
+    if (timerState.duration_seconds !== totalSeconds && timerState.status === 'stopped') {
+      console.log('Syncing timer duration:', timerState.duration_seconds, '->', totalSeconds);
+      sendAction('update', { duration_seconds: totalSeconds });
+    }
+  }, [timerState, totalSeconds, isController, sendAction]);
+
   // Calculate display time from timer state
   useEffect(() => {
     if (!timerState) return;
@@ -376,6 +387,13 @@ export default function LabTimer({
     if (timerState.status === 'running') {
       sendAction('pause');
     } else {
+      // Check if all stations are ready before starting
+      if (timerState.status === 'stopped' && totalStations > 0 && !allReady) {
+        const confirmStart = window.confirm(
+          `Only ${readyCount} of ${totalStations} stations are ready.\n\nStart anyway?`
+        );
+        if (!confirmStart) return;
+      }
       sendAction('start');
     }
   };
