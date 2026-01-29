@@ -297,14 +297,11 @@ export default function LabDayPage() {
 
     if (station.station_type === 'skills') {
       try {
-        // Fetch library skills
-        const res = await fetch(`/api/lab-management/stations?labDayId=${labDayId}`);
+        // Fetch library skills from station-skills endpoint
+        const res = await fetch(`/api/lab-management/station-skills?stationId=${station.id}`);
         const data = await res.json();
-        if (data.success) {
-          const fullStation = data.stations.find((s: any) => s.id === station.id);
-          if (fullStation?.station_skills) {
-            stationSkillIds = fullStation.station_skills.map((ss: any) => ss.skill?.id).filter(Boolean);
-          }
+        if (data.success && data.stationSkills) {
+          stationSkillIds = data.stationSkills.map((ss: any) => ss.skill?.id || ss.skill_id).filter(Boolean);
         }
 
         // Fetch custom skills
