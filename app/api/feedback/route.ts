@@ -2,15 +2,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
 
-// Use service role key to bypass RLS for feedback submission
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+// Create Supabase client inside handlers to ensure env vars are available
+function getSupabase() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-const supabase = createClient(supabaseUrl, supabaseKey);
+  if (!url || !key) {
+    throw new Error('Missing Supabase configuration');
+  }
+
+  return createClient(url, key);
+}
 
 // GET - List all feedback reports (for admin view)
 export async function GET(request: NextRequest) {
   try {
+    const supabase = getSupabase();
     const session = await getServerSession();
     if (!session?.user?.email) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
@@ -60,6 +67,7 @@ export async function GET(request: NextRequest) {
 // POST - Submit new feedback
 export async function POST(request: NextRequest) {
   try {
+    const supabase = getSupabase();
     const session = await getServerSession();
     const body = await request.json();
 
@@ -123,6 +131,7 @@ export async function POST(request: NextRequest) {
 // PATCH - Update feedback status (for admins)
 export async function PATCH(request: NextRequest) {
   try {
+    const supabase = getSupabase();
     const session = await getServerSession();
     if (!session?.user?.email) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
