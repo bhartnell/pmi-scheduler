@@ -387,7 +387,7 @@ export default function LabDayPage() {
 
     // Fetch scenarios and skills if not already loaded
     if (scenarios.length === 0 || skills.length === 0) {
-      fetchScenariosAndSkills();
+      await fetchScenariosAndSkills();
     }
   };
 
@@ -939,7 +939,7 @@ export default function LabDayPage() {
                     <button
                       key={type.value}
                       type="button"
-                      onClick={() => setEditForm({ ...editForm, station_type: type.value })}
+                      onClick={() => setEditForm(prev => ({ ...prev, station_type: type.value }))}
                       className={`p-3 rounded-lg border-2 text-center transition-all ${
                         editForm.station_type === type.value
                           ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
@@ -961,7 +961,7 @@ export default function LabDayPage() {
                 <input
                   type="text"
                   value={editForm.custom_title}
-                  onChange={(e) => setEditForm({ ...editForm, custom_title: e.target.value })}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, custom_title: e.target.value }))}
                   placeholder="e.g., PM14 01/23/26 - Chest Pain Scenario"
                   className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                 />
@@ -978,7 +978,7 @@ export default function LabDayPage() {
                   </label>
                   <select
                     value={editForm.scenario_id}
-                    onChange={(e) => setEditForm({ ...editForm, scenario_id: e.target.value })}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, scenario_id: e.target.value }))}
                     className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                   >
                     <option value="">Select a scenario...</option>
@@ -1083,7 +1083,7 @@ export default function LabDayPage() {
                   <input
                     type="url"
                     value={editForm.skill_sheet_url}
-                    onChange={(e) => setEditForm({ ...editForm, skill_sheet_url: e.target.value })}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, skill_sheet_url: e.target.value }))}
                     placeholder="https://drive.google.com/..."
                     className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                   />
@@ -1099,7 +1099,7 @@ export default function LabDayPage() {
                   <input
                     type="url"
                     value={editForm.instructions_url}
-                    onChange={(e) => setEditForm({ ...editForm, instructions_url: e.target.value })}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, instructions_url: e.target.value }))}
                     placeholder="https://drive.google.com/..."
                     className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                   />
@@ -1114,7 +1114,7 @@ export default function LabDayPage() {
                   </label>
                   <textarea
                     value={editForm.station_notes}
-                    onChange={(e) => setEditForm({ ...editForm, station_notes: e.target.value })}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, station_notes: e.target.value }))}
                     placeholder="Equipment needed, setup instructions, special considerations..."
                     rows={3}
                     className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
@@ -1213,14 +1213,14 @@ export default function LabDayPage() {
                     <input
                       type="text"
                       value={editForm.instructor_name}
-                      onChange={(e) => setEditForm({ ...editForm, instructor_name: e.target.value })}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, instructor_name: e.target.value }))}
                       placeholder="Name"
                       className="flex-1 px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                     />
                     <input
                       type="email"
                       value={editForm.instructor_email}
-                      onChange={(e) => setEditForm({ ...editForm, instructor_email: e.target.value })}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, instructor_email: e.target.value }))}
                       placeholder="Email"
                       className="flex-1 px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                     />
@@ -1263,7 +1263,7 @@ export default function LabDayPage() {
                 <input
                   type="text"
                   value={editForm.room}
-                  onChange={(e) => setEditForm({ ...editForm, room: e.target.value })}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, room: e.target.value }))}
                   placeholder="e.g., Sim Lab A"
                   className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                 />
@@ -1276,7 +1276,7 @@ export default function LabDayPage() {
                 </label>
                 <textarea
                   value={editForm.notes}
-                  onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+                  onChange={(e) => setEditForm(prev => ({ ...prev, notes: e.target.value }))}
                   rows={2}
                   placeholder="Special instructions, equipment needed, etc."
                   className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
