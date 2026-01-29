@@ -132,7 +132,11 @@ export default function SiteVisitsPage() {
   const [formDepartments, setFormDepartments] = useState<string[]>([]);
   const [formVisitorId, setFormVisitorId] = useState('');
   const [formVisitorName, setFormVisitorName] = useState('');
-  const [formVisitDate, setFormVisitDate] = useState(new Date().toISOString().split('T')[0]);
+  // Use local date to avoid timezone issues (toISOString uses UTC which can shift the date)
+  const [formVisitDate, setFormVisitDate] = useState(() => {
+    const today = new Date();
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  });
   const [formVisitTime, setFormVisitTime] = useState('');
   const [formCohortId, setFormCohortId] = useState('');
   const [formEntireClass, setFormEntireClass] = useState(true);
@@ -280,7 +284,9 @@ export default function SiteVisitsPage() {
     setFormDepartments([]);
     setFormVisitorId(currentUser?.id || '');
     setFormVisitorName(currentUser?.name || '');
-    setFormVisitDate(new Date().toISOString().split('T')[0]);
+    // Use local date to avoid timezone issues
+    const today = new Date();
+    setFormVisitDate(`${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`);
     // Auto-fill current time in HH:MM format
     const now = new Date();
     setFormVisitTime(`${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`);

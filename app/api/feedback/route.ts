@@ -84,8 +84,16 @@ export async function POST(request: NextRequest) {
     if (error) throw error;
 
     return NextResponse.json({ success: true, report: data });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error submitting feedback:', error);
+    // Check if table doesn't exist
+    if (error?.code === '42P01' || error?.message?.includes('does not exist')) {
+      return NextResponse.json({
+        success: false,
+        error: 'Feedback table not configured. Please run the migration.',
+        tableExists: false
+      }, { status: 500 });
+    }
     return NextResponse.json({ success: false, error: 'Failed to submit feedback' }, { status: 500 });
   }
 }
