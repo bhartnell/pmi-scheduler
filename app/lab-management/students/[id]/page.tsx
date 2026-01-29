@@ -24,8 +24,10 @@ import {
   Check,
   X,
   ExternalLink,
-  Brain
+  Brain,
+  Barcode as BarcodeIcon
 } from 'lucide-react';
+import Barcode from 'react-barcode';
 import { canManageStudentRoster, type Role } from '@/lib/permissions';
 
 interface Student {
@@ -46,6 +48,7 @@ interface Student {
   prior_employer: string | null;
   scrub_top_size: string | null;
   scrub_bottom_size: string | null;
+  student_id: string | null;
   cohort?: {
     id: string;
     cohort_number: number;
@@ -167,6 +170,7 @@ export default function StudentDetailPage() {
   const [editPriorEmployer, setEditPriorEmployer] = useState('');
   const [editScrubTopSize, setEditScrubTopSize] = useState('');
   const [editScrubBottomSize, setEditScrubBottomSize] = useState('');
+  const [editStudentId, setEditStudentId] = useState('');
 
   // Learning style state
   const [learningStyle, setLearningStyle] = useState<LearningStyle | null>(null);
@@ -253,6 +257,7 @@ export default function StudentDetailPage() {
         setEditPriorEmployer(data.student.prior_employer || '');
         setEditScrubTopSize(data.student.scrub_top_size || '');
         setEditScrubBottomSize(data.student.scrub_bottom_size || '');
+        setEditStudentId(data.student.student_id || '');
       }
     } catch (error) {
       console.error('Error fetching student:', error);
@@ -444,6 +449,7 @@ export default function StudentDetailPage() {
           prior_employer: editPriorEmployer || null,
           scrub_top_size: editScrubTopSize || null,
           scrub_bottom_size: editScrubBottomSize || null,
+          student_id: editStudentId || null,
         }),
       });
       
@@ -669,6 +675,22 @@ export default function StudentDetailPage() {
                     </div>
                   </div>
 
+                  {/* School Student ID */}
+                  <div className="pt-4 border-t dark:border-gray-600">
+                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">School Student ID</h3>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Student ID Number</label>
+                      <input
+                        type="text"
+                        value={editStudentId}
+                        onChange={e => setEditStudentId(e.target.value)}
+                        placeholder="Enter school-assigned ID"
+                        className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                      />
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Used for library barcode generation</p>
+                    </div>
+                  </div>
+
                   {/* Scrub Sizes */}
                   <div className="pt-4 border-t dark:border-gray-600">
                     <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Scrub Sizes</h3>
@@ -872,6 +894,33 @@ export default function StudentDetailPage() {
                   {student.scrub_bottom_size || '—'}
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Library Barcode Section */}
+        {student.student_id && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
+              <BarcodeIcon className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+              Library Barcode
+            </h2>
+            <div className="flex flex-col items-center">
+              <div className="bg-white p-4 rounded-lg border dark:border-gray-600">
+                <Barcode
+                  value={`STU-${student.student_id}`}
+                  format="CODE128"
+                  width={2}
+                  height={50}
+                  displayValue={true}
+                  fontSize={14}
+                  background="#ffffff"
+                  lineColor="#000000"
+                />
+              </div>
+              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                School ID: {student.student_id}
+              </p>
             </div>
           </div>
         )}
