@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// Use service role key to bypass RLS for feedback submission
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 // GET - List all feedback reports (for admin view)
 export async function GET(request: NextRequest) {
@@ -86,6 +87,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, report: data });
   } catch (error: any) {
     console.error('Error submitting feedback:', error);
+    console.error('Error details:', {
+      code: error?.code,
+      message: error?.message,
+      details: error?.details,
+      hint: error?.hint
+    });
+
     // Check if table doesn't exist
     if (error?.code === '42P01' || error?.message?.includes('does not exist')) {
       return NextResponse.json({
@@ -94,7 +102,21 @@ export async function POST(request: NextRequest) {
         tableExists: false
       }, { status: 500 });
     }
-    return NextResponse.json({ success: false, error: 'Failed to submit feedback' }, { status: 500 });
+
+    // Check for RLS policy violation
+    if (error?.code === '42501' || error?.message?.includes('policy')) {
+      return NextResponse.json({
+        success: false,
+        error: 'Permission denied. Check RLS policies or service role key.',
+        details: error?.message
+      }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      success: false,
+      error: 'Failed to submit feedback',
+      details: error?.message || 'Unknown error'
+    }, { status: 500 });
   }
 }
 
