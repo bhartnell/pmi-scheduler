@@ -221,8 +221,9 @@ export default function GradeStationPage() {
   useEffect(() => {
     // Initialize critical actions checkboxes when scenario loads
     if (station?.scenario?.critical_actions) {
+      const actions = toArray(station.scenario.critical_actions);
       const initial: Record<string, boolean> = {};
-      station.scenario.critical_actions.forEach((action, index) => {
+      actions.forEach((action, index) => {
         initial[`action-${index}`] = false;
       });
       setCriticalActions(initial);
@@ -944,14 +945,14 @@ export default function GradeStationPage() {
         )}
 
         {/* Critical Actions */}
-        {scenario?.critical_actions && scenario.critical_actions.length > 0 && (
+        {scenario?.critical_actions && toArray(scenario.critical_actions).length > 0 && (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
             <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-3">
               <AlertTriangle className="w-5 h-5 text-red-500" />
               Critical Actions
             </h2>
             <div className="space-y-2">
-              {scenario.critical_actions.map((action, index) => (
+              {toArray(scenario.critical_actions).map((action, index) => (
                 <label
                   key={index}
                   className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer ${
@@ -1254,11 +1255,11 @@ export default function GradeStationPage() {
         </div>
 
         {/* Debrief Points */}
-        {scenario?.debrief_points && scenario.debrief_points.length > 0 && (
+        {scenario?.debrief_points && toArray(scenario.debrief_points).length > 0 && (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
             <h2 className="font-semibold text-gray-900 dark:text-white mb-3">Debrief Discussion Points</h2>
             <ul className="space-y-2">
-              {scenario.debrief_points.map((point, index) => (
+              {toArray(scenario.debrief_points).map((point, index) => (
                 <li key={index} className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
                   <span className="text-blue-500 dark:text-blue-400">•</span>
                   {point}
