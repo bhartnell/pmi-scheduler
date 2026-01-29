@@ -20,6 +20,14 @@ import {
   ClipboardCheck
 } from 'lucide-react';
 import TimerBanner from '@/components/TimerBanner';
+import StudentPicker from '@/components/StudentPicker';
+
+// Helper function to safely handle array/string fields
+const toArray = (value: any): string[] => {
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string' && value.trim()) return [value];
+  return [];
+};
 
 // Types
 interface Student {
@@ -608,18 +616,18 @@ export default function GradeStationPage() {
                 )}
 
                 {/* Medical History */}
-                {(scenario.medical_history?.length || scenario.medications?.length || scenario.allergies?.length) && (
+                {(scenario.medical_history || scenario.medications || scenario.allergies) && (
                   <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
                     <h3 className="text-sm font-medium text-orange-800 dark:text-orange-300 mb-2">History</h3>
                     <div className="text-sm text-orange-700 dark:text-orange-400 space-y-1">
-                      {scenario.medical_history && scenario.medical_history.length > 0 && (
-                        <p><span className="font-medium">PMHx:</span> {scenario.medical_history.join(', ')}</p>
+                      {scenario.medical_history && toArray(scenario.medical_history).length > 0 && (
+                        <p><span className="font-medium">PMHx:</span> {toArray(scenario.medical_history).join(', ')}</p>
                       )}
-                      {scenario.medications && scenario.medications.length > 0 && (
-                        <p><span className="font-medium">Meds:</span> {scenario.medications.join(', ')}</p>
+                      {scenario.medications && toArray(scenario.medications).length > 0 && (
+                        <p><span className="font-medium">Meds:</span> {toArray(scenario.medications).join(', ')}</p>
                       )}
-                      {scenario.allergies && scenario.allergies.length > 0 && (
-                        <p><span className="font-medium">Allergies:</span> {scenario.allergies.join(', ')}</p>
+                      {scenario.allergies && toArray(scenario.allergies).length > 0 && (
+                        <p><span className="font-medium">Allergies:</span> {toArray(scenario.allergies).join(', ')}</p>
                       )}
                     </div>
                   </div>
@@ -710,9 +718,9 @@ export default function GradeStationPage() {
                               ))}
                             </div>
                           )}
-                          {phase.expected_interventions && phase.expected_interventions.length > 0 && (
+                          {phase.expected_interventions && toArray(phase.expected_interventions).length > 0 && (
                             <div className="mt-2 text-xs text-cyan-600 dark:text-cyan-500">
-                              <span className="font-medium">Expected:</span> {phase.expected_interventions.join(', ')}
+                              <span className="font-medium">Expected:</span> {toArray(phase.expected_interventions).join(', ')}
                             </div>
                           )}
                         </div>
@@ -722,11 +730,11 @@ export default function GradeStationPage() {
                 )}
 
                 {/* Learning Objectives */}
-                {scenario.learning_objectives && scenario.learning_objectives.length > 0 && (
+                {scenario.learning_objectives && toArray(scenario.learning_objectives).length > 0 && (
                   <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-200 dark:border-indigo-800">
                     <h3 className="text-sm font-medium text-indigo-800 dark:text-indigo-300 mb-2">Learning Objectives</h3>
                     <ul className="text-sm text-indigo-700 dark:text-indigo-400 space-y-1">
-                      {scenario.learning_objectives.map((obj, index) => (
+                      {toArray(scenario.learning_objectives).map((obj, index) => (
                         <li key={index} className="flex items-start gap-2">
                           <span className="text-indigo-400 dark:text-indigo-500">•</span>
                           {obj}
@@ -783,7 +791,7 @@ export default function GradeStationPage() {
               Select Student
             </h2>
 
-            {/* Student Selection */}
+            {/* Student Selection with Photos */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Student</label>
               {allStudents.length === 0 ? (
@@ -793,18 +801,12 @@ export default function GradeStationPage() {
                   </p>
                 </div>
               ) : (
-                <select
+                <StudentPicker
+                  students={allStudents}
                   value={selectedStudentId}
-                  onChange={(e) => setSelectedStudentId(e.target.value)}
-                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
-                >
-                  <option value="">Select a student...</option>
-                  {allStudents.map(student => (
-                    <option key={student.id} value={student.id}>
-                      {student.first_name} {student.last_name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setSelectedStudentId}
+                  placeholder="Select a student..."
+                />
               )}
             </div>
 
@@ -984,19 +986,26 @@ export default function GradeStationPage() {
         {/* Evaluation Criteria - different for skills vs scenarios */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-              {isSkillsStation ? (
-                <>
-                  <ClipboardCheck className="w-5 h-5 text-green-600 dark:text-green-400" />
-                  Skill Evaluation
-                </>
-              ) : (
-                <>
-                  <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                  Evaluation Criteria
-                </>
+            <div>
+              <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                {isSkillsStation ? (
+                  <>
+                    <ClipboardCheck className="w-5 h-5 text-green-600 dark:text-green-400" />
+                    Skill Evaluation
+                  </>
+                ) : (
+                  <>
+                    <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    Evaluation Criteria
+                  </>
+                )}
+              </h2>
+              {isSkillsStation && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Grading is optional for skills stations - you can save without rating
+                </p>
               )}
-            </h2>
+            </div>
             <div className="text-sm">
               <span className="text-green-600 dark:text-green-400 font-medium">{satisfactoryCount} S</span>
               {needsImprovementCount > 0 && (
