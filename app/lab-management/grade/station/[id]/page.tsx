@@ -139,7 +139,26 @@ interface Station {
     medical_history: string[] | null;
     medications: string[] | null;
     allergies: string[] | null;
+    // Primary Assessment - XABCDE (scenario-level defaults)
+    assessment_x: string | null;
+    assessment_a: string | null;
+    assessment_e: string | null;
     general_impression: string | null;
+    // SAMPLE History (scenario-level)
+    sample_history: {
+      signs_symptoms?: string;
+      last_oral_intake?: string;
+      events_leading?: string;
+    } | null;
+    // OPQRST (scenario-level)
+    opqrst: {
+      onset?: string;
+      provocation?: string;
+      quality?: string;
+      radiation?: string;
+      severity?: string;
+      time_onset?: string;
+    } | null;
     initial_vitals: Record<string, string> | null;
     phases: ScenarioPhase[] | null;
     critical_actions: string[];
@@ -757,14 +776,14 @@ export default function GradeStationPage() {
                       const hasPrimaryData = phase.hemorrhage_control || phase.airway || phase.breathing || phase.circulation || phase.disability || phase.expose || v.lung_sounds || v.skin || v.loc || v.gcs || v.gcs_total || v.pupils;
                       const hasOPQRST = phase.onset || phase.provocation || phase.quality || phase.radiation || phase.severity || phase.time_onset;
 
-                      // Build XABCDE from existing data if not explicitly provided
+                      // Build XABCDE from phase data, falling back to scenario-level defaults
                       const xabcde = {
-                        x: phase.hemorrhage_control || null,
-                        a: phase.airway || null,
+                        x: phase.hemorrhage_control || scenario.assessment_x || null,
+                        a: phase.airway || scenario.assessment_a || null,
                         b: phase.breathing || (v.rr || v.lung_sounds ? `RR ${v.rr || '—'}${v.lung_sounds ? `, ${v.lung_sounds}` : ''}` : null),
                         c: phase.circulation || (v.hr || v.skin ? `HR ${v.hr || '—'}${v.skin ? `, skin ${v.skin}` : ''}${v.pulse_quality ? `, pulse ${v.pulse_quality}` : ''}` : null),
                         d: phase.disability || (v.loc || v.gcs || v.gcs_total ? `${v.loc || ''}${v.gcs || v.gcs_total ? ` GCS ${v.gcs || v.gcs_total}` : ''}${v.pupils ? `, pupils ${v.pupils}` : ''}`.trim() : null),
-                        e: phase.expose || null
+                        e: phase.expose || scenario.assessment_e || null
                       };
                       const hasXABCDE = xabcde.x || xabcde.a || xabcde.b || xabcde.c || xabcde.d || xabcde.e;
 
@@ -776,8 +795,30 @@ export default function GradeStationPage() {
                         v.loc.toLowerCase().includes('unresponsive') ? 'Unresponsive' : null
                       ) : null);
 
-                      // SAMPLE from scenario (only show on first phase or if phase-specific)
-                      const showSAMPLE = index === 0 && (scenario.chief_complaint || scenario.allergies || scenario.medications || scenario.medical_history);
+                      // Get general impression from phase or scenario
+                      const generalImpression = phase.general_impression || scenario.general_impression;
+
+                      // SAMPLE - use phase values or fall back to scenario-level
+                      const sampleData = {
+                        signs_symptoms: phase.signs_symptoms || scenario.sample_history?.signs_symptoms || scenario.chief_complaint,
+                        allergies: scenario.allergies,
+                        medications: scenario.medications,
+                        medical_history: scenario.medical_history,
+                        last_oral_intake: phase.last_oral_intake || scenario.sample_history?.last_oral_intake,
+                        events_leading: phase.events_leading || scenario.sample_history?.events_leading
+                      };
+                      const showSAMPLE = index === 0 && (sampleData.signs_symptoms || sampleData.allergies || sampleData.medications || sampleData.medical_history || sampleData.last_oral_intake || sampleData.events_leading);
+
+                      // OPQRST - use phase values or fall back to scenario-level
+                      const opqrstData = {
+                        onset: phase.onset || scenario.opqrst?.onset,
+                        provocation: phase.provocation || scenario.opqrst?.provocation,
+                        quality: phase.quality || scenario.opqrst?.quality,
+                        radiation: phase.radiation || scenario.opqrst?.radiation,
+                        severity: phase.severity || scenario.opqrst?.severity,
+                        time_onset: phase.time_onset || scenario.opqrst?.time_onset
+                      };
+                      const hasOPQRSTData = opqrstData.onset || opqrstData.provocation || opqrstData.quality || opqrstData.radiation || opqrstData.severity || opqrstData.time_onset;
 
                       return (
                         <div
@@ -885,13 +926,13 @@ export default function GradeStationPage() {
                                   )}
                                 </div>
                                 {/* AVPU & General Impression */}
-                                {(avpu || phase.general_impression) && (
+                                {(avpu || generalImpression) && (
                                   <div className="flex gap-6 text-xs mt-2 pl-2 pt-2 border-t border-gray-100 dark:border-gray-700">
                                     {avpu && (
                                       <div><span className="font-medium text-gray-500 dark:text-gray-400">AVPU:</span> <span className="text-gray-900 dark:text-white font-medium">{avpu}</span></div>
                                     )}
-                                    {phase.general_impression && (
-                                      <div><span className="font-medium text-gray-500 dark:text-gray-400">Impression:</span> <span className={`font-medium ${phase.general_impression.toLowerCase().includes('sick') ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>{phase.general_impression}</span></div>
+                                    {generalImpression && (
+                                      <div><span className="font-medium text-gray-500 dark:text-gray-400">Impression:</span> <span className={`font-medium ${generalImpression.toLowerCase().includes('sick') || generalImpression.toLowerCase().includes('critical') ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>{generalImpression}</span></div>
                                     )}
                                   </div>
                                 )}
@@ -933,46 +974,46 @@ export default function GradeStationPage() {
                                   <div className="pl-2">
                                     <div className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">SAMPLE History</div>
                                     <div className="text-xs space-y-1 bg-gray-50 dark:bg-gray-700/50 rounded p-2">
-                                      {(scenario.chief_complaint || phase.signs_symptoms) && (
+                                      {sampleData.signs_symptoms && (
                                         <div className="flex">
                                           <span className="w-4 font-bold text-green-600 dark:text-green-400">S</span>
                                           <span className="text-gray-500 dark:text-gray-400 w-32">Signs/Symptoms:</span>
-                                          <span className="text-gray-900 dark:text-white flex-1">{phase.signs_symptoms || scenario.chief_complaint}</span>
+                                          <span className="text-gray-900 dark:text-white flex-1">{sampleData.signs_symptoms}</span>
                                         </div>
                                       )}
-                                      {scenario.allergies && (
+                                      {sampleData.allergies && (
                                         <div className="flex">
                                           <span className="w-4 font-bold text-green-600 dark:text-green-400">A</span>
                                           <span className="text-gray-500 dark:text-gray-400 w-32">Allergies:</span>
-                                          <span className="text-gray-900 dark:text-white flex-1">{toArray(scenario.allergies).join(', ') || 'NKDA'}</span>
+                                          <span className="text-gray-900 dark:text-white flex-1">{toArray(sampleData.allergies).join(', ') || 'NKDA'}</span>
                                         </div>
                                       )}
-                                      {scenario.medications && toArray(scenario.medications).length > 0 && (
+                                      {sampleData.medications && toArray(sampleData.medications).length > 0 && (
                                         <div className="flex">
                                           <span className="w-4 font-bold text-green-600 dark:text-green-400">M</span>
                                           <span className="text-gray-500 dark:text-gray-400 w-32">Medications:</span>
-                                          <span className="text-gray-900 dark:text-white flex-1">{toArray(scenario.medications).join(', ')}</span>
+                                          <span className="text-gray-900 dark:text-white flex-1">{toArray(sampleData.medications).join(', ')}</span>
                                         </div>
                                       )}
-                                      {scenario.medical_history && toArray(scenario.medical_history).length > 0 && (
+                                      {sampleData.medical_history && toArray(sampleData.medical_history).length > 0 && (
                                         <div className="flex">
                                           <span className="w-4 font-bold text-green-600 dark:text-green-400">P</span>
                                           <span className="text-gray-500 dark:text-gray-400 w-32">Past Medical Hx:</span>
-                                          <span className="text-gray-900 dark:text-white flex-1">{toArray(scenario.medical_history).join(', ')}</span>
+                                          <span className="text-gray-900 dark:text-white flex-1">{toArray(sampleData.medical_history).join(', ')}</span>
                                         </div>
                                       )}
-                                      {phase.last_oral_intake && (
+                                      {sampleData.last_oral_intake && (
                                         <div className="flex">
                                           <span className="w-4 font-bold text-green-600 dark:text-green-400">L</span>
                                           <span className="text-gray-500 dark:text-gray-400 w-32">Last Oral Intake:</span>
-                                          <span className="text-gray-900 dark:text-white flex-1">{phase.last_oral_intake}</span>
+                                          <span className="text-gray-900 dark:text-white flex-1">{sampleData.last_oral_intake}</span>
                                         </div>
                                       )}
-                                      {phase.events_leading && (
+                                      {sampleData.events_leading && (
                                         <div className="flex">
                                           <span className="w-4 font-bold text-green-600 dark:text-green-400">E</span>
                                           <span className="text-gray-500 dark:text-gray-400 w-32">Events Leading:</span>
-                                          <span className="text-gray-900 dark:text-white flex-1">{phase.events_leading}</span>
+                                          <span className="text-gray-900 dark:text-white flex-1">{sampleData.events_leading}</span>
                                         </div>
                                       )}
                                     </div>
@@ -980,50 +1021,50 @@ export default function GradeStationPage() {
                                 )}
 
                                 {/* OPQRST */}
-                                {hasOPQRST && (
+                                {hasOPQRSTData && (
                                   <div className="pl-2">
                                     <div className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">OPQRST</div>
                                     <div className="text-xs space-y-1 bg-gray-50 dark:bg-gray-700/50 rounded p-2">
-                                      {phase.onset && (
+                                      {opqrstData.onset && (
                                         <div className="flex">
                                           <span className="w-4 font-bold text-green-600 dark:text-green-400">O</span>
                                           <span className="text-gray-500 dark:text-gray-400 w-32">Onset:</span>
-                                          <span className="text-gray-900 dark:text-white flex-1">{phase.onset}</span>
+                                          <span className="text-gray-900 dark:text-white flex-1">{opqrstData.onset}</span>
                                         </div>
                                       )}
-                                      {phase.provocation && (
+                                      {opqrstData.provocation && (
                                         <div className="flex">
                                           <span className="w-4 font-bold text-green-600 dark:text-green-400">P</span>
                                           <span className="text-gray-500 dark:text-gray-400 w-32">Provocation:</span>
-                                          <span className="text-gray-900 dark:text-white flex-1">{phase.provocation}</span>
+                                          <span className="text-gray-900 dark:text-white flex-1">{opqrstData.provocation}</span>
                                         </div>
                                       )}
-                                      {phase.quality && (
+                                      {opqrstData.quality && (
                                         <div className="flex">
                                           <span className="w-4 font-bold text-green-600 dark:text-green-400">Q</span>
                                           <span className="text-gray-500 dark:text-gray-400 w-32">Quality:</span>
-                                          <span className="text-gray-900 dark:text-white flex-1">{phase.quality}</span>
+                                          <span className="text-gray-900 dark:text-white flex-1">{opqrstData.quality}</span>
                                         </div>
                                       )}
-                                      {phase.radiation && (
+                                      {opqrstData.radiation && (
                                         <div className="flex">
                                           <span className="w-4 font-bold text-green-600 dark:text-green-400">R</span>
                                           <span className="text-gray-500 dark:text-gray-400 w-32">Radiation:</span>
-                                          <span className="text-gray-900 dark:text-white flex-1">{phase.radiation}</span>
+                                          <span className="text-gray-900 dark:text-white flex-1">{opqrstData.radiation}</span>
                                         </div>
                                       )}
-                                      {phase.severity && (
+                                      {opqrstData.severity && (
                                         <div className="flex">
                                           <span className="w-4 font-bold text-green-600 dark:text-green-400">S</span>
                                           <span className="text-gray-500 dark:text-gray-400 w-32">Severity:</span>
-                                          <span className="text-gray-900 dark:text-white flex-1">{phase.severity}</span>
+                                          <span className="text-gray-900 dark:text-white flex-1">{opqrstData.severity}</span>
                                         </div>
                                       )}
-                                      {phase.time_onset && (
+                                      {opqrstData.time_onset && (
                                         <div className="flex">
                                           <span className="w-4 font-bold text-green-600 dark:text-green-400">T</span>
                                           <span className="text-gray-500 dark:text-gray-400 w-32">Time:</span>
-                                          <span className="text-gray-900 dark:text-white flex-1">{phase.time_onset}</span>
+                                          <span className="text-gray-900 dark:text-white flex-1">{opqrstData.time_onset}</span>
                                         </div>
                                       )}
                                     </div>
