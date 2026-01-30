@@ -875,203 +875,151 @@ export default function GradeStationPage() {
                               </div>
                             )}
 
-                            {/* 2. PRIMARY ASSESSMENT - XABCDE */}
-                            {hasXABCDE && (
-                              <div className="space-y-2">
-                                <div className="text-xs font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wider border-b border-orange-200 dark:border-orange-800 pb-1">
-                                  Primary Assessment
-                                </div>
-                                <div className="text-xs space-y-1.5 pl-2">
-                                  {xabcde.x && (
-                                    <div className="flex">
-                                      <span className="w-5 font-bold text-orange-600 dark:text-orange-400">X</span>
-                                      <span className="text-gray-500 dark:text-gray-400 w-24">Hemorrhage:</span>
-                                      <span className="text-gray-900 dark:text-white flex-1">{xabcde.x}</span>
-                                    </div>
-                                  )}
-                                  {xabcde.a && (
-                                    <div className="flex">
-                                      <span className="w-5 font-bold text-orange-600 dark:text-orange-400">A</span>
-                                      <span className="text-gray-500 dark:text-gray-400 w-24">Airway:</span>
-                                      <span className="text-gray-900 dark:text-white flex-1">{xabcde.a}</span>
-                                    </div>
-                                  )}
-                                  {xabcde.b && (
-                                    <div className="flex">
-                                      <span className="w-5 font-bold text-orange-600 dark:text-orange-400">B</span>
-                                      <span className="text-gray-500 dark:text-gray-400 w-24">Breathing:</span>
-                                      <span className="text-gray-900 dark:text-white flex-1">{xabcde.b}</span>
-                                    </div>
-                                  )}
-                                  {xabcde.c && (
-                                    <div className="flex">
-                                      <span className="w-5 font-bold text-orange-600 dark:text-orange-400">C</span>
-                                      <span className="text-gray-500 dark:text-gray-400 w-24">Circulation:</span>
-                                      <span className="text-gray-900 dark:text-white flex-1">{xabcde.c}</span>
-                                    </div>
-                                  )}
-                                  {xabcde.d && (
-                                    <div className="flex">
-                                      <span className="w-5 font-bold text-orange-600 dark:text-orange-400">D</span>
-                                      <span className="text-gray-500 dark:text-gray-400 w-24">Disability:</span>
-                                      <span className="text-gray-900 dark:text-white flex-1">{xabcde.d}</span>
-                                    </div>
-                                  )}
-                                  {xabcde.e && (
-                                    <div className="flex">
-                                      <span className="w-5 font-bold text-orange-600 dark:text-orange-400">E</span>
-                                      <span className="text-gray-500 dark:text-gray-400 w-24">Expose:</span>
-                                      <span className="text-gray-900 dark:text-white flex-1">{xabcde.e}</span>
-                                    </div>
-                                  )}
-                                </div>
-                                {/* AVPU & General Impression */}
-                                {(avpu || generalImpression) && (
-                                  <div className="flex gap-6 text-xs mt-2 pl-2 pt-2 border-t border-gray-100 dark:border-gray-700">
-                                    {avpu && (
-                                      <div><span className="font-medium text-gray-500 dark:text-gray-400">AVPU:</span> <span className="text-gray-900 dark:text-white font-medium">{avpu}</span></div>
-                                    )}
-                                    {generalImpression && (
-                                      <div><span className="font-medium text-gray-500 dark:text-gray-400">Impression:</span> <span className={`font-medium ${generalImpression.toLowerCase().includes('sick') || generalImpression.toLowerCase().includes('critical') ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>{generalImpression}</span></div>
-                                    )}
-                                  </div>
-                                )}
+                            {/* 2. PRIMARY ASSESSMENT - XABCDE (Always show structure) */}
+                            <div className="space-y-2">
+                              <div className="text-xs font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wider border-b border-orange-200 dark:border-orange-800 pb-1">
+                                Primary Assessment
                               </div>
-                            )}
-
-                            {/* 3. SECONDARY ASSESSMENT */}
-                            {(hasVitals || showSAMPLE || hasOPQRST) && (
-                              <div className="space-y-3">
-                                <div className="text-xs font-bold text-green-600 dark:text-green-400 uppercase tracking-wider border-b border-green-200 dark:border-green-800 pb-1">
-                                  Secondary Assessment
+                              <div className="text-xs space-y-1.5 pl-2">
+                                <div className="flex">
+                                  <span className="w-5 font-bold text-orange-600 dark:text-orange-400">X</span>
+                                  <span className="text-gray-500 dark:text-gray-400 w-24">Hemorrhage:</span>
+                                  <span className={`flex-1 ${xabcde.x ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{xabcde.x || '—'}</span>
                                 </div>
-
-                                {/* Vitals Grid */}
-                                {hasVitals && (
-                                  <div className="pl-2">
-                                    <div className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Vitals</div>
-                                    <div className="grid grid-cols-4 sm:grid-cols-7 gap-2 text-xs">
-                                      {v.bp && <div className="text-center p-1.5 bg-gray-50 dark:bg-gray-700 rounded"><div className="text-gray-400 dark:text-gray-500 text-[10px]">BP</div><div className="text-gray-900 dark:text-white font-medium">{v.bp}</div></div>}
-                                      {v.hr && <div className="text-center p-1.5 bg-gray-50 dark:bg-gray-700 rounded"><div className="text-gray-400 dark:text-gray-500 text-[10px]">HR</div><div className="text-gray-900 dark:text-white font-medium">{v.hr}</div></div>}
-                                      {v.rr && <div className="text-center p-1.5 bg-gray-50 dark:bg-gray-700 rounded"><div className="text-gray-400 dark:text-gray-500 text-[10px]">RR</div><div className="text-gray-900 dark:text-white font-medium">{v.rr}</div></div>}
-                                      {v.spo2 && <div className="text-center p-1.5 bg-gray-50 dark:bg-gray-700 rounded"><div className="text-gray-400 dark:text-gray-500 text-[10px]">SpO2</div><div className="text-gray-900 dark:text-white font-medium">{v.spo2}</div></div>}
-                                      {v.etco2 && <div className="text-center p-1.5 bg-gray-50 dark:bg-gray-700 rounded"><div className="text-gray-400 dark:text-gray-500 text-[10px]">EtCO2</div><div className="text-gray-900 dark:text-white font-medium">{v.etco2}</div></div>}
-                                      {v.temp && <div className="text-center p-1.5 bg-gray-50 dark:bg-gray-700 rounded"><div className="text-gray-400 dark:text-gray-500 text-[10px]">Temp</div><div className="text-gray-900 dark:text-white font-medium">{v.temp}</div></div>}
-                                      {(v.glucose || v.blood_glucose) && <div className="text-center p-1.5 bg-gray-50 dark:bg-gray-700 rounded"><div className="text-gray-400 dark:text-gray-500 text-[10px]">BGL</div><div className="text-gray-900 dark:text-white font-medium">{v.glucose || v.blood_glucose}</div></div>}
-                                    </div>
-                                    {/* Additional vitals on second row if present */}
-                                    {(v.ekg_rhythm || v.pain) && (
-                                      <div className="grid grid-cols-2 gap-2 mt-2 text-xs">
-                                        {v.ekg_rhythm && <div className="p-1.5 bg-gray-50 dark:bg-gray-700 rounded"><span className="text-gray-400 dark:text-gray-500 text-[10px]">EKG:</span> <span className="text-gray-900 dark:text-white font-medium">{v.ekg_rhythm}</span></div>}
-                                        {v.pain && <div className="p-1.5 bg-gray-50 dark:bg-gray-700 rounded"><span className="text-gray-400 dark:text-gray-500 text-[10px]">Pain:</span> <span className="text-gray-900 dark:text-white font-medium">{v.pain}/10</span></div>}
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-
-                                {/* SAMPLE History */}
-                                {showSAMPLE && (
-                                  <div className="pl-2">
-                                    <div className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">SAMPLE History</div>
-                                    <div className="text-xs space-y-1 bg-gray-50 dark:bg-gray-700/50 rounded p-2">
-                                      {sampleData.signs_symptoms && (
-                                        <div className="flex">
-                                          <span className="w-4 font-bold text-green-600 dark:text-green-400">S</span>
-                                          <span className="text-gray-500 dark:text-gray-400 w-32">Signs/Symptoms:</span>
-                                          <span className="text-gray-900 dark:text-white flex-1">{sampleData.signs_symptoms}</span>
-                                        </div>
-                                      )}
-                                      {sampleData.allergies && (
-                                        <div className="flex">
-                                          <span className="w-4 font-bold text-green-600 dark:text-green-400">A</span>
-                                          <span className="text-gray-500 dark:text-gray-400 w-32">Allergies:</span>
-                                          <span className="text-gray-900 dark:text-white flex-1">{toArray(sampleData.allergies).join(', ') || 'NKDA'}</span>
-                                        </div>
-                                      )}
-                                      {sampleData.medications && toArray(sampleData.medications).length > 0 && (
-                                        <div className="flex">
-                                          <span className="w-4 font-bold text-green-600 dark:text-green-400">M</span>
-                                          <span className="text-gray-500 dark:text-gray-400 w-32">Medications:</span>
-                                          <span className="text-gray-900 dark:text-white flex-1">{toArray(sampleData.medications).join(', ')}</span>
-                                        </div>
-                                      )}
-                                      {sampleData.medical_history && toArray(sampleData.medical_history).length > 0 && (
-                                        <div className="flex">
-                                          <span className="w-4 font-bold text-green-600 dark:text-green-400">P</span>
-                                          <span className="text-gray-500 dark:text-gray-400 w-32">Past Medical Hx:</span>
-                                          <span className="text-gray-900 dark:text-white flex-1">{toArray(sampleData.medical_history).join(', ')}</span>
-                                        </div>
-                                      )}
-                                      {sampleData.last_oral_intake && (
-                                        <div className="flex">
-                                          <span className="w-4 font-bold text-green-600 dark:text-green-400">L</span>
-                                          <span className="text-gray-500 dark:text-gray-400 w-32">Last Oral Intake:</span>
-                                          <span className="text-gray-900 dark:text-white flex-1">{sampleData.last_oral_intake}</span>
-                                        </div>
-                                      )}
-                                      {sampleData.events_leading && (
-                                        <div className="flex">
-                                          <span className="w-4 font-bold text-green-600 dark:text-green-400">E</span>
-                                          <span className="text-gray-500 dark:text-gray-400 w-32">Events Leading:</span>
-                                          <span className="text-gray-900 dark:text-white flex-1">{sampleData.events_leading}</span>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                )}
-
-                                {/* OPQRST */}
-                                {hasOPQRSTData && (
-                                  <div className="pl-2">
-                                    <div className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">OPQRST</div>
-                                    <div className="text-xs space-y-1 bg-gray-50 dark:bg-gray-700/50 rounded p-2">
-                                      {opqrstData.onset && (
-                                        <div className="flex">
-                                          <span className="w-4 font-bold text-green-600 dark:text-green-400">O</span>
-                                          <span className="text-gray-500 dark:text-gray-400 w-32">Onset:</span>
-                                          <span className="text-gray-900 dark:text-white flex-1">{opqrstData.onset}</span>
-                                        </div>
-                                      )}
-                                      {opqrstData.provocation && (
-                                        <div className="flex">
-                                          <span className="w-4 font-bold text-green-600 dark:text-green-400">P</span>
-                                          <span className="text-gray-500 dark:text-gray-400 w-32">Provocation:</span>
-                                          <span className="text-gray-900 dark:text-white flex-1">{opqrstData.provocation}</span>
-                                        </div>
-                                      )}
-                                      {opqrstData.quality && (
-                                        <div className="flex">
-                                          <span className="w-4 font-bold text-green-600 dark:text-green-400">Q</span>
-                                          <span className="text-gray-500 dark:text-gray-400 w-32">Quality:</span>
-                                          <span className="text-gray-900 dark:text-white flex-1">{opqrstData.quality}</span>
-                                        </div>
-                                      )}
-                                      {opqrstData.radiation && (
-                                        <div className="flex">
-                                          <span className="w-4 font-bold text-green-600 dark:text-green-400">R</span>
-                                          <span className="text-gray-500 dark:text-gray-400 w-32">Radiation:</span>
-                                          <span className="text-gray-900 dark:text-white flex-1">{opqrstData.radiation}</span>
-                                        </div>
-                                      )}
-                                      {opqrstData.severity && (
-                                        <div className="flex">
-                                          <span className="w-4 font-bold text-green-600 dark:text-green-400">S</span>
-                                          <span className="text-gray-500 dark:text-gray-400 w-32">Severity:</span>
-                                          <span className="text-gray-900 dark:text-white flex-1">{opqrstData.severity}</span>
-                                        </div>
-                                      )}
-                                      {opqrstData.time_onset && (
-                                        <div className="flex">
-                                          <span className="w-4 font-bold text-green-600 dark:text-green-400">T</span>
-                                          <span className="text-gray-500 dark:text-gray-400 w-32">Time:</span>
-                                          <span className="text-gray-900 dark:text-white flex-1">{opqrstData.time_onset}</span>
-                                        </div>
-                                      )}
-                                    </div>
-                                  </div>
-                                )}
+                                <div className="flex">
+                                  <span className="w-5 font-bold text-orange-600 dark:text-orange-400">A</span>
+                                  <span className="text-gray-500 dark:text-gray-400 w-24">Airway:</span>
+                                  <span className={`flex-1 ${xabcde.a ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{xabcde.a || '—'}</span>
+                                </div>
+                                <div className="flex">
+                                  <span className="w-5 font-bold text-orange-600 dark:text-orange-400">B</span>
+                                  <span className="text-gray-500 dark:text-gray-400 w-24">Breathing:</span>
+                                  <span className={`flex-1 ${xabcde.b ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{xabcde.b || '—'}</span>
+                                </div>
+                                <div className="flex">
+                                  <span className="w-5 font-bold text-orange-600 dark:text-orange-400">C</span>
+                                  <span className="text-gray-500 dark:text-gray-400 w-24">Circulation:</span>
+                                  <span className={`flex-1 ${xabcde.c ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{xabcde.c || '—'}</span>
+                                </div>
+                                <div className="flex">
+                                  <span className="w-5 font-bold text-orange-600 dark:text-orange-400">D</span>
+                                  <span className="text-gray-500 dark:text-gray-400 w-24">Disability:</span>
+                                  <span className={`flex-1 ${xabcde.d ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{xabcde.d || '—'}</span>
+                                </div>
+                                <div className="flex">
+                                  <span className="w-5 font-bold text-orange-600 dark:text-orange-400">E</span>
+                                  <span className="text-gray-500 dark:text-gray-400 w-24">Expose:</span>
+                                  <span className={`flex-1 ${xabcde.e ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{xabcde.e || '—'}</span>
+                                </div>
                               </div>
-                            )}
+                              {/* AVPU & General Impression */}
+                              <div className="flex gap-6 text-xs mt-2 pl-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+                                <div><span className="font-medium text-gray-500 dark:text-gray-400">AVPU:</span> <span className={`font-medium ${avpu ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{avpu || '—'}</span></div>
+                                <div><span className="font-medium text-gray-500 dark:text-gray-400">Impression:</span> <span className={`font-medium ${generalImpression ? (generalImpression.toLowerCase().includes('sick') || generalImpression.toLowerCase().includes('critical') ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400') : 'text-gray-400 dark:text-gray-500 italic'}`}>{generalImpression || '—'}</span></div>
+                              </div>
+                            </div>
+
+                            {/* 3. SECONDARY ASSESSMENT (Always show structure) */}
+                            <div className="space-y-3">
+                              <div className="text-xs font-bold text-green-600 dark:text-green-400 uppercase tracking-wider border-b border-green-200 dark:border-green-800 pb-1">
+                                Secondary Assessment
+                              </div>
+
+                              {/* Vitals Grid */}
+                              <div className="pl-2">
+                                <div className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Vitals</div>
+                                <div className="grid grid-cols-4 sm:grid-cols-7 gap-2 text-xs">
+                                  <div className="text-center p-1.5 bg-gray-50 dark:bg-gray-700 rounded"><div className="text-gray-400 dark:text-gray-500 text-[10px]">BP</div><div className={`font-medium ${v.bp ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{v.bp || '—'}</div></div>
+                                  <div className="text-center p-1.5 bg-gray-50 dark:bg-gray-700 rounded"><div className="text-gray-400 dark:text-gray-500 text-[10px]">HR</div><div className={`font-medium ${v.hr ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{v.hr || '—'}</div></div>
+                                  <div className="text-center p-1.5 bg-gray-50 dark:bg-gray-700 rounded"><div className="text-gray-400 dark:text-gray-500 text-[10px]">RR</div><div className={`font-medium ${v.rr ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{v.rr || '—'}</div></div>
+                                  <div className="text-center p-1.5 bg-gray-50 dark:bg-gray-700 rounded"><div className="text-gray-400 dark:text-gray-500 text-[10px]">SpO2</div><div className={`font-medium ${v.spo2 ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{v.spo2 || '—'}</div></div>
+                                  <div className="text-center p-1.5 bg-gray-50 dark:bg-gray-700 rounded"><div className="text-gray-400 dark:text-gray-500 text-[10px]">EtCO2</div><div className={`font-medium ${v.etco2 ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{v.etco2 || '—'}</div></div>
+                                  <div className="text-center p-1.5 bg-gray-50 dark:bg-gray-700 rounded"><div className="text-gray-400 dark:text-gray-500 text-[10px]">Temp</div><div className={`font-medium ${v.temp ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{v.temp || '—'}</div></div>
+                                  <div className="text-center p-1.5 bg-gray-50 dark:bg-gray-700 rounded"><div className="text-gray-400 dark:text-gray-500 text-[10px]">BGL</div><div className={`font-medium ${(v.glucose || v.blood_glucose) ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{v.glucose || v.blood_glucose || '—'}</div></div>
+                                </div>
+                                {/* Additional vitals on second row */}
+                                <div className="grid grid-cols-2 gap-2 mt-2 text-xs">
+                                  <div className="p-1.5 bg-gray-50 dark:bg-gray-700 rounded"><span className="text-gray-400 dark:text-gray-500 text-[10px]">EKG:</span> <span className={`font-medium ${v.ekg_rhythm ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{v.ekg_rhythm || '—'}</span></div>
+                                  <div className="p-1.5 bg-gray-50 dark:bg-gray-700 rounded"><span className="text-gray-400 dark:text-gray-500 text-[10px]">Pain:</span> <span className={`font-medium ${v.pain ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{v.pain ? `${v.pain}/10` : '—'}</span></div>
+                                </div>
+                              </div>
+
+                              {/* SAMPLE History (Always show on first phase) */}
+                              {index === 0 && (
+                                <div className="pl-2">
+                                  <div className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">SAMPLE History</div>
+                                  <div className="text-xs space-y-1 bg-gray-50 dark:bg-gray-700/50 rounded p-2">
+                                    <div className="flex">
+                                      <span className="w-4 font-bold text-green-600 dark:text-green-400">S</span>
+                                      <span className="text-gray-500 dark:text-gray-400 w-32">Signs/Symptoms:</span>
+                                      <span className={`flex-1 ${sampleData.signs_symptoms ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{sampleData.signs_symptoms || '—'}</span>
+                                    </div>
+                                    <div className="flex">
+                                      <span className="w-4 font-bold text-green-600 dark:text-green-400">A</span>
+                                      <span className="text-gray-500 dark:text-gray-400 w-32">Allergies:</span>
+                                      <span className={`flex-1 ${sampleData.allergies ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{sampleData.allergies ? (toArray(sampleData.allergies).join(', ') || 'NKDA') : '—'}</span>
+                                    </div>
+                                    <div className="flex">
+                                      <span className="w-4 font-bold text-green-600 dark:text-green-400">M</span>
+                                      <span className="text-gray-500 dark:text-gray-400 w-32">Medications:</span>
+                                      <span className={`flex-1 ${sampleData.medications && toArray(sampleData.medications).length > 0 ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{sampleData.medications && toArray(sampleData.medications).length > 0 ? toArray(sampleData.medications).join(', ') : '—'}</span>
+                                    </div>
+                                    <div className="flex">
+                                      <span className="w-4 font-bold text-green-600 dark:text-green-400">P</span>
+                                      <span className="text-gray-500 dark:text-gray-400 w-32">Past Medical Hx:</span>
+                                      <span className={`flex-1 ${sampleData.medical_history && toArray(sampleData.medical_history).length > 0 ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{sampleData.medical_history && toArray(sampleData.medical_history).length > 0 ? toArray(sampleData.medical_history).join(', ') : '—'}</span>
+                                    </div>
+                                    <div className="flex">
+                                      <span className="w-4 font-bold text-green-600 dark:text-green-400">L</span>
+                                      <span className="text-gray-500 dark:text-gray-400 w-32">Last Oral Intake:</span>
+                                      <span className={`flex-1 ${sampleData.last_oral_intake ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{sampleData.last_oral_intake || '—'}</span>
+                                    </div>
+                                    <div className="flex">
+                                      <span className="w-4 font-bold text-green-600 dark:text-green-400">E</span>
+                                      <span className="text-gray-500 dark:text-gray-400 w-32">Events Leading:</span>
+                                      <span className={`flex-1 ${sampleData.events_leading ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{sampleData.events_leading || '—'}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* OPQRST (Always show) */}
+                              <div className="pl-2">
+                                <div className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">OPQRST</div>
+                                <div className="text-xs space-y-1 bg-gray-50 dark:bg-gray-700/50 rounded p-2">
+                                  <div className="flex">
+                                    <span className="w-4 font-bold text-purple-600 dark:text-purple-400">O</span>
+                                    <span className="text-gray-500 dark:text-gray-400 w-32">Onset:</span>
+                                    <span className={`flex-1 ${opqrstData.onset ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{opqrstData.onset || '—'}</span>
+                                  </div>
+                                  <div className="flex">
+                                    <span className="w-4 font-bold text-purple-600 dark:text-purple-400">P</span>
+                                    <span className="text-gray-500 dark:text-gray-400 w-32">Provocation:</span>
+                                    <span className={`flex-1 ${opqrstData.provocation ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{opqrstData.provocation || '—'}</span>
+                                  </div>
+                                  <div className="flex">
+                                    <span className="w-4 font-bold text-purple-600 dark:text-purple-400">Q</span>
+                                    <span className="text-gray-500 dark:text-gray-400 w-32">Quality:</span>
+                                    <span className={`flex-1 ${opqrstData.quality ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{opqrstData.quality || '—'}</span>
+                                  </div>
+                                  <div className="flex">
+                                    <span className="w-4 font-bold text-purple-600 dark:text-purple-400">R</span>
+                                    <span className="text-gray-500 dark:text-gray-400 w-32">Radiation:</span>
+                                    <span className={`flex-1 ${opqrstData.radiation ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{opqrstData.radiation || '—'}</span>
+                                  </div>
+                                  <div className="flex">
+                                    <span className="w-4 font-bold text-purple-600 dark:text-purple-400">S</span>
+                                    <span className="text-gray-500 dark:text-gray-400 w-32">Severity:</span>
+                                    <span className={`flex-1 ${opqrstData.severity ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{opqrstData.severity || '—'}</span>
+                                  </div>
+                                  <div className="flex">
+                                    <span className="w-4 font-bold text-purple-600 dark:text-purple-400">T</span>
+                                    <span className="text-gray-500 dark:text-gray-400 w-32">Time:</span>
+                                    <span className={`flex-1 ${opqrstData.time_onset ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{opqrstData.time_onset || '—'}</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
 
                             {/* 4. EXPECTED INTERVENTIONS */}
                             {expectedActions && (
@@ -1086,6 +1034,143 @@ export default function GradeStationPage() {
                         </div>
                       );
                     })}
+                  </div>
+                )}
+
+                {/* Fallback: Show assessment structure when no phases exist */}
+                {(!scenario.phases || scenario.phases.length === 0) && (
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Assessment Structure</h3>
+                    <div className="rounded-lg border border-blue-300 dark:border-blue-700 bg-white dark:bg-gray-800 overflow-hidden">
+                      <div className="px-4 py-2 bg-blue-100 dark:bg-blue-900/30 border-b border-blue-200 dark:border-blue-800">
+                        <span className="font-semibold text-sm text-blue-800 dark:text-blue-300">Initial Presentation</span>
+                      </div>
+                      <div className="p-4 space-y-4">
+                        {/* Primary Assessment - XABCDE */}
+                        <div className="space-y-2">
+                          <div className="text-xs font-bold text-orange-600 dark:text-orange-400 uppercase tracking-wider border-b border-orange-200 dark:border-orange-800 pb-1">
+                            Primary Assessment
+                          </div>
+                          <div className="text-xs space-y-1.5 pl-2">
+                            <div className="flex">
+                              <span className="w-5 font-bold text-orange-600 dark:text-orange-400">X</span>
+                              <span className="text-gray-500 dark:text-gray-400 w-24">Hemorrhage:</span>
+                              <span className={`flex-1 ${scenario.assessment_x ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{scenario.assessment_x || '—'}</span>
+                            </div>
+                            <div className="flex">
+                              <span className="w-5 font-bold text-orange-600 dark:text-orange-400">A</span>
+                              <span className="text-gray-500 dark:text-gray-400 w-24">Airway:</span>
+                              <span className={`flex-1 ${scenario.assessment_a ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{scenario.assessment_a || '—'}</span>
+                            </div>
+                            <div className="flex">
+                              <span className="w-5 font-bold text-orange-600 dark:text-orange-400">B</span>
+                              <span className="text-gray-500 dark:text-gray-400 w-24">Breathing:</span>
+                              <span className="text-gray-400 dark:text-gray-500 italic flex-1">—</span>
+                            </div>
+                            <div className="flex">
+                              <span className="w-5 font-bold text-orange-600 dark:text-orange-400">C</span>
+                              <span className="text-gray-500 dark:text-gray-400 w-24">Circulation:</span>
+                              <span className="text-gray-400 dark:text-gray-500 italic flex-1">—</span>
+                            </div>
+                            <div className="flex">
+                              <span className="w-5 font-bold text-orange-600 dark:text-orange-400">D</span>
+                              <span className="text-gray-500 dark:text-gray-400 w-24">Disability:</span>
+                              <span className="text-gray-400 dark:text-gray-500 italic flex-1">—</span>
+                            </div>
+                            <div className="flex">
+                              <span className="w-5 font-bold text-orange-600 dark:text-orange-400">E</span>
+                              <span className="text-gray-500 dark:text-gray-400 w-24">Expose:</span>
+                              <span className={`flex-1 ${scenario.assessment_e ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{scenario.assessment_e || '—'}</span>
+                            </div>
+                          </div>
+                          <div className="flex gap-6 text-xs mt-2 pl-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+                            <div><span className="font-medium text-gray-500 dark:text-gray-400">AVPU:</span> <span className="text-gray-400 dark:text-gray-500 italic">—</span></div>
+                            <div><span className="font-medium text-gray-500 dark:text-gray-400">Impression:</span> <span className={`font-medium ${scenario.general_impression ? (scenario.general_impression.toLowerCase().includes('sick') || scenario.general_impression.toLowerCase().includes('critical') ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400') : 'text-gray-400 dark:text-gray-500 italic'}`}>{scenario.general_impression || '—'}</span></div>
+                          </div>
+                        </div>
+
+                        {/* Secondary Assessment */}
+                        <div className="space-y-3">
+                          <div className="text-xs font-bold text-green-600 dark:text-green-400 uppercase tracking-wider border-b border-green-200 dark:border-green-800 pb-1">
+                            Secondary Assessment
+                          </div>
+
+                          {/* SAMPLE History */}
+                          <div className="pl-2">
+                            <div className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">SAMPLE History</div>
+                            <div className="text-xs space-y-1 bg-gray-50 dark:bg-gray-700/50 rounded p-2">
+                              <div className="flex">
+                                <span className="w-4 font-bold text-green-600 dark:text-green-400">S</span>
+                                <span className="text-gray-500 dark:text-gray-400 w-32">Signs/Symptoms:</span>
+                                <span className={`flex-1 ${scenario.chief_complaint ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{scenario.chief_complaint || '—'}</span>
+                              </div>
+                              <div className="flex">
+                                <span className="w-4 font-bold text-green-600 dark:text-green-400">A</span>
+                                <span className="text-gray-500 dark:text-gray-400 w-32">Allergies:</span>
+                                <span className={`flex-1 ${scenario.allergies ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{scenario.allergies ? (toArray(scenario.allergies).join(', ') || 'NKDA') : '—'}</span>
+                              </div>
+                              <div className="flex">
+                                <span className="w-4 font-bold text-green-600 dark:text-green-400">M</span>
+                                <span className="text-gray-500 dark:text-gray-400 w-32">Medications:</span>
+                                <span className={`flex-1 ${scenario.medications && toArray(scenario.medications).length > 0 ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{scenario.medications && toArray(scenario.medications).length > 0 ? toArray(scenario.medications).join(', ') : '—'}</span>
+                              </div>
+                              <div className="flex">
+                                <span className="w-4 font-bold text-green-600 dark:text-green-400">P</span>
+                                <span className="text-gray-500 dark:text-gray-400 w-32">Past Medical Hx:</span>
+                                <span className={`flex-1 ${scenario.medical_history && toArray(scenario.medical_history).length > 0 ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{scenario.medical_history && toArray(scenario.medical_history).length > 0 ? toArray(scenario.medical_history).join(', ') : '—'}</span>
+                              </div>
+                              <div className="flex">
+                                <span className="w-4 font-bold text-green-600 dark:text-green-400">L</span>
+                                <span className="text-gray-500 dark:text-gray-400 w-32">Last Oral Intake:</span>
+                                <span className={`flex-1 ${scenario.sample_history?.last_oral_intake ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{scenario.sample_history?.last_oral_intake || '—'}</span>
+                              </div>
+                              <div className="flex">
+                                <span className="w-4 font-bold text-green-600 dark:text-green-400">E</span>
+                                <span className="text-gray-500 dark:text-gray-400 w-32">Events Leading:</span>
+                                <span className={`flex-1 ${scenario.sample_history?.events_leading ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{scenario.sample_history?.events_leading || '—'}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* OPQRST */}
+                          <div className="pl-2">
+                            <div className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">OPQRST</div>
+                            <div className="text-xs space-y-1 bg-gray-50 dark:bg-gray-700/50 rounded p-2">
+                              <div className="flex">
+                                <span className="w-4 font-bold text-purple-600 dark:text-purple-400">O</span>
+                                <span className="text-gray-500 dark:text-gray-400 w-32">Onset:</span>
+                                <span className={`flex-1 ${scenario.opqrst?.onset ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{scenario.opqrst?.onset || '—'}</span>
+                              </div>
+                              <div className="flex">
+                                <span className="w-4 font-bold text-purple-600 dark:text-purple-400">P</span>
+                                <span className="text-gray-500 dark:text-gray-400 w-32">Provocation:</span>
+                                <span className={`flex-1 ${scenario.opqrst?.provocation ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{scenario.opqrst?.provocation || '—'}</span>
+                              </div>
+                              <div className="flex">
+                                <span className="w-4 font-bold text-purple-600 dark:text-purple-400">Q</span>
+                                <span className="text-gray-500 dark:text-gray-400 w-32">Quality:</span>
+                                <span className={`flex-1 ${scenario.opqrst?.quality ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{scenario.opqrst?.quality || '—'}</span>
+                              </div>
+                              <div className="flex">
+                                <span className="w-4 font-bold text-purple-600 dark:text-purple-400">R</span>
+                                <span className="text-gray-500 dark:text-gray-400 w-32">Radiation:</span>
+                                <span className={`flex-1 ${scenario.opqrst?.radiation ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{scenario.opqrst?.radiation || '—'}</span>
+                              </div>
+                              <div className="flex">
+                                <span className="w-4 font-bold text-purple-600 dark:text-purple-400">S</span>
+                                <span className="text-gray-500 dark:text-gray-400 w-32">Severity:</span>
+                                <span className={`flex-1 ${scenario.opqrst?.severity ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{scenario.opqrst?.severity || '—'}</span>
+                              </div>
+                              <div className="flex">
+                                <span className="w-4 font-bold text-purple-600 dark:text-purple-400">T</span>
+                                <span className="text-gray-500 dark:text-gray-400 w-32">Time:</span>
+                                <span className={`flex-1 ${scenario.opqrst?.time_onset ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{scenario.opqrst?.time_onset || '—'}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
 
