@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
 // GET - Fetch assessments
@@ -125,8 +125,19 @@ export async function POST(request: NextRequest) {
     // For now, the group assessment links to students through lab_group_id
 
     return NextResponse.json({ success: true, assessment: data });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating assessment:', error);
-    return NextResponse.json({ success: false, error: 'Failed to create assessment' }, { status: 500 });
+    console.error('Error details:', {
+      code: error?.code,
+      message: error?.message,
+      details: error?.details,
+      hint: error?.hint
+    });
+    return NextResponse.json({
+      success: false,
+      error: error?.message || 'Failed to create assessment',
+      code: error?.code,
+      details: error?.details
+    }, { status: 500 });
   }
 }
