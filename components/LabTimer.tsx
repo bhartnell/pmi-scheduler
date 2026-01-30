@@ -262,16 +262,16 @@ export default function LabTimer({
     init();
   }, [labDayId, fetchTimerState, fetchReadyStatuses, initializeTimer, isController]);
 
-  // Poll for updates
+  // Poll for updates (every 2 seconds for ready status, 1 second for timer)
   useEffect(() => {
-    pollIntervalRef.current = setInterval(() => {
-      fetchTimerState();
-      fetchReadyStatuses();
-    }, 1000);
+    // Timer state polls every 1 second for accuracy
+    const timerPoll = setInterval(fetchTimerState, 1000);
+    // Ready status polls every 2 seconds (less frequent is fine)
+    const readyPoll = setInterval(fetchReadyStatuses, 2000);
+
     return () => {
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-      }
+      clearInterval(timerPoll);
+      clearInterval(readyPoll);
     };
   }, [fetchTimerState, fetchReadyStatuses]);
 
@@ -531,66 +531,144 @@ export default function LabTimer({
 
       {/* Main Timer Display */}
       <div className="flex-1 flex flex-col items-center justify-center p-8">
-        {/* Station Ready Status - Show when stopped/not started */}
-        {isController && isStopped && allStations.length > 0 && (
-          <div className="mb-8 w-full max-w-xl">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="flex items-center gap-2 text-lg font-medium">
-                <Users className="w-5 h-5" />
-                Station Status
-              </h3>
-              <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                allReady ? 'bg-green-600' : 'bg-yellow-600'
-              }`}>
-                {readyCount} of {totalStations} ready
-              </span>
-            </div>
-            <div className="bg-gray-800 rounded-lg p-4 space-y-2">
-              {allStations.map(station => {
-                const status = getStationStatus(station);
-                const isStationReady = status?.is_ready;
-                return (
-                  <div
-                    key={station.id}
-                    className={`flex items-center justify-between p-3 rounded-lg ${
-                      isStationReady ? 'bg-green-900/30' : 'bg-red-900/30'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      {isStationReady ? (
-                        <CheckCircle className="w-5 h-5 text-green-500" />
-                      ) : (
-                        <Circle className="w-5 h-5 text-red-500" />
-                      )}
-                      <div>
-                        <div className="font-medium">
-                          Station {station.station_number}
-                          {station.room_assignment && (
-                            <span className="text-sm opacity-70 ml-2">({station.room_assignment})</span>
+        {/* Station Ready Status - Always show for controller */}
+        {isController && (
+          <>
+            {/* Full display when stopped */}
+            {isStopped && allStations.length > 0 && (
+              <div className="mb-8 w-full max-w-xl">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="flex items-center gap-2 text-lg font-medium">
+                    <Users className="w-5 h-5" />
+                    Station Ready Status
+                  </h3>
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    allReady ? 'bg-green-600' : 'bg-yellow-600'
+                  }`}>
+                    {readyCount} of {totalStations} ready
+                  </span>
+                </div>
+                <div className="bg-gray-800 rounded-lg p-4 space-y-2">
+                  {allStations.map(station => {
+                    const status = getStationStatus(station);
+                    const isStationReady = status?.is_ready;
+                    return (
+                      <div
+                        key={station.id}
+                        className={`flex items-center justify-between p-3 rounded-lg ${
+                          isStationReady ? 'bg-green-900/30' : 'bg-red-900/30'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          {isStationReady ? (
+                            <CheckCircle className="w-5 h-5 text-green-500" />
+                          ) : (
+                            <Circle className="w-5 h-5 text-red-500" />
+                          )}
+                          <div>
+                            <div className="font-medium">
+                              Station {station.station_number}
+                              {station.room_assignment && (
+                                <span className="text-sm opacity-70 ml-2">({station.room_assignment})</span>
+                              )}
+                            </div>
+                            <div className="text-sm opacity-70">
+                              {station.station_type}
+                            </div>
+                          </div>
+                        </div>
+                        <div className={`text-sm ${isStationReady ? 'text-green-400' : 'text-red-400'}`}>
+                          {isStationReady ? (
+                            <span>Ready - {status?.user_name || status?.user_email?.split('@')[0]}</span>
+                          ) : (
+                            <span>Not Ready</span>
                           )}
                         </div>
-                        <div className="text-sm opacity-70">
-                          {station.station_type}
-                        </div>
                       </div>
+                    );
+                  })}
+                  {allStations.length === 0 && (
+                    <div className="text-center text-gray-400 py-4">
+                      No stations found for this lab day
                     </div>
-                    <div className={`text-sm ${isStationReady ? 'text-green-400' : 'text-red-400'}`}>
-                      {isStationReady ? (
-                        <span>Ready - {status?.user_name || status?.user_email?.split('@')[0]}</span>
-                      ) : (
-                        <span>Not Ready</span>
-                      )}
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Compact status bar when timer running/paused */}
+            {!isStopped && totalStations > 0 && (
+              <div className="absolute top-20 left-4 right-4">
+                <div className="bg-gray-800/90 rounded-lg p-3 flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <span className="flex items-center gap-2 text-sm font-medium">
+                      <Users className="w-4 h-4" />
+                      Stations:
+                    </span>
+                    <div className="flex items-center gap-2">
+                      {allStations.map(station => {
+                        const status = getStationStatus(station);
+                        const isStationReady = status?.is_ready;
+                        return (
+                          <div
+                            key={station.id}
+                            className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium ${
+                              isStationReady ? 'bg-green-900/50 text-green-400' : 'bg-red-900/50 text-red-400'
+                            }`}
+                            title={isStationReady ? `Ready - ${status?.user_name || status?.user_email}` : 'Not Ready'}
+                          >
+                            {isStationReady ? (
+                              <CheckCircle className="w-3 h-3" />
+                            ) : (
+                              <Circle className="w-3 h-3" />
+                            )}
+                            <span>#{station.station_number}</span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
-                );
-              })}
-              {allStations.length === 0 && (
-                <div className="text-center text-gray-400 py-4">
-                  No stations found for this lab day
+                  <span className={`px-2 py-1 rounded text-xs font-medium ${
+                    allReady ? 'bg-green-600' : 'bg-yellow-600'
+                  }`}>
+                    {readyCount}/{totalStations}
+                  </span>
                 </div>
-              )}
-            </div>
-          </div>
+              </div>
+            )}
+
+            {/* Show message if no stations yet (for debugging) */}
+            {isStopped && allStations.length === 0 && readyStatuses.length > 0 && (
+              <div className="mb-8 w-full max-w-xl">
+                <div className="bg-yellow-900/30 border border-yellow-600 rounded-lg p-4">
+                  <div className="flex items-center gap-2 text-yellow-400 font-medium mb-2">
+                    <Users className="w-5 h-5" />
+                    Ready Status Found ({readyStatuses.length})
+                  </div>
+                  <div className="space-y-1">
+                    {readyStatuses.map(rs => (
+                      <div key={rs.id} className="flex items-center gap-2 text-sm">
+                        {rs.is_ready ? (
+                          <CheckCircle className="w-4 h-4 text-green-500" />
+                        ) : (
+                          <Circle className="w-4 h-4 text-red-500" />
+                        )}
+                        <span>{rs.user_name || rs.user_email}</span>
+                        {rs.is_ready ? (
+                          <span className="text-green-400">Ready</span>
+                        ) : (
+                          <span className="text-red-400">Not Ready</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs text-yellow-500 mt-2">
+                    Note: No stations found for this lab day. Ready statuses may be from a different session.
+                  </p>
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         {/* Alert Messages */}
