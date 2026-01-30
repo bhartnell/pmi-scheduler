@@ -29,11 +29,17 @@ import {
 
 // Types
 interface VitalSigns {
+  // Primary Assessment - XABCDE
+  hemorrhage_control: string;  // X - Major hemorrhage
+  airway_status: string;       // A - Airway assessment
+  expose_findings: string;     // E - Expose/Environment findings
+  // Core Vitals (used in B, C)
   bp: string;
   hr: string;
   rr: string;
   spo2: string;
   temp: string;
+  // Neuro (D - Disability)
   gcs_total: string;
   gcs_e: string;
   gcs_v: string;
@@ -41,15 +47,22 @@ interface VitalSigns {
   pupils: string;
   loc: string;
   pain: string;
+  // Cardiac
   ekg_rhythm: string;
   etco2: string;
   twelve_lead_notes: string;
+  // Respiratory (B - Breathing)
   lung_sounds: string;
   lung_notes: string;
+  // Circulation/Perfusion (C - Circulation)
   skin: string;
   jvd: string;
   edema: string;
+  capillary_refill: string;
+  pulse_quality: string;
+  // Labs
   blood_glucose: string;
+  // Other
   other_findings: { key: string; value: string }[];
 }
 
@@ -61,6 +74,19 @@ interface Phase {
   presentation_notes: string;
   expected_actions: string;
   display_order: number;
+  // SAMPLE - L and E (S, A, M, P come from scenario-level)
+  signs_symptoms: string;      // S - Additional signs/symptoms for this phase
+  last_oral_intake: string;    // L
+  events_leading: string;      // E
+  // OPQRST
+  onset: string;               // O
+  provocation: string;         // P
+  quality: string;             // Q
+  radiation: string;           // R
+  severity: string;            // S
+  time_onset: string;          // T
+  // General Impression
+  general_impression: string;  // Sick / Not Sick
 }
 
 interface CriticalAction {
@@ -169,13 +195,22 @@ const DEFAULT_EVALUATION_CRITERIA = [
 
 // Helper to create empty vitals
 const createEmptyVitals = (): VitalSigns => ({
+  // XABCDE
+  hemorrhage_control: '', airway_status: '', expose_findings: '',
+  // Core Vitals
   bp: '', hr: '', rr: '', spo2: '', temp: '',
+  // Neuro
   gcs_total: '', gcs_e: '', gcs_v: '', gcs_m: '',
   pupils: '', loc: '', pain: '',
+  // Cardiac
   ekg_rhythm: '', etco2: '', twelve_lead_notes: '',
+  // Respiratory
   lung_sounds: '', lung_notes: '',
-  skin: '', jvd: '', edema: '',
+  // Circulation
+  skin: '', jvd: '', edema: '', capillary_refill: '', pulse_quality: '',
+  // Labs
   blood_glucose: '',
+  // Other
   other_findings: []
 });
 
@@ -187,7 +222,20 @@ const createEmptyPhase = (order: number): Phase => ({
   vitals: createEmptyVitals(),
   presentation_notes: '',
   expected_actions: '',
-  display_order: order
+  display_order: order,
+  // SAMPLE
+  signs_symptoms: '',
+  last_oral_intake: '',
+  events_leading: '',
+  // OPQRST
+  onset: '',
+  provocation: '',
+  quality: '',
+  radiation: '',
+  severity: '',
+  time_onset: '',
+  // General Impression
+  general_impression: ''
 });
 
 // Collapsible Section Component
@@ -256,6 +304,48 @@ function VitalsEditor({
 
   return (
     <div className="space-y-4 pt-3">
+      {/* Primary Assessment - XABCDE */}
+      <div className="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-3 border border-orange-200 dark:border-orange-800">
+        <h4 className="text-sm font-medium text-orange-700 dark:text-orange-300 mb-2 flex items-center gap-1">
+          <AlertTriangle className="w-4 h-4" /> Primary Assessment (XABCDE)
+        </h4>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label className="text-xs text-orange-600 dark:text-orange-400 font-medium">X - Hemorrhage Control</label>
+            <input
+              type="text"
+              value={vitals.hemorrhage_control}
+              onChange={(e) => updateVital('hemorrhage_control', e.target.value)}
+              placeholder="No major external bleeding"
+              className="w-full px-2 py-1 border border-orange-300 dark:border-orange-700 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-orange-600 dark:text-orange-400 font-medium">A - Airway Status</label>
+            <input
+              type="text"
+              value={vitals.airway_status}
+              onChange={(e) => updateVital('airway_status', e.target.value)}
+              placeholder="Open and patent"
+              className="w-full px-2 py-1 border border-orange-300 dark:border-orange-700 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-orange-600 dark:text-orange-400 font-medium">E - Expose/Environment</label>
+            <input
+              type="text"
+              value={vitals.expose_findings}
+              onChange={(e) => updateVital('expose_findings', e.target.value)}
+              placeholder="No trauma, rashes"
+              className="w-full px-2 py-1 border border-orange-300 dark:border-orange-700 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+            />
+          </div>
+        </div>
+        <p className="text-xs text-orange-500 dark:text-orange-400 mt-2 italic">
+          B (Breathing) and C (Circulation) data comes from vitals below. D (Disability) comes from Neuro section.
+        </p>
+      </div>
+
       {/* Core Vitals */}
       <div>
         <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
@@ -476,10 +566,10 @@ function VitalsEditor({
         </div>
       </div>
 
-      {/* Skin/Perfusion */}
+      {/* Skin/Perfusion (C - Circulation) */}
       <div>
         <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
-          <Droplets className="w-4 h-4" /> Skin/Perfusion
+          <Droplets className="w-4 h-4" /> Skin/Perfusion <span className="text-xs text-orange-500 dark:text-orange-400 ml-1">(C - Circulation)</span>
         </h4>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           <div>
@@ -495,6 +585,39 @@ function VitalsEditor({
               ))}
             </select>
           </div>
+          <div>
+            <label className="text-xs text-gray-500 dark:text-gray-400">Pulse Quality</label>
+            <select
+              value={vitals.pulse_quality}
+              onChange={(e) => updateVital('pulse_quality', e.target.value)}
+              className="w-full px-2 py-1 border dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+            >
+              <option value="">Select...</option>
+              <option value="Strong and regular">Strong and regular</option>
+              <option value="Weak and regular">Weak and regular</option>
+              <option value="Strong and irregular">Strong and irregular</option>
+              <option value="Weak and irregular">Weak and irregular</option>
+              <option value="Bounding">Bounding</option>
+              <option value="Thready">Thready</option>
+              <option value="Absent">Absent</option>
+            </select>
+          </div>
+          <div>
+            <label className="text-xs text-gray-500 dark:text-gray-400">Capillary Refill</label>
+            <select
+              value={vitals.capillary_refill}
+              onChange={(e) => updateVital('capillary_refill', e.target.value)}
+              className="w-full px-2 py-1 border dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+            >
+              <option value="">Select...</option>
+              <option value="< 2 seconds">{"< 2 seconds (normal)"}</option>
+              <option value="2-3 seconds">2-3 seconds (delayed)</option>
+              <option value="> 3 seconds">{"> 3 seconds (prolonged)"}</option>
+              <option value="Unable to assess">Unable to assess</option>
+            </select>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
           <div>
             <label className="text-xs text-gray-500 dark:text-gray-400">JVD</label>
             <div className="flex gap-2 mt-1">
@@ -1234,6 +1357,132 @@ export default function ScenarioEditorPage() {
                       placeholder="Patient appearance, behavior, environment..."
                       className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                     />
+                  </div>
+
+                  {/* General Impression */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">General Impression</label>
+                    <select
+                      value={phase.general_impression}
+                      onChange={(e) => updatePhase(index, { general_impression: e.target.value })}
+                      className="w-48 px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                    >
+                      <option value="">Select...</option>
+                      <option value="Sick">Sick</option>
+                      <option value="Not Sick">Not Sick</option>
+                      <option value="Critical">Critical</option>
+                    </select>
+                  </div>
+
+                  {/* SAMPLE History (L and E) */}
+                  <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 border border-green-200 dark:border-green-800">
+                    <h4 className="text-sm font-medium text-green-700 dark:text-green-300 mb-2">
+                      SAMPLE History <span className="text-xs text-green-500">(L & E - phase specific)</span>
+                    </h4>
+                    <p className="text-xs text-green-600 dark:text-green-400 mb-2 italic">
+                      S (Signs), A (Allergies), M (Medications), P (PMHx) come from Patient Info section above.
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs text-green-600 dark:text-green-400 font-medium">S - Signs/Symptoms (this phase)</label>
+                        <input
+                          type="text"
+                          value={phase.signs_symptoms}
+                          onChange={(e) => updatePhase(index, { signs_symptoms: e.target.value })}
+                          placeholder="SOB, wheezing, chest tightness..."
+                          className="w-full px-2 py-1 border border-green-300 dark:border-green-700 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-green-600 dark:text-green-400 font-medium">L - Last Oral Intake</label>
+                        <input
+                          type="text"
+                          value={phase.last_oral_intake}
+                          onChange={(e) => updatePhase(index, { last_oral_intake: e.target.value })}
+                          placeholder="Light breakfast 4 hours ago"
+                          className="w-full px-2 py-1 border border-green-300 dark:border-green-700 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                        />
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className="text-xs text-green-600 dark:text-green-400 font-medium">E - Events Leading Up</label>
+                        <textarea
+                          value={phase.events_leading}
+                          onChange={(e) => updatePhase(index, { events_leading: e.target.value })}
+                          rows={2}
+                          placeholder="What happened before the call? Timeline of events..."
+                          className="w-full px-2 py-1 border border-green-300 dark:border-green-700 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* OPQRST */}
+                  <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-3 border border-purple-200 dark:border-purple-800">
+                    <h4 className="text-sm font-medium text-purple-700 dark:text-purple-300 mb-2">
+                      OPQRST <span className="text-xs text-purple-500">(Pain/Symptom Assessment)</span>
+                    </h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="text-xs text-purple-600 dark:text-purple-400 font-medium">O - Onset</label>
+                        <input
+                          type="text"
+                          value={phase.onset}
+                          onChange={(e) => updatePhase(index, { onset: e.target.value })}
+                          placeholder="Woke up with symptoms"
+                          className="w-full px-2 py-1 border border-purple-300 dark:border-purple-700 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-purple-600 dark:text-purple-400 font-medium">P - Provocation/Palliation</label>
+                        <input
+                          type="text"
+                          value={phase.provocation}
+                          onChange={(e) => updatePhase(index, { provocation: e.target.value })}
+                          placeholder="Worse with exertion"
+                          className="w-full px-2 py-1 border border-purple-300 dark:border-purple-700 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-purple-600 dark:text-purple-400 font-medium">Q - Quality</label>
+                        <input
+                          type="text"
+                          value={phase.quality}
+                          onChange={(e) => updatePhase(index, { quality: e.target.value })}
+                          placeholder="Sharp, dull, pressure..."
+                          className="w-full px-2 py-1 border border-purple-300 dark:border-purple-700 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-purple-600 dark:text-purple-400 font-medium">R - Radiation/Region</label>
+                        <input
+                          type="text"
+                          value={phase.radiation}
+                          onChange={(e) => updatePhase(index, { radiation: e.target.value })}
+                          placeholder="Chest, radiates to arm..."
+                          className="w-full px-2 py-1 border border-purple-300 dark:border-purple-700 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-purple-600 dark:text-purple-400 font-medium">S - Severity (0-10)</label>
+                        <input
+                          type="text"
+                          value={phase.severity}
+                          onChange={(e) => updatePhase(index, { severity: e.target.value })}
+                          placeholder="8/10"
+                          className="w-full px-2 py-1 border border-purple-300 dark:border-purple-700 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs text-purple-600 dark:text-purple-400 font-medium">T - Time/Duration</label>
+                        <input
+                          type="text"
+                          value={phase.time_onset}
+                          onChange={(e) => updatePhase(index, { time_onset: e.target.value })}
+                          placeholder="Started 2 hours ago"
+                          className="w-full px-2 py-1 border border-purple-300 dark:border-purple-700 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                        />
+                      </div>
+                    </div>
                   </div>
 
                   <div>
