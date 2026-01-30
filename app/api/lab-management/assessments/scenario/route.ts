@@ -67,21 +67,35 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    // Validate required fields
-    if (!body.lab_group_id) {
-      return NextResponse.json({ success: false, error: 'lab_group_id is required' }, { status: 400 });
+    // Debug logging
+    console.log('Scenario assessment request body:', JSON.stringify(body, null, 2));
+
+    // Validate required fields - use correct DB column names
+    // Accept both old names (station_id) and new names (lab_station_id)
+    const labStationId = body.lab_station_id || body.station_id;
+    const labDayId = body.lab_day_id;
+    const cohortId = body.cohort_id;
+    const rotationNumber = body.rotation_number || 1;
+
+    if (!labStationId) {
+      return NextResponse.json({ success: false, error: 'lab_station_id is required' }, { status: 400 });
     }
-    if (!body.team_lead_id) {
-      return NextResponse.json({ success: false, error: 'team_lead_id is required' }, { status: 400 });
+    if (!labDayId) {
+      return NextResponse.json({ success: false, error: 'lab_day_id is required' }, { status: 400 });
+    }
+    if (!cohortId) {
+      return NextResponse.json({ success: false, error: 'cohort_id is required' }, { status: 400 });
     }
 
-    // Build assessment data
+    // Build assessment data with correct DB column names
     const assessmentData: any = {
-      station_id: body.station_id || null,
+      lab_station_id: labStationId,
+      lab_day_id: labDayId,
+      cohort_id: cohortId,
+      rotation_number: rotationNumber,
       scenario_id: body.scenario_id || null,
-      lab_group_id: body.lab_group_id,
-      team_lead_id: body.team_lead_id,
-      rotation_number: body.rotation_number || 1,
+      lab_group_id: body.lab_group_id || null,
+      team_lead_id: body.team_lead_id || null,
 
       // Store the full criteria ratings as JSONB
       criteria_ratings: body.criteria_ratings || [],
@@ -105,6 +119,8 @@ export async function POST(request: NextRequest) {
       overall_score: body.satisfactory_count || 0,
       team_lead_performance: body.phase2_pass ? 'satisfactory' : body.phase1_pass ? 'needs_improvement' : 'unsatisfactory'
     };
+
+    console.log('Assessment data to insert:', JSON.stringify(assessmentData, null, 2));
 
     const { data, error } = await supabase
       .from('scenario_assessments')
