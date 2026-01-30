@@ -48,6 +48,7 @@ interface LabGroup {
 
 interface ScenarioPhase {
   phase_name: string;
+  trigger?: string;
   vitals?: {
     bp?: string;
     hr?: string;
@@ -56,11 +57,27 @@ interface ScenarioPhase {
     etco2?: string;
     temp?: string;
     glucose?: string;
+    blood_glucose?: string;
     gcs?: string;
+    gcs_total?: string;
+    gcs_e?: string;
+    gcs_v?: string;
+    gcs_m?: string;
     pain?: string;
+    loc?: string;
+    pupils?: string;
+    ekg_rhythm?: string;
+    twelve_lead_notes?: string;
+    lung_sounds?: string;
+    lung_notes?: string;
+    skin?: string;
+    jvd?: string;
+    edema?: string;
+    other_findings?: { key: string; value: string }[];
   };
   presentation_notes?: string;
   expected_interventions?: string[];
+  expected_actions?: string;
 }
 
 interface Station {
@@ -698,35 +715,145 @@ export default function GradeStationPage() {
                 )}
 
                 {/* Phases with Vitals Changes */}
-                {scenario.phases && scenario.phases.length > 1 && (
-                  <div className="p-3 bg-cyan-50 dark:bg-cyan-900/20 rounded-lg border border-cyan-200 dark:border-cyan-800">
-                    <h3 className="text-sm font-medium text-cyan-800 dark:text-cyan-300 mb-2">Scenario Phases</h3>
-                    <div className="space-y-3">
-                      {scenario.phases.map((phase, index) => (
-                        <div key={index} className="border-l-2 border-cyan-400 dark:border-cyan-600 pl-3">
-                          <div className="font-medium text-cyan-700 dark:text-cyan-400 text-sm">{phase.phase_name}</div>
-                          {phase.presentation_notes && (
-                            <p className="text-xs text-cyan-600 dark:text-cyan-500 mt-1">{phase.presentation_notes}</p>
-                          )}
-                          {phase.vitals && Object.keys(phase.vitals).length > 0 && (
-                            <div className="flex flex-wrap gap-2 mt-2 text-xs">
-                              {Object.entries(phase.vitals).map(([key, value]) => (
-                                value && (
-                                  <span key={key} className="px-2 py-1 bg-white dark:bg-gray-800 rounded text-cyan-700 dark:text-cyan-400">
-                                    {key.toUpperCase()}: {value}
-                                  </span>
-                                )
-                              ))}
+                {scenario.phases && scenario.phases.length > 0 && (
+                  <div className="space-y-4">
+                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Scenario Phases</h3>
+                    {scenario.phases.map((phase, index) => {
+                      const v = phase.vitals || {};
+                      const hasVitals = v.bp || v.hr || v.rr || v.spo2 || v.temp || v.etco2 || v.glucose || v.blood_glucose;
+                      const hasNeuro = v.loc || v.gcs || v.gcs_total || v.pupils || v.pain;
+                      const hasCardiac = v.ekg_rhythm || v.twelve_lead_notes;
+                      const hasResp = v.lung_sounds || v.lung_notes || v.jvd;
+                      const hasAssessment = v.skin || v.edema || (v.other_findings && v.other_findings.length > 0);
+                      const expectedActions = phase.expected_actions || (phase.expected_interventions ? toArray(phase.expected_interventions).join(', ') : '');
+
+                      return (
+                        <div
+                          key={index}
+                          className={`rounded-lg border overflow-hidden ${
+                            index === 0
+                              ? 'border-blue-300 dark:border-blue-700 bg-blue-50/50 dark:bg-blue-900/10'
+                              : 'border-amber-300 dark:border-amber-700 bg-amber-50/50 dark:bg-amber-900/10'
+                          }`}
+                        >
+                          {/* Phase Header */}
+                          <div className={`px-4 py-2 border-b ${
+                            index === 0
+                              ? 'bg-blue-100 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800'
+                              : 'bg-amber-100 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800'
+                          }`}>
+                            <div className="flex items-center justify-between">
+                              <span className={`font-semibold text-sm ${
+                                index === 0
+                                  ? 'text-blue-800 dark:text-blue-300'
+                                  : 'text-amber-800 dark:text-amber-300'
+                              }`}>
+                                {phase.phase_name || `Phase ${index + 1}`}
+                              </span>
+                              {phase.trigger && (
+                                <span className="text-xs text-gray-500 dark:text-gray-400 italic">
+                                  {phase.trigger}
+                                </span>
+                              )}
                             </div>
-                          )}
-                          {phase.expected_interventions && toArray(phase.expected_interventions).length > 0 && (
-                            <div className="mt-2 text-xs text-cyan-600 dark:text-cyan-500">
-                              <span className="font-medium">Expected:</span> {toArray(phase.expected_interventions).join(', ')}
+                          </div>
+
+                          <div className="p-4 space-y-4">
+                            {/* Presentation Notes */}
+                            {phase.presentation_notes && (
+                              <p className="text-sm text-gray-700 dark:text-gray-300 italic border-l-2 border-gray-300 dark:border-gray-600 pl-3">
+                                {phase.presentation_notes}
+                              </p>
+                            )}
+
+                            {/* Vitals Grid */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
+                              {/* VITALS Section */}
+                              {hasVitals && (
+                                <div className="space-y-2">
+                                  <div className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Vitals</div>
+                                  <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                                    {v.bp && <div><span className="text-gray-500 dark:text-gray-400">BP:</span> <span className="text-gray-900 dark:text-white font-medium">{v.bp}</span></div>}
+                                    {v.hr && <div><span className="text-gray-500 dark:text-gray-400">HR:</span> <span className="text-gray-900 dark:text-white font-medium">{v.hr}</span></div>}
+                                    {v.rr && <div><span className="text-gray-500 dark:text-gray-400">RR:</span> <span className="text-gray-900 dark:text-white font-medium">{v.rr}</span></div>}
+                                    {v.spo2 && <div><span className="text-gray-500 dark:text-gray-400">SpO2:</span> <span className="text-gray-900 dark:text-white font-medium">{v.spo2}</span></div>}
+                                    {v.temp && <div><span className="text-gray-500 dark:text-gray-400">Temp:</span> <span className="text-gray-900 dark:text-white font-medium">{v.temp}</span></div>}
+                                    {v.etco2 && <div><span className="text-gray-500 dark:text-gray-400">EtCO2:</span> <span className="text-gray-900 dark:text-white font-medium">{v.etco2}</span></div>}
+                                    {(v.glucose || v.blood_glucose) && <div><span className="text-gray-500 dark:text-gray-400">BGL:</span> <span className="text-gray-900 dark:text-white font-medium">{v.glucose || v.blood_glucose}</span></div>}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* NEURO Section */}
+                              {hasNeuro && (
+                                <div className="space-y-2">
+                                  <div className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Neuro</div>
+                                  <div className="space-y-1">
+                                    {v.loc && <div><span className="text-gray-500 dark:text-gray-400">LOC:</span> <span className="text-gray-900 dark:text-white font-medium">{v.loc}</span></div>}
+                                    {(v.gcs || v.gcs_total) && (
+                                      <div>
+                                        <span className="text-gray-500 dark:text-gray-400">GCS:</span>{' '}
+                                        <span className="text-gray-900 dark:text-white font-medium">
+                                          {v.gcs || v.gcs_total}
+                                          {v.gcs_e && v.gcs_v && v.gcs_m && ` (E${v.gcs_e} V${v.gcs_v} M${v.gcs_m})`}
+                                        </span>
+                                      </div>
+                                    )}
+                                    {v.pupils && <div><span className="text-gray-500 dark:text-gray-400">Pupils:</span> <span className="text-gray-900 dark:text-white font-medium">{v.pupils}</span></div>}
+                                    {v.pain && <div><span className="text-gray-500 dark:text-gray-400">Pain:</span> <span className="text-gray-900 dark:text-white font-medium">{v.pain}</span></div>}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* CARDIAC Section */}
+                              {hasCardiac && (
+                                <div className="space-y-2">
+                                  <div className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Cardiac</div>
+                                  <div className="space-y-1">
+                                    {v.ekg_rhythm && <div><span className="text-gray-500 dark:text-gray-400">EKG:</span> <span className="text-gray-900 dark:text-white font-medium">{v.ekg_rhythm}</span></div>}
+                                    {v.twelve_lead_notes && <div><span className="text-gray-500 dark:text-gray-400">12-Lead:</span> <span className="text-gray-900 dark:text-white font-medium">{v.twelve_lead_notes}</span></div>}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* RESPIRATORY Section */}
+                              {hasResp && (
+                                <div className="space-y-2">
+                                  <div className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Respiratory</div>
+                                  <div className="space-y-1">
+                                    {v.lung_sounds && <div><span className="text-gray-500 dark:text-gray-400">Lungs:</span> <span className="text-gray-900 dark:text-white font-medium">{v.lung_sounds}</span></div>}
+                                    {v.lung_notes && <div><span className="text-gray-500 dark:text-gray-400">Notes:</span> <span className="text-gray-900 dark:text-white font-medium">{v.lung_notes}</span></div>}
+                                    {v.jvd && <div><span className="text-gray-500 dark:text-gray-400">JVD:</span> <span className="text-gray-900 dark:text-white font-medium">{v.jvd}</span></div>}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* ASSESSMENT Section */}
+                              {hasAssessment && (
+                                <div className="space-y-2">
+                                  <div className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Assessment</div>
+                                  <div className="space-y-1">
+                                    {v.skin && <div><span className="text-gray-500 dark:text-gray-400">Skin:</span> <span className="text-gray-900 dark:text-white font-medium">{v.skin}</span></div>}
+                                    {v.edema && <div><span className="text-gray-500 dark:text-gray-400">Edema:</span> <span className="text-gray-900 dark:text-white font-medium">{v.edema}</span></div>}
+                                    {v.other_findings && v.other_findings.map((finding, i) => (
+                                      <div key={i}><span className="text-gray-500 dark:text-gray-400">{finding.key}:</span> <span className="text-gray-900 dark:text-white font-medium">{finding.value}</span></div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
                             </div>
-                          )}
+
+                            {/* Expected Actions */}
+                            {expectedActions && (
+                              <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+                                <div className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-1">Expected Interventions</div>
+                                <p className="text-xs text-gray-700 dark:text-gray-300">{expectedActions}</p>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      ))}
-                    </div>
+                      );
+                    })}
                   </div>
                 )}
 
