@@ -15,7 +15,8 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
-  ExternalLink,
+  Copy,
+  Check,
   Loader2,
   RefreshCw
 } from 'lucide-react';
@@ -42,9 +43,9 @@ const STATUS_CONFIG = {
 };
 
 const TYPE_CONFIG = {
-  bug: { label: 'Bug', color: 'text-red-600 dark:text-red-400', icon: Bug },
-  feature: { label: 'Feature', color: 'text-yellow-600 dark:text-yellow-400', icon: Lightbulb },
-  other: { label: 'Other', color: 'text-blue-600 dark:text-blue-400', icon: HelpCircle }
+  bug: { label: 'BUG REPORT', emoji: '', bgColor: 'border-red-500 bg-red-50 dark:bg-red-900/20', headerBg: 'bg-red-100 dark:bg-red-900/40', textColor: 'text-red-700 dark:text-red-300', icon: Bug },
+  feature: { label: 'FEATURE REQUEST', emoji: '', bgColor: 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20', headerBg: 'bg-yellow-100 dark:bg-yellow-900/40', textColor: 'text-yellow-700 dark:text-yellow-300', icon: Lightbulb },
+  other: { label: 'FEEDBACK', emoji: '', bgColor: 'border-blue-500 bg-blue-50 dark:bg-blue-900/20', headerBg: 'bg-blue-100 dark:bg-blue-900/40', textColor: 'text-blue-700 dark:text-blue-300', icon: HelpCircle }
 };
 
 export default function FeedbackAdminPage() {
@@ -58,8 +59,8 @@ export default function FeedbackAdminPage() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterType, setFilterType] = useState('all');
 
-  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -117,24 +118,38 @@ export default function FeedbackAdminPage() {
     return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
+      year: 'numeric',
       hour: 'numeric',
       minute: '2-digit',
       hour12: true
     });
   };
 
-  const formatRelativeTime = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
+  const copyForClaude = async (report: FeedbackReport) => {
+    const typeLabel = report.report_type === 'bug' ? 'BUG REPORT' :
+                      report.report_type === 'feature' ? 'FEATURE REQUEST' : 'FEEDBACK';
 
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return formatDate(dateString);
+    const clipboardText = `## ${typeLabel}
+
+**Date:** ${formatDate(report.created_at)}
+**From:** ${report.user_email}
+**Page:** ${report.page_url || 'N/A'}
+**Status:** ${STATUS_CONFIG[report.status].label}
+
+### Description
+${report.description}
+
+### Browser Info
+${report.user_agent || 'Not available'}
+`;
+
+    try {
+      await navigator.clipboard.writeText(clipboardText);
+      setCopiedId(report.id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch (error) {
+      console.error('Failed to copy:', error);
+    }
   };
 
   if (status === 'loading' || loading) {
@@ -153,7 +168,7 @@ export default function FeedbackAdminPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 py-6">
+        <div className="max-w-5xl mx-auto px-4 py-6">
           <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
             <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1">
               <Home className="w-3 h-3" />
@@ -172,7 +187,7 @@ export default function FeedbackAdminPage() {
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Feedback Reports</h1>
                 <p className="text-gray-600 dark:text-gray-400">
-                  {total} total reports {newCount > 0 && <span className="text-red-600">({newCount} new)</span>}
+                  {total} total reports {newCount > 0 && <span className="text-red-600 font-medium">({newCount} new)</span>}
                 </p>
               </div>
             </div>
@@ -187,7 +202,7 @@ export default function FeedbackAdminPage() {
         </div>
       </div>
 
-      <main className="max-w-6xl mx-auto px-4 py-6 space-y-4">
+      <main className="max-w-5xl mx-auto px-4 py-6 space-y-4">
         {/* Filters */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
           <div className="flex flex-wrap gap-4 items-center">
@@ -223,7 +238,7 @@ export default function FeedbackAdminPage() {
         </div>
 
         {/* Reports List */}
-        <div className="space-y-3">
+        <div className="space-y-4">
           {reports.length === 0 ? (
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
               <MessageSquare className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
@@ -231,149 +246,117 @@ export default function FeedbackAdminPage() {
             </div>
           ) : (
             reports.map((report) => {
-              const statusConfig = STATUS_CONFIG[report.status];
               const typeConfig = TYPE_CONFIG[report.report_type];
+              const statusConfig = STATUS_CONFIG[report.status];
               const StatusIcon = statusConfig.icon;
               const TypeIcon = typeConfig.icon;
-              const isExpanded = expandedId === report.id;
 
               return (
                 <div
                   key={report.id}
-                  className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden"
+                  className={`rounded-lg border-2 overflow-hidden shadow-sm ${typeConfig.bgColor}`}
                 >
-                  {/* Main Row */}
-                  <div
-                    className="p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50"
-                    onClick={() => setExpandedId(isExpanded ? null : report.id)}
-                  >
-                    <div className="flex items-start gap-4">
-                      {/* Status Badge */}
-                      <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${statusConfig.color}`}>
-                        <StatusIcon className="w-3 h-3" />
-                        {statusConfig.label}
+                  {/* Header Row */}
+                  <div className={`px-4 py-3 ${typeConfig.headerBg} border-b border-gray-200 dark:border-gray-700`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <TypeIcon className={`w-5 h-5 ${typeConfig.textColor}`} />
+                        <span className={`font-bold ${typeConfig.textColor}`}>{typeConfig.label}</span>
+                        <span className={`ml-2 flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${statusConfig.color}`}>
+                          <StatusIcon className="w-3 h-3" />
+                          {statusConfig.label}
+                        </span>
                       </div>
-
-                      {/* Type Icon */}
-                      <TypeIcon className={`w-5 h-5 mt-0.5 ${typeConfig.color}`} />
-
-                      {/* Content */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-1">
-                          <span>{report.user_email}</span>
-                          <span>•</span>
-                          <span>{formatRelativeTime(report.created_at)}</span>
-                          {report.page_url && (
-                            <>
-                              <span>•</span>
-                              <span className="font-mono text-xs truncate max-w-[200px]">{report.page_url}</span>
-                            </>
-                          )}
-                        </div>
-                        <p className={`text-gray-900 dark:text-white ${isExpanded ? '' : 'line-clamp-2'}`}>
-                          {report.description}
-                        </p>
-                      </div>
-
-                      {/* Time */}
-                      <div className="text-sm text-gray-400 dark:text-gray-500 whitespace-nowrap">
+                      <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">
                         {formatDate(report.created_at)}
-                      </div>
+                      </span>
+                    </div>
+                    <div className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                      <span className="font-medium">From:</span> {report.user_email}
+                      {report.page_url && (
+                        <span className="ml-4">
+                          <span className="font-medium">Page:</span>{' '}
+                          <code className="text-xs bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded font-mono">
+                            {report.page_url}
+                          </code>
+                        </span>
+                      )}
                     </div>
                   </div>
 
-                  {/* Expanded Details */}
-                  {isExpanded && (
-                    <div className="px-4 pb-4 border-t dark:border-gray-700 pt-4 space-y-4">
-                      {/* Full Description */}
-                      <div>
-                        <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Full Description</label>
-                        <p className="mt-1 text-gray-900 dark:text-white whitespace-pre-wrap">{report.description}</p>
-                      </div>
+                  {/* Content */}
+                  <div className="px-4 py-4 bg-white dark:bg-gray-800">
+                    <pre className="whitespace-pre-wrap font-sans text-gray-900 dark:text-white text-sm leading-relaxed">
+                      {report.description}
+                    </pre>
+                  </div>
 
-                      {/* Metadata */}
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                        <div>
-                          <label className="text-gray-500 dark:text-gray-400">Page</label>
-                          <p className="font-mono text-xs text-gray-900 dark:text-white break-all">
-                            {report.page_url || 'N/A'}
-                          </p>
-                        </div>
-                        <div>
-                          <label className="text-gray-500 dark:text-gray-400">User</label>
-                          <p className="text-gray-900 dark:text-white">{report.user_email}</p>
-                        </div>
-                        <div>
-                          <label className="text-gray-500 dark:text-gray-400">Browser</label>
-                          <p className="text-gray-900 dark:text-white text-xs truncate">
-                            {report.user_agent ? report.user_agent.split(' ').slice(-2).join(' ') : 'N/A'}
-                          </p>
-                        </div>
-                        <div>
-                          <label className="text-gray-500 dark:text-gray-400">Submitted</label>
-                          <p className="text-gray-900 dark:text-white">{formatDate(report.created_at)}</p>
-                        </div>
-                      </div>
-
-                      {/* Resolution Info */}
-                      {report.resolved_at && (
-                        <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                          <p className="text-sm text-green-800 dark:text-green-300">
-                            Resolved by {report.resolved_by} on {formatDate(report.resolved_at)}
-                          </p>
-                          {report.resolution_notes && (
-                            <p className="mt-1 text-sm text-green-700 dark:text-green-400">
-                              {report.resolution_notes}
-                            </p>
-                          )}
-                        </div>
+                  {/* Resolution Info */}
+                  {report.resolved_at && (
+                    <div className="px-4 py-2 bg-green-100 dark:bg-green-900/30 border-t border-green-200 dark:border-green-800">
+                      <p className="text-sm text-green-800 dark:text-green-300">
+                        Resolved by <span className="font-medium">{report.resolved_by}</span> on {formatDate(report.resolved_at)}
+                      </p>
+                      {report.resolution_notes && (
+                        <p className="mt-1 text-sm text-green-700 dark:text-green-400 italic">
+                          {report.resolution_notes}
+                        </p>
                       )}
-
-                      {/* Actions */}
-                      <div className="flex items-center gap-2 pt-2">
-                        {report.status !== 'resolved' && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); updateStatus(report.id, 'resolved'); }}
-                            disabled={updatingId === report.id}
-                            className="flex items-center gap-2 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm disabled:opacity-50"
-                          >
-                            {updatingId === report.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-                            Mark Resolved
-                          </button>
-                        )}
-                        {report.status === 'new' && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); updateStatus(report.id, 'in_progress'); }}
-                            disabled={updatingId === report.id}
-                            className="flex items-center gap-2 px-3 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg text-sm disabled:opacity-50"
-                          >
-                            <Clock className="w-4 h-4" />
-                            Mark In Progress
-                          </button>
-                        )}
-                        {report.status !== 'wont_fix' && report.status !== 'resolved' && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); updateStatus(report.id, 'wont_fix'); }}
-                            disabled={updatingId === report.id}
-                            className="flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-sm disabled:opacity-50"
-                          >
-                            <XCircle className="w-4 h-4" />
-                            Won't Fix
-                          </button>
-                        )}
-                        {report.page_url && (
-                          <Link
-                            href={report.page_url}
-                            onClick={(e) => e.stopPropagation()}
-                            className="flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-sm"
-                          >
-                            <ExternalLink className="w-4 h-4" />
-                            Visit Page
-                          </Link>
-                        )}
-                      </div>
                     </div>
                   )}
+
+                  {/* Actions Row */}
+                  <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-600 flex items-center gap-2">
+                    <button
+                      onClick={() => copyForClaude(report)}
+                      className="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
+                    >
+                      {copiedId === report.id ? (
+                        <>
+                          <Check className="w-4 h-4" />
+                          Copied!
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-4 h-4" />
+                          Copy for Claude
+                        </>
+                      )}
+                    </button>
+
+                    {report.status === 'new' && (
+                      <button
+                        onClick={() => updateStatus(report.id, 'in_progress')}
+                        disabled={updatingId === report.id}
+                        className="flex items-center gap-2 px-3 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg text-sm font-medium disabled:opacity-50 transition-colors"
+                      >
+                        {updatingId === report.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Clock className="w-4 h-4" />}
+                        Mark In Progress
+                      </button>
+                    )}
+
+                    {report.status !== 'resolved' && (
+                      <button
+                        onClick={() => updateStatus(report.id, 'resolved')}
+                        disabled={updatingId === report.id}
+                        className="flex items-center gap-2 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium disabled:opacity-50 transition-colors"
+                      >
+                        {updatingId === report.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                        Mark Resolved
+                      </button>
+                    )}
+
+                    {report.status !== 'wont_fix' && report.status !== 'resolved' && (
+                      <button
+                        onClick={() => updateStatus(report.id, 'wont_fix')}
+                        disabled={updatingId === report.id}
+                        className="flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg text-sm font-medium disabled:opacity-50 transition-colors"
+                      >
+                        <XCircle className="w-4 h-4" />
+                        Won't Fix
+                      </button>
+                    )}
+                  </div>
                 </div>
               );
             })
