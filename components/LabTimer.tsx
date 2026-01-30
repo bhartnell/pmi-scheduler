@@ -193,6 +193,14 @@ export default function LabTimer({
       const res = await fetch(`/api/lab-management/timer/ready?labDayId=${labDayId}`);
       const data = await res.json();
 
+      console.log('Ready status API response:', {
+        success: data.success,
+        readyCount: data.readyStatuses?.length || 0,
+        stationCount: data.allStations?.length || 0,
+        readyStatuses: data.readyStatuses,
+        allStations: data.allStations
+      });
+
       if (data.success) {
         setReadyStatuses(data.readyStatuses || []);
         setAllStations(data.allStations || []);
@@ -597,7 +605,7 @@ export default function LabTimer({
             )}
 
             {/* Compact status bar when timer running/paused */}
-            {!isStopped && totalStations > 0 && (
+            {!isStopped && (
               <div className="absolute top-20 left-4 right-4">
                 <div className="bg-gray-800/90 rounded-lg p-3 flex items-center justify-between">
                   <div className="flex items-center gap-4">
@@ -605,31 +613,37 @@ export default function LabTimer({
                       <Users className="w-4 h-4" />
                       Stations:
                     </span>
-                    <div className="flex items-center gap-2">
-                      {allStations.map(station => {
-                        const status = getStationStatus(station);
-                        const isStationReady = status?.is_ready;
-                        return (
-                          <div
-                            key={station.id}
-                            className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium ${
-                              isStationReady ? 'bg-green-900/50 text-green-400' : 'bg-red-900/50 text-red-400'
-                            }`}
-                            title={isStationReady ? `Ready - ${status?.user_name || status?.user_email}` : 'Not Ready'}
-                          >
-                            {isStationReady ? (
-                              <CheckCircle className="w-3 h-3" />
-                            ) : (
-                              <Circle className="w-3 h-3" />
-                            )}
-                            <span>#{station.station_number}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
+                    {totalStations > 0 ? (
+                      <div className="flex items-center gap-2">
+                        {allStations.map(station => {
+                          const status = getStationStatus(station);
+                          const isStationReady = status?.is_ready;
+                          return (
+                            <div
+                              key={station.id}
+                              className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium ${
+                                isStationReady ? 'bg-green-900/50 text-green-400' : 'bg-red-900/50 text-red-400'
+                              }`}
+                              title={isStationReady ? `Ready - ${status?.user_name || status?.user_email}` : 'Not Ready'}
+                            >
+                              {isStationReady ? (
+                                <CheckCircle className="w-3 h-3" />
+                              ) : (
+                                <Circle className="w-3 h-3" />
+                              )}
+                              <span>#{station.station_number}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <span className="text-yellow-400 text-sm">
+                        No stations loaded (ready: {readyStatuses.length})
+                      </span>
+                    )}
                   </div>
                   <span className={`px-2 py-1 rounded text-xs font-medium ${
-                    allReady ? 'bg-green-600' : 'bg-yellow-600'
+                    allReady ? 'bg-green-600' : totalStations > 0 ? 'bg-yellow-600' : 'bg-gray-600'
                   }`}>
                     {readyCount}/{totalStations}
                   </span>
