@@ -426,12 +426,16 @@ export default function GradeStationPage() {
     setSaving(true);
     try {
       const payload = {
-        station_id: stationId,
+        // Required fields with correct DB column names
+        lab_station_id: stationId,
+        lab_day_id: station?.lab_day?.id,
+        cohort_id: station?.lab_day?.cohort?.id,
+        rotation_number: rotationNumber,
+        // Other fields
         scenario_id: station?.scenario?.id,
         lab_group_id: isSkillsStation ? null : selectedGroupId,
         team_lead_id: isSkillsStation ? null : teamLeaderId,
         student_id: isSkillsStation ? selectedStudentId : null,
-        rotation_number: rotationNumber,
         criteria_ratings: criteriaRatings,
         critical_actions_completed: criticalActions,
         satisfactory_count: satisfactoryCount,
