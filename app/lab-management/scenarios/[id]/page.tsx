@@ -108,17 +108,17 @@ interface Scenario {
   subcategory: string;
   difficulty: string;
   estimated_duration: number | null;
-  
+
   // Quick Reference
   instructor_summary: string;
   key_decision_points: string[];
-  
+
   // Dispatch
   dispatch_time: string;
   dispatch_location: string;
   chief_complaint: string;
   dispatch_notes: string;
-  
+
   // Patient Info
   patient_name: string;
   patient_age: string;
@@ -127,10 +127,33 @@ interface Scenario {
   medical_history: string[];
   medications: string[];
   allergies: string;
-  
+
+  // Primary Assessment - XABCDE (scenario-level defaults)
+  assessment_x: string;  // X - Hemorrhage
+  assessment_a: string;  // A - Airway
+  assessment_e: string;  // E - Expose/Environment
+  general_impression: string;  // Sick / Not Sick
+
+  // SAMPLE History (scenario-level)
+  sample_history: {
+    signs_symptoms: string;
+    last_oral_intake: string;
+    events_leading: string;
+  };
+
+  // OPQRST (scenario-level)
+  opqrst: {
+    onset: string;
+    provocation: string;
+    quality: string;
+    radiation: string;
+    severity: string;
+    time_onset: string;
+  };
+
   // Phases
   phases: Phase[];
-  
+
   // Grading
   critical_actions: CriticalAction[];
   evaluation_criteria: EvaluationCriteria[];
@@ -746,6 +769,26 @@ export default function ScenarioEditorPage() {
     medical_history: [],
     medications: [],
     allergies: '',
+    // Primary Assessment - XABCDE
+    assessment_x: '',
+    assessment_a: '',
+    assessment_e: '',
+    general_impression: '',
+    // SAMPLE History
+    sample_history: {
+      signs_symptoms: '',
+      last_oral_intake: '',
+      events_leading: ''
+    },
+    // OPQRST
+    opqrst: {
+      onset: '',
+      provocation: '',
+      quality: '',
+      radiation: '',
+      severity: '',
+      time_onset: ''
+    },
     phases: [createEmptyPhase(0)],
     critical_actions: [],
     evaluation_criteria: DEFAULT_EVALUATION_CRITERIA,
@@ -801,6 +844,26 @@ export default function ScenarioEditorPage() {
           medical_history: s.medical_history || [],
           medications: s.medications || [],
           allergies: s.allergies || '',
+          // Primary Assessment - XABCDE
+          assessment_x: s.assessment_x || '',
+          assessment_a: s.assessment_a || '',
+          assessment_e: s.assessment_e || '',
+          general_impression: s.general_impression || '',
+          // SAMPLE History
+          sample_history: s.sample_history || {
+            signs_symptoms: '',
+            last_oral_intake: '',
+            events_leading: ''
+          },
+          // OPQRST
+          opqrst: s.opqrst || {
+            onset: '',
+            provocation: '',
+            quality: '',
+            radiation: '',
+            severity: '',
+            time_onset: ''
+          },
           phases: s.phases?.length > 0 ? s.phases : [createEmptyPhase(0)],
           critical_actions: s.critical_actions?.map((a: string, i: number) => ({ id: `ca-${i}`, description: a })) || [],
           evaluation_criteria: DEFAULT_EVALUATION_CRITERIA,
@@ -845,6 +908,15 @@ export default function ScenarioEditorPage() {
         medical_history: scenario.medical_history,
         medications: scenario.medications,
         allergies: scenario.allergies,
+        // Primary Assessment - XABCDE
+        assessment_x: scenario.assessment_x,
+        assessment_a: scenario.assessment_a,
+        assessment_e: scenario.assessment_e,
+        general_impression: scenario.general_impression,
+        // SAMPLE History
+        sample_history: scenario.sample_history,
+        // OPQRST
+        opqrst: scenario.opqrst,
         phases: scenario.phases,
         critical_actions: scenario.critical_actions.map(a => a.description),
         debrief_points: scenario.debrief_points
@@ -1288,6 +1360,202 @@ export default function ScenarioEditorPage() {
                 placeholder="NKDA or list allergies"
                 className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
               />
+            </div>
+          </div>
+        </Section>
+
+        {/* Assessment Defaults (Scenario-Level) */}
+        <Section title="Assessment Defaults (XABCDE, SAMPLE, OPQRST)" icon={AlertTriangle}>
+          <div className="space-y-4 pt-3">
+            <p className="text-sm text-gray-500 dark:text-gray-400 italic">
+              These are scenario-level defaults. Phase-specific values in the phases below will override these.
+            </p>
+
+            {/* Primary Assessment - XABCDE */}
+            <div className="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-4 border border-orange-200 dark:border-orange-800">
+              <h4 className="text-sm font-medium text-orange-700 dark:text-orange-300 mb-3">Primary Assessment (XABCDE)</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs text-orange-600 dark:text-orange-400 font-medium">X - Hemorrhage Control</label>
+                  <input
+                    type="text"
+                    value={scenario.assessment_x}
+                    onChange={(e) => setScenario({ ...scenario, assessment_x: e.target.value })}
+                    placeholder="No major external bleeding"
+                    className="w-full px-3 py-2 border border-orange-300 dark:border-orange-700 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-orange-600 dark:text-orange-400 font-medium">A - Airway Status</label>
+                  <input
+                    type="text"
+                    value={scenario.assessment_a}
+                    onChange={(e) => setScenario({ ...scenario, assessment_a: e.target.value })}
+                    placeholder="Open and patent"
+                    className="w-full px-3 py-2 border border-orange-300 dark:border-orange-700 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-orange-600 dark:text-orange-400 font-medium">E - Expose/Environment</label>
+                  <input
+                    type="text"
+                    value={scenario.assessment_e}
+                    onChange={(e) => setScenario({ ...scenario, assessment_e: e.target.value })}
+                    placeholder="No trauma, rashes, environmental concerns"
+                    className="w-full px-3 py-2 border border-orange-300 dark:border-orange-700 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-orange-600 dark:text-orange-400 font-medium">General Impression</label>
+                  <select
+                    value={scenario.general_impression}
+                    onChange={(e) => setScenario({ ...scenario, general_impression: e.target.value })}
+                    className="w-full px-3 py-2 border border-orange-300 dark:border-orange-700 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  >
+                    <option value="">Select...</option>
+                    <option value="Sick">Sick</option>
+                    <option value="Not Sick">Not Sick</option>
+                    <option value="Critical">Critical</option>
+                  </select>
+                </div>
+              </div>
+              <p className="text-xs text-orange-500 dark:text-orange-400 mt-2 italic">
+                B, C, D are constructed from vitals: B (RR, lung sounds, SpO2), C (HR, BP, skin), D (LOC, GCS, pupils)
+              </p>
+            </div>
+
+            {/* SAMPLE History */}
+            <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 border border-green-200 dark:border-green-800">
+              <h4 className="text-sm font-medium text-green-700 dark:text-green-300 mb-3">SAMPLE History</h4>
+              <p className="text-xs text-green-600 dark:text-green-400 mb-3 italic">
+                S (from chief complaint), A (allergies), M (medications), P (medical history) are in Patient Info above.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs text-green-600 dark:text-green-400 font-medium">S - Signs/Symptoms (detailed)</label>
+                  <textarea
+                    value={scenario.sample_history.signs_symptoms}
+                    onChange={(e) => setScenario({
+                      ...scenario,
+                      sample_history: { ...scenario.sample_history, signs_symptoms: e.target.value }
+                    })}
+                    rows={2}
+                    placeholder="SOB, wheezing, speaking in 1-2 word sentences..."
+                    className="w-full px-3 py-2 border border-green-300 dark:border-green-700 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-green-600 dark:text-green-400 font-medium">L - Last Oral Intake</label>
+                  <input
+                    type="text"
+                    value={scenario.sample_history.last_oral_intake}
+                    onChange={(e) => setScenario({
+                      ...scenario,
+                      sample_history: { ...scenario.sample_history, last_oral_intake: e.target.value }
+                    })}
+                    placeholder="Light breakfast 4 hours ago"
+                    className="w-full px-3 py-2 border border-green-300 dark:border-green-700 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="text-xs text-green-600 dark:text-green-400 font-medium">E - Events Leading Up</label>
+                  <textarea
+                    value={scenario.sample_history.events_leading}
+                    onChange={(e) => setScenario({
+                      ...scenario,
+                      sample_history: { ...scenario.sample_history, events_leading: e.target.value }
+                    })}
+                    rows={2}
+                    placeholder="Progressive SOB since morning, worsening over last 2 hours..."
+                    className="w-full px-3 py-2 border border-green-300 dark:border-green-700 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* OPQRST */}
+            <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
+              <h4 className="text-sm font-medium text-purple-700 dark:text-purple-300 mb-3">OPQRST (Pain/Symptom Assessment)</h4>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="text-xs text-purple-600 dark:text-purple-400 font-medium">O - Onset</label>
+                  <input
+                    type="text"
+                    value={scenario.opqrst.onset}
+                    onChange={(e) => setScenario({
+                      ...scenario,
+                      opqrst: { ...scenario.opqrst, onset: e.target.value }
+                    })}
+                    placeholder="Woke up with symptoms"
+                    className="w-full px-3 py-2 border border-purple-300 dark:border-purple-700 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-purple-600 dark:text-purple-400 font-medium">P - Provocation/Palliation</label>
+                  <input
+                    type="text"
+                    value={scenario.opqrst.provocation}
+                    onChange={(e) => setScenario({
+                      ...scenario,
+                      opqrst: { ...scenario.opqrst, provocation: e.target.value }
+                    })}
+                    placeholder="Worse with exertion, better at rest"
+                    className="w-full px-3 py-2 border border-purple-300 dark:border-purple-700 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-purple-600 dark:text-purple-400 font-medium">Q - Quality</label>
+                  <input
+                    type="text"
+                    value={scenario.opqrst.quality}
+                    onChange={(e) => setScenario({
+                      ...scenario,
+                      opqrst: { ...scenario.opqrst, quality: e.target.value }
+                    })}
+                    placeholder="Sharp, dull, pressure, burning..."
+                    className="w-full px-3 py-2 border border-purple-300 dark:border-purple-700 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-purple-600 dark:text-purple-400 font-medium">R - Radiation/Region</label>
+                  <input
+                    type="text"
+                    value={scenario.opqrst.radiation}
+                    onChange={(e) => setScenario({
+                      ...scenario,
+                      opqrst: { ...scenario.opqrst, radiation: e.target.value }
+                    })}
+                    placeholder="Chest, radiates to left arm..."
+                    className="w-full px-3 py-2 border border-purple-300 dark:border-purple-700 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-purple-600 dark:text-purple-400 font-medium">S - Severity (0-10)</label>
+                  <input
+                    type="text"
+                    value={scenario.opqrst.severity}
+                    onChange={(e) => setScenario({
+                      ...scenario,
+                      opqrst: { ...scenario.opqrst, severity: e.target.value }
+                    })}
+                    placeholder="8/10"
+                    className="w-full px-3 py-2 border border-purple-300 dark:border-purple-700 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-purple-600 dark:text-purple-400 font-medium">T - Time/Duration</label>
+                  <input
+                    type="text"
+                    value={scenario.opqrst.time_onset}
+                    onChange={(e) => setScenario({
+                      ...scenario,
+                      opqrst: { ...scenario.opqrst, time_onset: e.target.value }
+                    })}
+                    placeholder="Started 2 hours ago, getting worse"
+                    className="w-full px-3 py-2 border border-purple-300 dark:border-purple-700 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </Section>
