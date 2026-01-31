@@ -425,24 +425,24 @@ export default function GradeStationPage() {
 
     setSaving(true);
     try {
+      // Build payload with EXACT DB column names only
+      // Schema: id, lab_station_id, lab_day_id, cohort_id, rotation_number,
+      // team_lead_id, graded_by, criteria_ratings, overall_comments, overall_score,
+      // flagged_for_review, issue_level, flag_categories, created_at
       const payload = {
-        // Required fields with correct DB column names
+        // Required fields
         lab_station_id: stationId,
         lab_day_id: station?.lab_day?.id,
         cohort_id: station?.lab_day?.cohort?.id,
         rotation_number: rotationNumber,
-        // Other fields
-        scenario_id: station?.scenario?.id,
-        lab_group_id: isSkillsStation ? null : selectedGroupId,
+        // Optional fields
         team_lead_id: isSkillsStation ? null : teamLeaderId,
-        student_id: isSkillsStation ? selectedStudentId : null,
-        criteria_ratings: criteriaRatings,
-        critical_actions_completed: criticalActions,
-        satisfactory_count: satisfactoryCount,
-        overall_comments: overallComments,
         graded_by: session?.user?.email,
-        phase1_pass: phase1Pass,
-        phase2_pass: phase2Pass,
+        // JSONB criteria ratings
+        criteria_ratings: criteriaRatings,
+        // Comments and score
+        overall_comments: overallComments,
+        overall_score: satisfactoryCount,
         // Flagging fields
         issue_level: issueLevel,
         flag_categories: flagCategories.length > 0 ? flagCategories : null,

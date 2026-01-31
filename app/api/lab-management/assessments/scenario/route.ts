@@ -9,46 +9,30 @@ const supabase = createClient(
 // GET - Fetch assessments
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
-  const studentId = searchParams.get('studentId');
-  const labGroupId = searchParams.get('labGroupId');
-  const stationId = searchParams.get('stationId');
-  const scenarioId = searchParams.get('scenarioId');
+  const labStationId = searchParams.get('labStationId') || searchParams.get('stationId');
+  const labDayId = searchParams.get('labDayId');
+  const cohortId = searchParams.get('cohortId');
 
   try {
     let query = supabase
       .from('scenario_assessments')
       .select(`
         *,
-        scenario:scenarios(id, title, category),
-        station:lab_stations(id, station_number),
-        lab_group:lab_groups(id, name),
-        team_lead:students!scenario_assessments_team_lead_id_fkey(id, first_name, last_name)
+        station:lab_stations!lab_station_id(id, station_number),
+        team_lead:students!team_lead_id(id, first_name, last_name)
       `)
       .order('created_at', { ascending: false });
 
-    if (studentId) {
-      // Get assessments where this student was involved (through lab group)
-      const { data: groupMemberships } = await supabase
-        .from('lab_group_members')
-        .select('lab_group_id')
-        .eq('student_id', studentId);
-      
-      const groupIds = groupMemberships?.map(m => m.lab_group_id) || [];
-      if (groupIds.length > 0) {
-        query = query.in('lab_group_id', groupIds);
-      }
+    if (labStationId) {
+      query = query.eq('lab_station_id', labStationId);
     }
 
-    if (labGroupId) {
-      query = query.eq('lab_group_id', labGroupId);
+    if (labDayId) {
+      query = query.eq('lab_day_id', labDayId);
     }
 
-    if (stationId) {
-      query = query.eq('station_id', stationId);
-    }
-
-    if (scenarioId) {
-      query = query.eq('scenario_id', scenarioId);
+    if (cohortId) {
+      query = query.eq('cohort_id', cohortId);
     }
 
     const { data, error } = await query;
@@ -75,7 +59,7 @@ export async function POST(request: NextRequest) {
     const labStationId = body.lab_station_id || body.station_id;
     const labDayId = body.lab_day_id;
     const cohortId = body.cohort_id;
-    const rotationNumber = body.rotation_number || 1;
+    const rotationNumber = parseInt(body.rotation_number) || 1;
 
     if (!labStationId) {
       return NextResponse.json({ success: false, error: 'lab_station_id is required' }, { status: 400 });
@@ -87,37 +71,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'cohort_id is required' }, { status: 400 });
     }
 
-    // Build assessment data with correct DB column names
+    // Build assessment data with EXACT DB column names only
+    // Schema columns: id, lab_station_id, lab_day_id, cohort_id, rotation_number,
+    // team_lead_id, graded_by, criteria_ratings, overall_comments, overall_score,
+    // flagged_for_review, issue_level, flag_categories, created_at
     const assessmentData: any = {
+      // Required fields
       lab_station_id: labStationId,
       lab_day_id: labDayId,
       cohort_id: cohortId,
       rotation_number: rotationNumber,
-      scenario_id: body.scenario_id || null,
-      lab_group_id: body.lab_group_id || null,
+
+      // Optional fields that exist in schema
       team_lead_id: body.team_lead_id || null,
-
-      // Store the full criteria ratings as JSONB
-      criteria_ratings: body.criteria_ratings || [],
-      critical_actions_completed: body.critical_actions_completed || {},
-
-      // Summary scores
-      satisfactory_count: body.satisfactory_count || 0,
-      phase1_pass: body.phase1_pass || false,
-      phase2_pass: body.phase2_pass || false,
-
-      // Comments
-      overall_comments: body.overall_comments || null,
       graded_by: body.graded_by || null,
 
-      // Flagging fields
-      issue_level: body.issue_level || 'none',
-      flag_categories: body.flag_categories || null,
-      flagged_for_review: body.flagged_for_review || false,
+      // JSONB field for criteria ratings
+      criteria_ratings: body.criteria_ratings || [],
 
-      // Legacy fields for compatibility
-      overall_score: body.satisfactory_count || 0,
-      team_lead_performance: body.phase2_pass ? 'satisfactory' : body.phase1_pass ? 'needs_improvement' : 'unsatisfactory'
+      // Comments and scores
+      overall_comments: body.overall_comments || null,
+      overall_score: body.overall_score ?? body.satisfactory_count ?? 0,
+
+      // Flagging fields
+      flagged_for_review: body.flagged_for_review || false,
+      issue_level: body.issue_level || 'none',
+      flag_categories: body.flag_categories || null
     };
 
     console.log('Assessment data to insert:', JSON.stringify(assessmentData, null, 2));
@@ -129,16 +108,6 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) throw error;
-
-    // Also record individual student assessments for each group member
-    // This links the group assessment to each student in the group
-    const { data: groupMembers } = await supabase
-      .from('lab_group_members')
-      .select('student_id')
-      .eq('lab_group_id', body.lab_group_id);
-
-    // You could create individual records here if needed for reporting
-    // For now, the group assessment links to students through lab_group_id
 
     return NextResponse.json({ success: true, assessment: data });
   } catch (error: any) {
