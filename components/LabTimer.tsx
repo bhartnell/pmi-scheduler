@@ -584,8 +584,8 @@ export default function LabTimer({
         </div>
       )}
 
-      {/* Main Timer Display */}
-      <div className="flex-1 flex flex-col items-center justify-center p-8">
+      {/* Main Timer Display - scrollable */}
+      <div className="flex-1 flex flex-col items-center overflow-y-auto p-8">
         {/* Station Ready Status - Full display when stopped */}
         {isController && isStopped && (
           <>
@@ -734,51 +734,7 @@ export default function LabTimer({
           </div>
         </div>
 
-        {/* Controls - Only show for controller */}
-        {isController && (
-          <div className="flex items-center gap-4 mt-12">
-            <button
-              onClick={handleReset}
-              className="p-4 rounded-full bg-gray-700 hover:bg-gray-600 transition-colors"
-              title="Reset (R)"
-            >
-              <RotateCcw className="w-8 h-8" />
-            </button>
-
-            <button
-              onClick={handlePlayPause}
-              className={`p-6 rounded-full transition-colors ${
-                isRunning ? 'bg-yellow-500 hover:bg-yellow-400' : 'bg-green-500 hover:bg-green-400'
-              }`}
-              title="Play/Pause (Space)"
-            >
-              {isRunning ? <Pause className="w-12 h-12" /> : <Play className="w-12 h-12 ml-1" />}
-            </button>
-
-            <button
-              onClick={handleStop}
-              className="p-4 rounded-full bg-red-600 hover:bg-red-500 transition-colors"
-              title="Stop"
-            >
-              <Square className="w-8 h-8" />
-            </button>
-
-            <button
-              onClick={handleNextRotation}
-              disabled={currentRotation >= numRotations}
-              className={`p-4 rounded-full transition-colors ${
-                currentRotation >= numRotations
-                  ? 'bg-gray-600 opacity-50 cursor-not-allowed'
-                  : 'bg-blue-500 hover:bg-blue-400'
-              }`}
-              title="Next Rotation (N)"
-            >
-              <SkipForward className="w-8 h-8" />
-            </button>
-          </div>
-        )}
-
-        {/* Settings - Only show for controller */}
+        {/* Settings - Only show for controller (inside scrollable area) */}
         {isController && (
           <div className="mt-8">
             <button
@@ -844,6 +800,50 @@ export default function LabTimer({
           </div>
         )}
       </div>
+
+      {/* Controls Bar - Always visible at bottom for controller */}
+      {isController && (
+        <div className="flex items-center justify-center gap-4 p-4 bg-gray-800 border-t border-gray-700">
+          <button
+            onClick={handleReset}
+            className="p-3 rounded-full bg-gray-700 hover:bg-gray-600 transition-colors"
+            title="Reset (R)"
+          >
+            <RotateCcw className="w-6 h-6" />
+          </button>
+
+          <button
+            onClick={handlePlayPause}
+            className={`p-4 rounded-full transition-colors ${
+              isRunning ? 'bg-yellow-500 hover:bg-yellow-400' : 'bg-green-500 hover:bg-green-400'
+            }`}
+            title="Play/Pause (Space)"
+          >
+            {isRunning ? <Pause className="w-10 h-10" /> : <Play className="w-10 h-10 ml-1" />}
+          </button>
+
+          <button
+            onClick={handleStop}
+            className="p-3 rounded-full bg-red-600 hover:bg-red-500 transition-colors"
+            title="Stop"
+          >
+            <Square className="w-6 h-6" />
+          </button>
+
+          <button
+            onClick={handleNextRotation}
+            disabled={currentRotation >= numRotations}
+            className={`p-3 rounded-full transition-colors ${
+              currentRotation >= numRotations
+                ? 'bg-gray-600 opacity-50 cursor-not-allowed'
+                : 'bg-blue-500 hover:bg-blue-400'
+            }`}
+            title="Next Rotation (N)"
+          >
+            <SkipForward className="w-6 h-6" />
+          </button>
+        </div>
+      )}
 
       {/* Footer Info */}
       <div className="p-4 border-t border-gray-700 text-center text-sm opacity-60">
