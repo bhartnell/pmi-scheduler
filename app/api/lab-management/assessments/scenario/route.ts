@@ -71,6 +71,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'cohort_id is required' }, { status: 400 });
     }
 
+    // Look up graded_by UUID from email if email was provided
+    // graded_by expects lab_users.id (UUID), not email string
+    let gradedByUserId: string | null = null;
+    if (body.graded_by) {
+      // Check if it's already a UUID format or if it's an email
+      const isEmail = body.graded_by.includes('@');
+      if (isEmail) {
+        const { data: user } = await supabase
+          .from('lab_users')
+          .select('id')
+          .eq('email', body.graded_by)
+          .single();
+        gradedByUserId = user?.id || null;
+        console.log('Looked up graded_by:', body.graded_by, '->', gradedByUserId);
+      } else {
+        // Assume it's already a UUID
+        gradedByUserId = body.graded_by;
+      }
+    }
+
     // Build assessment data with EXACT DB column names only
     // Schema columns: id, lab_station_id, lab_day_id, cohort_id, rotation_number,
     // team_lead_id, graded_by, criteria_ratings, overall_comments, overall_score,
@@ -84,7 +104,7 @@ export async function POST(request: NextRequest) {
 
       // Optional fields that exist in schema
       team_lead_id: body.team_lead_id || null,
-      graded_by: body.graded_by || null,
+      graded_by: gradedByUserId,
 
       // JSONB field for criteria ratings
       criteria_ratings: body.criteria_ratings || [],
