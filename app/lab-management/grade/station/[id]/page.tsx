@@ -413,12 +413,12 @@ export default function GradeStationPage() {
         return;
       }
 
-      // Check if NI or U ratings have notes (only for scenario stations)
-      const missingNotes = criteriaRatings.filter(
-        r => (r.rating === 'NI' || r.rating === 'U') && !r.notes.trim()
-      );
-      if (missingNotes.length > 0) {
-        alert(`Please add notes for: ${missingNotes.map(r => r.criteria_name).join(', ')}`);
+      // Notes for NI/U ratings are optional - instructors can add them if needed
+      // but they shouldn't block saving
+
+      // Validation: If flagged for follow-up, require at least one category selected
+      if (issueLevel === 'needs_followup' && flagCategories.length === 0) {
+        alert('Please select at least one category when flagging for follow-up');
         return;
       }
     }
@@ -1499,17 +1499,15 @@ export default function GradeStationPage() {
                         ))}
                       </div>
 
-                      {/* Notes (required for NI/U) */}
+                      {/* Notes (optional for NI/U) */}
                       {needsNotes && (
                         <div>
                           <textarea
                             value={rating?.notes || ''}
                             onChange={(e) => updateNotes(criteria.id, e.target.value)}
-                            placeholder="Required: Explain the issue and improvement plan..."
+                            placeholder="Optional: Add notes about the issue or improvement plan..."
                             rows={2}
-                            className={`w-full px-3 py-2 border rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 ${
-                              !rating?.notes?.trim() ? 'border-red-300 dark:border-red-700' : 'border-gray-300 dark:border-gray-600'
-                            }`}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                           />
                         </div>
                       )}
