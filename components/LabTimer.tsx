@@ -53,7 +53,7 @@ interface ReadyStatus {
     id: string;
     station_number: number;
     station_type: string;
-    room_assignment: string | null;
+    room: string | null;
   };
 }
 
@@ -61,7 +61,7 @@ interface Station {
   id: string;
   station_number: number;
   station_type: string;
-  room_assignment: string | null;
+  room: string | null;
 }
 
 export default function LabTimer({
@@ -622,8 +622,8 @@ export default function LabTimer({
                           <div>
                             <div className="font-medium">
                               Station {station.station_number}
-                              {station.room_assignment && (
-                                <span className="text-sm opacity-70 ml-2">({station.room_assignment})</span>
+                              {station.room && (
+                                <span className="text-sm opacity-70 ml-2">({station.room})</span>
                               )}
                             </div>
                             <div className="text-sm opacity-70">

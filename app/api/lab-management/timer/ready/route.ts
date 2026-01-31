@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
       .from('lab_timer_ready_status')
       .select(`
         *,
-        station:lab_stations(id, station_number, station_type, room_assignment)
+        station:lab_stations(id, station_number, station_type, room)
       `)
       .eq('lab_day_id', labDayId);
 
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     // Also get all stations for this lab day to show unregistered ones
     const { data: allStations, error: stationsError } = await supabase
       .from('lab_stations')
-      .select('id, station_number, station_type, room_assignment')
+      .select('id, station_number, station_type, room')
       .eq('lab_day_id', labDayId)
       .order('station_number');
 
