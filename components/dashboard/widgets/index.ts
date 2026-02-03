@@ -1,0 +1,79 @@
+export { default as NotificationsWidget } from './NotificationsWidget';
+export { default as MyLabsWidget } from './MyLabsWidget';
+export { default as QuickLinksWidget, QUICK_LINK_DEFINITIONS } from './QuickLinksWidget';
+export { default as NeedsAttentionWidget } from './NeedsAttentionWidget';
+export { default as OverviewStatsWidget } from './OverviewStatsWidget';
+export { default as OpenStationsWidget } from './OpenStationsWidget';
+export { default as RecentFeedbackWidget } from './RecentFeedbackWidget';
+
+// Widget configuration for the customize modal
+export const WIDGET_DEFINITIONS = {
+  notifications: {
+    id: 'notifications',
+    name: 'Notifications',
+    description: 'Recent unread notifications',
+    defaultFor: ['all'],
+  },
+  my_labs: {
+    id: 'my_labs',
+    name: 'My Upcoming Labs',
+    description: 'Labs where you are assigned as instructor',
+    defaultFor: ['all'],
+  },
+  quick_links: {
+    id: 'quick_links',
+    name: 'Quick Links',
+    description: 'Customizable shortcuts to common pages',
+    defaultFor: ['all'],
+  },
+  needs_attention: {
+    id: 'needs_attention',
+    name: 'Needs Attention',
+    description: 'Alerts for items requiring action',
+    defaultFor: ['admin', 'superadmin'],
+  },
+  overview_stats: {
+    id: 'overview_stats',
+    name: 'Overview Stats',
+    description: 'Summary of students, labs, and feedback',
+    defaultFor: ['admin', 'superadmin'],
+  },
+  open_stations: {
+    id: 'open_stations',
+    name: 'Open Stations',
+    description: 'Stations that need instructors assigned',
+    defaultFor: ['instructor', 'lead_instructor'],
+  },
+  recent_feedback: {
+    id: 'recent_feedback',
+    name: 'Recent Feedback',
+    description: 'Latest bug reports and feature requests',
+    defaultFor: ['admin', 'superadmin'],
+  },
+} as const;
+
+export type WidgetId = keyof typeof WIDGET_DEFINITIONS;
+
+// Role-based default configurations
+export const ROLE_DEFAULTS: Record<string, { widgets: string[]; quickLinks: string[] }> = {
+  superadmin: {
+    widgets: ['notifications', 'my_labs', 'quick_links', 'needs_attention', 'overview_stats', 'recent_feedback'],
+    quickLinks: ['scenarios', 'students', 'schedule', 'emt_tracker', 'clinical', 'feedback', 'admin'],
+  },
+  admin: {
+    widgets: ['notifications', 'my_labs', 'quick_links', 'needs_attention', 'overview_stats', 'recent_feedback'],
+    quickLinks: ['scenarios', 'students', 'schedule', 'emt_tracker', 'clinical', 'feedback', 'admin'],
+  },
+  lead_instructor: {
+    widgets: ['notifications', 'my_labs', 'quick_links', 'open_stations', 'overview_stats'],
+    quickLinks: ['scenarios', 'students', 'schedule', 'emt_tracker', 'clinical'],
+  },
+  instructor: {
+    widgets: ['notifications', 'my_labs', 'quick_links', 'open_stations'],
+    quickLinks: ['scenarios', 'students', 'schedule', 'my_certs'],
+  },
+  guest: {
+    widgets: ['notifications', 'quick_links'],
+    quickLinks: ['scenarios', 'students'],
+  },
+};

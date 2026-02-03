@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { notifyInstructorAssigned } from '@/lib/notifications';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -105,6 +106,20 @@ export async function PATCH(
     if (body.instructions_url !== undefined) updateData.instructions_url = body.instructions_url;
     if (body.station_notes !== undefined) updateData.station_notes = body.station_notes;
 
+    // Check if this is a new instructor assignment (for notification)
+    const isNewAssignment = body.instructor_email !== undefined;
+    let previousInstructor: string | null = null;
+
+    if (isNewAssignment) {
+      // Get current station to check if instructor is changing
+      const { data: currentStation } = await supabase
+        .from('lab_stations')
+        .select('instructor_email')
+        .eq('id', id)
+        .single();
+      previousInstructor = currentStation?.instructor_email || null;
+    }
+
     const { data, error } = await supabase
       .from('lab_stations')
       .update(updateData)
@@ -112,7 +127,14 @@ export async function PATCH(
       .select(`
         *,
         scenario:scenarios(id, title, category),
-        lab_day:lab_days(id, date)
+        lab_day:lab_days(
+          id,
+          date,
+          cohort:cohorts(
+            cohort_number,
+            program:programs(abbreviation)
+          )
+        )
       `)
       .single();
 
@@ -123,6 +145,26 @@ export async function PATCH(
         error: `Database error: ${error.message}`,
         code: error.code
       }, { status: 500 });
+    }
+
+    // Send notification if instructor was assigned (and it's a different instructor)
+    if (isNewAssignment && body.instructor_email && body.instructor_email !== previousInstructor) {
+      try {
+        const cohort = data.lab_day?.cohort;
+        const cohortName = cohort
+          ? `${cohort.program?.abbreviation || 'PM'} Group ${cohort.cohort_number}`
+          : 'Lab';
+
+        await notifyInstructorAssigned(body.instructor_email, {
+          stationId: id,
+          stationTitle: data.custom_title || data.scenario?.title || `Station ${data.station_number}`,
+          labDate: data.lab_day?.date || '',
+          cohortName,
+        });
+      } catch (notifyError) {
+        // Don't fail the request if notification fails
+        console.error('Failed to send assignment notification:', notifyError);
+      }
     }
 
     return NextResponse.json({ success: true, station: data });

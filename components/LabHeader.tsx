@@ -4,6 +4,7 @@ import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
 import { LogOut, Home } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import NotificationBell from '@/components/NotificationBell';
 
 interface LabHeaderProps {
   breadcrumbs?: { label: string; href?: string }[];
@@ -39,6 +40,7 @@ export default function LabHeader({ breadcrumbs = [], title, actions }: LabHeade
               <span className="text-sm text-gray-600 dark:text-gray-400 hidden sm:block">
                 {session.user?.email}
               </span>
+              <NotificationBell />
               <ThemeToggle />
               <button
                 onClick={() => signOut({ callbackUrl: '/' })}

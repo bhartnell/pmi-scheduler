@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
+import { notifyAdminsNewFeedback, notifyFeedbackResolved } from '@/lib/notifications';
 
 // Create Supabase client inside handlers to ensure env vars are available
 function getSupabase() {
@@ -92,6 +93,19 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error;
 
+    // Notify admins about new feedback
+    try {
+      await notifyAdminsNewFeedback({
+        feedbackId: data.id,
+        title: description.trim().substring(0, 100),
+        type: report_type || 'other',
+        submittedBy: session?.user?.email || 'anonymous',
+      });
+    } catch (notifyError) {
+      // Don't fail the request if notification fails
+      console.error('Failed to send feedback notification:', notifyError);
+    }
+
     return NextResponse.json({ success: true, report: data });
   } catch (error: any) {
     console.error('Error submitting feedback:', error);
@@ -158,6 +172,13 @@ export async function PATCH(request: NextRequest) {
       updateData.resolution_notes = resolution_notes;
     }
 
+    // Get the report first to check for status change and get reporter email
+    const { data: currentReport } = await supabase
+      .from('feedback_reports')
+      .select('status, user_email, description')
+      .eq('id', id)
+      .single();
+
     const { data, error } = await supabase
       .from('feedback_reports')
       .update(updateData)
@@ -166,6 +187,18 @@ export async function PATCH(request: NextRequest) {
       .single();
 
     if (error) throw error;
+
+    // Notify reporter if feedback was resolved
+    if (status === 'resolved' && currentReport?.status !== 'resolved' && currentReport?.user_email) {
+      try {
+        await notifyFeedbackResolved(currentReport.user_email, {
+          feedbackId: id,
+          title: currentReport.description?.substring(0, 100) || 'Your feedback',
+        });
+      } catch (notifyError) {
+        console.error('Failed to send resolution notification:', notifyError);
+      }
+    }
 
     return NextResponse.json({ success: true, report: data });
   } catch (error) {
