@@ -60,7 +60,11 @@ export async function GET(request: NextRequest) {
     for (const ss of (stationSkills || [])) {
       if (!ss.skill) continue;
 
-      const skill = ss.skill as { id: string; name: string; category: string; certification_levels: string[] };
+      // Handle both single object and array responses from Supabase
+      const skillData = Array.isArray(ss.skill) ? ss.skill[0] : ss.skill;
+      if (!skillData) continue;
+
+      const skill = skillData as { id: string; name: string; category: string; certification_levels: string[] };
       const station = stations.find(s => s.id === ss.station_id);
 
       if (!skillMap.has(skill.id)) {
