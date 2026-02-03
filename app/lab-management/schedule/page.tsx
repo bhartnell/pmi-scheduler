@@ -25,6 +25,7 @@ interface Cohort {
 interface LabDay {
   id: string;
   date: string;
+  title: string | null;
   week_number: number | null;
   day_number: number | null;
   num_rotations: number;
@@ -290,15 +291,21 @@ export default function SchedulePage() {
                       <Link
                         key={labDay.id}
                         href={`/lab-management/schedule/${labDay.id}`}
-                        className="block px-1.5 py-1 text-xs rounded bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/70 truncate"
+                        className="block px-1.5 py-1 text-xs rounded bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/70"
+                        title={labDay.title || `${labDay.cohort.program.abbreviation} G${labDay.cohort.cohort_number}`}
                       >
-                        <span className="font-medium">
+                        <div className="font-medium truncate">
                           {labDay.cohort.program.abbreviation} G{labDay.cohort.cohort_number}
-                        </span>
-                        {labDay.stations.length > 0 && (
-                          <span className="text-blue-600 dark:text-blue-400 ml-1">
-                            ({labDay.stations.length})
-                          </span>
+                          {labDay.stations.length > 0 && (
+                            <span className="text-blue-600 dark:text-blue-400 ml-1">
+                              ({labDay.stations.length})
+                            </span>
+                          )}
+                        </div>
+                        {labDay.title && (
+                          <div className="text-[10px] text-blue-600 dark:text-blue-400 truncate">
+                            {labDay.title}
+                          </div>
                         )}
                       </Link>
                     ))}

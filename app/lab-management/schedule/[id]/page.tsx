@@ -25,6 +25,7 @@ import {
   Timer
 } from 'lucide-react';
 import LabTimer from '@/components/LabTimer';
+import BLSPlatinumChecklist from '@/components/BLSPlatinumChecklist';
 
 interface LabDay {
   id: string;
@@ -1069,6 +1070,23 @@ export default function LabDayPage() {
                 </div>
               )}
 
+              {/* BLS/Platinum Skills Checklist (for skills stations) */}
+              {editForm.station_type === 'skills' && labDay && (
+                <BLSPlatinumChecklist
+                  labDayId={labDay.id}
+                  currentStationId={editingStation?.id}
+                  selectedSkillIds={editForm.selectedSkills}
+                  onToggleSkill={(skillId) => {
+                    setEditForm(prev => ({
+                      ...prev,
+                      selectedSkills: prev.selectedSkills.includes(skillId)
+                        ? prev.selectedSkills.filter(id => id !== skillId)
+                        : [...prev.selectedSkills, skillId]
+                    }));
+                  }}
+                />
+              )}
+
               {/* Station Documentation Section */}
               <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
                 <div className="flex items-center gap-2 mb-2">
@@ -1260,13 +1278,23 @@ export default function LabDayPage() {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Room / Location
                 </label>
-                <input
-                  type="text"
+                <select
                   value={editForm.room}
                   onChange={(e) => setEditForm(prev => ({ ...prev, room: e.target.value }))}
-                  placeholder="e.g., Sim Lab A"
                   className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
-                />
+                >
+                  <option value="">Select room...</option>
+                  <option value="Sim Lab A">Sim Lab A</option>
+                  <option value="Sim Lab B">Sim Lab B</option>
+                  <option value="Skills Lab">Skills Lab</option>
+                  <option value="Classroom 1">Classroom 1</option>
+                  <option value="Classroom 2">Classroom 2</option>
+                  <option value="Classroom 3">Classroom 3</option>
+                  <option value="Conference Room">Conference Room</option>
+                  <option value="Ambulance Bay">Ambulance Bay</option>
+                  <option value="Hallway">Hallway</option>
+                  <option value="Outside">Outside</option>
+                </select>
               </div>
 
               {/* Notes */}

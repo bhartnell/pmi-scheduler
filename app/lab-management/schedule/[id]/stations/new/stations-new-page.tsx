@@ -576,13 +576,23 @@ export default function AddStationPage() {
           {/* Room */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Room</label>
-            <input
-              type="text"
+            <select
               value={room}
               onChange={(e) => setRoom(e.target.value)}
-              placeholder="e.g., Sim Lab A"
               className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
-            />
+            >
+              <option value="">Select room...</option>
+              <option value="Sim Lab A">Sim Lab A</option>
+              <option value="Sim Lab B">Sim Lab B</option>
+              <option value="Skills Lab">Skills Lab</option>
+              <option value="Classroom 1">Classroom 1</option>
+              <option value="Classroom 2">Classroom 2</option>
+              <option value="Classroom 3">Classroom 3</option>
+              <option value="Conference Room">Conference Room</option>
+              <option value="Ambulance Bay">Ambulance Bay</option>
+              <option value="Hallway">Hallway</option>
+              <option value="Outside">Outside</option>
+            </select>
           </div>
 
           {/* Notes */}
