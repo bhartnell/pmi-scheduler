@@ -32,6 +32,7 @@ import {
   OverviewStatsWidget,
   OpenStationsWidget,
   RecentFeedbackWidget,
+  OnboardingWidget,
   ROLE_DEFAULTS,
 } from '@/components/dashboard/widgets';
 
@@ -124,6 +125,8 @@ export default function HomePage() {
         return <OpenStationsWidget key={widgetId} />;
       case 'recent_feedback':
         return <RecentFeedbackWidget key={widgetId} />;
+      case 'onboarding':
+        return <OnboardingWidget key={widgetId} />;
       default:
         return null;
     }

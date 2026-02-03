@@ -14,6 +14,7 @@ import {
   Stethoscope,
   GraduationCap,
   BarChart3,
+  ClipboardCheck,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -113,6 +114,12 @@ export const QUICK_LINK_DEFINITIONS: Record<string, {
     icon: BarChart3,
     label: 'Reports',
     color: 'bg-violet-500',
+  },
+  onboarding: {
+    href: '/onboarding',
+    icon: ClipboardCheck,
+    label: 'Onboarding',
+    color: 'bg-indigo-500',
   },
 };
 

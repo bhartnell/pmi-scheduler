@@ -5,6 +5,7 @@ export { default as NeedsAttentionWidget } from './NeedsAttentionWidget';
 export { default as OverviewStatsWidget } from './OverviewStatsWidget';
 export { default as OpenStationsWidget } from './OpenStationsWidget';
 export { default as RecentFeedbackWidget } from './RecentFeedbackWidget';
+export { default as OnboardingWidget } from './OnboardingWidget';
 
 // Widget configuration for the customize modal
 export const WIDGET_DEFINITIONS = {
@@ -50,6 +51,13 @@ export const WIDGET_DEFINITIONS = {
     description: 'Latest bug reports and feature requests',
     defaultFor: ['admin', 'superadmin'],
   },
+  onboarding: {
+    id: 'onboarding',
+    name: 'My Onboarding',
+    description: 'Track your onboarding progress and tasks',
+    defaultFor: ['instructor'],
+    conditional: true, // Only shows if user has active onboarding assignment
+  },
 } as const;
 
 export type WidgetId = keyof typeof WIDGET_DEFINITIONS;
@@ -69,8 +77,8 @@ export const ROLE_DEFAULTS: Record<string, { widgets: string[]; quickLinks: stri
     quickLinks: ['scenarios', 'students', 'schedule', 'emt_tracker', 'clinical'],
   },
   instructor: {
-    widgets: ['notifications', 'my_labs', 'quick_links', 'open_stations'],
-    quickLinks: ['scenarios', 'students', 'schedule', 'my_certs'],
+    widgets: ['notifications', 'onboarding', 'my_labs', 'quick_links', 'open_stations'],
+    quickLinks: ['scenarios', 'students', 'schedule', 'my_certs', 'onboarding'],
   },
   guest: {
     widgets: ['notifications', 'quick_links'],
