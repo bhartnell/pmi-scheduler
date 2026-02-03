@@ -22,28 +22,112 @@ import {
 } from 'lucide-react';
 import { canAccessAdmin, canAccessClinical, getRoleLabel, getRoleBadgeClasses, type Role } from '@/lib/permissions';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import NotificationBell from '@/components/NotificationBell';
+import CustomizeModal from '@/components/dashboard/CustomizeModal';
+import {
+  NotificationsWidget,
+  MyLabsWidget,
+  QuickLinksWidget,
+  NeedsAttentionWidget,
+  OverviewStatsWidget,
+  OpenStationsWidget,
+  RecentFeedbackWidget,
+  ROLE_DEFAULTS,
+} from '@/components/dashboard/widgets';
 
 interface CurrentUser {
   id: string;
   role: Role;
 }
 
+interface UserPreferences {
+  dashboard_widgets: string[];
+  quick_links: string[];
+}
+
 export default function HomePage() {
   const { data: session, status } = useSession();
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const [preferences, setPreferences] = useState<UserPreferences | null>(null);
+  const [showCustomize, setShowCustomize] = useState(false);
 
   useEffect(() => {
     if (session?.user?.email) {
-      fetch('/api/instructor/me')
-        .then(res => res.json())
-        .then(data => {
-          if (data.success && data.user) {
-            setCurrentUser(data.user);
-          }
-        })
-        .catch(console.error);
+      // Fetch user and preferences in parallel
+      Promise.all([
+        fetch('/api/instructor/me').then(res => res.json()),
+        fetch('/api/user/preferences').then(res => res.json())
+      ]).then(([userData, prefsData]) => {
+        if (userData.success && userData.user) {
+          setCurrentUser(userData.user);
+        }
+        if (prefsData.success && prefsData.preferences) {
+          setPreferences(prefsData.preferences);
+        } else if (userData.user) {
+          // Use role defaults if no preferences
+          const defaults = ROLE_DEFAULTS[userData.user.role] || ROLE_DEFAULTS.instructor;
+          setPreferences({
+            dashboard_widgets: defaults.widgets,
+            quick_links: defaults.quickLinks,
+          });
+        }
+      }).catch(console.error);
     }
   }, [session]);
+
+  const handleSavePreferences = async (widgets: string[], quickLinks: string[]) => {
+    try {
+      const res = await fetch('/api/user/preferences', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          dashboard_widgets: widgets,
+          quick_links: quickLinks,
+        }),
+      });
+      if (res.ok) {
+        setPreferences({ dashboard_widgets: widgets, quick_links: quickLinks });
+      }
+    } catch (error) {
+      console.error('Error saving preferences:', error);
+    }
+  };
+
+  const handleResetPreferences = async () => {
+    try {
+      await fetch('/api/user/preferences', { method: 'DELETE' });
+      const prefsRes = await fetch('/api/user/preferences');
+      const prefsData = await prefsRes.json();
+      if (prefsData.success) {
+        setPreferences(prefsData.preferences);
+      }
+    } catch (error) {
+      console.error('Error resetting preferences:', error);
+    }
+  };
+
+  // Render a widget by ID
+  const renderWidget = (widgetId: string) => {
+    const quickLinks = preferences?.quick_links || ['scenarios', 'students', 'schedule'];
+    switch (widgetId) {
+      case 'notifications':
+        return <NotificationsWidget key={widgetId} />;
+      case 'my_labs':
+        return <MyLabsWidget key={widgetId} />;
+      case 'quick_links':
+        return <QuickLinksWidget key={widgetId} links={quickLinks} />;
+      case 'needs_attention':
+        return <NeedsAttentionWidget key={widgetId} />;
+      case 'overview_stats':
+        return <OverviewStatsWidget key={widgetId} />;
+      case 'open_stations':
+        return <OpenStationsWidget key={widgetId} />;
+      case 'recent_feedback':
+        return <RecentFeedbackWidget key={widgetId} />;
+      default:
+        return null;
+    }
+  };
 
   // Loading state
   if (status === 'loading') {
@@ -114,6 +198,7 @@ export default function HomePage() {
           </div>
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-600 dark:text-gray-400 hidden sm:block">{session.user?.email}</span>
+            <NotificationBell />
             <ThemeToggle />
             <button
               onClick={() => signOut()}
@@ -270,57 +355,35 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* Quick Links */}
-        <div className="mt-8 max-w-5xl mx-auto">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 text-center">Quick Links</h3>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <Link
-              href="/lab-management/scenarios"
-              className="flex flex-col items-center p-4 bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-md transition-shadow"
-            >
-              <FileText className="w-6 h-6 text-gray-600 dark:text-gray-400 mb-2" />
-              <span className="text-sm text-gray-700 dark:text-gray-300">Scenarios</span>
-            </Link>
-            <Link
-              href="/lab-management/students"
-              className="flex flex-col items-center p-4 bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-md transition-shadow"
-            >
-              <Users className="w-6 h-6 text-gray-600 dark:text-gray-400 mb-2" />
-              <span className="text-sm text-gray-700 dark:text-gray-300">Students</span>
-            </Link>
-            <Link
-              href="/lab-management/schedule"
-              className="flex flex-col items-center p-4 bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-md transition-shadow"
-            >
-              <Calendar className="w-6 h-6 text-gray-600 dark:text-gray-400 mb-2" />
-              <span className="text-sm text-gray-700 dark:text-gray-300">Lab Schedule</span>
-            </Link>
-            <Link
-              href="/instructor/certifications"
-              className="flex flex-col items-center p-4 bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-md transition-shadow"
-            >
-              <Award className="w-6 h-6 text-purple-600 dark:text-purple-400 mb-2" />
-              <span className="text-sm text-gray-700 dark:text-gray-300">My Certs</span>
-            </Link>
-            <Link
-              href="/lab-management/admin/cohorts"
-              className="flex flex-col items-center p-4 bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-md transition-shadow"
-            >
-              <ClipboardList className="w-6 h-6 text-gray-600 dark:text-gray-400 mb-2" />
-              <span className="text-sm text-gray-700 dark:text-gray-300">Cohorts</span>
-            </Link>
-            {currentUser && canAccessClinical(currentUser.role) && (
-              <Link
-                href="/clinical/site-visits"
-                className="flex flex-col items-center p-4 bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-md transition-shadow"
+        {/* Customizable Dashboard Widgets */}
+        {preferences && preferences.dashboard_widgets.length > 0 && (
+          <div className="mt-8 max-w-5xl mx-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Your Dashboard</h3>
+              <button
+                onClick={() => setShowCustomize(true)}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
-                <Building2 className="w-6 h-6 text-teal-600 dark:text-teal-400 mb-2" />
-                <span className="text-sm text-gray-700 dark:text-gray-300">Site Visits</span>
-              </Link>
-            )}
+                <Settings className="w-4 h-4" />
+                Customize
+              </button>
+            </div>
+            <div className="grid md:grid-cols-2 gap-6">
+              {preferences.dashboard_widgets.map(widgetId => renderWidget(widgetId))}
+            </div>
           </div>
-        </div>
+        )}
       </main>
+
+      {/* Customize Modal */}
+      <CustomizeModal
+        isOpen={showCustomize}
+        onClose={() => setShowCustomize(false)}
+        widgets={preferences?.dashboard_widgets || []}
+        quickLinks={preferences?.quick_links || []}
+        onSave={handleSavePreferences}
+        onReset={handleResetPreferences}
+      />
 
       {/* Footer */}
       <footer className="mt-12 py-6 text-center text-sm text-gray-500 dark:text-gray-400">
