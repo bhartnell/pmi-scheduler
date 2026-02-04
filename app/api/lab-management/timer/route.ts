@@ -174,6 +174,11 @@ export async function PATCH(request: NextRequest) {
           paused_at: null,
           elapsed_when_paused: 0
         };
+        // Reset all ready statuses for this lab day when rotation advances
+        await supabase
+          .from('lab_timer_ready_status')
+          .update({ is_ready: false, updated_at: new Date().toISOString() })
+          .eq('lab_day_id', labDayId);
         break;
 
       case 'reset':

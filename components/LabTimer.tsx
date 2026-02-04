@@ -687,7 +687,7 @@ export default function LabTimer({
         {/* Alert Messages */}
         {showRotateAlert && (
           <div className="absolute top-1/4 text-6xl md:text-8xl font-bold text-white animate-bounce">
-            ROTATE!
+            {currentRotation >= numRotations ? 'LAB COMPLETE - BEGIN CLEANUP' : 'ROTATE!'}
           </div>
         )}
         {showDebriefAlert && !showRotateAlert && (
@@ -830,18 +830,15 @@ export default function LabTimer({
             <Square className="w-6 h-6" />
           </button>
 
-          <button
-            onClick={handleNextRotation}
-            disabled={currentRotation >= numRotations}
-            className={`p-3 rounded-full transition-colors ${
-              currentRotation >= numRotations
-                ? 'bg-gray-600 opacity-50 cursor-not-allowed'
-                : 'bg-blue-500 hover:bg-blue-400'
-            }`}
-            title="Next Rotation (N)"
-          >
-            <SkipForward className="w-6 h-6" />
-          </button>
+          {currentRotation < numRotations && (
+            <button
+              onClick={handleNextRotation}
+              className="p-3 rounded-full transition-colors bg-blue-500 hover:bg-blue-400"
+              title="Next Rotation (N)"
+            >
+              <SkipForward className="w-6 h-6" />
+            </button>
+          )}
         </div>
       )}
 
