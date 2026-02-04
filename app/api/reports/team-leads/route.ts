@@ -81,7 +81,8 @@ export async function GET(request: NextRequest) {
       if (studentTlMap[log.student_id]) {
         studentTlMap[log.student_id].count++;
         studentTlMap[log.student_id].rotations.push(log);
-        if (!studentTlMap[log.student_id].lastDate || log.date > studentTlMap[log.student_id].lastDate) {
+        const currentLastDate = studentTlMap[log.student_id].lastDate;
+        if (!currentLastDate || log.date > currentLastDate) {
           studentTlMap[log.student_id].lastDate = log.date;
         }
       }
