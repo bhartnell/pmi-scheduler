@@ -1,43 +1,39 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState, Suspense } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   ChevronRight,
-  Star,
-  AlertCircle,
+  Home,
+  BarChart3,
+  ClipboardList,
+  User,
+  Clock,
+  Briefcase,
   Users,
-  TrendingDown
+  UserCheck,
+  FileText
 } from 'lucide-react';
+import { canAccessClinical, type Role } from '@/lib/permissions';
 
-interface Student {
+interface ReportCard {
   id: string;
-  first_name: string;
-  last_name: string;
-  team_lead_count: number;
-  last_team_lead_date: string | null;
+  title: string;
+  description: string;
+  icon: React.ElementType;
+  href: string;
+  color: string;
+  bgColor: string;
+  requiresClinical?: boolean;
+  comingSoon?: boolean;
 }
 
-interface Cohort {
-  id: string;
-  cohort_number: number;
-  program: { abbreviation: string };
-}
-
-function TeamLeadsContent() {
+export default function ReportsIndexPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const cohortIdParam = searchParams.get('cohortId');
-
-  const [cohorts, setCohorts] = useState<Cohort[]>([]);
-  const [selectedCohort, setSelectedCohort] = useState(cohortIdParam || '');
-  const [stats, setStats] = useState<Student[]>([]);
-  const [averageTL, setAverageTL] = useState(0);
-  const [needingTL, setNeedingTL] = useState<Student[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [userRole, setUserRole] = useState<Role | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -46,49 +42,84 @@ function TeamLeadsContent() {
   }, [status, router]);
 
   useEffect(() => {
-    if (session) {
-      fetchCohorts();
+    if (session?.user?.email) {
+      fetch('/api/instructor/me')
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.user) {
+            setUserRole(data.user.role);
+          }
+        })
+        .catch(console.error);
     }
   }, [session]);
 
-  useEffect(() => {
-    if (session && selectedCohort) {
-      fetchTeamLeadStats();
-    }
-  }, [session, selectedCohort]);
+  const reports: ReportCard[] = [
+    {
+      id: 'lab-progress',
+      title: 'Lab Progress',
+      description: 'View cohort progress: scenarios, skills, attendance, and overall performance.',
+      icon: ClipboardList,
+      href: '/lab-management/reports/lab-progress',
+      color: 'text-green-600 dark:text-green-400',
+      bgColor: 'bg-green-100 dark:bg-green-900/30',
+    },
+    {
+      id: 'student-progress',
+      title: 'Student Progress',
+      description: 'Individual student report: grades, skills, team lead history, and trends.',
+      icon: User,
+      href: '/lab-management/reports/student-progress',
+      color: 'text-blue-600 dark:text-blue-400',
+      bgColor: 'bg-blue-100 dark:bg-blue-900/30',
+    },
+    {
+      id: 'clinical-hours',
+      title: 'Clinical Hours',
+      description: 'Hours by department and site. Track progress toward requirements.',
+      icon: Clock,
+      href: '/lab-management/reports/clinical-hours',
+      color: 'text-teal-600 dark:text-teal-400',
+      bgColor: 'bg-teal-100 dark:bg-teal-900/30',
+      requiresClinical: true,
+    },
+    {
+      id: 'internship-status',
+      title: 'Internship Status',
+      description: 'Placement status, agency assignments, preceptors, and progress.',
+      icon: Briefcase,
+      href: '/lab-management/reports/internship-status',
+      color: 'text-purple-600 dark:text-purple-400',
+      bgColor: 'bg-purple-100 dark:bg-purple-900/30',
+      requiresClinical: true,
+    },
+    {
+      id: 'team-leads',
+      title: 'Team Lead Rotations',
+      description: 'Who has led, how often, and who needs more opportunities.',
+      icon: Users,
+      href: '/lab-management/reports/team-leads',
+      color: 'text-orange-600 dark:text-orange-400',
+      bgColor: 'bg-orange-100 dark:bg-orange-900/30',
+    },
+    {
+      id: 'onboarding-status',
+      title: 'Onboarding Status',
+      description: 'New instructor onboarding task progress and completion.',
+      icon: UserCheck,
+      href: '/lab-management/reports/onboarding-status',
+      color: 'text-indigo-600 dark:text-indigo-400',
+      bgColor: 'bg-indigo-100 dark:bg-indigo-900/30',
+    },
+  ];
 
-  const fetchCohorts = async () => {
-    try {
-      const res = await fetch('/api/lab-management/cohorts');
-      const data = await res.json();
-      if (data.success) {
-        setCohorts(data.cohorts);
-        if (data.cohorts.length > 0 && !selectedCohort) {
-          setSelectedCohort(data.cohorts[0].id);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching cohorts:', error);
+  // Filter reports based on user role
+  const visibleReports = reports.filter(report => {
+    if (report.requiresClinical && userRole && !canAccessClinical(userRole)) {
+      return false;
     }
-  };
-
-  const fetchTeamLeadStats = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/lab-management/team-leads?cohortId=${selectedCohort}`);
-      const data = await res.json();
-      if (data.success) {
-        setStats(data.stats || []);
-        setAverageTL(data.averageTL || 0);
-        setNeedingTL(data.needingTL || []);
-      }
-    } catch (error) {
-      console.error('Error fetching team lead stats:', error);
-    }
-    setLoading(false);
-  };
-
-  const selectedCohortData = cohorts.find(c => c.id === selectedCohort);
+    return true;
+  });
 
   if (status === 'loading') {
     return (
@@ -103,166 +134,99 @@ function TeamLeadsContent() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
-      <div className="bg-white shadow-sm dark:bg-gray-800">
-        <div className="max-w-5xl mx-auto px-4 py-6">
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1">
-            <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
+      <div className="bg-white dark:bg-gray-800 shadow-sm">
+        <div className="max-w-6xl mx-auto px-4 py-6">
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
+            <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1">
+              <Home className="w-3 h-3" />
+              Home
+            </Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management/reports" className="hover:text-blue-600 dark:hover:text-blue-400">Reports</Link>
+            <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">
+              Lab Management
+            </Link>
             <ChevronRight className="w-4 h-4" />
-            <span>Team Lead Distribution</span>
+            <span>Reports</span>
           </div>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Team Lead Distribution</h1>
-            <select
-              value={selectedCohort}
-              onChange={(e) => setSelectedCohort(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-gray-900 bg-white dark:bg-gray-700 dark:text-white dark:border-gray-600"
-            >
-              <option value="">Select Cohort</option>
-              {cohorts.map(cohort => (
-                <option key={cohort.id} value={cohort.id}>
-                  {cohort.program.abbreviation} Group {cohort.cohort_number}
-                </option>
-              ))}
-            </select>
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+              <BarChart3 className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Reports</h1>
+              <p className="text-gray-600 dark:text-gray-400">Generate and export reports for students, labs, and clinical activities</p>
+            </div>
           </div>
         </div>
       </div>
 
-      <main className="max-w-5xl mx-auto px-4 py-6">
-        {!selectedCohort ? (
-          <div className="bg-white rounded-lg shadow p-8 text-center dark:bg-gray-800">
-            <Users className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-            <p className="text-gray-600 dark:text-gray-400">Select a cohort to view team lead distribution</p>
-          </div>
-        ) : loading ? (
-          <div className="bg-white rounded-lg shadow p-8 text-center dark:bg-gray-800">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600 dark:text-gray-400">Loading stats...</p>
-          </div>
-        ) : (
-          <>
-            {/* Stats Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              <div className="bg-white rounded-lg shadow p-4 dark:bg-gray-800">
-                <div className="text-sm text-gray-600 dark:text-gray-400">Total Students</div>
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.length}</div>
-              </div>
-              <div className="bg-white rounded-lg shadow p-4 dark:bg-gray-800">
-                <div className="text-sm text-gray-600 dark:text-gray-400">Average TL Count</div>
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">{averageTL}</div>
-              </div>
-              <div className="bg-white rounded-lg shadow p-4 dark:bg-gray-800">
-                <div className="text-sm text-gray-600 dark:text-gray-400">Total TL Assignments</div>
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {stats.reduce((sum, s) => sum + s.team_lead_count, 0)}
-                </div>
-              </div>
-              <div className="bg-white rounded-lg shadow p-4 dark:bg-gray-800">
-                <div className="text-sm text-gray-600 dark:text-gray-400">Need More TL</div>
-                <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">{needingTL.length}</div>
-              </div>
-            </div>
+      {/* Main Content */}
+      <main className="max-w-6xl mx-auto px-4 py-8">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {visibleReports.map((report) => {
+            const Icon = report.icon;
 
-            {/* Alert for students needing TL */}
-            {needingTL.length > 0 && (
-              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6 dark:bg-orange-900/20 dark:border-orange-700">
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-orange-600 dark:text-orange-400 shrink-0 mt-0.5" />
-                  <div>
-                    <h3 className="font-medium text-orange-800 dark:text-orange-300">Students Below Average</h3>
-                    <p className="text-sm text-orange-700 dark:text-orange-400 mt-1">
-                      {needingTL.length} student{needingTL.length !== 1 ? 's need' : ' needs'} more team lead opportunities:
-                      {' '}{needingTL.slice(0, 5).map(s => `${s.first_name} ${s.last_name}`).join(', ')}
-                      {needingTL.length > 5 && ` and ${needingTL.length - 5} more`}
-                    </p>
+            if (report.comingSoon) {
+              return (
+                <div
+                  key={report.id}
+                  className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 opacity-60 cursor-not-allowed"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className={`p-3 rounded-lg ${report.bgColor}`}>
+                      <Icon className={`w-6 h-6 ${report.color}`} />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-gray-900 dark:text-white">{report.title}</h3>
+                        <span className="px-2 py-0.5 text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-full">
+                          Coming Soon
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{report.description}</p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              );
+            }
 
-            {/* Student List */}
-            <div className="bg-white rounded-lg shadow overflow-hidden dark:bg-gray-800">
-              <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-                <h2 className="font-semibold text-gray-900 dark:text-white">All Students</h2>
-              </div>
-              {stats.length === 0 ? (
-                <div className="p-8 text-center text-gray-500 dark:text-gray-400">
-                  No students in this cohort
+            return (
+              <Link
+                key={report.id}
+                href={report.href}
+                className="bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-shadow p-6 group"
+              >
+                <div className="flex items-start gap-4">
+                  <div className={`p-3 rounded-lg ${report.bgColor} group-hover:scale-105 transition-transform`}>
+                    <Icon className={`w-6 h-6 ${report.color}`} />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                      {report.title}
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{report.description}</p>
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors" />
                 </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50 dark:bg-gray-700">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Student</th>
-                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">TL Count</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Last TL Date</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                      {stats
-                        .sort((a, b) => a.team_lead_count - b.team_lead_count)
-                        .map(student => {
-                          const belowAvg = student.team_lead_count < averageTL;
-                          return (
-                            <tr key={student.id} className={belowAvg ? 'bg-orange-50 dark:bg-orange-900/20' : 'dark:bg-gray-800'}>
-                              <td className="px-4 py-3">
-                                <Link
-                                  href={`/lab-management/students/${student.id}`}
-                                  className="font-medium text-gray-900 hover:text-blue-600 dark:text-white dark:hover:text-blue-400"
-                                >
-                                  {student.first_name} {student.last_name}
-                                </Link>
-                              </td>
-                              <td className="px-4 py-3 text-center">
-                                <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-sm font-medium ${
-                                  belowAvg ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300' : 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
-                                }`}>
-                                  <Star className="w-4 h-4" />
-                                  {student.team_lead_count}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
-                                {student.last_team_lead_date
-                                  ? new Date(student.last_team_lead_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                                  : '—'}
-                              </td>
-                              <td className="px-4 py-3">
-                                {belowAvg ? (
-                                  <span className="inline-flex items-center gap-1 text-sm text-orange-600 dark:text-orange-400">
-                                    <TrendingDown className="w-4 h-4" />
-                                    Below avg
-                                  </span>
-                                ) : (
-                                  <span className="text-sm text-green-600 dark:text-green-400">On track</span>
-                                )}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* Export Info */}
+        <div className="mt-8 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+            <div>
+              <h3 className="font-medium text-blue-800 dark:text-blue-300">Export Options</h3>
+              <p className="text-sm text-blue-700 dark:text-blue-400 mt-1">
+                All reports can be exported to PDF or Excel, or printed directly from your browser.
+                Each report shows the generation date and who created it.
+              </p>
             </div>
-          </>
-        )}
+          </div>
+        </div>
       </main>
     </div>
-  );
-}
-
-export default function TeamLeadsReportPage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    }>
-      <TeamLeadsContent />
-    </Suspense>
   );
 }
