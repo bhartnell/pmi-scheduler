@@ -19,7 +19,8 @@ import {
   Check,
   Loader2,
   RefreshCw,
-  Download
+  Download,
+  ArrowUpDown
 } from 'lucide-react';
 
 interface FeedbackReport {
@@ -30,6 +31,7 @@ interface FeedbackReport {
   user_email: string;
   user_agent: string | null;
   status: 'new' | 'in_progress' | 'resolved' | 'wont_fix';
+  priority: 'critical' | 'high' | 'medium' | 'low' | null;
   resolution_notes: string | null;
   created_at: string;
   resolved_at: string | null;
@@ -49,6 +51,13 @@ const TYPE_CONFIG = {
   other: { label: 'FEEDBACK', emoji: '', bgColor: 'border-blue-500 bg-blue-50 dark:bg-blue-900/20', headerBg: 'bg-blue-100 dark:bg-blue-900/40', textColor: 'text-blue-700 dark:text-blue-300', icon: HelpCircle }
 };
 
+const PRIORITY_CONFIG = {
+  critical: { label: 'Critical', emoji: '\uD83D\uDD34', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300', dotColor: 'bg-red-500', selectColor: 'text-red-600 dark:text-red-400' },
+  high: { label: 'High', emoji: '\uD83D\uDFE0', color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300', dotColor: 'bg-orange-500', selectColor: 'text-orange-600 dark:text-orange-400' },
+  medium: { label: 'Medium', emoji: '\uD83D\uDFE1', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300', dotColor: 'bg-yellow-500', selectColor: 'text-yellow-600 dark:text-yellow-400' },
+  low: { label: 'Low', emoji: '\uD83D\uDFE2', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300', dotColor: 'bg-green-500', selectColor: 'text-green-600 dark:text-green-400' }
+};
+
 export default function FeedbackAdminPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -59,6 +68,8 @@ export default function FeedbackAdminPage() {
 
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterType, setFilterType] = useState('all');
+  const [filterPriority, setFilterPriority] = useState('all');
+  const [sortBy, setSortBy] = useState<'priority' | 'date'>('priority');
 
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -73,14 +84,15 @@ export default function FeedbackAdminPage() {
     if (session) {
       fetchReports();
     }
-  }, [session, filterStatus, filterType]);
+  }, [session, filterStatus, filterType, filterPriority, sortBy]);
 
   const fetchReports = async () => {
     setLoading(true);
     try {
-      let url = '/api/feedback?';
+      let url = `/api/feedback?sortBy=${sortBy}&`;
       if (filterStatus !== 'all') url += `status=${filterStatus}&`;
       if (filterType !== 'all') url += `type=${filterType}&`;
+      if (filterPriority !== 'all') url += `priority=${filterPriority}&`;
 
       const res = await fetch(url);
       const data = await res.json();
@@ -114,6 +126,25 @@ export default function FeedbackAdminPage() {
     setUpdatingId(null);
   };
 
+  const updatePriority = async (id: string, newPriority: string) => {
+    setUpdatingId(id);
+    try {
+      const res = await fetch('/api/feedback', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, priority: newPriority })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setReports(prev => prev.map(r => r.id === id ? data.report : r));
+      }
+    } catch (error) {
+      console.error('Error updating priority:', error);
+    }
+    setUpdatingId(null);
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
@@ -126,12 +157,22 @@ export default function FeedbackAdminPage() {
     });
   };
 
+  const getPriorityConfig = (priority: string | null) => {
+    if (!priority || !PRIORITY_CONFIG[priority as keyof typeof PRIORITY_CONFIG]) {
+      return PRIORITY_CONFIG.medium; // default to medium
+    }
+    return PRIORITY_CONFIG[priority as keyof typeof PRIORITY_CONFIG];
+  };
+
   const copyForClaude = async (report: FeedbackReport) => {
     const typeLabel = report.report_type === 'bug' ? 'BUG REPORT' :
                       report.report_type === 'feature' ? 'FEATURE REQUEST' : 'FEEDBACK';
 
+    const priorityConfig = getPriorityConfig(report.priority);
+
     const clipboardText = `## ${typeLabel}
 
+**Priority:** ${priorityConfig.emoji} ${priorityConfig.label}
 **Date:** ${formatDate(report.created_at)}
 **From:** ${report.user_email}
 **Page:** ${report.page_url || 'N/A'}
@@ -168,8 +209,10 @@ ${report.user_agent || 'Not available'}
     unresolvedReports.forEach((report, index) => {
       const typeLabel = report.report_type === 'bug' ? 'BUG REPORT' :
                         report.report_type === 'feature' ? 'FEATURE REQUEST' : 'FEEDBACK';
+      const priorityConfig = getPriorityConfig(report.priority);
 
       markdownContent += `## ${index + 1}. ${typeLabel}\n\n`;
+      markdownContent += `- **Priority:** ${priorityConfig.emoji} ${priorityConfig.label}\n`;
       markdownContent += `- **Status:** ${STATUS_CONFIG[report.status].label}\n`;
       markdownContent += `- **Date:** ${formatDate(report.created_at)}\n`;
       markdownContent += `- **Reporter:** ${report.user_email}\n`;
@@ -264,7 +307,7 @@ ${report.user_agent || 'Not available'}
                 <option value="new">New</option>
                 <option value="in_progress">In Progress</option>
                 <option value="resolved">Resolved</option>
-                <option value="wont_fix">Won't Fix</option>
+                <option value="wont_fix">Won&apos;t Fix</option>
               </select>
             </div>
 
@@ -281,6 +324,31 @@ ${report.user_agent || 'Not available'}
                 <option value="other">Other</option>
               </select>
             </div>
+
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-gray-600 dark:text-gray-400">Priority:</label>
+              <select
+                value={filterPriority}
+                onChange={(e) => setFilterPriority(e.target.value)}
+                className="px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+              >
+                <option value="all">All</option>
+                <option value="critical">{PRIORITY_CONFIG.critical.emoji} Critical</option>
+                <option value="high">{PRIORITY_CONFIG.high.emoji} High</option>
+                <option value="medium">{PRIORITY_CONFIG.medium.emoji} Medium</option>
+                <option value="low">{PRIORITY_CONFIG.low.emoji} Low</option>
+              </select>
+            </div>
+
+            <div className="ml-auto">
+              <button
+                onClick={() => setSortBy(prev => prev === 'priority' ? 'date' : 'priority')}
+                className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg border border-gray-300 dark:border-gray-600 transition-colors"
+              >
+                <ArrowUpDown className="w-4 h-4" />
+                Sort: {sortBy === 'priority' ? 'Priority' : 'Date'}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -295,6 +363,7 @@ ${report.user_agent || 'Not available'}
             reports.map((report) => {
               const typeConfig = TYPE_CONFIG[report.report_type];
               const statusConfig = STATUS_CONFIG[report.status];
+              const priorityConfig = getPriorityConfig(report.priority);
               const StatusIcon = statusConfig.icon;
               const TypeIcon = typeConfig.icon;
 
@@ -307,6 +376,10 @@ ${report.user_agent || 'Not available'}
                   <div className={`px-4 py-3 ${typeConfig.headerBg} border-b border-gray-200 dark:border-gray-700`}>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
+                        {/* Priority Badge */}
+                        <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold ${priorityConfig.color}`}>
+                          {priorityConfig.emoji} {(report.priority || 'medium').toUpperCase()}
+                        </span>
                         <TypeIcon className={`w-5 h-5 ${typeConfig.textColor}`} />
                         <span className={`font-bold ${typeConfig.textColor}`}>{typeConfig.label}</span>
                         <span className={`ml-2 flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${statusConfig.color}`}>
@@ -353,7 +426,25 @@ ${report.user_agent || 'Not available'}
                   )}
 
                   {/* Actions Row */}
-                  <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-600 flex items-center gap-2">
+                  <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700/50 border-t border-gray-200 dark:border-gray-600 flex flex-wrap items-center gap-2">
+                    {/* Priority Dropdown */}
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs text-gray-500 dark:text-gray-400">Priority:</span>
+                      <select
+                        value={report.priority || 'medium'}
+                        onChange={(e) => updatePriority(report.id, e.target.value)}
+                        disabled={updatingId === report.id}
+                        className={`px-2 py-1 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-500 bg-white dark:bg-gray-700 disabled:opacity-50 cursor-pointer ${getPriorityConfig(report.priority).selectColor}`}
+                      >
+                        <option value="critical">{PRIORITY_CONFIG.critical.emoji} Critical</option>
+                        <option value="high">{PRIORITY_CONFIG.high.emoji} High</option>
+                        <option value="medium">{PRIORITY_CONFIG.medium.emoji} Medium</option>
+                        <option value="low">{PRIORITY_CONFIG.low.emoji} Low</option>
+                      </select>
+                    </div>
+
+                    <div className="w-px h-6 bg-gray-300 dark:bg-gray-500 mx-1" />
+
                     <button
                       onClick={() => copyForClaude(report)}
                       className="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors"
@@ -400,7 +491,7 @@ ${report.user_agent || 'Not available'}
                         className="flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-500 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 rounded-lg text-sm font-medium disabled:opacity-50 transition-colors"
                       >
                         <XCircle className="w-4 h-4" />
-                        Won't Fix
+                        Won&apos;t Fix
                       </button>
                     )}
                   </div>

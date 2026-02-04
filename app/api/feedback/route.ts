@@ -27,13 +27,23 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const status = searchParams.get('status');
     const reportType = searchParams.get('type');
+    const priority = searchParams.get('priority');
+    const sortBy = searchParams.get('sortBy') || 'priority';
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
 
     let query = supabase
       .from('feedback_reports')
-      .select('*', { count: 'exact' })
-      .order('created_at', { ascending: false });
+      .select('*', { count: 'exact' });
+
+    // Sort: priority sorts critical first (alphabetically: critical < high < low < medium),
+    // so we use ascending. For date sort, use descending (newest first).
+    if (sortBy === 'date') {
+      query = query.order('created_at', { ascending: false });
+    } else {
+      query = query.order('priority', { ascending: true, nullsFirst: false })
+                    .order('created_at', { ascending: false });
+    }
 
     if (status && status !== 'all') {
       query = query.eq('status', status);
@@ -41,6 +51,10 @@ export async function GET(request: NextRequest) {
 
     if (reportType && reportType !== 'all') {
       query = query.eq('report_type', reportType);
+    }
+
+    if (priority && priority !== 'all') {
+      query = query.eq('priority', priority);
     }
 
     query = query.range(offset, offset + limit - 1);
@@ -152,7 +166,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { id, status, resolution_notes } = body;
+    const { id, status, resolution_notes, priority } = body;
 
     if (!id) {
       return NextResponse.json({ success: false, error: 'Report ID is required' }, { status: 400 });
@@ -170,6 +184,10 @@ export async function PATCH(request: NextRequest) {
 
     if (resolution_notes !== undefined) {
       updateData.resolution_notes = resolution_notes;
+    }
+
+    if (priority) {
+      updateData.priority = priority;
     }
 
     // Get the report first to check for status change and get reporter email
