@@ -44,13 +44,13 @@ export const QUICK_LINK_DEFINITIONS: Record<string, {
     color: 'bg-blue-500',
   },
   emt_tracker: {
-    href: '/lab-management/emt-tracker',
+    href: '/clinical/emt-tracking',
     icon: Clipboard,
     label: 'EMT Tracker',
     color: 'bg-orange-500',
   },
   aemt_tracker: {
-    href: '/lab-management/aemt-tracker',
+    href: '/clinical/aemt-tracking',
     icon: Clipboard,
     label: 'AEMT Tracker',
     color: 'bg-amber-500',

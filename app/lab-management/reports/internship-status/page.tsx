@@ -7,16 +7,17 @@ import Link from 'next/link';
 import {
   ChevronRight,
   Home,
-  Users,
+  Briefcase,
   Download,
   Printer,
   FileSpreadsheet,
   Loader2,
-  Star,
+  Building2,
+  Users,
   AlertTriangle,
-  TrendingUp,
-  TrendingDown,
-  Calendar
+  CheckCircle,
+  Clock,
+  UserCheck
 } from 'lucide-react';
 
 interface Cohort {
@@ -25,54 +26,52 @@ interface Cohort {
   program: { abbreviation: string };
 }
 
-interface TeamLeadsData {
+interface InternshipStatusData {
   cohort: {
     id: string;
     name: string;
   };
-  dateRange: {
-    start: string;
-    end: string;
-  };
   summary: {
-    totalRotations: number;
-    averagePerStudent: number;
-    studentsWithZero: number;
-    mostRotations: number;
     totalStudents: number;
+    placed: number;
+    pending: number;
+    notStarted: number;
   };
+  agencyBreakdown: Array<{
+    name: string;
+    type: string;
+    studentCount: number;
+    students: string[];
+  }>;
   studentBreakdown: Array<{
     id: string;
     name: string;
-    rotationCount: number;
-    lastRotationDate: string | null;
-    needsMore: boolean;
+    status: string;
+    agency: string | null;
+    preceptor: string | null;
+    startDate: string | null;
+    hoursCompleted: number;
+    hoursRequired: number;
   }>;
-  recentRotations: Array<{
-    date: string;
-    studentName: string;
-    scenario: string;
-  }>;
-  studentsNeedingRotations: Array<{
+  flaggedStudents: Array<{
     id: string;
     name: string;
-    count: number;
-    daysSinceLast: number | null;
+    reason: string;
+    details: string;
   }>;
 }
 
-export default function TeamLeadsReportPage() {
+export default function InternshipStatusReportPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const reportRef = useRef<HTMLDivElement>(null);
 
   const [cohorts, setCohorts] = useState<Cohort[]>([]);
   const [selectedCohort, setSelectedCohort] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
 
+  const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const [reportData, setReportData] = useState<TeamLeadsData | null>(null);
+  const [reportData, setReportData] = useState<InternshipStatusData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -84,11 +83,6 @@ export default function TeamLeadsReportPage() {
   useEffect(() => {
     if (session) {
       fetchCohorts();
-      const end = new Date();
-      const start = new Date();
-      start.setMonth(start.getMonth() - 3);
-      setEndDate(end.toISOString().split('T')[0]);
-      setStartDate(start.toISOString().split('T')[0]);
     }
   }, [session]);
 
@@ -119,11 +113,9 @@ export default function TeamLeadsReportPage() {
     try {
       const params = new URLSearchParams({
         cohortId: selectedCohort,
-        startDate,
-        endDate,
       });
 
-      const res = await fetch(`/api/reports/team-leads?${params}`);
+      const res = await fetch(`/api/reports/internship-status?${params}`);
       const data = await res.json();
 
       if (data.success) {
@@ -145,31 +137,45 @@ export default function TeamLeadsReportPage() {
   const handleExportExcel = async () => {
     if (!reportData) return;
 
-    let csv = 'Team Lead Rotations Report\n';
+    let csv = 'Internship Status Report\n';
     csv += `Cohort,${reportData.cohort.name}\n`;
-    csv += `Date Range,${reportData.dateRange.start} to ${reportData.dateRange.end}\n`;
     csv += `Generated,${new Date().toLocaleString()}\n\n`;
 
     csv += 'Summary\n';
-    csv += `Total Rotations,${reportData.summary.totalRotations}\n`;
-    csv += `Average Per Student,${reportData.summary.averagePerStudent.toFixed(1)}\n`;
-    csv += `Students with Zero,${reportData.summary.studentsWithZero}\n\n`;
+    csv += `Total Students,${reportData.summary.totalStudents}\n`;
+    csv += `Placed,${reportData.summary.placed}\n`;
+    csv += `Pending,${reportData.summary.pending}\n`;
+    csv += `Not Started,${reportData.summary.notStarted}\n\n`;
 
     csv += 'Student Breakdown\n';
-    csv += 'Name,Rotations,Last Rotation,Needs More\n';
+    csv += 'Name,Status,Agency,Preceptor,Start Date,Hours Completed,Hours Required\n';
     reportData.studentBreakdown.forEach(student => {
-      csv += `${student.name},${student.rotationCount},${student.lastRotationDate || 'Never'},${student.needsMore ? 'Yes' : 'No'}\n`;
+      csv += `${student.name},${student.status},${student.agency || 'N/A'},${student.preceptor || 'N/A'},${student.startDate || 'N/A'},${student.hoursCompleted},${student.hoursRequired}\n`;
     });
 
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `team-leads-${reportData.cohort.name.replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.csv`;
+    a.download = `internship-status-${reportData.cohort.name.replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'placed':
+      case 'active':
+        return 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300';
+      case 'pending':
+        return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300';
+      case 'not started':
+        return 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300';
+      default:
+        return 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300';
+    }
   };
 
   if (status === 'loading') {
@@ -193,19 +199,23 @@ export default function TeamLeadsReportPage() {
               Home
             </Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
+            <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">
+              Lab Management
+            </Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management/reports" className="hover:text-blue-600 dark:hover:text-blue-400">Reports</Link>
+            <Link href="/lab-management/reports" className="hover:text-blue-600 dark:hover:text-blue-400">
+              Reports
+            </Link>
             <ChevronRight className="w-4 h-4" />
-            <span>Team Lead Rotations</span>
+            <span>Internship Status</span>
           </div>
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
-              <Users className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+            <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+              <Briefcase className="w-6 h-6 text-purple-600 dark:text-purple-400" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Team Lead Rotations Report</h1>
-              <p className="text-gray-600 dark:text-gray-400">Who has led, how often, and who needs more opportunities</p>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Internship Status Report</h1>
+              <p className="text-gray-600 dark:text-gray-400">Placement status, agency assignments, preceptors, and progress</p>
             </div>
           </div>
         </div>
@@ -218,9 +228,11 @@ export default function TeamLeadsReportPage() {
             <h2 className="font-semibold text-gray-900 dark:text-white">Report Parameters</h2>
           </div>
           <div className="p-4 space-y-4">
-            <div className="grid md:grid-cols-3 gap-4">
+            <div className="grid md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cohort</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Cohort
+                </label>
                 <select
                   value={selectedCohort}
                   onChange={(e) => setSelectedCohort(e.target.value)}
@@ -234,24 +246,6 @@ export default function TeamLeadsReportPage() {
                   ))}
                 </select>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
-                <input
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Date</label>
-                <input
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
-                />
-              </div>
             </div>
 
             {error && (
@@ -264,7 +258,7 @@ export default function TeamLeadsReportPage() {
               <button
                 onClick={generateReport}
                 disabled={generating || !selectedCohort}
-                className="flex items-center gap-2 px-6 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="flex items-center gap-2 px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {generating ? (
                   <>
@@ -273,7 +267,7 @@ export default function TeamLeadsReportPage() {
                   </>
                 ) : (
                   <>
-                    <Users className="w-4 h-4" />
+                    <Briefcase className="w-4 h-4" />
                     Generate Report
                   </>
                 )}
@@ -305,11 +299,10 @@ export default function TeamLeadsReportPage() {
               <div className="p-6 border-b dark:border-gray-700">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Team Lead Rotations Report</h2>
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Internship Status Report</h2>
                     <p className="text-lg text-gray-600 dark:text-gray-400 mt-1">{reportData.cohort.name}</p>
                   </div>
                   <div className="text-right text-sm text-gray-500 dark:text-gray-400">
-                    <p>Date Range: {new Date(reportData.dateRange.start).toLocaleDateString()} - {new Date(reportData.dateRange.end).toLocaleDateString()}</p>
                     <p>Generated: {new Date().toLocaleString()}</p>
                   </div>
                 </div>
@@ -318,86 +311,72 @@ export default function TeamLeadsReportPage() {
               {/* Summary */}
               <div className="p-6 border-b dark:border-gray-700">
                 <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Summary</h3>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
                     <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 text-sm">
-                      <Star className="w-4 h-4" />
-                      Total Rotations
+                      <Users className="w-4 h-4" />
+                      Total Students
                     </div>
-                    <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{reportData.summary.totalRotations}</p>
-                  </div>
-                  <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
-                    <div className="text-gray-600 dark:text-gray-400 text-sm">Total Students</div>
                     <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{reportData.summary.totalStudents}</p>
                   </div>
-                  <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
-                    <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 text-sm">
-                      <TrendingUp className="w-4 h-4" />
-                      Avg Per Student
-                    </div>
-                    <p className="text-2xl font-bold text-blue-700 dark:text-blue-300 mt-1">{reportData.summary.averagePerStudent.toFixed(1)}</p>
-                  </div>
                   <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
-                    <div className="text-green-600 dark:text-green-400 text-sm">Most Rotations</div>
-                    <p className="text-2xl font-bold text-green-700 dark:text-green-300 mt-1">{reportData.summary.mostRotations}</p>
-                  </div>
-                  <div className={`rounded-lg p-4 ${reportData.summary.studentsWithZero > 0 ? 'bg-orange-50 dark:bg-orange-900/20' : 'bg-gray-50 dark:bg-gray-700/50'}`}>
-                    <div className={`flex items-center gap-2 text-sm ${reportData.summary.studentsWithZero > 0 ? 'text-orange-600 dark:text-orange-400' : 'text-gray-600 dark:text-gray-400'}`}>
-                      <AlertTriangle className="w-4 h-4" />
-                      With Zero
+                    <div className="flex items-center gap-2 text-green-600 dark:text-green-400 text-sm">
+                      <CheckCircle className="w-4 h-4" />
+                      Placed
                     </div>
-                    <p className={`text-2xl font-bold mt-1 ${reportData.summary.studentsWithZero > 0 ? 'text-orange-700 dark:text-orange-300' : 'text-gray-900 dark:text-white'}`}>
-                      {reportData.summary.studentsWithZero}
-                    </p>
+                    <p className="text-2xl font-bold text-green-700 dark:text-green-300 mt-1">{reportData.summary.placed}</p>
+                  </div>
+                  <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4">
+                    <div className="flex items-center gap-2 text-yellow-600 dark:text-yellow-400 text-sm">
+                      <Clock className="w-4 h-4" />
+                      Pending
+                    </div>
+                    <p className="text-2xl font-bold text-yellow-700 dark:text-yellow-300 mt-1">{reportData.summary.pending}</p>
+                  </div>
+                  <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+                    <div className="text-gray-600 dark:text-gray-400 text-sm">Not Started</div>
+                    <p className="text-2xl font-bold text-gray-900 dark:text-white mt-1">{reportData.summary.notStarted}</p>
                   </div>
                 </div>
               </div>
 
-              {/* Students Needing Rotations */}
-              {reportData.studentsNeedingRotations.length > 0 && (
+              {/* Agency Breakdown */}
+              {reportData.agencyBreakdown.length > 0 && (
                 <div className="p-6 border-b dark:border-gray-700">
                   <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                    <AlertTriangle className="w-5 h-5 text-orange-500" />
-                    Students Needing More Rotations ({reportData.studentsNeedingRotations.length})
+                    <Building2 className="w-5 h-5 text-purple-500" />
+                    Students by Agency
                   </h3>
-                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-2">
-                    {reportData.studentsNeedingRotations.map((student) => (
-                      <div
-                        key={student.id}
-                        className="flex items-center justify-between p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg"
-                      >
-                        <div>
-                          <p className="font-medium text-gray-900 dark:text-white">{student.name}</p>
-                          <p className="text-sm text-orange-700 dark:text-orange-400">
-                            {student.count === 0 ? 'Never led' : `${student.count} rotation${student.count !== 1 ? 's' : ''}`}
-                          </p>
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {reportData.agencyBreakdown.map((agency, idx) => (
+                      <div key={idx} className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-medium text-gray-900 dark:text-white">{agency.name}</span>
+                          <span className="text-sm text-gray-600 dark:text-gray-400">{agency.type}</span>
                         </div>
-                        {student.daysSinceLast !== null && (
-                          <span className="text-xs text-gray-500 dark:text-gray-400">
-                            {student.daysSinceLast}d ago
-                          </span>
-                        )}
+                        <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{agency.studentCount}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{agency.students.slice(0, 3).join(', ')}{agency.students.length > 3 ? '...' : ''}</p>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
 
-              {/* Recent Rotations */}
-              {reportData.recentRotations.length > 0 && (
+              {/* Flagged Students */}
+              {reportData.flaggedStudents.length > 0 && (
                 <div className="p-6 border-b dark:border-gray-700">
                   <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                    <Calendar className="w-5 h-5 text-blue-500" />
-                    Recent Rotations
+                    <AlertTriangle className="w-5 h-5 text-orange-500" />
+                    Attention Required ({reportData.flaggedStudents.length})
                   </h3>
                   <div className="space-y-2">
-                    {reportData.recentRotations.slice(0, 10).map((rotation, idx) => (
-                      <div key={idx} className="flex items-center gap-4 p-2 bg-gray-50 dark:bg-gray-700/50 rounded">
-                        <span className="text-sm text-gray-500 dark:text-gray-400 w-24">
-                          {new Date(rotation.date).toLocaleDateString()}
-                        </span>
-                        <span className="font-medium text-gray-900 dark:text-white">{rotation.studentName}</span>
-                        <span className="text-sm text-gray-600 dark:text-gray-400">{rotation.scenario}</span>
+                    {reportData.flaggedStudents.map((student) => (
+                      <div key={student.id} className="flex items-center justify-between p-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+                        <div>
+                          <p className="font-medium text-gray-900 dark:text-white">{student.name}</p>
+                          <p className="text-sm text-orange-700 dark:text-orange-400">{student.reason}</p>
+                        </div>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">{student.details}</p>
                       </div>
                     ))}
                   </div>
@@ -412,9 +391,10 @@ export default function TeamLeadsReportPage() {
                     <thead className="bg-gray-50 dark:bg-gray-700">
                       <tr>
                         <th className="px-4 py-3 text-left font-medium text-gray-600 dark:text-gray-400">Student</th>
-                        <th className="px-4 py-3 text-center font-medium text-gray-600 dark:text-gray-400">Rotations</th>
-                        <th className="px-4 py-3 text-center font-medium text-gray-600 dark:text-gray-400">Last Rotation</th>
                         <th className="px-4 py-3 text-center font-medium text-gray-600 dark:text-gray-400">Status</th>
+                        <th className="px-4 py-3 text-left font-medium text-gray-600 dark:text-gray-400">Agency</th>
+                        <th className="px-4 py-3 text-left font-medium text-gray-600 dark:text-gray-400">Preceptor</th>
+                        <th className="px-4 py-3 text-center font-medium text-gray-600 dark:text-gray-400">Hours</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y dark:divide-gray-700">
@@ -422,24 +402,14 @@ export default function TeamLeadsReportPage() {
                         <tr key={student.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                           <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{student.name}</td>
                           <td className="px-4 py-3 text-center">
-                            <span className={`inline-flex items-center gap-1 ${student.rotationCount === 0 ? 'text-orange-600 dark:text-orange-400' : 'text-gray-600 dark:text-gray-400'}`}>
-                              <Star className="w-3 h-3" />
-                              {student.rotationCount}
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(student.status)}`}>
+                              {student.status}
                             </span>
                           </td>
+                          <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{student.agency || '-'}</td>
+                          <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{student.preceptor || '-'}</td>
                           <td className="px-4 py-3 text-center text-gray-600 dark:text-gray-400">
-                            {student.lastRotationDate ? new Date(student.lastRotationDate).toLocaleDateString() : 'Never'}
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            {student.needsMore ? (
-                              <span className="px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 text-xs rounded-full">
-                                Needs More
-                              </span>
-                            ) : (
-                              <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs rounded-full">
-                                On Track
-                              </span>
-                            )}
+                            {student.hoursCompleted}/{student.hoursRequired}
                           </td>
                         </tr>
                       ))}
@@ -454,9 +424,9 @@ export default function TeamLeadsReportPage() {
         {/* Empty State */}
         {!reportData && !generating && (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center print:hidden">
-            <Users className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+            <Briefcase className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Report Generated</h3>
-            <p className="text-gray-600 dark:text-gray-400">Select a cohort and date range, then click "Generate Report" to view team lead rotation data.</p>
+            <p className="text-gray-600 dark:text-gray-400">Select a cohort and click "Generate Report" to view internship status data.</p>
           </div>
         )}
       </main>
