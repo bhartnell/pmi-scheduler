@@ -165,6 +165,30 @@ export async function PATCH(
         // Don't fail the request if notification fails
         console.error('Failed to send assignment notification:', notifyError);
       }
+
+      // Also upsert into station_instructors table for multi-instructor support
+      try {
+        // First unset any existing primary instructors
+        await supabase
+          .from('station_instructors')
+          .update({ is_primary: false })
+          .eq('station_id', id);
+
+        // Upsert the new instructor as primary
+        await supabase
+          .from('station_instructors')
+          .upsert({
+            station_id: id,
+            user_email: body.instructor_email,
+            user_name: body.instructor_name || body.instructor_email.split('@')[0],
+            is_primary: true
+          }, {
+            onConflict: 'station_id,user_email'
+          });
+      } catch (siError) {
+        // Don't fail if station_instructors table doesn't exist or has issues
+        console.error('Failed to update station_instructors:', siError);
+      }
     }
 
     return NextResponse.json({ success: true, station: data });

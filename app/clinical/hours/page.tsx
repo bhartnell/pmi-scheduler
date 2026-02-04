@@ -47,7 +47,8 @@ const DEPT_COLUMNS = [
   { key: 'peds_ed', label: 'Peds ED', fullName: 'Pediatric ED' },
   { key: 'peds_icu', label: 'Peds ICU', fullName: 'Pediatric ICU' },
   { key: 'psych', label: 'Psych', fullName: 'Psychiatry' },
-  { key: 'cardiology', label: 'Cardio', fullName: 'Cardiology' },
+  { key: 'ccl', label: 'CCL', fullName: 'Cardiac Cath Lab' },
+  { key: 'ems', label: 'EMS', fullName: 'Emergency Medical Services' },
 ];
 
 export default function ClinicalHoursTrackerPage() {

@@ -18,7 +18,8 @@ import {
   Copy,
   Check,
   Loader2,
-  RefreshCw
+  RefreshCw,
+  Download
 } from 'lucide-react';
 
 interface FeedbackReport {
@@ -152,6 +153,43 @@ ${report.user_agent || 'Not available'}
     }
   };
 
+  const exportUnresolved = async () => {
+    // Filter for unresolved reports (new or in_progress)
+    const unresolvedReports = reports.filter(r => r.status === 'new' || r.status === 'in_progress');
+
+    if (unresolvedReports.length === 0) {
+      alert('No unresolved feedback to export');
+      return;
+    }
+
+    // Generate markdown content for all unresolved items
+    let markdownContent = `# Unresolved Feedback Report\n\nGenerated: ${new Date().toLocaleString()}\n\nTotal unresolved items: ${unresolvedReports.length}\n\n---\n\n`;
+
+    unresolvedReports.forEach((report, index) => {
+      const typeLabel = report.report_type === 'bug' ? 'BUG REPORT' :
+                        report.report_type === 'feature' ? 'FEATURE REQUEST' : 'FEEDBACK';
+
+      markdownContent += `## ${index + 1}. ${typeLabel}\n\n`;
+      markdownContent += `- **Status:** ${STATUS_CONFIG[report.status].label}\n`;
+      markdownContent += `- **Date:** ${formatDate(report.created_at)}\n`;
+      markdownContent += `- **Reporter:** ${report.user_email}\n`;
+      markdownContent += `- **Page:** ${report.page_url || 'N/A'}\n\n`;
+      markdownContent += `### Description\n\n${report.description}\n\n`;
+      markdownContent += `---\n\n`;
+    });
+
+    // Download as file
+    const blob = new Blob([markdownContent], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `unresolved-feedback-${new Date().toISOString().split('T')[0]}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   if (status === 'loading' || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
@@ -191,13 +229,22 @@ ${report.user_agent || 'Not available'}
                 </p>
               </div>
             </div>
-            <button
-              onClick={fetchReports}
-              className="flex items-center gap-2 px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-            >
-              <RefreshCw className="w-4 h-4" />
-              Refresh
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={exportUnresolved}
+                className="flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg transition-colors"
+              >
+                <Download className="w-4 h-4" />
+                Export Unresolved
+              </button>
+              <button
+                onClick={fetchReports}
+                className="flex items-center gap-2 px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Refresh
+              </button>
+            </div>
           </div>
         </div>
       </div>

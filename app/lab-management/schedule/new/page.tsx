@@ -48,6 +48,13 @@ interface Skill {
   certification_levels: string[];
 }
 
+interface Instructor {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
 interface Station {
   id: string;
   station_number: number;
@@ -76,6 +83,7 @@ export default function NewLabDayPage() {
   const [cohorts, setCohorts] = useState<Cohort[]>([]);
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
+  const [instructors, setInstructors] = useState<Instructor[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -152,10 +160,42 @@ export default function NewLabDayPage() {
       if (skillsData.success) {
         setSkills(skillsData.skills || []);
       }
+
+      // Fetch instructors
+      const instructorsRes = await fetch('/api/lab-management/instructors');
+      const instructorsData = await instructorsRes.json();
+      if (instructorsData.success) {
+        setInstructors(instructorsData.instructors || []);
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
     }
     setLoading(false);
+  };
+
+  const handleInstructorChange = (index: number, value: string) => {
+    if (value === 'custom') {
+      // Clear the fields for custom entry
+      updateStation(index, { instructor_name: '', instructor_email: '' });
+    } else if (value === '') {
+      // Clear instructor
+      updateStation(index, { instructor_name: '', instructor_email: '' });
+    } else {
+      // Parse the "name|email" format
+      const [name, email] = value.split('|');
+      updateStation(index, { instructor_name: name, instructor_email: email });
+    }
+  };
+
+  const getSelectedInstructorValue = (station: Station) => {
+    if (!station.instructor_email) return '';
+    // Check if it matches an instructor in the list
+    const match = instructors.find(i => i.email === station.instructor_email);
+    if (match) {
+      return `${match.name}|${match.email}`;
+    }
+    // Custom entry
+    return 'custom';
   };
 
   const addStation = () => {
@@ -697,28 +737,49 @@ export default function NewLabDayPage() {
                         )}
                       </div>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Name</label>
-                          <input
-                            type="text"
-                            value={station.instructor_name}
-                            onChange={(e) => updateStation(index, { instructor_name: e.target.value })}
-                            placeholder="Optional"
-                            className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 text-sm"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Email</label>
-                          <input
-                            type="email"
-                            value={station.instructor_email}
-                            onChange={(e) => updateStation(index, { instructor_email: e.target.value })}
-                            placeholder="Optional"
-                            className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 text-sm"
-                          />
-                        </div>
+                      {/* Instructor Dropdown */}
+                      <div className="mb-3">
+                        <select
+                          value={getSelectedInstructorValue(station)}
+                          onChange={(e) => handleInstructorChange(index, e.target.value)}
+                          className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 text-sm"
+                        >
+                          <option value="">Select instructor (optional)...</option>
+                          {instructors.map((instructor) => (
+                            <option key={instructor.id} value={`${instructor.name}|${instructor.email}`}>
+                              {instructor.name} ({instructor.role})
+                            </option>
+                          ))}
+                          <option value="custom">+ Enter custom name...</option>
+                        </select>
                       </div>
+
+                      {/* Custom fields shown when "custom" is selected or when there's a non-matching entry */}
+                      {(getSelectedInstructorValue(station) === 'custom' ||
+                        (station.instructor_email && !instructors.find(i => i.email === station.instructor_email))) && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Name</label>
+                            <input
+                              type="text"
+                              value={station.instructor_name}
+                              onChange={(e) => updateStation(index, { instructor_name: e.target.value })}
+                              placeholder="Enter name"
+                              className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Email</label>
+                            <input
+                              type="email"
+                              value={station.instructor_email}
+                              onChange={(e) => updateStation(index, { instructor_email: e.target.value })}
+                              placeholder="Enter email"
+                              className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 text-sm"
+                            />
+                          </div>
+                        </div>
+                      )}
 
                       {!station.instructor_email && (
                         <button
