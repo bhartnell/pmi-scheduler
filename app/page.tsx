@@ -51,16 +51,22 @@ export default function HomePage() {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [preferences, setPreferences] = useState<UserPreferences | null>(null);
   const [showCustomize, setShowCustomize] = useState(false);
+  const [hasOnboarding, setHasOnboarding] = useState(false);
 
   useEffect(() => {
     if (session?.user?.email) {
       // Fetch user and preferences in parallel
       Promise.all([
         fetch('/api/instructor/me').then(res => res.json()),
-        fetch('/api/user/preferences').then(res => res.json())
-      ]).then(([userData, prefsData]) => {
+        fetch('/api/user/preferences').then(res => res.json()),
+        fetch('/api/onboarding/dashboard').then(res => res.json()).catch(() => null)
+      ]).then(([userData, prefsData, onboardingData]) => {
         if (userData.success && userData.user) {
           setCurrentUser(userData.user);
+          // Show onboarding card for admins or users with active assignments
+          const isAdminRole = userData.user.role === 'admin' || userData.user.role === 'superadmin';
+          const hasActiveOnboarding = onboardingData?.success && onboardingData?.hasActiveAssignment;
+          setHasOnboarding(isAdminRole || !!hasActiveOnboarding);
         }
         if (prefsData.success && prefsData.preferences) {
           setPreferences(prefsData.preferences);
@@ -329,6 +335,31 @@ export default function HomePage() {
               </div>
             </div>
           </Link>
+
+          {/* Onboarding Card - For admin/superadmin or users with active onboarding */}
+          {hasOnboarding && (
+            <Link
+              href="/onboarding"
+              className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group border-2 border-indigo-200 dark:border-indigo-800"
+            >
+              <div className="flex flex-col items-center text-center">
+                <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/30 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-indigo-200 dark:group-hover:bg-indigo-900/50 transition-colors">
+                  <BookOpen className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Onboarding</h3>
+                <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
+                  {currentUser && canAccessAdmin(currentUser.role)
+                    ? 'Manage instructor onboarding assignments and progress.'
+                    : 'Track your onboarding progress and complete required tasks.'}
+                </p>
+                <div className="flex flex-wrap justify-center gap-2 text-xs">
+                  <span className="px-2 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded-full">Tasks</span>
+                  <span className="px-2 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded-full">Progress</span>
+                  <span className="px-2 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded-full">Tracks</span>
+                </div>
+              </div>
+            </Link>
+          )}
 
           {/* Clinical & Internship Card - Only for lead_instructor+ */}
           {currentUser && canAccessClinical(currentUser.role) && (

@@ -35,23 +35,23 @@ interface TrackingRecord {
   id: string;
   student_id: string;
   mce_complete: boolean;
-  vax_complete: boolean;
-  ride_along_complete: boolean;
+  vax_uploaded: boolean;
+  ridealong_scanned: boolean;
   clinical_1_complete: boolean;
   clinical_2_complete: boolean;
   clinical_3_complete: boolean;
-  vitals_complete: boolean;
+  vitals_tracker_date: string | null;
 }
 
-// AEMT tracking columns (includes 3 clinicals)
+// AEMT tracking columns - mapped to actual DB column names
 const TRACKING_COLUMNS = [
   { key: 'mce_complete', label: 'mCE', fullName: 'mCE Modules' },
-  { key: 'vax_complete', label: 'Vax', fullName: 'Vaccinations' },
-  { key: 'ride_along_complete', label: 'Ride-Along', fullName: 'Ride-Along Complete' },
+  { key: 'vax_uploaded', label: 'Vax', fullName: 'Vaccinations' },
+  { key: 'ridealong_scanned', label: 'Ride-Along', fullName: 'Ride-Along Complete' },
   { key: 'clinical_1_complete', label: 'Clinical 1', fullName: 'Clinical Rotation 1' },
   { key: 'clinical_2_complete', label: 'Clinical 2', fullName: 'Clinical Rotation 2' },
   { key: 'clinical_3_complete', label: 'Clinical 3', fullName: 'Clinical Rotation 3' },
-  { key: 'vitals_complete', label: 'Vitals', fullName: 'Vitals Assessment' },
+  { key: 'vitals_tracker_date', label: 'Vitals', fullName: 'Vitals Assessment', isDate: true },
 ];
 
 export default function AEMTTrackingPage() {
@@ -138,7 +138,12 @@ export default function AEMTTrackingPage() {
 
   const getTrackingStatus = (studentId: string, field: string): boolean => {
     const record = tracking.find(t => t.student_id === studentId);
-    return record ? (record as any)[field] === true : false;
+    if (!record) return false;
+    const value = (record as any)[field];
+    // Handle both boolean fields and date fields (truthy date = complete)
+    if (typeof value === 'boolean') return value;
+    if (typeof value === 'string' && value.trim()) return true; // non-empty date string = complete
+    return !!value;
   };
 
   const toggleField = async (studentId: string, field: string) => {
@@ -148,7 +153,12 @@ export default function AEMTTrackingPage() {
     setSaving(cellKey);
 
     const currentValue = getTrackingStatus(studentId, field);
-    const newValue = !currentValue;
+    // For date fields, toggle between today's date and null; for booleans, toggle true/false
+    const colConfig = TRACKING_COLUMNS.find(c => c.key === field);
+    const isDateField = (colConfig as any)?.isDate;
+    const newValue = isDateField
+      ? (currentValue ? null : new Date().toISOString().split('T')[0])
+      : !currentValue;
 
     try {
       const res = await fetch('/api/clinical/aemt-tracking', {

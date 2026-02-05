@@ -386,10 +386,9 @@ export default function LabDayPage() {
       setIsCustomInstructor(false);
     }
 
-    // Fetch scenarios and skills if not already loaded
-    if (scenarios.length === 0 || skills.length === 0) {
-      await fetchScenariosAndSkills();
-    }
+    // Always fetch scenarios and skills to ensure they're available for rendering
+    // This fixes a race condition where skills would appear empty in the edit form
+    await fetchScenariosAndSkills();
   };
 
   const toggleSkill = (skillId: string) => {

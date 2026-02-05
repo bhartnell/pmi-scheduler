@@ -27,6 +27,13 @@ import {
   ArrowLeft
 } from 'lucide-react';
 
+// Helper to safely convert DB values to arrays (handles string, array, null)
+const toArray = (value: any): string[] => {
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string' && value.trim()) return [value];
+  return [];
+};
+
 // Types
 interface VitalSigns {
   // Primary Assessment - XABCDE
@@ -832,7 +839,7 @@ export default function ScenarioEditorPage() {
           difficulty: s.difficulty || 'Intermediate',
           estimated_duration: s.estimated_duration || 20,
           instructor_summary: s.instructor_notes || '',
-          key_decision_points: s.learning_objectives || [],
+          key_decision_points: toArray(s.learning_objectives),
           dispatch_time: s.dispatch_time || '',
           dispatch_location: s.dispatch_location || '',
           chief_complaint: s.chief_complaint || '',
@@ -841,8 +848,8 @@ export default function ScenarioEditorPage() {
           patient_age: s.patient_age?.toString() || '',
           patient_sex: s.patient_sex || '',
           patient_weight: s.patient_weight?.toString() || '',
-          medical_history: s.medical_history || [],
-          medications: s.medications || [],
+          medical_history: toArray(s.medical_history),
+          medications: toArray(s.medications),
           allergies: s.allergies || '',
           // Primary Assessment - XABCDE
           assessment_x: s.assessment_x || '',
@@ -867,7 +874,7 @@ export default function ScenarioEditorPage() {
           phases: s.phases?.length > 0 ? s.phases : [createEmptyPhase(0)],
           critical_actions: s.critical_actions?.map((a: string, i: number) => ({ id: `ca-${i}`, description: a })) || [],
           evaluation_criteria: DEFAULT_EVALUATION_CRITERIA,
-          debrief_points: s.debrief_points || []
+          debrief_points: toArray(s.debrief_points)
         });
       }
     } catch (error) {

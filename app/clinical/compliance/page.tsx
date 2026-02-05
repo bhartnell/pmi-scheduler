@@ -30,31 +30,28 @@ interface CohortOption {
   program: { abbreviation: string };
 }
 
-interface ComplianceDoc {
+// Wide-table record: one row per student, each doc is a column
+interface ComplianceRecord {
   id: string;
   student_id: string;
-  doc_type: string;
-  completed: boolean;
-  completion_date: string | null;
-  expiration_date: string | null;
-  notes: string | null;
+  [key: string]: any;
 }
 
-// Document columns configuration
+// Document columns mapped to actual DB column names (wide-table schema)
 const DOC_COLUMNS = [
-  { key: 'mmr', label: 'MMR', fullName: 'MMR Vaccine' },
-  { key: 'vzv', label: 'VZV', fullName: 'Varicella' },
-  { key: 'hepb', label: 'HepB', fullName: 'Hepatitis B' },
-  { key: 'tdap', label: 'Tdap', fullName: 'Tdap Vaccine' },
-  { key: 'covid', label: 'COVID', fullName: 'COVID Vaccine' },
-  { key: 'tb', label: 'TB', fullName: 'TB Test' },
-  { key: 'physical', label: 'Physical', fullName: 'Physical Exam' },
-  { key: 'insurance', label: 'Insurance', fullName: 'Health Insurance' },
-  { key: 'bls', label: 'BLS', fullName: 'BLS Card' },
-  { key: 'flu', label: 'Flu', fullName: 'Flu Vaccine' },
-  { key: 'hospital_orient', label: 'Hosp Orient', fullName: 'Hospital Orientation' },
-  { key: 'background', label: 'BG', fullName: 'Background Check' },
-  { key: 'drug_test', label: 'DT', fullName: 'Drug Test' },
+  { key: 'mmr_complete', label: 'MMR', fullName: 'MMR Vaccine' },
+  { key: 'vzv_complete', label: 'VZV', fullName: 'Varicella' },
+  { key: 'hep_b_complete', label: 'HepB', fullName: 'Hepatitis B' },
+  { key: 'tdap_complete', label: 'Tdap', fullName: 'Tdap Vaccine' },
+  { key: 'covid_complete', label: 'COVID', fullName: 'COVID Vaccine' },
+  { key: 'tb_test_1_complete', label: 'TB', fullName: 'TB Test' },
+  { key: 'physical_complete', label: 'Physical', fullName: 'Physical Exam' },
+  { key: 'health_insurance_complete', label: 'Insurance', fullName: 'Health Insurance' },
+  { key: 'bls_complete', label: 'BLS', fullName: 'BLS Card' },
+  { key: 'flu_shot_complete', label: 'Flu', fullName: 'Flu Vaccine' },
+  { key: 'hospital_orientation_complete', label: 'Hosp Orient', fullName: 'Hospital Orientation' },
+  { key: 'background_check_complete', label: 'BG', fullName: 'Background Check' },
+  { key: 'drug_test_complete', label: 'DT', fullName: 'Drug Test' },
 ];
 
 export default function ComplianceTrackerPage() {
@@ -63,7 +60,7 @@ export default function ComplianceTrackerPage() {
 
   const [cohorts, setCohorts] = useState<CohortOption[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
-  const [docs, setDocs] = useState<ComplianceDoc[]>([]);
+  const [docs, setDocs] = useState<ComplianceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<Role | null>(null);
@@ -128,24 +125,31 @@ export default function ComplianceTrackerPage() {
       const docsData = await docsRes.json();
 
       if (studentsData.success) setStudents(studentsData.students || []);
-      if (docsData.success) setDocs(docsData.docs || []);
+      if (docsData.success) {
+        setDocs(docsData.docs || []);
+      } else {
+        console.error('Compliance API error:', docsData.error);
+        // Still show students even if compliance docs fail
+        setDocs([]);
+      }
     } catch (error) {
       console.error('Error fetching cohort data:', error);
     }
   };
 
-  const getDocStatus = (studentId: string, docType: string): ComplianceDoc | null => {
-    return docs.find(d => d.student_id === studentId && d.doc_type === docType) || null;
+  const getDocStatus = (studentId: string, columnKey: string): boolean => {
+    const record = docs.find(d => d.student_id === studentId);
+    return record ? record[columnKey] === true : false;
   };
 
-  const toggleDoc = async (studentId: string, docType: string) => {
+  const toggleDoc = async (studentId: string, columnKey: string) => {
     if (!userRole || !canEditClinical(userRole)) return;
 
-    const cellKey = `${studentId}-${docType}`;
+    const cellKey = `${studentId}-${columnKey}`;
     setSaving(cellKey);
 
-    const existing = getDocStatus(studentId, docType);
-    const newCompleted = !existing?.completed;
+    const currentValue = getDocStatus(studentId, columnKey);
+    const newValue = !currentValue;
 
     try {
       const res = await fetch('/api/clinical/compliance', {
@@ -153,17 +157,30 @@ export default function ComplianceTrackerPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           student_id: studentId,
-          doc_type: docType,
-          completed: newCompleted,
-          completion_date: newCompleted ? new Date().toISOString().split('T')[0] : null,
+          field: columnKey,
+          value: newValue,
         }),
       });
 
-      if (res.ok) {
+      const data = await res.json();
+      if (data.success) {
+        // Optimistically update local state
+        setDocs(prev => {
+          const existing = prev.find(d => d.student_id === studentId);
+          if (existing) {
+            return prev.map(d =>
+              d.student_id === studentId ? { ...d, [columnKey]: newValue } : d
+            );
+          }
+          return prev;
+        });
+      } else {
+        console.error('Compliance save failed:', data.error);
         await fetchCohortData();
       }
     } catch (error) {
       console.error('Error toggling doc:', error);
+      await fetchCohortData();
     }
     setSaving(null);
   };
@@ -177,8 +194,8 @@ export default function ComplianceTrackerPage() {
     }
 
     if (showIncompleteOnly) {
-      const studentDocs = docs.filter(d => d.student_id === student.id && d.completed);
-      if (studentDocs.length === DOC_COLUMNS.length) return false;
+      const completedCount = DOC_COLUMNS.filter(col => getDocStatus(student.id, col.key)).length;
+      if (completedCount === DOC_COLUMNS.length) return false;
     }
 
     return true;
@@ -186,7 +203,9 @@ export default function ComplianceTrackerPage() {
 
   // Calculate stats
   const totalCells = students.length * DOC_COLUMNS.length;
-  const completedCells = docs.filter(d => d.completed).length;
+  const completedCells = students.reduce((acc, student) => {
+    return acc + DOC_COLUMNS.filter(col => getDocStatus(student.id, col.key)).length;
+  }, 0);
   const completionPercent = totalCells > 0 ? Math.round((completedCells / totalCells) * 100) : 0;
 
   if (status === 'loading' || loading) {
@@ -310,7 +329,7 @@ export default function ComplianceTrackerPage() {
                     </tr>
                   ) : (
                     filteredStudents.map(student => {
-                      const studentCompleted = docs.filter(d => d.student_id === student.id && d.completed).length;
+                      const studentCompleted = DOC_COLUMNS.filter(col => getDocStatus(student.id, col.key)).length;
                       const studentPercent = Math.round((studentCompleted / DOC_COLUMNS.length) * 100);
 
                       return (
@@ -321,8 +340,7 @@ export default function ComplianceTrackerPage() {
                             </div>
                           </td>
                           {DOC_COLUMNS.map(col => {
-                            const doc = getDocStatus(student.id, col.key);
-                            const isCompleted = doc?.completed;
+                            const isCompleted = getDocStatus(student.id, col.key);
                             const cellKey = `${student.id}-${col.key}`;
                             const isSaving = saving === cellKey;
 

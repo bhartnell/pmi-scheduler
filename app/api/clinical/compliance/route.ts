@@ -33,13 +33,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, docs: [] });
     }
 
-    // Get compliance docs for these students
+    // Get compliance docs for these students (wide-table: one row per student)
     const { data: docs, error } = await supabase
       .from('student_compliance_docs')
       .select('*')
       .in('student_id', studentIds);
 
-    if (error) throw error;
+    if (error) {
+      console.error('Supabase error:', error.code, error.message);
+      return NextResponse.json({
+        success: false,
+        error: `Database error: ${error.message}`
+      }, { status: 500 });
+    }
 
     return NextResponse.json({ success: true, docs: docs || [] });
   } catch (error) {
@@ -56,52 +62,50 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { student_id, doc_type, completed, completion_date, expiration_date, notes } = body;
+    const { student_id, field, value } = body;
 
-    if (!student_id || !doc_type) {
-      return NextResponse.json({ success: false, error: 'Student ID and doc type required' }, { status: 400 });
+    if (!student_id || !field) {
+      return NextResponse.json({ success: false, error: 'Student ID and field required' }, { status: 400 });
     }
 
-    // Check if record exists
+    // Check if record exists for this student
     const { data: existing } = await supabase
       .from('student_compliance_docs')
       .select('id')
       .eq('student_id', student_id)
-      .eq('doc_type', doc_type)
       .single();
 
     let result;
     if (existing) {
-      // Update existing
+      // Update existing record's field
       result = await supabase
         .from('student_compliance_docs')
         .update({
-          completed,
-          completion_date: completion_date || null,
-          expiration_date: expiration_date || null,
-          notes: notes || null,
+          [field]: value,
           updated_at: new Date().toISOString(),
         })
         .eq('id', existing.id)
         .select()
         .single();
     } else {
-      // Insert new
+      // Insert new record with this field
       result = await supabase
         .from('student_compliance_docs')
         .insert({
           student_id,
-          doc_type,
-          completed,
-          completion_date: completion_date || null,
-          expiration_date: expiration_date || null,
-          notes: notes || null,
+          [field]: value,
         })
         .select()
         .single();
     }
 
-    if (result.error) throw result.error;
+    if (result.error) {
+      console.error('Supabase error:', result.error.code, result.error.message);
+      return NextResponse.json({
+        success: false,
+        error: `Database error: ${result.error.message}`
+      }, { status: 500 });
+    }
 
     return NextResponse.json({ success: true, doc: result.data });
   } catch (error) {
