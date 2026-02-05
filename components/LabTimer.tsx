@@ -839,13 +839,23 @@ export default function LabTimer({
             <Square className="w-6 h-6" />
           </button>
 
-          {currentRotation < numRotations && (
+          {currentRotation < numRotations ? (
             <button
               onClick={handleNextRotation}
-              className="p-3 rounded-full transition-colors bg-blue-500 hover:bg-blue-400"
+              className="flex items-center gap-2 px-4 py-3 rounded-full transition-colors bg-blue-500 hover:bg-blue-400"
               title="Next Rotation (N)"
             >
               <SkipForward className="w-6 h-6" />
+              <span className="font-medium">Next Rotation</span>
+            </button>
+          ) : (
+            <button
+              onClick={handleNextRotation}
+              className="flex items-center gap-2 px-4 py-3 rounded-full transition-colors bg-purple-500 hover:bg-purple-400"
+              title="Begin Cleanup"
+            >
+              <SkipForward className="w-6 h-6" />
+              <span className="font-medium">Cleanup</span>
             </button>
           )}
         </div>

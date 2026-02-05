@@ -661,7 +661,8 @@ export default function SiteVisitsPage() {
                             weekday: 'short',
                             year: 'numeric',
                             month: 'short',
-                            day: 'numeric'
+                            day: 'numeric',
+                            timeZone: 'America/Phoenix'
                           })}
                         </div>
                         {visit.visit_time && (

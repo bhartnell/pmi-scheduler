@@ -413,8 +413,15 @@ export default function GradeStationPage() {
         return;
       }
 
-      // Notes for NI/U ratings are optional - instructors can add them if needed
-      // but they shouldn't block saving
+      // Validation: Require notes for Needs Improvement or Unsatisfactory ratings
+      const missingNotes = criteriaRatings.filter(r =>
+        (r.rating === 'NI' || r.rating === 'U') && (!r.notes || r.notes.trim() === '')
+      );
+      if (missingNotes.length > 0) {
+        const criteriaNames = missingNotes.map(r => r.criteria_name).join(', ');
+        alert(`Please add notes for the following "Needs Improvement" or "Unsatisfactory" ratings: ${criteriaNames}`);
+        return;
+      }
 
       // Validation: If flagged for follow-up, require at least one category selected
       if (issueLevel === 'needs_followup' && flagCategories.length === 0) {
@@ -1505,8 +1512,9 @@ export default function GradeStationPage() {
                           <textarea
                             value={rating?.notes || ''}
                             onChange={(e) => updateNotes(criteria.id, e.target.value)}
-                            placeholder="Optional: Add notes about the issue or improvement plan..."
+                            placeholder="Required: Explain the issue and improvement plan..."
                             rows={2}
+                            required
                             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                           />
                         </div>
