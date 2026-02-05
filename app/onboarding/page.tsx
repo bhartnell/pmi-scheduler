@@ -504,6 +504,141 @@ export default function OnboardingPage() {
             </Link>
           </div>
         </main>
+
+        {/* Assignment Modal — must be in this return block for admins without active assignments */}
+        {showAssignModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+              <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Assign New Instructor</h2>
+                <button
+                  onClick={() => setShowAssignModal(false)}
+                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleAssignSubmit} className="p-6 space-y-4">
+                {errorMessage && (
+                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 flex items-start gap-2">
+                    <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-red-700 dark:text-red-300">{errorMessage}</p>
+                  </div>
+                )}
+
+                {successMessage && (
+                  <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-3 flex items-start gap-2">
+                    <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-green-700 dark:text-green-300">{successMessage}</p>
+                  </div>
+                )}
+
+                {/* Instructor Email */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Instructor Email <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={formInstructorEmail}
+                    onChange={(e) => setFormInstructorEmail(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                  >
+                    <option value="">Select instructor...</option>
+                    {instructors
+                      .filter((i) => i.is_active)
+                      .map((instructor) => (
+                        <option key={instructor.id} value={instructor.email}>
+                          {instructor.name} ({instructor.email})
+                        </option>
+                      ))}
+                  </select>
+                </div>
+
+                {/* Template */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Onboarding Template <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={formTemplateId}
+                    onChange={(e) => setFormTemplateId(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                  >
+                    {templates.length === 0 ? (
+                      <option value="">No templates available</option>
+                    ) : (
+                      templates.map((template) => (
+                        <option key={template.id} value={template.id}>
+                          {template.name}
+                          {template.instructor_type !== 'all' && ` (${template.instructor_type})`}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </div>
+
+                {/* Mentor */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Mentor (Optional)
+                  </label>
+                  <select
+                    value={formMentorEmail}
+                    onChange={(e) => setFormMentorEmail(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+                  >
+                    <option value="">No mentor</option>
+                    {instructors
+                      .filter((i) => i.is_active && i.email !== formInstructorEmail)
+                      .map((instructor) => (
+                        <option key={instructor.id} value={instructor.email}>
+                          {instructor.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+
+                {/* Instructor Type */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Instructor Type <span className="text-red-500">*</span>
+                  </label>
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="radio" value="new_hire" checked={formInstructorType === 'new_hire'} onChange={(e) => setFormInstructorType(e.target.value)} className="w-4 h-4 text-blue-600 focus:ring-blue-500" />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">New Hire (Full onboarding)</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="radio" value="adjunct" checked={formInstructorType === 'adjunct'} onChange={(e) => setFormInstructorType(e.target.value)} className="w-4 h-4 text-blue-600 focus:ring-blue-500" />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">Adjunct (Abbreviated)</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Target Completion Date */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Target Completion Date (Optional)
+                  </label>
+                  <input type="date" value={formTargetDate} onChange={(e) => setFormTargetDate(e.target.value)} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white" />
+                </div>
+
+                {/* Buttons */}
+                <div className="flex gap-3 pt-4">
+                  <button type="button" onClick={() => setShowAssignModal(false)} disabled={submitting} className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50">
+                    Cancel
+                  </button>
+                  <button type="submit" disabled={submitting || templates.length === 0} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                    {submitting ? (<><Loader2 className="w-4 h-4 animate-spin" />Assigning...</>) : 'Assign Instructor'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
