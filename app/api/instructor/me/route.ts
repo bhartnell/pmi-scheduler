@@ -47,7 +47,20 @@ export async function GET(request: NextRequest) {
       throw error;
     }
 
-    return NextResponse.json({ success: true, user });
+    // Fetch endorsements for this user
+    let endorsements: any[] = [];
+    try {
+      const { data: endorsementData } = await supabase
+        .from('user_endorsements')
+        .select('id, endorsement_type, title, department_id, granted_at')
+        .eq('user_id', user.id)
+        .eq('is_active', true);
+      endorsements = endorsementData || [];
+    } catch {
+      // Table may not exist yet, ignore
+    }
+
+    return NextResponse.json({ success: true, user: { ...user, endorsements } });
   } catch (error) {
     console.error('Error fetching current user:', error);
     return NextResponse.json({ success: false, error: 'Failed to fetch user' }, { status: 500 });

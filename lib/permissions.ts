@@ -157,6 +157,33 @@ export function getRoleLabel(role: Role | string): string {
 }
 
 // ============================================
+// Endorsement Badge Helpers (for UI display)
+// ============================================
+
+export const ENDORSEMENT_BADGE_CONFIG: Record<string, { abbrev: string; label: string; bg: string; text: string }> = {
+  director: { abbrev: 'DIR', label: 'Director', bg: 'bg-amber-100 dark:bg-amber-900/30', text: 'text-amber-800 dark:text-amber-300' },
+  mentor: { abbrev: 'MNT', label: 'Mentor', bg: 'bg-violet-100 dark:bg-violet-900/30', text: 'text-violet-800 dark:text-violet-300' },
+  preceptor: { abbrev: 'PRC', label: 'Preceptor', bg: 'bg-cyan-100 dark:bg-cyan-900/30', text: 'text-cyan-800 dark:text-cyan-300' },
+};
+
+/**
+ * Get the short badge text for an endorsement
+ * e.g., "Program Director" -> "PD", "Clinical Director" -> "CD"
+ */
+export function getEndorsementBadgeText(endorsementType: string, title?: string | null): string {
+  if (endorsementType === 'director' && title) {
+    if (title.includes('Program')) return 'PD';
+    if (title.includes('Clinical')) return 'CD';
+  }
+  return ENDORSEMENT_BADGE_CONFIG[endorsementType]?.abbrev || endorsementType.toUpperCase().slice(0, 3);
+}
+
+export function getEndorsementBadgeClasses(endorsementType: string): string {
+  const config = ENDORSEMENT_BADGE_CONFIG[endorsementType];
+  return config ? `${config.bg} ${config.text}` : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400';
+}
+
+// ============================================
 // FERPA Data Access Permissions
 // ============================================
 

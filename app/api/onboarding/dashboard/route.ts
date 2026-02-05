@@ -126,7 +126,8 @@ export async function GET(request: NextRequest) {
           sign_off_role,
           lane,
           requires_evidence,
-          applicable_types
+          applicable_types,
+          requires_director
         )
       `)
       .eq('assignment_id', assignment.id);

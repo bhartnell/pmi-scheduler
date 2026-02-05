@@ -167,7 +167,7 @@ export async function PATCH(
 
     const { data: currentUser } = await supabase
       .from('lab_users')
-      .select('role')
+      .select('id, role')
       .eq('email', session.user.email)
       .single();
 
@@ -251,6 +251,26 @@ export async function PATCH(
           error: `This task requires sign-off from ${signOffRole === 'mentor' ? 'your mentor' : 'the program director'}.`,
           requires_sign_off: true,
           sign_off_role: signOffRole
+        }, { status: 422 });
+      }
+    }
+
+    // Check if task requires director endorsement (e.g., 30-day observation, final sign-off)
+    if (body.status === 'completed' && taskData?.requires_director) {
+      // Must have director endorsement to complete this task
+      const { data: directorEndorsement } = await supabase
+        .from('user_endorsements')
+        .select('id')
+        .eq('user_id', currentUser?.id || '')
+        .eq('endorsement_type', 'director')
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (!directorEndorsement) {
+        return NextResponse.json({
+          success: false,
+          error: 'This task requires Director sign-off. Only a Program Director or Clinical Director can approve this item.',
+          requires_director: true
         }, { status: 422 });
       }
     }
