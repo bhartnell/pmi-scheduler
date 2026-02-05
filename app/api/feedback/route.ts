@@ -38,23 +38,27 @@ export async function GET(request: NextRequest) {
       .from('feedback_reports')
       .select('*', { count: 'exact' });
 
-    // Exclude archived by default
+    // Exclude archived by default — filter by status rather than archived_at for robustness
     if (!showArchived) {
-      query = query.is('archived_at', null);
+      query = query.neq('status', 'archived');
     }
 
     // Auto-archive resolved items > 7 days old
-    // Do this as a side effect on GET for simplicity
+    // Do this as a side effect on GET for simplicity — wrapped in try/catch so it never breaks the GET
     if (!showArchived) {
-      const sevenDaysAgo = new Date();
-      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      try {
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
-      await supabase
-        .from('feedback_reports')
-        .update({ status: 'archived', archived_at: new Date().toISOString() })
-        .eq('status', 'resolved')
-        .is('archived_at', null)
-        .lt('updated_at', sevenDaysAgo.toISOString());
+        await supabase
+          .from('feedback_reports')
+          .update({ status: 'archived', archived_at: new Date().toISOString() })
+          .eq('status', 'resolved')
+          .is('archived_at', null)
+          .lt('updated_at', sevenDaysAgo.toISOString());
+      } catch (archiveErr) {
+        console.error('Auto-archive side effect failed (non-fatal):', archiveErr);
+      }
     }
 
     // Status filter
@@ -219,8 +223,8 @@ export async function PATCH(request: NextRequest) {
 
       // Handle status-specific updates
       if (status === 'read') {
-        // Get current user's email for read_by
         updateData.read_at = new Date().toISOString();
+        // read_by stores the admin's email who first viewed it
         updateData.read_by = session.user.email;
       } else if (status === 'resolved') {
         updateData.resolved_at = new Date().toISOString();
@@ -270,8 +274,14 @@ export async function PATCH(request: NextRequest) {
     }
 
     return NextResponse.json({ success: true, report: data });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error updating feedback:', error);
-    return NextResponse.json({ success: false, error: 'Failed to update feedback' }, { status: 500 });
+    console.error('PATCH error details:', {
+      code: error?.code,
+      message: error?.message,
+      details: error?.details,
+      hint: error?.hint
+    });
+    return NextResponse.json({ success: false, error: error?.message || 'Failed to update feedback' }, { status: 500 });
   }
 }

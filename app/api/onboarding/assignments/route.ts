@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
         // Get instructor name
         const { data: instructor } = await supabase
           .from('lab_users')
-          .select('full_name')
+          .select('name')
           .eq('email', assignment.instructor_email)
           .single();
 
@@ -72,10 +72,10 @@ export async function GET(request: NextRequest) {
         if (assignment.mentor_email) {
           const { data: mentor } = await supabase
             .from('lab_users')
-            .select('full_name')
+            .select('name')
             .eq('email', assignment.mentor_email)
             .single();
-          mentorName = mentor?.full_name || null;
+          mentorName = mentor?.name || null;
         }
 
         // Get progress summary from view
@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
 
         return {
           ...assignment,
-          instructorName: instructor?.full_name || null,
+          instructorName: instructor?.name || null,
           mentorName,
           summary: summary || {
             total_tasks: 0,
@@ -153,7 +153,7 @@ export async function POST(request: NextRequest) {
     // Verify instructor exists in lab_users
     const { data: instructor, error: instructorError } = await supabase
       .from('lab_users')
-      .select('email, full_name')
+      .select('email, name')
       .eq('email', instructor_email)
       .single();
 

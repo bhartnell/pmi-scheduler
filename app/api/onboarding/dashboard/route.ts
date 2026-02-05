@@ -219,10 +219,11 @@ export async function GET(request: NextRequest) {
     });
 
     // We need to re-query to get tasks with their phase_id
+    const phaseIds = (phasesData || []).map(p => p.id);
     const { data: allTasks, error: allTasksError } = await supabase
       .from('onboarding_tasks')
       .select('id, phase_id')
-      .eq('phase_id', phasesData?.map(p => p.id) || []);
+      .in('phase_id', phaseIds.length > 0 ? phaseIds : ['00000000-0000-0000-0000-000000000000']);
 
     // Create task to phase mapping
     const taskPhaseMap = new Map<string, string>();
@@ -311,19 +312,19 @@ export async function GET(request: NextRequest) {
     if (assignment.mentor_email) {
       const { data: mentor } = await supabase
         .from('lab_users')
-        .select('full_name')
+        .select('name')
         .eq('email', assignment.mentor_email)
         .single();
-      mentorName = mentor?.full_name;
+      mentorName = mentor?.name;
     }
 
     if (assignment.assigned_by) {
       const { data: assignedBy } = await supabase
         .from('lab_users')
-        .select('full_name')
+        .select('name')
         .eq('email', assignment.assigned_by)
         .single();
-      assignedByName = assignedBy?.full_name;
+      assignedByName = assignedBy?.name;
     }
 
     return NextResponse.json({
