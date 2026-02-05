@@ -26,7 +26,8 @@ import {
   ClipboardCheck,
   AlertCircle,
   CheckSquare,
-  ExternalLink
+  ExternalLink,
+  X
 } from 'lucide-react';
 import { canAccessClinical, canEditClinical, type Role } from '@/lib/permissions';
 
@@ -86,6 +87,14 @@ interface Internship {
   phase_2_meeting_scheduled: string | null;
   final_exam_poll_id: string | null;
   final_exam_scheduled: string | null;
+  // Extension tracking
+  is_extended: boolean;
+  extension_reason: string | null;
+  extension_date: string | null;
+  original_expected_end_date: string | null;
+  extension_eval_completed: boolean;
+  extension_eval_date: string | null;
+  extension_eval_notes: string | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -198,6 +207,11 @@ export default function InternshipDetailPage() {
   const [showAddPreceptorModal, setShowAddPreceptorModal] = useState(false);
   const [newPreceptor, setNewPreceptor] = useState({ first_name: '', last_name: '', email: '', phone: '', agency_name: '' });
   const [addingPreceptor, setAddingPreceptor] = useState(false);
+  // Multi-preceptor assignments
+  const [preceptorAssignments, setPreceptorAssignments] = useState<any[]>([]);
+  const [addingAssignment, setAddingAssignment] = useState(false);
+  const [newAssignRole, setNewAssignRole] = useState('primary');
+  const [newAssignPreceptorId, setNewAssignPreceptorId] = useState('');
 
   // Form state with all fields
   const [formData, setFormData] = useState<Record<string, any>>({});
@@ -227,15 +241,21 @@ export default function InternshipDetailPage() {
         }
       }
 
-      const [internshipRes, preceptorsRes, agenciesRes] = await Promise.all([
+      const [internshipRes, preceptorsRes, agenciesRes, assignmentsRes] = await Promise.all([
         fetch(`/api/clinical/internships/${internshipId}`),
         fetch('/api/clinical/preceptors?activeOnly=true'),
         fetch('/api/clinical/agencies'),
+        fetch(`/api/clinical/preceptor-assignments?internshipId=${internshipId}&activeOnly=false`),
       ]);
 
       const internshipData = await internshipRes.json();
       const preceptorsData = await preceptorsRes.json();
       const agenciesData = await agenciesRes.json();
+      const assignmentsData = await assignmentsRes.json();
+
+      if (assignmentsData.success) {
+        setPreceptorAssignments(assignmentsData.assignments || []);
+      }
 
       if (internshipData.success && internshipData.internship) {
         setInternship(internshipData.internship);
@@ -292,6 +312,14 @@ export default function InternshipDetailPage() {
           final_exam_poll_id: i.final_exam_poll_id || '',
           final_exam_scheduled: i.final_exam_scheduled || '',
           notes: i.notes || '',
+          // Extension tracking
+          is_extended: i.is_extended || false,
+          extension_reason: i.extension_reason || '',
+          extension_date: i.extension_date || '',
+          original_expected_end_date: i.original_expected_end_date || '',
+          extension_eval_completed: i.extension_eval_completed || false,
+          extension_eval_date: i.extension_eval_date || '',
+          extension_eval_notes: i.extension_eval_notes || '',
         });
       } else {
         console.error('Failed to load internship:', internshipData.error, internshipData.debug);
@@ -308,7 +336,20 @@ export default function InternshipDetailPage() {
   };
 
   const handleInputChange = (field: string, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData(prev => {
+      const updated = { ...prev, [field]: value };
+
+      // Sync "Internship Started" and "Phase 1 Started" dates
+      // When one is set, auto-fill the other if it's empty
+      if (field === 'internship_start_date' && value && !prev.phase_1_start_date) {
+        updated.phase_1_start_date = value;
+      }
+      if (field === 'phase_1_start_date' && value && !prev.internship_start_date) {
+        updated.internship_start_date = value;
+      }
+
+      return updated;
+    });
     setHasChanges(true);
   };
 
@@ -833,24 +874,131 @@ export default function InternshipDetailPage() {
                         ))}
                       </select>
                     </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Preceptor</label>
-                      <select
-                        value={formData.preceptor_id || ''}
-                        onChange={(e) => handleInputChange('preceptor_id', e.target.value)}
-                        className="w-full px-2 py-1.5 text-sm border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
-                      >
-                        <option value="">Select Preceptor</option>
-                        {preceptors.map(p => (
-                          <option key={p.id} value={p.id}>{p.first_name} {p.last_name}</option>
+                    <div className="col-span-2">
+                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Preceptor Assignments</label>
+
+                      {/* Current assignments */}
+                      <div className="space-y-2 mb-3">
+                        {preceptorAssignments.filter(a => a.is_active).length === 0 && (
+                          <p className="text-xs text-gray-400 dark:text-gray-500 italic">No preceptors assigned</p>
+                        )}
+                        {preceptorAssignments.filter(a => a.is_active).map(assignment => (
+                          <div key={assignment.id} className="flex items-center gap-2 p-2 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+                            <span className={`px-1.5 py-0.5 text-[10px] font-bold uppercase rounded ${
+                              assignment.role === 'primary'
+                                ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400'
+                                : assignment.role === 'secondary'
+                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                                : 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
+                            }`}>
+                              {assignment.role === 'primary' ? '1°' : assignment.role === 'secondary' ? '2°' : '3°'}
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                {assignment.preceptor?.first_name} {assignment.preceptor?.last_name}
+                              </div>
+                              {assignment.preceptor?.agency_name && (
+                                <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{assignment.preceptor.agency_name}</div>
+                              )}
+                            </div>
+                            <span className="text-[10px] text-gray-400">{assignment.assigned_date}</span>
+                            {canEdit && (
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  await fetch(`/api/clinical/preceptor-assignments?id=${assignment.id}`, { method: 'DELETE' });
+                                  const res = await fetch(`/api/clinical/preceptor-assignments?internshipId=${internshipId}&activeOnly=false`);
+                                  const data = await res.json();
+                                  if (data.success) setPreceptorAssignments(data.assignments || []);
+                                }}
+                                className="text-gray-400 hover:text-red-500 p-1"
+                                title="Remove assignment"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            )}
+                          </div>
                         ))}
-                      </select>
+
+                        {/* Inactive/historical assignments */}
+                        {preceptorAssignments.filter(a => !a.is_active).length > 0 && (
+                          <details className="text-xs">
+                            <summary className="text-gray-400 cursor-pointer hover:text-gray-600">
+                              {preceptorAssignments.filter(a => !a.is_active).length} previous assignment(s)
+                            </summary>
+                            <div className="mt-1 space-y-1 pl-2 border-l-2 border-gray-200 dark:border-gray-600">
+                              {preceptorAssignments.filter(a => !a.is_active).map(assignment => (
+                                <div key={assignment.id} className="flex items-center gap-2 text-gray-400 dark:text-gray-500">
+                                  <span className="font-medium">{assignment.preceptor?.first_name} {assignment.preceptor?.last_name}</span>
+                                  <span>({assignment.role})</span>
+                                  <span>{assignment.assigned_date} → {assignment.end_date || '?'}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </details>
+                        )}
+                      </div>
+
+                      {/* Add preceptor assignment */}
+                      {canEdit && (
+                        <div className="flex gap-2 items-end">
+                          <select
+                            value={newAssignPreceptorId}
+                            onChange={(e) => setNewAssignPreceptorId(e.target.value)}
+                            className="flex-1 px-2 py-1.5 text-sm border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
+                          >
+                            <option value="">Select Preceptor</option>
+                            {preceptors.map(p => (
+                              <option key={p.id} value={p.id}>{p.first_name} {p.last_name} {p.agency_name ? `(${p.agency_name})` : ''}</option>
+                            ))}
+                          </select>
+                          <select
+                            value={newAssignRole}
+                            onChange={(e) => setNewAssignRole(e.target.value)}
+                            className="px-2 py-1.5 text-sm border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
+                          >
+                            <option value="primary">Primary</option>
+                            <option value="secondary">Secondary</option>
+                            <option value="tertiary">Tertiary</option>
+                          </select>
+                          <button
+                            type="button"
+                            disabled={!newAssignPreceptorId || addingAssignment}
+                            onClick={async () => {
+                              setAddingAssignment(true);
+                              try {
+                                await fetch('/api/clinical/preceptor-assignments', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({
+                                    internship_id: internshipId,
+                                    preceptor_id: newAssignPreceptorId,
+                                    role: newAssignRole,
+                                  }),
+                                });
+                                // Refresh assignments
+                                const res = await fetch(`/api/clinical/preceptor-assignments?internshipId=${internshipId}&activeOnly=false`);
+                                const data = await res.json();
+                                if (data.success) setPreceptorAssignments(data.assignments || []);
+                                setNewAssignPreceptorId('');
+                              } catch (err) {
+                                console.error('Error adding assignment:', err);
+                              }
+                              setAddingAssignment(false);
+                            }}
+                            className="px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700 disabled:opacity-50"
+                          >
+                            {addingAssignment ? '...' : 'Add'}
+                          </button>
+                        </div>
+                      )}
+
                       <button
                         type="button"
                         onClick={() => setShowAddPreceptorModal(true)}
-                        className="mt-1 text-xs text-teal-600 dark:text-teal-400 hover:text-teal-800 dark:hover:text-teal-300"
+                        className="mt-2 text-xs text-teal-600 dark:text-teal-400 hover:text-teal-800 dark:hover:text-teal-300"
                       >
-                        + Add New Preceptor
+                        + Create New Preceptor
                       </button>
                     </div>
                   </div>
@@ -984,6 +1132,102 @@ export default function InternshipDetailPage() {
                 </div>
               </div>
             </div>
+
+            {/* Extension Tracking */}
+            {(formData.is_extended || formData.current_phase === 'extended') && (
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden border-2 border-amber-300 dark:border-amber-600">
+                <div className="px-4 py-3 border-b border-amber-200 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                    <h3 className="font-semibold text-gray-900 dark:text-white">Extension Active</h3>
+                    <span className="px-2 py-0.5 text-xs font-medium rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">Extended</span>
+                  </div>
+                </div>
+                <div className="p-4 space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Extension Date</label>
+                      <input
+                        type="date"
+                        value={formData.extension_date || ''}
+                        onChange={(e) => handleInputChange('extension_date', e.target.value)}
+                        disabled={!canEdit}
+                        className="w-full px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white disabled:opacity-50"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Original End Date</label>
+                      <input
+                        type="date"
+                        value={formData.original_expected_end_date || ''}
+                        onChange={(e) => handleInputChange('original_expected_end_date', e.target.value)}
+                        disabled={!canEdit}
+                        className="w-full px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white disabled:opacity-50"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Extension Reason</label>
+                    <textarea
+                      value={formData.extension_reason || ''}
+                      onChange={(e) => handleInputChange('extension_reason', e.target.value)}
+                      disabled={!canEdit}
+                      rows={2}
+                      className="w-full px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white disabled:opacity-50"
+                      placeholder="Reason for extension..."
+                    />
+                  </div>
+                  <div className="flex items-center gap-4 pt-2 border-t border-gray-200 dark:border-gray-700">
+                    <label className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={formData.extension_eval_completed || false}
+                        onChange={(e) => handleInputChange('extension_eval_completed', e.target.checked)}
+                        disabled={!canEdit}
+                        className="w-4 h-4 rounded text-amber-600"
+                      />
+                      <span className="text-gray-700 dark:text-gray-300">Extension Evaluation Completed</span>
+                    </label>
+                    {formData.extension_eval_completed && (
+                      <input
+                        type="date"
+                        value={formData.extension_eval_date || ''}
+                        onChange={(e) => handleInputChange('extension_eval_date', e.target.value)}
+                        disabled={!canEdit}
+                        className="px-3 py-1 text-sm border rounded-lg bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white disabled:opacity-50"
+                      />
+                    )}
+                  </div>
+                  {formData.extension_eval_completed && (
+                    <textarea
+                      value={formData.extension_eval_notes || ''}
+                      onChange={(e) => handleInputChange('extension_eval_notes', e.target.value)}
+                      disabled={!canEdit}
+                      rows={2}
+                      className="w-full px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white disabled:opacity-50"
+                      placeholder="Extension evaluation notes..."
+                    />
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Mark as Extended button (when not already extended) */}
+            {!formData.is_extended && formData.current_phase !== 'extended' && canEdit && (
+              <button
+                type="button"
+                onClick={() => {
+                  handleInputChange('is_extended', true);
+                  handleInputChange('current_phase', 'extended');
+                  handleInputChange('original_expected_end_date', formData.expected_end_date || '');
+                  handleInputChange('extension_date', new Date().toISOString().split('T')[0]);
+                }}
+                className="w-full py-2 text-sm text-amber-600 dark:text-amber-400 border border-amber-300 dark:border-amber-600 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
+              >
+                <Clock className="w-4 h-4 inline-block mr-1" />
+                Mark as Extended (removes critical alerts)
+              </button>
+            )}
 
             {/* Closeout Workflow */}
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
