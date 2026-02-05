@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   ChevronRight,
@@ -25,6 +25,7 @@ import {
   Archive,
   Eye,
   FileText,
+  Upload,
 } from 'lucide-react';
 
 interface FeedbackReport {
@@ -91,6 +92,9 @@ export default function FeedbackAdminPage() {
   const [resolvedCollapsed, setResolvedCollapsed] = useState(false);
   const [editingResolutionId, setEditingResolutionId] = useState<string | null>(null);
   const [resolutionText, setResolutionText] = useState('');
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<{ updated: number; skipped: number; errors: string[] } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -249,11 +253,12 @@ ${report.user_agent || 'Not available'}
 
   const exportCSV = async () => {
     const csvRows = [
-      ['Date', 'Type', 'Priority', 'Status', 'Reporter', 'Page', 'Description', 'Resolution Notes'].join(',')
+      ['id', 'Date', 'Type', 'Priority', 'Status', 'Reporter', 'Page', 'Description', 'Resolution Notes'].join(',')
     ];
 
     reports.forEach(r => {
       const row = [
+        r.id,
         formatDate(r.created_at),
         TYPE_CONFIG[r.report_type].label,
         (r.priority || 'medium').toUpperCase(),
@@ -275,6 +280,62 @@ ${report.user_agent || 'Not available'}
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  const handleImportCSV = async (file: File) => {
+    setImporting(true);
+    setImportResult(null);
+
+    try {
+      // Preview: count rows to confirm
+      const text = await file.text();
+      const lines = text.trim().split('\n').filter(l => l.trim());
+      const dataRows = lines.length - 1; // exclude header
+
+      if (dataRows <= 0) {
+        setImportResult({ updated: 0, skipped: 0, errors: ['CSV file has no data rows'] });
+        setImporting(false);
+        return;
+      }
+
+      // Confirm with user
+      const proceed = window.confirm(`Import will process ${dataRows} feedback item${dataRows !== 1 ? 's' : ''}. Continue?`);
+      if (!proceed) {
+        setImporting(false);
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch('/api/admin/feedback/import', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        setImportResult({
+          updated: data.updated || 0,
+          skipped: data.skipped || 0,
+          errors: data.errors || [],
+        });
+        // Refresh the list
+        fetchReports();
+      } else {
+        setImportResult({ updated: 0, skipped: 0, errors: [data.error || 'Import failed'] });
+      }
+    } catch (error) {
+      console.error('Import error:', error);
+      setImportResult({ updated: 0, skipped: 0, errors: ['Failed to process import'] });
+    }
+    setImporting(false);
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const resetFilters = () => {
@@ -360,6 +421,24 @@ ${report.user_agent || 'Not available'}
                 <Download className="w-4 h-4" />
                 Export CSV
               </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleImportCSV(file);
+                }}
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={importing}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg transition-colors"
+              >
+                {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                {importing ? 'Importing...' : 'Import Updates'}
+              </button>
               <button
                 onClick={fetchReports}
                 className="flex items-center gap-2 px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
@@ -373,6 +452,31 @@ ${report.user_agent || 'Not available'}
       </div>
 
       <main className="max-w-7xl mx-auto px-4 py-6 space-y-4">
+        {/* Import Result Banner */}
+        {importResult && (
+          <div className={`rounded-lg p-4 ${importResult.errors.length > 0 && importResult.updated === 0 ? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800' : 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'}`}>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium text-gray-900 dark:text-white">
+                  {importResult.updated > 0 ? (
+                    <>Updated {importResult.updated} item{importResult.updated !== 1 ? 's' : ''}{importResult.skipped > 0 ? `, skipped ${importResult.skipped} unchanged` : ''}</>
+                  ) : (
+                    'No items updated'
+                  )}
+                </p>
+                {importResult.errors.length > 0 && (
+                  <ul className="mt-1 text-sm text-red-600 dark:text-red-400 list-disc list-inside">
+                    {importResult.errors.map((err, i) => <li key={i}>{err}</li>)}
+                  </ul>
+                )}
+              </div>
+              <button onClick={() => setImportResult(null)} className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded">
+                <XCircle className="w-5 h-5 text-gray-400" />
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Filters */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
           <div className="flex flex-wrap gap-4 items-center">
