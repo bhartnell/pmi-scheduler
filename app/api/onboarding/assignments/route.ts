@@ -231,11 +231,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Map form instructor_type to DB values
+    // Form sends 'new_hire'/'adjunct', DB CHECK constraint expects 'full_time'/'part_time'/'lab_only'/'adjunct'
+    const typeMap: Record<string, string> = {
+      new_hire: 'full_time',
+      full_time: 'full_time',
+      part_time: 'part_time',
+      lab_only: 'lab_only',
+      adjunct: 'adjunct',
+    };
+    const resolvedType = typeMap[instructor_type || 'new_hire'] || 'full_time';
+
     // Create the assignment
     const assignmentData = {
       template_id: resolvedTemplateId,
       instructor_email,
-      instructor_type: instructor_type || 'new_hire',
+      instructor_type: resolvedType,
       mentor_email: mentor_email || null,
       assigned_by: session.user.email,
       start_date: start_date || new Date().toISOString().split('T')[0],
@@ -250,6 +261,60 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (insertError) throw insertError;
+
+    // Initialize task_progress rows for all tasks in the template
+    // Get all phases for this template
+    const { data: phases, error: phasesError } = await supabase
+      .from('onboarding_phases')
+      .select('id')
+      .eq('template_id', resolvedTemplateId);
+
+    if (phasesError) throw phasesError;
+
+    if (phases && phases.length > 0) {
+      const phaseIds = phases.map(p => p.id);
+
+      // Get all tasks for these phases
+      const { data: tasks, error: tasksError } = await supabase
+        .from('onboarding_tasks')
+        .select('id, applicable_types')
+        .in('phase_id', phaseIds);
+
+      if (tasksError) throw tasksError;
+
+      if (tasks && tasks.length > 0) {
+        // Filter tasks by instructor type (only include tasks applicable to this instructor type)
+        const resolvedInstructorType = instructor_type || 'new_hire';
+        // Map form values to DB values — 'new_hire' maps to 'full_time' in applicable_types
+        const dbInstructorType = resolvedInstructorType === 'new_hire' ? 'full_time' : resolvedInstructorType;
+
+        const applicableTasks = tasks.filter(task => {
+          // If applicable_types is null or empty, include for all types
+          if (!task.applicable_types || task.applicable_types.length === 0) return true;
+          return task.applicable_types.includes(dbInstructorType);
+        });
+
+        // Create progress rows for each applicable task
+        const progressRows = applicableTasks.map(task => ({
+          assignment_id: newAssignment.id,
+          task_id: task.id,
+          status: 'pending',
+          time_spent_minutes: 0,
+        }));
+
+        if (progressRows.length > 0) {
+          const { error: progressError } = await supabase
+            .from('onboarding_task_progress')
+            .insert(progressRows);
+
+          if (progressError) {
+            console.error('Error creating task progress rows:', progressError);
+            // Don't throw — assignment was created, just log the error
+            // The admin can manually fix this if needed
+          }
+        }
+      }
+    }
 
     // Log the event
     await supabase

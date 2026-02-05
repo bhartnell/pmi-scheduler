@@ -335,7 +335,15 @@ export async function GET(request: NextRequest) {
         mentorName,
         assignedByName
       },
-      summary: summary || {
+      summary: summary ? {
+        totalTasks: summary.total_tasks,
+        completedTasks: summary.completed_tasks,
+        inProgressTasks: summary.in_progress_tasks,
+        blockedTasks: summary.blocked_tasks,
+        progressPercent: summary.progress_percent || 0,
+        totalMinutesSpent: summary.total_minutes_spent,
+        lastActivity: summary.last_activity,
+      } : {
         totalTasks: organizedPhases.reduce((sum, p) => sum + p.totalCount, 0),
         completedTasks: organizedPhases.reduce((sum, p) => sum + p.completedCount, 0),
         progressPercent: 0
