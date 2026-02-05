@@ -94,6 +94,9 @@ export default function NewLabDayPage() {
   const [endTime, setEndTime] = useState('12:00');
   const [labTitle, setLabTitle] = useState('');
   const [labNotes, setLabNotes] = useState('');
+  const [semester, setSemester] = useState('');
+  const [weekNumber, setWeekNumber] = useState('');
+  const [dayNumber, setDayNumber] = useState('');
   const [stations, setStations] = useState<Station[]>([
     createEmptyStation(1)
   ]);
@@ -259,7 +262,10 @@ export default function NewLabDayPage() {
           start_time: startTime || null,
           end_time: endTime || null,
           title: labTitle || null,
-          notes: labNotes || null
+          notes: labNotes || null,
+          semester: semester ? parseInt(semester) : null,
+          week_number: weekNumber ? parseInt(weekNumber) : null,
+          day_number: dayNumber ? parseInt(dayNumber) : null
         })
       });
 
@@ -511,6 +517,55 @@ export default function NewLabDayPage() {
                 value={labNotes}
                 onChange={(e) => setLabNotes(e.target.value)}
                 placeholder="Any special instructions..."
+                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Semester
+              </label>
+              <select
+                value={semester}
+                onChange={(e) => setSemester(e.target.value)}
+                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+              >
+                <option value="">Select semester...</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Week #
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="52"
+                value={weekNumber}
+                onChange={(e) => setWeekNumber(e.target.value)}
+                placeholder="e.g., 12"
+                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Day #
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="7"
+                value={dayNumber}
+                onChange={(e) => setDayNumber(e.target.value)}
+                placeholder="e.g., 1"
                 className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
               />
             </div>

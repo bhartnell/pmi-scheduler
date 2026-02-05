@@ -61,6 +61,7 @@ export async function POST(request: NextRequest) {
       title: labDayData.title || null,
       start_time: labDayData.start_time || null,
       end_time: labDayData.end_time || null,
+      semester: labDayData.semester || null,
       week_number: labDayData.week_number || null,
       day_number: labDayData.day_number || null,
       num_rotations: labDayData.num_rotations || 4,

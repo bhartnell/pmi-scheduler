@@ -26,6 +26,7 @@ interface LabDay {
   id: string;
   date: string;
   title: string | null;
+  semester: number | null;
   week_number: number | null;
   day_number: number | null;
   num_rotations: number;
@@ -302,6 +303,11 @@ export default function SchedulePage() {
                             </span>
                           )}
                         </div>
+                        {labDay.week_number && (
+                          <div className="text-[10px] text-blue-600 dark:text-blue-400 truncate">
+                            W{labDay.week_number}
+                          </div>
+                        )}
                         {labDay.title && (
                           <div className="text-[10px] text-blue-600 dark:text-blue-400 truncate">
                             {labDay.title}
@@ -373,8 +379,12 @@ export default function SchedulePage() {
                           {labDay.cohort.program.abbreviation} Group {labDay.cohort.cohort_number}
                         </div>
                         <div className="text-sm text-gray-600 dark:text-gray-400">
-                          {labDay.week_number && labDay.day_number
+                          {labDay.semester && labDay.week_number && labDay.day_number
+                            ? `Sem ${labDay.semester} • Week ${labDay.week_number}, Day ${labDay.day_number} • `
+                            : labDay.week_number && labDay.day_number
                             ? `Week ${labDay.week_number}, Day ${labDay.day_number} • `
+                            : labDay.semester
+                            ? `Semester ${labDay.semester} • `
                             : ''}
                           {labDay.stations.length} station{labDay.stations.length !== 1 ? 's' : ''}
                         </div>
