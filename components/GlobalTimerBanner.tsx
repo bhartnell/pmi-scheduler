@@ -121,8 +121,8 @@ export default function GlobalTimerBanner() {
 
   // Get background color based on time remaining
   const getBannerColor = () => {
-    if (!timer || timer.status === 'paused') {
-      return 'bg-yellow-600';
+    if (!timer) {
+      return 'bg-green-600';
     }
     const remaining = timer.mode === 'countdown'
       ? displaySeconds
@@ -133,13 +133,12 @@ export default function GlobalTimerBanner() {
     return 'bg-green-600';
   };
 
-  // Don't render if no active timer or user dismissed
-  if (!timer || !labDay || isDismissed) {
+  // Don't render if no active timer, user dismissed, or timer is not running
+  if (!timer || !labDay || isDismissed || timer.status !== 'running') {
     return null;
   }
 
   const isRunning = timer.status === 'running';
-  const isPaused = timer.status === 'paused';
 
   return (
     <div
@@ -161,8 +160,7 @@ export default function GlobalTimerBanner() {
 
           {/* Center: Time display */}
           <div className="flex items-center gap-2">
-            {isPaused && <Pause className="w-4 h-4" />}
-            {isRunning && <Play className="w-4 h-4" />}
+            <Play className="w-4 h-4" />
             <span className="font-mono font-bold text-lg sm:text-xl">
               {formatTime(displaySeconds)}
             </span>
@@ -174,7 +172,7 @@ export default function GlobalTimerBanner() {
           {/* Right: Link to timer page */}
           <div className="flex items-center gap-2">
             <Link
-              href={`/lab-management/timer/${labDay.id}`}
+              href={`/lab-management/schedule/${labDay.id}`}
               className="flex items-center gap-1 px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors"
             >
               <span className="hidden sm:inline">Open Timer</span>

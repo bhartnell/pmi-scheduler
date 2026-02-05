@@ -168,8 +168,7 @@ const EXAM_ITEMS: ChecklistItem[] = [
 ];
 
 const PHASE1_ITEMS: ChecklistItem[] = [
-  { key: 'internship_start_date', label: 'Internship Started', dateKey: 'internship_start_date', required: true },
-  { key: 'phase_1_start_date', label: 'Phase 1 Started', dateKey: 'phase_1_start_date', required: true },
+  { key: 'internship_start_date', label: 'Internship / Phase 1 Start Date', dateKey: 'internship_start_date', required: true },
   { key: 'phase_1_eval_scheduled', label: 'Evaluation Scheduled', dateKey: 'phase_1_eval_scheduled', required: true },
   { key: 'phase_1_eval_completed', label: 'Phase 1 Evaluation Completed', required: true },
 ];
@@ -339,12 +338,12 @@ export default function InternshipDetailPage() {
     setFormData(prev => {
       const updated = { ...prev, [field]: value };
 
-      // Sync "Internship Started" and "Phase 1 Started" dates
-      // When one is set, auto-fill the other if it's empty
-      if (field === 'internship_start_date' && value && !prev.phase_1_start_date) {
+      // Sync "Internship Started" and "Phase 1 Started" dates — always keep in lockstep
+      // These are displayed as a single field "Internship / Phase 1 Start Date"
+      if (field === 'internship_start_date') {
         updated.phase_1_start_date = value;
       }
-      if (field === 'phase_1_start_date' && value && !prev.internship_start_date) {
+      if (field === 'phase_1_start_date') {
         updated.internship_start_date = value;
       }
 

@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   ChevronRight,
+  ChevronDown,
   Home,
   ClipboardList,
   Plus,
@@ -91,6 +92,11 @@ interface Internship {
   cpr_card_verified: boolean;
   cleared_for_nremt: boolean;
   status: string;
+  // Phase extension tracking
+  phase_1_extended: boolean;
+  phase_1_extended_until: string | null;
+  phase_1_extension_reason: string | null;
+  is_extended: boolean;
   students: Student | null;
   cohorts: Cohort | null;
   field_preceptors: Preceptor | null;
@@ -187,6 +193,14 @@ export default function InternshipTrackerPage() {
   const [editingInternship, setEditingInternship] = useState<Internship | null>(null);
   const [saving, setSaving] = useState(false);
   const [togglingPhase, setTogglingPhase] = useState<string | null>(null);
+  // Collapsible sections in edit modal
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    basic: true,
+    phase: false,
+    clearance: false,
+    notes: false,
+  });
+  const toggleSection = (key: string) => setExpandedSections(prev => ({ ...prev, [key]: !prev[key] }));
   const [formData, setFormData] = useState({
     student_id: '',
     cohort_id: '',
@@ -198,6 +212,32 @@ export default function InternshipTrackerPage() {
     status: 'not_started',
     current_phase: 'pre_internship',
     notes: '',
+    // Phase tracking
+    orientation_date: '',
+    orientation_completed: false,
+    phase_1_start_date: '',
+    phase_1_eval_scheduled: '',
+    phase_1_eval_completed: false,
+    phase_1_eval_notes: '',
+    phase_2_start_date: '',
+    phase_2_eval_scheduled: '',
+    phase_2_eval_completed: false,
+    phase_2_eval_notes: '',
+    expected_end_date: '',
+    // Clearance & Closeout
+    closeout_meeting_date: '',
+    closeout_completed: false,
+    internship_completion_date: '',
+    snhd_submitted: false,
+    snhd_submitted_date: '',
+    cleared_for_nremt: false,
+    nremt_clearance_date: '',
+    ryan_notified: false,
+    ryan_notified_date: '',
+    // Extension
+    phase_1_extended: false,
+    phase_1_extended_until: '',
+    phase_1_extension_reason: '',
   });
 
   // Quick add modals
@@ -317,7 +357,7 @@ export default function InternshipTrackerPage() {
     setEditingInternship(internship);
 
     if (internship) {
-      // Editing existing internship
+      // Editing existing internship — populate ALL fields
       setFormData({
         student_id: student.id,
         cohort_id: selectedCohort,
@@ -328,8 +368,36 @@ export default function InternshipTrackerPage() {
         internship_start_date: internship.internship_start_date || '',
         status: internship.status || 'not_started',
         current_phase: internship.current_phase || 'pre_internship',
-        notes: '',
+        notes: (internship as any).notes || '',
+        // Phase tracking
+        orientation_date: internship.orientation_date || '',
+        orientation_completed: internship.orientation_completed || false,
+        phase_1_start_date: internship.phase_1_start_date || '',
+        phase_1_eval_scheduled: internship.phase_1_eval_scheduled || '',
+        phase_1_eval_completed: internship.phase_1_eval_completed || false,
+        phase_1_eval_notes: (internship as any).phase_1_eval_notes || '',
+        phase_2_start_date: internship.phase_2_start_date || '',
+        phase_2_eval_scheduled: internship.phase_2_eval_scheduled || '',
+        phase_2_eval_completed: internship.phase_2_eval_completed || false,
+        phase_2_eval_notes: (internship as any).phase_2_eval_notes || '',
+        expected_end_date: internship.expected_end_date || '',
+        // Clearance & Closeout
+        closeout_meeting_date: internship.closeout_meeting_date || '',
+        closeout_completed: internship.closeout_completed || false,
+        internship_completion_date: (internship as any).internship_completion_date || '',
+        snhd_submitted: (internship as any).snhd_submitted || false,
+        snhd_submitted_date: (internship as any).snhd_submitted_date || '',
+        cleared_for_nremt: internship.cleared_for_nremt || false,
+        nremt_clearance_date: (internship as any).nremt_clearance_date || '',
+        ryan_notified: (internship as any).ryan_notified || false,
+        ryan_notified_date: (internship as any).ryan_notified_date || '',
+        // Extension
+        phase_1_extended: internship.phase_1_extended || false,
+        phase_1_extended_until: internship.phase_1_extended_until || '',
+        phase_1_extension_reason: internship.phase_1_extension_reason || '',
       });
+      // Expand basic section, collapse others
+      setExpandedSections({ basic: true, phase: false, clearance: false, notes: false });
     } else {
       // Creating new internship for this student
       setFormData({
@@ -343,7 +411,31 @@ export default function InternshipTrackerPage() {
         status: 'not_started',
         current_phase: 'pre_internship',
         notes: '',
+        orientation_date: '',
+        orientation_completed: false,
+        phase_1_start_date: '',
+        phase_1_eval_scheduled: '',
+        phase_1_eval_completed: false,
+        phase_1_eval_notes: '',
+        phase_2_start_date: '',
+        phase_2_eval_scheduled: '',
+        phase_2_eval_completed: false,
+        phase_2_eval_notes: '',
+        expected_end_date: '',
+        closeout_meeting_date: '',
+        closeout_completed: false,
+        internship_completion_date: '',
+        snhd_submitted: false,
+        snhd_submitted_date: '',
+        cleared_for_nremt: false,
+        nremt_clearance_date: '',
+        ryan_notified: false,
+        ryan_notified_date: '',
+        phase_1_extended: false,
+        phase_1_extended_until: '',
+        phase_1_extension_reason: '',
       });
+      setExpandedSections({ basic: true, phase: false, clearance: false, notes: false });
     }
   };
 
@@ -485,9 +577,22 @@ export default function InternshipTrackerPage() {
 
   // Calculate milestone statuses for each internship (defined early so it can be used in filters)
   const getInternshipMilestones = (internship: Internship) => {
-    const p1Status = getMilestoneStatus(internship.phase_1_eval_scheduled, internship.phase_1_eval_completed);
+    let p1Status = getMilestoneStatus(internship.phase_1_eval_scheduled, internship.phase_1_eval_completed);
     const p2Status = getMilestoneStatus(internship.phase_2_eval_scheduled, internship.phase_2_eval_completed);
     const endStatus = getMilestoneStatus(internship.expected_end_date, internship.status === 'completed');
+
+    // Phase 1 extension: suppress overdue alert if phase 1 is extended and we're before the extended date
+    const p1Extended = internship.phase_1_extended && internship.phase_1_extended_until;
+    if (p1Extended && p1Status === 'overdue') {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const extendedUntil = new Date(internship.phase_1_extended_until!);
+      extendedUntil.setHours(0, 0, 0, 0);
+      if (today <= extendedUntil) {
+        // Phase 1 is extended and we're still within the extension period — downgrade from overdue
+        p1Status = 'not_set'; // suppress the alert
+      }
+    }
 
     const isOverdue = p1Status === 'overdue' || p2Status === 'overdue' || endStatus === 'overdue';
     const isDueThisWeek = p1Status === 'due_week' || p2Status === 'due_week' || endStatus === 'due_week';
@@ -603,6 +708,23 @@ export default function InternshipTrackerPage() {
   // Calculate alerts with categories: critical, action, upcoming
   const alerts = internships.reduce((acc, internship) => {
     const milestones = getInternshipMilestones(internship);
+
+    // Check if Phase 1 is extended (show info notice instead of critical)
+    const p1IsExtended = internship.phase_1_extended && internship.phase_1_extended_until;
+    if (p1IsExtended) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const extUntil = new Date(internship.phase_1_extended_until!);
+      extUntil.setHours(0, 0, 0, 0);
+      if (today <= extUntil) {
+        // Phase 1 extended — show as upcoming info notice, not critical
+        acc.upcoming.push({
+          internship,
+          milestones,
+          reason: `Phase 1 extended until ${extUntil.toLocaleDateString()}${internship.phase_1_extension_reason ? ` — ${internship.phase_1_extension_reason}` : ''}`
+        });
+      }
+    }
 
     // CRITICAL: Overdue items that need immediate attention
     if (milestones.isOverdue) {
@@ -1194,7 +1316,7 @@ export default function InternshipTrackerPage() {
       {/* Edit/Create Internship Modal */}
       {editingStudent && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-4 border-b dark:border-gray-700 flex items-center justify-between sticky top-0 bg-white dark:bg-gray-800">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -1212,145 +1334,269 @@ export default function InternshipTrackerPage() {
               </button>
             </div>
 
-            <div className="p-4 space-y-4">
-              {/* Agency */}
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Agency
-                  </label>
+            <div className="p-4 space-y-2">
+              {/* === BASIC INFO Section (accordion) === */}
+              <button
+                type="button"
+                onClick={() => toggleSection('basic')}
+                className="w-full flex items-center justify-between py-2 px-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg text-sm font-semibold text-gray-900 dark:text-white"
+              >
+                <span>Basic Info</span>
+                <ChevronDown className={`w-4 h-4 transition-transform ${expandedSections.basic ? 'rotate-180' : ''}`} />
+              </button>
+              {expandedSections.basic && (
+                <div className="space-y-4 px-1 pb-2">
+                  {/* Agency */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Agency</label>
+                      <button type="button" onClick={() => setShowAddAgencyModal(true)} className="text-xs text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1">
+                        <Plus className="w-3 h-3" /> Add New
+                      </button>
+                    </div>
+                    <select value={formData.agency_id} onChange={(e) => setFormData({ ...formData, agency_id: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600">
+                      <option value="">Select Agency</option>
+                      {agencies.map(a => (<option key={a.id} value={a.id}>{a.name} {a.abbreviation ? `(${a.abbreviation})` : ''}</option>))}
+                    </select>
+                  </div>
+                  {/* Preceptor */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Preceptor</label>
+                      <button type="button" onClick={() => { setNewPreceptor({ ...newPreceptor, agency_id: formData.agency_id }); setShowAddPreceptorModal(true); }} className="text-xs text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1">
+                        <Plus className="w-3 h-3" /> Add New
+                      </button>
+                    </div>
+                    <select value={formData.preceptor_id} onChange={(e) => setFormData({ ...formData, preceptor_id: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600">
+                      <option value="">Select Preceptor</option>
+                      {preceptors.filter(p => !formData.agency_id || p.agency_name === agencies.find(a => a.id === formData.agency_id)?.name).map(p => (
+                        <option key={p.id} value={p.id}>{p.first_name} {p.last_name} {p.agency_name ? `(${p.agency_name})` : ''} {p.station ? `- Station ${p.station}` : ''}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {/* Dates */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Placement Date</label>
+                      <input type="date" value={formData.placement_date} onChange={(e) => setFormData({ ...formData, placement_date: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
+                      <input type="date" value={formData.internship_start_date} onChange={(e) => setFormData({ ...formData, internship_start_date: e.target.value, phase_1_start_date: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600" />
+                    </div>
+                  </div>
+                  {/* Status Row */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phase</label>
+                      <select value={formData.current_phase} onChange={(e) => setFormData({ ...formData, current_phase: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600">
+                        {Object.entries(PHASE_LABELS).map(([value, label]) => (<option key={value} value={value}>{label}</option>))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+                      <select value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600">
+                        {Object.entries(STATUS_CONFIG).map(([value, config]) => (<option key={value} value={value}>{config.label}</option>))}
+                      </select>
+                    </div>
+                  </div>
+                  {/* Shift Type */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Shift Type</label>
+                    <select value={formData.shift_type} onChange={(e) => setFormData({ ...formData, shift_type: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600">
+                      <option value="12_hour">12-Hour Shifts</option>
+                      <option value="14_hour">14-Hour Shifts</option>
+                      <option value="24_hour">24-Hour Shifts</option>
+                      <option value="48_hour">48-Hour Shifts</option>
+                      <option value="mixed">Mixed Schedule</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {/* === PHASE STATUS Section (accordion) === */}
+              {editingInternship && (
+                <>
                   <button
                     type="button"
-                    onClick={() => setShowAddAgencyModal(true)}
-                    className="text-xs text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1"
+                    onClick={() => toggleSection('phase')}
+                    className="w-full flex items-center justify-between py-2 px-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg text-sm font-semibold text-gray-900 dark:text-white"
                   >
-                    <Plus className="w-3 h-3" />
-                    Add New
+                    <span>Phase Status & Dates</span>
+                    <ChevronDown className={`w-4 h-4 transition-transform ${expandedSections.phase ? 'rotate-180' : ''}`} />
                   </button>
-                </div>
-                <select
-                  value={formData.agency_id}
-                  onChange={(e) => setFormData({ ...formData, agency_id: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-                >
-                  <option value="">Select Agency</option>
-                  {agencies.map(a => (
-                    <option key={a.id} value={a.id}>
-                      {a.name} {a.abbreviation ? `(${a.abbreviation})` : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                  {expandedSections.phase && (
+                    <div className="space-y-4 px-1 pb-2">
+                      {/* Orientation */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Orientation Date</label>
+                          <input type="date" value={formData.orientation_date} onChange={(e) => setFormData({ ...formData, orientation_date: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600" />
+                        </div>
+                        <div className="flex items-end pb-2">
+                          <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                            <input type="checkbox" checked={formData.orientation_completed} onChange={(e) => setFormData({ ...formData, orientation_completed: e.target.checked })} className="rounded" />
+                            Orientation Completed
+                          </label>
+                        </div>
+                      </div>
+                      {/* Expected End Date */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Expected End Date</label>
+                        <input type="date" value={formData.expected_end_date} onChange={(e) => setFormData({ ...formData, expected_end_date: e.target.value })} className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600" />
+                      </div>
+                      {/* Phase 1 */}
+                      <div className="p-3 bg-blue-50 dark:bg-blue-900/10 rounded-lg space-y-3">
+                        <p className="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase">Phase 1 — Mentorship</p>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">P1 Start Date</label>
+                            <input type="date" value={formData.phase_1_start_date} onChange={(e) => setFormData({ ...formData, phase_1_start_date: e.target.value, internship_start_date: e.target.value })} className="w-full px-2 py-1.5 text-sm border rounded text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600" />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">P1 Eval Scheduled</label>
+                            <input type="date" value={formData.phase_1_eval_scheduled} onChange={(e) => setFormData({ ...formData, phase_1_eval_scheduled: e.target.value })} className="w-full px-2 py-1.5 text-sm border rounded text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600" />
+                          </div>
+                        </div>
+                        <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                          <input type="checkbox" checked={formData.phase_1_eval_completed} onChange={(e) => setFormData({ ...formData, phase_1_eval_completed: e.target.checked })} className="rounded" />
+                          Phase 1 Eval Completed
+                        </label>
+                        <textarea value={formData.phase_1_eval_notes} onChange={(e) => setFormData({ ...formData, phase_1_eval_notes: e.target.value })} placeholder="P1 eval notes..." rows={2} className="w-full px-2 py-1.5 text-sm border rounded text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600" />
+                        {/* Extension */}
+                        <div className="mt-2 p-2 border border-amber-300 dark:border-amber-700 rounded bg-amber-50 dark:bg-amber-900/10 space-y-2">
+                          <label className="flex items-center gap-2 text-sm font-medium text-amber-700 dark:text-amber-400">
+                            <input type="checkbox" checked={formData.phase_1_extended} onChange={(e) => setFormData({ ...formData, phase_1_extended: e.target.checked })} className="rounded" />
+                            Phase 1 Extended
+                          </label>
+                          {formData.phase_1_extended && (
+                            <div className="space-y-2 pl-6">
+                              <div>
+                                <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Extended Until</label>
+                                <input type="date" value={formData.phase_1_extended_until} onChange={(e) => setFormData({ ...formData, phase_1_extended_until: e.target.value })} className="w-full px-2 py-1.5 text-sm border rounded text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600" />
+                              </div>
+                              <div>
+                                <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Reason</label>
+                                <input type="text" value={formData.phase_1_extension_reason} onChange={(e) => setFormData({ ...formData, phase_1_extension_reason: e.target.value })} placeholder="Reason for extension..." className="w-full px-2 py-1.5 text-sm border rounded text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600" />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      {/* Phase 2 */}
+                      <div className="p-3 bg-purple-50 dark:bg-purple-900/10 rounded-lg space-y-3">
+                        <p className="text-xs font-semibold text-purple-700 dark:text-purple-400 uppercase">Phase 2 — Evaluation</p>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">P2 Start Date</label>
+                            <input type="date" value={formData.phase_2_start_date} onChange={(e) => setFormData({ ...formData, phase_2_start_date: e.target.value })} className="w-full px-2 py-1.5 text-sm border rounded text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600" />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">P2 Eval Scheduled</label>
+                            <input type="date" value={formData.phase_2_eval_scheduled} onChange={(e) => setFormData({ ...formData, phase_2_eval_scheduled: e.target.value })} className="w-full px-2 py-1.5 text-sm border rounded text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600" />
+                          </div>
+                        </div>
+                        <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                          <input type="checkbox" checked={formData.phase_2_eval_completed} onChange={(e) => setFormData({ ...formData, phase_2_eval_completed: e.target.checked })} className="rounded" />
+                          Phase 2 Eval Completed
+                        </label>
+                        <textarea value={formData.phase_2_eval_notes} onChange={(e) => setFormData({ ...formData, phase_2_eval_notes: e.target.value })} placeholder="P2 eval notes..." rows={2} className="w-full px-2 py-1.5 text-sm border rounded text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600" />
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
 
-              {/* Preceptor */}
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Preceptor
-                  </label>
+              {/* === CLEARANCE & CLOSEOUT Section (accordion) === */}
+              {editingInternship && (
+                <>
                   <button
                     type="button"
-                    onClick={() => {
-                      setNewPreceptor({ ...newPreceptor, agency_id: formData.agency_id });
-                      setShowAddPreceptorModal(true);
-                    }}
-                    className="text-xs text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-1"
+                    onClick={() => toggleSection('clearance')}
+                    className="w-full flex items-center justify-between py-2 px-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg text-sm font-semibold text-gray-900 dark:text-white"
                   >
-                    <Plus className="w-3 h-3" />
-                    Add New
+                    <span>Clearance & Closeout</span>
+                    <ChevronDown className={`w-4 h-4 transition-transform ${expandedSections.clearance ? 'rotate-180' : ''}`} />
                   </button>
-                </div>
-                <select
-                  value={formData.preceptor_id}
-                  onChange={(e) => setFormData({ ...formData, preceptor_id: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-                >
-                  <option value="">Select Preceptor</option>
-                  {preceptors
-                    .filter(p => !formData.agency_id || p.agency_name === agencies.find(a => a.id === formData.agency_id)?.name)
-                    .map(p => (
-                      <option key={p.id} value={p.id}>
-                        {p.first_name} {p.last_name} {p.agency_name ? `(${p.agency_name})` : ''} {p.station ? `- Station ${p.station}` : ''}
-                      </option>
-                    ))}
-                </select>
-              </div>
+                  {expandedSections.clearance && (
+                    <div className="space-y-3 px-1 pb-2">
+                      {/* Completion */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Completion Date</label>
+                          <input type="date" value={formData.internship_completion_date} onChange={(e) => setFormData({ ...formData, internship_completion_date: e.target.value })} className="w-full px-2 py-1.5 text-sm border rounded text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600" />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Closeout Meeting</label>
+                          <input type="date" value={formData.closeout_meeting_date} onChange={(e) => setFormData({ ...formData, closeout_meeting_date: e.target.value })} className="w-full px-2 py-1.5 text-sm border rounded text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600" />
+                        </div>
+                      </div>
+                      <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                        <input type="checkbox" checked={formData.closeout_completed} onChange={(e) => setFormData({ ...formData, closeout_completed: e.target.checked })} className="rounded" />
+                        Closeout Meeting Completed
+                      </label>
+                      {/* SNHD */}
+                      <div className="grid grid-cols-2 gap-3 items-end">
+                        <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                          <input type="checkbox" checked={formData.snhd_submitted} onChange={(e) => setFormData({ ...formData, snhd_submitted: e.target.checked })} className="rounded" />
+                          SNHD Submitted
+                        </label>
+                        <div>
+                          <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">SNHD Date</label>
+                          <input type="date" value={formData.snhd_submitted_date} onChange={(e) => setFormData({ ...formData, snhd_submitted_date: e.target.value })} className="w-full px-2 py-1.5 text-sm border rounded text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600" />
+                        </div>
+                      </div>
+                      {/* NREMT */}
+                      <div className="grid grid-cols-2 gap-3 items-end">
+                        <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                          <input type="checkbox" checked={formData.cleared_for_nremt} onChange={(e) => setFormData({ ...formData, cleared_for_nremt: e.target.checked })} className="rounded" />
+                          Cleared for NREMT
+                        </label>
+                        <div>
+                          <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">NREMT Date</label>
+                          <input type="date" value={formData.nremt_clearance_date} onChange={(e) => setFormData({ ...formData, nremt_clearance_date: e.target.value })} className="w-full px-2 py-1.5 text-sm border rounded text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600" />
+                        </div>
+                      </div>
+                      {/* Ryan Notified */}
+                      <div className="grid grid-cols-2 gap-3 items-end">
+                        <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                          <input type="checkbox" checked={formData.ryan_notified} onChange={(e) => setFormData({ ...formData, ryan_notified: e.target.checked })} className="rounded" />
+                          Ryan Notified
+                        </label>
+                        <div>
+                          <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Notified Date</label>
+                          <input type="date" value={formData.ryan_notified_date} onChange={(e) => setFormData({ ...formData, ryan_notified_date: e.target.value })} className="w-full px-2 py-1.5 text-sm border rounded text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
 
-              {/* Dates Row 1 */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Placement Date
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.placement_date}
-                    onChange={(e) => setFormData({ ...formData, placement_date: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Start Date
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.internship_start_date}
-                    onChange={(e) => setFormData({ ...formData, internship_start_date: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-                  />
-                </div>
-              </div>
-
-              {/* Status Row */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Phase
-                  </label>
-                  <select
-                    value={formData.current_phase}
-                    onChange={(e) => setFormData({ ...formData, current_phase: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+              {/* === NOTES Section (accordion) === */}
+              {editingInternship && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => toggleSection('notes')}
+                    className="w-full flex items-center justify-between py-2 px-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg text-sm font-semibold text-gray-900 dark:text-white"
                   >
-                    {Object.entries(PHASE_LABELS).map(([value, label]) => (
-                      <option key={value} value={value}>{label}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Status
-                  </label>
-                  <select
-                    value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                    className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-                  >
-                    {Object.entries(STATUS_CONFIG).map(([value, config]) => (
-                      <option key={value} value={value}>{config.label}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Shift Type */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Shift Type
-                </label>
-                <select
-                  value={formData.shift_type}
-                  onChange={(e) => setFormData({ ...formData, shift_type: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-                >
-                  <option value="12_hour">12-Hour Shifts</option>
-                  <option value="14_hour">14-Hour Shifts</option>
-                  <option value="24_hour">24-Hour Shifts</option>
-                  <option value="48_hour">48-Hour Shifts</option>
-                  <option value="mixed">Mixed Schedule</option>
-                </select>
-              </div>
+                    <span>Notes</span>
+                    <ChevronDown className={`w-4 h-4 transition-transform ${expandedSections.notes ? 'rotate-180' : ''}`} />
+                  </button>
+                  {expandedSections.notes && (
+                    <div className="px-1 pb-2">
+                      <textarea
+                        value={formData.notes}
+                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                        placeholder="General notes about this internship..."
+                        rows={4}
+                        className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                      />
+                    </div>
+                  )}
+                </>
+              )}
 
               {/* Full details link for existing records */}
               {editingInternship && (
@@ -1359,7 +1605,7 @@ export default function InternshipTrackerPage() {
                     href={`/clinical/internships/${editingInternship.id}`}
                     className="text-sm text-teal-600 dark:text-teal-400 hover:underline"
                   >
-                    View full details & edit all fields →
+                    View full timeline & history →
                   </Link>
                 </div>
               )}

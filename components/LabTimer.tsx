@@ -387,8 +387,13 @@ export default function LabTimer({
     ? ((totalSeconds - displaySeconds) / totalSeconds) * 100
     : (displaySeconds / totalSeconds) * 100;
 
+  // Ready status variables
+  const readyCount = readyStatuses.filter(s => s.is_ready).length;
+  const totalStations = allStations.length;
+  const allReady = totalStations > 0 && readyCount === totalStations;
+
   // Control handlers
-  const handlePlayPause = () => {
+  const handlePlayPause = useCallback(() => {
     if (!timerState) return;
     if (showRotateAlert) setShowRotateAlert(false);
 
@@ -404,16 +409,24 @@ export default function LabTimer({
       }
       sendAction('start');
     }
-  };
+  }, [timerState, showRotateAlert, sendAction, totalStations, allReady, readyCount]);
 
-  const handleStop = () => sendAction('stop');
-  const handleReset = () => sendAction('reset');
+  const handleStop = useCallback(() => sendAction('stop'), [sendAction]);
+  const handleReset = useCallback(() => sendAction('reset'), [sendAction]);
 
-  const handleNextRotation = () => {
+  const handleClose = useCallback(async () => {
+    // If timer is paused when closing, stop it to prevent stale state
+    if (timerState?.status === 'paused') {
+      await sendAction('stop');
+    }
+    onClose();
+  }, [timerState?.status, sendAction, onClose]);
+
+  const handleNextRotation = useCallback(() => {
     if (timerState && timerState.rotation_number < numRotations) {
       sendAction('next');
     }
-  };
+  }, [timerState, numRotations, sendAction]);
 
   const updateSettings = (updates: any) => {
     sendAction('update', updates);
@@ -451,7 +464,7 @@ export default function LabTimer({
         if (isFullscreen) {
           document.exitFullscreen();
         } else {
-          onClose();
+          handleClose();
         }
       } else if (e.key === 'n' || e.key === 'N') {
         handleNextRotation();
@@ -462,7 +475,7 @@ export default function LabTimer({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isFullscreen, timerState, numRotations, isController]);
+  }, [isFullscreen, timerState, numRotations, isController, handleClose, handlePlayPause, handleNextRotation, handleReset]);
 
   // Get background color based on time/alerts
   const getBackgroundClass = () => {
@@ -485,10 +498,6 @@ export default function LabTimer({
     const status = readyStatuses.find(s => s.station_id === station.id);
     return status;
   };
-
-  const readyCount = readyStatuses.filter(s => s.is_ready).length;
-  const totalStations = allStations.length;
-  const allReady = totalStations > 0 && readyCount === totalStations;
 
   const currentRotation = timerState?.rotation_number || 1;
   const isRunning = timerState?.status === 'running';
@@ -528,7 +537,7 @@ export default function LabTimer({
             {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
           </button>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="p-2 rounded-lg hover:bg-gray-700"
             title="Close timer"
           >

@@ -9,11 +9,11 @@ const supabase = createClient(
 // GET - Get any active (running) timer across all lab days
 export async function GET() {
   try {
-    // Find any timer that is currently running or paused
+    // Find any timer that is currently running (not paused or stopped)
     const { data: timer, error: timerError } = await supabase
       .from('lab_timer_state')
       .select('*')
-      .in('status', ['running', 'paused'])
+      .eq('status', 'running')
       .order('updated_at', { ascending: false })
       .limit(1)
       .maybeSingle();

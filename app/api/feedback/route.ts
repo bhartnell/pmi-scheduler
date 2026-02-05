@@ -28,33 +28,73 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status');
     const reportType = searchParams.get('type');
     const priority = searchParams.get('priority');
+    const reporter = searchParams.get('reporter');
+    const showArchived = searchParams.get('showArchived') === 'true';
     const sortBy = searchParams.get('sortBy') || 'priority';
-    const limit = parseInt(searchParams.get('limit') || '50');
+    const limit = parseInt(searchParams.get('limit') || '500');
     const offset = parseInt(searchParams.get('offset') || '0');
 
     let query = supabase
       .from('feedback_reports')
       .select('*', { count: 'exact' });
 
-    // Sort: priority sorts critical first (alphabetically: critical < high < low < medium),
-    // so we use ascending. For date sort, use descending (newest first).
-    if (sortBy === 'date') {
-      query = query.order('created_at', { ascending: false });
-    } else {
-      query = query.order('priority', { ascending: true, nullsFirst: false })
-                    .order('created_at', { ascending: false });
+    // Exclude archived by default
+    if (!showArchived) {
+      query = query.is('archived_at', null);
     }
 
+    // Auto-archive resolved items > 7 days old
+    // Do this as a side effect on GET for simplicity
+    if (!showArchived) {
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+      await supabase
+        .from('feedback_reports')
+        .update({ status: 'archived', archived_at: new Date().toISOString() })
+        .eq('status', 'resolved')
+        .is('archived_at', null)
+        .lt('updated_at', sevenDaysAgo.toISOString());
+    }
+
+    // Status filter
     if (status && status !== 'all') {
       query = query.eq('status', status);
     }
 
+    // Type filter
     if (reportType && reportType !== 'all') {
       query = query.eq('report_type', reportType);
     }
 
+    // Priority filter
     if (priority && priority !== 'all') {
       query = query.eq('priority', priority);
+    }
+
+    // Reporter filter
+    if (reporter && reporter !== 'all') {
+      query = query.eq('user_email', reporter);
+    }
+
+    // Sorting
+    if (sortBy === 'newest') {
+      query = query.order('created_at', { ascending: false });
+    } else if (sortBy === 'oldest') {
+      query = query.order('created_at', { ascending: true });
+    } else if (sortBy === 'priority') {
+      query = query
+        .order('priority', { ascending: true, nullsFirst: false })
+        .order('created_at', { ascending: false });
+    } else if (sortBy === 'status') {
+      query = query
+        .order('status', { ascending: true })
+        .order('created_at', { ascending: false });
+    } else {
+      // Default: priority
+      query = query
+        .order('priority', { ascending: true, nullsFirst: false })
+        .order('created_at', { ascending: false });
     }
 
     query = query.range(offset, offset + limit - 1);
@@ -176,9 +216,17 @@ export async function PATCH(request: NextRequest) {
 
     if (status) {
       updateData.status = status;
-      if (status === 'resolved' || status === 'wont_fix') {
+
+      // Handle status-specific updates
+      if (status === 'read') {
+        // Get current user's email for read_by
+        updateData.read_at = new Date().toISOString();
+        updateData.read_by = session.user.email;
+      } else if (status === 'resolved') {
         updateData.resolved_at = new Date().toISOString();
         updateData.resolved_by = session.user.email;
+      } else if (status === 'archived') {
+        updateData.archived_at = new Date().toISOString();
       }
     }
 
@@ -189,6 +237,9 @@ export async function PATCH(request: NextRequest) {
     if (priority) {
       updateData.priority = priority;
     }
+
+    // Add updated_at for auto-archive tracking
+    updateData.updated_at = new Date().toISOString();
 
     // Get the report first to check for status change and get reporter email
     const { data: currentReport } = await supabase

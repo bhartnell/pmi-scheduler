@@ -45,8 +45,8 @@ interface TrackingRecord {
 }
 
 // EMT tracking columns - mapped to actual DB column names
+// Note: MCE checkbox removed per Ryan's feedback — EMT students do NOT have mCE
 const TRACKING_COLUMNS = [
-  { key: 'mce_complete', label: 'mCE', fullName: 'mCE Modules' },
   { key: 'vax_uploaded', label: 'Vax', fullName: 'Vaccinations' },
   { key: 'ridealong_scanned', label: 'Ride-Along', fullName: 'Ride-Along Complete' },
   { key: 'vitals_tracker_date', label: 'Vitals', fullName: 'Vitals Assessment', isDate: true },
@@ -179,7 +179,7 @@ export default function EMTTrackingPage() {
               t.student_id === studentId ? { ...t, [field]: newValue } : t
             );
           } else {
-            return [...prev, { id: data.tracking?.id || '', student_id: studentId, mce_complete: false, vax_uploaded: false, ridealong_scanned: false, vitals_tracker_date: null, [field]: newValue } as TrackingRecord];
+            return [...prev, { id: data.tracking?.id || '', student_id: studentId, mce_complete: false, vax_uploaded: false, ridealong_scanned: false, vitals_tracker_date: null, [field]: newValue } as unknown as TrackingRecord];
           }
         });
       } else {
@@ -285,7 +285,7 @@ export default function EMTTrackingPage() {
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">EMT Student Tracking</h1>
-                <p className="text-gray-600 dark:text-gray-400">Track mCE, vaccinations, ride-alongs, and vitals</p>
+                <p className="text-gray-600 dark:text-gray-400">Track vaccinations, ride-alongs, and vitals</p>
               </div>
             </div>
             <div className="flex items-center gap-4">

@@ -193,7 +193,17 @@ export async function PATCH(request: NextRequest) {
 
       case 'update':
         // Direct updates (for settings changes)
-        updateData = updates;
+        // When switching modes, reset the timer if it's stopped
+        if (updates.mode && updates.mode !== currentState.mode && currentState.status === 'stopped') {
+          updateData = {
+            ...updates,
+            started_at: null,
+            paused_at: null,
+            elapsed_when_paused: 0
+          };
+        } else {
+          updateData = updates;
+        }
         break;
 
       default:
