@@ -68,6 +68,7 @@ export default function AddStationPage() {
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
   const [instructors, setInstructors] = useState<Instructor[]>([]);
+  const [locations, setLocations] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -131,6 +132,13 @@ export default function AddStationPage() {
       const instructorsData = await instructorsRes.json();
       if (instructorsData.success) {
         setInstructors(instructorsData.instructors || []);
+      }
+
+      // Fetch locations (rooms)
+      const locationsRes = await fetch('/api/lab-management/locations?type=room');
+      const locationsData = await locationsRes.json();
+      if (locationsData.success) {
+        setLocations(locationsData.locations || []);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -624,16 +632,9 @@ export default function AddStationPage() {
               className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
             >
               <option value="">Select room...</option>
-              <option value="Sim Lab A">Sim Lab A</option>
-              <option value="Sim Lab B">Sim Lab B</option>
-              <option value="Skills Lab">Skills Lab</option>
-              <option value="Classroom 1">Classroom 1</option>
-              <option value="Classroom 2">Classroom 2</option>
-              <option value="Classroom 3">Classroom 3</option>
-              <option value="Conference Room">Conference Room</option>
-              <option value="Ambulance Bay">Ambulance Bay</option>
-              <option value="Hallway">Hallway</option>
-              <option value="Outside">Outside</option>
+              {locations.map(loc => (
+                <option key={loc.id} value={loc.name}>{loc.name}</option>
+              ))}
             </select>
           </div>
 

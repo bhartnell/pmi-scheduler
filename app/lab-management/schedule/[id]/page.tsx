@@ -139,6 +139,7 @@ export default function LabDayPage() {
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
   const [instructors, setInstructors] = useState<Instructor[]>([]);
+  const [locations, setLocations] = useState<{ id: string; name: string }[]>([]);
   const [selectedInstructor, setSelectedInstructor] = useState('');
   const [isCustomInstructor, setIsCustomInstructor] = useState(false);
   const [savingStation, setSavingStation] = useState(false);
@@ -176,13 +177,15 @@ export default function LabDayPage() {
   const fetchLabDay = async () => {
     setLoading(true);
     try {
-      const [labDayRes, instructorsRes] = await Promise.all([
+      const [labDayRes, instructorsRes, locationsRes] = await Promise.all([
         fetch(`/api/lab-management/lab-days/${labDayId}`),
-        fetch('/api/lab-management/instructors')
+        fetch('/api/lab-management/instructors'),
+        fetch('/api/lab-management/locations?type=room')
       ]);
 
       const labDayData = await labDayRes.json();
       const instructorsData = await instructorsRes.json();
+      const locationsData = await locationsRes.json();
 
       if (labDayData.success) {
         setLabDay(labDayData.labDay);
@@ -192,6 +195,10 @@ export default function LabDayPage() {
 
       if (instructorsData.success) {
         setInstructors(instructorsData.instructors || []);
+      }
+
+      if (locationsData.success) {
+        setLocations(locationsData.locations || []);
       }
     } catch (error) {
       console.error('Error fetching lab day:', error);
@@ -1330,16 +1337,9 @@ export default function LabDayPage() {
                   className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                 >
                   <option value="">Select room...</option>
-                  <option value="Sim Lab A">Sim Lab A</option>
-                  <option value="Sim Lab B">Sim Lab B</option>
-                  <option value="Skills Lab">Skills Lab</option>
-                  <option value="Classroom 1">Classroom 1</option>
-                  <option value="Classroom 2">Classroom 2</option>
-                  <option value="Classroom 3">Classroom 3</option>
-                  <option value="Conference Room">Conference Room</option>
-                  <option value="Ambulance Bay">Ambulance Bay</option>
-                  <option value="Hallway">Hallway</option>
-                  <option value="Outside">Outside</option>
+                  {locations.map(loc => (
+                    <option key={loc.id} value={loc.name}>{loc.name}</option>
+                  ))}
                 </select>
               </div>
 
