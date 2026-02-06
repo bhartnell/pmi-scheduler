@@ -24,6 +24,7 @@ import {
   Edit2
 } from 'lucide-react';
 import ExportDropdown from '@/components/ExportDropdown';
+import FieldTripAttendance from '@/components/FieldTripAttendance';
 import type { ExportConfig } from '@/lib/export-utils';
 
 interface Cohort {
@@ -444,6 +445,11 @@ export default function CohortHubPage() {
               </div>
             )}
           </div>
+        )}
+
+        {/* Field Trip Attendance */}
+        {students.length > 0 && (
+          <FieldTripAttendance cohortId={cohortId} students={students} />
         )}
 
         {/* Student List */}
