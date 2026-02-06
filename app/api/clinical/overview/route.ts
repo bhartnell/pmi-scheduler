@@ -7,6 +7,35 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
+// Wide-table columns for compliance docs (matches DB schema)
+const DOC_COLUMNS = [
+  { key: 'mmr_complete', label: 'mmr' },
+  { key: 'vzv_complete', label: 'vzv' },
+  { key: 'hep_b_complete', label: 'hepb' },
+  { key: 'tdap_complete', label: 'tdap' },
+  { key: 'covid_complete', label: 'covid' },
+  { key: 'tb_test_1_complete', label: 'tb' },
+  { key: 'physical_complete', label: 'physical' },
+  { key: 'health_insurance_complete', label: 'insurance' },
+  { key: 'bls_complete', label: 'bls' },
+  { key: 'flu_shot_complete', label: 'flu' },
+  { key: 'hospital_orientation_complete', label: 'hospital_orient' },
+  { key: 'background_check_complete', label: 'background' },
+  { key: 'drug_test_complete', label: 'drug_test' },
+];
+
+// Helper: count completed docs from wide-table row
+function countCompletedDocs(doc: Record<string, any> | null): { count: number; completedTypes: string[] } {
+  if (!doc) return { count: 0, completedTypes: [] };
+  const completedTypes: string[] = [];
+  for (const col of DOC_COLUMNS) {
+    if (doc[col.key] === true) {
+      completedTypes.push(col.label);
+    }
+  }
+  return { count: completedTypes.length, completedTypes };
+}
+
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession();
@@ -90,11 +119,14 @@ export async function GET(request: NextRequest) {
     const clinicalHours = clinicalHoursResult.data || [];
     const mceModules = mceModulesResult.data || [];
 
-    // Calculate compliance stats
-    const REQUIRED_DOCS = ['mmr', 'vzv', 'hepb', 'tdap', 'covid', 'tb', 'physical', 'insurance', 'bls', 'flu', 'hospital_orient', 'background', 'drug_test'];
+    // Calculate compliance stats (wide-table: count boolean columns per student)
+    const REQUIRED_DOCS = DOC_COLUMNS.map(d => d.label);
     const totalDocsNeeded = studentIds.length * REQUIRED_DOCS.length;
-    const completedDocs = complianceDocs?.filter(d => d.completed).length || 0;
-    const compliancePercent = totalDocsNeeded > 0 ? Math.round((completedDocs / totalDocsNeeded) * 100) : 0;
+    let totalCompletedDocs = 0;
+    for (const doc of complianceDocs || []) {
+      totalCompletedDocs += countCompletedDocs(doc).count;
+    }
+    const compliancePercent = totalDocsNeeded > 0 ? Math.round((totalCompletedDocs / totalDocsNeeded) * 100) : 0;
 
     // Calculate mCE stats
     const MCE_MODULES = ['airway', 'respiratory', 'cardiovascular', 'trauma', 'medical', 'obstetrics', 'pediatrics', 'geriatrics', 'behavioral', 'toxicology', 'neurology', 'endocrine', 'immunology', 'infectious', 'operations'];
@@ -120,12 +152,13 @@ export async function GET(request: NextRequest) {
 
     // Check each student for issues
     students?.forEach(student => {
-      const studentDocs = complianceDocs?.filter(d => d.student_id === student.id && d.completed) || [];
+      // Wide-table: find the single row for this student
+      const studentDocRow = complianceDocs?.find(d => d.student_id === student.id) || null;
+      const { completedTypes: completedDocTypes } = countCompletedDocs(studentDocRow);
       const studentInternship = internships?.find(i => i.student_id === student.id);
       const studentMce = mceModules?.filter(m => m.student_id === student.id && m.completed) || [];
       const studentHours = clinicalHours?.filter(h => h.student_id === student.id) || [];
 
-      const completedDocTypes = studentDocs.map(d => d.doc_type);
       const missingDocs = REQUIRED_DOCS.filter(doc => !completedDocTypes.includes(doc));
 
       // Critical: Missing required compliance docs
@@ -251,16 +284,18 @@ export async function GET(request: NextRequest) {
 
     // Build student summaries
     const studentSummaries = students?.map(student => {
-      const studentDocs = complianceDocs?.filter(d => d.student_id === student.id && d.completed) || [];
+      // Wide-table: find the single row for this student
+      const studentDocRow = complianceDocs?.find(d => d.student_id === student.id) || null;
+      const { count: studentDocCount } = countCompletedDocs(studentDocRow);
       const studentInternship = internships?.find(i => i.student_id === student.id);
       const studentMce = mceModules?.filter(m => m.student_id === student.id && m.completed) || [];
       const studentHours = clinicalHours?.filter(h => h.student_id === student.id) || [];
 
       return {
         ...student,
-        complianceCount: studentDocs.length,
+        complianceCount: studentDocCount,
         complianceTotal: REQUIRED_DOCS.length,
-        compliancePercent: Math.round((studentDocs.length / REQUIRED_DOCS.length) * 100),
+        compliancePercent: Math.round((studentDocCount / REQUIRED_DOCS.length) * 100),
         mceCount: studentMce.length,
         mceTotal: MCE_MODULES.length,
         mcePercent: Math.round((studentMce.length / MCE_MODULES.length) * 100),

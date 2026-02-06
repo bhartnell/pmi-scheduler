@@ -7,7 +7,23 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-const REQUIRED_DOCS = ['mmr', 'vzv', 'hepb', 'tdap', 'covid', 'tb', 'physical', 'insurance', 'bls', 'flu', 'hospital_orient', 'background', 'drug_test'];
+// Wide-table columns for compliance docs (matches DB schema)
+const DOC_COLUMNS = [
+  { key: 'mmr_complete', label: 'mmr' },
+  { key: 'vzv_complete', label: 'vzv' },
+  { key: 'hep_b_complete', label: 'hepb' },
+  { key: 'tdap_complete', label: 'tdap' },
+  { key: 'covid_complete', label: 'covid' },
+  { key: 'tb_test_1_complete', label: 'tb' },
+  { key: 'physical_complete', label: 'physical' },
+  { key: 'health_insurance_complete', label: 'insurance' },
+  { key: 'bls_complete', label: 'bls' },
+  { key: 'flu_shot_complete', label: 'flu' },
+  { key: 'hospital_orientation_complete', label: 'hospital_orient' },
+  { key: 'background_check_complete', label: 'background' },
+  { key: 'drug_test_complete', label: 'drug_test' },
+];
+const REQUIRED_DOCS = DOC_COLUMNS.map(d => d.label);
 const MCE_MODULES = ['airway', 'respiratory', 'cardiovascular', 'trauma', 'medical', 'obstetrics', 'pediatrics', 'geriatrics', 'behavioral', 'toxicology', 'neurology', 'endocrine', 'immunology', 'infectious', 'operations'];
 
 export async function GET(
@@ -24,16 +40,17 @@ export async function GET(
 
     // Fetch all clinical data in parallel
     const [
-      { data: complianceDocs },
+      { data: complianceDoc },
       { data: internship },
       { data: clinicalHours },
       { data: mceModules },
     ] = await Promise.all([
+      // Wide-table: one row per student with boolean columns
       supabase
         .from('student_compliance_docs')
-        .select('doc_type, completed')
+        .select('*')
         .eq('student_id', studentId)
-        .eq('completed', true),
+        .single(),
       supabase
         .from('student_internships')
         .select(`
@@ -57,8 +74,15 @@ export async function GET(
         .eq('completed', true),
     ]);
 
-    // Process compliance docs
-    const completedDocs = complianceDocs?.map(d => d.doc_type) || [];
+    // Process compliance docs (wide-table: check each boolean column)
+    const completedDocs: string[] = [];
+    if (complianceDoc) {
+      for (const col of DOC_COLUMNS) {
+        if (complianceDoc[col.key] === true) {
+          completedDocs.push(col.label);
+        }
+      }
+    }
     const compliancePercent = Math.round((completedDocs.length / REQUIRED_DOCS.length) * 100);
 
     // Process mCE modules
