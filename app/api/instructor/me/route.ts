@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
           .insert({
             email: session.user.email,
             name: session.user.name || session.user.email.split('@')[0],
-            role: 'instructor', // Default role for PMI users
+            role: 'guest', // Default to guest - admin must promote to instructor
             is_active: true,
             approved_at: new Date().toISOString(), // Auto-approve PMI users
           })

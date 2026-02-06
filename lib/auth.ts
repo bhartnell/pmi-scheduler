@@ -64,7 +64,7 @@ export const authOptions: NextAuthOptions = {
             .insert({
               email: user.email,
               name: user.name || user.email.split('@')[0],
-              role: 'instructor', // Default role for new users
+              role: 'guest', // Default to guest - admin must promote to instructor
               is_active: true,
               approved_at: new Date().toISOString(), // Auto-approve PMI users
             });

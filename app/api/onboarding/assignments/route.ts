@@ -371,3 +371,81 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+// DELETE - Remove an onboarding assignment (admin only)
+export async function DELETE(request: NextRequest) {
+  try {
+    const session = await getServerSession();
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Verify admin/superadmin role
+    const { data: currentUser } = await supabase
+      .from('lab_users')
+      .select('role')
+      .eq('email', session.user.email)
+      .single();
+
+    const isAdmin = currentUser?.role === 'admin' || currentUser?.role === 'superadmin';
+    if (!isAdmin) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const assignmentId = searchParams.get('id');
+
+    if (!assignmentId) {
+      return NextResponse.json({ success: false, error: 'Assignment ID is required' }, { status: 400 });
+    }
+
+    // Get assignment details for logging
+    const { data: assignment } = await supabase
+      .from('onboarding_assignments')
+      .select('instructor_email, status')
+      .eq('id', assignmentId)
+      .single();
+
+    if (!assignment) {
+      return NextResponse.json({ success: false, error: 'Assignment not found' }, { status: 404 });
+    }
+
+    // Delete task progress records first (foreign key constraint)
+    await supabase
+      .from('onboarding_task_progress')
+      .delete()
+      .eq('assignment_id', assignmentId);
+
+    // Delete event log entries
+    await supabase
+      .from('onboarding_event_log')
+      .delete()
+      .eq('assignment_id', assignmentId);
+
+    // Delete the assignment
+    const { error: deleteError } = await supabase
+      .from('onboarding_assignments')
+      .delete()
+      .eq('id', assignmentId);
+
+    if (deleteError) throw deleteError;
+
+    // Send notification to the instructor
+    await createNotification({
+      userEmail: assignment.instructor_email,
+      title: 'Onboarding Assignment Removed',
+      message: 'Your onboarding program assignment has been removed by an administrator.',
+      type: 'general',
+      linkUrl: '/onboarding',
+    });
+
+    return NextResponse.json({ success: true });
+
+  } catch (error: any) {
+    console.error('Error deleting onboarding assignment:', error);
+    return NextResponse.json(
+      { success: false, error: error?.message || 'Failed to delete onboarding assignment' },
+      { status: 500 }
+    );
+  }
+}

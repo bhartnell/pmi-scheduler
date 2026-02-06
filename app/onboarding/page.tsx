@@ -177,6 +177,7 @@ export default function OnboardingPage() {
   const [submitting, setSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [removingAssignment, setRemovingAssignment] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -379,6 +380,30 @@ export default function OnboardingPage() {
     setSubmitting(false);
   };
 
+  const handleRemoveAssignment = async (assignmentId: string, instructorName: string) => {
+    if (!confirm(`Are you sure you want to remove the onboarding assignment for ${instructorName}? This will delete all progress data.`)) {
+      return;
+    }
+
+    setRemovingAssignment(assignmentId);
+    try {
+      const res = await fetch(`/api/onboarding/assignments?id=${assignmentId}`, {
+        method: 'DELETE',
+      });
+
+      const result = await res.json();
+      if (result.success) {
+        loadAdminData(); // Refresh list
+      } else {
+        alert(result.error || 'Failed to remove assignment');
+      }
+    } catch (error) {
+      console.error('Error removing assignment:', error);
+      alert('An error occurred while removing the assignment');
+    }
+    setRemovingAssignment(null);
+  };
+
   if (status === 'loading' || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
@@ -476,6 +501,13 @@ export default function OnboardingPage() {
                                 <p className="text-xs text-gray-500 dark:text-gray-400">
                                   {assignment.summary.completed_tasks}/{assignment.summary.total_tasks} tasks
                                 </p>
+                                <button
+                                  onClick={() => handleRemoveAssignment(assignment.id, assignment.instructorName || assignment.instructor_email)}
+                                  disabled={removingAssignment === assignment.id}
+                                  className="mt-2 text-xs text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 disabled:opacity-50"
+                                >
+                                  {removingAssignment === assignment.id ? 'Removing...' : 'Remove'}
+                                </button>
                               </div>
                             </div>
                           </div>
@@ -739,6 +771,13 @@ export default function OnboardingPage() {
                                 <p className="text-xs text-gray-500 dark:text-gray-400">
                                   {assignment.summary.completed_tasks}/{assignment.summary.total_tasks} tasks
                                 </p>
+                                <button
+                                  onClick={() => handleRemoveAssignment(assignment.id, assignment.instructorName || assignment.instructor_email)}
+                                  disabled={removingAssignment === assignment.id}
+                                  className="mt-2 text-xs text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 disabled:opacity-50"
+                                >
+                                  {removingAssignment === assignment.id ? 'Removing...' : 'Remove'}
+                                </button>
                               </div>
                             </div>
                           </div>
