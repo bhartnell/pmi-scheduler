@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
-import { Calendar, ChevronRight } from 'lucide-react';
+import { Calendar, ChevronRight, Timer } from 'lucide-react';
 import WidgetCard, { WidgetEmpty } from '../WidgetCard';
 
 interface StationAssignment {
@@ -60,6 +60,13 @@ function isUrgent(dateString: string): boolean {
   return date.toDateString() === today.toDateString() || date.toDateString() === tomorrow.toDateString();
 }
 
+function isToday(dateString: string): boolean {
+  const date = new Date(dateString + 'T12:00:00');
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+  return date.toDateString() === today.toDateString();
+}
+
 export default function MyLabsWidget() {
   const { data: session } = useSession();
   const [assignments, setAssignments] = useState<StationAssignment[]>([]);
@@ -100,37 +107,58 @@ export default function MyLabsWidget() {
         />
       ) : (
         <div className="space-y-2">
-          {assignments.map(assignment => (
-            <Link
-              key={assignment.id}
-              href={`/lab-management/grade/station/${assignment.id}`}
-              className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 border border-gray-200 dark:border-gray-700"
-            >
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className={`text-xs font-medium px-2 py-0.5 rounded ${
-                    isUrgent(assignment.lab_day.date)
-                      ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-                  }`}>
-                    {formatDate(assignment.lab_day.date)}
-                  </span>
-                  {assignment.lab_day.start_time && (
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                      {formatTime(assignment.lab_day.start_time)}
+          {assignments.map(assignment => {
+            const labIsToday = isToday(assignment.lab_day.date);
+            return (
+              <div
+                key={assignment.id}
+                className="flex items-center justify-between p-2 rounded-lg border border-gray-200 dark:border-gray-700"
+              >
+                <Link
+                  href={`/lab-management/grade/station/${assignment.id}`}
+                  className="flex-1 min-w-0 hover:opacity-80"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded ${
+                      isUrgent(assignment.lab_day.date)
+                        ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                    }`}>
+                      {formatDate(assignment.lab_day.date)}
                     </span>
+                    {assignment.lab_day.start_time && (
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {formatTime(assignment.lab_day.start_time)}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm font-medium text-gray-900 dark:text-white mt-1 truncate">
+                    {assignment.custom_title || assignment.scenario?.title || `Station ${assignment.station_number}`}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {assignment.lab_day.cohort.program.abbreviation} Group {assignment.lab_day.cohort.cohort_number} - Station {assignment.station_number}
+                  </p>
+                </Link>
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  {labIsToday && (
+                    <Link
+                      href={`/lab-management/schedule/${assignment.lab_day.id}`}
+                      className="p-1.5 rounded-lg bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50"
+                      title="Open lab with timer"
+                    >
+                      <Timer className="w-4 h-4" />
+                    </Link>
                   )}
+                  <Link
+                    href={`/lab-management/grade/station/${assignment.id}`}
+                    className="p-1 text-gray-400"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </Link>
                 </div>
-                <p className="text-sm font-medium text-gray-900 dark:text-white mt-1 truncate">
-                  {assignment.custom_title || assignment.scenario?.title || `Station ${assignment.station_number}`}
-                </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {assignment.lab_day.cohort.program.abbreviation} Group {assignment.lab_day.cohort.cohort_number} - Station {assignment.station_number}
-                </p>
               </div>
-              <ChevronRight className="w-4 h-4 text-gray-400 flex-shrink-0" />
-            </Link>
-          ))}
+            );
+          })}
         </div>
       )}
     </WidgetCard>

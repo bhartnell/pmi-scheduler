@@ -15,6 +15,7 @@ import {
   GraduationCap,
   BarChart3,
   ClipboardCheck,
+  Timer,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -120,6 +121,12 @@ export const QUICK_LINK_DEFINITIONS: Record<string, {
     icon: ClipboardCheck,
     label: 'Onboarding',
     color: 'bg-indigo-500',
+  },
+  todays_labs: {
+    href: '/lab-management/schedule?today=true',
+    icon: Timer,
+    label: "Today's Labs",
+    color: 'bg-emerald-500',
   },
 };
 

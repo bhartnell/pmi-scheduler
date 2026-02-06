@@ -1,7 +1,7 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
@@ -10,7 +10,8 @@ import {
   Calendar,
   Plus,
   Filter,
-  Users
+  Users,
+  Timer
 } from 'lucide-react';
 
 interface Cohort {
@@ -43,11 +44,13 @@ interface LabDay {
 export default function SchedulePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [cohorts, setCohorts] = useState<Cohort[]>([]);
   const [labDays, setLabDays] = useState<LabDay[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCohort, setSelectedCohort] = useState('');
+  const [showTodayOnly, setShowTodayOnly] = useState(searchParams.get('today') === 'true');
 
   // Calendar state
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -232,27 +235,123 @@ export default function SchedulePage() {
               </button>
             </div>
 
-            {/* Cohort Filter */}
-            <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-              <select
-                value={selectedCohort}
-                onChange={(e) => setSelectedCohort(e.target.value)}
-                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+            {/* Filters */}
+            <div className="flex items-center gap-3">
+              {/* Today's Labs toggle */}
+              <button
+                onClick={() => setShowTodayOnly(!showTodayOnly)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${
+                  showTodayOnly
+                    ? 'bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-700 text-green-700 dark:text-green-300'
+                    : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                }`}
               >
-                <option value="">All Cohorts</option>
-                {cohorts.map(cohort => (
-                  <option key={cohort.id} value={cohort.id}>
-                    {cohort.program.abbreviation} Group {cohort.cohort_number}
-                  </option>
-                ))}
-              </select>
+                <Timer className="w-4 h-4" />
+                <span className="text-sm font-medium">Today&apos;s Labs</span>
+              </button>
+
+              {/* Cohort Filter */}
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                <select
+                  value={selectedCohort}
+                  onChange={(e) => setSelectedCohort(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                >
+                  <option value="">All Cohorts</option>
+                  {cohorts.map(cohort => (
+                    <option key={cohort.id} value={cohort.id}>
+                      {cohort.program.abbreviation} Group {cohort.cohort_number}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
         </div>
 
+        {/* Today's Labs View - Focused timer-ready view */}
+        {showTodayOnly && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
+            <div className="p-4 border-b dark:border-gray-600 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Timer className="w-5 h-5 text-green-600 dark:text-green-400" />
+                <h3 className="font-semibold text-gray-900 dark:text-white">Today&apos;s Labs - Ready for Timer</h3>
+              </div>
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+              </span>
+            </div>
+            <div className="divide-y dark:divide-gray-600">
+              {loading ? (
+                <div className="p-8 text-center text-gray-500 dark:text-gray-400">Loading...</div>
+              ) : labDays.filter(ld => ld.date === new Date().toISOString().split('T')[0]).length === 0 ? (
+                <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+                  <Calendar className="w-12 h-12 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
+                  <p className="font-medium mb-1">No labs scheduled for today</p>
+                  <p className="text-sm">Toggle off &quot;Today&apos;s Labs&quot; to see the full schedule</p>
+                </div>
+              ) : (
+                labDays
+                  .filter(ld => ld.date === new Date().toISOString().split('T')[0])
+                  .map(labDay => (
+                    <div key={labDay.id} className="p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <h4 className="font-semibold text-lg text-gray-900 dark:text-white">
+                            {labDay.cohort.program.abbreviation} Group {labDay.cohort.cohort_number}
+                          </h4>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            {labDay.title || (labDay.week_number && labDay.day_number
+                              ? `Week ${labDay.week_number}, Day ${labDay.day_number}`
+                              : 'Lab Day'
+                            )}
+                            {' • '}
+                            {labDay.num_rotations} rotations × {labDay.stations[0]?.rotation_minutes || labDay.num_rotations} min
+                          </p>
+                        </div>
+                        <Link
+                          href={`/lab-management/schedule/${labDay.id}`}
+                          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
+                        >
+                          <Timer className="w-4 h-4" />
+                          Start Timer
+                        </Link>
+                      </div>
+                      {labDay.stations.length > 0 && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mt-3">
+                          {labDay.stations.map((station: any) => (
+                            <Link
+                              key={station.id}
+                              href={`/lab-management/grade/station/${station.id}`}
+                              className="flex items-center gap-2 p-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
+                            >
+                              <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 flex items-center justify-center text-xs font-medium">
+                                {station.station_number}
+                              </span>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                  {station.custom_title || station.scenario?.title || `Station ${station.station_number}`}
+                                </p>
+                                {station.instructor_name && (
+                                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                    {station.instructor_name}
+                                  </p>
+                                )}
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Calendar Grid */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+        <div className={`bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden ${showTodayOnly ? 'hidden' : ''}`}>
           {/* Week day headers */}
           <div className="grid grid-cols-7 bg-gray-50 dark:bg-gray-700 border-b dark:border-gray-600">
             {weekDays.map(day => (
@@ -328,7 +427,7 @@ export default function SchedulePage() {
         </div>
 
         {/* Upcoming Labs List (Mobile-friendly alternative) */}
-        <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow">
+        <div className={`mt-6 bg-white dark:bg-gray-800 rounded-lg shadow ${showTodayOnly ? 'hidden' : ''}`}>
           <div className="p-4 border-b dark:border-gray-600">
             <h3 className="font-semibold text-gray-900 dark:text-white">Upcoming Labs</h3>
           </div>
