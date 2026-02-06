@@ -244,7 +244,7 @@ export default function InternshipDetailPage() {
         fetch(`/api/clinical/internships/${internshipId}`),
         fetch('/api/clinical/preceptors?activeOnly=true'),
         fetch('/api/clinical/agencies'),
-        fetch(`/api/clinical/preceptor-assignments?internshipId=${internshipId}&activeOnly=false`),
+        fetch(`/api/clinical/internships/${internshipId}/preceptors`),
       ]);
 
       const internshipData = await internshipRes.json();
@@ -878,7 +878,24 @@ export default function InternshipDetailPage() {
 
                       {/* Current assignments */}
                       <div className="space-y-2 mb-3">
-                        {preceptorAssignments.filter(a => a.is_active).length === 0 && (
+                        {/* Legacy preceptor (if no assignments but internship has preceptor_id) */}
+                        {preceptorAssignments.filter(a => a.is_active).length === 0 && internship.field_preceptors && formData.preceptor_id && (
+                          <div className="flex items-center gap-2 p-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700">
+                            <span className="px-1.5 py-0.5 text-[10px] font-bold uppercase rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                              1° Legacy
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                {internship.field_preceptors.first_name} {internship.field_preceptors.last_name}
+                              </div>
+                              {internship.field_preceptors.agency_name && (
+                                <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{internship.field_preceptors.agency_name}</div>
+                              )}
+                            </div>
+                            <span className="text-[10px] text-gray-400">Pre-migration</span>
+                          </div>
+                        )}
+                        {preceptorAssignments.filter(a => a.is_active).length === 0 && !internship.field_preceptors && (
                           <p className="text-xs text-gray-400 dark:text-gray-500 italic">No preceptors assigned</p>
                         )}
                         {preceptorAssignments.filter(a => a.is_active).map(assignment => (
@@ -900,13 +917,13 @@ export default function InternshipDetailPage() {
                                 <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{assignment.preceptor.agency_name}</div>
                               )}
                             </div>
-                            <span className="text-[10px] text-gray-400">{assignment.assigned_date}</span>
+                            <span className="text-[10px] text-gray-400">{assignment.start_date}</span>
                             {canEdit && (
                               <button
                                 type="button"
                                 onClick={async () => {
-                                  await fetch(`/api/clinical/preceptor-assignments?id=${assignment.id}`, { method: 'DELETE' });
-                                  const res = await fetch(`/api/clinical/preceptor-assignments?internshipId=${internshipId}&activeOnly=false`);
+                                  await fetch(`/api/clinical/internships/${internshipId}/preceptors`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ assignmentId: assignment.id, is_active: false, end_date: new Date().toISOString().split('T')[0] }) });
+                                  const res = await fetch(`/api/clinical/internships/${internshipId}/preceptors`);
                                   const data = await res.json();
                                   if (data.success) setPreceptorAssignments(data.assignments || []);
                                 }}
@@ -930,7 +947,7 @@ export default function InternshipDetailPage() {
                                 <div key={assignment.id} className="flex items-center gap-2 text-gray-400 dark:text-gray-500">
                                   <span className="font-medium">{assignment.preceptor?.first_name} {assignment.preceptor?.last_name}</span>
                                   <span>({assignment.role})</span>
-                                  <span>{assignment.assigned_date} → {assignment.end_date || '?'}</span>
+                                  <span>{assignment.start_date} → {assignment.end_date || '?'}</span>
                                 </div>
                               ))}
                             </div>
@@ -966,17 +983,17 @@ export default function InternshipDetailPage() {
                             onClick={async () => {
                               setAddingAssignment(true);
                               try {
-                                await fetch('/api/clinical/preceptor-assignments', {
+                                await fetch(`/api/clinical/internships/${internshipId}/preceptors`, {
                                   method: 'POST',
                                   headers: { 'Content-Type': 'application/json' },
                                   body: JSON.stringify({
-                                    internship_id: internshipId,
                                     preceptor_id: newAssignPreceptorId,
                                     role: newAssignRole,
+                                    start_date: new Date().toISOString().split('T')[0],
                                   }),
                                 });
                                 // Refresh assignments
-                                const res = await fetch(`/api/clinical/preceptor-assignments?internshipId=${internshipId}&activeOnly=false`);
+                                const res = await fetch(`/api/clinical/internships/${internshipId}/preceptors`);
                                 const data = await res.json();
                                 if (data.success) setPreceptorAssignments(data.assignments || []);
                                 setNewAssignPreceptorId('');
