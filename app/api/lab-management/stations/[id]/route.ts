@@ -65,7 +65,7 @@ export async function GET(
             category
           )
         ),
-        custom_skills:station_custom_skills(
+        custom_skills(
           id,
           name
         )
