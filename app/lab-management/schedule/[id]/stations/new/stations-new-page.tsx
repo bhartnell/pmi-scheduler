@@ -192,9 +192,51 @@ export default function AddStationPage() {
     }
   };
 
+  // Generate station title based on type and selection
+  const generateStationTitle = () => {
+    const stationNum = getNextStationNumber();
+    const prefix = labDay ? `${labDay.cohort.program.abbreviation}${labDay.cohort.cohort_number}` : '';
+    const dateStr = labDay ? new Date(labDay.date + 'T12:00:00').toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' }) : '';
+
+    if (stationType === 'scenario' && scenarioId) {
+      const scenario = scenarios.find(s => s.id === scenarioId);
+      if (scenario) {
+        return `${prefix} ${dateStr} - Station ${stationNum}: ${scenario.title}`;
+      }
+    }
+
+    if (stationType === 'skills' && selectedSkills.length > 0) {
+      const skillNames = selectedSkills
+        .map(id => skills.find(s => s.id === id)?.name)
+        .filter(Boolean)
+        .slice(0, 2);
+      const skillStr = skillNames.join(', ') + (selectedSkills.length > 2 ? '...' : '');
+      return `${prefix} ${dateStr} - Station ${stationNum}: ${skillStr}`;
+    }
+
+    if (stationType === 'documentation') {
+      return `${prefix} ${dateStr} - Station ${stationNum}: Documentation`;
+    }
+
+    return `${prefix} ${dateStr} - Station ${stationNum}`;
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
+      // Auto-add selected instructor if user selected from dropdown but didn't explicitly add
+      let finalInstructorName = instructorName;
+      let finalInstructorEmail = instructorEmail;
+
+      if (selectedInstructor && selectedInstructor !== 'custom' && !instructorEmail) {
+        const [name, email] = selectedInstructor.split('|');
+        finalInstructorName = name;
+        finalInstructorEmail = email;
+      }
+
+      // Auto-generate title if not provided
+      const finalTitle = customTitle || generateStationTitle();
+
       // Create station
       const stationRes = await fetch('/api/lab-management/stations', {
         method: 'POST',
@@ -204,12 +246,12 @@ export default function AddStationPage() {
           station_number: getNextStationNumber(),
           station_type: stationType,
           scenario_id: stationType === 'scenario' ? scenarioId || null : null,
-          custom_title: customTitle || null,
+          custom_title: finalTitle || null,
           skill_sheet_url: skillSheetUrl || null,
           instructions_url: instructionsUrl || null,
           station_notes: stationNotes || null,
-          instructor_name: instructorName || null,
-          instructor_email: instructorEmail || null,
+          instructor_name: finalInstructorName || null,
+          instructor_email: finalInstructorEmail || null,
           room: room || null,
           notes: notes || null
         })
@@ -368,11 +410,11 @@ export default function AddStationPage() {
               type="text"
               value={customTitle}
               onChange={(e) => setCustomTitle(e.target.value)}
-              placeholder="e.g., PM14 01/23/26 - Chest Pain Scenario"
+              placeholder={generateStationTitle() || "e.g., PM14 01/23/26 - Station 1: Chest Pain"}
               className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
             />
             <p className="text-xs text-gray-500 mt-1">
-              Descriptive name shown on dashboard and schedule (optional - auto-generates if left blank)
+              Leave blank to auto-generate based on scenario/skill selection
             </p>
           </div>
 
