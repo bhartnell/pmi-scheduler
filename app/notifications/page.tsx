@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Bell, Check, CheckCheck, ExternalLink, ArrowLeft, Trash2 } from 'lucide-react';
+import { Bell, Check, CheckCheck, ExternalLink, ArrowLeft, Trash2, Settings } from 'lucide-react';
 import LabHeader from '@/components/LabHeader';
 
 interface Notification {
@@ -52,12 +52,27 @@ function formatDate(dateString: string): string {
   }
 }
 
+interface NotificationSettings {
+  email_lab_assignments: boolean;
+  email_lab_reminders: boolean;
+  email_feedback_updates: boolean;
+  show_desktop_notifications: boolean;
+}
+
 export default function NotificationsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
+  const [showSettings, setShowSettings] = useState(false);
+  const [settings, setSettings] = useState<NotificationSettings>({
+    email_lab_assignments: true,
+    email_lab_reminders: true,
+    email_feedback_updates: false,
+    show_desktop_notifications: false,
+  });
+  const [savingSettings, setSavingSettings] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -68,8 +83,46 @@ export default function NotificationsPage() {
   useEffect(() => {
     if (session?.user?.email) {
       fetchNotifications();
+      fetchSettings();
     }
   }, [session?.user?.email]);
+
+  const fetchSettings = async () => {
+    try {
+      const res = await fetch('/api/user/preferences');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.preferences?.notification_settings) {
+          setSettings(data.preferences.notification_settings);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch notification settings:', error);
+    }
+  };
+
+  const saveSettings = async (newSettings: NotificationSettings) => {
+    setSavingSettings(true);
+    try {
+      const res = await fetch('/api/user/preferences', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notification_settings: newSettings }),
+      });
+      if (res.ok) {
+        setSettings(newSettings);
+      }
+    } catch (error) {
+      console.error('Failed to save notification settings:', error);
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
+  const toggleSetting = (key: keyof NotificationSettings) => {
+    const newSettings = { ...settings, [key]: !settings[key] };
+    saveSettings(newSettings);
+  };
 
   const fetchNotifications = async () => {
     try {
@@ -181,8 +234,117 @@ export default function NotificationsPage() {
                 Mark All Read
               </button>
             )}
+
+            {/* Settings Button */}
+            <button
+              onClick={() => setShowSettings(!showSettings)}
+              className={`flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg border transition-colors ${
+                showSettings
+                  ? 'bg-blue-600 text-white border-blue-600'
+                  : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+              }`}
+            >
+              <Settings className="w-4 h-4" />
+              Settings
+            </button>
           </div>
         </div>
+
+        {/* Notification Settings Panel */}
+        {showSettings && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6 overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+              <Settings className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+              <h2 className="font-semibold text-gray-900 dark:text-white">Notification Preferences</h2>
+              {savingSettings && (
+                <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">Saving...</span>
+              )}
+            </div>
+            <div className="p-4 space-y-4">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Choose which notifications you want to receive. In-app notifications will always appear in your notification bell.
+              </p>
+
+              <div className="space-y-3">
+                {/* Lab Assignment Emails */}
+                <label className="flex items-center justify-between p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer">
+                  <div>
+                    <span className="font-medium text-gray-900 dark:text-white">Lab Assignment Emails</span>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Get emailed when you're assigned to a lab station</p>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="checkbox"
+                      checked={settings.email_lab_assignments}
+                      onChange={() => toggleSetting('email_lab_assignments')}
+                      className="sr-only"
+                    />
+                    <div className={`w-11 h-6 rounded-full transition-colors ${settings.email_lab_assignments ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                      <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${settings.email_lab_assignments ? 'translate-x-5' : ''}`} />
+                    </div>
+                  </div>
+                </label>
+
+                {/* Lab Reminder Emails */}
+                <label className="flex items-center justify-between p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer">
+                  <div>
+                    <span className="font-medium text-gray-900 dark:text-white">Lab Reminder Emails</span>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Get reminded the day before your scheduled lab</p>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="checkbox"
+                      checked={settings.email_lab_reminders}
+                      onChange={() => toggleSetting('email_lab_reminders')}
+                      className="sr-only"
+                    />
+                    <div className={`w-11 h-6 rounded-full transition-colors ${settings.email_lab_reminders ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                      <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${settings.email_lab_reminders ? 'translate-x-5' : ''}`} />
+                    </div>
+                  </div>
+                </label>
+
+                {/* Feedback Update Emails */}
+                <label className="flex items-center justify-between p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer">
+                  <div>
+                    <span className="font-medium text-gray-900 dark:text-white">Feedback Update Emails</span>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Get notified when your feedback reports are resolved</p>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="checkbox"
+                      checked={settings.email_feedback_updates}
+                      onChange={() => toggleSetting('email_feedback_updates')}
+                      className="sr-only"
+                    />
+                    <div className={`w-11 h-6 rounded-full transition-colors ${settings.email_feedback_updates ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                      <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${settings.email_feedback_updates ? 'translate-x-5' : ''}`} />
+                    </div>
+                  </div>
+                </label>
+
+                {/* Browser Notifications (disabled for now) */}
+                <label className="flex items-center justify-between p-3 rounded-lg border border-gray-200 dark:border-gray-700 opacity-50 cursor-not-allowed">
+                  <div>
+                    <span className="font-medium text-gray-900 dark:text-white">Browser Notifications</span>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Desktop push notifications (coming soon)</p>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="checkbox"
+                      checked={settings.show_desktop_notifications}
+                      disabled
+                      className="sr-only"
+                    />
+                    <div className={`w-11 h-6 rounded-full transition-colors bg-gray-300 dark:bg-gray-600`}>
+                      <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow`} />
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Notifications List */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
