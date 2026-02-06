@@ -3,9 +3,15 @@ import { getServerSession } from 'next-auth';
 import { createClient } from '@supabase/supabase-js';
 import { createNotification } from '@/lib/notifications';
 
+// Use service role key to bypass RLS - required for admin operations
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+if (!serviceRoleKey) {
+  console.warn('WARNING: SUPABASE_SERVICE_ROLE_KEY not found, falling back to anon key');
+}
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  serviceRoleKey || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
 // GET - List all onboarding assignments (admin view)
@@ -260,7 +266,16 @@ export async function POST(request: NextRequest) {
       .select()
       .single();
 
-    if (insertError) throw insertError;
+    if (insertError) {
+      console.error('Error inserting assignment:', {
+        code: insertError.code,
+        message: insertError.message,
+        details: insertError.details,
+        hint: insertError.hint,
+        assignmentData,
+      });
+      throw insertError;
+    }
 
     // Initialize task_progress rows for all tasks in the template
     // Get all phases for this template
