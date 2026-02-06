@@ -57,6 +57,17 @@ export async function GET(
             cohort_number,
             program:programs(abbreviation)
           )
+        ),
+        station_skills:station_skills(
+          skill:skills(
+            id,
+            name,
+            category
+          )
+        ),
+        custom_skills:station_custom_skills(
+          id,
+          name
         )
       `)
       .eq('id', id)

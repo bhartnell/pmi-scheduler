@@ -109,6 +109,19 @@ interface ScenarioPhase {
   expected_actions?: string;
 }
 
+interface AssignedSkill {
+  skill: {
+    id: string;
+    name: string;
+    category: string;
+  };
+}
+
+interface CustomSkill {
+  id: string;
+  name: string;
+}
+
 interface Station {
   id: string;
   station_number: number;
@@ -119,6 +132,8 @@ interface Station {
   skill_sheet_url: string | null;
   instructions_url: string | null;
   station_notes: string | null;
+  station_skills?: AssignedSkill[];
+  custom_skills?: CustomSkill[];
   scenario: {
     id: string;
     title: string;
@@ -591,6 +606,25 @@ export default function GradeStationPage() {
               <div className="mb-4 p-3 bg-white dark:bg-gray-800 rounded-lg border border-green-200 dark:border-green-700">
                 <div className="text-sm font-medium text-green-700 dark:text-green-400 mb-1">Instructions:</div>
                 <div className="text-sm text-green-800 dark:text-green-300 whitespace-pre-wrap">{station.station_details}</div>
+              </div>
+            )}
+
+            {/* Assigned Skills List */}
+            {((station.station_skills && station.station_skills.length > 0) || (station.custom_skills && station.custom_skills.length > 0)) && (
+              <div className="mb-4 p-3 bg-white dark:bg-gray-800 rounded-lg border border-green-200 dark:border-green-700">
+                <div className="text-sm font-medium text-green-700 dark:text-green-400 mb-2">Skills to Practice:</div>
+                <div className="flex flex-wrap gap-2">
+                  {station.station_skills?.map((ss, idx) => (
+                    <span key={ss.skill.id} className="px-2 py-1 bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200 text-sm rounded-lg">
+                      {ss.skill.name}
+                    </span>
+                  ))}
+                  {station.custom_skills?.map((cs) => (
+                    <span key={cs.id} className="px-2 py-1 bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 text-sm rounded-lg">
+                      {cs.name} <span className="text-xs opacity-70">(custom)</span>
+                    </span>
+                  ))}
+                </div>
               </div>
             )}
 

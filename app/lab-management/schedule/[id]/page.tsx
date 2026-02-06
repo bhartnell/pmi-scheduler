@@ -512,8 +512,29 @@ export default function LabDayPage() {
 
     setSavingStation(true);
     try {
+      // Auto-add selected instructor if user forgot to click (+)
+      let workingInstructors = [...stationInstructors];
+      if (selectedInstructor && selectedInstructor !== 'custom') {
+        const [name, email] = selectedInstructor.split('|');
+        if (!workingInstructors.some(i => i.user_email === email)) {
+          workingInstructors.push({
+            user_name: name,
+            user_email: email,
+            is_primary: workingInstructors.length === 0
+          });
+        }
+      }
+      // Also handle custom instructor fields
+      if (isCustomInstructor && editForm.instructor_email && !workingInstructors.some(i => i.user_email === editForm.instructor_email)) {
+        workingInstructors.push({
+          user_name: editForm.instructor_name || editForm.instructor_email,
+          user_email: editForm.instructor_email,
+          is_primary: workingInstructors.length === 0
+        });
+      }
+
       // Get primary instructor for backwards compatibility
-      const primaryInstructor = stationInstructors.find(i => i.is_primary) || stationInstructors[0];
+      const primaryInstructor = workingInstructors.find(i => i.is_primary) || workingInstructors[0];
 
       // Update station basic info
       const res = await fetch(`/api/lab-management/stations/${editingStation.id}`, {
@@ -593,7 +614,7 @@ export default function LabDayPage() {
 
       // Remove instructors that are no longer in the list
       for (const email of existingEmails) {
-        if (!stationInstructors.some(i => i.user_email === email)) {
+        if (!workingInstructors.some(i => i.user_email === email)) {
           await fetch(`/api/lab-management/station-instructors?stationId=${editingStation.id}&userEmail=${encodeURIComponent(email)}`, {
             method: 'DELETE'
           });
@@ -601,7 +622,7 @@ export default function LabDayPage() {
       }
 
       // Add or update instructors
-      for (const instructor of stationInstructors) {
+      for (const instructor of workingInstructors) {
         await fetch('/api/lab-management/station-instructors', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -958,13 +979,39 @@ export default function LabDayPage() {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Station Name
                 </label>
-                <input
-                  type="text"
-                  value={editForm.custom_title}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, custom_title: e.target.value }))}
-                  placeholder="e.g., PM14 01/23/26 - Chest Pain Scenario"
-                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={editForm.custom_title}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, custom_title: e.target.value }))}
+                    placeholder="e.g., PM14 01/23/26 - Chest Pain Scenario"
+                    className="flex-1 px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!labDay) return;
+                      const cohortAbbrev = labDay.cohort.program.abbreviation + labDay.cohort.cohort_number;
+                      const dateStr = new Date(labDay.date + 'T12:00:00').toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' });
+                      let suffix = '';
+                      if (editForm.station_type === 'scenario' && editForm.scenario_id) {
+                        const scenario = scenarios.find(s => s.id === editForm.scenario_id);
+                        suffix = scenario ? scenario.title : 'Scenario';
+                      } else if (editForm.station_type === 'skills' && editForm.selectedSkills.length > 0) {
+                        const firstSkill = skills.find(s => s.id === editForm.selectedSkills[0]);
+                        suffix = firstSkill ? (editForm.selectedSkills.length > 1 ? `${firstSkill.name} +${editForm.selectedSkills.length - 1}` : firstSkill.name) : 'Skills';
+                      } else if (editForm.station_type === 'documentation') {
+                        suffix = 'Documentation';
+                      } else {
+                        suffix = `Station ${editingStation?.station_number || ''}`;
+                      }
+                      setEditForm(prev => ({ ...prev, custom_title: `${cohortAbbrev} ${dateStr} - ${suffix}` }));
+                    }}
+                    className="px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 text-sm whitespace-nowrap"
+                  >
+                    Auto-generate
+                  </button>
+                </div>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                   Descriptive name shown on dashboard and schedule
                 </p>

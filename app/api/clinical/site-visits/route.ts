@@ -115,7 +115,21 @@ export async function POST(request: NextRequest) {
       .select()
       .single();
 
-    if (visitError) throw visitError;
+    if (visitError) {
+      console.error('Error inserting site visit:', {
+        code: visitError.code,
+        message: visitError.message,
+        details: visitError.details,
+        hint: visitError.hint,
+        body: {
+          site_id: body.site_id,
+          visitor_name: body.visitor_name,
+          visit_date: body.visit_date,
+          cohort_id: body.cohort_id,
+        }
+      });
+      throw visitError;
+    }
 
     // If specific students were selected, add them
     if (body.student_ids && Array.isArray(body.student_ids) && body.student_ids.length > 0 && !body.entire_class) {
@@ -151,8 +165,21 @@ export async function POST(request: NextRequest) {
     if (fetchError) throw fetchError;
 
     return NextResponse.json({ success: true, visit: completeVisit });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating site visit:', error);
-    return NextResponse.json({ success: false, error: 'Failed to create site visit' }, { status: 500 });
+    // Return more specific error message for debugging
+    const errorMessage = error?.message || 'Failed to create site visit';
+    const errorCode = error?.code;
+
+    // Handle specific Postgres errors
+    if (errorCode === '23503') {
+      // Foreign key violation
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid reference: site, visitor, or cohort not found'
+      }, { status: 400 });
+    }
+
+    return NextResponse.json({ success: false, error: errorMessage }, { status: 500 });
   }
 }
