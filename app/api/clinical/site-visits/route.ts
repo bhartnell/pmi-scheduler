@@ -28,6 +28,7 @@ export async function GET(request: NextRequest) {
       .select(`
         *,
         site:clinical_sites(id, name, abbreviation, system),
+        agency:agencies(id, name, abbreviation),
         cohort:cohorts(id, cohort_number, program:programs(id, name, abbreviation)),
         visitor:lab_users(id, name, email),
         students:clinical_visit_students(
@@ -97,11 +98,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Visitor name is required' }, { status: 400 });
     }
 
+    // Handle field agency IDs (prefixed with "agency-")
+    let actualSiteId = body.site_id;
+    let agencyId: string | null = null;
+
+    if (body.site_id.startsWith('agency-')) {
+      // This is a field agency, not a clinical site
+      // Store the agency ID separately and set site_id to null
+      agencyId = body.site_id.replace('agency-', '');
+      actualSiteId = null;
+    }
+
     // Create the visit
     const { data: visit, error: visitError } = await supabase
       .from('clinical_site_visits')
       .insert({
-        site_id: body.site_id,
+        site_id: actualSiteId,
+        agency_id: agencyId,
         departments: body.departments || [],
         visitor_id: body.visitor_id || null,
         visitor_name: body.visitor_name.trim(),
@@ -153,6 +166,7 @@ export async function POST(request: NextRequest) {
       .select(`
         *,
         site:clinical_sites(id, name, abbreviation, system),
+        agency:agencies(id, name, abbreviation),
         cohort:cohorts(id, cohort_number, program:programs(id, name, abbreviation)),
         visitor:lab_users(id, name, email),
         students:clinical_visit_students(

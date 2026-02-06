@@ -65,7 +65,8 @@ interface Instructor {
 
 interface SiteVisit {
   id: string;
-  site_id: string;
+  site_id: string | null;
+  agency_id: string | null;
   departments: string[];
   visitor_id: string | null;
   visitor_name: string;
@@ -80,7 +81,12 @@ interface SiteVisit {
     name: string;
     abbreviation: string;
     system: string | null;
-  };
+  } | null;
+  agency: {
+    id: string;
+    name: string;
+    abbreviation: string;
+  } | null;
   cohort: {
     id: string;
     cohort_number: number;
@@ -301,7 +307,13 @@ export default function SiteVisitsPage() {
 
   const openEditForm = (visit: SiteVisit) => {
     setEditingVisit(visit);
-    setFormSiteId(visit.site_id);
+    // Reconstruct the site/agency ID for the form
+    // If it's an agency, use the prefixed format
+    if (visit.agency_id) {
+      setFormSiteId(`agency-${visit.agency_id}`);
+    } else {
+      setFormSiteId(visit.site_id || '');
+    }
     setFormDepartments(visit.departments || []);
     setFormVisitorId(visit.visitor_id || '');
     setFormVisitorName(visit.visitor_name);
@@ -634,12 +646,17 @@ export default function SiteVisitsPage() {
                     <div className="flex-1">
                       <div className="flex items-center gap-3 mb-2">
                         <span className="font-semibold text-gray-900 dark:text-white">
-                          {visit.site?.abbreviation || 'Unknown Site'}
+                          {visit.site?.abbreviation || visit.agency?.abbreviation || 'Unknown'}
                         </span>
                         <span className="text-gray-500 dark:text-gray-400">-</span>
                         <span className="text-gray-700 dark:text-gray-300">
-                          {visit.site?.name}
+                          {visit.site?.name || visit.agency?.name}
                         </span>
+                        {visit.agency && (
+                          <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs rounded-full">
+                            Field Agency
+                          </span>
+                        )}
                         {visit.departments && visit.departments.length > 0 && (
                           <div className="flex gap-1">
                             {visit.departments.map(dept => (

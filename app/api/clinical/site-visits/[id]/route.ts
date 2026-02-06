@@ -24,6 +24,7 @@ export async function GET(
       .select(`
         *,
         site:clinical_sites(id, name, abbreviation, system),
+        agency:agencies(id, name, abbreviation),
         cohort:cohorts(id, cohort_number, program:programs(id, name, abbreviation)),
         visitor:lab_users(id, name, email),
         students:clinical_visit_students(
@@ -59,7 +60,17 @@ export async function PUT(
       updated_at: new Date().toISOString(),
     };
 
-    if (body.site_id !== undefined) updateData.site_id = body.site_id;
+    // Handle field agency IDs (prefixed with "agency-")
+    if (body.site_id !== undefined) {
+      if (body.site_id && body.site_id.startsWith('agency-')) {
+        // This is a field agency
+        updateData.site_id = null;
+        updateData.agency_id = body.site_id.replace('agency-', '');
+      } else {
+        updateData.site_id = body.site_id;
+        updateData.agency_id = null;
+      }
+    }
     if (body.departments !== undefined) updateData.departments = body.departments;
     if (body.visitor_id !== undefined) updateData.visitor_id = body.visitor_id;
     if (body.visitor_name !== undefined) updateData.visitor_name = body.visitor_name.trim();
@@ -105,6 +116,7 @@ export async function PUT(
       .select(`
         *,
         site:clinical_sites(id, name, abbreviation, system),
+        agency:agencies(id, name, abbreviation),
         cohort:cohorts(id, cohort_number, program:programs(id, name, abbreviation)),
         visitor:lab_users(id, name, email),
         students:clinical_visit_students(
