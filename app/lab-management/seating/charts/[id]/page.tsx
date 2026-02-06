@@ -17,7 +17,8 @@ import {
   Wand2,
   X,
   AlertCircle,
-  Download
+  Download,
+  FlipVertical
 } from 'lucide-react';
 
 interface Student {
@@ -98,6 +99,7 @@ export default function SeatingChartBuilderPage() {
   const [warnings, setWarnings] = useState<string[]>([]);
   const [showWarnings, setShowWarnings] = useState(false);
   const [generationStats, setGenerationStats] = useState<any>(null);
+  const [isFlipped, setIsFlipped] = useState(false); // Flip orientation - false = instructor view (front at top), true = student view (front at bottom)
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -441,12 +443,15 @@ export default function SeatingChartBuilderPage() {
   }
 
   // Build table layout: 4 rows, 2 tables per row
-  const rows = [
+  const baseRows = [
     { row: 1, tables: [1, 2], zone: 'Front (Audio)' },
     { row: 2, tables: [3, 4], zone: 'Middle (Visual)' },
     { row: 3, tables: [5, 6], zone: 'Middle (Visual)' },
     { row: 4, tables: [7, 8], zone: 'Back (Kinesthetic)' },
   ];
+
+  // Reverse rows when flipped (student view)
+  const rows = isFlipped ? [...baseRows].reverse() : baseRows;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 print:bg-white">
@@ -487,6 +492,14 @@ export default function SeatingChartBuilderPage() {
               >
                 <Wand2 className="w-4 h-4" />
                 {generating ? 'Generating...' : 'Auto-Generate'}
+              </button>
+              <button
+                onClick={() => setIsFlipped(!isFlipped)}
+                className={`inline-flex items-center gap-1 px-3 py-2 text-sm border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-300 ${isFlipped ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700' : ''}`}
+                title={isFlipped ? 'Student View (front at bottom)' : 'Instructor View (front at top)'}
+              >
+                <FlipVertical className="w-4 h-4" />
+                {isFlipped ? 'Student View' : 'Instructor View'}
               </button>
               <button
                 onClick={handleClearAll}
@@ -595,10 +608,19 @@ export default function SeatingChartBuilderPage() {
         <div className="flex gap-6 print:block">
           {/* Classroom Layout */}
           <div className="flex-1">
-            {/* Front of Room Label */}
-            <div className="text-center mb-4 py-2 bg-gray-800 dark:bg-gray-700 text-white rounded-lg font-medium print:bg-gray-200 print:text-gray-800">
-              FRONT OF ROOM (Instructor)
-            </div>
+            {/* Front of Room Label - at top when not flipped */}
+            {!isFlipped && (
+              <div className="text-center mb-4 py-2 bg-gray-800 dark:bg-gray-700 text-white rounded-lg font-medium print:bg-gray-200 print:text-gray-800">
+                FRONT OF ROOM (Instructor)
+              </div>
+            )}
+
+            {/* Back of Room Label - at top when flipped */}
+            {isFlipped && (
+              <div className="text-center mb-4 py-2 bg-gray-500 dark:bg-gray-600 text-white rounded-lg font-medium print:bg-gray-100 print:text-gray-800">
+                BACK OF ROOM
+              </div>
+            )}
 
             {/* Tables Grid */}
             <div className="space-y-4">
@@ -685,9 +707,11 @@ export default function SeatingChartBuilderPage() {
               ))}
             </div>
 
-            {/* Overflow Seats */}
+            {/* Overflow Seats - always at bottom of tables, but label changes based on view */}
             <div className="mt-6">
-              <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">Overflow Seating (Back Wall)</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                {isFlipped ? 'Overflow Seating (Near Front)' : 'Overflow Seating (Back Wall)'}
+              </div>
               <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-3 print:shadow-none print:border">
                 <div className="flex gap-2 justify-center">
                   {[1, 2, 3].map((seat) => {
@@ -749,6 +773,20 @@ export default function SeatingChartBuilderPage() {
                 </div>
               </div>
             </div>
+
+            {/* Front of Room Label - at bottom when flipped (student view) */}
+            {isFlipped && (
+              <div className="text-center mt-6 py-2 bg-gray-800 dark:bg-gray-700 text-white rounded-lg font-medium print:bg-gray-200 print:text-gray-800">
+                FRONT OF ROOM (Instructor)
+              </div>
+            )}
+
+            {/* Back of Room Label - at bottom when not flipped */}
+            {!isFlipped && (
+              <div className="text-center mt-6 py-2 bg-gray-500 dark:bg-gray-600 text-white rounded-lg font-medium print:bg-gray-100 print:text-gray-800">
+                BACK OF ROOM
+              </div>
+            )}
           </div>
 
           {/* Unassigned Students Sidebar */}
