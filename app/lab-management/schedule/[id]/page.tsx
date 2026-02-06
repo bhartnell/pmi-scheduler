@@ -292,6 +292,10 @@ export default function LabDayPage() {
   const openEditModal = async (station: Station) => {
     setEditingStation(station);
 
+    // Always fetch scenarios and skills FIRST to ensure they're available for rendering
+    // This fixes a race condition where skills would appear empty in the edit form
+    await fetchScenariosAndSkills();
+
     // Fetch station skills and custom skills if it's a skills station
     let stationSkillIds: string[] = [];
     let customSkillsList: string[] = [];
@@ -385,10 +389,6 @@ export default function LabDayPage() {
       setSelectedInstructor('');
       setIsCustomInstructor(false);
     }
-
-    // Always fetch scenarios and skills to ensure they're available for rendering
-    // This fixes a race condition where skills would appear empty in the edit form
-    await fetchScenariosAndSkills();
   };
 
   const toggleSkill = (skillId: string) => {

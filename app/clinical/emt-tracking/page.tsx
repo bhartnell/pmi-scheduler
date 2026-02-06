@@ -35,21 +35,17 @@ interface TrackingRecord {
   id: string;
   student_id: string;
   mce_complete: boolean;
-  vax_uploaded: boolean;
-  ridealong_scanned: boolean;
-  vitals_tracker_date: string | null;
-  // Keep these for backwards compat with any new records
-  vax_complete?: boolean;
-  ride_along_complete?: boolean;
-  vitals_complete?: boolean;
+  vax_complete: boolean;
+  ride_along_complete: boolean;
+  vitals_complete: boolean;
 }
 
 // EMT tracking columns - mapped to actual DB column names
 // Note: MCE checkbox removed per Ryan's feedback — EMT students do NOT have mCE
 const TRACKING_COLUMNS = [
-  { key: 'vax_uploaded', label: 'Vax', fullName: 'Vaccinations' },
-  { key: 'ridealong_scanned', label: 'Ride-Along', fullName: 'Ride-Along Complete' },
-  { key: 'vitals_tracker_date', label: 'Vitals', fullName: 'Vitals Assessment', isDate: true },
+  { key: 'vax_complete', label: 'Vax', fullName: 'Vaccinations' },
+  { key: 'ride_along_complete', label: 'Ride-Along', fullName: 'Ride-Along Complete' },
+  { key: 'vitals_complete', label: 'Vitals', fullName: 'Vitals Assessment' },
 ];
 
 export default function EMTTrackingPage() {
@@ -138,10 +134,8 @@ export default function EMTTrackingPage() {
     const record = tracking.find(t => t.student_id === studentId);
     if (!record) return false;
     const value = (record as any)[field];
-    // Handle both boolean fields and date fields (truthy date = complete)
-    if (typeof value === 'boolean') return value;
-    if (typeof value === 'string' && value.trim()) return true; // non-empty date string = complete
-    return !!value;
+    // All fields are booleans
+    return value === true;
   };
 
   const toggleField = async (studentId: string, field: string) => {
@@ -151,12 +145,8 @@ export default function EMTTrackingPage() {
     setSaving(cellKey);
 
     const currentValue = getTrackingStatus(studentId, field);
-    // For date fields, toggle between today's date and null; for booleans, toggle true/false
-    const colConfig = TRACKING_COLUMNS.find(c => c.key === field);
-    const isDateField = (colConfig as any)?.isDate;
-    const newValue = isDateField
-      ? (currentValue ? null : new Date().toISOString().split('T')[0])
-      : !currentValue;
+    // All fields are booleans, toggle true/false
+    const newValue = !currentValue;
 
     try {
       const res = await fetch('/api/clinical/emt-tracking', {
@@ -179,7 +169,7 @@ export default function EMTTrackingPage() {
               t.student_id === studentId ? { ...t, [field]: newValue } : t
             );
           } else {
-            return [...prev, { id: data.tracking?.id || '', student_id: studentId, mce_complete: false, vax_uploaded: false, ridealong_scanned: false, vitals_tracker_date: null, [field]: newValue } as unknown as TrackingRecord];
+            return [...prev, { id: data.tracking?.id || '', student_id: studentId, mce_complete: false, vax_complete: false, ride_along_complete: false, vitals_complete: false, [field]: newValue } as TrackingRecord];
           }
         });
       } else {
