@@ -96,6 +96,31 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// PATCH - Reset all ready statuses to NOT READY (called after rotation acknowledgment)
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { labDayId } = body;
+
+    if (!labDayId) {
+      return NextResponse.json({ success: false, error: 'labDayId is required' }, { status: 400 });
+    }
+
+    // Set all ready statuses to is_ready: false
+    const { error } = await supabase
+      .from('lab_timer_ready_status')
+      .update({ is_ready: false })
+      .eq('lab_day_id', labDayId);
+
+    if (error) throw error;
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error resetting ready statuses:', error);
+    return NextResponse.json({ success: false, error: 'Failed to reset ready statuses' }, { status: 500 });
+  }
+}
+
 // DELETE - Clear all ready statuses for a lab day (called when timer resets)
 export async function DELETE(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;

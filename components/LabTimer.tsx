@@ -79,10 +79,14 @@ export default function LabTimer({
   const [showSettings, setShowSettings] = useState(false);
   const [showDebriefAlert, setShowDebriefAlert] = useState(false);
   const [showRotateAlert, setShowRotateAlert] = useState(false);
+  const [rotateAlertStartTime, setRotateAlertStartTime] = useState<number | null>(null);
+  const [rotateAlertCountdown, setRotateAlertCountdown] = useState(30);
   const [lastAlertRotation, setLastAlertRotation] = useState(0);
   const [debriefAlertShown, setDebriefAlertShown] = useState(false);
   const [readyStatuses, setReadyStatuses] = useState<ReadyStatus[]>([]);
   const [allStations, setAllStations] = useState<Station[]>([]);
+
+  const ROTATE_ALERT_TIMEOUT = 30000; // 30 seconds auto-dismiss
 
   const containerRef = useRef<HTMLDivElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -210,6 +214,29 @@ export default function LabTimer({
     }
   }, [labDayId]);
 
+  // Reset all ready statuses to NOT READY
+  const resetReadyStatuses = useCallback(async () => {
+    try {
+      await fetch('/api/lab-management/timer/ready', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ labDayId })
+      });
+      // Refresh ready statuses
+      await fetchReadyStatuses();
+    } catch (error) {
+      console.error('Error resetting ready statuses:', error);
+    }
+  }, [labDayId, fetchReadyStatuses]);
+
+  // Acknowledge rotation alert - clears overlay and resets ready statuses
+  const acknowledgeRotation = useCallback(async () => {
+    setShowRotateAlert(false);
+    setRotateAlertStartTime(null);
+    // Reset all instructors to NOT READY for next rotation
+    await resetReadyStatuses();
+  }, [resetReadyStatuses]);
+
   // Initialize timer
   const initializeTimer = useCallback(async () => {
     try {
@@ -332,6 +359,7 @@ export default function LabTimer({
         // Rotation end alert - LOUD
         if (remaining <= 0 && timerState.status === 'running' && lastAlertRotation !== timerState.rotation_number) {
           setShowRotateAlert(true);
+          setRotateAlertStartTime(Date.now());
           setLastAlertRotation(timerState.rotation_number);
           playLoudAlert();
         }
@@ -356,6 +384,7 @@ export default function LabTimer({
 
         if (elapsed >= duration && timerState.status === 'running' && lastAlertRotation !== timerState.rotation_number) {
           setShowRotateAlert(true);
+          setRotateAlertStartTime(Date.now());
           setLastAlertRotation(timerState.rotation_number);
           playLoudAlert();
         }
@@ -374,6 +403,30 @@ export default function LabTimer({
       setDebriefAlertShown(false);
     }
   }, [timerState?.rotation_number]);
+
+  // Auto-dismiss rotate alert after 30 seconds and update countdown
+  useEffect(() => {
+    if (showRotateAlert && rotateAlertStartTime) {
+      // Update countdown every second
+      const countdownInterval = setInterval(() => {
+        const elapsed = Date.now() - rotateAlertStartTime;
+        const remaining = Math.ceil((ROTATE_ALERT_TIMEOUT - elapsed) / 1000);
+        setRotateAlertCountdown(Math.max(0, remaining));
+      }, 100);
+
+      // Auto-dismiss timeout
+      const timeoutId = setTimeout(() => {
+        acknowledgeRotation();
+      }, ROTATE_ALERT_TIMEOUT);
+
+      return () => {
+        clearInterval(countdownInterval);
+        clearTimeout(timeoutId);
+      };
+    } else {
+      setRotateAlertCountdown(30);
+    }
+  }, [showRotateAlert, rotateAlertStartTime, acknowledgeRotation]);
 
   // Format time as MM:SS
   const formatTime = (seconds: number) => {
@@ -459,9 +512,16 @@ export default function LabTimer({
 
       if (e.key === ' ' || e.key === 'Space') {
         e.preventDefault();
-        handlePlayPause();
+        // If rotate alert is showing, acknowledge it instead of play/pause
+        if (showRotateAlert) {
+          acknowledgeRotation();
+        } else {
+          handlePlayPause();
+        }
       } else if (e.key === 'Escape') {
-        if (isFullscreen) {
+        if (showRotateAlert) {
+          acknowledgeRotation();
+        } else if (isFullscreen) {
           document.exitFullscreen();
         } else {
           handleClose();
@@ -475,7 +535,7 @@ export default function LabTimer({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isFullscreen, timerState, numRotations, isController, handleClose, handlePlayPause, handleNextRotation, handleReset]);
+  }, [isFullscreen, timerState, numRotations, isController, handleClose, handlePlayPause, handleNextRotation, handleReset, showRotateAlert, acknowledgeRotation]);
 
   // Get background color based on time/alerts
   const getBackgroundClass = () => {
@@ -693,10 +753,35 @@ export default function LabTimer({
           </>
         )}
 
-        {/* Alert Messages */}
+        {/* Rotate Alert Overlay - Full screen clickable */}
         {showRotateAlert && (
-          <div className="absolute top-1/4 text-6xl md:text-8xl font-bold text-white animate-bounce">
-            {currentRotation >= numRotations ? 'LAB COMPLETE - BEGIN CLEANUP' : 'ROTATE!'}
+          <div
+            className="absolute inset-0 flex flex-col items-center justify-center bg-red-600/95 cursor-pointer z-10"
+            onClick={acknowledgeRotation}
+          >
+            <div className="text-6xl md:text-8xl font-bold text-white animate-bounce mb-8">
+              {currentRotation >= numRotations ? 'LAB COMPLETE' : 'ROTATE!'}
+            </div>
+            {currentRotation >= numRotations && (
+              <div className="text-3xl md:text-4xl font-medium text-white/90 mb-8">
+                BEGIN CLEANUP
+              </div>
+            )}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                acknowledgeRotation();
+              }}
+              className="px-8 py-4 bg-white text-red-600 font-bold text-xl rounded-lg hover:bg-gray-100 transition-colors shadow-lg"
+            >
+              ACKNOWLEDGE
+            </button>
+            <div className="mt-6 text-white/70 text-sm">
+              Press SPACE, tap screen, or click button to dismiss
+            </div>
+            <div className="mt-2 text-white/50 text-xs">
+              Auto-dismisses in {rotateAlertCountdown}s
+            </div>
           </div>
         )}
         {showDebriefAlert && !showRotateAlert && (
