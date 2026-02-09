@@ -450,7 +450,7 @@ export default function SeatingChartBuilderPage() {
     { row: 4, tables: [7, 8], zone: 'Back (Kinesthetic)' },
   ];
 
-  // Reverse rows when flipped (student view)
+  // Reverse row ORDER only (not left/right within rows) when flipped (student view)
   const rows = isFlipped ? [...baseRows].reverse() : baseRows;
 
   return (
@@ -622,6 +622,75 @@ export default function SeatingChartBuilderPage() {
               </div>
             )}
 
+            {/* Overflow Seats - at back of room (top when flipped, bottom when not flipped) */}
+            {isFlipped && (
+              <div className="mb-6">
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                  Overflow Seating (Back Wall)
+                </div>
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-3 print:shadow-none print:border">
+                  <div className="flex gap-2 justify-center">
+                    {[1, 2, 3].map((seat) => {
+                      const student = getStudentAtSeat(0, seat, true);
+                      const ls = student ? getLearningStyle(student.id) : null;
+
+                      return (
+                        <div
+                          key={seat}
+                          onDragOver={handleDragOver}
+                          onDrop={() => handleDrop(0, seat, 5, true)}
+                          className={`w-24 h-36 print:h-auto rounded-lg border-2 border-dashed flex flex-col items-center justify-center p-1 transition-colors ${
+                            student
+                              ? 'border-solid border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700'
+                              : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30'
+                          }`}
+                        >
+                          {student ? (
+                            <div
+                              draggable
+                              onDragStart={() => handleDragStart(student, { table: 0, seat })}
+                              onContextMenu={(e) => handleContextMenu(e, student)}
+                              className="w-full h-full flex flex-col items-center justify-center cursor-move"
+                            >
+                              <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 mb-1">
+                                {student.photo_url ? (
+                                  <img src={student.photo_url} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-gray-500 dark:text-gray-300 text-xs font-medium">
+                                    {student.first_name[0]}{student.last_name[0]}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="text-xs print:text-sm font-medium text-gray-900 dark:text-white print:text-black text-center truncate print:whitespace-normal w-full">
+                                {student.first_name}
+                              </div>
+                              <div className="text-xs print:text-sm text-gray-500 dark:text-gray-400 print:text-black text-center truncate print:whitespace-normal w-full">
+                                {student.last_name}
+                              </div>
+                              <div className="flex gap-0.5 mt-1 print:hidden">
+                                {ls?.primary_style && (
+                                  <span className={`w-4 h-4 rounded text-xs flex items-center justify-center ${STYLE_BADGES[ls.primary_style]?.bg} ${STYLE_BADGES[ls.primary_style]?.text}`}>
+                                    {STYLE_BADGES[ls.primary_style]?.label}
+                                  </span>
+                                )}
+                                {ls?.social_style && (
+                                  <span className={`w-4 h-4 rounded text-xs flex items-center justify-center ${STYLE_BADGES[ls.social_style]?.bg} ${STYLE_BADGES[ls.social_style]?.text}`}>
+                                    {STYLE_BADGES[ls.social_style]?.label}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-gray-400">Overflow {seat}</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Tables Grid */}
             <div className="space-y-4">
               {rows.map(({ row, tables, zone }) => (
@@ -707,72 +776,74 @@ export default function SeatingChartBuilderPage() {
               ))}
             </div>
 
-            {/* Overflow Seats - always at bottom of tables, but label changes based on view */}
-            <div className="mt-6">
-              <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                {isFlipped ? 'Overflow Seating (Near Front)' : 'Overflow Seating (Back Wall)'}
-              </div>
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-3 print:shadow-none print:border">
-                <div className="flex gap-2 justify-center">
-                  {[1, 2, 3].map((seat) => {
-                    const student = getStudentAtSeat(0, seat, true);
-                    const ls = student ? getLearningStyle(student.id) : null;
+            {/* Overflow Seats - at back of room (bottom when not flipped) */}
+            {!isFlipped && (
+              <div className="mt-6">
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                  Overflow Seating (Back Wall)
+                </div>
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-3 print:shadow-none print:border">
+                  <div className="flex gap-2 justify-center">
+                    {[1, 2, 3].map((seat) => {
+                      const student = getStudentAtSeat(0, seat, true);
+                      const ls = student ? getLearningStyle(student.id) : null;
 
-                    return (
-                      <div
-                        key={seat}
-                        onDragOver={handleDragOver}
-                        onDrop={() => handleDrop(0, seat, 5, true)}
-                        className={`w-24 h-36 print:h-auto rounded-lg border-2 border-dashed flex flex-col items-center justify-center p-1 transition-colors ${
-                          student
-                            ? 'border-solid border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700'
-                            : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30'
-                        }`}
-                      >
-                        {student ? (
-                          <div
-                            draggable
-                            onDragStart={() => handleDragStart(student, { table: 0, seat })}
-                            onContextMenu={(e) => handleContextMenu(e, student)}
-                            className="w-full h-full flex flex-col items-center justify-center cursor-move"
-                          >
-                            <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 mb-1">
-                              {student.photo_url ? (
-                                <img src={student.photo_url} alt="" className="w-full h-full object-cover" />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center text-gray-500 dark:text-gray-300 text-xs font-medium">
-                                  {student.first_name[0]}{student.last_name[0]}
-                                </div>
-                              )}
+                      return (
+                        <div
+                          key={seat}
+                          onDragOver={handleDragOver}
+                          onDrop={() => handleDrop(0, seat, 5, true)}
+                          className={`w-24 h-36 print:h-auto rounded-lg border-2 border-dashed flex flex-col items-center justify-center p-1 transition-colors ${
+                            student
+                              ? 'border-solid border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700'
+                              : 'border-gray-300 dark:border-gray-600 hover:border-blue-400 dark:hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30'
+                          }`}
+                        >
+                          {student ? (
+                            <div
+                              draggable
+                              onDragStart={() => handleDragStart(student, { table: 0, seat })}
+                              onContextMenu={(e) => handleContextMenu(e, student)}
+                              className="w-full h-full flex flex-col items-center justify-center cursor-move"
+                            >
+                              <div className="w-20 h-20 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-600 mb-1">
+                                {student.photo_url ? (
+                                  <img src={student.photo_url} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-gray-500 dark:text-gray-300 text-xs font-medium">
+                                    {student.first_name[0]}{student.last_name[0]}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="text-xs print:text-sm font-medium text-gray-900 dark:text-white print:text-black text-center truncate print:whitespace-normal w-full">
+                                {student.first_name}
+                              </div>
+                              <div className="text-xs print:text-sm text-gray-500 dark:text-gray-400 print:text-black text-center truncate print:whitespace-normal w-full">
+                                {student.last_name}
+                              </div>
+                              <div className="flex gap-0.5 mt-1 print:hidden">
+                                {ls?.primary_style && (
+                                  <span className={`w-4 h-4 rounded text-xs flex items-center justify-center ${STYLE_BADGES[ls.primary_style]?.bg} ${STYLE_BADGES[ls.primary_style]?.text}`}>
+                                    {STYLE_BADGES[ls.primary_style]?.label}
+                                  </span>
+                                )}
+                                {ls?.social_style && (
+                                  <span className={`w-4 h-4 rounded text-xs flex items-center justify-center ${STYLE_BADGES[ls.social_style]?.bg} ${STYLE_BADGES[ls.social_style]?.text}`}>
+                                    {STYLE_BADGES[ls.social_style]?.label}
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                            <div className="text-xs print:text-sm font-medium text-gray-900 dark:text-white print:text-black text-center truncate print:whitespace-normal w-full">
-                              {student.first_name}
-                            </div>
-                            <div className="text-xs print:text-sm text-gray-500 dark:text-gray-400 print:text-black text-center truncate print:whitespace-normal w-full">
-                              {student.last_name}
-                            </div>
-                            <div className="flex gap-0.5 mt-1 print:hidden">
-                              {ls?.primary_style && (
-                                <span className={`w-4 h-4 rounded text-xs flex items-center justify-center ${STYLE_BADGES[ls.primary_style]?.bg} ${STYLE_BADGES[ls.primary_style]?.text}`}>
-                                  {STYLE_BADGES[ls.primary_style]?.label}
-                                </span>
-                              )}
-                              {ls?.social_style && (
-                                <span className={`w-4 h-4 rounded text-xs flex items-center justify-center ${STYLE_BADGES[ls.social_style]?.bg} ${STYLE_BADGES[ls.social_style]?.text}`}>
-                                  {STYLE_BADGES[ls.social_style]?.label}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-gray-400">Overflow {seat}</span>
-                        )}
-                      </div>
-                    );
-                  })}
+                          ) : (
+                            <span className="text-xs text-gray-400">Overflow {seat}</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Front of Room Label - at bottom when flipped (student view) */}
             {isFlipped && (

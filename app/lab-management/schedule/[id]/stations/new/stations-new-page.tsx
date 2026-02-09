@@ -4,7 +4,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { 
+import {
   ChevronRight,
   Save,
   AlertCircle,
@@ -14,7 +14,10 @@ import {
   User,
   Search,
   X,
-  Plus
+  Plus,
+  Upload,
+  Repeat,
+  Trash2
 } from 'lucide-react';
 
 interface LabDay {
@@ -55,6 +58,7 @@ interface Instructor {
 const STATION_TYPES = [
   { value: 'scenario', label: 'Scenario', icon: Stethoscope, color: 'bg-purple-500', description: 'Full scenario with grading' },
   { value: 'skills', label: 'Skills', icon: ClipboardCheck, color: 'bg-green-500', description: 'Skills practice station' },
+  { value: 'skill_drill', label: 'Skill Drill', icon: Repeat, color: 'bg-orange-500', description: 'Student-led practice' },
   { value: 'documentation', label: 'Documentation', icon: FileText, color: 'bg-blue-500', description: 'Documentation/PCR station' }
 ];
 
@@ -73,7 +77,14 @@ export default function AddStationPage() {
   const [saving, setSaving] = useState(false);
 
   // Form state
-  const [stationType, setStationType] = useState<'scenario' | 'skills' | 'documentation'>('scenario');
+  const [stationType, setStationType] = useState<'scenario' | 'skills' | 'skill_drill' | 'documentation'>('scenario');
+  const [userEditedName, setUserEditedName] = useState(false); // Track if user manually edited the name
+
+  // File upload state
+  const [skillSheetFile, setSkillSheetFile] = useState<File | null>(null);
+  const [instructionsFile, setInstructionsFile] = useState<File | null>(null);
+  const [uploadingSkillSheet, setUploadingSkillSheet] = useState(false);
+  const [uploadingInstructions, setUploadingInstructions] = useState(false);
   const [customTitle, setCustomTitle] = useState('');
   const [scenarioId, setScenarioId] = useState('');
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
@@ -200,6 +211,16 @@ export default function AddStationPage() {
     }
   };
 
+  // Auto-generate station name when scenario/skills change (if user hasn't manually edited)
+  useEffect(() => {
+    if (!userEditedName && labDay) {
+      const generatedTitle = generateStationTitle();
+      if (generatedTitle) {
+        setCustomTitle(generatedTitle);
+      }
+    }
+  }, [scenarioId, selectedSkills, stationType, labDay, userEditedName]);
+
   // Generate station title based on type and selection
   const generateStationTitle = () => {
     const stationNum = getNextStationNumber();
@@ -222,11 +243,42 @@ export default function AddStationPage() {
       return `${prefix} ${dateStr} - Station ${stationNum}: ${skillStr}`;
     }
 
+    if (stationType === 'skill_drill') {
+      if (selectedSkills.length > 0) {
+        const skillNames = selectedSkills
+          .map(id => skills.find(s => s.id === id)?.name)
+          .filter(Boolean)
+          .slice(0, 2);
+        const skillStr = skillNames.join(', ') + (selectedSkills.length > 2 ? '...' : '');
+        return `${prefix} ${dateStr} - Station ${stationNum}: Skill Drill - ${skillStr}`;
+      }
+      return `${prefix} ${dateStr} - Station ${stationNum}: Skill Drill`;
+    }
+
     if (stationType === 'documentation') {
       return `${prefix} ${dateStr} - Station ${stationNum}: Documentation`;
     }
 
     return `${prefix} ${dateStr} - Station ${stationNum}`;
+  };
+
+  // Upload a document file to a station
+  const uploadDocument = async (stationId: string, file: File, documentType: 'skill_sheet' | 'instructions'): Promise<string | null> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('documentType', documentType);
+
+    const res = await fetch(`/api/lab-management/stations/${stationId}/documents`, {
+      method: 'POST',
+      body: formData
+    });
+
+    const data = await res.json();
+    if (data.success) {
+      return data.documentUrl;
+    }
+    console.error('Failed to upload document:', data.error);
+    return null;
   };
 
   const handleSave = async () => {
@@ -266,20 +318,35 @@ export default function AddStationPage() {
       });
 
       const stationData = await stationRes.json();
-      
+
       if (!stationData.success) {
         throw new Error(stationData.error || 'Failed to create station');
       }
 
-      // If skills station, add skill links
-      if (stationType === 'skills' && stationData.station) {
+      const stationId = stationData.station.id;
+
+      // Upload files if provided
+      if (skillSheetFile) {
+        setUploadingSkillSheet(true);
+        await uploadDocument(stationId, skillSheetFile, 'skill_sheet');
+        setUploadingSkillSheet(false);
+      }
+
+      if (instructionsFile) {
+        setUploadingInstructions(true);
+        await uploadDocument(stationId, instructionsFile, 'instructions');
+        setUploadingInstructions(false);
+      }
+
+      // If skills or skill_drill station, add skill links
+      if ((stationType === 'skills' || stationType === 'skill_drill') && stationData.station) {
         // Add library skills
         for (const skillId of selectedSkills) {
           await fetch('/api/lab-management/station-skills', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              station_id: stationData.station.id,
+              station_id: stationId,
               skill_id: skillId
             })
           });
@@ -292,7 +359,7 @@ export default function AddStationPage() {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
-                station_id: stationData.station.id,
+                station_id: stationId,
                 name: customSkill.trim()
               })
             });
@@ -383,7 +450,7 @@ export default function AddStationPage() {
           {/* Station Type Selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-3">Station Type</label>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {STATION_TYPES.map(type => {
                 const Icon = type.icon;
                 const isSelected = stationType === type.value;
@@ -417,12 +484,15 @@ export default function AddStationPage() {
             <input
               type="text"
               value={customTitle}
-              onChange={(e) => setCustomTitle(e.target.value)}
-              placeholder={generateStationTitle() || "e.g., PM14 01/23/26 - Station 1: Chest Pain"}
+              onChange={(e) => {
+                setCustomTitle(e.target.value);
+                setUserEditedName(true); // Mark as manually edited
+              }}
+              placeholder="e.g., PM14 01/23/26 - Station 1: Chest Pain"
               className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
             />
             <p className="text-xs text-gray-500 mt-1">
-              Leave blank to auto-generate based on scenario/skill selection
+              Auto-generated based on selection. Edit to customize.
             </p>
           </div>
 
@@ -445,8 +515,18 @@ export default function AddStationPage() {
             </div>
           )}
 
-          {/* Skills Selection (for skills type) */}
-          {stationType === 'skills' && (
+          {/* Skill Drill Info */}
+          {stationType === 'skill_drill' && (
+            <div className="p-4 bg-orange-50 rounded-lg">
+              <p className="text-orange-800 text-sm">
+                <strong>Skill Drill:</strong> Student-led practice station where students independently practice skills
+                (e.g., IV reps, intubation practice, cognitive load drills). No instructor grading required.
+              </p>
+            </div>
+          )}
+
+          {/* Skills Selection (for skills or skill_drill type) */}
+          {(stationType === 'skills' || stationType === 'skill_drill') && (
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Skills from Library</label>
@@ -526,36 +606,108 @@ export default function AddStationPage() {
               <h3 className="text-sm font-semibold text-gray-900">Station Documentation</h3>
             </div>
 
+            {/* Skill Sheet Upload */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Skill Sheet URL
+                Skill Sheet
               </label>
-              <input
-                type="url"
-                value={skillSheetUrl}
-                onChange={(e) => setSkillSheetUrl(e.target.value)}
-                placeholder="https://drive.google.com/..."
-                className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Link to skill sheet or reference document
-              </p>
+              <div className="space-y-2">
+                {/* File Upload */}
+                <div className="flex items-center gap-2">
+                  <label className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors">
+                    <Upload className="w-5 h-5 text-gray-400" />
+                    <span className="text-sm text-gray-600">
+                      {skillSheetFile ? skillSheetFile.name : 'Upload file (PDF, DOCX, images)'}
+                    </span>
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp,.gif"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setSkillSheetFile(file);
+                          setSkillSheetUrl(''); // Clear URL if file selected
+                        }
+                      }}
+                      className="hidden"
+                    />
+                  </label>
+                  {skillSheetFile && (
+                    <button
+                      type="button"
+                      onClick={() => setSkillSheetFile(null)}
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+                {/* OR URL */}
+                {!skillSheetFile && (
+                  <>
+                    <div className="text-xs text-center text-gray-400">— OR enter URL —</div>
+                    <input
+                      type="url"
+                      value={skillSheetUrl}
+                      onChange={(e) => setSkillSheetUrl(e.target.value)}
+                      placeholder="https://drive.google.com/..."
+                      className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white text-sm"
+                    />
+                  </>
+                )}
+              </div>
             </div>
 
+            {/* Instructions Upload */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Instructions URL
+                Instructions
               </label>
-              <input
-                type="url"
-                value={instructionsUrl}
-                onChange={(e) => setInstructionsUrl(e.target.value)}
-                placeholder="https://drive.google.com/..."
-                className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Link to instructor instructions or setup guide
-              </p>
+              <div className="space-y-2">
+                {/* File Upload */}
+                <div className="flex items-center gap-2">
+                  <label className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors">
+                    <Upload className="w-5 h-5 text-gray-400" />
+                    <span className="text-sm text-gray-600">
+                      {instructionsFile ? instructionsFile.name : 'Upload file (PDF, DOCX, images)'}
+                    </span>
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp,.gif"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setInstructionsFile(file);
+                          setInstructionsUrl(''); // Clear URL if file selected
+                        }
+                      }}
+                      className="hidden"
+                    />
+                  </label>
+                  {instructionsFile && (
+                    <button
+                      type="button"
+                      onClick={() => setInstructionsFile(null)}
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+                {/* OR URL */}
+                {!instructionsFile && (
+                  <>
+                    <div className="text-xs text-center text-gray-400">— OR enter URL —</div>
+                    <input
+                      type="url"
+                      value={instructionsUrl}
+                      onChange={(e) => setInstructionsUrl(e.target.value)}
+                      placeholder="https://drive.google.com/..."
+                      className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white text-sm"
+                    />
+                  </>
+                )}
+              </div>
             </div>
 
             <div>

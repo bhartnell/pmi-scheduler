@@ -22,7 +22,10 @@ import {
   X,
   Save,
   Trash2,
-  Timer
+  Timer,
+  Repeat,
+  Upload,
+  ExternalLink
 } from 'lucide-react';
 import LabTimer from '@/components/LabTimer';
 import BLSPlatinumChecklist from '@/components/BLSPlatinumChecklist';
@@ -103,12 +106,15 @@ interface Instructor {
 const STATION_TYPES = [
   { value: 'scenario', label: 'Scenario', description: 'Full scenario with grading' },
   { value: 'skills', label: 'Skills', description: 'Skills practice station' },
+  { value: 'skill_drill', label: 'Skill Drill', description: 'Student-led practice' },
   { value: 'documentation', label: 'Documentation', description: 'Documentation/PCR station' }
 ];
 
 const STATION_TYPE_COLORS: Record<string, string> = {
   scenario: 'border-blue-200 bg-blue-50 dark:border-blue-700 dark:bg-blue-900/30',
   skill: 'border-green-200 bg-green-50 dark:border-green-700 dark:bg-green-900/30',
+  skills: 'border-green-200 bg-green-50 dark:border-green-700 dark:bg-green-900/30',
+  skill_drill: 'border-orange-200 bg-orange-50 dark:border-orange-700 dark:bg-orange-900/30',
   documentation: 'border-purple-200 bg-purple-50 dark:border-purple-700 dark:bg-purple-900/30',
   lecture: 'border-yellow-200 bg-yellow-50 dark:border-yellow-700 dark:bg-yellow-900/30',
   testing: 'border-red-200 bg-red-50 dark:border-red-700 dark:bg-red-900/30',
@@ -117,6 +123,8 @@ const STATION_TYPE_COLORS: Record<string, string> = {
 const STATION_TYPE_BADGES: Record<string, string> = {
   scenario: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300',
   skill: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300',
+  skills: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300',
+  skill_drill: 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300',
   documentation: 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300',
   lecture: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300',
   testing: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300',
@@ -307,7 +315,7 @@ export default function LabDayPage() {
     let stationSkillIds: string[] = [];
     let customSkillsList: string[] = [];
 
-    if (station.station_type === 'skills') {
+    if (station.station_type === 'skills' || station.station_type === 'skill_drill') {
       try {
         // Fetch library skills from station-skills endpoint
         const res = await fetch(`/api/lab-management/station-skills?stationId=${station.id}`);
@@ -568,8 +576,8 @@ export default function LabDayPage() {
         return;
       }
 
-      // If skills station, update skill links and custom skills
-      if (editForm.station_type === 'skills') {
+      // If skills or skill_drill station, update skill links and custom skills
+      if (editForm.station_type === 'skills' || editForm.station_type === 'skill_drill') {
         // Delete existing skill links
         await fetch(`/api/lab-management/station-skills?stationId=${editingStation.id}`, {
           method: 'DELETE'
@@ -889,6 +897,36 @@ export default function LabDayPage() {
                     )}
                   </div>
 
+                  {/* Document Links */}
+                  {(station.skill_sheet_url || station.instructions_url) && (
+                    <div className="flex flex-wrap gap-2 mb-3 print:hidden">
+                      {station.skill_sheet_url && (
+                        <a
+                          href={station.skill_sheet_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-100 dark:hover:bg-blue-900/50"
+                        >
+                          <FileText className="w-3 h-3" />
+                          Skill Sheet
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
+                      {station.instructions_url && (
+                        <a
+                          href={station.instructions_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded hover:bg-green-100 dark:hover:bg-green-900/50"
+                        >
+                          <FileText className="w-3 h-3" />
+                          Instructions
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
+                    </div>
+                  )}
+
                   {/* Actions */}
                   <div className="flex gap-2 pt-3 border-t dark:border-gray-700 print:hidden">
                     <button
@@ -962,7 +1000,7 @@ export default function LabDayPage() {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Station Type
                 </label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {STATION_TYPES.map(type => (
                     <button
                       key={type.value}
@@ -1045,8 +1083,18 @@ export default function LabDayPage() {
                 </div>
               )}
 
-              {/* Skills Selection (for skills type) */}
-              {editForm.station_type === 'skills' && (
+              {/* Skill Drill Info */}
+              {editForm.station_type === 'skill_drill' && (
+                <div className="p-4 bg-orange-50 dark:bg-orange-900/30 rounded-lg">
+                  <p className="text-orange-800 dark:text-orange-300 text-sm">
+                    <strong>Skill Drill:</strong> Student-led practice station where students independently practice skills.
+                    No instructor grading required.
+                  </p>
+                </div>
+              )}
+
+              {/* Skills Selection (for skills or skill_drill type) */}
+              {(editForm.station_type === 'skills' || editForm.station_type === 'skill_drill') && (
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -1123,8 +1171,8 @@ export default function LabDayPage() {
                 </div>
               )}
 
-              {/* BLS/Platinum Skills Checklist (for skills stations) */}
-              {editForm.station_type === 'skills' && labDay && (
+              {/* BLS/Platinum Skills Checklist (for skills/skill_drill stations) */}
+              {(editForm.station_type === 'skills' || editForm.station_type === 'skill_drill') && labDay && (
                 <BLSPlatinumChecklist
                   labDayId={labDay.id}
                   currentStationId={editingStation?.id}
