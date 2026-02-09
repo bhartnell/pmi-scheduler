@@ -198,8 +198,9 @@ export default function TimerBanner({
     fetchReadyStatus();
 
     // Determine poll interval based on timer state
+    // TimerBanner is on grading page - user is actively grading
     const getPollInterval = () => {
-      if (!timerState || timerState.status === 'stopped') return 10000; // 10s when stopped
+      if (!timerState || timerState.status === 'stopped') return 30000; // 30s when stopped (waiting for lab to start)
       if (timerState.status === 'paused') return 5000; // 5s when paused
       // When running: faster polling in final 30 seconds
       if (timerState.status === 'running' && displaySeconds <= 30) return 2000; // 2s in final 30s

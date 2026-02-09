@@ -59,8 +59,11 @@ export default function GlobalTimerBanner() {
   // Poll for active timer - optimized interval based on state
   useEffect(() => {
     fetchActiveTimer();
-    // Poll every 10 seconds when no active timer, 5 seconds when timer is running
-    const interval = timer?.status === 'running' ? 5000 : 10000;
+
+    // Determine polling interval:
+    // - Running timer: 5s (need responsive updates)
+    // - No timer/stopped: 60s (just checking if a new lab started)
+    const interval = timer?.status === 'running' ? 5000 : 60000;
     const pollId = setInterval(fetchActiveTimer, interval);
     return () => clearInterval(pollId);
   }, [fetchActiveTimer, timer?.status]);

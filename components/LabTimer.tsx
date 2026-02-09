@@ -300,8 +300,9 @@ export default function LabTimer({
   // Poll for updates - optimized intervals based on timer status
   useEffect(() => {
     // Determine polling intervals based on timer state
+    // When timer modal is open, user is actively managing the lab
     const getTimerPollInterval = () => {
-      if (!timerState || timerState.status === 'stopped') return 10000; // 10s when stopped
+      if (!timerState || timerState.status === 'stopped') return 30000; // 30s when stopped (user may restart)
       if (timerState.status === 'paused') return 5000; // 5s when paused
       // When running: faster polling in final 30 seconds for smooth countdown
       if (timerState.status === 'running' && displaySeconds <= 30) return 2000; // 2s in final 30s
@@ -309,8 +310,8 @@ export default function LabTimer({
     };
 
     const getReadyPollInterval = () => {
-      if (!timerState || timerState.status === 'stopped') return 10000; // 10s when stopped
-      return 5000; // 5s when active
+      if (!timerState || timerState.status === 'stopped') return 30000; // 30s when stopped
+      return 5000; // 5s when active (instructors marking ready)
     };
 
     const timerInterval = getTimerPollInterval();
