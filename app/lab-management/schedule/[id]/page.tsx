@@ -94,6 +94,7 @@ interface Skill {
   id: string;
   name: string;
   category: string;
+  certification_levels?: string[];
 }
 
 interface Instructor {
@@ -154,6 +155,7 @@ export default function LabDayPage() {
   const [deletingStation, setDeletingStation] = useState(false);
   const [skillsModalOpen, setSkillsModalOpen] = useState(false);
   const [skillSearch, setSkillSearch] = useState('');
+  const [certLevelFilter, setCertLevelFilter] = useState<string>(''); // '' = All, 'EMT', 'AEMT', 'Paramedic'
   const [editCustomSkills, setEditCustomSkills] = useState<string[]>([]);
   const [stationInstructors, setStationInstructors] = useState<{id?: string; user_email: string; user_name: string; is_primary: boolean}[]>([]);
   const [editForm, setEditForm] = useState({
@@ -505,12 +507,14 @@ export default function LabDayPage() {
     setEditCustomSkills(editCustomSkills.filter((_, i) => i !== index));
   };
 
-  // Group skills by category for the modal
-  const filteredSkills = skills.filter(skill =>
-    !skillSearch ||
-    skill.name.toLowerCase().includes(skillSearch.toLowerCase()) ||
-    skill.category.toLowerCase().includes(skillSearch.toLowerCase())
-  );
+  // Group skills by category for the modal with certification level filter
+  const filteredSkills = skills.filter(skill => {
+    const matchesSearch = !skillSearch ||
+      skill.name.toLowerCase().includes(skillSearch.toLowerCase()) ||
+      skill.category.toLowerCase().includes(skillSearch.toLowerCase());
+    const matchesLevel = !certLevelFilter || skill.certification_levels?.includes(certLevelFilter);
+    return matchesSearch && matchesLevel;
+  });
 
   const skillsByCategory = filteredSkills.reduce((acc, skill) => {
     if (!acc[skill.category]) acc[skill.category] = [];
@@ -1471,18 +1475,31 @@ export default function LabDayPage() {
               </button>
             </div>
 
-            {/* Search */}
-            <div className="p-4 border-b dark:border-gray-700">
-              <input
-                type="text"
-                value={skillSearch}
-                onChange={(e) => setSkillSearch(e.target.value)}
-                placeholder="Search skills..."
-                className="w-full px-4 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
-              />
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                {editForm.selectedSkills.length} selected
-              </p>
+            {/* Search and Filter */}
+            <div className="p-4 border-b dark:border-gray-700 space-y-3">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={skillSearch}
+                  onChange={(e) => setSkillSearch(e.target.value)}
+                  placeholder="Search skills..."
+                  className="flex-1 px-4 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                />
+                <select
+                  value={certLevelFilter}
+                  onChange={(e) => setCertLevelFilter(e.target.value)}
+                  className="px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 text-sm"
+                >
+                  <option value="">All Levels</option>
+                  <option value="EMT">EMT</option>
+                  <option value="AEMT">AEMT</option>
+                  <option value="Paramedic">Paramedic</option>
+                </select>
+              </div>
+              <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                <span>{editForm.selectedSkills.length} selected</span>
+                <span>{filteredSkills.length} skills shown</span>
+              </div>
             </div>
 
             {/* Skills List */}

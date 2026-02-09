@@ -102,6 +102,7 @@ export default function AddStationPage() {
   // Skills modal
   const [skillsModalOpen, setSkillsModalOpen] = useState(false);
   const [skillSearch, setSkillSearch] = useState('');
+  const [certLevelFilter, setCertLevelFilter] = useState<string>(''); // '' = All, 'EMT', 'AEMT', 'Paramedic'
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -375,13 +376,17 @@ export default function AddStationPage() {
     setSaving(false);
   };
 
-  // Filter skills by search and program level
+  // Filter skills by search and certification level
+  // If certLevelFilter is set, use it; otherwise default to program level (or show all)
   const programLevel = labDay?.cohort?.program?.abbreviation || '';
+  const effectiveLevel = certLevelFilter || ''; // Empty means show all
   const filteredSkills = skills.filter(skill => {
-    const matchesSearch = !skillSearch || 
+    const matchesSearch = !skillSearch ||
       skill.name.toLowerCase().includes(skillSearch.toLowerCase()) ||
       skill.category.toLowerCase().includes(skillSearch.toLowerCase());
-    const matchesLevel = !programLevel || skill.certification_levels.includes(programLevel) || skill.certification_levels.includes('Paramedic');
+    // If a specific level filter is selected, filter by it
+    // Otherwise show all skills (no automatic filtering by program)
+    const matchesLevel = !effectiveLevel || skill.certification_levels.includes(effectiveLevel);
     return matchesSearch && matchesLevel;
   });
 
@@ -840,21 +845,34 @@ export default function AddStationPage() {
               </button>
             </div>
             
-            {/* Search */}
-            <div className="p-4 border-b">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="text"
-                  value={skillSearch}
-                  onChange={(e) => setSkillSearch(e.target.value)}
-                  placeholder="Search skills..."
-                  className="w-full pl-10 pr-4 py-2 border rounded-lg text-gray-900 bg-white"
-                />
+            {/* Search and Filter */}
+            <div className="p-4 border-b space-y-3">
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    value={skillSearch}
+                    onChange={(e) => setSkillSearch(e.target.value)}
+                    placeholder="Search skills..."
+                    className="w-full pl-10 pr-4 py-2 border rounded-lg text-gray-900 bg-white"
+                  />
+                </div>
+                <select
+                  value={certLevelFilter}
+                  onChange={(e) => setCertLevelFilter(e.target.value)}
+                  className="px-3 py-2 border rounded-lg text-gray-900 bg-white text-sm"
+                >
+                  <option value="">All Levels</option>
+                  <option value="EMT">EMT</option>
+                  <option value="AEMT">AEMT</option>
+                  <option value="Paramedic">Paramedic</option>
+                </select>
               </div>
-              <p className="text-xs text-gray-500 mt-2">
-                {selectedSkills.length} selected
-              </p>
+              <div className="flex items-center justify-between text-xs text-gray-500">
+                <span>{selectedSkills.length} selected</span>
+                <span>{filteredSkills.length} skills shown</span>
+              </div>
             </div>
             
             {/* Skills List */}
