@@ -56,12 +56,14 @@ export default function GlobalTimerBanner() {
     }
   }, [lastRotation]);
 
-  // Poll for active timer every 3 seconds
+  // Poll for active timer - optimized interval based on state
   useEffect(() => {
     fetchActiveTimer();
-    const interval = setInterval(fetchActiveTimer, 3000);
-    return () => clearInterval(interval);
-  }, [fetchActiveTimer]);
+    // Poll every 10 seconds when no active timer, 5 seconds when timer is running
+    const interval = timer?.status === 'running' ? 5000 : 10000;
+    const pollId = setInterval(fetchActiveTimer, interval);
+    return () => clearInterval(pollId);
+  }, [fetchActiveTimer, timer?.status]);
 
   // Add/remove body class and padding when banner is visible
   const isActive = timer && labDay && !isDismissed;

@@ -297,18 +297,33 @@ export default function LabTimer({
     init();
   }, [labDayId, fetchTimerState, fetchReadyStatuses, initializeTimer, isController]);
 
-  // Poll for updates (every 2 seconds for ready status, 1 second for timer)
+  // Poll for updates - optimized intervals based on timer status
   useEffect(() => {
-    // Timer state polls every 1 second for accuracy
-    const timerPoll = setInterval(fetchTimerState, 1000);
-    // Ready status polls every 2 seconds (less frequent is fine)
-    const readyPoll = setInterval(fetchReadyStatuses, 2000);
+    // Determine polling intervals based on timer state
+    const getTimerPollInterval = () => {
+      if (!timerState || timerState.status === 'stopped') return 10000; // 10s when stopped
+      if (timerState.status === 'paused') return 5000; // 5s when paused
+      // When running: faster polling in final 30 seconds for smooth countdown
+      if (timerState.status === 'running' && displaySeconds <= 30) return 2000; // 2s in final 30s
+      return 5000; // 5s normally when running
+    };
+
+    const getReadyPollInterval = () => {
+      if (!timerState || timerState.status === 'stopped') return 10000; // 10s when stopped
+      return 5000; // 5s when active
+    };
+
+    const timerInterval = getTimerPollInterval();
+    const readyInterval = getReadyPollInterval();
+
+    const timerPoll = setInterval(fetchTimerState, timerInterval);
+    const readyPoll = setInterval(fetchReadyStatuses, readyInterval);
 
     return () => {
       clearInterval(timerPoll);
       clearInterval(readyPoll);
     };
-  }, [fetchTimerState, fetchReadyStatuses]);
+  }, [fetchTimerState, fetchReadyStatuses, timerState?.status, displaySeconds]);
 
   // Sync timer duration when lab day settings change
   useEffect(() => {

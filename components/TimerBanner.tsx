@@ -192,20 +192,32 @@ export default function TimerBanner({
     setSettingReady(false);
   };
 
-  // Initialize on mount and poll for updates
+  // Initialize on mount and poll for updates - optimized intervals
   useEffect(() => {
     fetchTimerState();
     fetchReadyStatus();
+
+    // Determine poll interval based on timer state
+    const getPollInterval = () => {
+      if (!timerState || timerState.status === 'stopped') return 10000; // 10s when stopped
+      if (timerState.status === 'paused') return 5000; // 5s when paused
+      // When running: faster polling in final 30 seconds
+      if (timerState.status === 'running' && displaySeconds <= 30) return 2000; // 2s in final 30s
+      return 5000; // 5s normally when running
+    };
+
+    const interval = getPollInterval();
     pollIntervalRef.current = setInterval(() => {
       fetchTimerState();
       fetchReadyStatus();
-    }, 1000);
+    }, interval);
+
     return () => {
       if (pollIntervalRef.current) {
         clearInterval(pollIntervalRef.current);
       }
     };
-  }, [fetchTimerState, fetchReadyStatus]);
+  }, [fetchTimerState, fetchReadyStatus, timerState?.status, displaySeconds]);
 
   // Calculate display time from timer state
   useEffect(() => {
