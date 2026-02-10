@@ -16,7 +16,10 @@ import {
   X,
   AlertTriangle,
   CheckCircle2,
-  FileSpreadsheet
+  FileSpreadsheet,
+  LayoutGrid,
+  Table2,
+  TrendingUp
 } from 'lucide-react';
 import { canAccessClinical, canEditClinical, type Role } from '@/lib/permissions';
 import * as XLSX from 'xlsx';
@@ -63,18 +66,33 @@ interface StudentHours {
   total_shifts: number;
 }
 
+// Hour requirements for each category
+const HOUR_REQUIREMENTS: Record<string, number> = {
+  psych_hours: 12,
+  ed_hours: 132,
+  icu_hours: 12,
+  ob_hours: 24,
+  or_hours: 36,
+  peds_ed_hours: 36,
+  peds_icu_hours: 12,
+  ems_field_hours: 24,  // Elective/Misc
+  cardiology_hours: 0,  // CCL - no requirement
+};
+
+const TOTAL_REQUIRED_HOURS = 290;
+
 // Department columns configuration - maps to wide table columns
 // CCL in UI = cardiology in DB
 const DEPT_COLUMNS = [
-  { key: 'psych', label: 'Psych', fullName: 'Behavioral Health', hoursField: 'psych_hours', shiftsField: 'psych_shifts' },
-  { key: 'ed', label: 'ED', fullName: 'Emergency Room', hoursField: 'ed_hours', shiftsField: 'ed_shifts' },
-  { key: 'ems_field', label: 'EMS Field', fullName: 'EMS Field Experience', hoursField: 'ems_field_hours', shiftsField: 'ems_field_shifts' },
-  { key: 'icu', label: 'ICU', fullName: 'Intensive Care Unit', hoursField: 'icu_hours', shiftsField: 'icu_shifts' },
-  { key: 'ob', label: 'OB', fullName: 'Labor & Delivery', hoursField: 'ob_hours', shiftsField: 'ob_shifts' },
-  { key: 'or', label: 'OR', fullName: 'Inpatient', hoursField: 'or_hours', shiftsField: 'or_shifts' },
-  { key: 'peds_ed', label: 'Peds ED', fullName: 'Pediatric ED', hoursField: 'peds_ed_hours', shiftsField: 'peds_ed_shifts' },
-  { key: 'peds_icu', label: 'Peds ICU', fullName: 'Pediatric ICU', hoursField: 'peds_icu_hours', shiftsField: 'peds_icu_shifts' },
-  { key: 'cardiology', label: 'CCL', fullName: 'Cardiac Cath Lab', hoursField: 'cardiology_hours', shiftsField: 'cardiology_shifts' },
+  { key: 'psych', label: 'Psych', fullName: 'Behavioral Health', hoursField: 'psych_hours' as const, shiftsField: 'psych_shifts' as const, required: 12 },
+  { key: 'ed', label: 'ED', fullName: 'Emergency Room', hoursField: 'ed_hours' as const, shiftsField: 'ed_shifts' as const, required: 132 },
+  { key: 'icu', label: 'ICU', fullName: 'Intensive Care Unit', hoursField: 'icu_hours' as const, shiftsField: 'icu_shifts' as const, required: 12 },
+  { key: 'ob', label: 'OB', fullName: 'Labor & Delivery', hoursField: 'ob_hours' as const, shiftsField: 'ob_shifts' as const, required: 24 },
+  { key: 'or', label: 'OR', fullName: 'Inpatient', hoursField: 'or_hours' as const, shiftsField: 'or_shifts' as const, required: 36 },
+  { key: 'peds_ed', label: 'Peds ED', fullName: 'Pediatric ED', hoursField: 'peds_ed_hours' as const, shiftsField: 'peds_ed_shifts' as const, required: 36 },
+  { key: 'peds_icu', label: 'Peds ICU', fullName: 'Pediatric ICU', hoursField: 'peds_icu_hours' as const, shiftsField: 'peds_icu_shifts' as const, required: 12 },
+  { key: 'ems_field', label: 'Elective', fullName: 'EMS Field / Elective', hoursField: 'ems_field_hours' as const, shiftsField: 'ems_field_shifts' as const, required: 24 },
+  { key: 'cardiology', label: 'CCL', fullName: 'Cardiac Cath Lab', hoursField: 'cardiology_hours' as const, shiftsField: 'cardiology_shifts' as const, required: 0 },
 ] as const;
 
 interface ImportPreviewRow {
@@ -82,6 +100,8 @@ interface ImportPreviewRow {
   matchedStudent: Student | null;
   data: Partial<StudentHours>;
 }
+
+type ViewMode = 'dashboard' | 'detailed';
 
 export default function ClinicalHoursTrackerPage() {
   const { data: session, status } = useSession();
@@ -99,6 +119,7 @@ export default function ClinicalHoursTrackerPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [editingCell, setEditingCell] = useState<string | null>(null);
   const [editValue, setEditValue] = useState({ shifts: 0, hours: 0 });
+  const [viewMode, setViewMode] = useState<ViewMode>('dashboard');
 
   // Import modal state
   const [showImportModal, setShowImportModal] = useState(false);
@@ -172,6 +193,45 @@ export default function ClinicalHoursTrackerPage() {
     return hoursData.find(h => h.student_id === studentId) || null;
   };
 
+  // Get completion status color for a cell
+  const getCompletionColor = (current: number, required: number): string => {
+    if (required === 0) return 'bg-gray-100 dark:bg-gray-700'; // No requirement
+    const percentage = (current / required) * 100;
+    if (percentage >= 100) return 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300';
+    if (percentage >= 50) return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300';
+    return 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300';
+  };
+
+  // Get progress bar color
+  const getProgressColor = (percentage: number): string => {
+    if (percentage >= 100) return 'bg-green-500';
+    if (percentage >= 50) return 'bg-yellow-500';
+    return 'bg-red-500';
+  };
+
+  // Calculate cohort summary stats
+  const getCohortStats = () => {
+    const totalStudents = students.length;
+    let completedCount = 0;
+    let totalPercentage = 0;
+
+    students.forEach(student => {
+      const hours = getStudentHours(student.id);
+      const studentTotal = hours?.total_hours || 0;
+      const percentage = Math.min((studentTotal / TOTAL_REQUIRED_HOURS) * 100, 100);
+      totalPercentage += percentage;
+      if (studentTotal >= TOTAL_REQUIRED_HOURS) {
+        completedCount++;
+      }
+    });
+
+    return {
+      totalStudents,
+      completedCount,
+      averagePercentage: totalStudents > 0 ? Math.round(totalPercentage / totalStudents) : 0
+    };
+  };
+
   const startEditing = (studentId: string, col: typeof DEPT_COLUMNS[number]) => {
     if (!userRole || !canEditClinical(userRole)) return;
 
@@ -229,7 +289,7 @@ export default function ClinicalHoursTrackerPage() {
     return true;
   });
 
-  // Platinum Import Functions
+  // Platinum Import Functions - REPLACES values (not increments)
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -258,15 +318,7 @@ export default function ClinicalHoursTrackerPage() {
       const preview: ImportPreviewRow[] = validRows.map((row: unknown[]) => {
         const name = String(row[0] || '').trim();
 
-        // Parse hours/shifts from columns
-        // Cols 1-2: Behavioral (Hours, Shifts) → psych
-        // Cols 3-4: Emergency Room → ed
-        // Cols 5-6: EMS Field Experience → ems_field
-        // Cols 7-8: ICU → icu
-        // Cols 9-10: OB/Labor & Delivery → ob
-        // Cols 11-12: OR Inpatient → or
-        // Cols 13-14: Pediatric ED → peds_ed
-        // Cols 15-16: Pediatric ICU → peds_icu
+        // Parse hours/shifts from columns (Platinum shows cumulative totals)
         const parseNum = (val: unknown): number => {
           if (typeof val === 'number') return val;
           if (typeof val === 'string') return parseFloat(val) || 0;
@@ -292,7 +344,6 @@ export default function ClinicalHoursTrackerPage() {
           peds_icu_shifts: parseNum(row[16]),
         };
 
-        // Try to match student by name
         const matchedStudent = matchStudentByName(name);
 
         return {
@@ -309,7 +360,6 @@ export default function ClinicalHoursTrackerPage() {
       setImportError('Failed to parse file. Please ensure it is a valid Excel file.');
     }
 
-    // Reset file input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -318,7 +368,6 @@ export default function ClinicalHoursTrackerPage() {
   const matchStudentByName = (importName: string): Student | null => {
     const normalizedImport = importName.toLowerCase().trim();
 
-    // Try exact match first
     let match = students.find(s => {
       const fullName = `${s.first_name} ${s.last_name}`.toLowerCase();
       const reverseName = `${s.last_name} ${s.first_name}`.toLowerCase();
@@ -330,7 +379,6 @@ export default function ClinicalHoursTrackerPage() {
 
     if (match) return match;
 
-    // Try partial match (last name + first initial)
     match = students.find(s => {
       const lastName = s.last_name.toLowerCase();
       const firstInitial = s.first_name[0]?.toLowerCase();
@@ -341,6 +389,7 @@ export default function ClinicalHoursTrackerPage() {
     return match || null;
   };
 
+  // Import REPLACES/SETS values (Platinum shows cumulative totals, not increments)
   const executeImport = async () => {
     setImporting(true);
     setImportError(null);
@@ -351,6 +400,7 @@ export default function ClinicalHoursTrackerPage() {
       for (const row of matchedRows) {
         if (!row.matchedStudent) continue;
 
+        // POST with the values - API will SET (not increment) these values
         const updateData = {
           student_id: row.matchedStudent.id,
           cohort_id: selectedCohort,
@@ -368,7 +418,6 @@ export default function ClinicalHoursTrackerPage() {
         }
       }
 
-      // Refresh data
       await fetchCohortData();
       setShowImportModal(false);
       setImportPreview([]);
@@ -393,6 +442,7 @@ export default function ClinicalHoursTrackerPage() {
   const canEdit = userRole && canEditClinical(userRole);
   const unmatchedCount = importPreview.filter(r => !r.matchedStudent).length;
   const matchedCount = importPreview.filter(r => r.matchedStudent).length;
+  const cohortStats = getCohortStats();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50 to-cyan-100 dark:from-gray-900 dark:to-gray-800">
@@ -419,24 +469,52 @@ export default function ClinicalHoursTrackerPage() {
                 <p className="text-gray-600 dark:text-gray-400">Track shifts and hours by department</p>
               </div>
             </div>
-            {canEdit && selectedCohort && (
-              <div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".xlsx,.xls"
-                  onChange={handleFileSelect}
-                  className="hidden"
-                />
+            <div className="flex items-center gap-3">
+              {/* View Toggle */}
+              <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
                 <button
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  onClick={() => setViewMode('dashboard')}
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded text-sm transition-colors ${
+                    viewMode === 'dashboard'
+                      ? 'bg-white dark:bg-gray-600 shadow text-blue-600 dark:text-blue-400'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                  }`}
                 >
-                  <Upload className="w-4 h-4" />
-                  Import from Platinum
+                  <LayoutGrid className="w-4 h-4" />
+                  Dashboard
+                </button>
+                <button
+                  onClick={() => setViewMode('detailed')}
+                  className={`flex items-center gap-1 px-3 py-1.5 rounded text-sm transition-colors ${
+                    viewMode === 'detailed'
+                      ? 'bg-white dark:bg-gray-600 shadow text-blue-600 dark:text-blue-400'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                  }`}
+                >
+                  <Table2 className="w-4 h-4" />
+                  Detailed
                 </button>
               </div>
-            )}
+
+              {canEdit && selectedCohort && (
+                <>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".xlsx,.xls"
+                    onChange={handleFileSelect}
+                    className="hidden"
+                  />
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    <Upload className="w-4 h-4" />
+                    Import from Platinum
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -472,14 +550,142 @@ export default function ClinicalHoursTrackerPage() {
               />
             </div>
 
-            <div className="text-sm text-gray-500 dark:text-gray-400">
-              Click any cell to edit shifts/hours
-            </div>
+            {viewMode === 'detailed' && (
+              <div className="text-sm text-gray-500 dark:text-gray-400">
+                Click any cell to edit shifts/hours
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Grid Table */}
-        {selectedCohort && (
+        {/* Cohort Summary Stats */}
+        {selectedCohort && students.length > 0 && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-6">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-blue-500" />
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    <span className="font-semibold text-gray-900 dark:text-white">{cohortStats.completedCount}</span> of {cohortStats.totalStudents} students completed all hours
+                  </span>
+                </div>
+                <div className="h-4 w-px bg-gray-300 dark:bg-gray-600" />
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    Cohort average: <span className="font-semibold text-gray-900 dark:text-white">{cohortStats.averagePercentage}%</span> complete
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 text-xs">
+                <span className="flex items-center gap-1">
+                  <span className="w-3 h-3 rounded bg-green-500"></span> Complete
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-3 h-3 rounded bg-yellow-500"></span> 50%+
+                </span>
+                <span className="flex items-center gap-1">
+                  <span className="w-3 h-3 rounded bg-red-500"></span> &lt;50%
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Dashboard View */}
+        {selectedCohort && viewMode === 'dashboard' && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 dark:bg-gray-700">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider sticky left-0 bg-gray-50 dark:bg-gray-700 z-10">
+                      Student
+                    </th>
+                    {DEPT_COLUMNS.map(col => (
+                      <th
+                        key={col.key}
+                        className="px-2 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap"
+                        title={col.fullName}
+                      >
+                        <div>{col.label}</div>
+                        {col.required > 0 && (
+                          <div className="text-[10px] font-normal text-gray-400">/{col.required}h</div>
+                        )}
+                      </th>
+                    ))}
+                    <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-blue-50 dark:bg-blue-900/20">
+                      Total<br/><span className="text-[10px] font-normal">/{TOTAL_REQUIRED_HOURS}h</span>
+                    </th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-32">
+                      Progress
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                  {filteredStudents.length === 0 ? (
+                    <tr>
+                      <td colSpan={DEPT_COLUMNS.length + 3} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
+                        No students found
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredStudents.map(student => {
+                      const studentHours = getStudentHours(student.id);
+                      const totalHours = studentHours?.total_hours || 0;
+                      const progressPercent = Math.min(Math.round((totalHours / TOTAL_REQUIRED_HOURS) * 100), 100);
+
+                      return (
+                        <tr key={student.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                          <td className="px-4 py-2 whitespace-nowrap sticky left-0 bg-white dark:bg-gray-800 z-10">
+                            <div className="font-medium text-gray-900 dark:text-white text-sm">
+                              {student.last_name}, {student.first_name}
+                            </div>
+                          </td>
+                          {DEPT_COLUMNS.map(col => {
+                            const hours = studentHours?.[col.hoursField] || 0;
+                            const colorClass = getCompletionColor(hours, col.required);
+
+                            return (
+                              <td key={col.key} className="px-2 py-2 text-center">
+                                <div className={`inline-block px-2 py-1 rounded text-xs font-medium ${colorClass}`}>
+                                  {hours}{col.required > 0 ? `/${col.required}` : ''}
+                                </div>
+                              </td>
+                            );
+                          })}
+                          <td className="px-3 py-2 text-center bg-blue-50 dark:bg-blue-900/20">
+                            <div className="font-semibold text-blue-700 dark:text-blue-300 text-sm">
+                              {totalHours}/{TOTAL_REQUIRED_HOURS}
+                            </div>
+                          </td>
+                          <td className="px-4 py-2">
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full ${getProgressColor(progressPercent)} transition-all`}
+                                  style={{ width: `${progressPercent}%` }}
+                                />
+                              </div>
+                              <span className={`text-xs font-medium min-w-[3rem] text-right ${
+                                progressPercent >= 100 ? 'text-green-600' :
+                                progressPercent >= 50 ? 'text-yellow-600' : 'text-red-600'
+                              }`}>
+                                {progressPercent}%
+                              </span>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Detailed View (original editable grid) */}
+        {selectedCohort && viewMode === 'detailed' && (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -618,7 +824,10 @@ export default function ClinicalHoursTrackerPage() {
             <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <FileSpreadsheet className="w-5 h-5 text-green-600" />
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Import Preview</h2>
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Import Preview</h2>
+                  <p className="text-xs text-gray-500">Values will REPLACE existing data (Platinum shows cumulative totals)</p>
+                </div>
               </div>
               <button
                 onClick={() => { setShowImportModal(false); setImportPreview([]); }}
@@ -687,28 +896,28 @@ export default function ClinicalHoursTrackerPage() {
                           }
                         </td>
                         <td className="px-3 py-2 text-center text-xs">
-                          {row.data.psych_shifts}s/{row.data.psych_hours}h
+                          {row.data.psych_hours}h
                         </td>
                         <td className="px-3 py-2 text-center text-xs">
-                          {row.data.ed_shifts}s/{row.data.ed_hours}h
+                          {row.data.ed_hours}h
                         </td>
                         <td className="px-3 py-2 text-center text-xs">
-                          {row.data.ems_field_shifts}s/{row.data.ems_field_hours}h
+                          {row.data.ems_field_hours}h
                         </td>
                         <td className="px-3 py-2 text-center text-xs">
-                          {row.data.icu_shifts}s/{row.data.icu_hours}h
+                          {row.data.icu_hours}h
                         </td>
                         <td className="px-3 py-2 text-center text-xs">
-                          {row.data.ob_shifts}s/{row.data.ob_hours}h
+                          {row.data.ob_hours}h
                         </td>
                         <td className="px-3 py-2 text-center text-xs">
-                          {row.data.or_shifts}s/{row.data.or_hours}h
+                          {row.data.or_hours}h
                         </td>
                         <td className="px-3 py-2 text-center text-xs">
-                          {row.data.peds_ed_shifts}s/{row.data.peds_ed_hours}h
+                          {row.data.peds_ed_hours}h
                         </td>
                         <td className="px-3 py-2 text-center text-xs">
-                          {row.data.peds_icu_shifts}s/{row.data.peds_icu_hours}h
+                          {row.data.peds_icu_hours}h
                         </td>
                       </tr>
                     ))}
