@@ -81,11 +81,7 @@ interface Phase {
   presentation_notes: string;
   expected_actions: string;
   display_order: number;
-  // SAMPLE - L and E (S, A, M, P come from scenario-level)
-  signs_symptoms: string;      // S - Additional signs/symptoms for this phase
-  last_oral_intake: string;    // L
-  events_leading: string;      // E
-  // OPQRST
+  // OPQRST (for phases where symptom assessment changes)
   onset: string;               // O
   provocation: string;         // P
   quality: string;             // Q
@@ -253,10 +249,6 @@ const createEmptyPhase = (order: number): Phase => ({
   presentation_notes: '',
   expected_actions: '',
   display_order: order,
-  // SAMPLE
-  signs_symptoms: '',
-  last_oral_intake: '',
-  events_leading: '',
   // OPQRST
   onset: '',
   provocation: '',
@@ -1647,48 +1639,6 @@ export default function ScenarioEditorPage() {
                       <option value="Not Sick">Not Sick</option>
                       <option value="Critical">Critical</option>
                     </select>
-                  </div>
-
-                  {/* SAMPLE History (L and E) */}
-                  <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 border border-green-200 dark:border-green-800">
-                    <h4 className="text-sm font-medium text-green-700 dark:text-green-300 mb-2">
-                      SAMPLE History <span className="text-xs text-green-500">(L & E - phase specific)</span>
-                    </h4>
-                    <p className="text-xs text-green-600 dark:text-green-400 mb-2 italic">
-                      S (Signs), A (Allergies), M (Medications), P (PMHx) come from Patient Info section above.
-                    </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-xs text-green-600 dark:text-green-400 font-medium">S - Signs/Symptoms (this phase)</label>
-                        <input
-                          type="text"
-                          value={phase.signs_symptoms}
-                          onChange={(e) => updatePhase(index, { signs_symptoms: e.target.value })}
-                          placeholder="SOB, wheezing, chest tightness..."
-                          className="w-full px-2 py-1 border border-green-300 dark:border-green-700 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs text-green-600 dark:text-green-400 font-medium">L - Last Oral Intake</label>
-                        <input
-                          type="text"
-                          value={phase.last_oral_intake}
-                          onChange={(e) => updatePhase(index, { last_oral_intake: e.target.value })}
-                          placeholder="Light breakfast 4 hours ago"
-                          className="w-full px-2 py-1 border border-green-300 dark:border-green-700 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
-                        />
-                      </div>
-                      <div className="sm:col-span-2">
-                        <label className="text-xs text-green-600 dark:text-green-400 font-medium">E - Events Leading Up</label>
-                        <textarea
-                          value={phase.events_leading}
-                          onChange={(e) => updatePhase(index, { events_leading: e.target.value })}
-                          rows={2}
-                          placeholder="What happened before the call? Timeline of events..."
-                          className="w-full px-2 py-1 border border-green-300 dark:border-green-700 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
-                        />
-                      </div>
-                    </div>
                   </div>
 
                   {/* OPQRST */}
