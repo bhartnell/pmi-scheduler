@@ -30,6 +30,7 @@ import {
   X
 } from 'lucide-react';
 import { canAccessClinical, canEditClinical, type Role } from '@/lib/permissions';
+import SummativeEvaluationsSection from '@/components/clinical/SummativeEvaluationsSection';
 
 interface Internship {
   id: string;
@@ -1148,6 +1149,15 @@ export default function InternshipDetailPage() {
                 </div>
               </div>
             </div>
+
+            {/* Summative Evaluations */}
+            <SummativeEvaluationsSection
+              internshipId={internshipId}
+              studentId={internship.student_id}
+              studentName={`${student?.first_name} ${student?.last_name}`}
+              cohortId={internship.cohort_id}
+              canEdit={canEdit}
+            />
 
             {/* Extension Tracking */}
             {(formData.is_extended || formData.current_phase === 'extended') && (
