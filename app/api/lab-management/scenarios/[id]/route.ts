@@ -76,7 +76,19 @@ export async function PATCH(
     if (body.medical_history !== undefined) updateData.medical_history = body.medical_history;
     if (body.medications !== undefined) updateData.medications = body.medications;
     if (body.allergies !== undefined) updateData.allergies = body.allergies;
-    
+
+    // Primary Assessment - XABCDE
+    if (body.assessment_x !== undefined) updateData.assessment_x = body.assessment_x;
+    if (body.assessment_a !== undefined) updateData.assessment_a = body.assessment_a;
+    if (body.assessment_e !== undefined) updateData.assessment_e = body.assessment_e;
+    if (body.general_impression !== undefined) updateData.general_impression = body.general_impression;
+
+    // SAMPLE History (scenario-level)
+    if (body.sample_history !== undefined) updateData.sample_history = body.sample_history;
+
+    // OPQRST (scenario-level)
+    if (body.opqrst !== undefined) updateData.opqrst = body.opqrst;
+
     // Phases
     if (body.phases !== undefined) {
       updateData.phases = body.phases;
