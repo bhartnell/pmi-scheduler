@@ -7,7 +7,7 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-// GET - Get single evaluation with all scores
+// GET - Get single evaluation with all scores (v2)
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
