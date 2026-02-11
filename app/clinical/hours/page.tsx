@@ -98,7 +98,9 @@ const DEPT_COLUMNS = [
 interface ImportPreviewRow {
   name: string;
   matchedStudent: Student | null;
+  similarNames: string[];  // Suggestions for unmatched names
   data: Partial<StudentHours>;
+  manualMatch?: string;  // For manual matching by user
 }
 
 type ViewMode = 'dashboard' | 'detailed';
@@ -345,10 +347,13 @@ export default function ClinicalHoursTrackerPage() {
         };
 
         const matchedStudent = matchStudentByName(name);
+        // Find similar names if no match
+        const similarNames = matchedStudent ? [] : findSimilarNames(name);
 
         return {
           name,
           matchedStudent,
+          similarNames,
           data: rowData,
         };
       });
@@ -365,28 +370,119 @@ export default function ClinicalHoursTrackerPage() {
     }
   };
 
-  const matchStudentByName = (importName: string): Student | null => {
-    const normalizedImport = importName.toLowerCase().trim();
+  // Normalize name for comparison
+  const normalizeName = (name: string): string => {
+    return name
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, ' ')  // Multiple spaces to single
+      .replace(/[.,]/g, '')   // Remove periods and commas
+      .trim();
+  };
 
+  // Calculate Levenshtein distance for fuzzy matching
+  const levenshteinDistance = (a: string, b: string): number => {
+    if (a.length === 0) return b.length;
+    if (b.length === 0) return a.length;
+
+    const matrix = Array(b.length + 1).fill(null).map(() => Array(a.length + 1).fill(null));
+
+    for (let i = 0; i <= a.length; i++) matrix[0][i] = i;
+    for (let j = 0; j <= b.length; j++) matrix[j][0] = j;
+
+    for (let j = 1; j <= b.length; j++) {
+      for (let i = 1; i <= a.length; i++) {
+        const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+        matrix[j][i] = Math.min(
+          matrix[j][i - 1] + 1,
+          matrix[j - 1][i] + 1,
+          matrix[j - 1][i - 1] + cost
+        );
+      }
+    }
+    return matrix[b.length][a.length];
+  };
+
+  // Get student name variations for matching
+  const getNameVariations = (student: Student): string[] => {
+    const first = normalizeName(student.first_name);
+    const last = normalizeName(student.last_name);
+    return [
+      `${first} ${last}`,           // John Smith
+      `${last} ${first}`,           // Smith John
+      `${last}, ${first}`,          // Smith, John
+      `${last} ${first[0]}`,        // Smith J
+      `${first[0]} ${last}`,        // J Smith
+    ];
+  };
+
+  // Find similar names for suggestions
+  const findSimilarNames = (importName: string, maxSuggestions: number = 3): string[] => {
+    const normalized = normalizeName(importName);
+
+    const scored = students.map(s => {
+      const fullName = `${s.first_name} ${s.last_name}`;
+      const variations = getNameVariations(s);
+
+      // Find minimum distance across all variations
+      const minDistance = Math.min(
+        ...variations.map(v => levenshteinDistance(normalized, v))
+      );
+
+      return { student: s, name: fullName, distance: minDistance };
+    });
+
+    // Sort by distance and return top suggestions
+    return scored
+      .filter(s => s.distance <= 5)  // Only reasonably close matches
+      .sort((a, b) => a.distance - b.distance)
+      .slice(0, maxSuggestions)
+      .map(s => s.name);
+  };
+
+  const matchStudentByName = (importName: string): Student | null => {
+    const normalized = normalizeName(importName);
+
+    // Exact match attempts
     let match = students.find(s => {
-      const fullName = `${s.first_name} ${s.last_name}`.toLowerCase();
-      const reverseName = `${s.last_name} ${s.first_name}`.toLowerCase();
-      const lastFirst = `${s.last_name}, ${s.first_name}`.toLowerCase();
-      return fullName === normalizedImport ||
-             reverseName === normalizedImport ||
-             lastFirst === normalizedImport;
+      const variations = getNameVariations(s);
+      return variations.some(v => v === normalized);
     });
 
     if (match) return match;
 
+    // Partial match: last name + first initial
     match = students.find(s => {
-      const lastName = s.last_name.toLowerCase();
+      const lastName = normalizeName(s.last_name);
       const firstInitial = s.first_name[0]?.toLowerCase();
-      return normalizedImport.includes(lastName) &&
-             normalizedImport.includes(firstInitial);
+      return normalized.includes(lastName) &&
+             normalized.includes(firstInitial);
     });
 
-    return match || null;
+    if (match) return match;
+
+    // Fuzzy match: very close Levenshtein distance (≤2)
+    const fuzzyMatch = students.find(s => {
+      const variations = getNameVariations(s);
+      return variations.some(v => levenshteinDistance(normalized, v) <= 2);
+    });
+
+    return fuzzyMatch || null;
+  };
+
+  // Handle manual match selection
+  const handleManualMatch = (rowIndex: number, studentId: string) => {
+    const student = students.find(s => s.id === studentId) || null;
+    setImportPreview(prev => {
+      const updated = [...prev];
+      updated[rowIndex] = {
+        ...updated[rowIndex],
+        matchedStudent: student,
+        manualMatch: studentId,
+        similarNames: [], // Clear suggestions once matched
+      };
+      return updated;
+    });
   };
 
   // Import REPLACES/SETS values (Platinum shows cumulative totals, not increments)
@@ -394,12 +490,13 @@ export default function ClinicalHoursTrackerPage() {
     setImporting(true);
     setImportError(null);
 
-    try {
-      const matchedRows = importPreview.filter(row => row.matchedStudent);
+    const matchedRows = importPreview.filter(row => row.matchedStudent);
+    const results = { success: 0, failed: 0, failedNames: [] as string[] };
 
-      for (const row of matchedRows) {
-        if (!row.matchedStudent) continue;
+    for (const row of matchedRows) {
+      if (!row.matchedStudent) continue;
 
+      try {
         // POST with the values - API will SET (not increment) these values
         const updateData = {
           student_id: row.matchedStudent.id,
@@ -413,17 +510,44 @@ export default function ClinicalHoursTrackerPage() {
           body: JSON.stringify(updateData),
         });
 
-        if (!res.ok) {
-          throw new Error(`Failed to import for ${row.name}`);
+        if (res.ok) {
+          results.success++;
+        } else {
+          results.failed++;
+          results.failedNames.push(row.name);
         }
+      } catch (error) {
+        console.error(`Import error for ${row.name}:`, error);
+        results.failed++;
+        results.failedNames.push(row.name);
       }
+    }
 
-      await fetchCohortData();
+    // Check unmatched count
+    const unmatchedNames = importPreview
+      .filter(row => !row.matchedStudent)
+      .map(row => row.name);
+
+    await fetchCohortData();
+
+    // Show summary message
+    if (results.failed > 0 || unmatchedNames.length > 0) {
+      let message = `Imported ${results.success}/${matchedRows.length} students.`;
+      if (results.failed > 0) {
+        message += ` ${results.failed} failed: ${results.failedNames.join(', ')}.`;
+      }
+      if (unmatchedNames.length > 0) {
+        message += ` ${unmatchedNames.length} skipped (no match): ${unmatchedNames.slice(0, 3).join(', ')}${unmatchedNames.length > 3 ? '...' : ''}.`;
+      }
+      setImportError(message);
+      // Don't close modal if there were issues, let user see summary
+      if (results.failed === 0) {
+        setShowImportModal(false);
+        setImportPreview([]);
+      }
+    } else {
       setShowImportModal(false);
       setImportPreview([]);
-    } catch (error) {
-      console.error('Import error:', error);
-      setImportError('Failed to import some records. Please try again.');
     }
 
     setImporting(false);
@@ -839,21 +963,27 @@ export default function ClinicalHoursTrackerPage() {
 
             <div className="p-6 overflow-y-auto max-h-[calc(90vh-180px)]">
               {importError && (
-                <div className="mb-4 p-3 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4" />
-                  {importError}
+                <div className={`mb-4 p-3 rounded-lg flex items-start gap-2 ${
+                  importError.includes('failed') || importError.includes('skipped')
+                    ? 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400'
+                    : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400'
+                }`}>
+                  <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm">{importError}</div>
                 </div>
               )}
 
-              <div className="mb-4 flex gap-4">
+              <div className="mb-4 flex flex-wrap gap-4">
                 <div className="flex items-center gap-2 text-sm">
                   <CheckCircle2 className="w-4 h-4 text-green-600" />
                   <span className="text-gray-600 dark:text-gray-400">{matchedCount} matched</span>
                 </div>
                 {unmatchedCount > 0 && (
-                  <div className="flex items-center gap-2 text-sm">
+                  <div className="flex items-center gap-2 text-sm bg-yellow-50 dark:bg-yellow-900/20 px-3 py-1 rounded-lg">
                     <AlertTriangle className="w-4 h-4 text-yellow-600" />
-                    <span className="text-gray-600 dark:text-gray-400">{unmatchedCount} unmatched (will be skipped)</span>
+                    <span className="text-yellow-700 dark:text-yellow-400 font-medium">
+                      {unmatchedCount} unmatched - select from dropdown or will be skipped
+                    </span>
                   </div>
                 )}
               </div>
@@ -876,7 +1006,16 @@ export default function ClinicalHoursTrackerPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                    {importPreview.map((row, idx) => (
+                    {/* Show unmatched rows first */}
+                    {importPreview
+                      .map((row, idx) => ({ row, idx }))
+                      .sort((a, b) => {
+                        // Unmatched first
+                        const aMatched = a.row.matchedStudent ? 1 : 0;
+                        const bMatched = b.row.matchedStudent ? 1 : 0;
+                        return aMatched - bMatched;
+                      })
+                      .map(({ row, idx }) => (
                       <tr
                         key={idx}
                         className={row.matchedStudent ? '' : 'bg-yellow-50 dark:bg-yellow-900/10'}
@@ -888,12 +1027,48 @@ export default function ClinicalHoursTrackerPage() {
                             <AlertTriangle className="w-4 h-4 text-yellow-600" />
                           )}
                         </td>
-                        <td className="px-3 py-2 text-gray-900 dark:text-white">{row.name}</td>
-                        <td className="px-3 py-2 text-gray-600 dark:text-gray-400">
-                          {row.matchedStudent
-                            ? `${row.matchedStudent.first_name} ${row.matchedStudent.last_name}`
-                            : <span className="text-yellow-600">No match</span>
-                          }
+                        <td className="px-3 py-2 text-gray-900 dark:text-white font-medium">{row.name}</td>
+                        <td className="px-3 py-2 min-w-[200px]">
+                          {row.matchedStudent ? (
+                            <span className="text-green-700 dark:text-green-400">
+                              {row.matchedStudent.first_name} {row.matchedStudent.last_name}
+                              {row.manualMatch && <span className="text-xs ml-1">(manual)</span>}
+                            </span>
+                          ) : (
+                            <div className="space-y-1">
+                              <select
+                                value={row.manualMatch || ''}
+                                onChange={(e) => handleManualMatch(idx, e.target.value)}
+                                className="w-full text-xs px-2 py-1 border rounded bg-white dark:bg-gray-700 border-yellow-400 dark:border-yellow-600 text-gray-900 dark:text-white"
+                              >
+                                <option value="">-- Select student --</option>
+                                {row.similarNames.length > 0 && (
+                                  <optgroup label="Similar names">
+                                    {row.similarNames.map(name => {
+                                      const student = students.find(s => `${s.first_name} ${s.last_name}` === name);
+                                      return student ? (
+                                        <option key={student.id} value={student.id}>
+                                          {name}
+                                        </option>
+                                      ) : null;
+                                    })}
+                                  </optgroup>
+                                )}
+                                <optgroup label="All students">
+                                  {students.map(s => (
+                                    <option key={s.id} value={s.id}>
+                                      {s.first_name} {s.last_name}
+                                    </option>
+                                  ))}
+                                </optgroup>
+                              </select>
+                              {row.similarNames.length > 0 && !row.manualMatch && (
+                                <div className="text-xs text-yellow-600 dark:text-yellow-400">
+                                  Similar: {row.similarNames.join(', ')}
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </td>
                         <td className="px-3 py-2 text-center text-xs">
                           {row.data.psych_hours}h
