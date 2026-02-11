@@ -234,25 +234,15 @@ export async function GET(
     }
 
     .rubric-table td.selected {
-      background: #d4edda;
+      background: #e8e8e8;
       font-weight: bold;
+      border: 2px solid #000;
     }
 
-    .score-circle {
-      display: inline-block;
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      border: 2px solid #000;
-      text-align: center;
-      line-height: 16px;
+    .score-marker {
+      font-family: monospace;
       font-weight: bold;
       margin-right: 5px;
-    }
-
-    .score-circle.selected {
-      background: #000;
-      color: #fff;
     }
 
     .critical-section {
@@ -276,17 +266,24 @@ export async function GET(
     }
 
     .checkbox {
-      width: 15px;
-      height: 15px;
-      border: 1px solid #000;
+      width: 16px;
+      height: 16px;
+      border: 2px solid #000;
       display: inline-flex;
       align-items: center;
       justify-content: center;
+      font-family: monospace;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .checkbox.checked {
+      background: #000;
+      color: #fff;
     }
 
     .checkbox.checked::after {
-      content: "✓";
-      font-weight: bold;
+      content: "X";
     }
 
     .total-section {
@@ -398,7 +395,17 @@ function generateStudentPDF(evaluation: any, score: any): string {
   const student = score.student;
   const scenario = evaluation.scenario;
 
-  // Generate rubric sections
+  // Calculate total score from individual scores if total_score is null
+  const calculatedTotal = (
+    (score.leadership_scene_score ?? 0) +
+    (score.patient_assessment_score ?? 0) +
+    (score.patient_management_score ?? 0) +
+    (score.interpersonal_score ?? 0) +
+    (score.integration_score ?? 0)
+  );
+  const totalScore = score.total_score ?? calculatedTotal;
+
+  // Generate rubric sections with B&W friendly markers
   const rubricSections = SCORE_CATEGORIES.map(category => {
     const scoreValue = score[category.key] as number | null;
 
@@ -418,8 +425,8 @@ function generateStudentPDF(evaluation: any, score: any): string {
             <tr>
               ${category.levels.map((desc, idx) => `
                 <td class="${scoreValue === idx ? 'selected' : ''}">
-                  <span class="score-circle ${scoreValue === idx ? 'selected' : ''}">${idx}</span>
-                  ${desc}
+                  <span class="score-marker">${scoreValue === idx ? '[X]' : '[ ]'}</span>
+                  <strong>${idx}</strong> - ${desc}
                 </td>
               `).join('')}
             </tr>
@@ -500,9 +507,9 @@ function generateStudentPDF(evaluation: any, score: any): string {
       <div class="total-section">
         <div>
           <strong>Total Score:</strong>
-          <span class="total-score">${score.total_score ?? 0} / 15</span>
+          <span class="total-score">${totalScore} / 15</span>
           <span style="margin-left: 20px; color: #666;">
-            (${Math.round(((score.total_score ?? 0) / 15) * 100)}% - Pass ≥ 80%)
+            (${Math.round((totalScore / 15) * 100)}% - Pass ≥ 80%)
           </span>
         </div>
         <div class="pass-fail ${passFailClass}">${passFailText}</div>
