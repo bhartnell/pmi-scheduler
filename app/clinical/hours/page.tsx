@@ -299,15 +299,19 @@ export default function ClinicalHoursTrackerPage() {
     shiftsField: keyof StudentHours;
   }
 
+  // IMPORTANT: Order matters! Check Peds ED/ICU BEFORE generic ED/ICU
+  // so that "Pediatric Emergency Department" matches Peds ED, not ED
   const CATEGORY_MAPPINGS: CategoryMapping[] = [
     { name: 'Psych', patterns: ['behavioral', 'psychiatric', 'psych'], hoursField: 'psych_hours', shiftsField: 'psych_shifts' },
-    { name: 'ED', patterns: ['emergency room', 'emergency dept', 'emergency department'], hoursField: 'ed_hours', shiftsField: 'ed_shifts' },
-    { name: 'EMS Field', patterns: ['ems field', 'field experience'], hoursField: 'ems_field_hours', shiftsField: 'ems_field_shifts' },
-    { name: 'ICU', patterns: ['icu'], hoursField: 'icu_hours', shiftsField: 'icu_shifts' },  // Will check it's not Peds ICU
-    { name: 'OB', patterns: ['ob', 'labor', 'l&d', 'obstetric'], hoursField: 'ob_hours', shiftsField: 'ob_shifts' },
-    { name: 'OR', patterns: ['or inpatient', 'or ', 'operating room', 'inpatient'], hoursField: 'or_hours', shiftsField: 'or_shifts' },
+    // Peds categories MUST come before generic ED/ICU
     { name: 'Peds ED', patterns: ['pediatric emergency', 'peds ed', 'pediatric ed', 'ped ed'], hoursField: 'peds_ed_hours', shiftsField: 'peds_ed_shifts' },
     { name: 'Peds ICU', patterns: ['pediatric icu', 'peds icu', 'picu', 'ped icu'], hoursField: 'peds_icu_hours', shiftsField: 'peds_icu_shifts' },
+    // Generic ED/ICU - these will only match if Peds patterns didn't match first
+    { name: 'ED', patterns: ['emergency room', 'emergency dept', 'emergency department'], hoursField: 'ed_hours', shiftsField: 'ed_shifts' },
+    { name: 'ICU', patterns: ['icu'], hoursField: 'icu_hours', shiftsField: 'icu_shifts' },
+    { name: 'EMS Field', patterns: ['ems field', 'field experience'], hoursField: 'ems_field_hours', shiftsField: 'ems_field_shifts' },
+    { name: 'OB', patterns: ['ob', 'labor', 'l&d', 'obstetric'], hoursField: 'ob_hours', shiftsField: 'ob_shifts' },
+    { name: 'OR', patterns: ['or inpatient', 'or ', 'operating room', 'inpatient'], hoursField: 'or_hours', shiftsField: 'or_shifts' },
     { name: 'Cardiology', patterns: ['cardiology', 'cardiac', 'ccl', 'cath lab'], hoursField: 'cardiology_hours', shiftsField: 'cardiology_shifts' },
   ];
 
@@ -390,12 +394,12 @@ export default function ClinicalHoursTrackerPage() {
         // Find matching category mapping
         let mapping: CategoryMapping | null = null;
         if (!shouldIgnore) {
-          // Special handling: Peds ICU/ED must be checked BEFORE generic ICU
+          // Special handling: Peds categories must NOT match generic ED/ICU
           const isPeds = cat.nameLower.includes('pediatric') || cat.nameLower.includes('peds') || cat.nameLower.includes('picu');
 
           for (const m of CATEGORY_MAPPINGS) {
-            // Skip generic ICU if this is a Peds category
-            if (m.name === 'ICU' && isPeds) continue;
+            // Skip generic ED/ICU if this is a Peds category - let it match Peds ED/ICU instead
+            if ((m.name === 'ICU' || m.name === 'ED') && isPeds) continue;
 
             if (m.patterns.some(p => cat.nameLower.includes(p))) {
               mapping = m;
