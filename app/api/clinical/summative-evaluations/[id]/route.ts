@@ -30,7 +30,8 @@ export async function GET(
           title,
           description,
           patient_presentation,
-          expected_interventions
+          expected_interventions,
+          linked_scenario_id
         ),
         cohort:cohorts(
           id,

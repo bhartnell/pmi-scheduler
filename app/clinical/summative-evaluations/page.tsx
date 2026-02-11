@@ -19,7 +19,9 @@ import {
   X,
   Search,
   Filter,
-  Users
+  Users,
+  FileText,
+  Info
 } from 'lucide-react';
 import { canAccessClinical, type Role } from '@/lib/permissions';
 
@@ -28,6 +30,7 @@ interface Scenario {
   scenario_number: number;
   title: string;
   description: string | null;
+  linked_scenario_id: string | null;
 }
 
 interface Student {
@@ -543,16 +546,41 @@ export default function SummativeEvaluationsPage() {
                       className={`p-3 text-left rounded-lg border-2 transition-colors ${
                         newEval.scenario_id === scenario.id
                           ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20'
-                          : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                          : scenario.linked_scenario_id
+                            ? 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                            : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 opacity-75'
                       }`}
                     >
                       <div className="flex items-center gap-2">
-                        <span className="w-8 h-8 bg-gray-100 dark:bg-gray-700 rounded flex items-center justify-center text-sm font-bold">
+                        <span className={`w-8 h-8 rounded flex items-center justify-center text-sm font-bold ${
+                          scenario.linked_scenario_id
+                            ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                            : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                        }`}>
                           {scenario.scenario_number}
                         </span>
-                        <span className="text-sm font-medium text-gray-900 dark:text-white">
-                          {scenario.title}
-                        </span>
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm font-medium text-gray-900 dark:text-white block truncate">
+                            {scenario.title}
+                          </span>
+                          <span className={`text-xs flex items-center gap-1 ${
+                            scenario.linked_scenario_id
+                              ? 'text-green-600 dark:text-green-400'
+                              : 'text-gray-400 dark:text-gray-500'
+                          }`}>
+                            {scenario.linked_scenario_id ? (
+                              <>
+                                <FileText className="w-3 h-3" />
+                                Full Details
+                              </>
+                            ) : (
+                              <>
+                                <Info className="w-3 h-3" />
+                                Basic Only
+                              </>
+                            )}
+                          </span>
+                        </div>
                       </div>
                     </button>
                   ))}

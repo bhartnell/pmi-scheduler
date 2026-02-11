@@ -18,7 +18,12 @@ import {
   Loader2,
   FileText,
   Download,
-  MapPin
+  MapPin,
+  ChevronDown,
+  ChevronUp,
+  Stethoscope,
+  ClipboardList,
+  Info
 } from 'lucide-react';
 import { canAccessClinical, canEditClinical, type Role } from '@/lib/permissions';
 
@@ -58,6 +63,46 @@ interface Scenario {
   title: string;
   description: string | null;
   patient_presentation: string | null;
+  expected_interventions: string[] | null;
+  linked_scenario_id: string | null;
+}
+
+interface LinkedScenario {
+  id: string;
+  name: string;
+  patient_name: string | null;
+  patient_age: number | null;
+  patient_sex: string | null;
+  chief_complaint: string | null;
+  history: string | null;
+  medications: string | null;
+  allergies: string | null;
+  instructor_notes: string | null;
+  phases: ScenarioPhase[];
+}
+
+interface ScenarioPhase {
+  id: string;
+  phase_number: number;
+  phase_name: string;
+  description: string | null;
+  vitals: PhaseVitals | null;
+  expected_actions: string[] | null;
+  duration_minutes: number | null;
+}
+
+interface PhaseVitals {
+  hr?: number;
+  bp?: string;
+  rr?: number;
+  spo2?: number;
+  temp?: string;
+  etco2?: number;
+  glucose?: number;
+  pain?: number;
+  gcs?: number;
+  pupils?: string;
+  skin?: string;
 }
 
 interface Evaluation {
@@ -144,6 +189,9 @@ function GradingPageContent() {
   const [activeStudentId, setActiveStudentId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
+  const [scenarioExpanded, setScenarioExpanded] = useState(true);
+  const [linkedScenario, setLinkedScenario] = useState<LinkedScenario | null>(null);
+  const [expandedPhases, setExpandedPhases] = useState<Set<string>>(new Set());
 
   // Local score state for editing
   const [localScores, setLocalScores] = useState<Record<string, Partial<Score>>>({});
@@ -191,6 +239,33 @@ function GradingPageContent() {
         // Set active student to first one
         if (evalData.evaluation.scores.length > 0 && !activeStudentId) {
           setActiveStudentId(evalData.evaluation.scores[0].student_id);
+        }
+
+        // Fetch linked scenario if available
+        if (evalData.evaluation.scenario?.linked_scenario_id) {
+          try {
+            const scenarioRes = await fetch(`/api/lab-management/scenarios/${evalData.evaluation.scenario.linked_scenario_id}`);
+            const scenarioData = await scenarioRes.json();
+            if (scenarioData.success && scenarioData.scenario) {
+              // Map the scenario fields to our LinkedScenario interface
+              const scenario = scenarioData.scenario;
+              setLinkedScenario({
+                id: scenario.id,
+                name: scenario.title || scenario.name,
+                patient_name: scenario.patient_name,
+                patient_age: scenario.patient_age,
+                patient_sex: scenario.patient_sex,
+                chief_complaint: scenario.chief_complaint,
+                history: scenario.medical_history,
+                medications: scenario.medications,
+                allergies: scenario.allergies,
+                instructor_notes: scenario.instructor_notes,
+                phases: scenario.phases || []
+              });
+            }
+          } catch (err) {
+            console.error('Error fetching linked scenario:', err);
+          }
         }
       }
     } catch (error) {
@@ -293,6 +368,35 @@ function GradingPageContent() {
 
   const canEdit = userRole ? canEditClinical(userRole) : false;
 
+  const togglePhase = (phaseId: string) => {
+    setExpandedPhases(prev => {
+      const next = new Set(prev);
+      if (next.has(phaseId)) {
+        next.delete(phaseId);
+      } else {
+        next.add(phaseId);
+      }
+      return next;
+    });
+  };
+
+  const formatVitals = (vitals: PhaseVitals | null) => {
+    if (!vitals) return null;
+    const parts: string[] = [];
+    if (vitals.hr) parts.push(`HR: ${vitals.hr}`);
+    if (vitals.bp) parts.push(`BP: ${vitals.bp}`);
+    if (vitals.rr) parts.push(`RR: ${vitals.rr}`);
+    if (vitals.spo2) parts.push(`SpO2: ${vitals.spo2}%`);
+    if (vitals.etco2) parts.push(`EtCO2: ${vitals.etco2}`);
+    if (vitals.temp) parts.push(`Temp: ${vitals.temp}`);
+    if (vitals.glucose) parts.push(`Glucose: ${vitals.glucose}`);
+    if (vitals.gcs) parts.push(`GCS: ${vitals.gcs}`);
+    if (vitals.pain !== undefined) parts.push(`Pain: ${vitals.pain}/10`);
+    if (vitals.pupils) parts.push(`Pupils: ${vitals.pupils}`);
+    if (vitals.skin) parts.push(`Skin: ${vitals.skin}`);
+    return parts;
+  };
+
   if (sessionStatus === 'loading' || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-amber-100 dark:from-gray-900 dark:to-gray-800">
@@ -385,6 +489,216 @@ function GradingPageContent() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-6">
+        {/* Scenario Details Section */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow mb-6 overflow-hidden">
+          <button
+            onClick={() => setScenarioExpanded(!scenarioExpanded)}
+            className="w-full px-6 py-4 flex items-center justify-between bg-blue-50 dark:bg-blue-900/20 border-b border-gray-200 dark:border-gray-700"
+          >
+            <div className="flex items-center gap-3">
+              <Stethoscope className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              <h3 className="font-semibold text-gray-900 dark:text-white">Scenario Details</h3>
+              {!linkedScenario && !evaluation?.scenario?.patient_presentation && (
+                <span className="text-xs px-2 py-1 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded">
+                  Basic Info Only
+                </span>
+              )}
+            </div>
+            {scenarioExpanded ? (
+              <ChevronUp className="w-5 h-5 text-gray-500" />
+            ) : (
+              <ChevronDown className="w-5 h-5 text-gray-500" />
+            )}
+          </button>
+
+          {scenarioExpanded && (
+            <div className="p-6">
+              {linkedScenario ? (
+                // Full scenario details from linked scenario
+                <div className="space-y-6">
+                  {/* Patient Info */}
+                  <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {linkedScenario.patient_name && (
+                      <div>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">Patient Name</span>
+                        <div className="font-medium text-gray-900 dark:text-white">{linkedScenario.patient_name}</div>
+                      </div>
+                    )}
+                    {linkedScenario.patient_age && (
+                      <div>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">Age</span>
+                        <div className="font-medium text-gray-900 dark:text-white">{linkedScenario.patient_age} y/o</div>
+                      </div>
+                    )}
+                    {linkedScenario.patient_sex && (
+                      <div>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">Sex</span>
+                        <div className="font-medium text-gray-900 dark:text-white">{linkedScenario.patient_sex}</div>
+                      </div>
+                    )}
+                    {linkedScenario.chief_complaint && (
+                      <div>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">Chief Complaint</span>
+                        <div className="font-medium text-gray-900 dark:text-white">{linkedScenario.chief_complaint}</div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* History, Meds, Allergies */}
+                  <div className="grid md:grid-cols-3 gap-4">
+                    {linkedScenario.history && (
+                      <div>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">Medical History</span>
+                        <div className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">{linkedScenario.history}</div>
+                      </div>
+                    )}
+                    {linkedScenario.medications && (
+                      <div>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">Medications</span>
+                        <div className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">{linkedScenario.medications}</div>
+                      </div>
+                    )}
+                    {linkedScenario.allergies && (
+                      <div>
+                        <span className="text-xs text-gray-500 dark:text-gray-400">Allergies</span>
+                        <div className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">{linkedScenario.allergies}</div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Phases */}
+                  {linkedScenario.phases && linkedScenario.phases.length > 0 && (
+                    <div>
+                      <h4 className="font-medium text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                        <ClipboardList className="w-4 h-4" />
+                        Scenario Phases
+                      </h4>
+                      <div className="space-y-2">
+                        {linkedScenario.phases.sort((a, b) => a.phase_number - b.phase_number).map(phase => {
+                          const isPhaseExpanded = expandedPhases.has(phase.id);
+                          const vitals = formatVitals(phase.vitals);
+                          return (
+                            <div key={phase.id} className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                              <button
+                                onClick={() => togglePhase(phase.id)}
+                                className="w-full px-4 py-3 flex items-center justify-between bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <span className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs flex items-center justify-center font-bold">
+                                    {phase.phase_number}
+                                  </span>
+                                  <span className="font-medium text-gray-900 dark:text-white">{phase.phase_name}</span>
+                                  {phase.duration_minutes && (
+                                    <span className="text-xs text-gray-500">({phase.duration_minutes} min)</span>
+                                  )}
+                                </div>
+                                {isPhaseExpanded ? (
+                                  <ChevronUp className="w-4 h-4 text-gray-500" />
+                                ) : (
+                                  <ChevronDown className="w-4 h-4 text-gray-500" />
+                                )}
+                              </button>
+                              {isPhaseExpanded && (
+                                <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700 space-y-3">
+                                  {phase.description && (
+                                    <div>
+                                      <span className="text-xs text-gray-500 dark:text-gray-400">Description</span>
+                                      <p className="text-sm text-gray-900 dark:text-white">{phase.description}</p>
+                                    </div>
+                                  )}
+                                  {vitals && vitals.length > 0 && (
+                                    <div>
+                                      <span className="text-xs text-gray-500 dark:text-gray-400">Vitals</span>
+                                      <div className="flex flex-wrap gap-2 mt-1">
+                                        {vitals.map((v, i) => (
+                                          <span key={i} className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-gray-700 dark:text-gray-300">
+                                            {v}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                  {phase.expected_actions && phase.expected_actions.length > 0 && (
+                                    <div>
+                                      <span className="text-xs text-gray-500 dark:text-gray-400">Expected Actions</span>
+                                      <ul className="mt-1 space-y-1">
+                                        {phase.expected_actions.map((action, i) => (
+                                          <li key={i} className="text-sm text-gray-900 dark:text-white flex items-start gap-2">
+                                            <span className="text-green-500 mt-0.5">•</span>
+                                            {action}
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Instructor Notes */}
+                  {linkedScenario.instructor_notes && (
+                    <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                      <h4 className="font-medium text-yellow-800 dark:text-yellow-200 mb-2 flex items-center gap-2">
+                        <Info className="w-4 h-4" />
+                        Instructor Notes
+                      </h4>
+                      <p className="text-sm text-yellow-700 dark:text-yellow-300 whitespace-pre-wrap">
+                        {linkedScenario.instructor_notes}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                // Basic scenario info from summative_scenarios
+                <div className="space-y-4">
+                  {evaluation?.scenario?.description && (
+                    <div>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">Description</span>
+                      <p className="text-sm text-gray-900 dark:text-white mt-1">{evaluation.scenario.description}</p>
+                    </div>
+                  )}
+
+                  {evaluation?.scenario?.patient_presentation && (
+                    <div>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">Patient Presentation</span>
+                      <p className="text-sm text-gray-900 dark:text-white mt-1 whitespace-pre-wrap">
+                        {evaluation.scenario.patient_presentation}
+                      </p>
+                    </div>
+                  )}
+
+                  {evaluation?.scenario?.expected_interventions && evaluation.scenario.expected_interventions.length > 0 && (
+                    <div>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">Expected Interventions</span>
+                      <ul className="mt-1 space-y-1">
+                        {evaluation.scenario.expected_interventions.map((intervention, i) => (
+                          <li key={i} className="text-sm text-gray-900 dark:text-white flex items-start gap-2">
+                            <span className="text-green-500 mt-0.5">•</span>
+                            {intervention}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {!evaluation?.scenario?.patient_presentation && !evaluation?.scenario?.expected_interventions?.length && (
+                    <div className="text-center py-4 text-gray-500 dark:text-gray-400">
+                      <Info className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">Full scenario details not available.</p>
+                      <p className="text-xs mt-1">This scenario has basic information only.</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
         <div className="grid lg:grid-cols-4 gap-6">
           {/* Student List Sidebar */}
           <div className="lg:col-span-1">
