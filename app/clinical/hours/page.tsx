@@ -291,6 +291,37 @@ export default function ClinicalHoursTrackerPage() {
     return true;
   });
 
+  // Category mapping for Platinum export columns
+  interface CategoryMapping {
+    name: string;
+    patterns: string[];  // Patterns to match in header (case-insensitive)
+    hoursField: keyof StudentHours;
+    shiftsField: keyof StudentHours;
+  }
+
+  const CATEGORY_MAPPINGS: CategoryMapping[] = [
+    { name: 'Psych', patterns: ['behavioral', 'psychiatric', 'psych'], hoursField: 'psych_hours', shiftsField: 'psych_shifts' },
+    { name: 'ED', patterns: ['emergency room', 'emergency dept', 'emergency department'], hoursField: 'ed_hours', shiftsField: 'ed_shifts' },
+    { name: 'EMS Field', patterns: ['ems field', 'field experience'], hoursField: 'ems_field_hours', shiftsField: 'ems_field_shifts' },
+    { name: 'ICU', patterns: ['icu'], hoursField: 'icu_hours', shiftsField: 'icu_shifts' },  // Will check it's not Peds ICU
+    { name: 'OB', patterns: ['ob', 'labor', 'l&d', 'obstetric'], hoursField: 'ob_hours', shiftsField: 'ob_shifts' },
+    { name: 'OR', patterns: ['or inpatient', 'or ', 'operating room', 'inpatient'], hoursField: 'or_hours', shiftsField: 'or_shifts' },
+    { name: 'Peds ED', patterns: ['pediatric emergency', 'peds ed', 'pediatric ed', 'ped ed'], hoursField: 'peds_ed_hours', shiftsField: 'peds_ed_shifts' },
+    { name: 'Peds ICU', patterns: ['pediatric icu', 'peds icu', 'picu', 'ped icu'], hoursField: 'peds_icu_hours', shiftsField: 'peds_icu_shifts' },
+    { name: 'Cardiology', patterns: ['cardiology', 'cardiac', 'ccl', 'cath lab'], hoursField: 'cardiology_hours', shiftsField: 'cardiology_shifts' },
+  ];
+
+  // Categories to ignore
+  const IGNORE_PATTERNS = ['other', 'simulation', 'grand total', 'total'];
+
+  interface DetectedCategory {
+    name: string;
+    mapping: CategoryMapping | null;
+    hoursCol: number | null;
+    shiftsCol: number | null;
+    pendingCol: number | null;
+  }
+
   // Platinum Import Functions - REPLACES values (not increments)
   const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -305,7 +336,86 @@ export default function ClinicalHoursTrackerPage() {
       const worksheet = workbook.Sheets[sheetName];
       const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as unknown[][];
 
-      // Skip header rows (0-4), start from row 5
+      // Dynamic column detection
+      // Row 3 (index 2) = Category headers
+      // Row 4 (index 3) = Sub-headers (Hours, Pending Hours, Shifts)
+      // Row 5 (index 4) = Column headers repeated
+      // Data starts at row 6 (index 5)
+
+      const categoryRow = jsonData[2] || [];
+      const subHeaderRow = jsonData[3] || [];
+
+      // Detect categories and their columns
+      const detectedCategories: DetectedCategory[] = [];
+      let currentCategory: DetectedCategory | null = null;
+
+      for (let col = 1; col < Math.max(categoryRow.length, subHeaderRow.length); col++) {
+        const categoryCell = String(categoryRow[col] || '').trim().toLowerCase();
+        const subHeaderCell = String(subHeaderRow[col] || '').trim().toLowerCase();
+
+        // Check if this is a new category
+        if (categoryCell && categoryCell.length > 0) {
+          // Save previous category if exists
+          if (currentCategory) {
+            detectedCategories.push(currentCategory);
+          }
+
+          // Check if should be ignored
+          const shouldIgnore = IGNORE_PATTERNS.some(p => categoryCell.includes(p));
+
+          // Find matching category mapping
+          let mapping: CategoryMapping | null = null;
+          if (!shouldIgnore) {
+            // Special handling: Peds ICU/ED must be checked BEFORE generic ICU
+            const isPeds = categoryCell.includes('pediatric') || categoryCell.includes('peds') || categoryCell.includes('picu');
+
+            for (const m of CATEGORY_MAPPINGS) {
+              // Skip generic ICU if this is a Peds category
+              if (m.name === 'ICU' && isPeds) continue;
+
+              if (m.patterns.some(p => categoryCell.includes(p))) {
+                mapping = m;
+                break;
+              }
+            }
+          }
+
+          currentCategory = {
+            name: categoryCell,
+            mapping,
+            hoursCol: null,
+            shiftsCol: null,
+            pendingCol: null
+          };
+        }
+
+        // Map sub-headers to current category
+        if (currentCategory && subHeaderCell) {
+          if (subHeaderCell === 'hours' || subHeaderCell.includes('hours') && !subHeaderCell.includes('pending')) {
+            if (!currentCategory.hoursCol) currentCategory.hoursCol = col;
+          } else if (subHeaderCell === 'shifts' || subHeaderCell.includes('shift')) {
+            if (!currentCategory.shiftsCol) currentCategory.shiftsCol = col;
+          } else if (subHeaderCell.includes('pending')) {
+            currentCategory.pendingCol = col;
+          }
+        }
+      }
+
+      // Don't forget the last category
+      if (currentCategory) {
+        detectedCategories.push(currentCategory);
+      }
+
+      // Log detected structure for debugging
+      console.log('Detected Platinum categories:', detectedCategories.map(c => ({
+        name: c.name,
+        mapped: c.mapping?.name || 'IGNORED',
+        hours: c.hoursCol,
+        shifts: c.shiftsCol,
+        pending: c.pendingCol
+      })));
+
+      // Data starts at row 6 (index 5)
       const dataRows = jsonData.slice(5);
 
       // Filter out empty rows and the grand total row
@@ -316,35 +426,28 @@ export default function ClinicalHoursTrackerPage() {
         return true;
       });
 
-      // Parse and match students
+      // Parse helper
+      const parseNum = (val: unknown): number => {
+        if (typeof val === 'number') return val;
+        if (typeof val === 'string') return parseFloat(val) || 0;
+        return 0;
+      };
+
+      // Parse and match students using detected columns
       const preview: ImportPreviewRow[] = validRows.map((row: unknown[]) => {
         const name = String(row[0] || '').trim();
 
-        // Parse hours/shifts from columns (Platinum shows cumulative totals)
-        const parseNum = (val: unknown): number => {
-          if (typeof val === 'number') return val;
-          if (typeof val === 'string') return parseFloat(val) || 0;
-          return 0;
-        };
+        // Build row data dynamically from detected categories
+        const rowData: Record<string, number> = {};
 
-        const rowData: Partial<StudentHours> = {
-          psych_hours: parseNum(row[1]),
-          psych_shifts: parseNum(row[2]),
-          ed_hours: parseNum(row[3]),
-          ed_shifts: parseNum(row[4]),
-          ems_field_hours: parseNum(row[5]),
-          ems_field_shifts: parseNum(row[6]),
-          icu_hours: parseNum(row[7]),
-          icu_shifts: parseNum(row[8]),
-          ob_hours: parseNum(row[9]),
-          ob_shifts: parseNum(row[10]),
-          or_hours: parseNum(row[11]),
-          or_shifts: parseNum(row[12]),
-          peds_ed_hours: parseNum(row[13]),
-          peds_ed_shifts: parseNum(row[14]),
-          peds_icu_hours: parseNum(row[15]),
-          peds_icu_shifts: parseNum(row[16]),
-        };
+        for (const cat of detectedCategories) {
+          if (cat.mapping && cat.hoursCol !== null) {
+            rowData[cat.mapping.hoursField] = parseNum(row[cat.hoursCol]);
+          }
+          if (cat.mapping && cat.shiftsCol !== null) {
+            rowData[cat.mapping.shiftsField] = parseNum(row[cat.shiftsCol]);
+          }
+        }
 
         const matchedStudent = matchStudentByName(name);
         // Find similar names if no match
@@ -354,9 +457,18 @@ export default function ClinicalHoursTrackerPage() {
           name,
           matchedStudent,
           similarNames,
-          data: rowData,
+          data: rowData as Partial<StudentHours>,
         };
       });
+
+      // Show warning if some categories weren't mapped
+      const unmappedCategories = detectedCategories
+        .filter(c => !c.mapping && !IGNORE_PATTERNS.some(p => c.name.includes(p)))
+        .map(c => c.name);
+
+      if (unmappedCategories.length > 0) {
+        console.warn('Unmapped categories found:', unmappedCategories);
+      }
 
       setImportPreview(preview);
       setShowImportModal(true);
