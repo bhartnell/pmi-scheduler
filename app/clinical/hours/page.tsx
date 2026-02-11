@@ -336,8 +336,8 @@ export default function ClinicalHoursTrackerPage() {
       const worksheet = workbook.Sheets[sheetName];
       const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as unknown[][];
 
-      // Dynamic column detection
-      // Row 3 (index 2) = Category headers
+      // Dynamic column detection with STRICT BOUNDARIES
+      // Row 3 (index 2) = Category headers (merged cells - only first col has value)
       // Row 4 (index 3) = Sub-headers (Hours, Pending Hours, Shifts)
       // Row 5 (index 4) = Column headers repeated
       // Data starts at row 6 (index 5)
@@ -345,74 +345,100 @@ export default function ClinicalHoursTrackerPage() {
       const categoryRow = jsonData[2] || [];
       const subHeaderRow = jsonData[3] || [];
 
-      // Detect categories and their columns
-      const detectedCategories: DetectedCategory[] = [];
-      let currentCategory: DetectedCategory | null = null;
+      // PASS 1: Find all category start columns
+      interface CategoryStart {
+        name: string;
+        nameLower: string;
+        startCol: number;
+        endCol: number;  // Will be set in pass 2
+      }
 
-      for (let col = 1; col < Math.max(categoryRow.length, subHeaderRow.length); col++) {
-        const categoryCell = String(categoryRow[col] || '').trim().toLowerCase();
-        const subHeaderCell = String(subHeaderRow[col] || '').trim().toLowerCase();
-
-        // Check if this is a new category
-        if (categoryCell && categoryCell.length > 0) {
-          // Save previous category if exists
-          if (currentCategory) {
-            detectedCategories.push(currentCategory);
-          }
-
-          // Check if should be ignored
-          const shouldIgnore = IGNORE_PATTERNS.some(p => categoryCell.includes(p));
-
-          // Find matching category mapping
-          let mapping: CategoryMapping | null = null;
-          if (!shouldIgnore) {
-            // Special handling: Peds ICU/ED must be checked BEFORE generic ICU
-            const isPeds = categoryCell.includes('pediatric') || categoryCell.includes('peds') || categoryCell.includes('picu');
-
-            for (const m of CATEGORY_MAPPINGS) {
-              // Skip generic ICU if this is a Peds category
-              if (m.name === 'ICU' && isPeds) continue;
-
-              if (m.patterns.some(p => categoryCell.includes(p))) {
-                mapping = m;
-                break;
-              }
-            }
-          }
-
-          currentCategory = {
-            name: categoryCell,
-            mapping,
-            hoursCol: null,
-            shiftsCol: null,
-            pendingCol: null
-          };
-        }
-
-        // Map sub-headers to current category
-        if (currentCategory && subHeaderCell) {
-          if (subHeaderCell === 'hours' || subHeaderCell.includes('hours') && !subHeaderCell.includes('pending')) {
-            if (!currentCategory.hoursCol) currentCategory.hoursCol = col;
-          } else if (subHeaderCell === 'shifts' || subHeaderCell.includes('shift')) {
-            if (!currentCategory.shiftsCol) currentCategory.shiftsCol = col;
-          } else if (subHeaderCell.includes('pending')) {
-            currentCategory.pendingCol = col;
-          }
+      const categoryStarts: CategoryStart[] = [];
+      for (let col = 1; col < categoryRow.length; col++) {
+        const cellValue = String(categoryRow[col] || '').trim();
+        if (cellValue && cellValue.length > 0) {
+          categoryStarts.push({
+            name: cellValue,
+            nameLower: cellValue.toLowerCase(),
+            startCol: col,
+            endCol: 0  // Will be set in pass 2
+          });
         }
       }
 
-      // Don't forget the last category
-      if (currentCategory) {
-        detectedCategories.push(currentCategory);
+      // PASS 2: Assign end columns (where next category starts, or end of row)
+      const maxCol = Math.max(categoryRow.length, subHeaderRow.length);
+      for (let i = 0; i < categoryStarts.length; i++) {
+        const nextStart = categoryStarts[i + 1]?.startCol || maxCol;
+        categoryStarts[i].endCol = nextStart;
+      }
+
+      // PASS 3: Find Hours/Shifts ONLY within each category's column boundaries
+      const detectedCategories: DetectedCategory[] = [];
+
+      for (const cat of categoryStarts) {
+        // Check if should be ignored
+        const shouldIgnore = IGNORE_PATTERNS.some(p => cat.nameLower.includes(p));
+
+        // Find matching category mapping
+        let mapping: CategoryMapping | null = null;
+        if (!shouldIgnore) {
+          // Special handling: Peds ICU/ED must be checked BEFORE generic ICU
+          const isPeds = cat.nameLower.includes('pediatric') || cat.nameLower.includes('peds') || cat.nameLower.includes('picu');
+
+          for (const m of CATEGORY_MAPPINGS) {
+            // Skip generic ICU if this is a Peds category
+            if (m.name === 'ICU' && isPeds) continue;
+
+            if (m.patterns.some(p => cat.nameLower.includes(p))) {
+              mapping = m;
+              break;
+            }
+          }
+        }
+
+        // Find Hours/Shifts columns ONLY within [startCol, endCol)
+        let hoursCol: number | null = null;
+        let shiftsCol: number | null = null;
+        let pendingCol: number | null = null;
+
+        for (let col = cat.startCol; col < cat.endCol; col++) {
+          const header = String(subHeaderRow[col] || '').trim().toLowerCase();
+
+          if (!header) continue;
+
+          // Check for "Hours" (but NOT "Pending Hours")
+          if ((header === 'hours' || header === 'hour') && hoursCol === null) {
+            hoursCol = col;
+          }
+          // Check for "Shifts"
+          else if ((header === 'shifts' || header === 'shift') && shiftsCol === null) {
+            shiftsCol = col;
+          }
+          // Check for "Pending Hours"
+          else if (header.includes('pending') && pendingCol === null) {
+            pendingCol = col;
+          }
+        }
+
+        detectedCategories.push({
+          name: cat.nameLower,
+          mapping,
+          hoursCol,
+          shiftsCol,
+          pendingCol
+        });
       }
 
       // Log detected structure for debugging
-      console.log('Detected Platinum categories:', detectedCategories.map(c => ({
+      console.log('Detected Platinum categories:', detectedCategories.map((c, i) => ({
         name: c.name,
         mapped: c.mapping?.name || 'IGNORED',
-        hours: c.hoursCol,
-        shifts: c.shiftsCol,
-        pending: c.pendingCol
+        startCol: categoryStarts[i]?.startCol,
+        endCol: categoryStarts[i]?.endCol,
+        hoursCol: c.hoursCol,
+        shiftsCol: c.shiftsCol,
+        pendingCol: c.pendingCol
       })));
 
       // Data starts at row 6 (index 5)
