@@ -30,7 +30,8 @@ export async function GET(
           title,
           description,
           patient_presentation,
-          expected_interventions
+          expected_interventions,
+          linked_scenario_id
         ),
         cohort:cohorts(
           id,
@@ -41,13 +42,16 @@ export async function GET(
           id,
           student_id,
           student:students(id, first_name, last_name, email, photo_url),
-          scene_safety_score,
-          history_assessment_score,
+          leadership_scene_score,
+          patient_assessment_score,
           patient_management_score,
-          communication_score,
-          clinical_reasoning_score,
+          interpersonal_score,
+          integration_score,
           total_score,
           critical_criteria_failed,
+          critical_fails_mandatory,
+          critical_harmful_intervention,
+          critical_unprofessional,
           critical_criteria_notes,
           passed,
           start_time,
@@ -66,6 +70,19 @@ export async function GET(
         return NextResponse.json({ success: false, error: 'Evaluation not found' }, { status: 404 });
       }
       throw error;
+    }
+
+    // If there's a linked scenario, fetch its full details
+    if (data?.scenario?.linked_scenario_id) {
+      const { data: linkedScenario } = await supabase
+        .from('scenarios')
+        .select('*')
+        .eq('id', data.scenario.linked_scenario_id)
+        .single();
+
+      if (linkedScenario) {
+        (data as any).linked_scenario = linkedScenario;
+      }
     }
 
     return NextResponse.json({ success: true, evaluation: data });

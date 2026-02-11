@@ -6,6 +6,8 @@ import { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import {
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   Home,
   Save,
   ArrowLeft,
@@ -18,7 +20,13 @@ import {
   Loader2,
   FileText,
   Download,
-  MapPin
+  MapPin,
+  Stethoscope,
+  Activity,
+  Pill,
+  Heart,
+  ClipboardList,
+  Info
 } from 'lucide-react';
 import { canAccessClinical, canEditClinical, type Role } from '@/lib/permissions';
 
@@ -58,11 +66,52 @@ interface Scenario {
   title: string;
   description: string | null;
   patient_presentation: string | null;
+  expected_interventions: string[] | null;
+  linked_scenario_id: string | null;
+}
+
+// Full scenario details from linked scenarios table
+interface LinkedScenario {
+  id: string;
+  title: string;
+  category: string | null;
+  difficulty: string | null;
+  chief_complaint: string | null;
+  patient_name: string | null;
+  patient_age: number | null;
+  patient_sex: string | null;
+  patient_weight: string | null;
+  medical_history: string[] | null;
+  medications: string[] | null;
+  allergies: string | null;
+  instructor_notes: string | null;
+  learning_objectives: string[] | null;
+  dispatch_notes: string | null;
+  phases: Phase[] | null;
+  critical_actions: string[] | null;
+}
+
+interface Phase {
+  name: string;
+  vitals?: {
+    bp?: string;
+    hr?: number | string;
+    rr?: number | string;
+    spo2?: number | string;
+    temp?: number | string;
+    bgl?: number | string;
+    etco2?: number | string;
+    gcs?: number | string;
+  };
+  presentation_notes?: string;
+  expected_actions?: string[];
+  instructor_cues?: string;
 }
 
 interface Evaluation {
   id: string;
   scenario: Scenario;
+  linked_scenario?: LinkedScenario;
   cohort: {
     id: string;
     cohort_number: string;
@@ -144,6 +193,8 @@ function GradingPageContent() {
   const [activeStudentId, setActiveStudentId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
+  const [showScenarioDetails, setShowScenarioDetails] = useState(true);
+  const [expandedPhase, setExpandedPhase] = useState<number | null>(0);
 
   // Local score state for editing
   const [localScores, setLocalScores] = useState<Record<string, Partial<Score>>>({});
@@ -444,6 +495,275 @@ function GradingPageContent() {
 
           {/* Grading Form */}
           <div className="lg:col-span-3">
+            {/* Scenario Details Section - Always visible above grading */}
+            {(evaluation.linked_scenario || evaluation.scenario) && (
+              <div className="mb-6">
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
+                  <button
+                    onClick={() => setShowScenarioDetails(!showScenarioDetails)}
+                    className="w-full px-6 py-4 flex items-center justify-between bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Stethoscope className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                      <span className="font-semibold text-gray-900 dark:text-white">
+                        Scenario Details
+                      </span>
+                      {evaluation.linked_scenario && (
+                        <span className="text-xs bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded">
+                          Full Details Available
+                        </span>
+                      )}
+                    </div>
+                    {showScenarioDetails ? (
+                      <ChevronUp className="w-5 h-5 text-gray-500" />
+                    ) : (
+                      <ChevronDown className="w-5 h-5 text-gray-500" />
+                    )}
+                  </button>
+
+                  {showScenarioDetails && (
+                    <div className="p-6">
+                      {evaluation.linked_scenario ? (
+                        // Full linked scenario details
+                        <div className="space-y-6">
+                          {/* Patient Info */}
+                          <div className="grid md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <h4 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                <User className="w-4 h-4" />
+                                Patient Information
+                              </h4>
+                              <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                                {evaluation.linked_scenario.patient_name && (
+                                  <p><strong>Name:</strong> {evaluation.linked_scenario.patient_name}</p>
+                                )}
+                                {evaluation.linked_scenario.patient_age && (
+                                  <p><strong>Age:</strong> {evaluation.linked_scenario.patient_age} years</p>
+                                )}
+                                {evaluation.linked_scenario.patient_sex && (
+                                  <p><strong>Sex:</strong> {evaluation.linked_scenario.patient_sex}</p>
+                                )}
+                                {evaluation.linked_scenario.patient_weight && (
+                                  <p><strong>Weight:</strong> {evaluation.linked_scenario.patient_weight}</p>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              <h4 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                <Heart className="w-4 h-4" />
+                                Chief Complaint
+                              </h4>
+                              <p className="text-sm text-gray-600 dark:text-gray-400">
+                                {evaluation.linked_scenario.chief_complaint || 'Not specified'}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Medical History */}
+                          {(evaluation.linked_scenario.medical_history?.length ||
+                            evaluation.linked_scenario.medications?.length ||
+                            evaluation.linked_scenario.allergies) && (
+                            <div className="grid md:grid-cols-3 gap-4">
+                              {evaluation.linked_scenario.medical_history?.length ? (
+                                <div>
+                                  <h4 className="font-semibold text-gray-900 dark:text-white text-sm mb-1">Medical History</h4>
+                                  <ul className="text-sm text-gray-600 dark:text-gray-400 list-disc list-inside">
+                                    {evaluation.linked_scenario.medical_history.map((item, idx) => (
+                                      <li key={idx}>{item}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              ) : null}
+                              {evaluation.linked_scenario.medications?.length ? (
+                                <div>
+                                  <h4 className="font-semibold text-gray-900 dark:text-white text-sm mb-1 flex items-center gap-1">
+                                    <Pill className="w-3 h-3" /> Medications
+                                  </h4>
+                                  <ul className="text-sm text-gray-600 dark:text-gray-400 list-disc list-inside">
+                                    {evaluation.linked_scenario.medications.map((item, idx) => (
+                                      <li key={idx}>{item}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              ) : null}
+                              {evaluation.linked_scenario.allergies && (
+                                <div>
+                                  <h4 className="font-semibold text-gray-900 dark:text-white text-sm mb-1">Allergies</h4>
+                                  <p className="text-sm text-red-600 dark:text-red-400">{evaluation.linked_scenario.allergies}</p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Phases with Vitals */}
+                          {evaluation.linked_scenario.phases?.length ? (
+                            <div>
+                              <h4 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                                <Activity className="w-4 h-4" />
+                                Scenario Phases
+                              </h4>
+                              <div className="space-y-2">
+                                {evaluation.linked_scenario.phases.map((phase, idx) => (
+                                  <div key={idx} className="border dark:border-gray-700 rounded-lg overflow-hidden">
+                                    <button
+                                      onClick={() => setExpandedPhase(expandedPhase === idx ? null : idx)}
+                                      className="w-full px-4 py-2 flex items-center justify-between bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                    >
+                                      <span className="font-medium text-gray-900 dark:text-white">
+                                        Phase {idx + 1}: {phase.name || `Phase ${idx + 1}`}
+                                      </span>
+                                      {expandedPhase === idx ? (
+                                        <ChevronUp className="w-4 h-4 text-gray-500" />
+                                      ) : (
+                                        <ChevronDown className="w-4 h-4 text-gray-500" />
+                                      )}
+                                    </button>
+                                    {expandedPhase === idx && (
+                                      <div className="p-4 space-y-3">
+                                        {phase.vitals && (
+                                          <div>
+                                            <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Vitals</h5>
+                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+                                              {phase.vitals.bp && (
+                                                <div className="bg-blue-50 dark:bg-blue-900/20 p-2 rounded">
+                                                  <span className="text-gray-500 dark:text-gray-400">BP:</span>{' '}
+                                                  <span className="font-medium text-gray-900 dark:text-white">{phase.vitals.bp}</span>
+                                                </div>
+                                              )}
+                                              {phase.vitals.hr && (
+                                                <div className="bg-red-50 dark:bg-red-900/20 p-2 rounded">
+                                                  <span className="text-gray-500 dark:text-gray-400">HR:</span>{' '}
+                                                  <span className="font-medium text-gray-900 dark:text-white">{phase.vitals.hr}</span>
+                                                </div>
+                                              )}
+                                              {phase.vitals.rr && (
+                                                <div className="bg-green-50 dark:bg-green-900/20 p-2 rounded">
+                                                  <span className="text-gray-500 dark:text-gray-400">RR:</span>{' '}
+                                                  <span className="font-medium text-gray-900 dark:text-white">{phase.vitals.rr}</span>
+                                                </div>
+                                              )}
+                                              {phase.vitals.spo2 && (
+                                                <div className="bg-purple-50 dark:bg-purple-900/20 p-2 rounded">
+                                                  <span className="text-gray-500 dark:text-gray-400">SpO2:</span>{' '}
+                                                  <span className="font-medium text-gray-900 dark:text-white">{phase.vitals.spo2}%</span>
+                                                </div>
+                                              )}
+                                              {phase.vitals.temp && (
+                                                <div className="bg-orange-50 dark:bg-orange-900/20 p-2 rounded">
+                                                  <span className="text-gray-500 dark:text-gray-400">Temp:</span>{' '}
+                                                  <span className="font-medium text-gray-900 dark:text-white">{phase.vitals.temp}°F</span>
+                                                </div>
+                                              )}
+                                              {phase.vitals.bgl && (
+                                                <div className="bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded">
+                                                  <span className="text-gray-500 dark:text-gray-400">BGL:</span>{' '}
+                                                  <span className="font-medium text-gray-900 dark:text-white">{phase.vitals.bgl}</span>
+                                                </div>
+                                              )}
+                                              {phase.vitals.gcs && (
+                                                <div className="bg-gray-50 dark:bg-gray-700 p-2 rounded">
+                                                  <span className="text-gray-500 dark:text-gray-400">GCS:</span>{' '}
+                                                  <span className="font-medium text-gray-900 dark:text-white">{phase.vitals.gcs}</span>
+                                                </div>
+                                              )}
+                                            </div>
+                                          </div>
+                                        )}
+                                        {phase.presentation_notes && (
+                                          <div>
+                                            <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Presentation</h5>
+                                            <p className="text-sm text-gray-600 dark:text-gray-400">{phase.presentation_notes}</p>
+                                          </div>
+                                        )}
+                                        {phase.expected_actions?.length ? (
+                                          <div>
+                                            <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Expected Actions</h5>
+                                            <ul className="text-sm text-gray-600 dark:text-gray-400 list-disc list-inside">
+                                              {phase.expected_actions.map((action, aIdx) => (
+                                                <li key={aIdx}>{action}</li>
+                                              ))}
+                                            </ul>
+                                          </div>
+                                        ) : null}
+                                        {phase.instructor_cues && (
+                                          <div className="bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded border border-yellow-200 dark:border-yellow-800">
+                                            <h5 className="text-sm font-medium text-yellow-800 dark:text-yellow-300 mb-1">Instructor Cues</h5>
+                                            <p className="text-sm text-yellow-700 dark:text-yellow-400">{phase.instructor_cues}</p>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ) : null}
+
+                          {/* Instructor Notes */}
+                          {evaluation.linked_scenario.instructor_notes && (
+                            <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-lg border border-amber-200 dark:border-amber-800">
+                              <h4 className="font-semibold text-amber-800 dark:text-amber-300 mb-2 flex items-center gap-2">
+                                <Info className="w-4 h-4" />
+                                Instructor Notes
+                              </h4>
+                              <p className="text-sm text-amber-700 dark:text-amber-400">{evaluation.linked_scenario.instructor_notes}</p>
+                            </div>
+                          )}
+
+                          {/* Critical Actions */}
+                          {evaluation.linked_scenario.critical_actions?.length ? (
+                            <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-200 dark:border-red-800">
+                              <h4 className="font-semibold text-red-800 dark:text-red-300 mb-2 flex items-center gap-2">
+                                <AlertTriangle className="w-4 h-4" />
+                                Critical Actions (Must Perform)
+                              </h4>
+                              <ul className="text-sm text-red-700 dark:text-red-400 list-disc list-inside">
+                                {evaluation.linked_scenario.critical_actions.map((action, idx) => (
+                                  <li key={idx}>{action}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : (
+                        // Basic summative scenario info (no linked scenario)
+                        <div className="space-y-4">
+                          <div>
+                            <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Description</h4>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                              {evaluation.scenario.description || 'No description available'}
+                            </p>
+                          </div>
+                          {evaluation.scenario.patient_presentation && (
+                            <div>
+                              <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Patient Presentation</h4>
+                              <p className="text-sm text-gray-600 dark:text-gray-400">
+                                {evaluation.scenario.patient_presentation}
+                              </p>
+                            </div>
+                          )}
+                          {evaluation.scenario.expected_interventions?.length ? (
+                            <div>
+                              <h4 className="font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                                <ClipboardList className="w-4 h-4" />
+                                Expected Interventions
+                              </h4>
+                              <ul className="text-sm text-gray-600 dark:text-gray-400 list-disc list-inside">
+                                {evaluation.scenario.expected_interventions.map((item, idx) => (
+                                  <li key={idx}>{item}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          ) : null}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {activeScore && activeStudent ? (
               <div className="space-y-6">
                 {/* Student Header */}
