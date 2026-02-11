@@ -337,13 +337,20 @@ export default function ClinicalHoursTrackerPage() {
       const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as unknown[][];
 
       // Dynamic column detection with STRICT BOUNDARIES
-      // Row 3 (index 2) = Category headers (merged cells - only first col has value)
-      // Row 4 (index 3) = Sub-headers (Hours, Pending Hours, Shifts)
-      // Row 5 (index 4) = Column headers repeated
-      // Data starts at row 6 (index 5)
+      // Platinum export structure (1-indexed in Excel):
+      // Row 1: Filter headers
+      // Row 2: Column area headers
+      // Row 3: Row area headers
+      // Row 4 (index 3): Category headers (merged cells - only first col has value)
+      // Row 5 (index 4): Sub-headers (Hours, Pending Hours, Shifts)
+      // Row 6+ (index 5+): Data rows
 
-      const categoryRow = jsonData[2] || [];
-      const subHeaderRow = jsonData[3] || [];
+      const categoryRow = jsonData[3] || [];
+      const subHeaderRow = jsonData[4] || [];
+
+      // Debug: Log raw header rows
+      console.log('Raw category row (index 3):', categoryRow.slice(0, 30));
+      console.log('Raw sub-header row (index 4):', subHeaderRow.slice(0, 30));
 
       // PASS 1: Find all category start columns
       interface CategoryStart {
@@ -407,17 +414,18 @@ export default function ClinicalHoursTrackerPage() {
 
           if (!header) continue;
 
-          // Check for "Hours" (but NOT "Pending Hours")
-          if ((header === 'hours' || header === 'hour') && hoursCol === null) {
+          // IMPORTANT: Check "Pending Hours" FIRST (before plain "Hours")
+          // because "pending hours" contains "hours"
+          if (header.includes('pending') && pendingCol === null) {
+            pendingCol = col;
+          }
+          // Check for "Hours" (exact match or starts with "hour")
+          else if ((header === 'hours' || header === 'hour') && hoursCol === null) {
             hoursCol = col;
           }
           // Check for "Shifts"
           else if ((header === 'shifts' || header === 'shift') && shiftsCol === null) {
             shiftsCol = col;
-          }
-          // Check for "Pending Hours"
-          else if (header.includes('pending') && pendingCol === null) {
-            pendingCol = col;
           }
         }
 

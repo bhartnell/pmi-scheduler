@@ -186,12 +186,16 @@ export async function POST(request: NextRequest) {
         .single();
     }
 
-    if (result.error) throw result.error;
+    if (result.error) {
+      console.error('Supabase error saving clinical hours:', result.error);
+      throw result.error;
+    }
 
     return NextResponse.json({ success: true, hours: result.data });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error saving clinical hours:', error);
-    return NextResponse.json({ success: false, error: 'Failed to save clinical hours' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Failed to save clinical hours';
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }
 
