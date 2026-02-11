@@ -76,7 +76,8 @@ export async function POST(request: NextRequest) {
         elapsed_when_paused: 0,
         duration_seconds: durationSeconds,
         debrief_seconds: debriefSeconds || 300,
-        mode: mode || 'countdown'
+        mode: mode || 'countdown',
+        rotation_acknowledged: true  // Start acknowledged
       }, {
         onConflict: 'lab_day_id'
       })
@@ -172,7 +173,8 @@ export async function PATCH(request: NextRequest) {
           status: 'stopped',
           started_at: null,
           paused_at: null,
-          elapsed_when_paused: 0
+          elapsed_when_paused: 0,
+          rotation_acknowledged: false  // Require acknowledgment for new rotation
         };
         // Reset all ready statuses for this lab day when rotation advances
         await supabase

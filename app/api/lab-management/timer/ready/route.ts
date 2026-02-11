@@ -97,10 +97,11 @@ export async function POST(request: NextRequest) {
 }
 
 // PATCH - Reset all ready statuses to NOT READY (called after rotation acknowledgment)
+// Also sets rotation_acknowledged = true in lab_timer_state
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
-    const { labDayId } = body;
+    const { labDayId, acknowledgeRotation } = body;
 
     if (!labDayId) {
       return NextResponse.json({ success: false, error: 'labDayId is required' }, { status: 400 });
@@ -113,6 +114,14 @@ export async function PATCH(request: NextRequest) {
       .eq('lab_day_id', labDayId);
 
     if (error) throw error;
+
+    // If acknowledgeRotation is true, also set rotation_acknowledged in timer state
+    if (acknowledgeRotation) {
+      await supabase
+        .from('lab_timer_state')
+        .update({ rotation_acknowledged: true })
+        .eq('lab_day_id', labDayId);
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

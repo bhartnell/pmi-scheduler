@@ -4,12 +4,15 @@ import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { 
+import {
   ChevronRight,
   Save,
   Trash2,
   AlertCircle,
-  Calendar
+  Calendar,
+  Monitor,
+  Smartphone,
+  Check
 } from 'lucide-react';
 
 interface LabDay {
@@ -20,6 +23,8 @@ interface LabDay {
   num_rotations: number;
   rotation_duration: number;
   notes: string | null;
+  room: string | null;
+  assigned_timer_id: string | null;
   cohort: {
     id: string;
     cohort_number: number;
@@ -28,6 +33,14 @@ interface LabDay {
       abbreviation: string;
     };
   };
+}
+
+interface TimerToken {
+  id: string;
+  room_name: string;
+  timer_type: 'fixed' | 'mobile';
+  lab_room_id: string | null;
+  is_active: boolean;
 }
 
 export default function EditLabDayPage() {
@@ -40,6 +53,11 @@ export default function EditLabDayPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  // Timer display state
+  const [timerTokens, setTimerTokens] = useState<TimerToken[]>([]);
+  const [fixedTimer, setFixedTimer] = useState<TimerToken | null>(null);
+  const [assignedTimerId, setAssignedTimerId] = useState<string | null>(null);
 
   // Form state
   const [labDate, setLabDate] = useState('');
@@ -58,8 +76,21 @@ export default function EditLabDayPage() {
   useEffect(() => {
     if (session && labDayId) {
       fetchLabDay();
+      fetchTimerTokens();
     }
   }, [session, labDayId]);
+
+  const fetchTimerTokens = async () => {
+    try {
+      const res = await fetch('/api/timer-display');
+      const data = await res.json();
+      if (data.success) {
+        setTimerTokens(data.tokens?.filter((t: TimerToken) => t.is_active) || []);
+      }
+    } catch (error) {
+      console.error('Error fetching timer tokens:', error);
+    }
+  };
 
   const fetchLabDay = async () => {
     try {
@@ -75,12 +106,31 @@ export default function EditLabDayPage() {
         setNumRotations(data.labDay.num_rotations || 4);
         setRotationDuration(data.labDay.rotation_duration || 30);
         setNotes(data.labDay.notes || '');
+        setAssignedTimerId(data.labDay.assigned_timer_id || null);
+
+        // Check if room has a fixed timer
+        if (data.labDay.room && timerTokens.length > 0) {
+          const fixed = timerTokens.find(
+            t => t.timer_type === 'fixed' && t.room_name === data.labDay.room
+          );
+          setFixedTimer(fixed || null);
+        }
       }
     } catch (error) {
       console.error('Error fetching lab day:', error);
     }
     setLoading(false);
   };
+
+  // Check for fixed timer when tokens load
+  useEffect(() => {
+    if (labDay?.room && timerTokens.length > 0) {
+      const fixed = timerTokens.find(
+        t => t.timer_type === 'fixed' && t.room_name === labDay.room
+      );
+      setFixedTimer(fixed || null);
+    }
+  }, [labDay?.room, timerTokens]);
 
   const handleSave = async () => {
     if (!labDate) {
@@ -99,7 +149,8 @@ export default function EditLabDayPage() {
           day_number: dayNumber || null,
           num_rotations: numRotations,
           rotation_duration: rotationDuration,
-          notes: notes || null
+          notes: notes || null,
+          assigned_timer_id: fixedTimer ? null : (assignedTimerId || null)
         })
       });
 
@@ -284,6 +335,58 @@ export default function EditLabDayPage() {
                 placeholder="Any special instructions or notes for this lab day..."
                 className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 placeholder-gray-400 dark:placeholder-gray-500"
               />
+            </div>
+
+            {/* Timer Display Assignment */}
+            <div className="md:col-span-2 pt-4 border-t dark:border-gray-700">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Timer Display
+              </label>
+
+              {fixedTimer ? (
+                // Room has a fixed timer - auto-assigned
+                <div className="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                  <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                    <Monitor className="w-5 h-5 text-green-600 dark:text-green-400" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-green-700 dark:text-green-300 flex items-center gap-2">
+                      {fixedTimer.room_name}
+                      <Check className="w-4 h-4" />
+                    </p>
+                    <p className="text-xs text-green-600 dark:text-green-400">
+                      Fixed timer auto-assigned to this room
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                // No fixed timer - show mobile timer selection
+                <div>
+                  <select
+                    value={assignedTimerId || ''}
+                    onChange={(e) => setAssignedTimerId(e.target.value || null)}
+                    className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  >
+                    <option value="">No timer assigned</option>
+                    {timerTokens
+                      .filter(t => t.timer_type === 'mobile')
+                      .map(t => (
+                        <option key={t.id} value={t.id}>
+                          {t.room_name} (Mobile)
+                        </option>
+                      ))}
+                  </select>
+                  {timerTokens.filter(t => t.timer_type === 'mobile').length === 0 && (
+                    <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                      <Smartphone className="w-3 h-3" />
+                      No mobile timers available.{' '}
+                      <Link href="/lab-management/admin/timer-displays" className="text-blue-600 hover:underline">
+                        Create one
+                      </Link>
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
