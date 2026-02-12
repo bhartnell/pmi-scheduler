@@ -18,7 +18,8 @@ import {
   UserPlus,
   Briefcase,
   Building2,
-  Plus
+  Plus,
+  CheckSquare
 } from 'lucide-react';
 import { canAccessAdmin, canAccessClinical, getRoleLabel, getRoleBadgeClasses, type Role } from '@/lib/permissions';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -332,6 +333,27 @@ export default function HomePage() {
               <div className="flex flex-wrap justify-center gap-2 text-xs">
                 <span className="px-2 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-full">Create Polls</span>
                 <span className="px-2 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-full">View Results</span>
+              </div>
+            </div>
+          </Link>
+
+          {/* Tasks Card */}
+          <Link
+            href="/tasks"
+            className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
+          >
+            <div className="flex flex-col items-center text-center">
+              <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/30 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-amber-200 dark:group-hover:bg-amber-900/50 transition-colors">
+                <CheckSquare className="w-8 h-8 text-amber-600 dark:text-amber-400" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Tasks</h3>
+              <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
+                Assign and track tasks between instructors.
+              </p>
+              <div className="flex flex-wrap justify-center gap-2 text-xs">
+                <span className="px-2 py-1 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full">Assign</span>
+                <span className="px-2 py-1 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full">Track</span>
+                <span className="px-2 py-1 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full">Comment</span>
               </div>
             </div>
           </Link>

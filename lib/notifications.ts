@@ -14,6 +14,8 @@ export type NotificationType =
   | 'feedback_new'
   | 'feedback_resolved'
   | 'task_assigned'
+  | 'task_completed'
+  | 'task_comment'
   | 'general';
 
 interface CreateNotificationParams {
@@ -208,4 +210,70 @@ function formatTime(timeString: string): string {
   const ampm = hour >= 12 ? 'PM' : 'AM';
   const hour12 = hour % 12 || 12;
   return `${hour12}:${minutes} ${ampm}`;
+}
+
+/**
+ * Notify user when a task is assigned to them
+ */
+export async function notifyTaskAssigned(
+  assigneeEmail: string,
+  taskInfo: {
+    taskId: string;
+    title: string;
+    assignerName: string;
+  }
+): Promise<void> {
+  await createNotification({
+    userEmail: assigneeEmail,
+    title: 'New task assigned',
+    message: `${taskInfo.assignerName} assigned you a task: ${taskInfo.title}`,
+    type: 'task_assigned',
+    linkUrl: `/tasks/${taskInfo.taskId}`,
+    referenceType: 'instructor_task',
+    referenceId: taskInfo.taskId,
+  });
+}
+
+/**
+ * Notify assigner when a task is completed
+ */
+export async function notifyTaskCompleted(
+  assignerEmail: string,
+  taskInfo: {
+    taskId: string;
+    title: string;
+    assigneeName: string;
+  }
+): Promise<void> {
+  await createNotification({
+    userEmail: assignerEmail,
+    title: 'Task completed',
+    message: `${taskInfo.assigneeName} completed: ${taskInfo.title}`,
+    type: 'task_completed',
+    linkUrl: `/tasks/${taskInfo.taskId}`,
+    referenceType: 'instructor_task',
+    referenceId: taskInfo.taskId,
+  });
+}
+
+/**
+ * Notify task participant when a comment is added
+ */
+export async function notifyTaskComment(
+  recipientEmail: string,
+  taskInfo: {
+    taskId: string;
+    title: string;
+    commenterName: string;
+  }
+): Promise<void> {
+  await createNotification({
+    userEmail: recipientEmail,
+    title: 'New comment on task',
+    message: `${taskInfo.commenterName} commented on: ${taskInfo.title}`,
+    type: 'task_comment',
+    linkUrl: `/tasks/${taskInfo.taskId}`,
+    referenceType: 'instructor_task',
+    referenceId: taskInfo.taskId,
+  });
 }
