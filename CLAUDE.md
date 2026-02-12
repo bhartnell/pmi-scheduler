@@ -34,6 +34,12 @@ PMI EMS Scheduler is a comprehensive scheduling and management system for the Pi
 - **Repository & deployment:** `C:\Users\benny\.claude-worktrees\pmi-scheduler`
 - **Services:** GitHub, Vercel, Supabase
 
+## Git Workflow
+
+- **Always push to `main` branch** - This session works directly on main
+- Commit completed work with descriptive messages
+- Run `npm run build` before committing to verify no errors
+
 ## Conventions
 
 - API routes: NextRequest/NextResponse, getServerSession for auth, createClient for Supabase
