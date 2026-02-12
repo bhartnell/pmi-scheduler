@@ -16,7 +16,8 @@ import {
   Trash2,
   Award,
   Brain,
-  Layout
+  Layout,
+  Monitor
 } from 'lucide-react';
 import { canManageContent, type Role } from '@/lib/permissions';
 
@@ -133,6 +134,13 @@ export default function AdminPage() {
       title: 'Scenario Library',
       description: 'Create and manage training scenarios',
       color: 'bg-orange-500'
+    },
+    {
+      href: '/lab-management/admin/timer-displays',
+      icon: Monitor,
+      title: 'Timer Displays',
+      description: 'Manage kiosk display tokens for Raspberry Pi or wall monitors',
+      color: 'bg-green-500'
     }
   ];
 
