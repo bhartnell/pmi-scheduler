@@ -113,11 +113,28 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
     `;
   };
 
-  // Build sections in proper assessment flow order
+  // Build sections in INSTRUCTOR-FOCUSED order
+  // Instructor reads these BEFORE running the scenario
   let content = '';
 
-  // 1. DISPATCH INFORMATION
-  if (linkedScenario?.dispatch_time || linkedScenario?.dispatch_location || linkedScenario?.dispatch_notes) {
+  // ============================================================
+  // 1. INSTRUCTOR NOTES (TOP - READ FIRST!)
+  // Brief case summary, initial vitals to program, key tips
+  // ============================================================
+  if (linkedScenario?.instructor_notes) {
+    content += `
+      <div class="section instructor-section-top">
+        <h3>⚡ INSTRUCTOR NOTES (READ FIRST)</h3>
+        <p>${linkedScenario.instructor_notes}</p>
+      </div>
+    `;
+  }
+
+  // ============================================================
+  // 2. DISPATCH INFORMATION
+  // Time, Location, Chief Complaint, Dispatch Notes
+  // ============================================================
+  if (linkedScenario?.dispatch_time || linkedScenario?.dispatch_location || linkedScenario?.dispatch_notes || linkedScenario?.chief_complaint) {
     content += `
       <div class="section">
         <h3>DISPATCH INFORMATION</h3>
@@ -125,38 +142,97 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
           ${linkedScenario.dispatch_time ? `<div><strong>Time:</strong> ${linkedScenario.dispatch_time}</div>` : ''}
           ${linkedScenario.dispatch_location ? `<div><strong>Location:</strong> ${linkedScenario.dispatch_location}</div>` : ''}
         </div>
-        ${linkedScenario.dispatch_notes ? `<p class="dispatch-notes"><strong>Notes:</strong> ${linkedScenario.dispatch_notes}</p>` : ''}
+        ${linkedScenario.chief_complaint ? `<p class="chief-complaint"><strong>Chief Complaint:</strong> ${linkedScenario.chief_complaint}</p>` : ''}
+        ${linkedScenario.dispatch_notes ? `<p class="dispatch-notes"><strong>Dispatch Notes:</strong> ${linkedScenario.dispatch_notes}</p>` : ''}
       </div>
     `;
   }
 
-  // 2. PATIENT INFORMATION
-  if (linkedScenario) {
+  // ============================================================
+  // 3. PATIENT INFORMATION & SCENE
+  // Name, Age, Sex, Weight, Presentation, Scene Info
+  // ============================================================
+  const hasPatientInfo = linkedScenario?.patient_name || linkedScenario?.patient_age ||
+                         linkedScenario?.patient_sex || linkedScenario?.patient_weight ||
+                         linkedScenario?.general_impression || scenario?.patient_presentation;
+
+  if (hasPatientInfo) {
     content += `
       <div class="section">
-        <h3>PATIENT INFORMATION</h3>
+        <h3>PATIENT INFORMATION & SCENE</h3>
         <div class="info-grid">
-          ${linkedScenario.patient_name ? `<div><strong>Name:</strong> ${linkedScenario.patient_name}</div>` : ''}
-          ${linkedScenario.patient_age ? `<div><strong>Age:</strong> ${linkedScenario.patient_age} years</div>` : ''}
-          ${linkedScenario.patient_sex ? `<div><strong>Sex:</strong> ${linkedScenario.patient_sex}</div>` : ''}
-          ${linkedScenario.patient_weight ? `<div><strong>Weight:</strong> ${linkedScenario.patient_weight}</div>` : ''}
+          ${linkedScenario?.patient_name ? `<div><strong>Name:</strong> ${linkedScenario.patient_name}</div>` : ''}
+          ${linkedScenario?.patient_age ? `<div><strong>Age:</strong> ${linkedScenario.patient_age} years</div>` : ''}
+          ${linkedScenario?.patient_sex ? `<div><strong>Sex:</strong> ${linkedScenario.patient_sex}</div>` : ''}
+          ${linkedScenario?.patient_weight ? `<div><strong>Weight:</strong> ${linkedScenario.patient_weight}</div>` : ''}
         </div>
-        ${linkedScenario.chief_complaint ? `<p class="chief-complaint"><strong>Chief Complaint:</strong> ${linkedScenario.chief_complaint}</p>` : ''}
+        ${linkedScenario?.general_impression ? `<p class="presentation-box"><strong>Presentation:</strong> ${linkedScenario.general_impression}</p>` : ''}
+        ${scenario?.patient_presentation ? `<p class="presentation-box"><strong>Scene:</strong> ${scenario.patient_presentation}</p>` : ''}
       </div>
     `;
   }
 
-  // 3. INITIAL VITALS (PROMINENT BOX - for station setup)
-  if (linkedScenario?.initial_vitals && Object.values(linkedScenario.initial_vitals).some((v: any) => v)) {
+  // ============================================================
+  // 4. PRIMARY ASSESSMENT (XABCDE)
+  // X, A, B, C, D (with GCS/Pupils), E, then AVPU, General Impression
+  // ============================================================
+  const hasXabcde = linkedScenario?.assessment_x || linkedScenario?.assessment_a || linkedScenario?.assessment_b ||
+                   linkedScenario?.assessment_c || linkedScenario?.assessment_d || linkedScenario?.assessment_e;
+  const hasPrimaryAssessment = hasXabcde || linkedScenario?.avpu || linkedScenario?.gcs || linkedScenario?.pupils;
+
+  if (hasPrimaryAssessment) {
+    // Build D - Disability line with GCS and pupils if present
+    let disabilityLine = linkedScenario?.assessment_d || '';
+    if (linkedScenario?.gcs) {
+      disabilityLine += disabilityLine ? ` | GCS: ${linkedScenario.gcs}` : `GCS: ${linkedScenario.gcs}`;
+    }
+    if (linkedScenario?.pupils) {
+      disabilityLine += disabilityLine ? ` | Pupils: ${linkedScenario.pupils}` : `Pupils: ${linkedScenario.pupils}`;
+    }
+
+    content += `
+      <div class="section primary-section">
+        <h3>PRIMARY ASSESSMENT (XABCDE)</h3>
+        <table class="assessment-table">
+          ${linkedScenario?.assessment_x ? `<tr><td class="xabcde-label">X</td><td><strong>Hemorrhage Control:</strong></td><td>${linkedScenario.assessment_x}</td></tr>` : ''}
+          ${linkedScenario?.assessment_a ? `<tr><td class="xabcde-label">A</td><td><strong>Airway:</strong></td><td>${linkedScenario.assessment_a}</td></tr>` : ''}
+          ${linkedScenario?.assessment_b ? `<tr><td class="xabcde-label">B</td><td><strong>Breathing:</strong></td><td>${linkedScenario.assessment_b}</td></tr>` : ''}
+          ${linkedScenario?.assessment_c ? `<tr><td class="xabcde-label">C</td><td><strong>Circulation:</strong></td><td>${linkedScenario.assessment_c}</td></tr>` : ''}
+          ${disabilityLine ? `<tr><td class="xabcde-label">D</td><td><strong>Disability:</strong></td><td>${disabilityLine}</td></tr>` : ''}
+          ${linkedScenario?.assessment_e ? `<tr><td class="xabcde-label">E</td><td><strong>Expose/Environment:</strong></td><td>${linkedScenario.assessment_e}</td></tr>` : ''}
+        </table>
+        <div class="avpu-row">
+          ${linkedScenario?.avpu ? `<span><strong>AVPU:</strong> ${linkedScenario.avpu}</span>` : ''}
+        </div>
+      </div>
+    `;
+  }
+
+  // ============================================================
+  // 5. SECONDARY ASSESSMENT (grouped section)
+  // 5a. Vital Signs, 5b. Medical History, 5c. SAMPLE, 5d. OPQRST, 5e. EKG, 5f. Secondary Survey
+  // ============================================================
+
+  // 5a. VITAL SIGNS
+  const hasVitals = linkedScenario?.initial_vitals && Object.values(linkedScenario.initial_vitals).some((v: any) => v);
+  const hasEkg = linkedScenario?.ekg_findings && Object.values(linkedScenario.ekg_findings).some((v: any) => v);
+
+  if (hasVitals || hasEkg) {
     content += `
       <div class="section vitals-section">
-        <h3>INITIAL VITALS</h3>
-        ${renderVitalsRow(linkedScenario.initial_vitals)}
+        <h3>VITAL SIGNS</h3>
+        ${hasVitals ? renderVitalsRow(linkedScenario.initial_vitals) : ''}
+        ${hasEkg ? `
+          <div class="ekg-inline">
+            <strong>EKG:</strong> ${linkedScenario.ekg_findings.rhythm || 'Sinus rhythm'}
+            ${linkedScenario.ekg_findings.twelve_lead ? ` | <strong>12-Lead:</strong> ${linkedScenario.ekg_findings.twelve_lead}` : ', unremarkable'}
+          </div>
+        ` : ''}
       </div>
     `;
   }
 
-  // 4. MEDICAL HISTORY (PMH, Medications, Allergies)
+  // 5b. MEDICAL HISTORY (PMH, Medications, Allergies)
   if (linkedScenario?.medical_history?.length || linkedScenario?.medications?.length || linkedScenario?.allergies) {
     content += `
       <div class="section">
@@ -184,52 +260,20 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
     `;
   }
 
-  // 5. PRIMARY ASSESSMENT (General Impression, AVPU, XABCDE)
-  const hasXabcde = linkedScenario?.assessment_x || linkedScenario?.assessment_a || linkedScenario?.assessment_b ||
-                   linkedScenario?.assessment_c || linkedScenario?.assessment_d || linkedScenario?.assessment_e;
-  const hasPrimaryAssessment = hasXabcde || linkedScenario?.general_impression || linkedScenario?.avpu ||
-                               linkedScenario?.gcs || linkedScenario?.pupils;
-
-  if (hasPrimaryAssessment) {
-    // Build D - Disability line with GCS and pupils if present
-    let disabilityLine = linkedScenario?.assessment_d || '';
-    if (linkedScenario?.gcs) {
-      disabilityLine += disabilityLine ? ` | GCS: ${linkedScenario.gcs}` : `GCS: ${linkedScenario.gcs}`;
-    }
-    if (linkedScenario?.pupils) {
-      disabilityLine += disabilityLine ? ` | Pupils: ${linkedScenario.pupils}` : `Pupils: ${linkedScenario.pupils}`;
-    }
-
-    content += `
-      <div class="section">
-        <h3>PRIMARY ASSESSMENT (XABCDE)</h3>
-        <table class="assessment-table">
-          ${linkedScenario.general_impression ? `<tr><td><strong>General Impression:</strong></td><td>${linkedScenario.general_impression}</td></tr>` : ''}
-          ${linkedScenario.avpu ? `<tr><td><strong>AVPU:</strong></td><td>${linkedScenario.avpu}</td></tr>` : ''}
-          ${linkedScenario.assessment_x ? `<tr><td><strong>X - Hemorrhage Control:</strong></td><td>${linkedScenario.assessment_x}</td></tr>` : ''}
-          ${linkedScenario.assessment_a ? `<tr><td><strong>A - Airway:</strong></td><td>${linkedScenario.assessment_a}</td></tr>` : ''}
-          ${linkedScenario.assessment_b ? `<tr><td><strong>B - Breathing:</strong></td><td>${linkedScenario.assessment_b}</td></tr>` : ''}
-          ${linkedScenario.assessment_c ? `<tr><td><strong>C - Circulation:</strong></td><td>${linkedScenario.assessment_c}</td></tr>` : ''}
-          ${disabilityLine ? `<tr><td><strong>D - Disability:</strong></td><td>${disabilityLine}</td></tr>` : ''}
-          ${linkedScenario.assessment_e ? `<tr><td><strong>E - Expose/Environment:</strong></td><td>${linkedScenario.assessment_e}</td></tr>` : ''}
-        </table>
-      </div>
-    `;
-  }
-
-  // 6. SECONDARY ASSESSMENT (SAMPLE, OPQRST combined)
+  // 5c. SAMPLE History
   const hasSample = linkedScenario?.sample_history && Object.values(linkedScenario.sample_history).some((v: any) => v);
+
+  // 5d. OPQRST
   const hasOpqrst = linkedScenario?.opqrst && Object.values(linkedScenario.opqrst).some((v: any) => v);
 
   if (hasSample || hasOpqrst) {
     content += `
       <div class="section">
-        <h3>SECONDARY ASSESSMENT</h3>
+        <h3>HISTORY TAKING</h3>
         <div class="secondary-grid">
     `;
 
     if (hasSample) {
-      // Get SAMPLE values - prefer sample_history fields, fallback to top-level
       const sampleS = linkedScenario.sample_history.signs_symptoms;
       const sampleA = linkedScenario.sample_history.allergies || linkedScenario.allergies;
       const sampleM = linkedScenario.sample_history.medications || (linkedScenario.medications?.length ? linkedScenario.medications.join(', ') : null);
@@ -274,7 +318,7 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
     `;
   }
 
-  // 6b. SECONDARY SURVEY (Physical exam body regions)
+  // 5e. SECONDARY SURVEY (Physical exam body regions)
   const hasSecondarySurvey = linkedScenario?.secondary_survey &&
     Object.values(linkedScenario.secondary_survey).some((v: any) => v);
 
@@ -296,30 +340,13 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
     `;
   }
 
-  // 6c. EKG FINDINGS (for cardiac scenarios)
-  const hasEkg = linkedScenario?.ekg_findings &&
-    Object.values(linkedScenario.ekg_findings).some((v: any) => v);
-
-  if (hasEkg) {
-    const ekg = linkedScenario.ekg_findings;
-    content += `
-      <div class="section">
-        <h3>EKG / CARDIAC FINDINGS</h3>
-        <table class="assessment-table">
-          ${ekg.rhythm ? `<tr><td><strong>Rhythm:</strong></td><td>${ekg.rhythm}</td></tr>` : ''}
-          ${ekg.rate ? `<tr><td><strong>Rate:</strong></td><td>${ekg.rate}</td></tr>` : ''}
-          ${ekg.interpretation ? `<tr><td><strong>Interpretation:</strong></td><td>${ekg.interpretation}</td></tr>` : ''}
-          ${ekg.twelve_lead ? `<tr><td><strong>12-Lead Findings:</strong></td><td>${ekg.twelve_lead}</td></tr>` : ''}
-        </table>
-      </div>
-    `;
-  }
-
-  // 7. CRITICAL ACTIONS (Must Perform - PROMINENT BOX)
+  // ============================================================
+  // 6. CRITICAL ACTIONS (Must Perform - PROMINENT BOX)
+  // ============================================================
   if (linkedScenario?.critical_actions?.length) {
     content += `
       <div class="section critical-section">
-        <h3>CRITICAL ACTIONS (Must Perform)</h3>
+        <h3>✓ CRITICAL ACTIONS (Must Perform)</h3>
         <ul class="critical-list">
           ${linkedScenario.critical_actions.map((action: string) => `<li>${action}</li>`).join('')}
         </ul>
@@ -327,35 +354,14 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
     `;
   }
 
-  // 8. INSTRUCTOR NOTES
-  if (linkedScenario?.instructor_notes) {
-    content += `
-      <div class="section instructor-section">
-        <h3>INSTRUCTOR NOTES</h3>
-        <p>${linkedScenario.instructor_notes}</p>
-      </div>
-    `;
-  }
-
-  // 8b. DEBRIEF POINTS
-  if (linkedScenario?.debrief_points?.length) {
-    content += `
-      <div class="section debrief-section">
-        <h3>DEBRIEF DISCUSSION POINTS</h3>
-        <ul class="debrief-list">
-          ${linkedScenario.debrief_points.map((point: string) => `<li>${point}</li>`).join('')}
-        </ul>
-      </div>
-    `;
-  }
-
-  // 9. PHASES (Progression with vitals/actions/cues per phase)
+  // ============================================================
+  // 7. SCENARIO PHASES (Progression)
+  // ============================================================
   if (linkedScenario?.phases?.length) {
     content += `
       <div class="section phases-section">
         <h3>SCENARIO PHASES</h3>
         ${linkedScenario.phases.map((phase: any, idx: number) => {
-          // Get phase title - skip if it's just "Phase X" to avoid "PHASE 1 Phase 1"
           const phaseName = phase.name || phase.title || '';
           const isDefaultName = /^Phase \d+$/i.test(phaseName);
           const displayTitle = isDefaultName ? '' : phaseName;
@@ -394,6 +400,20 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
           </div>
         `;
         }).join('')}
+      </div>
+    `;
+  }
+
+  // ============================================================
+  // 8. DEBRIEF DISCUSSION POINTS (at end)
+  // ============================================================
+  if (linkedScenario?.debrief_points?.length) {
+    content += `
+      <div class="section debrief-section">
+        <h3>DEBRIEF DISCUSSION POINTS</h3>
+        <ul class="debrief-list">
+          ${linkedScenario.debrief_points.map((point: string) => `<li>${point}</li>`).join('')}
+        </ul>
       </div>
     `;
   }
@@ -584,7 +604,60 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
       font-size: 12px;
     }
 
-    /* Instructor Notes */
+    /* Instructor Notes - TOP (Read First!) */
+    .instructor-section-top {
+      background: #fff3cd;
+      border: 3px solid #000;
+      margin-bottom: 20px;
+    }
+
+    .instructor-section-top h3 {
+      background: #000;
+      color: #fff;
+      padding: 6px 10px;
+      margin: -12px -12px 12px -12px;
+      border-bottom: none;
+    }
+
+    /* Presentation Box */
+    .presentation-box {
+      margin-top: 10px;
+      padding: 8px;
+      background: #f0f0f0;
+      border-left: 4px solid #000;
+    }
+
+    /* Primary Assessment Section */
+    .primary-section {
+      border: 2px solid #000;
+    }
+
+    .xabcde-label {
+      width: 30px;
+      font-weight: bold;
+      font-size: 14px;
+      text-align: center;
+      background: #333;
+      color: #fff;
+    }
+
+    .avpu-row {
+      margin-top: 10px;
+      padding: 8px;
+      background: #f0f0f0;
+      display: flex;
+      gap: 30px;
+    }
+
+    /* EKG Inline */
+    .ekg-inline {
+      margin-top: 10px;
+      padding: 8px;
+      background: #f8f8f8;
+      border-left: 3px solid #666;
+    }
+
+    /* Instructor Notes (legacy) */
     .instructor-section {
       background: #f8f8f8;
       border-style: dashed;
