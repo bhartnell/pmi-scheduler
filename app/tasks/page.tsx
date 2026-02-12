@@ -100,7 +100,8 @@ function TasksPageContent() {
 
   const fetchInstructors = async () => {
     try {
-      const res = await fetch('/api/admin/users?activeOnly=true');
+      // Use /api/users/list which is accessible to all authenticated users
+      const res = await fetch('/api/users/list?activeOnly=true');
       const data = await res.json();
       if (data.success) {
         setInstructors(data.users || []);
