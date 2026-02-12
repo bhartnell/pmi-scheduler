@@ -138,8 +138,11 @@ export default function GlobalTimerBanner() {
     return 'bg-green-600';
   };
 
-  // Don't render if no active timer, user dismissed, or timer is not running
-  if (!timer || !labDay || isDismissed || timer.status !== 'running') {
+  // Auto-dismiss when countdown reaches 0
+  const isTimeUp = timer?.mode === 'countdown' && displaySeconds <= 0 && timer?.status === 'running';
+
+  // Don't render if no active timer, user dismissed, timer is not running, or time is up
+  if (!timer || !labDay || isDismissed || timer.status !== 'running' || isTimeUp) {
     return null;
   }
 

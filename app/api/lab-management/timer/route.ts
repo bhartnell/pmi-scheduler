@@ -183,7 +183,7 @@ export async function PATCH(request: NextRequest) {
           started_at: null,
           paused_at: null,
           elapsed_when_paused: 0,
-          rotation_acknowledged: false  // Require acknowledgment for new rotation
+          rotation_acknowledged: true  // Set true when manually advancing - ROTATE shows only when timer hits 0
         };
         // Reset all ready statuses for this lab day when rotation advances
         await supabase

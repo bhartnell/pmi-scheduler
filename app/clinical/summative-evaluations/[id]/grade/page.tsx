@@ -232,7 +232,7 @@ function GradingPageContent() {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
   const [showScenarioDetails, setShowScenarioDetails] = useState(true);
-  const [expandedPhase, setExpandedPhase] = useState<number | null>(0);
+  const [expandedPhases, setExpandedPhases] = useState<Set<number>>(new Set([0])); // Start with first phase open
 
   // Local score state for editing
   const [localScores, setLocalScores] = useState<Record<string, Partial<Score>>>({});
@@ -863,19 +863,30 @@ function GradingPageContent() {
                                 {evaluation.linked_scenario.phases.map((phase, idx) => (
                                   <div key={idx} className="border dark:border-gray-700 rounded-lg overflow-hidden">
                                     <button
-                                      onClick={() => setExpandedPhase(expandedPhase === idx ? null : idx)}
+                                      onClick={() => {
+                                        const newSet = new Set(expandedPhases);
+                                        if (newSet.has(idx)) {
+                                          newSet.delete(idx);
+                                        } else {
+                                          newSet.add(idx);
+                                        }
+                                        setExpandedPhases(newSet);
+                                      }}
                                       className="w-full px-4 py-2 flex items-center justify-between bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700"
                                     >
                                       <span className="font-medium text-gray-900 dark:text-white">
-                                        Phase {idx + 1}: {phase.name || `Phase ${idx + 1}`}
+                                        {/* Show phase title - use actual name if it's not just "Phase X" */}
+                                        {phase.name && !phase.name.match(/^Phase \d+$/i)
+                                          ? `Phase ${idx + 1}: ${phase.name}`
+                                          : `Phase ${idx + 1}`}
                                       </span>
-                                      {expandedPhase === idx ? (
+                                      {expandedPhases.has(idx) ? (
                                         <ChevronUp className="w-4 h-4 text-gray-500" />
                                       ) : (
                                         <ChevronDown className="w-4 h-4 text-gray-500" />
                                       )}
                                     </button>
-                                    {expandedPhase === idx && (
+                                    {expandedPhases.has(idx) && (
                                       <div className="p-4 space-y-3">
                                         {phase.vitals && (
                                           <div>

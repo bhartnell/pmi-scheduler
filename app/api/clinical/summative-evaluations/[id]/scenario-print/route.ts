@@ -212,16 +212,24 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
     `;
 
     if (hasSample) {
+      // Get SAMPLE values - prefer sample_history fields, fallback to top-level
+      const sampleS = linkedScenario.sample_history.signs_symptoms;
+      const sampleA = linkedScenario.sample_history.allergies || linkedScenario.allergies;
+      const sampleM = linkedScenario.sample_history.medications || (linkedScenario.medications?.length ? linkedScenario.medications.join(', ') : null);
+      const sampleP = linkedScenario.sample_history.past_medical_history || (linkedScenario.medical_history?.length ? linkedScenario.medical_history.join(', ') : null);
+      const sampleL = linkedScenario.sample_history.last_oral_intake;
+      const sampleE = linkedScenario.sample_history.events_leading;
+
       content += `
           <div class="sample-box">
             <h4>SAMPLE History</h4>
             <table class="history-table">
-              ${linkedScenario.sample_history.signs_symptoms ? `<tr><td><strong>S</strong></td><td>Signs/Symptoms</td><td>${linkedScenario.sample_history.signs_symptoms}</td></tr>` : ''}
-              ${linkedScenario.allergies ? `<tr><td><strong>A</strong></td><td>Allergies</td><td>${linkedScenario.allergies}</td></tr>` : ''}
-              ${linkedScenario.medications?.length ? `<tr><td><strong>M</strong></td><td>Medications</td><td>${linkedScenario.medications.join(', ')}</td></tr>` : ''}
-              ${linkedScenario.medical_history?.length ? `<tr><td><strong>P</strong></td><td>Past Medical Hx</td><td>${linkedScenario.medical_history.join(', ')}</td></tr>` : ''}
-              ${linkedScenario.sample_history.last_oral_intake ? `<tr><td><strong>L</strong></td><td>Last Oral Intake</td><td>${linkedScenario.sample_history.last_oral_intake}</td></tr>` : ''}
-              ${linkedScenario.sample_history.events_leading ? `<tr><td><strong>E</strong></td><td>Events Leading</td><td>${linkedScenario.sample_history.events_leading}</td></tr>` : ''}
+              ${sampleS ? `<tr><td><strong>S</strong></td><td>Signs/Symptoms</td><td>${sampleS}</td></tr>` : ''}
+              ${sampleA ? `<tr><td><strong>A</strong></td><td>Allergies</td><td>${sampleA}</td></tr>` : ''}
+              ${sampleM ? `<tr><td><strong>M</strong></td><td>Medications</td><td>${sampleM}</td></tr>` : ''}
+              ${sampleP ? `<tr><td><strong>P</strong></td><td>Past Medical Hx</td><td>${sampleP}</td></tr>` : ''}
+              ${sampleL ? `<tr><td><strong>L</strong></td><td>Last Oral Intake</td><td>${sampleL}</td></tr>` : ''}
+              ${sampleE ? `<tr><td><strong>E</strong></td><td>Events Leading</td><td>${sampleE}</td></tr>` : ''}
             </table>
           </div>
       `;
@@ -276,11 +284,16 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
     content += `
       <div class="section phases-section">
         <h3>SCENARIO PHASES</h3>
-        ${linkedScenario.phases.map((phase: any, idx: number) => `
+        ${linkedScenario.phases.map((phase: any, idx: number) => {
+          // Get phase title - skip if it's just "Phase X" to avoid "PHASE 1 Phase 1"
+          const phaseName = phase.name || phase.title || '';
+          const isDefaultName = /^Phase \d+$/i.test(phaseName);
+          const displayTitle = isDefaultName ? '' : phaseName;
+          return `
           <div class="phase">
             <div class="phase-header">
               <span class="phase-number">PHASE ${idx + 1}</span>
-              <span class="phase-title">${phase.name || phase.title || ''}</span>
+              ${displayTitle ? `<span class="phase-title">${displayTitle}</span>` : ''}
             </div>
             ${phase.trigger ? `
               <div class="phase-trigger">
@@ -309,7 +322,8 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
               </div>
             ` : ''}
           </div>
-        `).join('')}
+        `;
+        }).join('')}
       </div>
     `;
   }
