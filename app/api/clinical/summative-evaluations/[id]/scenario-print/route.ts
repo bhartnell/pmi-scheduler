@@ -460,6 +460,9 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
       }
       .section { page-break-inside: avoid; }
       .phase-box { page-break-inside: avoid; }
+      /* Force print backgrounds where supported */
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
     }
 
     @page {
@@ -615,12 +618,13 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
       margin-bottom: 15px;
     }
 
+    /* PRINT-SAFE: Instructor Notes header */
     .instructor-section-top h3 {
-      background: #000;
-      color: #fff;
+      background: #e0e0e0;
+      color: #000;
+      border: 2px solid #000;
       padding: 5px 10px;
       margin: -10px -10px 10px -10px;
-      border-bottom: none;
       font-size: 12px;
     }
 
@@ -637,14 +641,15 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
       border: 2px solid #000;
     }
 
-    /* XABCDE Labels - HIGH CONTRAST BLACK */
+    /* XABCDE Labels - PRINT-SAFE (no background dependency) */
     .xabcde-label {
       width: 28px;
       font-weight: bold;
       font-size: 13px;
       text-align: center;
-      background: #000;
-      color: #fff;
+      background: #e0e0e0;
+      color: #000;
+      border: 2px solid #000;
     }
 
     .avpu-row {
@@ -695,13 +700,15 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
       color: #000;
     }
 
+    /* PRINT-SAFE: Letter labels (S, A, M, P, L, E, O, Q, R, T) */
     .assessment-table td:first-child,
     .history-table td:first-child {
       width: 28px;
       font-weight: bold;
       text-align: center;
-      background: #000;
-      color: #fff;
+      background: #e0e0e0;
+      color: #000;
+      border: 2px solid #000;
     }
 
     .history-table td:nth-child(2) {
@@ -809,11 +816,13 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
       border-bottom: 1px solid #000;
     }
 
+    /* PRINT-SAFE: Phase number badges */
     .phase-number {
       font-weight: bold;
       font-size: 12px;
-      background: #000;
-      color: #fff;
+      background: #e0e0e0;
+      color: #000;
+      border: 2px solid #000;
       padding: 2px 8px;
     }
 
