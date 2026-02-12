@@ -2,10 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// Create Supabase client lazily to avoid build-time errors
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+}
 
 // GET - Export scenario as printable HTML
 export async function GET(
@@ -19,6 +22,8 @@ export async function GET(
     if (!session?.user?.email) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
+
+    const supabase = getSupabase();
 
     // Fetch evaluation with scenario info
     const { data: evaluation, error } = await supabase
@@ -82,42 +87,50 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
     });
   };
 
-  // Helper function to render vitals grid
-  const renderVitals = (vitals: any) => {
+  // Helper function to render vitals as a horizontal table row
+  const renderVitalsRow = (vitals: any) => {
     if (!vitals) return '';
-    const items = [];
-    if (vitals.bp) items.push(`<td><strong>BP:</strong> ${vitals.bp}</td>`);
-    if (vitals.hr) items.push(`<td><strong>HR:</strong> ${vitals.hr}</td>`);
-    if (vitals.rr) items.push(`<td><strong>RR:</strong> ${vitals.rr}</td>`);
-    if (vitals.spo2) items.push(`<td><strong>SpO2:</strong> ${vitals.spo2}%</td>`);
-    if (vitals.temp) items.push(`<td><strong>Temp:</strong> ${vitals.temp}°F</td>`);
-    if (vitals.bgl || vitals.glucose) items.push(`<td><strong>BGL:</strong> ${vitals.bgl || vitals.glucose}</td>`);
-    if (vitals.gcs) items.push(`<td><strong>GCS:</strong> ${vitals.gcs}</td>`);
-    if (vitals.etco2) items.push(`<td><strong>ETCO2:</strong> ${vitals.etco2}</td>`);
 
-    if (items.length === 0) return '';
+    // Standard vitals labels and values
+    const vitalItems = [
+      { label: 'BP', value: vitals.bp },
+      { label: 'HR', value: vitals.hr },
+      { label: 'RR', value: vitals.rr },
+      { label: 'SpO2', value: vitals.spo2 ? `${vitals.spo2}%` : null },
+      { label: 'Temp', value: vitals.temp ? `${vitals.temp}°F` : null },
+      { label: 'BGL', value: vitals.bgl || vitals.glucose },
+      { label: 'GCS', value: vitals.gcs },
+      { label: 'ETCO2', value: vitals.etco2 }
+    ].filter(v => v.value);
 
-    return `<table class="vitals-table"><tr>${items.join('')}</tr></table>`;
+    if (vitalItems.length === 0) return '';
+
+    return `
+      <table class="vitals-table">
+        <tr class="vitals-header">${vitalItems.map(v => `<th>${v.label}</th>`).join('')}</tr>
+        <tr class="vitals-values">${vitalItems.map(v => `<td>${v.value}</td>`).join('')}</tr>
+      </table>
+    `;
   };
 
-  // Build sections
+  // Build sections in proper assessment flow order
   let content = '';
 
-  // Dispatch Information
+  // 1. DISPATCH INFORMATION
   if (linkedScenario?.dispatch_time || linkedScenario?.dispatch_location || linkedScenario?.dispatch_notes) {
     content += `
-      <div class="section dispatch-section">
+      <div class="section">
         <h3>DISPATCH INFORMATION</h3>
         <div class="info-grid">
           ${linkedScenario.dispatch_time ? `<div><strong>Time:</strong> ${linkedScenario.dispatch_time}</div>` : ''}
           ${linkedScenario.dispatch_location ? `<div><strong>Location:</strong> ${linkedScenario.dispatch_location}</div>` : ''}
         </div>
-        ${linkedScenario.dispatch_notes ? `<p><strong>Notes:</strong> ${linkedScenario.dispatch_notes}</p>` : ''}
+        ${linkedScenario.dispatch_notes ? `<p class="dispatch-notes"><strong>Notes:</strong> ${linkedScenario.dispatch_notes}</p>` : ''}
       </div>
     `;
   }
 
-  // Patient Information
+  // 2. PATIENT INFORMATION
   if (linkedScenario) {
     content += `
       <div class="section">
@@ -133,7 +146,17 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
     `;
   }
 
-  // Medical History, Medications, Allergies
+  // 3. INITIAL VITALS (PROMINENT BOX - for station setup)
+  if (linkedScenario?.initial_vitals && Object.values(linkedScenario.initial_vitals).some((v: any) => v)) {
+    content += `
+      <div class="section vitals-section">
+        <h3>INITIAL VITALS</h3>
+        ${renderVitalsRow(linkedScenario.initial_vitals)}
+      </div>
+    `;
+  }
+
+  // 4. MEDICAL HISTORY (PMH, Medications, Allergies)
   if (linkedScenario?.medical_history?.length || linkedScenario?.medications?.length || linkedScenario?.allergies) {
     content += `
       <div class="section">
@@ -152,7 +175,7 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
             </div>
           ` : ''}
           ${linkedScenario.allergies ? `
-            <div class="allergies">
+            <div class="allergies-box">
               <strong>Allergies:</strong> ${linkedScenario.allergies}
             </div>
           ` : ''}
@@ -161,89 +184,72 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
     `;
   }
 
-  // Initial Vitals
-  if (linkedScenario?.initial_vitals && Object.values(linkedScenario.initial_vitals).some((v: any) => v)) {
+  // 5. PRIMARY ASSESSMENT (General Impression, AVPU, XABCDE)
+  if (linkedScenario?.assessment_x || linkedScenario?.assessment_a || linkedScenario?.assessment_e || linkedScenario?.general_impression || linkedScenario?.avpu) {
     content += `
-      <div class="section vitals-section">
-        <h3>INITIAL VITALS</h3>
-        ${renderVitals(linkedScenario.initial_vitals)}
-      </div>
-    `;
-  }
-
-  // SAMPLE History
-  if (linkedScenario?.sample_history && Object.values(linkedScenario.sample_history).some((v: any) => v)) {
-    content += `
-      <div class="section sample-section">
-        <h3>SAMPLE HISTORY</h3>
-        <table class="sample-table">
-          ${linkedScenario.sample_history.signs_symptoms ? `<tr><td><strong>S - Signs/Symptoms:</strong></td><td>${linkedScenario.sample_history.signs_symptoms}</td></tr>` : ''}
-          ${linkedScenario.allergies ? `<tr><td><strong>A - Allergies:</strong></td><td>${linkedScenario.allergies}</td></tr>` : ''}
-          ${linkedScenario.medications?.length ? `<tr><td><strong>M - Medications:</strong></td><td>${linkedScenario.medications.join(', ')}</td></tr>` : ''}
-          ${linkedScenario.medical_history?.length ? `<tr><td><strong>P - Past Medical History:</strong></td><td>${linkedScenario.medical_history.join(', ')}</td></tr>` : ''}
-          ${linkedScenario.sample_history.last_oral_intake ? `<tr><td><strong>L - Last Oral Intake:</strong></td><td>${linkedScenario.sample_history.last_oral_intake}</td></tr>` : ''}
-          ${linkedScenario.sample_history.events_leading ? `<tr><td><strong>E - Events Leading:</strong></td><td>${linkedScenario.sample_history.events_leading}</td></tr>` : ''}
-        </table>
-      </div>
-    `;
-  }
-
-  // OPQRST
-  if (linkedScenario?.opqrst && Object.values(linkedScenario.opqrst).some((v: any) => v)) {
-    content += `
-      <div class="section opqrst-section">
-        <h3>OPQRST (Pain Assessment)</h3>
-        <table class="opqrst-table">
-          ${linkedScenario.opqrst.onset ? `<tr><td><strong>O - Onset:</strong></td><td>${linkedScenario.opqrst.onset}</td></tr>` : ''}
-          ${linkedScenario.opqrst.provocation ? `<tr><td><strong>P - Provocation:</strong></td><td>${linkedScenario.opqrst.provocation}</td></tr>` : ''}
-          ${linkedScenario.opqrst.quality ? `<tr><td><strong>Q - Quality:</strong></td><td>${linkedScenario.opqrst.quality}</td></tr>` : ''}
-          ${linkedScenario.opqrst.radiation ? `<tr><td><strong>R - Radiation:</strong></td><td>${linkedScenario.opqrst.radiation}</td></tr>` : ''}
-          ${linkedScenario.opqrst.severity ? `<tr><td><strong>S - Severity:</strong></td><td>${linkedScenario.opqrst.severity}</td></tr>` : ''}
-          ${linkedScenario.opqrst.time_onset ? `<tr><td><strong>T - Time:</strong></td><td>${linkedScenario.opqrst.time_onset}</td></tr>` : ''}
-        </table>
-      </div>
-    `;
-  }
-
-  // Primary Assessment X/A/E
-  if (linkedScenario?.assessment_x || linkedScenario?.assessment_a || linkedScenario?.assessment_e || linkedScenario?.general_impression) {
-    content += `
-      <div class="section assessment-section">
+      <div class="section">
         <h3>PRIMARY ASSESSMENT (XABCDE)</h3>
         <table class="assessment-table">
+          ${linkedScenario.general_impression ? `<tr><td><strong>General Impression:</strong></td><td>${linkedScenario.general_impression}</td></tr>` : ''}
+          ${linkedScenario.avpu ? `<tr><td><strong>AVPU:</strong></td><td>${linkedScenario.avpu}</td></tr>` : ''}
           ${linkedScenario.assessment_x ? `<tr><td><strong>X - Hemorrhage Control:</strong></td><td>${linkedScenario.assessment_x}</td></tr>` : ''}
           ${linkedScenario.assessment_a ? `<tr><td><strong>A - Airway:</strong></td><td>${linkedScenario.assessment_a}</td></tr>` : ''}
           ${linkedScenario.assessment_e ? `<tr><td><strong>E - Expose/Environment:</strong></td><td>${linkedScenario.assessment_e}</td></tr>` : ''}
-          ${linkedScenario.general_impression ? `<tr><td><strong>General Impression:</strong></td><td>${linkedScenario.general_impression}</td></tr>` : ''}
         </table>
       </div>
     `;
   }
 
-  // Phases with vitals
-  if (linkedScenario?.phases?.length) {
+  // 6. SECONDARY ASSESSMENT (SAMPLE, OPQRST combined)
+  const hasSample = linkedScenario?.sample_history && Object.values(linkedScenario.sample_history).some((v: any) => v);
+  const hasOpqrst = linkedScenario?.opqrst && Object.values(linkedScenario.opqrst).some((v: any) => v);
+
+  if (hasSample || hasOpqrst) {
     content += `
-      <div class="section phases-section">
-        <h3>SCENARIO PHASES</h3>
-        ${linkedScenario.phases.map((phase: any, idx: number) => `
-          <div class="phase">
-            <h4>Phase ${idx + 1}: ${phase.name || `Phase ${idx + 1}`}</h4>
-            ${phase.vitals ? renderVitals(phase.vitals) : ''}
-            ${phase.presentation_notes ? `<p><strong>Presentation:</strong> ${phase.presentation_notes}</p>` : ''}
-            ${phase.expected_actions?.length ? `
-              <div>
-                <strong>Expected Actions:</strong>
-                <ul>${phase.expected_actions.map((a: string) => `<li>${a}</li>`).join('')}</ul>
-              </div>
-            ` : ''}
-            ${phase.instructor_cues ? `<p class="instructor-cue"><strong>Instructor Cue:</strong> ${phase.instructor_cues}</p>` : ''}
+      <div class="section">
+        <h3>SECONDARY ASSESSMENT</h3>
+        <div class="secondary-grid">
+    `;
+
+    if (hasSample) {
+      content += `
+          <div class="sample-box">
+            <h4>SAMPLE History</h4>
+            <table class="history-table">
+              ${linkedScenario.sample_history.signs_symptoms ? `<tr><td><strong>S</strong></td><td>Signs/Symptoms</td><td>${linkedScenario.sample_history.signs_symptoms}</td></tr>` : ''}
+              ${linkedScenario.allergies ? `<tr><td><strong>A</strong></td><td>Allergies</td><td>${linkedScenario.allergies}</td></tr>` : ''}
+              ${linkedScenario.medications?.length ? `<tr><td><strong>M</strong></td><td>Medications</td><td>${linkedScenario.medications.join(', ')}</td></tr>` : ''}
+              ${linkedScenario.medical_history?.length ? `<tr><td><strong>P</strong></td><td>Past Medical Hx</td><td>${linkedScenario.medical_history.join(', ')}</td></tr>` : ''}
+              ${linkedScenario.sample_history.last_oral_intake ? `<tr><td><strong>L</strong></td><td>Last Oral Intake</td><td>${linkedScenario.sample_history.last_oral_intake}</td></tr>` : ''}
+              ${linkedScenario.sample_history.events_leading ? `<tr><td><strong>E</strong></td><td>Events Leading</td><td>${linkedScenario.sample_history.events_leading}</td></tr>` : ''}
+            </table>
           </div>
-        `).join('')}
+      `;
+    }
+
+    if (hasOpqrst) {
+      content += `
+          <div class="opqrst-box">
+            <h4>OPQRST (Pain Assessment)</h4>
+            <table class="history-table">
+              ${linkedScenario.opqrst.onset ? `<tr><td><strong>O</strong></td><td>Onset</td><td>${linkedScenario.opqrst.onset}</td></tr>` : ''}
+              ${linkedScenario.opqrst.provocation ? `<tr><td><strong>P</strong></td><td>Provocation</td><td>${linkedScenario.opqrst.provocation}</td></tr>` : ''}
+              ${linkedScenario.opqrst.quality ? `<tr><td><strong>Q</strong></td><td>Quality</td><td>${linkedScenario.opqrst.quality}</td></tr>` : ''}
+              ${linkedScenario.opqrst.radiation ? `<tr><td><strong>R</strong></td><td>Radiation</td><td>${linkedScenario.opqrst.radiation}</td></tr>` : ''}
+              ${linkedScenario.opqrst.severity ? `<tr><td><strong>S</strong></td><td>Severity</td><td>${linkedScenario.opqrst.severity}</td></tr>` : ''}
+              ${linkedScenario.opqrst.time_onset ? `<tr><td><strong>T</strong></td><td>Time</td><td>${linkedScenario.opqrst.time_onset}</td></tr>` : ''}
+            </table>
+          </div>
+      `;
+    }
+
+    content += `
+        </div>
       </div>
     `;
   }
 
-  // Critical Actions
+  // 7. CRITICAL ACTIONS (Must Perform - PROMINENT BOX)
   if (linkedScenario?.critical_actions?.length) {
     content += `
       <div class="section critical-section">
@@ -255,12 +261,55 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
     `;
   }
 
-  // Instructor Notes
+  // 8. INSTRUCTOR NOTES
   if (linkedScenario?.instructor_notes) {
     content += `
       <div class="section instructor-section">
         <h3>INSTRUCTOR NOTES</h3>
         <p>${linkedScenario.instructor_notes}</p>
+      </div>
+    `;
+  }
+
+  // 9. PHASES (Progression with vitals/actions/cues per phase)
+  if (linkedScenario?.phases?.length) {
+    content += `
+      <div class="section phases-section">
+        <h3>SCENARIO PHASES</h3>
+        ${linkedScenario.phases.map((phase: any, idx: number) => `
+          <div class="phase">
+            <div class="phase-header">
+              <span class="phase-number">PHASE ${idx + 1}</span>
+              <span class="phase-title">${phase.name || phase.title || ''}</span>
+            </div>
+            ${phase.trigger ? `
+              <div class="phase-trigger">
+                <strong>Trigger:</strong> ${phase.trigger}
+              </div>
+            ` : ''}
+            ${phase.vitals ? `
+              <div class="phase-vitals">
+                ${renderVitalsRow(phase.vitals)}
+              </div>
+            ` : ''}
+            ${phase.presentation || phase.presentation_notes ? `
+              <div class="phase-presentation">
+                <strong>Presentation:</strong> ${phase.presentation || phase.presentation_notes}
+              </div>
+            ` : ''}
+            ${phase.expected_actions?.length ? `
+              <div class="phase-actions">
+                <strong>Expected Actions:</strong>
+                <ul>${phase.expected_actions.map((a: string) => `<li>${a}</li>`).join('')}</ul>
+              </div>
+            ` : ''}
+            ${phase.instructor_cues || phase.cues ? `
+              <div class="phase-cues">
+                <strong>Instructor Cues:</strong> <em>${phase.instructor_cues || phase.cues}</em>
+              </div>
+            ` : ''}
+          </div>
+        `).join('')}
       </div>
     `;
   }
@@ -303,6 +352,8 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
     @media print {
       .no-print { display: none !important; }
       body { font-size: 11pt; }
+      .section { page-break-inside: avoid; }
+      .phase { page-break-inside: avoid; }
     }
 
     * {
@@ -332,6 +383,14 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
       font-size: 16px;
       cursor: pointer;
       margin: 0 5px;
+      background: #333;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+    }
+
+    .no-print button:hover {
+      background: #555;
     }
 
     .header {
@@ -342,170 +401,189 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
     }
 
     .header h1 {
-      font-size: 20px;
+      font-size: 18px;
+      font-weight: bold;
       margin-bottom: 5px;
+      text-transform: uppercase;
     }
 
     .header h2 {
       font-size: 16px;
-      font-weight: normal;
-      color: #333;
+      font-weight: bold;
     }
 
     .meta-info {
       display: flex;
       justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
       margin-bottom: 15px;
       padding: 10px;
-      background: #f5f5f5;
-      border: 1px solid #ddd;
+      background: #f0f0f0;
+      border: 1px solid #000;
     }
 
+    /* Standard Section Styling - B&W Optimized */
     .section {
-      margin-bottom: 20px;
-      padding: 15px;
-      border: 1px solid #ccc;
-      background: #fafafa;
+      margin-bottom: 15px;
+      padding: 12px;
+      border: 1px solid #000;
+      background: #fff;
     }
 
     .section h3 {
-      font-size: 14px;
+      font-size: 13px;
+      font-weight: bold;
       text-transform: uppercase;
-      border-bottom: 2px solid #333;
-      padding-bottom: 5px;
+      border-bottom: 2px solid #000;
+      padding-bottom: 4px;
       margin-bottom: 10px;
     }
 
-    .dispatch-section {
-      background: #f0f0f0;
-      border-color: #999;
+    .section h4 {
+      font-size: 12px;
+      font-weight: bold;
+      margin-bottom: 8px;
     }
 
+    /* INITIAL VITALS - Prominent thick border */
     .vitals-section {
-      background: #e6f3ff;
-      border-color: #0066cc;
+      border: 3px solid #000;
+      background: #f0f0f0;
     }
 
     .vitals-section h3 {
-      color: #0066cc;
-      border-color: #0066cc;
+      font-size: 14px;
     }
 
     .vitals-table {
       width: 100%;
       border-collapse: collapse;
+      margin-top: 8px;
+    }
+
+    .vitals-table th {
+      padding: 6px 10px;
+      border: 1px solid #000;
+      background: #e0e0e0;
+      font-weight: bold;
+      text-align: center;
+      font-size: 11px;
     }
 
     .vitals-table td {
-      padding: 8px 12px;
-      border: 1px solid #ccc;
+      padding: 8px 10px;
+      border: 1px solid #000;
       background: #fff;
       text-align: center;
+      font-size: 14px;
+      font-weight: bold;
     }
 
-    .sample-section {
-      background: #e6ffe6;
-      border-color: #006600;
+    /* CRITICAL ACTIONS - Prominent thick border */
+    .critical-section {
+      border: 3px solid #000;
+      background: #f0f0f0;
     }
 
-    .sample-section h3 {
-      color: #006600;
-      border-color: #006600;
+    .critical-section h3 {
+      font-size: 14px;
     }
 
-    .opqrst-section {
-      background: #f3e6ff;
-      border-color: #660099;
+    .critical-list {
+      margin-left: 20px;
     }
 
-    .opqrst-section h3 {
-      color: #660099;
-      border-color: #660099;
+    .critical-list li {
+      padding: 4px 0;
+      font-weight: bold;
+      font-size: 12px;
     }
 
-    .assessment-section {
-      background: #e6ffff;
-      border-color: #006666;
+    /* Instructor Notes */
+    .instructor-section {
+      background: #f8f8f8;
+      border-style: dashed;
     }
 
-    .assessment-section h3 {
-      color: #006666;
-      border-color: #006666;
-    }
-
-    .sample-table,
-    .opqrst-table,
-    .assessment-table {
+    /* Assessment Tables */
+    .assessment-table,
+    .history-table {
       width: 100%;
       border-collapse: collapse;
     }
 
-    .sample-table td,
-    .opqrst-table td,
-    .assessment-table td {
-      padding: 6px 10px;
-      border: 1px solid #ccc;
+    .assessment-table td,
+    .history-table td {
+      padding: 5px 8px;
+      border: 1px solid #000;
       vertical-align: top;
     }
 
-    .sample-table td:first-child,
-    .opqrst-table td:first-child,
-    .assessment-table td:first-child {
-      width: 200px;
-      background: #f9f9f9;
-    }
-
-    .critical-section {
-      background: #ffe6e6;
-      border: 2px solid #cc0000;
-    }
-
-    .critical-section h3 {
-      color: #cc0000;
-      border-color: #cc0000;
-    }
-
-    .critical-list li {
-      margin-left: 20px;
-      padding: 3px 0;
+    .assessment-table td:first-child,
+    .history-table td:first-child {
+      width: 30px;
       font-weight: bold;
+      text-align: center;
+      background: #f0f0f0;
     }
 
-    .instructor-section {
-      background: #fff8e6;
-      border-color: #cc7700;
+    .history-table td:nth-child(2) {
+      width: 120px;
+      background: #f8f8f8;
     }
 
-    .instructor-section h3 {
-      color: #cc7700;
-      border-color: #cc7700;
+    /* Secondary Assessment Grid */
+    .secondary-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
     }
 
-    .phases-section .phase {
-      margin-bottom: 15px;
+    .sample-box,
+    .opqrst-box {
+      border: 1px solid #000;
       padding: 10px;
-      background: #fff;
-      border: 1px solid #ddd;
+      background: #fafafa;
     }
 
-    .phases-section .phase h4 {
-      font-size: 13px;
-      margin-bottom: 10px;
-      color: #333;
-    }
-
+    /* Info Grids */
     .info-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      gap: 10px;
+      gap: 8px;
     }
 
     .three-column {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 15px;
+      gap: 12px;
     }
 
+    /* Chief Complaint emphasis */
+    .chief-complaint {
+      font-size: 13px;
+      margin-top: 10px;
+      padding: 8px;
+      background: #f0f0f0;
+      border-left: 4px solid #000;
+    }
+
+    .dispatch-notes {
+      margin-top: 8px;
+      padding: 6px;
+      background: #f8f8f8;
+    }
+
+    /* Allergies emphasis */
+    .allergies-box {
+      font-weight: bold;
+      padding: 6px;
+      border: 2px solid #000;
+      background: #f0f0f0;
+    }
+
+    /* Lists */
     ul {
       margin-left: 20px;
     }
@@ -514,34 +592,84 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
       margin-bottom: 3px;
     }
 
-    .allergies {
-      color: #cc0000;
+    /* PHASES SECTION */
+    .phases-section {
+      border: 2px solid #000;
+    }
+
+    .phase {
+      margin-bottom: 0;
+      padding: 12px;
+      border-bottom: 2px solid #000;
+    }
+
+    .phase:last-child {
+      border-bottom: none;
+    }
+
+    .phase-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #ccc;
+    }
+
+    .phase-number {
       font-weight: bold;
+      font-size: 13px;
+      background: #000;
+      color: #fff;
+      padding: 2px 8px;
     }
 
-    .chief-complaint {
-      font-size: 14px;
-      margin-top: 10px;
-      padding: 10px;
-      background: #fff;
-      border-left: 4px solid #cc0000;
+    .phase-title {
+      font-weight: bold;
+      font-size: 13px;
     }
 
-    .instructor-cue {
-      margin-top: 10px;
-      padding: 8px;
-      background: #fff8e6;
-      border-left: 3px solid #cc7700;
+    .phase-trigger {
+      margin-bottom: 8px;
+      padding: 6px;
+      background: #f0f0f0;
+      border-left: 3px solid #000;
+    }
+
+    .phase-vitals {
+      margin-bottom: 10px;
+    }
+
+    .phase-presentation {
+      margin-bottom: 8px;
+      padding: 6px;
+      background: #f8f8f8;
+    }
+
+    .phase-actions {
+      margin-bottom: 8px;
+    }
+
+    .phase-actions ul {
+      margin-top: 4px;
+    }
+
+    .phase-cues {
+      margin-top: 8px;
+      padding: 6px;
+      background: #f0f0f0;
+      border-left: 3px solid #666;
       font-style: italic;
     }
 
+    /* Footer */
     .footer {
-      margin-top: 30px;
+      margin-top: 25px;
       text-align: center;
       font-size: 10px;
       color: #666;
-      border-top: 1px solid #ccc;
-      padding-top: 10px;
+      border-top: 1px solid #000;
+      padding-top: 8px;
     }
   </style>
 </head>
@@ -552,7 +680,7 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
   </div>
 
   <div class="header">
-    <h1>PIMA MEDICAL INSTITUTE</h1>
+    <h1>PIMA MEDICAL INSTITUTE - PARAMEDIC PROGRAM</h1>
     <h2>Scenario #${scenario?.scenario_number}: ${scenario?.title || linkedScenario?.title}</h2>
   </div>
 
@@ -566,7 +694,7 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
   ${content}
 
   <div class="footer">
-    Printed: ${new Date().toLocaleString()} | For instructor reference only
+    Printed: ${new Date().toLocaleString()} | FOR INSTRUCTOR REFERENCE ONLY
   </div>
 </body>
 </html>

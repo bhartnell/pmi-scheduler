@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// Create Supabase client lazily to avoid build-time errors
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+}
 
 // GET - Get all skills assigned to any station on a lab day
 export async function GET(request: NextRequest) {
@@ -17,6 +20,8 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const supabase = getSupabase();
+
     // Get all stations for this lab day
     const { data: stations, error: stationsError } = await supabase
       .from('lab_stations')
