@@ -1,288 +1,271 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
+import { useEffect, useState, useCallback, useRef } from 'react';
 
-interface TimerData {
-  remaining_seconds: number;
-  is_running: boolean;
+interface TimerState {
+  id: string;
+  lab_day_id: string;
   rotation_number: number;
-  total_rotations: number;
-  duration_minutes: number;
-  status: string;
+  status: 'running' | 'paused' | 'stopped';
+  started_at: string | null;
+  paused_at: string | null;
+  elapsed_when_paused: number;
+  duration_seconds: number;
+  debrief_seconds: number;
+  mode: 'countdown' | 'countup';
+  rotation_acknowledged: boolean;
 }
 
-interface DisplayState {
-  valid: boolean;
-  error: string | null;
+interface DisplayInfo {
+  id: string;
   room_name: string;
-  timer: TimerData | null;
-  loading: boolean;
+  timer_type: 'fixed' | 'mobile';
+}
+
+interface LabDayInfo {
+  id: string;
+  date: string;
+  title: string | null;
+  displayName: string;
 }
 
 export default function TimerDisplayPage() {
   const params = useParams();
   const token = params.token as string;
 
-  const [state, setState] = useState<DisplayState>({
-    valid: false,
-    error: null,
-    room_name: '',
-    timer: null,
-    loading: true
-  });
+  const [display, setDisplay] = useState<DisplayInfo | null>(null);
+  const [timer, setTimer] = useState<TimerState | null>(null);
+  const [labDay, setLabDay] = useState<LabDayInfo | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [serverTimeOffset, setServerTimeOffset] = useState(0);
+  const lastFetchRef = useRef<number>(0);
 
-  const [flashRotate, setFlashRotate] = useState(false);
-
+  // Poll for timer status
   const fetchTimerStatus = useCallback(async () => {
     try {
       const res = await fetch(`/api/timer-display/${token}`);
       const data = await res.json();
 
-      if (data.success) {
-        setState(prev => ({
-          ...prev,
-          valid: true,
-          error: null,
-          room_name: data.room_name,
-          timer: data.timer,
-          loading: false
-        }));
-
-        // Flash when timer hits 0 and is still "running"
-        if (data.timer?.remaining_seconds === 0 && data.timer?.is_running) {
-          setFlashRotate(true);
-        } else {
-          setFlashRotate(false);
-        }
-      } else {
-        setState(prev => ({
-          ...prev,
-          valid: false,
-          error: data.error || 'Invalid token',
-          loading: false
-        }));
+      if (!data.success) {
+        setError(data.error || 'Failed to fetch timer status');
+        return;
       }
+
+      setDisplay(data.display);
+      setTimer(data.timer);
+      setLabDay(data.labDay);
+      setError(null);
+
+      // Calculate server time offset
+      if (data.serverTime) {
+        const serverTime = new Date(data.serverTime).getTime();
+        const localTime = Date.now();
+        setServerTimeOffset(serverTime - localTime);
+      }
+
+      lastFetchRef.current = Date.now();
     } catch (err) {
-      console.error('Fetch error:', err);
-      // Don't update state on network errors - keep showing last known state
+      console.error('Error fetching timer status:', err);
+      setError('Connection error');
     }
   }, [token]);
 
   // Initial fetch and polling
   useEffect(() => {
     fetchTimerStatus();
-    const interval = setInterval(fetchTimerStatus, 5000);
+    const interval = setInterval(fetchTimerStatus, 5000); // Poll every 5 seconds
     return () => clearInterval(interval);
   }, [fetchTimerStatus]);
 
-  // Format time as MM:SS
+  // Calculate current time display
+  useEffect(() => {
+    if (!timer) {
+      setCurrentTime(0);
+      return;
+    }
+
+    const calculateTime = () => {
+      if (timer.status === 'stopped') {
+        return timer.mode === 'countdown' ? timer.duration_seconds : 0;
+      }
+
+      if (timer.status === 'paused') {
+        return timer.mode === 'countdown'
+          ? timer.duration_seconds - timer.elapsed_when_paused
+          : timer.elapsed_when_paused;
+      }
+
+      // Running
+      if (timer.started_at) {
+        const now = Date.now() + serverTimeOffset;
+        const startTime = new Date(timer.started_at).getTime();
+        const elapsed = Math.floor((now - startTime) / 1000);
+
+        if (timer.mode === 'countdown') {
+          return Math.max(0, timer.duration_seconds - elapsed);
+        } else {
+          return elapsed;
+        }
+      }
+
+      return 0;
+    };
+
+    setCurrentTime(calculateTime());
+
+    // Update every second when running
+    if (timer.status === 'running') {
+      const interval = setInterval(() => {
+        setCurrentTime(calculateTime());
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [timer, serverTimeOffset]);
+
+  // Format time as MM:SS or HH:MM:SS
   const formatTime = (seconds: number): string => {
-    const mins = Math.floor(Math.abs(seconds) / 60);
-    const secs = Math.abs(seconds) % 60;
-    const sign = seconds < 0 ? '-' : '';
-    return `${sign}${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    const absSeconds = Math.abs(seconds);
+    const hrs = Math.floor(absSeconds / 3600);
+    const mins = Math.floor((absSeconds % 3600) / 60);
+    const secs = absSeconds % 60;
+
+    if (hrs > 0) {
+      return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // Determine display state
+  const isTimeUp = timer?.mode === 'countdown' && currentTime <= 0 && timer?.status === 'running';
+  const needsRotation = !timer?.rotation_acknowledged;
+  const showRotateFlash = isTimeUp || needsRotation;
+  const isDebrief = timer?.mode === 'countdown' && currentTime > 0 && currentTime <= (timer?.debrief_seconds || 300) && timer?.status === 'running';
+
+  // Error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-black flex flex-col items-center justify-center text-white p-4">
+        <div className="text-4xl mb-4">⚠️</div>
+        <h1 className="text-2xl font-bold mb-2">Timer Display Error</h1>
+        <p className="text-gray-400 text-center">{error}</p>
+        <p className="text-sm text-gray-600 mt-4">Token: {token}</p>
+      </div>
+    );
+  }
+
   // Loading state
-  if (state.loading) {
+  if (!display) {
     return (
-      <div className="kiosk-container">
-        <div className="loading">Loading...</div>
-        <style jsx>{kioskStyles}</style>
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="animate-pulse text-white text-6xl">Loading...</div>
       </div>
     );
   }
 
-  // Invalid token
-  if (!state.valid || state.error) {
+  // No active timer
+  if (!timer || !labDay) {
     return (
-      <div className="kiosk-container">
-        <div className="error">
-          <div className="error-icon">⚠</div>
-          <div className="error-text">Invalid Display Token</div>
-          <div className="error-detail">{state.error}</div>
-        </div>
-        <style jsx>{kioskStyles}</style>
+      <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center text-white p-4">
+        <h1 className="text-4xl md:text-6xl font-bold mb-4 text-center">{display.room_name}</h1>
+        <p className="text-2xl md:text-4xl text-gray-400">No Active Timer</p>
+        <p className="text-lg text-gray-600 mt-4">Waiting for lab session to start...</p>
       </div>
     );
   }
 
-  const timer = state.timer;
-  const isRotateTime = timer?.remaining_seconds === 0 && timer?.is_running;
-  const isStopped = !timer?.is_running || timer?.status === 'stopped';
-
+  // Main display
   return (
-    <div className={`kiosk-container ${flashRotate ? 'flash' : ''}`}>
-      {/* Room name - small in corner */}
-      <div className="room-name">{state.room_name}</div>
+    <div
+      className={`min-h-screen flex flex-col items-center justify-center transition-colors duration-300 ${
+        showRotateFlash
+          ? 'animate-pulse bg-red-600'
+          : isDebrief
+          ? 'bg-yellow-600'
+          : timer.status === 'paused'
+          ? 'bg-blue-900'
+          : 'bg-black'
+      }`}
+    >
+      {/* Room/Lab Name */}
+      <div className="absolute top-4 left-4 right-4 flex justify-between items-start">
+        <div>
+          <h2 className="text-xl md:text-2xl text-white/80 font-medium">{display.room_name}</h2>
+          <p className="text-sm md:text-lg text-white/60">{labDay.displayName}</p>
+        </div>
+        <div className="text-right">
+          <p className="text-xl md:text-3xl text-white/80 font-bold">
+            Rotation {timer.rotation_number}
+          </p>
+        </div>
+      </div>
 
-      {/* Main timer display */}
-      <div className="timer-section">
-        {isRotateTime ? (
-          <div className="rotate-alert">
-            <div className="rotate-text">ROTATE!</div>
-          </div>
+      {/* Main Timer Display */}
+      <div className="flex flex-col items-center">
+        {showRotateFlash ? (
+          <>
+            <div className="text-[12rem] md:text-[20rem] font-black text-white leading-none tracking-tight animate-bounce">
+              ROTATE!
+            </div>
+            <p className="text-2xl md:text-4xl text-white/80 mt-4">
+              Time to switch stations
+            </p>
+          </>
         ) : (
-          <div className={`timer ${isStopped ? 'stopped' : ''}`}>
-            {formatTime(timer?.remaining_seconds || 0)}
-          </div>
+          <>
+            <div
+              className={`text-[10rem] md:text-[16rem] font-black leading-none tracking-tight ${
+                isDebrief ? 'text-black' : 'text-white'
+              }`}
+              style={{ fontVariantNumeric: 'tabular-nums' }}
+            >
+              {formatTime(currentTime)}
+            </div>
+
+            {/* Status Indicators */}
+            <div className="flex items-center gap-4 mt-4">
+              {timer.status === 'paused' && (
+                <span className="text-2xl md:text-4xl text-blue-300 font-bold animate-pulse">
+                  PAUSED
+                </span>
+              )}
+              {timer.status === 'stopped' && (
+                <span className="text-2xl md:text-4xl text-gray-400 font-bold">
+                  STOPPED
+                </span>
+              )}
+              {isDebrief && (
+                <span className="text-2xl md:text-4xl text-black font-bold">
+                  DEBRIEF TIME
+                </span>
+              )}
+            </div>
+          </>
         )}
       </div>
 
-      {/* Rotation info */}
-      <div className="rotation-info">
-        <span className="rotation-label">Rotation</span>
-        <span className="rotation-number">
-          {timer?.rotation_number || 1}
-          {timer?.total_rotations ? ` / ${timer.total_rotations}` : ''}
-        </span>
+      {/* Bottom Status */}
+      <div className="absolute bottom-4 left-4 right-4 flex justify-between items-end text-white/40 text-sm">
+        <div>
+          {timer.mode === 'countdown' ? 'Countdown' : 'Count Up'} |{' '}
+          {Math.floor(timer.duration_seconds / 60)} min rotation
+        </div>
+        <div>
+          Last update: {new Date(lastFetchRef.current).toLocaleTimeString()}
+        </div>
       </div>
 
-      {/* Status indicator */}
-      {isStopped && !isRotateTime && (
-        <div className="status-badge">PAUSED</div>
-      )}
-
-      <style jsx>{kioskStyles}</style>
+      {/* CSS for ROTATE animation */}
+      <style jsx>{`
+        @keyframes pulse-bg {
+          0%, 100% { background-color: rgb(220, 38, 38); }
+          50% { background-color: rgb(185, 28, 28); }
+        }
+        .animate-pulse {
+          animation: pulse-bg 1s ease-in-out infinite;
+        }
+      `}</style>
     </div>
   );
 }
-
-const kioskStyles = `
-  .kiosk-container {
-    position: fixed;
-    inset: 0;
-    background: #000;
-    color: #fff;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-    overflow: hidden;
-    user-select: none;
-  }
-
-  .kiosk-container.flash {
-    animation: flash-bg 0.5s infinite;
-  }
-
-  @keyframes flash-bg {
-    0%, 100% { background: #000; }
-    50% { background: #1a1a00; }
-  }
-
-  .loading {
-    font-size: 48px;
-    color: #666;
-  }
-
-  .error {
-    text-align: center;
-  }
-
-  .error-icon {
-    font-size: 120px;
-    color: #ff4444;
-    margin-bottom: 20px;
-  }
-
-  .error-text {
-    font-size: 48px;
-    color: #ff4444;
-    font-weight: bold;
-  }
-
-  .error-detail {
-    font-size: 24px;
-    color: #888;
-    margin-top: 20px;
-  }
-
-  .room-name {
-    position: absolute;
-    top: 20px;
-    left: 20px;
-    font-size: 24px;
-    color: #666;
-    font-weight: 500;
-  }
-
-  .timer-section {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-  }
-
-  .timer {
-    font-size: min(50vw, 280px);
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-    color: #00ff00;
-    text-shadow: 0 0 30px rgba(0, 255, 0, 0.5);
-    letter-spacing: 0.05em;
-  }
-
-  .timer.stopped {
-    color: #ffaa00;
-    text-shadow: 0 0 30px rgba(255, 170, 0, 0.5);
-  }
-
-  .rotate-alert {
-    text-align: center;
-    animation: pulse 0.5s infinite;
-  }
-
-  @keyframes pulse {
-    0%, 100% { transform: scale(1); opacity: 1; }
-    50% { transform: scale(1.05); opacity: 0.8; }
-  }
-
-  .rotate-text {
-    font-size: min(40vw, 200px);
-    font-weight: 900;
-    color: #ffff00;
-    text-shadow: 0 0 50px rgba(255, 255, 0, 0.8);
-    letter-spacing: 0.1em;
-  }
-
-  .rotation-info {
-    position: absolute;
-    bottom: 40px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .rotation-label {
-    font-size: 24px;
-    color: #666;
-    text-transform: uppercase;
-    letter-spacing: 0.2em;
-  }
-
-  .rotation-number {
-    font-size: 64px;
-    font-weight: 700;
-    color: #00aaff;
-    text-shadow: 0 0 20px rgba(0, 170, 255, 0.5);
-  }
-
-  .status-badge {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    padding: 12px 24px;
-    background: rgba(255, 170, 0, 0.2);
-    border: 2px solid #ffaa00;
-    color: #ffaa00;
-    font-size: 20px;
-    font-weight: 700;
-    letter-spacing: 0.1em;
-    border-radius: 8px;
-  }
-`;

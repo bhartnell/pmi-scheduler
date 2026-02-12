@@ -6,6 +6,8 @@ import { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import {
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   Home,
   Save,
   ArrowLeft,
@@ -19,11 +21,16 @@ import {
   FileText,
   Download,
   MapPin,
-  ChevronDown,
-  ChevronUp,
   Stethoscope,
+  Activity,
+  Pill,
+  Heart,
   ClipboardList,
-  Info
+  Info,
+  Radio,
+  Printer,
+  Thermometer,
+  Zap
 } from 'lucide-react';
 import { canAccessClinical, canEditClinical, type Role } from '@/lib/permissions';
 
@@ -67,47 +74,82 @@ interface Scenario {
   linked_scenario_id: string | null;
 }
 
+// Full scenario details from linked scenarios table
 interface LinkedScenario {
   id: string;
-  name: string;
+  title: string;
+  category: string | null;
+  difficulty: string | null;
+  chief_complaint: string | null;
   patient_name: string | null;
   patient_age: number | null;
   patient_sex: string | null;
-  chief_complaint: string | null;
-  history: string | null;
-  medications: string | null;
+  patient_weight: string | null;
+  medical_history: string[] | null;
+  medications: string[] | null;
   allergies: string | null;
   instructor_notes: string | null;
-  phases: ScenarioPhase[];
+  learning_objectives: string[] | null;
+  dispatch_time: string | null;
+  dispatch_location: string | null;
+  dispatch_notes: string | null;
+  phases: Phase[] | null;
+  critical_actions: string[] | null;
+  // Initial vitals (legacy field)
+  initial_vitals: {
+    bp?: string;
+    hr?: number | string;
+    rr?: number | string;
+    spo2?: number | string;
+    temp?: number | string;
+    bgl?: number | string;
+    etco2?: number | string;
+    gcs?: number | string;
+  } | null;
+  // SAMPLE History
+  sample_history: {
+    signs_symptoms?: string;
+    last_oral_intake?: string;
+    events_leading?: string;
+  } | null;
+  // OPQRST
+  opqrst: {
+    onset?: string;
+    provocation?: string;
+    quality?: string;
+    radiation?: string;
+    severity?: string;
+    time_onset?: string;
+  } | null;
+  // Assessment X/A/E
+  assessment_x: string | null;
+  assessment_a: string | null;
+  assessment_e: string | null;
+  // General impression
+  general_impression: string | null;
 }
 
-interface ScenarioPhase {
-  id: string;
-  phase_number: number;
-  phase_name: string;
-  description: string | null;
-  vitals: PhaseVitals | null;
-  expected_actions: string[] | null;
-  duration_minutes: number | null;
-}
-
-interface PhaseVitals {
-  hr?: number;
-  bp?: string;
-  rr?: number;
-  spo2?: number;
-  temp?: string;
-  etco2?: number;
-  glucose?: number;
-  pain?: number;
-  gcs?: number;
-  pupils?: string;
-  skin?: string;
+interface Phase {
+  name: string;
+  vitals?: {
+    bp?: string;
+    hr?: number | string;
+    rr?: number | string;
+    spo2?: number | string;
+    temp?: number | string;
+    bgl?: number | string;
+    etco2?: number | string;
+    gcs?: number | string;
+  };
+  presentation_notes?: string;
+  expected_actions?: string[];
+  instructor_cues?: string;
 }
 
 interface Evaluation {
   id: string;
   scenario: Scenario;
+  linked_scenario?: LinkedScenario;
   cohort: {
     id: string;
     cohort_number: string;
@@ -189,9 +231,8 @@ function GradingPageContent() {
   const [activeStudentId, setActiveStudentId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
-  const [scenarioExpanded, setScenarioExpanded] = useState(true);
-  const [linkedScenario, setLinkedScenario] = useState<LinkedScenario | null>(null);
-  const [expandedPhases, setExpandedPhases] = useState<Set<string>>(new Set());
+  const [showScenarioDetails, setShowScenarioDetails] = useState(true);
+  const [expandedPhase, setExpandedPhase] = useState<number | null>(0);
 
   // Local score state for editing
   const [localScores, setLocalScores] = useState<Record<string, Partial<Score>>>({});
@@ -239,33 +280,6 @@ function GradingPageContent() {
         // Set active student to first one
         if (evalData.evaluation.scores.length > 0 && !activeStudentId) {
           setActiveStudentId(evalData.evaluation.scores[0].student_id);
-        }
-
-        // Fetch linked scenario if available
-        if (evalData.evaluation.scenario?.linked_scenario_id) {
-          try {
-            const scenarioRes = await fetch(`/api/lab-management/scenarios/${evalData.evaluation.scenario.linked_scenario_id}`);
-            const scenarioData = await scenarioRes.json();
-            if (scenarioData.success && scenarioData.scenario) {
-              // Map the scenario fields to our LinkedScenario interface
-              const scenario = scenarioData.scenario;
-              setLinkedScenario({
-                id: scenario.id,
-                name: scenario.title || scenario.name,
-                patient_name: scenario.patient_name,
-                patient_age: scenario.patient_age,
-                patient_sex: scenario.patient_sex,
-                chief_complaint: scenario.chief_complaint,
-                history: scenario.medical_history,
-                medications: scenario.medications,
-                allergies: scenario.allergies,
-                instructor_notes: scenario.instructor_notes,
-                phases: scenario.phases || []
-              });
-            }
-          } catch (err) {
-            console.error('Error fetching linked scenario:', err);
-          }
         }
       }
     } catch (error) {
@@ -368,35 +382,6 @@ function GradingPageContent() {
 
   const canEdit = userRole ? canEditClinical(userRole) : false;
 
-  const togglePhase = (phaseId: string) => {
-    setExpandedPhases(prev => {
-      const next = new Set(prev);
-      if (next.has(phaseId)) {
-        next.delete(phaseId);
-      } else {
-        next.add(phaseId);
-      }
-      return next;
-    });
-  };
-
-  const formatVitals = (vitals: PhaseVitals | null) => {
-    if (!vitals) return null;
-    const parts: string[] = [];
-    if (vitals.hr) parts.push(`HR: ${vitals.hr}`);
-    if (vitals.bp) parts.push(`BP: ${vitals.bp}`);
-    if (vitals.rr) parts.push(`RR: ${vitals.rr}`);
-    if (vitals.spo2) parts.push(`SpO2: ${vitals.spo2}%`);
-    if (vitals.etco2) parts.push(`EtCO2: ${vitals.etco2}`);
-    if (vitals.temp) parts.push(`Temp: ${vitals.temp}`);
-    if (vitals.glucose) parts.push(`Glucose: ${vitals.glucose}`);
-    if (vitals.gcs) parts.push(`GCS: ${vitals.gcs}`);
-    if (vitals.pain !== undefined) parts.push(`Pain: ${vitals.pain}/10`);
-    if (vitals.pupils) parts.push(`Pupils: ${vitals.pupils}`);
-    if (vitals.skin) parts.push(`Skin: ${vitals.skin}`);
-    return parts;
-  };
-
   if (sessionStatus === 'loading' || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-amber-100 dark:from-gray-900 dark:to-gray-800">
@@ -474,6 +459,17 @@ function GradingPageContent() {
             </div>
 
             <div className="flex items-center gap-3">
+              {/* Print Scenario Button */}
+              {evaluation.linked_scenario && (
+                <Link
+                  href={`/api/clinical/summative-evaluations/${evaluationId}/scenario-print`}
+                  target="_blank"
+                  className="flex items-center gap-2 px-4 py-2 text-blue-600 dark:text-blue-400 border border-blue-300 dark:border-blue-600 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                >
+                  <Printer className="w-4 h-4" />
+                  Print Scenario
+                </Link>
+              )}
               {/* Export PDF Button */}
               <Link
                 href={`/api/clinical/summative-evaluations/${evaluationId}/export`}
@@ -489,216 +485,6 @@ function GradingPageContent() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-6">
-        {/* Scenario Details Section */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow mb-6 overflow-hidden">
-          <button
-            onClick={() => setScenarioExpanded(!scenarioExpanded)}
-            className="w-full px-6 py-4 flex items-center justify-between bg-blue-50 dark:bg-blue-900/20 border-b border-gray-200 dark:border-gray-700"
-          >
-            <div className="flex items-center gap-3">
-              <Stethoscope className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-              <h3 className="font-semibold text-gray-900 dark:text-white">Scenario Details</h3>
-              {!linkedScenario && !evaluation?.scenario?.patient_presentation && (
-                <span className="text-xs px-2 py-1 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded">
-                  Basic Info Only
-                </span>
-              )}
-            </div>
-            {scenarioExpanded ? (
-              <ChevronUp className="w-5 h-5 text-gray-500" />
-            ) : (
-              <ChevronDown className="w-5 h-5 text-gray-500" />
-            )}
-          </button>
-
-          {scenarioExpanded && (
-            <div className="p-6">
-              {linkedScenario ? (
-                // Full scenario details from linked scenario
-                <div className="space-y-6">
-                  {/* Patient Info */}
-                  <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {linkedScenario.patient_name && (
-                      <div>
-                        <span className="text-xs text-gray-500 dark:text-gray-400">Patient Name</span>
-                        <div className="font-medium text-gray-900 dark:text-white">{linkedScenario.patient_name}</div>
-                      </div>
-                    )}
-                    {linkedScenario.patient_age && (
-                      <div>
-                        <span className="text-xs text-gray-500 dark:text-gray-400">Age</span>
-                        <div className="font-medium text-gray-900 dark:text-white">{linkedScenario.patient_age} y/o</div>
-                      </div>
-                    )}
-                    {linkedScenario.patient_sex && (
-                      <div>
-                        <span className="text-xs text-gray-500 dark:text-gray-400">Sex</span>
-                        <div className="font-medium text-gray-900 dark:text-white">{linkedScenario.patient_sex}</div>
-                      </div>
-                    )}
-                    {linkedScenario.chief_complaint && (
-                      <div>
-                        <span className="text-xs text-gray-500 dark:text-gray-400">Chief Complaint</span>
-                        <div className="font-medium text-gray-900 dark:text-white">{linkedScenario.chief_complaint}</div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* History, Meds, Allergies */}
-                  <div className="grid md:grid-cols-3 gap-4">
-                    {linkedScenario.history && (
-                      <div>
-                        <span className="text-xs text-gray-500 dark:text-gray-400">Medical History</span>
-                        <div className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">{linkedScenario.history}</div>
-                      </div>
-                    )}
-                    {linkedScenario.medications && (
-                      <div>
-                        <span className="text-xs text-gray-500 dark:text-gray-400">Medications</span>
-                        <div className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">{linkedScenario.medications}</div>
-                      </div>
-                    )}
-                    {linkedScenario.allergies && (
-                      <div>
-                        <span className="text-xs text-gray-500 dark:text-gray-400">Allergies</span>
-                        <div className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">{linkedScenario.allergies}</div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Phases */}
-                  {linkedScenario.phases && linkedScenario.phases.length > 0 && (
-                    <div>
-                      <h4 className="font-medium text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                        <ClipboardList className="w-4 h-4" />
-                        Scenario Phases
-                      </h4>
-                      <div className="space-y-2">
-                        {linkedScenario.phases.sort((a, b) => a.phase_number - b.phase_number).map(phase => {
-                          const isPhaseExpanded = expandedPhases.has(phase.id);
-                          const vitals = formatVitals(phase.vitals);
-                          return (
-                            <div key={phase.id} className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-                              <button
-                                onClick={() => togglePhase(phase.id)}
-                                className="w-full px-4 py-3 flex items-center justify-between bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700"
-                              >
-                                <div className="flex items-center gap-3">
-                                  <span className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs flex items-center justify-center font-bold">
-                                    {phase.phase_number}
-                                  </span>
-                                  <span className="font-medium text-gray-900 dark:text-white">{phase.phase_name}</span>
-                                  {phase.duration_minutes && (
-                                    <span className="text-xs text-gray-500">({phase.duration_minutes} min)</span>
-                                  )}
-                                </div>
-                                {isPhaseExpanded ? (
-                                  <ChevronUp className="w-4 h-4 text-gray-500" />
-                                ) : (
-                                  <ChevronDown className="w-4 h-4 text-gray-500" />
-                                )}
-                              </button>
-                              {isPhaseExpanded && (
-                                <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700 space-y-3">
-                                  {phase.description && (
-                                    <div>
-                                      <span className="text-xs text-gray-500 dark:text-gray-400">Description</span>
-                                      <p className="text-sm text-gray-900 dark:text-white">{phase.description}</p>
-                                    </div>
-                                  )}
-                                  {vitals && vitals.length > 0 && (
-                                    <div>
-                                      <span className="text-xs text-gray-500 dark:text-gray-400">Vitals</span>
-                                      <div className="flex flex-wrap gap-2 mt-1">
-                                        {vitals.map((v, i) => (
-                                          <span key={i} className="text-xs px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-gray-700 dark:text-gray-300">
-                                            {v}
-                                          </span>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
-                                  {phase.expected_actions && phase.expected_actions.length > 0 && (
-                                    <div>
-                                      <span className="text-xs text-gray-500 dark:text-gray-400">Expected Actions</span>
-                                      <ul className="mt-1 space-y-1">
-                                        {phase.expected_actions.map((action, i) => (
-                                          <li key={i} className="text-sm text-gray-900 dark:text-white flex items-start gap-2">
-                                            <span className="text-green-500 mt-0.5">•</span>
-                                            {action}
-                                          </li>
-                                        ))}
-                                      </ul>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Instructor Notes */}
-                  {linkedScenario.instructor_notes && (
-                    <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
-                      <h4 className="font-medium text-yellow-800 dark:text-yellow-200 mb-2 flex items-center gap-2">
-                        <Info className="w-4 h-4" />
-                        Instructor Notes
-                      </h4>
-                      <p className="text-sm text-yellow-700 dark:text-yellow-300 whitespace-pre-wrap">
-                        {linkedScenario.instructor_notes}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                // Basic scenario info from summative_scenarios
-                <div className="space-y-4">
-                  {evaluation?.scenario?.description && (
-                    <div>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">Description</span>
-                      <p className="text-sm text-gray-900 dark:text-white mt-1">{evaluation.scenario.description}</p>
-                    </div>
-                  )}
-
-                  {evaluation?.scenario?.patient_presentation && (
-                    <div>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">Patient Presentation</span>
-                      <p className="text-sm text-gray-900 dark:text-white mt-1 whitespace-pre-wrap">
-                        {evaluation.scenario.patient_presentation}
-                      </p>
-                    </div>
-                  )}
-
-                  {evaluation?.scenario?.expected_interventions && evaluation.scenario.expected_interventions.length > 0 && (
-                    <div>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">Expected Interventions</span>
-                      <ul className="mt-1 space-y-1">
-                        {evaluation.scenario.expected_interventions.map((intervention, i) => (
-                          <li key={i} className="text-sm text-gray-900 dark:text-white flex items-start gap-2">
-                            <span className="text-green-500 mt-0.5">•</span>
-                            {intervention}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {!evaluation?.scenario?.patient_presentation && !evaluation?.scenario?.expected_interventions?.length && (
-                    <div className="text-center py-4 text-gray-500 dark:text-gray-400">
-                      <Info className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">Full scenario details not available.</p>
-                      <p className="text-xs mt-1">This scenario has basic information only.</p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
         <div className="grid lg:grid-cols-4 gap-6">
           {/* Student List Sidebar */}
           <div className="lg:col-span-1">
@@ -758,6 +544,482 @@ function GradingPageContent() {
 
           {/* Grading Form */}
           <div className="lg:col-span-3">
+            {/* Scenario Details Section - Always visible above grading */}
+            {(evaluation.linked_scenario || evaluation.scenario) && (
+              <div className="mb-6">
+                <div className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
+                  <button
+                    onClick={() => setShowScenarioDetails(!showScenarioDetails)}
+                    className="w-full px-6 py-4 flex items-center justify-between bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Stethoscope className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                      <span className="font-semibold text-gray-900 dark:text-white">
+                        Scenario Details
+                      </span>
+                      {evaluation.linked_scenario && (
+                        <span className="text-xs bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded">
+                          Full Details Available
+                        </span>
+                      )}
+                    </div>
+                    {showScenarioDetails ? (
+                      <ChevronUp className="w-5 h-5 text-gray-500" />
+                    ) : (
+                      <ChevronDown className="w-5 h-5 text-gray-500" />
+                    )}
+                  </button>
+
+                  {showScenarioDetails && (
+                    <div className="p-6">
+                      {evaluation.linked_scenario ? (
+                        // Full linked scenario details
+                        <div className="space-y-6">
+                          {/* Dispatch Info */}
+                          {(evaluation.linked_scenario.dispatch_time || evaluation.linked_scenario.dispatch_location || evaluation.linked_scenario.dispatch_notes) && (
+                            <div className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+                              <h4 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                                <Radio className="w-4 h-4" />
+                                Dispatch Information
+                              </h4>
+                              <div className="grid md:grid-cols-3 gap-4 text-sm">
+                                {evaluation.linked_scenario.dispatch_time && (
+                                  <div>
+                                    <span className="text-gray-500 dark:text-gray-400">Time:</span>{' '}
+                                    <span className="font-medium text-gray-900 dark:text-white">{evaluation.linked_scenario.dispatch_time}</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.dispatch_location && (
+                                  <div>
+                                    <span className="text-gray-500 dark:text-gray-400">Location:</span>{' '}
+                                    <span className="font-medium text-gray-900 dark:text-white">{evaluation.linked_scenario.dispatch_location}</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.dispatch_notes && (
+                                  <div className="md:col-span-3">
+                                    <span className="text-gray-500 dark:text-gray-400">Notes:</span>{' '}
+                                    <span className="font-medium text-gray-900 dark:text-white">{evaluation.linked_scenario.dispatch_notes}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Patient Info */}
+                          <div className="grid md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <h4 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                <User className="w-4 h-4" />
+                                Patient Information
+                              </h4>
+                              <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                                {evaluation.linked_scenario.patient_name && (
+                                  <p><strong>Name:</strong> {evaluation.linked_scenario.patient_name}</p>
+                                )}
+                                {evaluation.linked_scenario.patient_age && (
+                                  <p><strong>Age:</strong> {evaluation.linked_scenario.patient_age} years</p>
+                                )}
+                                {evaluation.linked_scenario.patient_sex && (
+                                  <p><strong>Sex:</strong> {evaluation.linked_scenario.patient_sex}</p>
+                                )}
+                                {evaluation.linked_scenario.patient_weight && (
+                                  <p><strong>Weight:</strong> {evaluation.linked_scenario.patient_weight}</p>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              <h4 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                <Heart className="w-4 h-4" />
+                                Chief Complaint
+                              </h4>
+                              <p className="text-sm text-gray-600 dark:text-gray-400">
+                                {evaluation.linked_scenario.chief_complaint || 'Not specified'}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Medical History */}
+                          {(evaluation.linked_scenario.medical_history?.length ||
+                            evaluation.linked_scenario.medications?.length ||
+                            evaluation.linked_scenario.allergies) && (
+                            <div className="grid md:grid-cols-3 gap-4">
+                              {evaluation.linked_scenario.medical_history?.length ? (
+                                <div>
+                                  <h4 className="font-semibold text-gray-900 dark:text-white text-sm mb-1">Medical History</h4>
+                                  <ul className="text-sm text-gray-600 dark:text-gray-400 list-disc list-inside">
+                                    {evaluation.linked_scenario.medical_history.map((item, idx) => (
+                                      <li key={idx}>{item}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              ) : null}
+                              {evaluation.linked_scenario.medications?.length ? (
+                                <div>
+                                  <h4 className="font-semibold text-gray-900 dark:text-white text-sm mb-1 flex items-center gap-1">
+                                    <Pill className="w-3 h-3" /> Medications
+                                  </h4>
+                                  <ul className="text-sm text-gray-600 dark:text-gray-400 list-disc list-inside">
+                                    {evaluation.linked_scenario.medications.map((item, idx) => (
+                                      <li key={idx}>{item}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              ) : null}
+                              {evaluation.linked_scenario.allergies && (
+                                <div>
+                                  <h4 className="font-semibold text-gray-900 dark:text-white text-sm mb-1">Allergies</h4>
+                                  <p className="text-sm text-red-600 dark:text-red-400">{evaluation.linked_scenario.allergies}</p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Initial Vitals */}
+                          {evaluation.linked_scenario.initial_vitals && Object.values(evaluation.linked_scenario.initial_vitals).some(v => v) && (
+                            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                              <h4 className="font-semibold text-blue-800 dark:text-blue-300 mb-3 flex items-center gap-2">
+                                <Thermometer className="w-4 h-4" />
+                                Initial Vitals
+                              </h4>
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                                {evaluation.linked_scenario.initial_vitals.bp && (
+                                  <div className="bg-white dark:bg-gray-800 p-2 rounded">
+                                    <span className="text-gray-500 dark:text-gray-400">BP:</span>{' '}
+                                    <span className="font-medium text-gray-900 dark:text-white">{evaluation.linked_scenario.initial_vitals.bp}</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.initial_vitals.hr && (
+                                  <div className="bg-white dark:bg-gray-800 p-2 rounded">
+                                    <span className="text-gray-500 dark:text-gray-400">HR:</span>{' '}
+                                    <span className="font-medium text-gray-900 dark:text-white">{evaluation.linked_scenario.initial_vitals.hr}</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.initial_vitals.rr && (
+                                  <div className="bg-white dark:bg-gray-800 p-2 rounded">
+                                    <span className="text-gray-500 dark:text-gray-400">RR:</span>{' '}
+                                    <span className="font-medium text-gray-900 dark:text-white">{evaluation.linked_scenario.initial_vitals.rr}</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.initial_vitals.spo2 && (
+                                  <div className="bg-white dark:bg-gray-800 p-2 rounded">
+                                    <span className="text-gray-500 dark:text-gray-400">SpO2:</span>{' '}
+                                    <span className="font-medium text-gray-900 dark:text-white">{evaluation.linked_scenario.initial_vitals.spo2}%</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.initial_vitals.temp && (
+                                  <div className="bg-white dark:bg-gray-800 p-2 rounded">
+                                    <span className="text-gray-500 dark:text-gray-400">Temp:</span>{' '}
+                                    <span className="font-medium text-gray-900 dark:text-white">{evaluation.linked_scenario.initial_vitals.temp}°F</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.initial_vitals.bgl && (
+                                  <div className="bg-white dark:bg-gray-800 p-2 rounded">
+                                    <span className="text-gray-500 dark:text-gray-400">BGL:</span>{' '}
+                                    <span className="font-medium text-gray-900 dark:text-white">{evaluation.linked_scenario.initial_vitals.bgl}</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.initial_vitals.gcs && (
+                                  <div className="bg-white dark:bg-gray-800 p-2 rounded">
+                                    <span className="text-gray-500 dark:text-gray-400">GCS:</span>{' '}
+                                    <span className="font-medium text-gray-900 dark:text-white">{evaluation.linked_scenario.initial_vitals.gcs}</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.initial_vitals.etco2 && (
+                                  <div className="bg-white dark:bg-gray-800 p-2 rounded">
+                                    <span className="text-gray-500 dark:text-gray-400">ETCO2:</span>{' '}
+                                    <span className="font-medium text-gray-900 dark:text-white">{evaluation.linked_scenario.initial_vitals.etco2}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* SAMPLE History */}
+                          {evaluation.linked_scenario.sample_history && Object.values(evaluation.linked_scenario.sample_history).some(v => v) && (
+                            <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
+                              <h4 className="font-semibold text-green-800 dark:text-green-300 mb-3 flex items-center gap-2">
+                                <ClipboardList className="w-4 h-4" />
+                                SAMPLE History
+                              </h4>
+                              <div className="space-y-2 text-sm">
+                                {evaluation.linked_scenario.sample_history.signs_symptoms && (
+                                  <div>
+                                    <span className="font-medium text-green-700 dark:text-green-400">S - Signs/Symptoms:</span>{' '}
+                                    <span className="text-gray-700 dark:text-gray-300">{evaluation.linked_scenario.sample_history.signs_symptoms}</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.sample_history.last_oral_intake && (
+                                  <div>
+                                    <span className="font-medium text-green-700 dark:text-green-400">L - Last Oral Intake:</span>{' '}
+                                    <span className="text-gray-700 dark:text-gray-300">{evaluation.linked_scenario.sample_history.last_oral_intake}</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.sample_history.events_leading && (
+                                  <div>
+                                    <span className="font-medium text-green-700 dark:text-green-400">E - Events Leading:</span>{' '}
+                                    <span className="text-gray-700 dark:text-gray-300">{evaluation.linked_scenario.sample_history.events_leading}</span>
+                                  </div>
+                                )}
+                              </div>
+                              <p className="text-xs text-green-600 dark:text-green-400 mt-2 italic">
+                                Note: A (Allergies), M (Medications), P (Past Medical History) shown above
+                              </p>
+                            </div>
+                          )}
+
+                          {/* OPQRST */}
+                          {evaluation.linked_scenario.opqrst && Object.values(evaluation.linked_scenario.opqrst).some(v => v) && (
+                            <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
+                              <h4 className="font-semibold text-purple-800 dark:text-purple-300 mb-3 flex items-center gap-2">
+                                <Zap className="w-4 h-4" />
+                                OPQRST (Pain Assessment)
+                              </h4>
+                              <div className="grid md:grid-cols-2 gap-2 text-sm">
+                                {evaluation.linked_scenario.opqrst.onset && (
+                                  <div>
+                                    <span className="font-medium text-purple-700 dark:text-purple-400">O - Onset:</span>{' '}
+                                    <span className="text-gray-700 dark:text-gray-300">{evaluation.linked_scenario.opqrst.onset}</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.opqrst.provocation && (
+                                  <div>
+                                    <span className="font-medium text-purple-700 dark:text-purple-400">P - Provocation:</span>{' '}
+                                    <span className="text-gray-700 dark:text-gray-300">{evaluation.linked_scenario.opqrst.provocation}</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.opqrst.quality && (
+                                  <div>
+                                    <span className="font-medium text-purple-700 dark:text-purple-400">Q - Quality:</span>{' '}
+                                    <span className="text-gray-700 dark:text-gray-300">{evaluation.linked_scenario.opqrst.quality}</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.opqrst.radiation && (
+                                  <div>
+                                    <span className="font-medium text-purple-700 dark:text-purple-400">R - Radiation:</span>{' '}
+                                    <span className="text-gray-700 dark:text-gray-300">{evaluation.linked_scenario.opqrst.radiation}</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.opqrst.severity && (
+                                  <div>
+                                    <span className="font-medium text-purple-700 dark:text-purple-400">S - Severity:</span>{' '}
+                                    <span className="text-gray-700 dark:text-gray-300">{evaluation.linked_scenario.opqrst.severity}</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.opqrst.time_onset && (
+                                  <div>
+                                    <span className="font-medium text-purple-700 dark:text-purple-400">T - Time:</span>{' '}
+                                    <span className="text-gray-700 dark:text-gray-300">{evaluation.linked_scenario.opqrst.time_onset}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Assessment X/A/E */}
+                          {(evaluation.linked_scenario.assessment_x || evaluation.linked_scenario.assessment_a || evaluation.linked_scenario.assessment_e || evaluation.linked_scenario.general_impression) && (
+                            <div className="bg-cyan-50 dark:bg-cyan-900/20 p-4 rounded-lg border border-cyan-200 dark:border-cyan-800">
+                              <h4 className="font-semibold text-cyan-800 dark:text-cyan-300 mb-3 flex items-center gap-2">
+                                <Stethoscope className="w-4 h-4" />
+                                Primary Assessment (XABCDE)
+                              </h4>
+                              <div className="space-y-2 text-sm">
+                                {evaluation.linked_scenario.assessment_x && (
+                                  <div>
+                                    <span className="font-medium text-cyan-700 dark:text-cyan-400">X - Hemorrhage Control:</span>{' '}
+                                    <span className="text-gray-700 dark:text-gray-300">{evaluation.linked_scenario.assessment_x}</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.assessment_a && (
+                                  <div>
+                                    <span className="font-medium text-cyan-700 dark:text-cyan-400">A - Airway:</span>{' '}
+                                    <span className="text-gray-700 dark:text-gray-300">{evaluation.linked_scenario.assessment_a}</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.assessment_e && (
+                                  <div>
+                                    <span className="font-medium text-cyan-700 dark:text-cyan-400">E - Expose/Environment:</span>{' '}
+                                    <span className="text-gray-700 dark:text-gray-300">{evaluation.linked_scenario.assessment_e}</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.general_impression && (
+                                  <div className="mt-2 pt-2 border-t border-cyan-200 dark:border-cyan-700">
+                                    <span className="font-medium text-cyan-700 dark:text-cyan-400">General Impression:</span>{' '}
+                                    <span className="text-gray-700 dark:text-gray-300">{evaluation.linked_scenario.general_impression}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Phases with Vitals */}
+                          {evaluation.linked_scenario.phases?.length ? (
+                            <div>
+                              <h4 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                                <Activity className="w-4 h-4" />
+                                Scenario Phases
+                              </h4>
+                              <div className="space-y-2">
+                                {evaluation.linked_scenario.phases.map((phase, idx) => (
+                                  <div key={idx} className="border dark:border-gray-700 rounded-lg overflow-hidden">
+                                    <button
+                                      onClick={() => setExpandedPhase(expandedPhase === idx ? null : idx)}
+                                      className="w-full px-4 py-2 flex items-center justify-between bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700"
+                                    >
+                                      <span className="font-medium text-gray-900 dark:text-white">
+                                        Phase {idx + 1}: {phase.name || `Phase ${idx + 1}`}
+                                      </span>
+                                      {expandedPhase === idx ? (
+                                        <ChevronUp className="w-4 h-4 text-gray-500" />
+                                      ) : (
+                                        <ChevronDown className="w-4 h-4 text-gray-500" />
+                                      )}
+                                    </button>
+                                    {expandedPhase === idx && (
+                                      <div className="p-4 space-y-3">
+                                        {phase.vitals && (
+                                          <div>
+                                            <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Vitals</h5>
+                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+                                              {phase.vitals.bp && (
+                                                <div className="bg-blue-50 dark:bg-blue-900/20 p-2 rounded">
+                                                  <span className="text-gray-500 dark:text-gray-400">BP:</span>{' '}
+                                                  <span className="font-medium text-gray-900 dark:text-white">{phase.vitals.bp}</span>
+                                                </div>
+                                              )}
+                                              {phase.vitals.hr && (
+                                                <div className="bg-red-50 dark:bg-red-900/20 p-2 rounded">
+                                                  <span className="text-gray-500 dark:text-gray-400">HR:</span>{' '}
+                                                  <span className="font-medium text-gray-900 dark:text-white">{phase.vitals.hr}</span>
+                                                </div>
+                                              )}
+                                              {phase.vitals.rr && (
+                                                <div className="bg-green-50 dark:bg-green-900/20 p-2 rounded">
+                                                  <span className="text-gray-500 dark:text-gray-400">RR:</span>{' '}
+                                                  <span className="font-medium text-gray-900 dark:text-white">{phase.vitals.rr}</span>
+                                                </div>
+                                              )}
+                                              {phase.vitals.spo2 && (
+                                                <div className="bg-purple-50 dark:bg-purple-900/20 p-2 rounded">
+                                                  <span className="text-gray-500 dark:text-gray-400">SpO2:</span>{' '}
+                                                  <span className="font-medium text-gray-900 dark:text-white">{phase.vitals.spo2}%</span>
+                                                </div>
+                                              )}
+                                              {phase.vitals.temp && (
+                                                <div className="bg-orange-50 dark:bg-orange-900/20 p-2 rounded">
+                                                  <span className="text-gray-500 dark:text-gray-400">Temp:</span>{' '}
+                                                  <span className="font-medium text-gray-900 dark:text-white">{phase.vitals.temp}°F</span>
+                                                </div>
+                                              )}
+                                              {phase.vitals.bgl && (
+                                                <div className="bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded">
+                                                  <span className="text-gray-500 dark:text-gray-400">BGL:</span>{' '}
+                                                  <span className="font-medium text-gray-900 dark:text-white">{phase.vitals.bgl}</span>
+                                                </div>
+                                              )}
+                                              {phase.vitals.gcs && (
+                                                <div className="bg-gray-50 dark:bg-gray-700 p-2 rounded">
+                                                  <span className="text-gray-500 dark:text-gray-400">GCS:</span>{' '}
+                                                  <span className="font-medium text-gray-900 dark:text-white">{phase.vitals.gcs}</span>
+                                                </div>
+                                              )}
+                                            </div>
+                                          </div>
+                                        )}
+                                        {phase.presentation_notes && (
+                                          <div>
+                                            <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Presentation</h5>
+                                            <p className="text-sm text-gray-600 dark:text-gray-400">{phase.presentation_notes}</p>
+                                          </div>
+                                        )}
+                                        {phase.expected_actions?.length ? (
+                                          <div>
+                                            <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Expected Actions</h5>
+                                            <ul className="text-sm text-gray-600 dark:text-gray-400 list-disc list-inside">
+                                              {phase.expected_actions.map((action, aIdx) => (
+                                                <li key={aIdx}>{action}</li>
+                                              ))}
+                                            </ul>
+                                          </div>
+                                        ) : null}
+                                        {phase.instructor_cues && (
+                                          <div className="bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded border border-yellow-200 dark:border-yellow-800">
+                                            <h5 className="text-sm font-medium text-yellow-800 dark:text-yellow-300 mb-1">Instructor Cues</h5>
+                                            <p className="text-sm text-yellow-700 dark:text-yellow-400">{phase.instructor_cues}</p>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ) : null}
+
+                          {/* Instructor Notes */}
+                          {evaluation.linked_scenario.instructor_notes && (
+                            <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-lg border border-amber-200 dark:border-amber-800">
+                              <h4 className="font-semibold text-amber-800 dark:text-amber-300 mb-2 flex items-center gap-2">
+                                <Info className="w-4 h-4" />
+                                Instructor Notes
+                              </h4>
+                              <p className="text-sm text-amber-700 dark:text-amber-400">{evaluation.linked_scenario.instructor_notes}</p>
+                            </div>
+                          )}
+
+                          {/* Critical Actions */}
+                          {evaluation.linked_scenario.critical_actions?.length ? (
+                            <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg border border-red-200 dark:border-red-800">
+                              <h4 className="font-semibold text-red-800 dark:text-red-300 mb-2 flex items-center gap-2">
+                                <AlertTriangle className="w-4 h-4" />
+                                Critical Actions (Must Perform)
+                              </h4>
+                              <ul className="text-sm text-red-700 dark:text-red-400 list-disc list-inside">
+                                {evaluation.linked_scenario.critical_actions.map((action, idx) => (
+                                  <li key={idx}>{action}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : (
+                        // Basic summative scenario info (no linked scenario)
+                        <div className="space-y-4">
+                          <div>
+                            <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Description</h4>
+                            <p className="text-sm text-gray-600 dark:text-gray-400">
+                              {evaluation.scenario.description || 'No description available'}
+                            </p>
+                          </div>
+                          {evaluation.scenario.patient_presentation && (
+                            <div>
+                              <h4 className="font-semibold text-gray-900 dark:text-white mb-2">Patient Presentation</h4>
+                              <p className="text-sm text-gray-600 dark:text-gray-400">
+                                {evaluation.scenario.patient_presentation}
+                              </p>
+                            </div>
+                          )}
+                          {evaluation.scenario.expected_interventions?.length ? (
+                            <div>
+                              <h4 className="font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+                                <ClipboardList className="w-4 h-4" />
+                                Expected Interventions
+                              </h4>
+                              <ul className="text-sm text-gray-600 dark:text-gray-400 list-disc list-inside">
+                                {evaluation.scenario.expected_interventions.map((item, idx) => (
+                                  <li key={idx}>{item}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          ) : null}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {activeScore && activeStudent ? (
               <div className="space-y-6">
                 {/* Student Header */}

@@ -72,6 +72,19 @@ export async function GET(
       throw error;
     }
 
+    // If there's a linked scenario, fetch its full details
+    if (data?.scenario?.linked_scenario_id) {
+      const { data: linkedScenario } = await supabase
+        .from('scenarios')
+        .select('*')
+        .eq('id', data.scenario.linked_scenario_id)
+        .single();
+
+      if (linkedScenario) {
+        (data as any).linked_scenario = linkedScenario;
+      }
+    }
+
     return NextResponse.json({ success: true, evaluation: data });
   } catch (error) {
     console.error('Error fetching summative evaluation:', error);

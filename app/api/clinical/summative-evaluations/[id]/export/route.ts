@@ -142,6 +142,12 @@ export async function GET(
   <style>
     @media print {
       .page-break { page-break-after: always; }
+      .page { page-break-inside: avoid; }
+    }
+
+    /* Ensure each student page starts on a new page */
+    .page:not(:first-child) {
+      page-break-before: always;
     }
 
     * {
@@ -239,23 +245,25 @@ export async function GET(
       border: 2px solid #000;
     }
 
+    /* B&W friendly score marker */
     .score-marker {
       font-family: monospace;
       font-weight: bold;
-      margin-right: 5px;
+      font-size: 12px;
+      margin-right: 3px;
     }
 
     .critical-section {
-      border: 2px solid #dc3545;
+      border: 2px solid #000;
       padding: 10px;
       margin-bottom: 15px;
     }
 
     .critical-title {
-      color: #dc3545;
       font-weight: bold;
       font-size: 12px;
       margin-bottom: 10px;
+      text-transform: uppercase;
     }
 
     .critical-item {
@@ -265,25 +273,11 @@ export async function GET(
       margin-bottom: 5px;
     }
 
-    .checkbox {
-      width: 16px;
-      height: 16px;
-      border: 2px solid #000;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
+    /* B&W friendly checkbox text */
+    .checkbox-text {
       font-family: monospace;
-      font-size: 12px;
       font-weight: bold;
-    }
-
-    .checkbox.checked {
-      background: #000;
-      color: #fff;
-    }
-
-    .checkbox.checked::after {
-      content: "X";
+      font-size: 14px;
     }
 
     .total-section {
@@ -309,15 +303,23 @@ export async function GET(
     }
 
     .pass-fail.pass {
-      background: #d4edda;
-      border-color: #28a745;
-      color: #28a745;
+      background: #fff;
+      border-color: #000;
+      color: #000;
+    }
+
+    .pass-fail.pass::before {
+      content: "✓ ";
     }
 
     .pass-fail.fail {
-      background: #f8d7da;
-      border-color: #dc3545;
-      color: #dc3545;
+      background: #e8e8e8;
+      border-color: #000;
+      color: #000;
+    }
+
+    .pass-fail.fail::before {
+      content: "✗ ";
     }
 
     .notes-section {
@@ -397,11 +399,11 @@ function generateStudentPDF(evaluation: any, score: any): string {
 
   // Calculate total score from individual scores if total_score is null
   const calculatedTotal = (
-    (score.leadership_scene_score ?? 0) +
-    (score.patient_assessment_score ?? 0) +
-    (score.patient_management_score ?? 0) +
-    (score.interpersonal_score ?? 0) +
-    (score.integration_score ?? 0)
+    (score.leadership_scene_score || 0) +
+    (score.patient_assessment_score || 0) +
+    (score.patient_management_score || 0) +
+    (score.interpersonal_score || 0) +
+    (score.integration_score || 0)
   );
   const totalScore = score.total_score ?? calculatedTotal;
 
@@ -436,7 +438,7 @@ function generateStudentPDF(evaluation: any, score: any): string {
     `;
   }).join('');
 
-  // Generate critical criteria section
+  // Generate critical criteria section with B&W friendly checkboxes
   const criticalSection = `
     <div class="critical-section">
       <div class="critical-title">CRITICAL CRITERIA (Any checked = Automatic Fail)</div>
@@ -444,7 +446,7 @@ function generateStudentPDF(evaluation: any, score: any): string {
         const isChecked = score[criteria.key] || false;
         return `
           <div class="critical-item">
-            <div class="checkbox ${isChecked ? 'checked' : ''}"></div>
+            <span class="checkbox-text">${isChecked ? '[X]' : '[ ]'}</span>
             <span>${criteria.label}</span>
           </div>
         `;
@@ -457,10 +459,12 @@ function generateStudentPDF(evaluation: any, score: any): string {
     </div>
   `;
 
-  // Determine pass/fail
-  const passed = score.passed;
-  const passFailClass = passed === true ? 'pass' : passed === false ? 'fail' : '';
-  const passFailText = passed === true ? 'PASS' : passed === false ? 'FAIL' : 'PENDING';
+  // Determine pass/fail based on score and critical criteria
+  const hasCriticalFail = score.critical_criteria_failed || score.critical_fails_mandatory || score.critical_harmful_intervention || score.critical_unprofessional;
+  const calculatedPassed = !hasCriticalFail && totalScore >= 12; // 80% of 15
+  const passed = score.passed ?? calculatedPassed;
+  const passFailClass = passed === true ? 'pass' : 'fail';
+  const passFailText = passed === true ? 'PASS' : 'FAIL';
 
   return `
     <div class="page">
