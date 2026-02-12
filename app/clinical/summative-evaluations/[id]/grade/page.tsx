@@ -26,7 +26,11 @@ import {
   Pill,
   Heart,
   ClipboardList,
-  Info
+  Info,
+  Radio,
+  Printer,
+  Thermometer,
+  Zap
 } from 'lucide-react';
 import { canAccessClinical, canEditClinical, type Role } from '@/lib/permissions';
 
@@ -86,9 +90,43 @@ interface LinkedScenario {
   allergies: string | null;
   instructor_notes: string | null;
   learning_objectives: string[] | null;
+  dispatch_time: string | null;
+  dispatch_location: string | null;
   dispatch_notes: string | null;
   phases: Phase[] | null;
   critical_actions: string[] | null;
+  // Initial vitals (legacy field)
+  initial_vitals: {
+    bp?: string;
+    hr?: number | string;
+    rr?: number | string;
+    spo2?: number | string;
+    temp?: number | string;
+    bgl?: number | string;
+    etco2?: number | string;
+    gcs?: number | string;
+  } | null;
+  // SAMPLE History
+  sample_history: {
+    signs_symptoms?: string;
+    last_oral_intake?: string;
+    events_leading?: string;
+  } | null;
+  // OPQRST
+  opqrst: {
+    onset?: string;
+    provocation?: string;
+    quality?: string;
+    radiation?: string;
+    severity?: string;
+    time_onset?: string;
+  } | null;
+  // Assessment X/A/E
+  assessment_x: string | null;
+  assessment_a: string | null;
+  assessment_e: string | null;
+  // General impression
+  general_impression: string | null;
 }
 
 interface Phase {
@@ -421,6 +459,17 @@ function GradingPageContent() {
             </div>
 
             <div className="flex items-center gap-3">
+              {/* Print Scenario Button */}
+              {evaluation.linked_scenario && (
+                <Link
+                  href={`/api/clinical/summative-evaluations/${evaluationId}/scenario-print`}
+                  target="_blank"
+                  className="flex items-center gap-2 px-4 py-2 text-blue-600 dark:text-blue-400 border border-blue-300 dark:border-blue-600 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                >
+                  <Printer className="w-4 h-4" />
+                  Print Scenario
+                </Link>
+              )}
               {/* Export PDF Button */}
               <Link
                 href={`/api/clinical/summative-evaluations/${evaluationId}/export`}
@@ -526,6 +575,36 @@ function GradingPageContent() {
                       {evaluation.linked_scenario ? (
                         // Full linked scenario details
                         <div className="space-y-6">
+                          {/* Dispatch Info */}
+                          {(evaluation.linked_scenario.dispatch_time || evaluation.linked_scenario.dispatch_location || evaluation.linked_scenario.dispatch_notes) && (
+                            <div className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+                              <h4 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                                <Radio className="w-4 h-4" />
+                                Dispatch Information
+                              </h4>
+                              <div className="grid md:grid-cols-3 gap-4 text-sm">
+                                {evaluation.linked_scenario.dispatch_time && (
+                                  <div>
+                                    <span className="text-gray-500 dark:text-gray-400">Time:</span>{' '}
+                                    <span className="font-medium text-gray-900 dark:text-white">{evaluation.linked_scenario.dispatch_time}</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.dispatch_location && (
+                                  <div>
+                                    <span className="text-gray-500 dark:text-gray-400">Location:</span>{' '}
+                                    <span className="font-medium text-gray-900 dark:text-white">{evaluation.linked_scenario.dispatch_location}</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.dispatch_notes && (
+                                  <div className="md:col-span-3">
+                                    <span className="text-gray-500 dark:text-gray-400">Notes:</span>{' '}
+                                    <span className="font-medium text-gray-900 dark:text-white">{evaluation.linked_scenario.dispatch_notes}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
                           {/* Patient Info */}
                           <div className="grid md:grid-cols-2 gap-4">
                             <div className="space-y-2">
@@ -593,6 +672,183 @@ function GradingPageContent() {
                                   <p className="text-sm text-red-600 dark:text-red-400">{evaluation.linked_scenario.allergies}</p>
                                 </div>
                               )}
+                            </div>
+                          )}
+
+                          {/* Initial Vitals */}
+                          {evaluation.linked_scenario.initial_vitals && Object.values(evaluation.linked_scenario.initial_vitals).some(v => v) && (
+                            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                              <h4 className="font-semibold text-blue-800 dark:text-blue-300 mb-3 flex items-center gap-2">
+                                <Thermometer className="w-4 h-4" />
+                                Initial Vitals
+                              </h4>
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                                {evaluation.linked_scenario.initial_vitals.bp && (
+                                  <div className="bg-white dark:bg-gray-800 p-2 rounded">
+                                    <span className="text-gray-500 dark:text-gray-400">BP:</span>{' '}
+                                    <span className="font-medium text-gray-900 dark:text-white">{evaluation.linked_scenario.initial_vitals.bp}</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.initial_vitals.hr && (
+                                  <div className="bg-white dark:bg-gray-800 p-2 rounded">
+                                    <span className="text-gray-500 dark:text-gray-400">HR:</span>{' '}
+                                    <span className="font-medium text-gray-900 dark:text-white">{evaluation.linked_scenario.initial_vitals.hr}</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.initial_vitals.rr && (
+                                  <div className="bg-white dark:bg-gray-800 p-2 rounded">
+                                    <span className="text-gray-500 dark:text-gray-400">RR:</span>{' '}
+                                    <span className="font-medium text-gray-900 dark:text-white">{evaluation.linked_scenario.initial_vitals.rr}</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.initial_vitals.spo2 && (
+                                  <div className="bg-white dark:bg-gray-800 p-2 rounded">
+                                    <span className="text-gray-500 dark:text-gray-400">SpO2:</span>{' '}
+                                    <span className="font-medium text-gray-900 dark:text-white">{evaluation.linked_scenario.initial_vitals.spo2}%</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.initial_vitals.temp && (
+                                  <div className="bg-white dark:bg-gray-800 p-2 rounded">
+                                    <span className="text-gray-500 dark:text-gray-400">Temp:</span>{' '}
+                                    <span className="font-medium text-gray-900 dark:text-white">{evaluation.linked_scenario.initial_vitals.temp}°F</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.initial_vitals.bgl && (
+                                  <div className="bg-white dark:bg-gray-800 p-2 rounded">
+                                    <span className="text-gray-500 dark:text-gray-400">BGL:</span>{' '}
+                                    <span className="font-medium text-gray-900 dark:text-white">{evaluation.linked_scenario.initial_vitals.bgl}</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.initial_vitals.gcs && (
+                                  <div className="bg-white dark:bg-gray-800 p-2 rounded">
+                                    <span className="text-gray-500 dark:text-gray-400">GCS:</span>{' '}
+                                    <span className="font-medium text-gray-900 dark:text-white">{evaluation.linked_scenario.initial_vitals.gcs}</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.initial_vitals.etco2 && (
+                                  <div className="bg-white dark:bg-gray-800 p-2 rounded">
+                                    <span className="text-gray-500 dark:text-gray-400">ETCO2:</span>{' '}
+                                    <span className="font-medium text-gray-900 dark:text-white">{evaluation.linked_scenario.initial_vitals.etco2}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* SAMPLE History */}
+                          {evaluation.linked_scenario.sample_history && Object.values(evaluation.linked_scenario.sample_history).some(v => v) && (
+                            <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
+                              <h4 className="font-semibold text-green-800 dark:text-green-300 mb-3 flex items-center gap-2">
+                                <ClipboardList className="w-4 h-4" />
+                                SAMPLE History
+                              </h4>
+                              <div className="space-y-2 text-sm">
+                                {evaluation.linked_scenario.sample_history.signs_symptoms && (
+                                  <div>
+                                    <span className="font-medium text-green-700 dark:text-green-400">S - Signs/Symptoms:</span>{' '}
+                                    <span className="text-gray-700 dark:text-gray-300">{evaluation.linked_scenario.sample_history.signs_symptoms}</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.sample_history.last_oral_intake && (
+                                  <div>
+                                    <span className="font-medium text-green-700 dark:text-green-400">L - Last Oral Intake:</span>{' '}
+                                    <span className="text-gray-700 dark:text-gray-300">{evaluation.linked_scenario.sample_history.last_oral_intake}</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.sample_history.events_leading && (
+                                  <div>
+                                    <span className="font-medium text-green-700 dark:text-green-400">E - Events Leading:</span>{' '}
+                                    <span className="text-gray-700 dark:text-gray-300">{evaluation.linked_scenario.sample_history.events_leading}</span>
+                                  </div>
+                                )}
+                              </div>
+                              <p className="text-xs text-green-600 dark:text-green-400 mt-2 italic">
+                                Note: A (Allergies), M (Medications), P (Past Medical History) shown above
+                              </p>
+                            </div>
+                          )}
+
+                          {/* OPQRST */}
+                          {evaluation.linked_scenario.opqrst && Object.values(evaluation.linked_scenario.opqrst).some(v => v) && (
+                            <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
+                              <h4 className="font-semibold text-purple-800 dark:text-purple-300 mb-3 flex items-center gap-2">
+                                <Zap className="w-4 h-4" />
+                                OPQRST (Pain Assessment)
+                              </h4>
+                              <div className="grid md:grid-cols-2 gap-2 text-sm">
+                                {evaluation.linked_scenario.opqrst.onset && (
+                                  <div>
+                                    <span className="font-medium text-purple-700 dark:text-purple-400">O - Onset:</span>{' '}
+                                    <span className="text-gray-700 dark:text-gray-300">{evaluation.linked_scenario.opqrst.onset}</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.opqrst.provocation && (
+                                  <div>
+                                    <span className="font-medium text-purple-700 dark:text-purple-400">P - Provocation:</span>{' '}
+                                    <span className="text-gray-700 dark:text-gray-300">{evaluation.linked_scenario.opqrst.provocation}</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.opqrst.quality && (
+                                  <div>
+                                    <span className="font-medium text-purple-700 dark:text-purple-400">Q - Quality:</span>{' '}
+                                    <span className="text-gray-700 dark:text-gray-300">{evaluation.linked_scenario.opqrst.quality}</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.opqrst.radiation && (
+                                  <div>
+                                    <span className="font-medium text-purple-700 dark:text-purple-400">R - Radiation:</span>{' '}
+                                    <span className="text-gray-700 dark:text-gray-300">{evaluation.linked_scenario.opqrst.radiation}</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.opqrst.severity && (
+                                  <div>
+                                    <span className="font-medium text-purple-700 dark:text-purple-400">S - Severity:</span>{' '}
+                                    <span className="text-gray-700 dark:text-gray-300">{evaluation.linked_scenario.opqrst.severity}</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.opqrst.time_onset && (
+                                  <div>
+                                    <span className="font-medium text-purple-700 dark:text-purple-400">T - Time:</span>{' '}
+                                    <span className="text-gray-700 dark:text-gray-300">{evaluation.linked_scenario.opqrst.time_onset}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Assessment X/A/E */}
+                          {(evaluation.linked_scenario.assessment_x || evaluation.linked_scenario.assessment_a || evaluation.linked_scenario.assessment_e || evaluation.linked_scenario.general_impression) && (
+                            <div className="bg-cyan-50 dark:bg-cyan-900/20 p-4 rounded-lg border border-cyan-200 dark:border-cyan-800">
+                              <h4 className="font-semibold text-cyan-800 dark:text-cyan-300 mb-3 flex items-center gap-2">
+                                <Stethoscope className="w-4 h-4" />
+                                Primary Assessment (XABCDE)
+                              </h4>
+                              <div className="space-y-2 text-sm">
+                                {evaluation.linked_scenario.assessment_x && (
+                                  <div>
+                                    <span className="font-medium text-cyan-700 dark:text-cyan-400">X - Hemorrhage Control:</span>{' '}
+                                    <span className="text-gray-700 dark:text-gray-300">{evaluation.linked_scenario.assessment_x}</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.assessment_a && (
+                                  <div>
+                                    <span className="font-medium text-cyan-700 dark:text-cyan-400">A - Airway:</span>{' '}
+                                    <span className="text-gray-700 dark:text-gray-300">{evaluation.linked_scenario.assessment_a}</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.assessment_e && (
+                                  <div>
+                                    <span className="font-medium text-cyan-700 dark:text-cyan-400">E - Expose/Environment:</span>{' '}
+                                    <span className="text-gray-700 dark:text-gray-300">{evaluation.linked_scenario.assessment_e}</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.general_impression && (
+                                  <div className="mt-2 pt-2 border-t border-cyan-200 dark:border-cyan-700">
+                                    <span className="font-medium text-cyan-700 dark:text-cyan-400">General Impression:</span>{' '}
+                                    <span className="text-gray-700 dark:text-gray-300">{evaluation.linked_scenario.general_impression}</span>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           )}
 
