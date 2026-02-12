@@ -157,8 +157,32 @@ interface Station {
     // Primary Assessment - XABCDE (scenario-level defaults)
     assessment_x: string | null;
     assessment_a: string | null;
+    assessment_b: string | null;
+    assessment_c: string | null;
+    assessment_d: string | null;
     assessment_e: string | null;
+    // Neurological (part of D)
+    gcs: string | null;
+    pupils: string | null;
     general_impression: string | null;
+    avpu: string | null;
+    // Secondary Survey
+    secondary_survey: {
+      head?: string;
+      neck?: string;
+      chest?: string;
+      abdomen?: string;
+      back?: string;
+      pelvis?: string;
+      extremities?: string;
+    } | null;
+    // EKG/Cardiac Findings
+    ekg_findings: {
+      rhythm?: string;
+      rate?: string;
+      interpretation?: string;
+      twelve_lead?: string;
+    } | null;
     // SAMPLE History (scenario-level)
     sample_history: {
       signs_symptoms?: string;
@@ -825,15 +849,15 @@ export default function GradeStationPage() {
                       const xabcde = {
                         x: phase.hemorrhage_control || scenario.assessment_x || null,
                         a: phase.airway || scenario.assessment_a || null,
-                        b: phase.breathing || (v.rr || v.lung_sounds ? `RR ${v.rr || '—'}${v.lung_sounds ? `, ${v.lung_sounds}` : ''}` : null),
-                        c: phase.circulation || (v.hr || v.skin ? `HR ${v.hr || '—'}${v.skin ? `, skin ${v.skin}` : ''}${v.pulse_quality ? `, pulse ${v.pulse_quality}` : ''}` : null),
-                        d: phase.disability || (v.loc || v.gcs || v.gcs_total ? `${v.loc || ''}${v.gcs || v.gcs_total ? ` GCS ${v.gcs || v.gcs_total}` : ''}${v.pupils ? `, pupils ${v.pupils}` : ''}`.trim() : null),
+                        b: phase.breathing || scenario.assessment_b || (v.rr || v.lung_sounds ? `RR ${v.rr || '—'}${v.lung_sounds ? `, ${v.lung_sounds}` : ''}` : null),
+                        c: phase.circulation || scenario.assessment_c || (v.hr || v.skin ? `HR ${v.hr || '—'}${v.skin ? `, skin ${v.skin}` : ''}${v.pulse_quality ? `, pulse ${v.pulse_quality}` : ''}` : null),
+                        d: phase.disability || scenario.assessment_d || (v.loc || v.gcs || v.gcs_total || scenario.gcs || scenario.pupils ? `${v.loc || ''}${v.gcs || v.gcs_total || scenario.gcs ? ` GCS ${v.gcs || v.gcs_total || scenario.gcs}` : ''}${v.pupils || scenario.pupils ? `, pupils ${v.pupils || scenario.pupils}` : ''}`.trim() : null),
                         e: phase.expose || scenario.assessment_e || null
                       };
                       const hasXABCDE = xabcde.x || xabcde.a || xabcde.b || xabcde.c || xabcde.d || xabcde.e;
 
-                      // Get AVPU from LOC
-                      const avpu = phase.avpu || (v.loc ? (
+                      // Get AVPU from LOC or scenario-level
+                      const avpu = phase.avpu || scenario.avpu || (v.loc ? (
                         v.loc.toLowerCase().includes('alert') ? 'Alert' :
                         v.loc.toLowerCase().includes('verbal') ? 'Verbal' :
                         v.loc.toLowerCase().includes('pain') ? 'Pain' :
@@ -1110,17 +1134,19 @@ export default function GradeStationPage() {
                             <div className="flex">
                               <span className="w-5 font-bold text-orange-600 dark:text-orange-400">B</span>
                               <span className="text-gray-500 dark:text-gray-400 w-24">Breathing:</span>
-                              <span className="text-gray-400 dark:text-gray-500 italic flex-1">—</span>
+                              <span className={`flex-1 ${scenario.assessment_b ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{scenario.assessment_b || '—'}</span>
                             </div>
                             <div className="flex">
                               <span className="w-5 font-bold text-orange-600 dark:text-orange-400">C</span>
                               <span className="text-gray-500 dark:text-gray-400 w-24">Circulation:</span>
-                              <span className="text-gray-400 dark:text-gray-500 italic flex-1">—</span>
+                              <span className={`flex-1 ${scenario.assessment_c ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{scenario.assessment_c || '—'}</span>
                             </div>
                             <div className="flex">
                               <span className="w-5 font-bold text-orange-600 dark:text-orange-400">D</span>
                               <span className="text-gray-500 dark:text-gray-400 w-24">Disability:</span>
-                              <span className="text-gray-400 dark:text-gray-500 italic flex-1">—</span>
+                              <span className={`flex-1 ${scenario.assessment_d || scenario.gcs || scenario.pupils ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>
+                                {scenario.assessment_d || (scenario.gcs || scenario.pupils ? [scenario.gcs && `GCS: ${scenario.gcs}`, scenario.pupils && `Pupils: ${scenario.pupils}`].filter(Boolean).join(' | ') : '—')}
+                              </span>
                             </div>
                             <div className="flex">
                               <span className="w-5 font-bold text-orange-600 dark:text-orange-400">E</span>
@@ -1129,7 +1155,7 @@ export default function GradeStationPage() {
                             </div>
                           </div>
                           <div className="flex gap-6 text-xs mt-2 pl-2 pt-2 border-t border-gray-100 dark:border-gray-700">
-                            <div><span className="font-medium text-gray-500 dark:text-gray-400">AVPU:</span> <span className="text-gray-400 dark:text-gray-500 italic">—</span></div>
+                            <div><span className="font-medium text-gray-500 dark:text-gray-400">AVPU:</span> <span className={`font-medium ${scenario.avpu ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{scenario.avpu || '—'}</span></div>
                             <div><span className="font-medium text-gray-500 dark:text-gray-400">Impression:</span> <span className={`font-medium ${scenario.general_impression ? (scenario.general_impression.toLowerCase().includes('sick') || scenario.general_impression.toLowerCase().includes('critical') ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400') : 'text-gray-400 dark:text-gray-500 italic'}`}>{scenario.general_impression || '—'}</span></div>
                           </div>
                         </div>
