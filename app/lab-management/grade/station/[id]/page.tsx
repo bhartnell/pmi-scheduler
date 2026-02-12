@@ -710,7 +710,15 @@ export default function GradeStationPage() {
             </button>
             {showScenarioDetails && (
               <div className="px-4 pb-4 border-t dark:border-gray-700 space-y-4 mt-3">
-                {/* Dispatch Info */}
+                {/* 1. INSTRUCTOR NOTES (TOP - READ FIRST!) */}
+                {scenario.instructor_notes && (
+                  <div className="p-3 bg-yellow-100 dark:bg-yellow-900/40 rounded-lg border-2 border-yellow-400 dark:border-yellow-600">
+                    <h3 className="text-sm font-bold text-yellow-900 dark:text-yellow-200 mb-1">INSTRUCTOR NOTES (READ FIRST)</h3>
+                    <p className="text-sm text-yellow-800 dark:text-yellow-300 whitespace-pre-wrap">{scenario.instructor_notes}</p>
+                  </div>
+                )}
+
+                {/* 2. Dispatch Info */}
                 {(scenario.chief_complaint || scenario.dispatch_location) && (
                   <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
                     <h3 className="text-sm font-medium text-red-800 dark:text-red-300 mb-2">Dispatch</h3>
@@ -1260,11 +1268,18 @@ export default function GradeStationPage() {
                   </div>
                 )}
 
-                {/* Instructor Notes */}
-                {scenario.instructor_notes && (
-                  <div className="p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-800">
-                    <h3 className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-1">Instructor Notes</h3>
-                    <p className="text-sm text-blue-700 dark:text-blue-400">{scenario.instructor_notes}</p>
+                {/* Debrief Points */}
+                {scenario.debrief_points && toArray(scenario.debrief_points).length > 0 && (
+                  <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                    <h3 className="text-sm font-medium text-amber-800 dark:text-amber-300 mb-2">Debrief Discussion Points</h3>
+                    <ul className="text-sm text-amber-700 dark:text-amber-400 space-y-1">
+                      {toArray(scenario.debrief_points).map((point, index) => (
+                        <li key={index} className="flex items-start gap-2">
+                          <span className="text-amber-400 dark:text-amber-500">•</span>
+                          {point}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 )}
               </div>
