@@ -1,0 +1,176 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+import { getServerSession } from 'next-auth';
+import { isDirector } from '@/lib/endorsements';
+
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+}
+
+// Helper to get current user
+async function getCurrentUser(email: string) {
+  const supabase = getSupabase();
+  const { data } = await supabase
+    .from('lab_users')
+    .select('id, name, email, role')
+    .ilike('email', email)
+    .single();
+  return data;
+}
+
+// GET - List shifts
+export async function GET(request: NextRequest) {
+  try {
+    const session = await getServerSession();
+    if (!session?.user?.email) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const currentUser = await getCurrentUser(session.user.email);
+    if (!currentUser) {
+      return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
+    }
+
+    const searchParams = request.nextUrl.searchParams;
+    const startDate = searchParams.get('start_date');
+    const endDate = searchParams.get('end_date');
+    const department = searchParams.get('department');
+    const includeFilled = searchParams.get('include_filled') !== 'false';
+    const includeCancelled = searchParams.get('include_cancelled') === 'true';
+
+    const supabase = getSupabase();
+
+    let query = supabase
+      .from('open_shifts')
+      .select(`
+        *,
+        creator:created_by(id, name, email),
+        signups:shift_signups(
+          id,
+          instructor_id,
+          signup_start_time,
+          signup_end_time,
+          is_partial,
+          status,
+          notes,
+          instructor:instructor_id(id, name, email)
+        )
+      `)
+      .order('date', { ascending: true })
+      .order('start_time', { ascending: true });
+
+    // Date range filter
+    if (startDate) {
+      query = query.gte('date', startDate);
+    }
+    if (endDate) {
+      query = query.lte('date', endDate);
+    }
+
+    // Department filter
+    if (department) {
+      query = query.eq('department', department);
+    }
+
+    // Exclude cancelled by default
+    if (!includeCancelled) {
+      query = query.eq('is_cancelled', false);
+    }
+
+    const { data: shifts, error } = await query;
+
+    if (error) throw error;
+
+    // Process shifts to add counts and user-specific info
+    const processedShifts = (shifts || []).map(shift => {
+      const signups = shift.signups || [];
+      const confirmedSignups = signups.filter((s: { status: string }) => s.status === 'confirmed');
+      const userSignup = signups.find((s: { instructor_id: string }) => s.instructor_id === currentUser.id);
+
+      return {
+        ...shift,
+        signup_count: signups.length,
+        confirmed_count: confirmedSignups.length,
+        user_signup: userSignup || null,
+        is_filled: shift.max_instructors ? confirmedSignups.length >= shift.max_instructors : false
+      };
+    });
+
+    // Filter out filled shifts if requested
+    const filteredShifts = includeFilled
+      ? processedShifts
+      : processedShifts.filter(s => !s.is_filled);
+
+    return NextResponse.json({ success: true, shifts: filteredShifts });
+  } catch (error) {
+    console.error('Error fetching shifts:', error);
+    return NextResponse.json({ success: false, error: 'Failed to fetch shifts' }, { status: 500 });
+  }
+}
+
+// POST - Create shift (directors only)
+export async function POST(request: NextRequest) {
+  try {
+    const session = await getServerSession();
+    if (!session?.user?.email) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const currentUser = await getCurrentUser(session.user.email);
+    if (!currentUser) {
+      return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
+    }
+
+    // Check if user is a director or admin
+    const userIsDirector = await isDirector(currentUser.id);
+    const isAdmin = currentUser.role === 'admin' || currentUser.role === 'superadmin';
+
+    if (!userIsDirector && !isAdmin) {
+      return NextResponse.json({ success: false, error: 'Only directors can create shifts' }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const { title, description, date, start_time, end_time, location, department, min_instructors, max_instructors } = body;
+
+    if (!title || !date || !start_time || !end_time) {
+      return NextResponse.json(
+        { success: false, error: 'Title, date, start time, and end time are required' },
+        { status: 400 }
+      );
+    }
+
+    const supabase = getSupabase();
+
+    const { data: shift, error } = await supabase
+      .from('open_shifts')
+      .insert({
+        title,
+        description: description || null,
+        date,
+        start_time,
+        end_time,
+        location: location || null,
+        department: department || null,
+        created_by: currentUser.id,
+        min_instructors: min_instructors || 1,
+        max_instructors: max_instructors || null,
+      })
+      .select(`
+        *,
+        creator:created_by(id, name, email)
+      `)
+      .single();
+
+    if (error) throw error;
+
+    // TODO: Send notification to available instructors
+
+    return NextResponse.json({ success: true, shift });
+  } catch (error) {
+    console.error('Error creating shift:', error);
+    return NextResponse.json({ success: false, error: 'Failed to create shift' }, { status: 500 });
+  }
+}
