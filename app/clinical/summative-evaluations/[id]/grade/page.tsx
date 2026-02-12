@@ -121,12 +121,39 @@ interface LinkedScenario {
     severity?: string;
     time_onset?: string;
   } | null;
-  // Assessment X/A/E
+  // Assessment XABCDE
   assessment_x: string | null;
   assessment_a: string | null;
+  assessment_b: string | null;
+  assessment_c: string | null;
+  assessment_d: string | null;
   assessment_e: string | null;
+  // Neurological (part of D)
+  gcs: string | null;
+  pupils: string | null;
   // General impression
   general_impression: string | null;
+  // AVPU
+  avpu: string | null;
+  // Secondary Survey
+  secondary_survey: {
+    head?: string;
+    neck?: string;
+    chest?: string;
+    abdomen?: string;
+    back?: string;
+    pelvis?: string;
+    extremities?: string;
+  } | null;
+  // EKG/Cardiac Findings
+  ekg_findings: {
+    rhythm?: string;
+    rate?: string;
+    interpretation?: string;
+    twelve_lead?: string;
+  } | null;
+  // Debrief Points
+  debrief_points: string[] | null;
 }
 
 interface Phase {
@@ -816,14 +843,30 @@ function GradingPageContent() {
                             </div>
                           )}
 
-                          {/* Assessment X/A/E */}
-                          {(evaluation.linked_scenario.assessment_x || evaluation.linked_scenario.assessment_a || evaluation.linked_scenario.assessment_e || evaluation.linked_scenario.general_impression) && (
+                          {/* Primary Assessment (XABCDE) */}
+                          {(evaluation.linked_scenario.assessment_x || evaluation.linked_scenario.assessment_a ||
+                            evaluation.linked_scenario.assessment_b || evaluation.linked_scenario.assessment_c ||
+                            evaluation.linked_scenario.assessment_d || evaluation.linked_scenario.assessment_e ||
+                            evaluation.linked_scenario.general_impression || evaluation.linked_scenario.avpu ||
+                            evaluation.linked_scenario.gcs || evaluation.linked_scenario.pupils) && (
                             <div className="bg-cyan-50 dark:bg-cyan-900/20 p-4 rounded-lg border border-cyan-200 dark:border-cyan-800">
                               <h4 className="font-semibold text-cyan-800 dark:text-cyan-300 mb-3 flex items-center gap-2">
                                 <Stethoscope className="w-4 h-4" />
                                 Primary Assessment (XABCDE)
                               </h4>
                               <div className="space-y-2 text-sm">
+                                {evaluation.linked_scenario.general_impression && (
+                                  <div>
+                                    <span className="font-medium text-cyan-700 dark:text-cyan-400">General Impression:</span>{' '}
+                                    <span className="text-gray-700 dark:text-gray-300">{evaluation.linked_scenario.general_impression}</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.avpu && (
+                                  <div>
+                                    <span className="font-medium text-cyan-700 dark:text-cyan-400">AVPU:</span>{' '}
+                                    <span className="text-gray-700 dark:text-gray-300">{evaluation.linked_scenario.avpu}</span>
+                                  </div>
+                                )}
                                 {evaluation.linked_scenario.assessment_x && (
                                   <div>
                                     <span className="font-medium text-cyan-700 dark:text-cyan-400">X - Hemorrhage Control:</span>{' '}
@@ -836,21 +879,144 @@ function GradingPageContent() {
                                     <span className="text-gray-700 dark:text-gray-300">{evaluation.linked_scenario.assessment_a}</span>
                                   </div>
                                 )}
+                                {evaluation.linked_scenario.assessment_b && (
+                                  <div>
+                                    <span className="font-medium text-cyan-700 dark:text-cyan-400">B - Breathing:</span>{' '}
+                                    <span className="text-gray-700 dark:text-gray-300">{evaluation.linked_scenario.assessment_b}</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.assessment_c && (
+                                  <div>
+                                    <span className="font-medium text-cyan-700 dark:text-cyan-400">C - Circulation:</span>{' '}
+                                    <span className="text-gray-700 dark:text-gray-300">{evaluation.linked_scenario.assessment_c}</span>
+                                  </div>
+                                )}
+                                {(evaluation.linked_scenario.assessment_d || evaluation.linked_scenario.gcs || evaluation.linked_scenario.pupils) && (
+                                  <div>
+                                    <span className="font-medium text-cyan-700 dark:text-cyan-400">D - Disability:</span>{' '}
+                                    <span className="text-gray-700 dark:text-gray-300">
+                                      {[
+                                        evaluation.linked_scenario.assessment_d,
+                                        evaluation.linked_scenario.gcs && `GCS: ${evaluation.linked_scenario.gcs}`,
+                                        evaluation.linked_scenario.pupils && `Pupils: ${evaluation.linked_scenario.pupils}`
+                                      ].filter(Boolean).join(' | ')}
+                                    </span>
+                                  </div>
+                                )}
                                 {evaluation.linked_scenario.assessment_e && (
                                   <div>
                                     <span className="font-medium text-cyan-700 dark:text-cyan-400">E - Expose/Environment:</span>{' '}
                                     <span className="text-gray-700 dark:text-gray-300">{evaluation.linked_scenario.assessment_e}</span>
                                   </div>
                                 )}
-                                {evaluation.linked_scenario.general_impression && (
-                                  <div className="mt-2 pt-2 border-t border-cyan-200 dark:border-cyan-700">
-                                    <span className="font-medium text-cyan-700 dark:text-cyan-400">General Impression:</span>{' '}
-                                    <span className="text-gray-700 dark:text-gray-300">{evaluation.linked_scenario.general_impression}</span>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Secondary Survey */}
+                          {evaluation.linked_scenario.secondary_survey && Object.values(evaluation.linked_scenario.secondary_survey).some(v => v) && (
+                            <div className="bg-teal-50 dark:bg-teal-900/20 p-4 rounded-lg border border-teal-200 dark:border-teal-800">
+                              <h4 className="font-semibold text-teal-800 dark:text-teal-300 mb-3 flex items-center gap-2">
+                                <Activity className="w-4 h-4" />
+                                Secondary Survey (Physical Exam)
+                              </h4>
+                              <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
+                                {evaluation.linked_scenario.secondary_survey.head && (
+                                  <div className="bg-white dark:bg-gray-800 p-2 rounded">
+                                    <span className="font-medium text-teal-700 dark:text-teal-400">Head:</span>{' '}
+                                    <span className="text-gray-700 dark:text-gray-300">{evaluation.linked_scenario.secondary_survey.head}</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.secondary_survey.neck && (
+                                  <div className="bg-white dark:bg-gray-800 p-2 rounded">
+                                    <span className="font-medium text-teal-700 dark:text-teal-400">Neck:</span>{' '}
+                                    <span className="text-gray-700 dark:text-gray-300">{evaluation.linked_scenario.secondary_survey.neck}</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.secondary_survey.chest && (
+                                  <div className="bg-white dark:bg-gray-800 p-2 rounded">
+                                    <span className="font-medium text-teal-700 dark:text-teal-400">Chest:</span>{' '}
+                                    <span className="text-gray-700 dark:text-gray-300">{evaluation.linked_scenario.secondary_survey.chest}</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.secondary_survey.abdomen && (
+                                  <div className="bg-white dark:bg-gray-800 p-2 rounded">
+                                    <span className="font-medium text-teal-700 dark:text-teal-400">Abdomen:</span>{' '}
+                                    <span className="text-gray-700 dark:text-gray-300">{evaluation.linked_scenario.secondary_survey.abdomen}</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.secondary_survey.back && (
+                                  <div className="bg-white dark:bg-gray-800 p-2 rounded">
+                                    <span className="font-medium text-teal-700 dark:text-teal-400">Back:</span>{' '}
+                                    <span className="text-gray-700 dark:text-gray-300">{evaluation.linked_scenario.secondary_survey.back}</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.secondary_survey.pelvis && (
+                                  <div className="bg-white dark:bg-gray-800 p-2 rounded">
+                                    <span className="font-medium text-teal-700 dark:text-teal-400">Pelvis:</span>{' '}
+                                    <span className="text-gray-700 dark:text-gray-300">{evaluation.linked_scenario.secondary_survey.pelvis}</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.secondary_survey.extremities && (
+                                  <div className="bg-white dark:bg-gray-800 p-2 rounded col-span-2 md:col-span-1">
+                                    <span className="font-medium text-teal-700 dark:text-teal-400">Extremities:</span>{' '}
+                                    <span className="text-gray-700 dark:text-gray-300">{evaluation.linked_scenario.secondary_survey.extremities}</span>
                                   </div>
                                 )}
                               </div>
                             </div>
                           )}
+
+                          {/* EKG/Cardiac Findings */}
+                          {evaluation.linked_scenario.ekg_findings && Object.values(evaluation.linked_scenario.ekg_findings).some(v => v) && (
+                            <div className="bg-rose-50 dark:bg-rose-900/20 p-4 rounded-lg border border-rose-200 dark:border-rose-800">
+                              <h4 className="font-semibold text-rose-800 dark:text-rose-300 mb-3 flex items-center gap-2">
+                                <Activity className="w-4 h-4" />
+                                EKG / Cardiac Findings
+                              </h4>
+                              <div className="space-y-2 text-sm">
+                                {evaluation.linked_scenario.ekg_findings.rhythm && (
+                                  <div>
+                                    <span className="font-medium text-rose-700 dark:text-rose-400">Rhythm:</span>{' '}
+                                    <span className="text-gray-700 dark:text-gray-300">{evaluation.linked_scenario.ekg_findings.rhythm}</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.ekg_findings.rate && (
+                                  <div>
+                                    <span className="font-medium text-rose-700 dark:text-rose-400">Rate:</span>{' '}
+                                    <span className="text-gray-700 dark:text-gray-300">{evaluation.linked_scenario.ekg_findings.rate}</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.ekg_findings.interpretation && (
+                                  <div>
+                                    <span className="font-medium text-rose-700 dark:text-rose-400">Interpretation:</span>{' '}
+                                    <span className="text-gray-700 dark:text-gray-300">{evaluation.linked_scenario.ekg_findings.interpretation}</span>
+                                  </div>
+                                )}
+                                {evaluation.linked_scenario.ekg_findings.twelve_lead && (
+                                  <div>
+                                    <span className="font-medium text-rose-700 dark:text-rose-400">12-Lead Findings:</span>{' '}
+                                    <span className="text-gray-700 dark:text-gray-300">{evaluation.linked_scenario.ekg_findings.twelve_lead}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Debrief Discussion Points */}
+                          {evaluation.linked_scenario.debrief_points?.length ? (
+                            <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-lg border border-amber-200 dark:border-amber-800">
+                              <h4 className="font-semibold text-amber-800 dark:text-amber-300 mb-3 flex items-center gap-2">
+                                <FileText className="w-4 h-4" />
+                                Debrief Discussion Points
+                              </h4>
+                              <ul className="list-disc list-inside space-y-1 text-sm text-gray-700 dark:text-gray-300">
+                                {evaluation.linked_scenario.debrief_points.map((point, idx) => (
+                                  <li key={idx}>{point}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          ) : null}
 
                           {/* Phases with Vitals */}
                           {evaluation.linked_scenario.phases?.length ? (
