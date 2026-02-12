@@ -351,7 +351,7 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
   }
 
   // ============================================================
-  // 7. SCENARIO PHASES (Progression)
+  // 7. SCENARIO PHASES (Progression) - Each phase in its own box
   // ============================================================
   if (linkedScenario?.phases?.length) {
     content += `
@@ -362,37 +362,39 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
           const isDefaultName = /^Phase \d+$/i.test(phaseName);
           const displayTitle = isDefaultName ? '' : phaseName;
           return `
-          <div class="phase">
+          <div class="phase-box">
             <div class="phase-header">
               <span class="phase-number">PHASE ${idx + 1}</span>
               ${displayTitle ? `<span class="phase-title">${displayTitle}</span>` : ''}
             </div>
-            ${phase.trigger ? `
-              <div class="phase-trigger">
-                <strong>Trigger:</strong> ${phase.trigger}
-              </div>
-            ` : ''}
-            ${phase.vitals ? `
-              <div class="phase-vitals">
-                ${renderVitalsRow(phase.vitals)}
-              </div>
-            ` : ''}
-            ${phase.presentation || phase.presentation_notes ? `
-              <div class="phase-presentation">
-                <strong>Presentation:</strong> ${phase.presentation || phase.presentation_notes}
-              </div>
-            ` : ''}
-            ${phase.expected_actions?.length ? `
-              <div class="phase-actions">
-                <strong>Expected Actions:</strong>
-                <ul>${phase.expected_actions.map((a: string) => `<li>${a}</li>`).join('')}</ul>
-              </div>
-            ` : ''}
-            ${phase.instructor_cues || phase.cues ? `
-              <div class="phase-cues">
-                <strong>Instructor Cues:</strong> <em>${phase.instructor_cues || phase.cues}</em>
-              </div>
-            ` : ''}
+            <div class="phase-content">
+              ${phase.trigger ? `
+                <div class="phase-trigger">
+                  <strong>Trigger:</strong> ${phase.trigger}
+                </div>
+              ` : ''}
+              ${phase.vitals ? `
+                <div class="phase-vitals">
+                  ${renderVitalsRow(phase.vitals)}
+                </div>
+              ` : ''}
+              ${phase.presentation || phase.presentation_notes ? `
+                <div class="phase-presentation">
+                  <strong>Presentation:</strong> ${phase.presentation || phase.presentation_notes}
+                </div>
+              ` : ''}
+              ${phase.expected_actions?.length ? `
+                <div class="phase-actions">
+                  <strong>Expected Actions:</strong>
+                  <ul>${phase.expected_actions.map((a: string) => `<li>${a}</li>`).join('')}</ul>
+                </div>
+              ` : ''}
+              ${phase.instructor_cues || phase.cues ? `
+                <div class="phase-cues">
+                  <strong>Instructor Cues:</strong> <em>${phase.instructor_cues || phase.cues}</em>
+                </div>
+              ` : ''}
+            </div>
           </div>
         `;
         }).join('')}
@@ -451,9 +453,17 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
   <style>
     @media print {
       .no-print { display: none !important; }
-      body { font-size: 11pt; }
+      body {
+        font-size: 11pt;
+        margin: 0.5in 0.75in 0.5in 0.5in !important;
+        padding: 0 !important;
+      }
       .section { page-break-inside: avoid; }
-      .phase { page-break-inside: avoid; }
+      .phase-box { page-break-inside: avoid; }
+    }
+
+    @page {
+      margin: 0.5in 0.75in 0.5in 0.5in;
     }
 
     * {
@@ -465,16 +475,16 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
     body {
       font-family: Arial, sans-serif;
       font-size: 12px;
-      line-height: 1.5;
+      line-height: 1.4;
       color: #000;
       background: #fff;
       max-width: 8.5in;
       margin: 0 auto;
-      padding: 0.5in;
+      padding: 0.5in 0.75in 0.5in 0.5in;
     }
 
     .no-print {
-      margin-bottom: 20px;
+      margin-bottom: 15px;
       text-align: center;
     }
 
@@ -496,131 +506,130 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
     .header {
       text-align: center;
       border-bottom: 3px solid #000;
-      padding-bottom: 15px;
-      margin-bottom: 20px;
+      padding-bottom: 12px;
+      margin-bottom: 15px;
     }
 
     .header h1 {
-      font-size: 18px;
+      font-size: 16px;
       font-weight: bold;
-      margin-bottom: 5px;
+      margin-bottom: 4px;
       text-transform: uppercase;
+      color: #000;
     }
 
     .header h2 {
-      font-size: 16px;
+      font-size: 14px;
       font-weight: bold;
+      color: #000;
     }
 
-    .meta-info {
-      display: flex;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-bottom: 15px;
-      padding: 10px;
-      background: #f0f0f0;
-      border: 1px solid #000;
-    }
-
-    /* Standard Section Styling - B&W Optimized */
+    /* Standard Section Styling - HIGH CONTRAST B&W */
     .section {
-      margin-bottom: 15px;
-      padding: 12px;
+      margin-bottom: 12px;
+      padding: 10px;
       border: 1px solid #000;
       background: #fff;
     }
 
     .section h3 {
-      font-size: 13px;
+      font-size: 12px;
       font-weight: bold;
       text-transform: uppercase;
       border-bottom: 2px solid #000;
-      padding-bottom: 4px;
-      margin-bottom: 10px;
+      padding-bottom: 3px;
+      margin-bottom: 8px;
+      color: #000;
     }
 
     .section h4 {
-      font-size: 12px;
+      font-size: 11px;
       font-weight: bold;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
+      color: #000;
     }
 
     /* INITIAL VITALS - Prominent thick border */
     .vitals-section {
-      border: 3px solid #000;
-      background: #f0f0f0;
+      border: 2px solid #000;
+      background: #f5f5f5;
     }
 
     .vitals-section h3 {
-      font-size: 14px;
+      font-size: 12px;
+      color: #000;
     }
 
     .vitals-table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 8px;
+      margin-top: 6px;
     }
 
     .vitals-table th {
-      padding: 6px 10px;
+      padding: 4px 8px;
       border: 1px solid #000;
       background: #e0e0e0;
       font-weight: bold;
       text-align: center;
-      font-size: 11px;
+      font-size: 10px;
+      color: #000;
     }
 
     .vitals-table td {
-      padding: 8px 10px;
+      padding: 6px 8px;
       border: 1px solid #000;
       background: #fff;
       text-align: center;
-      font-size: 14px;
+      font-size: 12px;
       font-weight: bold;
+      color: #000;
     }
 
     /* CRITICAL ACTIONS - Prominent thick border */
     .critical-section {
-      border: 3px solid #000;
-      background: #f0f0f0;
+      border: 2px solid #000;
+      background: #f5f5f5;
     }
 
     .critical-section h3 {
-      font-size: 14px;
+      font-size: 12px;
+      color: #000;
     }
 
     .critical-list {
-      margin-left: 20px;
+      margin-left: 18px;
     }
 
     .critical-list li {
-      padding: 4px 0;
+      padding: 3px 0;
       font-weight: bold;
-      font-size: 12px;
+      font-size: 11px;
+      color: #000;
     }
 
     /* Instructor Notes - TOP (Read First!) */
     .instructor-section-top {
       background: #fff3cd;
       border: 3px solid #000;
-      margin-bottom: 20px;
+      margin-bottom: 15px;
     }
 
     .instructor-section-top h3 {
       background: #000;
       color: #fff;
-      padding: 6px 10px;
-      margin: -12px -12px 12px -12px;
+      padding: 5px 10px;
+      margin: -10px -10px 10px -10px;
       border-bottom: none;
+      font-size: 12px;
     }
 
     /* Presentation Box */
     .presentation-box {
-      margin-top: 10px;
-      padding: 8px;
-      background: #f0f0f0;
-      border-left: 4px solid #000;
+      margin-top: 8px;
+      padding: 6px;
+      background: #f5f5f5;
+      border-left: 3px solid #000;
     }
 
     /* Primary Assessment Section */
@@ -628,52 +637,50 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
       border: 2px solid #000;
     }
 
+    /* XABCDE Labels - HIGH CONTRAST BLACK */
     .xabcde-label {
-      width: 30px;
+      width: 28px;
       font-weight: bold;
-      font-size: 14px;
+      font-size: 13px;
       text-align: center;
-      background: #333;
+      background: #000;
       color: #fff;
     }
 
     .avpu-row {
-      margin-top: 10px;
-      padding: 8px;
-      background: #f0f0f0;
+      margin-top: 8px;
+      padding: 6px;
+      background: #f5f5f5;
       display: flex;
-      gap: 30px;
+      gap: 25px;
+      color: #000;
     }
 
     /* EKG Inline */
     .ekg-inline {
-      margin-top: 10px;
-      padding: 8px;
+      margin-top: 8px;
+      padding: 6px;
       background: #f8f8f8;
-      border-left: 3px solid #666;
-    }
-
-    /* Instructor Notes (legacy) */
-    .instructor-section {
-      background: #f8f8f8;
-      border-style: dashed;
+      border-left: 3px solid #000;
+      color: #000;
     }
 
     /* Debrief Section */
     .debrief-section {
       background: #f5f5f5;
-      border: 2px solid #666;
+      border: 2px solid #000;
     }
 
     .debrief-list {
-      margin-left: 20px;
+      margin-left: 18px;
     }
 
     .debrief-list li {
-      padding: 3px 0;
+      padding: 2px 0;
+      color: #000;
     }
 
-    /* Assessment Tables */
+    /* Assessment Tables - HIGH CONTRAST */
     .assessment-table,
     .history-table {
       width: 100%;
@@ -682,35 +689,38 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
 
     .assessment-table td,
     .history-table td {
-      padding: 5px 8px;
+      padding: 4px 6px;
       border: 1px solid #000;
       vertical-align: top;
+      color: #000;
     }
 
     .assessment-table td:first-child,
     .history-table td:first-child {
-      width: 30px;
+      width: 28px;
       font-weight: bold;
       text-align: center;
-      background: #f0f0f0;
+      background: #000;
+      color: #fff;
     }
 
     .history-table td:nth-child(2) {
-      width: 120px;
-      background: #f8f8f8;
+      width: 110px;
+      background: #f5f5f5;
+      color: #000;
     }
 
     /* Secondary Assessment Grid */
     .secondary-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 15px;
+      gap: 12px;
     }
 
     .sample-box,
     .opqrst-box {
       border: 1px solid #000;
-      padding: 10px;
+      padding: 8px;
       background: #fafafa;
     }
 
@@ -718,74 +728,90 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
     .info-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      gap: 8px;
+      gap: 6px;
+      color: #000;
     }
 
     .three-column {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
-      gap: 12px;
+      gap: 10px;
+      color: #000;
     }
 
     /* Chief Complaint emphasis */
     .chief-complaint {
-      font-size: 13px;
-      margin-top: 10px;
-      padding: 8px;
-      background: #f0f0f0;
-      border-left: 4px solid #000;
+      font-size: 12px;
+      margin-top: 8px;
+      padding: 6px;
+      background: #f5f5f5;
+      border-left: 3px solid #000;
+      color: #000;
     }
 
     .dispatch-notes {
-      margin-top: 8px;
-      padding: 6px;
+      margin-top: 6px;
+      padding: 5px;
       background: #f8f8f8;
+      color: #000;
     }
 
     /* Allergies emphasis */
     .allergies-box {
       font-weight: bold;
-      padding: 6px;
+      padding: 5px;
       border: 2px solid #000;
-      background: #f0f0f0;
+      background: #f5f5f5;
+      color: #000;
     }
 
     /* Lists */
     ul {
-      margin-left: 20px;
+      margin-left: 18px;
+      color: #000;
     }
 
     li {
-      margin-bottom: 3px;
+      margin-bottom: 2px;
+      color: #000;
     }
 
-    /* PHASES SECTION */
+    /* PHASES SECTION - Each phase in its own box */
     .phases-section {
-      border: 2px solid #000;
+      border: none;
+      padding: 0;
     }
 
-    .phase {
-      margin-bottom: 0;
-      padding: 12px;
+    .phases-section > h3 {
+      border: none;
       border-bottom: 2px solid #000;
+      padding: 0 0 4px 0;
+      margin-bottom: 10px;
     }
 
-    .phase:last-child {
-      border-bottom: none;
+    /* Individual Phase Box - no continuous vertical lines */
+    .phase-box {
+      border: 2px solid #000;
+      margin-bottom: 10px;
+      background: #fff;
+    }
+
+    .phase-box:last-child {
+      margin-bottom: 0;
     }
 
     .phase-header {
       display: flex;
       align-items: center;
-      gap: 12px;
-      margin-bottom: 10px;
-      padding-bottom: 6px;
-      border-bottom: 1px solid #ccc;
+      gap: 10px;
+      padding: 8px 10px;
+      background: #f0f0f0;
+      border-bottom: 1px solid #000;
     }
 
     .phase-number {
       font-weight: bold;
-      font-size: 13px;
+      font-size: 12px;
       background: #000;
       color: #fff;
       padding: 2px 8px;
@@ -793,50 +819,49 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
 
     .phase-title {
       font-weight: bold;
-      font-size: 13px;
+      font-size: 12px;
+      color: #000;
+    }
+
+    .phase-content {
+      padding: 10px;
     }
 
     .phase-trigger {
       margin-bottom: 8px;
-      padding: 6px;
-      background: #f0f0f0;
+      padding: 5px;
+      background: #f5f5f5;
       border-left: 3px solid #000;
+      color: #000;
     }
 
     .phase-vitals {
-      margin-bottom: 10px;
+      margin-bottom: 8px;
     }
 
     .phase-presentation {
       margin-bottom: 8px;
-      padding: 6px;
+      padding: 5px;
       background: #f8f8f8;
+      color: #000;
     }
 
     .phase-actions {
       margin-bottom: 8px;
+      color: #000;
     }
 
     .phase-actions ul {
-      margin-top: 4px;
+      margin-top: 3px;
     }
 
     .phase-cues {
       margin-top: 8px;
-      padding: 6px;
-      background: #f0f0f0;
-      border-left: 3px solid #666;
+      padding: 5px;
+      background: #f5f5f5;
+      border-left: 3px solid #000;
       font-style: italic;
-    }
-
-    /* Footer */
-    .footer {
-      margin-top: 25px;
-      text-align: center;
-      font-size: 10px;
-      color: #666;
-      border-top: 1px solid #000;
-      padding-top: 8px;
+      color: #000;
     }
   </style>
 </head>
@@ -851,18 +876,7 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
     <h2>Scenario #${scenario?.scenario_number}: ${scenario?.title || linkedScenario?.title}</h2>
   </div>
 
-  <div class="meta-info">
-    <div><strong>Date:</strong> ${formatDate(evaluation.evaluation_date)}</div>
-    <div><strong>Examiner:</strong> ${evaluation.examiner_name}</div>
-    ${evaluation.location ? `<div><strong>Location:</strong> ${evaluation.location}</div>` : ''}
-    ${evaluation.cohort ? `<div><strong>Cohort:</strong> ${evaluation.cohort.program?.abbreviation || ''} ${evaluation.cohort.cohort_number}</div>` : ''}
-  </div>
-
   ${content}
-
-  <div class="footer">
-    Printed: ${new Date().toLocaleString()} | FOR INSTRUCTOR REFERENCE ONLY
-  </div>
 </body>
 </html>
   `;
