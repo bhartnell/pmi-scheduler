@@ -1,14 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// Create Supabase client lazily to avoid build-time errors
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+}
 
 // POST - Assign or move a student to a group
 export async function POST(request: NextRequest) {
   try {
+    const supabase = getSupabase();
+
     const body = await request.json();
     const { student_id, group_id, changed_by, reason } = body;
 
@@ -76,6 +81,8 @@ export async function DELETE(request: NextRequest) {
   }
 
   try {
+    const supabase = getSupabase();
+
     // Get current group
     const { data: currentAssignment } = await supabase
       .from('lab_group_members')

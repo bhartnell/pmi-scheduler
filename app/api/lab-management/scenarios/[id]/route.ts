@@ -3,10 +3,13 @@ import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
 
 // Use service role key for server-side operations to bypass RLS
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// Create Supabase client lazily to avoid build-time errors
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+}
 
 export async function GET(
   request: NextRequest,
@@ -15,6 +18,8 @@ export async function GET(
   const { id } = await params;
   
   try {
+    const supabase = getSupabase();
+
     const { data, error } = await supabase
       .from('scenarios')
       .select('*')
@@ -37,6 +42,8 @@ export async function PATCH(
   const { id } = await params;
 
   try {
+    const supabase = getSupabase();
+
     // Check authentication
     const session = await getServerSession();
     if (!session?.user?.email) {
@@ -136,6 +143,8 @@ export async function DELETE(
   const { id } = await params;
 
   try {
+    const supabase = getSupabase();
+
     // Check authentication
     const session = await getServerSession();
     if (!session?.user?.email) {

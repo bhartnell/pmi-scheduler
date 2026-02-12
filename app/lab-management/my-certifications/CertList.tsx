@@ -1,14 +1,21 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import CETracker from './CETracker';
 import { Award, Upload, Download, Calendar, Building, Hash, Edit2, Trash2, Plus, X } from 'lucide-react';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// Lazy-initialize Supabase client to avoid SSR build issues
+let _supabase: SupabaseClient | null = null;
+function getSupabase() {
+  if (!_supabase) {
+    _supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+  }
+  return _supabase;
+}
 
 type Certification = {
   id: string;
@@ -103,6 +110,7 @@ export default function CertList({ initialCerts, instructorId }: Props) {
 
     setUploadProgress('Uploading image...');
 
+    const supabase = getSupabase();
     const { error } = await supabase.storage
       .from('cert-images')
       .upload(fileName, file, { upsert: true });
@@ -113,7 +121,7 @@ export default function CertList({ initialCerts, instructorId }: Props) {
       return null;
     }
 
-    const { data: urlData } = supabase.storage
+    const { data: urlData } = getSupabase().storage
       .from('cert-images')
       .getPublicUrl(fileName);
 
@@ -126,7 +134,7 @@ export default function CertList({ initialCerts, instructorId }: Props) {
     const match = imageUrl.match(/cert-images\/(.+)$/);
     if (!match) return;
 
-    await supabase.storage
+    await getSupabase().storage
       .from('cert-images')
       .remove([match[1]]);
   };

@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// Create Supabase client lazily to avoid build-time errors
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+}
 
 // GET - Get timer state for a lab day
 export async function GET(request: NextRequest) {
@@ -16,6 +19,8 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const supabase = getSupabase();
+
     const { data, error } = await supabase
       .from('lab_timer_state')
       .select('*')
@@ -52,6 +57,8 @@ export async function GET(request: NextRequest) {
 // POST - Create or reset timer state for a lab day
 export async function POST(request: NextRequest) {
   try {
+    const supabase = getSupabase();
+
     const body = await request.json();
     const { labDayId, durationSeconds, debriefSeconds, mode } = body;
 
@@ -102,6 +109,8 @@ export async function POST(request: NextRequest) {
 // PATCH - Update timer state (start, pause, stop, next rotation)
 export async function PATCH(request: NextRequest) {
   try {
+    const supabase = getSupabase();
+
     const body = await request.json();
     const { labDayId, action, ...updates } = body;
 

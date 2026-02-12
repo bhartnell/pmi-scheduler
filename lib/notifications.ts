@@ -1,9 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// Create Supabase client lazily to avoid build-time errors
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+}
 
 export type NotificationType =
   | 'lab_assignment'
@@ -36,6 +39,7 @@ export async function createNotification({
   referenceId,
 }: CreateNotificationParams): Promise<{ success: boolean; error?: string }> {
   try {
+    const supabase = getSupabase();
     const { error } = await supabase.from('user_notifications').insert({
       user_email: userEmail,
       title,
@@ -61,6 +65,7 @@ export async function createBulkNotifications(
   notifications: CreateNotificationParams[]
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    const supabase = getSupabase();
     const records = notifications.map(n => ({
       user_email: n.userEmail,
       title: n.title,
@@ -122,6 +127,7 @@ export async function notifyAdminsNewFeedback(
   }
 ): Promise<void> {
   try {
+    const supabase = getSupabase();
     // Get all admin and superadmin users
     const { data: admins } = await supabase
       .from('lab_users')

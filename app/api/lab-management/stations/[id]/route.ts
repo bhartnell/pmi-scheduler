@@ -2,10 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { notifyInstructorAssigned } from '@/lib/notifications';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// Create Supabase client lazily to avoid build-time errors
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+}
 
 export async function GET(
   request: NextRequest,
@@ -14,6 +17,8 @@ export async function GET(
   const { id } = await params;
   
   try {
+    const supabase = getSupabase();
+
     const { data, error } = await supabase
       .from('lab_stations')
       .select(`
@@ -97,6 +102,8 @@ export async function PATCH(
   const { id } = await params;
   
   try {
+    const supabase = getSupabase();
+
     const body = await request.json();
     
     // Build update object with only provided fields
@@ -217,6 +224,8 @@ export async function DELETE(
   const { id } = await params;
   
   try {
+    const supabase = getSupabase();
+
     const { error } = await supabase
       .from('lab_stations')
       .delete()

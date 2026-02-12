@@ -2,10 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// Create Supabase client lazily to avoid build-time errors
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+}
 
 // Role-based default configurations
 const ROLE_DEFAULTS: Record<string, { widgets: string[]; quickLinks: string[] }> = {
@@ -34,6 +37,8 @@ const ROLE_DEFAULTS: Record<string, { widgets: string[]; quickLinks: string[] }>
 // GET - Fetch user preferences
 export async function GET(request: NextRequest) {
   try {
+    const supabase = getSupabase();
+
     const session = await getServerSession();
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -96,6 +101,8 @@ export async function GET(request: NextRequest) {
 // PUT - Update user preferences
 export async function PUT(request: NextRequest) {
   try {
+    const supabase = getSupabase();
+
     const session = await getServerSession();
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -149,6 +156,8 @@ export async function PUT(request: NextRequest) {
 // DELETE - Reset preferences to defaults
 export async function DELETE(request: NextRequest) {
   try {
+    const supabase = getSupabase();
+
     const session = await getServerSession();
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

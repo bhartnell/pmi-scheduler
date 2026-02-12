@@ -1,9 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// Create Supabase client lazily to avoid build-time errors
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+}
 
 export interface LabUser {
   id: string;
@@ -26,6 +29,7 @@ export async function findOrCreateLabUser(
   name: string
 ): Promise<LabUser | null> {
   try {
+    const supabase = getSupabase();
     // Check if user exists (case-insensitive email match)
     const { data: existingUser, error: findError } = await supabase
       .from('lab_users')
@@ -66,6 +70,7 @@ export async function findOrCreateLabUser(
  */
 export async function getUserRole(email: string): Promise<string | null> {
   try {
+    const supabase = getSupabase();
     const { data, error } = await supabase
       .from('lab_users')
       .select('role')

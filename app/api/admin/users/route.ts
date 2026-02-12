@@ -9,13 +9,17 @@ import {
   type Role
 } from '@/lib/permissions';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// Create Supabase client lazily to avoid build-time errors
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+}
 
 // Helper to get current user with role
 async function getCurrentUser(email: string) {
+  const supabase = getSupabase();
   const { data } = await supabase
     .from('lab_users')
     .select('id, name, email, role')
@@ -40,6 +44,7 @@ export async function GET(request: NextRequest) {
     const role = searchParams.get('role');
     const activeOnly = searchParams.get('activeOnly') !== 'false';
 
+    const supabase = getSupabase();
     let query = supabase
       .from('lab_users')
       .select('*')
@@ -82,6 +87,8 @@ export async function POST(request: NextRequest) {
     if (!email) {
       return NextResponse.json({ success: false, error: 'Email is required' }, { status: 400 });
     }
+
+    const supabase = getSupabase();
 
     // Check if user already exists
     const { data: existingUser } = await supabase
@@ -135,6 +142,8 @@ export async function PATCH(request: NextRequest) {
     if (!userId) {
       return NextResponse.json({ success: false, error: 'User ID is required' }, { status: 400 });
     }
+
+    const supabase = getSupabase();
 
     // Get target user
     const { data: targetUser } = await supabase
@@ -211,6 +220,8 @@ export async function DELETE(request: NextRequest) {
     if (!userId) {
       return NextResponse.json({ success: false, error: 'User ID is required' }, { status: 400 });
     }
+
+    const supabase = getSupabase();
 
     // Get target user
     const { data: targetUser } = await supabase

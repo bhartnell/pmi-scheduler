@@ -2,13 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+// Create Supabase client lazily to avoid build-time errors
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+}
 
 // Helper to get current user's lab_users record
 async function getCurrentUser(email: string) {
+  const supabase = getSupabase();
   const { data } = await supabase
     .from('lab_users')
     .select('id, role')
@@ -21,6 +25,7 @@ async function getCurrentUser(email: string) {
 async function canAccessCert(certId: string, userId: string, userRole: string): Promise<boolean> {
   if (userRole === 'admin') return true;
 
+  const supabase = getSupabase();
   const { data } = await supabase
     .from('instructor_certifications')
     .select('instructor_id')
@@ -37,6 +42,8 @@ export async function GET(
   const { id } = await params;
 
   try {
+    const supabase = getSupabase();
+
     const { data, error } = await supabase
       .from('instructor_certifications')
       .select(`
@@ -63,6 +70,8 @@ export async function PATCH(
   const { id } = await params;
 
   try {
+    const supabase = getSupabase();
+
     const session = await getServerSession();
     if (!session?.user?.email) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
@@ -117,6 +126,8 @@ export async function DELETE(
   const { id } = await params;
 
   try {
+    const supabase = getSupabase();
+
     const session = await getServerSession();
     if (!session?.user?.email) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
