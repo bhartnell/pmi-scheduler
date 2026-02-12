@@ -185,7 +185,21 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
   }
 
   // 5. PRIMARY ASSESSMENT (General Impression, AVPU, XABCDE)
-  if (linkedScenario?.assessment_x || linkedScenario?.assessment_a || linkedScenario?.assessment_e || linkedScenario?.general_impression || linkedScenario?.avpu) {
+  const hasXabcde = linkedScenario?.assessment_x || linkedScenario?.assessment_a || linkedScenario?.assessment_b ||
+                   linkedScenario?.assessment_c || linkedScenario?.assessment_d || linkedScenario?.assessment_e;
+  const hasPrimaryAssessment = hasXabcde || linkedScenario?.general_impression || linkedScenario?.avpu ||
+                               linkedScenario?.gcs || linkedScenario?.pupils;
+
+  if (hasPrimaryAssessment) {
+    // Build D - Disability line with GCS and pupils if present
+    let disabilityLine = linkedScenario?.assessment_d || '';
+    if (linkedScenario?.gcs) {
+      disabilityLine += disabilityLine ? ` | GCS: ${linkedScenario.gcs}` : `GCS: ${linkedScenario.gcs}`;
+    }
+    if (linkedScenario?.pupils) {
+      disabilityLine += disabilityLine ? ` | Pupils: ${linkedScenario.pupils}` : `Pupils: ${linkedScenario.pupils}`;
+    }
+
     content += `
       <div class="section">
         <h3>PRIMARY ASSESSMENT (XABCDE)</h3>
@@ -194,6 +208,9 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
           ${linkedScenario.avpu ? `<tr><td><strong>AVPU:</strong></td><td>${linkedScenario.avpu}</td></tr>` : ''}
           ${linkedScenario.assessment_x ? `<tr><td><strong>X - Hemorrhage Control:</strong></td><td>${linkedScenario.assessment_x}</td></tr>` : ''}
           ${linkedScenario.assessment_a ? `<tr><td><strong>A - Airway:</strong></td><td>${linkedScenario.assessment_a}</td></tr>` : ''}
+          ${linkedScenario.assessment_b ? `<tr><td><strong>B - Breathing:</strong></td><td>${linkedScenario.assessment_b}</td></tr>` : ''}
+          ${linkedScenario.assessment_c ? `<tr><td><strong>C - Circulation:</strong></td><td>${linkedScenario.assessment_c}</td></tr>` : ''}
+          ${disabilityLine ? `<tr><td><strong>D - Disability:</strong></td><td>${disabilityLine}</td></tr>` : ''}
           ${linkedScenario.assessment_e ? `<tr><td><strong>E - Expose/Environment:</strong></td><td>${linkedScenario.assessment_e}</td></tr>` : ''}
         </table>
       </div>
@@ -257,6 +274,47 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
     `;
   }
 
+  // 6b. SECONDARY SURVEY (Physical exam body regions)
+  const hasSecondarySurvey = linkedScenario?.secondary_survey &&
+    Object.values(linkedScenario.secondary_survey).some((v: any) => v);
+
+  if (hasSecondarySurvey) {
+    const survey = linkedScenario.secondary_survey;
+    content += `
+      <div class="section">
+        <h3>SECONDARY SURVEY (Physical Exam)</h3>
+        <table class="assessment-table">
+          ${survey.head ? `<tr><td><strong>Head:</strong></td><td>${survey.head}</td></tr>` : ''}
+          ${survey.neck ? `<tr><td><strong>Neck:</strong></td><td>${survey.neck}</td></tr>` : ''}
+          ${survey.chest ? `<tr><td><strong>Chest:</strong></td><td>${survey.chest}</td></tr>` : ''}
+          ${survey.abdomen ? `<tr><td><strong>Abdomen:</strong></td><td>${survey.abdomen}</td></tr>` : ''}
+          ${survey.back ? `<tr><td><strong>Back:</strong></td><td>${survey.back}</td></tr>` : ''}
+          ${survey.pelvis ? `<tr><td><strong>Pelvis:</strong></td><td>${survey.pelvis}</td></tr>` : ''}
+          ${survey.extremities ? `<tr><td><strong>Extremities:</strong></td><td>${survey.extremities}</td></tr>` : ''}
+        </table>
+      </div>
+    `;
+  }
+
+  // 6c. EKG FINDINGS (for cardiac scenarios)
+  const hasEkg = linkedScenario?.ekg_findings &&
+    Object.values(linkedScenario.ekg_findings).some((v: any) => v);
+
+  if (hasEkg) {
+    const ekg = linkedScenario.ekg_findings;
+    content += `
+      <div class="section">
+        <h3>EKG / CARDIAC FINDINGS</h3>
+        <table class="assessment-table">
+          ${ekg.rhythm ? `<tr><td><strong>Rhythm:</strong></td><td>${ekg.rhythm}</td></tr>` : ''}
+          ${ekg.rate ? `<tr><td><strong>Rate:</strong></td><td>${ekg.rate}</td></tr>` : ''}
+          ${ekg.interpretation ? `<tr><td><strong>Interpretation:</strong></td><td>${ekg.interpretation}</td></tr>` : ''}
+          ${ekg.twelve_lead ? `<tr><td><strong>12-Lead Findings:</strong></td><td>${ekg.twelve_lead}</td></tr>` : ''}
+        </table>
+      </div>
+    `;
+  }
+
   // 7. CRITICAL ACTIONS (Must Perform - PROMINENT BOX)
   if (linkedScenario?.critical_actions?.length) {
     content += `
@@ -275,6 +333,18 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
       <div class="section instructor-section">
         <h3>INSTRUCTOR NOTES</h3>
         <p>${linkedScenario.instructor_notes}</p>
+      </div>
+    `;
+  }
+
+  // 8b. DEBRIEF POINTS
+  if (linkedScenario?.debrief_points?.length) {
+    content += `
+      <div class="section debrief-section">
+        <h3>DEBRIEF DISCUSSION POINTS</h3>
+        <ul class="debrief-list">
+          ${linkedScenario.debrief_points.map((point: string) => `<li>${point}</li>`).join('')}
+        </ul>
       </div>
     `;
   }
@@ -518,6 +588,20 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
     .instructor-section {
       background: #f8f8f8;
       border-style: dashed;
+    }
+
+    /* Debrief Section */
+    .debrief-section {
+      background: #f5f5f5;
+      border: 2px solid #666;
+    }
+
+    .debrief-list {
+      margin-left: 20px;
+    }
+
+    .debrief-list li {
+      padding: 3px 0;
     }
 
     /* Assessment Tables */
