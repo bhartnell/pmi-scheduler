@@ -119,40 +119,61 @@ export default function CustomizeModal({
               </span>
             </h3>
             <div className="space-y-2">
-              {allWidgetIds.map(widgetId => {
+              {/* First render enabled widgets in their sorted order */}
+              {widgets.map((widgetId, index) => {
                 const widget = WIDGET_DEFINITIONS[widgetId as keyof typeof WIDGET_DEFINITIONS];
-                const isEnabled = widgets.includes(widgetId);
-                const order = widgets.indexOf(widgetId);
+                if (!widget) return null;
 
                 return (
                   <div
                     key={widgetId}
-                    draggable={isEnabled}
+                    draggable
                     onDragStart={() => handleDragStart(widgetId)}
                     onDragOver={(e) => handleDragOver(e, widgetId)}
                     onDragEnd={handleDragEnd}
-                    className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
-                      isEnabled
-                        ? 'border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20'
-                        : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/30'
-                    } ${draggedWidget === widgetId ? 'opacity-50' : ''}`}
+                    className={`flex items-center gap-3 p-3 rounded-lg border transition-colors border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 ${draggedWidget === widgetId ? 'opacity-50' : ''}`}
                   >
-                    {isEnabled && (
-                      <GripVertical className="w-4 h-4 text-gray-400 cursor-grab flex-shrink-0" />
-                    )}
+                    <GripVertical className="w-4 h-4 text-gray-400 cursor-grab flex-shrink-0" />
                     <label className="flex items-center gap-3 flex-1 cursor-pointer">
                       <input
                         type="checkbox"
-                        checked={isEnabled}
+                        checked={true}
                         onChange={() => toggleWidget(widgetId)}
                         className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                       />
                       <div className="flex-1">
                         <div className="font-medium text-gray-900 dark:text-white text-sm">
                           {widget.name}
-                          {isEnabled && order >= 0 && (
-                            <span className="text-xs text-gray-400 ml-2">#{order + 1}</span>
-                          )}
+                          <span className="text-xs text-gray-400 ml-2">#{index + 1}</span>
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          {widget.description}
+                        </div>
+                      </div>
+                    </label>
+                  </div>
+                );
+              })}
+              {/* Then render disabled widgets */}
+              {allWidgetIds.filter(id => !widgets.includes(id)).map(widgetId => {
+                const widget = WIDGET_DEFINITIONS[widgetId as keyof typeof WIDGET_DEFINITIONS];
+
+                return (
+                  <div
+                    key={widgetId}
+                    className="flex items-center gap-3 p-3 rounded-lg border transition-colors border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/30"
+                  >
+                    <div className="w-4 h-4 flex-shrink-0" /> {/* Spacer for alignment */}
+                    <label className="flex items-center gap-3 flex-1 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={false}
+                        onChange={() => toggleWidget(widgetId)}
+                        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <div className="flex-1">
+                        <div className="font-medium text-gray-900 dark:text-white text-sm">
+                          {widget.name}
                         </div>
                         <div className="text-xs text-gray-500 dark:text-gray-400">
                           {widget.description}
