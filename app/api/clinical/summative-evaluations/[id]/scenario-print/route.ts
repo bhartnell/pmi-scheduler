@@ -260,63 +260,59 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
     `;
   }
 
-  // 5c. SAMPLE History
-  const hasSample = linkedScenario?.sample_history && Object.values(linkedScenario.sample_history).some((v: any) => v);
+  // 5c. SAMPLE History - Always show complete format
+  const sampleS = linkedScenario?.sample_history?.signs_symptoms || linkedScenario?.chief_complaint || '—';
+  const sampleA = linkedScenario?.allergies || 'NKDA';
+  const sampleM = linkedScenario?.medications?.length ? linkedScenario.medications.join(', ') : 'None';
+  const sampleP = linkedScenario?.medical_history?.length ? linkedScenario.medical_history.join(', ') : 'None';
+  const sampleL = linkedScenario?.sample_history?.last_oral_intake || '—';
+  const sampleE = linkedScenario?.sample_history?.events_leading || '—';
 
   // 5d. OPQRST
   const hasOpqrst = linkedScenario?.opqrst && Object.values(linkedScenario.opqrst).some((v: any) => v);
 
-  if (hasSample || hasOpqrst) {
-    content += `
-      <div class="section">
-        <h3>HISTORY TAKING</h3>
-        <div class="secondary-grid">
-    `;
+  // Always show SAMPLE, optionally show OPQRST
+  content += `
+    <div class="section">
+      <h3>HISTORY TAKING</h3>
+      <div class="secondary-grid">
+  `;
 
-    if (hasSample) {
-      const sampleS = linkedScenario.sample_history.signs_symptoms;
-      const sampleA = linkedScenario.sample_history.allergies || linkedScenario.allergies;
-      const sampleM = linkedScenario.sample_history.medications || (linkedScenario.medications?.length ? linkedScenario.medications.join(', ') : null);
-      const sampleP = linkedScenario.sample_history.past_medical_history || (linkedScenario.medical_history?.length ? linkedScenario.medical_history.join(', ') : null);
-      const sampleL = linkedScenario.sample_history.last_oral_intake;
-      const sampleE = linkedScenario.sample_history.events_leading;
-
-      content += `
-          <div class="sample-box">
-            <h4>SAMPLE History</h4>
-            <table class="history-table">
-              ${sampleS ? `<tr><td><strong>S</strong></td><td>Signs/Symptoms</td><td>${sampleS}</td></tr>` : ''}
-              ${sampleA ? `<tr><td><strong>A</strong></td><td>Allergies</td><td>${sampleA}</td></tr>` : ''}
-              ${sampleM ? `<tr><td><strong>M</strong></td><td>Medications</td><td>${sampleM}</td></tr>` : ''}
-              ${sampleP ? `<tr><td><strong>P</strong></td><td>Past Medical Hx</td><td>${sampleP}</td></tr>` : ''}
-              ${sampleL ? `<tr><td><strong>L</strong></td><td>Last Oral Intake</td><td>${sampleL}</td></tr>` : ''}
-              ${sampleE ? `<tr><td><strong>E</strong></td><td>Events Leading</td><td>${sampleE}</td></tr>` : ''}
-            </table>
-          </div>
-      `;
-    }
-
-    if (hasOpqrst) {
-      content += `
-          <div class="opqrst-box">
-            <h4>OPQRST (Pain Assessment)</h4>
-            <table class="history-table">
-              ${linkedScenario.opqrst.onset ? `<tr><td><strong>O</strong></td><td>Onset</td><td>${linkedScenario.opqrst.onset}</td></tr>` : ''}
-              ${linkedScenario.opqrst.provocation ? `<tr><td><strong>P</strong></td><td>Provocation</td><td>${linkedScenario.opqrst.provocation}</td></tr>` : ''}
-              ${linkedScenario.opqrst.quality ? `<tr><td><strong>Q</strong></td><td>Quality</td><td>${linkedScenario.opqrst.quality}</td></tr>` : ''}
-              ${linkedScenario.opqrst.radiation ? `<tr><td><strong>R</strong></td><td>Radiation</td><td>${linkedScenario.opqrst.radiation}</td></tr>` : ''}
-              ${linkedScenario.opqrst.severity ? `<tr><td><strong>S</strong></td><td>Severity</td><td>${linkedScenario.opqrst.severity}</td></tr>` : ''}
-              ${linkedScenario.opqrst.time_onset ? `<tr><td><strong>T</strong></td><td>Time</td><td>${linkedScenario.opqrst.time_onset}</td></tr>` : ''}
-            </table>
-          </div>
-      `;
-    }
-
-    content += `
-        </div>
+  // Always show complete SAMPLE
+  content += `
+      <div class="sample-box">
+        <h4>SAMPLE History</h4>
+        <table class="history-table">
+          <tr><td><strong>S</strong></td><td>Signs/Symptoms</td><td>${sampleS}</td></tr>
+          <tr><td><strong>A</strong></td><td>Allergies</td><td>${sampleA}</td></tr>
+          <tr><td><strong>M</strong></td><td>Medications</td><td>${sampleM}</td></tr>
+          <tr><td><strong>P</strong></td><td>Past Medical Hx</td><td>${sampleP}</td></tr>
+          <tr><td><strong>L</strong></td><td>Last Oral Intake</td><td>${sampleL}</td></tr>
+          <tr><td><strong>E</strong></td><td>Events Leading</td><td>${sampleE}</td></tr>
+        </table>
       </div>
+  `;
+
+  if (hasOpqrst) {
+    content += `
+        <div class="opqrst-box">
+          <h4>OPQRST (Pain Assessment)</h4>
+          <table class="history-table">
+            ${linkedScenario.opqrst.onset ? `<tr><td><strong>O</strong></td><td>Onset</td><td>${linkedScenario.opqrst.onset}</td></tr>` : ''}
+            ${linkedScenario.opqrst.provocation ? `<tr><td><strong>P</strong></td><td>Provocation</td><td>${linkedScenario.opqrst.provocation}</td></tr>` : ''}
+            ${linkedScenario.opqrst.quality ? `<tr><td><strong>Q</strong></td><td>Quality</td><td>${linkedScenario.opqrst.quality}</td></tr>` : ''}
+            ${linkedScenario.opqrst.radiation ? `<tr><td><strong>R</strong></td><td>Radiation</td><td>${linkedScenario.opqrst.radiation}</td></tr>` : ''}
+            ${linkedScenario.opqrst.severity ? `<tr><td><strong>S</strong></td><td>Severity</td><td>${linkedScenario.opqrst.severity}</td></tr>` : ''}
+            ${linkedScenario.opqrst.time_onset ? `<tr><td><strong>T</strong></td><td>Time</td><td>${linkedScenario.opqrst.time_onset}</td></tr>` : ''}
+          </table>
+        </div>
     `;
   }
+
+  content += `
+      </div>
+    </div>
+  `;
 
   // 5e. SECONDARY SURVEY (Physical exam body regions)
   const hasSecondarySurvey = linkedScenario?.secondary_survey &&

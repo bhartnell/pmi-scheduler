@@ -874,37 +874,44 @@ function GradingPageContent() {
                               </div>
                             )}
 
-                            {/* SAMPLE History */}
-                            {evaluation.linked_scenario.sample_history && Object.values(evaluation.linked_scenario.sample_history).some(v => v) && (
-                              <div>
-                                <h5 className="text-sm font-medium text-blue-700 dark:text-blue-400 mb-2 flex items-center gap-1">
-                                  <ClipboardList className="w-3 h-3" /> SAMPLE History
-                                </h5>
-                                <div className="space-y-1 text-sm">
-                                  {evaluation.linked_scenario.sample_history.signs_symptoms && (
-                                    <div>
-                                      <span className="font-medium text-gray-700 dark:text-gray-300">S - Signs/Symptoms:</span>{' '}
-                                      <span className="text-gray-600 dark:text-gray-400">{evaluation.linked_scenario.sample_history.signs_symptoms}</span>
-                                    </div>
-                                  )}
-                                  {evaluation.linked_scenario.sample_history.last_oral_intake && (
-                                    <div>
-                                      <span className="font-medium text-gray-700 dark:text-gray-300">L - Last Oral Intake:</span>{' '}
-                                      <span className="text-gray-600 dark:text-gray-400">{evaluation.linked_scenario.sample_history.last_oral_intake}</span>
-                                    </div>
-                                  )}
-                                  {evaluation.linked_scenario.sample_history.events_leading && (
-                                    <div>
-                                      <span className="font-medium text-gray-700 dark:text-gray-300">E - Events Leading:</span>{' '}
-                                      <span className="text-gray-600 dark:text-gray-400">{evaluation.linked_scenario.sample_history.events_leading}</span>
-                                    </div>
-                                  )}
+                            {/* SAMPLE History - Complete format */}
+                            <div>
+                              <h5 className="text-sm font-medium text-blue-700 dark:text-blue-400 mb-2 flex items-center gap-1">
+                                <ClipboardList className="w-3 h-3" /> SAMPLE History
+                              </h5>
+                              <div className="space-y-1 text-sm">
+                                <div>
+                                  <span className="font-medium text-gray-700 dark:text-gray-300">S - Signs/Symptoms:</span>{' '}
+                                  <span className="text-gray-600 dark:text-gray-400">{evaluation.linked_scenario.sample_history?.signs_symptoms || evaluation.linked_scenario.chief_complaint || '—'}</span>
                                 </div>
-                                <p className="text-xs text-blue-600 dark:text-blue-400 mt-1 italic">
-                                  Note: A (Allergies), M (Medications), P (Past Medical Hx) shown above
-                                </p>
+                                <div>
+                                  <span className="font-medium text-gray-700 dark:text-gray-300">A - Allergies:</span>{' '}
+                                  <span className={`${evaluation.linked_scenario.allergies ? 'text-red-600 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'}`}>
+                                    {evaluation.linked_scenario.allergies || 'NKDA'}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="font-medium text-gray-700 dark:text-gray-300">M - Medications:</span>{' '}
+                                  <span className="text-gray-600 dark:text-gray-400">
+                                    {evaluation.linked_scenario.medications?.length ? evaluation.linked_scenario.medications.join(', ') : 'None'}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="font-medium text-gray-700 dark:text-gray-300">P - Past Medical Hx:</span>{' '}
+                                  <span className="text-gray-600 dark:text-gray-400">
+                                    {evaluation.linked_scenario.medical_history?.length ? evaluation.linked_scenario.medical_history.join(', ') : 'None'}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="font-medium text-gray-700 dark:text-gray-300">L - Last Oral Intake:</span>{' '}
+                                  <span className="text-gray-600 dark:text-gray-400">{evaluation.linked_scenario.sample_history?.last_oral_intake || '—'}</span>
+                                </div>
+                                <div>
+                                  <span className="font-medium text-gray-700 dark:text-gray-300">E - Events Leading:</span>{' '}
+                                  <span className="text-gray-600 dark:text-gray-400">{evaluation.linked_scenario.sample_history?.events_leading || '—'}</span>
+                                </div>
                               </div>
-                            )}
+                            </div>
 
                             {/* OPQRST */}
                             {evaluation.linked_scenario.opqrst && Object.values(evaluation.linked_scenario.opqrst).some(v => v) && (
