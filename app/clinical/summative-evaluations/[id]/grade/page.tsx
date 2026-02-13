@@ -167,6 +167,8 @@ interface Phase {
     bgl?: number | string;
     etco2?: number | string;
     gcs?: number | string;
+    rhythm?: string;
+    ekg?: string;
   };
   presentation_notes?: string;
   expected_actions?: string[];
@@ -1109,6 +1111,18 @@ function GradingPageContent() {
                                                 <div className="bg-gray-50 dark:bg-gray-700 p-2 rounded">
                                                   <span className="text-gray-500 dark:text-gray-400">GCS:</span>{' '}
                                                   <span className="font-medium text-gray-900 dark:text-white">{phase.vitals.gcs}</span>
+                                                </div>
+                                              )}
+                                              {phase.vitals.etco2 && (
+                                                <div className="bg-cyan-50 dark:bg-cyan-900/20 p-2 rounded">
+                                                  <span className="text-gray-500 dark:text-gray-400">ETCO2:</span>{' '}
+                                                  <span className="font-medium text-gray-900 dark:text-white">{phase.vitals.etco2}</span>
+                                                </div>
+                                              )}
+                                              {(phase.vitals.rhythm || phase.vitals.ekg) && (
+                                                <div className="bg-pink-50 dark:bg-pink-900/20 p-2 rounded col-span-2">
+                                                  <span className="text-gray-500 dark:text-gray-400">Rhythm:</span>{' '}
+                                                  <span className="font-medium text-gray-900 dark:text-white">{phase.vitals.rhythm || phase.vitals.ekg}</span>
                                                 </div>
                                               )}
                                             </div>

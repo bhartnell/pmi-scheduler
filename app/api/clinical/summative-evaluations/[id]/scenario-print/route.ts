@@ -97,10 +97,11 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
       { label: 'HR', value: vitals.hr },
       { label: 'RR', value: vitals.rr },
       { label: 'SpO2', value: vitals.spo2 ? `${vitals.spo2}%` : null },
+      { label: 'ETCO2', value: vitals.etco2 },
       { label: 'Temp', value: vitals.temp ? `${vitals.temp}°F` : null },
       { label: 'BGL', value: vitals.bgl || vitals.glucose },
       { label: 'GCS', value: vitals.gcs },
-      { label: 'ETCO2', value: vitals.etco2 }
+      { label: 'Rhythm', value: vitals.rhythm || vitals.ekg }
     ].filter(v => v.value);
 
     if (vitalItems.length === 0) return '';
