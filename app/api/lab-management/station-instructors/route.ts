@@ -75,20 +75,47 @@ export async function POST(request: NextRequest) {
         .eq('station_id', stationId);
     }
 
-    // Upsert the instructor
-    const { data, error } = await supabase
+    // Check if instructor already exists for this station
+    const { data: existing } = await supabase
       .from('station_instructors')
-      .upsert({
-        station_id: stationId,
-        user_id: userId || null,
-        user_email: userEmail,
-        user_name: userName || userEmail.split('@')[0],
-        is_primary: isPrimary || false
-      }, {
-        onConflict: 'station_id,user_email'
-      })
-      .select()
+      .select('id')
+      .eq('station_id', stationId)
+      .eq('user_email', userEmail)
       .single();
+
+    let data;
+    let error;
+
+    if (existing) {
+      // Update existing record
+      const result = await supabase
+        .from('station_instructors')
+        .update({
+          user_id: userId || null,
+          user_name: userName || userEmail.split('@')[0],
+          is_primary: isPrimary || false
+        })
+        .eq('id', existing.id)
+        .select()
+        .single();
+      data = result.data;
+      error = result.error;
+    } else {
+      // Insert new record
+      const result = await supabase
+        .from('station_instructors')
+        .insert({
+          station_id: stationId,
+          user_id: userId || null,
+          user_email: userEmail,
+          user_name: userName || userEmail.split('@')[0],
+          is_primary: isPrimary || false
+        })
+        .select()
+        .single();
+      data = result.data;
+      error = result.error;
+    }
 
     if (error) throw error;
 

@@ -32,10 +32,11 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const labDayId = searchParams.get('labDayId');
+    // Accept both labDayId and lab_day_id for compatibility
+    const labDayId = searchParams.get('labDayId') || searchParams.get('lab_day_id');
 
     if (!labDayId) {
-      return NextResponse.json({ success: false, error: 'Lab day ID required' }, { status: 400 });
+      return NextResponse.json({ success: true, roles: [] }); // Return empty array instead of error to prevent retry loops
     }
 
     const supabase = getSupabase();
@@ -58,9 +59,13 @@ export async function GET(request: NextRequest) {
     }));
 
     return NextResponse.json({ success: true, roles: processedRoles });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching lab day roles:', error);
-    return NextResponse.json({ success: false, error: 'Failed to fetch roles' }, { status: 500 });
+    // Handle table not existing gracefully
+    if (error?.code === '42P01' || error?.message?.includes('does not exist')) {
+      return NextResponse.json({ success: true, roles: [], tableExists: false });
+    }
+    return NextResponse.json({ success: true, roles: [] }); // Return empty array to prevent retry loops
   }
 }
 
