@@ -104,6 +104,19 @@ interface Instructor {
   role: string;
 }
 
+interface LabDayRole {
+  id: string;
+  lab_day_id: string;
+  instructor_id: string;
+  role: 'lab_lead' | 'roamer' | 'observer';
+  notes: string | null;
+  instructor?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+}
+
 const STATION_TYPES = [
   { value: 'scenario', label: 'Scenario', description: 'Full scenario with grading' },
   { value: 'skills', label: 'Skills', description: 'Skills practice station' },
@@ -142,6 +155,7 @@ export default function LabDayPage() {
   const [labDay, setLabDay] = useState<LabDay | null>(null);
   const [loading, setLoading] = useState(true);
   const [showTimer, setShowTimer] = useState(false);
+  const [labDayRoles, setLabDayRoles] = useState<LabDayRole[]>([]);
 
   // Edit station modal state
   const [editingStation, setEditingStation] = useState<Station | null>(null);
@@ -187,15 +201,17 @@ export default function LabDayPage() {
   const fetchLabDay = async () => {
     setLoading(true);
     try {
-      const [labDayRes, instructorsRes, locationsRes] = await Promise.all([
+      const [labDayRes, instructorsRes, locationsRes, rolesRes] = await Promise.all([
         fetch(`/api/lab-management/lab-days/${labDayId}`),
         fetch('/api/lab-management/instructors'),
-        fetch('/api/lab-management/locations?type=room')
+        fetch('/api/lab-management/locations?type=room'),
+        fetch(`/api/lab-management/lab-day-roles?lab_day_id=${labDayId}`)
       ]);
 
       const labDayData = await labDayRes.json();
       const instructorsData = await instructorsRes.json();
       const locationsData = await locationsRes.json();
+      const rolesData = await rolesRes.json();
 
       if (labDayData.success) {
         setLabDay(labDayData.labDay);
@@ -209,6 +225,10 @@ export default function LabDayPage() {
 
       if (locationsData.success) {
         setLocations(locationsData.locations || []);
+      }
+
+      if (rolesData.success) {
+        setLabDayRoles(rolesData.roles || []);
       }
     } catch (error) {
       console.error('Error fetching lab day:', error);
@@ -829,6 +849,68 @@ export default function LabDayPage() {
           <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded-lg p-4 mb-6">
             <h3 className="font-medium text-yellow-800 dark:text-yellow-300 mb-1">Notes</h3>
             <p className="text-yellow-700 dark:text-yellow-400 text-sm">{labDay.notes}</p>
+          </div>
+        )}
+
+        {/* Lab Day Roles */}
+        {labDayRoles.length > 0 && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6 print:shadow-none print:border print:border-gray-300">
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+              <Users className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+              Lab Day Roles
+            </h3>
+            <div className="flex flex-wrap gap-4">
+              {/* Lab Leads */}
+              {labDayRoles.filter(r => r.role === 'lab_lead').length > 0 && (
+                <div>
+                  <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Lab Lead</span>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {labDayRoles.filter(r => r.role === 'lab_lead').map(role => (
+                      <span
+                        key={role.id}
+                        className="inline-flex items-center gap-1 px-3 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 rounded-full text-sm font-medium"
+                      >
+                        {role.instructor?.name || 'Unknown'}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Roamers */}
+              {labDayRoles.filter(r => r.role === 'roamer').length > 0 && (
+                <div>
+                  <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Roamer</span>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {labDayRoles.filter(r => r.role === 'roamer').map(role => (
+                      <span
+                        key={role.id}
+                        className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-full text-sm font-medium"
+                      >
+                        {role.instructor?.name || 'Unknown'}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Observers */}
+              {labDayRoles.filter(r => r.role === 'observer').length > 0 && (
+                <div>
+                  <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Observer</span>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {labDayRoles.filter(r => r.role === 'observer').map(role => (
+                      <span
+                        key={role.id}
+                        className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 rounded-full text-sm font-medium"
+                      >
+                        {role.instructor?.name || 'Unknown'}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
 

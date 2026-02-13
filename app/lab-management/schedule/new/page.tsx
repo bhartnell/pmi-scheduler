@@ -19,7 +19,8 @@ import {
   FileText,
   ClipboardCheck,
   Search,
-  X
+  X,
+  Users
 } from 'lucide-react';
 
 interface Cohort {
@@ -55,6 +56,12 @@ interface Instructor {
   role: string;
 }
 
+interface LabUser {
+  id: string;
+  name: string;
+  email: string;
+}
+
 interface Station {
   id: string;
   station_number: number;
@@ -84,8 +91,14 @@ export default function NewLabDayPage() {
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
   const [instructors, setInstructors] = useState<Instructor[]>([]);
+  const [users, setUsers] = useState<LabUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // Lab Day Roles state
+  const [labLeads, setLabLeads] = useState<string[]>([]);
+  const [roamers, setRoamers] = useState<string[]>([]);
+  const [observers, setObservers] = useState<string[]>([]);
 
   // Form state
   const [selectedCohort, setSelectedCohort] = useState('');
@@ -169,6 +182,13 @@ export default function NewLabDayPage() {
       const instructorsData = await instructorsRes.json();
       if (instructorsData.success) {
         setInstructors(instructorsData.instructors || []);
+      }
+
+      // Fetch users for roles dropdown
+      const usersRes = await fetch('/api/users/list');
+      const usersData = await usersRes.json();
+      if (usersData.success) {
+        setUsers(usersData.users || []);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -275,6 +295,25 @@ export default function NewLabDayPage() {
       }
 
       const labDayId = labDayData.labDay.id;
+
+      // Save lab day roles
+      const allRoles = [
+        ...labLeads.map(id => ({ instructor_id: id, role: 'lab_lead' as const })),
+        ...roamers.map(id => ({ instructor_id: id, role: 'roamer' as const })),
+        ...observers.map(id => ({ instructor_id: id, role: 'observer' as const }))
+      ];
+
+      for (const role of allRoles) {
+        await fetch('/api/lab-management/lab-day-roles', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            lab_day_id: labDayId,
+            instructor_id: role.instructor_id,
+            role: role.role
+          })
+        });
+      }
 
       // Create stations
       for (const station of stations) {
@@ -568,6 +607,151 @@ export default function NewLabDayPage() {
                 placeholder="e.g., 1"
                 className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
               />
+            </div>
+          </div>
+        </div>
+
+        {/* Lab Day Roles */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+          <h2 className="font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+            <Users className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+            Lab Day Roles
+          </h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            Assign instructors to roles for this lab day. These are day-wide assignments (not station rotations).
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Lab Lead */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Lab Lead(s)
+                <span className="ml-2 text-xs text-gray-500 font-normal block">Oversees the lab day</span>
+              </label>
+              <div className="flex flex-wrap gap-2 mb-2 min-h-[28px]">
+                {labLeads.map(id => {
+                  const user = users.find(u => u.id === id);
+                  return user ? (
+                    <span
+                      key={id}
+                      className="inline-flex items-center gap-1 px-3 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 rounded-full text-sm"
+                    >
+                      {user.name}
+                      <button
+                        type="button"
+                        onClick={() => setLabLeads(labLeads.filter(l => l !== id))}
+                        className="ml-1 hover:text-amber-600 dark:hover:text-amber-200"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ) : null;
+                })}
+              </div>
+              <select
+                value=""
+                onChange={(e) => {
+                  if (e.target.value && !labLeads.includes(e.target.value)) {
+                    setLabLeads([...labLeads, e.target.value]);
+                  }
+                }}
+                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 text-sm"
+              >
+                <option value="">Add a lab lead...</option>
+                {users
+                  .filter(u => !labLeads.includes(u.id))
+                  .map(u => (
+                    <option key={u.id} value={u.id}>{u.name}</option>
+                  ))}
+              </select>
+            </div>
+
+            {/* Roamer */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Roamer(s)
+                <span className="ml-2 text-xs text-gray-500 font-normal block">Floats between stations</span>
+              </label>
+              <div className="flex flex-wrap gap-2 mb-2 min-h-[28px]">
+                {roamers.map(id => {
+                  const user = users.find(u => u.id === id);
+                  return user ? (
+                    <span
+                      key={id}
+                      className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-full text-sm"
+                    >
+                      {user.name}
+                      <button
+                        type="button"
+                        onClick={() => setRoamers(roamers.filter(r => r !== id))}
+                        className="ml-1 hover:text-blue-600 dark:hover:text-blue-200"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ) : null;
+                })}
+              </div>
+              <select
+                value=""
+                onChange={(e) => {
+                  if (e.target.value && !roamers.includes(e.target.value)) {
+                    setRoamers([...roamers, e.target.value]);
+                  }
+                }}
+                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 text-sm"
+              >
+                <option value="">Add a roamer...</option>
+                {users
+                  .filter(u => !roamers.includes(u.id))
+                  .map(u => (
+                    <option key={u.id} value={u.id}>{u.name}</option>
+                  ))}
+              </select>
+            </div>
+
+            {/* Observer */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Observer(s)
+                <span className="ml-2 text-xs text-gray-500 font-normal block">For training/shadowing</span>
+              </label>
+              <div className="flex flex-wrap gap-2 mb-2 min-h-[28px]">
+                {observers.map(id => {
+                  const user = users.find(u => u.id === id);
+                  return user ? (
+                    <span
+                      key={id}
+                      className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 rounded-full text-sm"
+                    >
+                      {user.name}
+                      <button
+                        type="button"
+                        onClick={() => setObservers(observers.filter(o => o !== id))}
+                        className="ml-1 hover:text-purple-600 dark:hover:text-purple-200"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ) : null;
+                })}
+              </div>
+              <select
+                value=""
+                onChange={(e) => {
+                  if (e.target.value && !observers.includes(e.target.value)) {
+                    setObservers([...observers, e.target.value]);
+                  }
+                }}
+                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 text-sm"
+              >
+                <option value="">Add an observer...</option>
+                {users
+                  .filter(u => !observers.includes(u.id))
+                  .map(u => (
+                    <option key={u.id} value={u.id}>{u.name}</option>
+                  ))}
+              </select>
             </div>
           </div>
         </div>
