@@ -18,7 +18,9 @@ import {
   WifiOff,
   CheckCircle,
   Circle,
-  Users
+  Users,
+  Trash2,
+  AlertTriangle
 } from 'lucide-react';
 
 interface LabTimerProps {
@@ -85,6 +87,8 @@ export default function LabTimer({
   const [debriefAlertShown, setDebriefAlertShown] = useState(false);
   const [readyStatuses, setReadyStatuses] = useState<ReadyStatus[]>([]);
   const [allStations, setAllStations] = useState<Station[]>([]);
+  const [showStaleWarning, setShowStaleWarning] = useState(false);
+  const [showEndLabConfirm, setShowEndLabConfirm] = useState(false);
 
   const ROTATE_ALERT_TIMEOUT = 30000; // 30 seconds auto-dismiss
 
@@ -167,7 +171,7 @@ export default function LabTimer({
   }, [soundEnabled]);
 
   // Fetch timer state from server
-  const fetchTimerState = useCallback(async () => {
+  const fetchTimerState = useCallback(async (checkStale = false) => {
     try {
       const res = await fetch(`/api/lab-management/timer?labDayId=${labDayId}`);
       const data = await res.json();
@@ -176,6 +180,10 @@ export default function LabTimer({
         setIsConnected(true);
         if (data.timer) {
           setTimerState(data.timer);
+          // Show stale warning on initial load if timer is from a previous day
+          if (checkStale && data.isStale && data.timer.status !== 'stopped') {
+            setShowStaleWarning(true);
+          }
         }
         // Log if table doesn't exist yet
         if (data.tableExists === false) {
@@ -260,6 +268,29 @@ export default function LabTimer({
     }
   }, [labDayId, totalSeconds]);
 
+  // End lab - completely clear timer state
+  const endLab = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/lab-management/timer?labDayId=${labDayId}`, {
+        method: 'DELETE'
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setTimerState(null);
+        setShowEndLabConfirm(false);
+        setShowStaleWarning(false);
+        // Reset local state
+        setDebriefAlertShown(false);
+        setLastAlertRotation(0);
+        setShowRotateAlert(false);
+        setShowDebriefAlert(false);
+      }
+    } catch (error) {
+      console.error('Error ending lab:', error);
+    }
+  }, [labDayId]);
+
   // Send action to server
   const sendAction = useCallback(async (action: string, updates?: any) => {
     try {
@@ -286,7 +317,7 @@ export default function LabTimer({
   // Initialize on mount
   useEffect(() => {
     const init = async () => {
-      await fetchTimerState();
+      await fetchTimerState(true); // Check for stale on initial load
       await fetchReadyStatuses();
       const res = await fetch(`/api/lab-management/timer?labDayId=${labDayId}`);
       const data = await res.json();
@@ -911,9 +942,80 @@ export default function LabTimer({
         )}
       </div>
 
+      {/* Stale Timer Warning Modal */}
+      {showStaleWarning && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-20">
+          <div className="bg-gray-800 rounded-lg p-6 max-w-md mx-4 shadow-xl border border-yellow-500">
+            <div className="flex items-center gap-3 text-yellow-500 mb-4">
+              <AlertTriangle className="w-8 h-8" />
+              <h3 className="text-xl font-bold">Previous Timer Found</h3>
+            </div>
+            <p className="text-gray-300 mb-6">
+              A timer from a previous lab day was found. Would you like to start fresh or continue from where you left off?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  endLab();
+                }}
+                className="flex-1 px-4 py-3 bg-green-600 hover:bg-green-500 rounded-lg font-medium transition-colors"
+              >
+                Start Fresh
+              </button>
+              <button
+                onClick={() => setShowStaleWarning(false)}
+                className="flex-1 px-4 py-3 bg-gray-600 hover:bg-gray-500 rounded-lg font-medium transition-colors"
+              >
+                Continue
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* End Lab Confirmation Modal */}
+      {showEndLabConfirm && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-20">
+          <div className="bg-gray-800 rounded-lg p-6 max-w-md mx-4 shadow-xl border border-red-500">
+            <div className="flex items-center gap-3 text-red-500 mb-4">
+              <Trash2 className="w-8 h-8" />
+              <h3 className="text-xl font-bold">End Lab Session?</h3>
+            </div>
+            <p className="text-gray-300 mb-6">
+              This will completely reset the timer and clear all rotation progress. You can start a fresh timer afterwards.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={endLab}
+                className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-500 rounded-lg font-medium transition-colors"
+              >
+                End Lab
+              </button>
+              <button
+                onClick={() => setShowEndLabConfirm(false)}
+                className="flex-1 px-4 py-3 bg-gray-600 hover:bg-gray-500 rounded-lg font-medium transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Controls Bar - Always visible at bottom for controller */}
       {isController && (
         <div className="flex items-center justify-center gap-4 p-4 bg-gray-800 border-t border-gray-700">
+          {/* End Lab Button - Only show when timer exists */}
+          {timerState && (
+            <button
+              onClick={() => setShowEndLabConfirm(true)}
+              className="p-3 rounded-full bg-gray-700 hover:bg-red-600 transition-colors"
+              title="End Lab / Clear Timer"
+            >
+              <Trash2 className="w-6 h-6" />
+            </button>
+          )}
+
           <button
             onClick={handleReset}
             className="p-3 rounded-full bg-gray-700 hover:bg-gray-600 transition-colors"

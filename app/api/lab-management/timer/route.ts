@@ -21,9 +21,13 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabase();
 
+    // Get timer state with lab day date for stale detection
     const { data, error } = await supabase
       .from('lab_timer_state')
-      .select('*')
+      .select(`
+        *,
+        lab_day:lab_days(id, date)
+      `)
       .eq('lab_day_id', labDayId)
       .single();
 
@@ -31,9 +35,20 @@ export async function GET(request: NextRequest) {
       throw error;
     }
 
+    // Check if timer is stale (lab day date is in the past)
+    let isStale = false;
+    if (data?.lab_day?.date) {
+      const labDate = new Date(data.lab_day.date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      labDate.setHours(0, 0, 0, 0);
+      isStale = labDate < today;
+    }
+
     return NextResponse.json({
       success: true,
       timer: data || null,
+      isStale,
       serverTime: new Date().toISOString() // Include server time for sync
     });
   } catch (error: any) {
@@ -102,6 +117,47 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: false,
       error: error?.message || 'Failed to create timer state'
+    }, { status: 500 });
+  }
+}
+
+// DELETE - Completely remove timer state for a lab day (end lab)
+export async function DELETE(request: NextRequest) {
+  const searchParams = request.nextUrl.searchParams;
+  const labDayId = searchParams.get('labDayId');
+
+  if (!labDayId) {
+    return NextResponse.json({ success: false, error: 'labDayId is required' }, { status: 400 });
+  }
+
+  try {
+    const supabase = getSupabase();
+
+    // Delete the timer state
+    const { error: timerError } = await supabase
+      .from('lab_timer_state')
+      .delete()
+      .eq('lab_day_id', labDayId);
+
+    if (timerError) throw timerError;
+
+    // Also clean up ready statuses for this lab day
+    const { error: readyError } = await supabase
+      .from('lab_timer_ready_status')
+      .delete()
+      .eq('lab_day_id', labDayId);
+
+    if (readyError) {
+      console.warn('Error cleaning up ready statuses:', readyError);
+      // Don't fail - main timer was deleted
+    }
+
+    return NextResponse.json({ success: true, message: 'Timer state cleared' });
+  } catch (error: any) {
+    console.error('Error deleting timer state:', error);
+    return NextResponse.json({
+      success: false,
+      error: error?.message || 'Failed to delete timer state'
     }, { status: 500 });
   }
 }
