@@ -62,6 +62,8 @@ interface StudentHours {
   ems_field_shifts: number;
   cardiology_hours: number;
   cardiology_shifts: number;
+  ems_ridealong_hours: number;
+  ems_ridealong_shifts: number;
   total_hours: number;
   total_shifts: number;
 }
@@ -77,6 +79,7 @@ const HOUR_REQUIREMENTS: Record<string, number> = {
   peds_icu_hours: 12,
   ems_field_hours: 24,  // Elective/Misc
   cardiology_hours: 0,  // CCL - no requirement
+  ems_ridealong_hours: 0,  // EMS ride-alongs - no requirement
 };
 
 const TOTAL_REQUIRED_HOURS = 290;
@@ -93,6 +96,7 @@ const DEPT_COLUMNS = [
   { key: 'peds_icu', label: 'Peds ICU', fullName: 'Pediatric ICU', hoursField: 'peds_icu_hours' as const, shiftsField: 'peds_icu_shifts' as const, required: 12 },
   { key: 'ems_field', label: 'Elective', fullName: 'EMS Field / Elective', hoursField: 'ems_field_hours' as const, shiftsField: 'ems_field_shifts' as const, required: 24 },
   { key: 'cardiology', label: 'CCL', fullName: 'Cardiac Cath Lab', hoursField: 'cardiology_hours' as const, shiftsField: 'cardiology_shifts' as const, required: 0 },
+  { key: 'ems_ridealong', label: 'EMS', fullName: 'EMS Ride-Along', hoursField: 'ems_ridealong_hours' as const, shiftsField: 'ems_ridealong_shifts' as const, required: 0 },
 ] as const;
 
 interface ImportPreviewRow {
@@ -309,7 +313,8 @@ export default function ClinicalHoursTrackerPage() {
     // Generic ED/ICU - these will only match if Peds patterns didn't match first
     { name: 'ED', patterns: ['emergency room', 'emergency dept', 'emergency department'], hoursField: 'ed_hours', shiftsField: 'ed_shifts' },
     { name: 'ICU', patterns: ['icu'], hoursField: 'icu_hours', shiftsField: 'icu_shifts' },
-    { name: 'EMS Field', patterns: ['ems field', 'field experience'], hoursField: 'ems_field_hours', shiftsField: 'ems_field_shifts' },
+    { name: 'EMS Field', patterns: ['ems field', 'field experience', 'elective'], hoursField: 'ems_field_hours', shiftsField: 'ems_field_shifts' },
+    { name: 'EMS Ridealong', patterns: ['ems ride', 'ride-along', 'ridealong', 'ride along'], hoursField: 'ems_ridealong_hours', shiftsField: 'ems_ridealong_shifts' },
     { name: 'OB', patterns: ['ob', 'labor', 'l&d', 'obstetric'], hoursField: 'ob_hours', shiftsField: 'ob_shifts' },
     { name: 'OR', patterns: ['or inpatient', 'or ', 'operating room', 'inpatient'], hoursField: 'or_hours', shiftsField: 'or_shifts' },
     { name: 'Cardiology', patterns: ['cardiology', 'cardiac', 'ccl', 'cath lab'], hoursField: 'cardiology_hours', shiftsField: 'cardiology_shifts' },
@@ -1147,12 +1152,14 @@ export default function ClinicalHoursTrackerPage() {
                       <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Matched To</th>
                       <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400">Psych</th>
                       <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400">ED</th>
-                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400">EMS</th>
+                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400">Elective</th>
                       <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400">ICU</th>
                       <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400">OB</th>
                       <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400">OR</th>
                       <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400">Peds ED</th>
                       <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400">Peds ICU</th>
+                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400">CCL</th>
+                      <th className="px-3 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400">EMS</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -1221,28 +1228,34 @@ export default function ClinicalHoursTrackerPage() {
                           )}
                         </td>
                         <td className="px-3 py-2 text-center text-xs">
-                          {row.data.psych_hours}h
+                          {row.data.psych_hours || 0}h
                         </td>
                         <td className="px-3 py-2 text-center text-xs">
-                          {row.data.ed_hours}h
+                          {row.data.ed_hours || 0}h
                         </td>
                         <td className="px-3 py-2 text-center text-xs">
-                          {row.data.ems_field_hours}h
+                          {row.data.ems_field_hours || 0}h
                         </td>
                         <td className="px-3 py-2 text-center text-xs">
-                          {row.data.icu_hours}h
+                          {row.data.icu_hours || 0}h
                         </td>
                         <td className="px-3 py-2 text-center text-xs">
-                          {row.data.ob_hours}h
+                          {row.data.ob_hours || 0}h
                         </td>
                         <td className="px-3 py-2 text-center text-xs">
-                          {row.data.or_hours}h
+                          {row.data.or_hours || 0}h
                         </td>
                         <td className="px-3 py-2 text-center text-xs">
-                          {row.data.peds_ed_hours}h
+                          {row.data.peds_ed_hours || 0}h
                         </td>
                         <td className="px-3 py-2 text-center text-xs">
-                          {row.data.peds_icu_hours}h
+                          {row.data.peds_icu_hours || 0}h
+                        </td>
+                        <td className="px-3 py-2 text-center text-xs">
+                          {row.data.cardiology_hours || 0}h
+                        </td>
+                        <td className="px-3 py-2 text-center text-xs">
+                          {row.data.ems_ridealong_hours || 0}h
                         </td>
                       </tr>
                     ))}
