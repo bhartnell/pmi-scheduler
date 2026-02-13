@@ -1,6 +1,7 @@
 import { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import { createClient } from '@supabase/supabase-js';
+import { notifyAdminsNewPendingUser } from '@/lib/notifications';
 
 // Create Supabase client with service role for auth operations
 const getSupabaseAdmin = () => {
@@ -57,23 +58,33 @@ export const authOptions: NextAuthOptions = {
           return true;
         }
 
-        // If user doesn't exist, create them
+        // If user doesn't exist, create them with pending role
         if (!existingUser) {
-          const { error: insertError } = await supabase
+          const { data: newUser, error: insertError } = await supabase
             .from('lab_users')
             .insert({
               email: user.email,
               name: user.name || user.email.split('@')[0],
-              role: 'guest', // Default to guest - admin must promote to instructor
+              role: 'pending', // Default to pending - admin must approve and assign role
               is_active: true,
-              approved_at: new Date().toISOString(), // Auto-approve PMI users
-            });
+              // approved_at is left NULL until admin approves
+            })
+            .select('id, name, email')
+            .single();
 
           if (insertError) {
             console.error('Error creating lab_user:', insertError);
             // Still allow sign in - we can try again later
           } else {
-            console.log(`Created new lab_user for ${user.email}`);
+            console.log(`Created new lab_user for ${user.email} with pending status`);
+            // Notify admins about the new pending user
+            if (newUser) {
+              notifyAdminsNewPendingUser({
+                userId: newUser.id,
+                name: newUser.name,
+                email: newUser.email,
+              }).catch(err => console.error('Failed to notify admins of new user:', err));
+            }
           }
         }
 

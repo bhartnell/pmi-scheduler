@@ -27,16 +27,16 @@ export async function GET(request: NextRequest) {
       .single();
 
     if (error) {
-      // User might not exist yet - create them
+      // User might not exist yet - create them with pending role
       if (error.code === 'PGRST116') {
         const { data: newUser, error: createError } = await supabase
           .from('lab_users')
           .insert({
             email: session.user.email,
             name: session.user.name || session.user.email.split('@')[0],
-            role: 'guest', // Default to guest - admin must promote to instructor
+            role: 'pending', // Default to pending - admin must approve and assign role
             is_active: true,
-            approved_at: new Date().toISOString(), // Auto-approve PMI users
+            // approved_at is left NULL until admin approves
           })
           .select()
           .single();

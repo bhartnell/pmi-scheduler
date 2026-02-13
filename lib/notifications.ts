@@ -16,6 +16,7 @@ export type NotificationType =
   | 'task_assigned'
   | 'task_completed'
   | 'task_comment'
+  | 'role_approved'
   | 'general';
 
 interface CreateNotificationParams {
@@ -276,4 +277,76 @@ export async function notifyTaskComment(
     referenceType: 'instructor_task',
     referenceId: taskInfo.taskId,
   });
+}
+
+/**
+ * Notify user when their role is approved/upgraded from pending
+ */
+export async function notifyRoleApproved(
+  userEmail: string,
+  roleInfo: {
+    userId: string;
+    newRole: string;
+    approverName: string;
+  }
+): Promise<void> {
+  const roleLabel = getRoleLabelForNotification(roleInfo.newRole);
+  await createNotification({
+    userEmail: userEmail,
+    title: 'Account approved!',
+    message: `Your account has been approved. You now have ${roleLabel} access to PMI Tools.`,
+    type: 'role_approved',
+    linkUrl: '/',
+    referenceType: 'lab_user',
+    referenceId: roleInfo.userId,
+  });
+}
+
+/**
+ * Notify admins when a new user signs up (pending approval)
+ */
+export async function notifyAdminsNewPendingUser(
+  newUserInfo: {
+    userId: string;
+    name: string;
+    email: string;
+  }
+): Promise<void> {
+  try {
+    const supabase = getSupabase();
+    // Get all admin and superadmin users
+    const { data: admins } = await supabase
+      .from('lab_users')
+      .select('email')
+      .in('role', ['admin', 'superadmin'])
+      .eq('is_active', true);
+
+    if (!admins || admins.length === 0) return;
+
+    const notifications = admins.map(admin => ({
+      userEmail: admin.email,
+      title: 'New user pending approval',
+      message: `${newUserInfo.name} (${newUserInfo.email}) signed up and needs role assignment`,
+      type: 'general' as NotificationType,
+      linkUrl: '/admin/users',
+      referenceType: 'lab_user',
+      referenceId: newUserInfo.userId,
+    }));
+
+    await createBulkNotifications(notifications);
+  } catch (error) {
+    console.error('Error notifying admins of new pending user:', error);
+  }
+}
+
+function getRoleLabelForNotification(role: string): string {
+  const labels: Record<string, string> = {
+    superadmin: 'Super Admin',
+    admin: 'Admin',
+    lead_instructor: 'Lead Instructor',
+    instructor: 'Instructor',
+    guest: 'Guest',
+    pending: 'Pending',
+  };
+  return labels[role] || role;
 }

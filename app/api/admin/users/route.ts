@@ -8,6 +8,7 @@ import {
   isProtectedSuperadmin,
   type Role
 } from '@/lib/permissions';
+import { notifyRoleApproved } from '@/lib/notifications';
 
 // Create Supabase client lazily to avoid build-time errors
 function getSupabase() {
@@ -173,6 +174,9 @@ export async function PATCH(request: NextRequest) {
 
     const updates: Record<string, any> = {};
 
+    // Track if this is a role upgrade from pending
+    const isUpgradeFromPending = targetUser.role === 'pending' && role && role !== 'pending';
+
     if (role !== undefined) {
       updates.role = role;
       // Set approval info when assigning a real role
@@ -194,6 +198,16 @@ export async function PATCH(request: NextRequest) {
       .single();
 
     if (error) throw error;
+
+    // Notify user when their role is upgraded from pending
+    if (isUpgradeFromPending && data) {
+      // Fire and forget - don't block the response
+      notifyRoleApproved(data.email, {
+        userId: data.id,
+        newRole: data.role,
+        approverName: currentUser.name || currentUser.email,
+      }).catch(err => console.error('Failed to send role approval notification:', err));
+    }
 
     return NextResponse.json({ success: true, user: data });
   } catch (error) {

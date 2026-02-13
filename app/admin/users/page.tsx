@@ -175,13 +175,9 @@ export default function UserManagementPage() {
   const filteredUsers = users.filter(user => {
     // Tab filter
     if (activeTab !== 'all') {
-      // Special handling for pending - users with role 'pending' OR not approved
+      // Pending tab shows users with 'pending' role
       if (activeTab === 'pending') {
-        if (user.role !== 'instructor' && user.role !== 'lead_instructor' &&
-            user.role !== 'admin' && user.role !== 'superadmin' && user.role !== 'guest') {
-          return true;
-        }
-        return false;
+        return user.role === 'pending';
       }
       if (user.role !== activeTab) return false;
     }
@@ -196,11 +192,8 @@ export default function UserManagementPage() {
     return true;
   });
 
-  // Count for pending badge (users without a proper role)
-  const pendingCount = users.filter(u =>
-    u.role !== 'instructor' && u.role !== 'lead_instructor' &&
-    u.role !== 'admin' && u.role !== 'superadmin' && u.role !== 'guest'
-  ).length;
+  // Count for pending badge
+  const pendingCount = users.filter(u => u.role === 'pending').length;
 
   if (status === 'loading' || loading) {
     return (
@@ -267,7 +260,7 @@ export default function UserManagementPage() {
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
           <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Role Hierarchy</h3>
           <div className="flex flex-wrap gap-3">
-            {(['superadmin', 'admin', 'lead_instructor', 'instructor', 'guest'] as Role[]).map(role => (
+            {(['superadmin', 'admin', 'lead_instructor', 'instructor', 'guest', 'pending'] as Role[]).map(role => (
               <div key={role} className="flex items-center gap-2">
                 <span className={`px-2 py-1 rounded text-xs font-medium ${getRoleBadgeClasses(role)}`}>
                   {getRoleLabel(role)}
@@ -277,6 +270,29 @@ export default function UserManagementPage() {
             ))}
           </div>
         </div>
+
+        {/* Pending Users Alert */}
+        {pendingCount > 0 && (
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <Clock className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mt-0.5" />
+              <div>
+                <p className="font-medium text-yellow-800 dark:text-yellow-200">
+                  {pendingCount} user{pendingCount > 1 ? 's' : ''} awaiting approval
+                </p>
+                <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                  New users sign in with &quot;Pending Approval&quot; status. Assign them a role to grant access to the system.
+                </p>
+                <button
+                  onClick={() => setActiveTab('pending')}
+                  className="mt-2 text-sm font-medium text-yellow-800 dark:text-yellow-200 hover:text-yellow-900 dark:hover:text-yellow-100 underline"
+                >
+                  View pending users →
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Search & Tabs */}
         <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
@@ -428,9 +444,12 @@ export default function UserManagementPage() {
             <div className="text-sm text-amber-800 dark:text-amber-200">
               <p className="font-medium">Role Assignment Rules:</p>
               <ul className="mt-1 list-disc list-inside space-y-1">
+                <li><strong>Pending:</strong> New users start with &quot;Pending Approval&quot; and cannot access any features until approved</li>
+                <li><strong>Guest:</strong> Basic read-only access to limited features</li>
+                <li><strong>Instructor:</strong> Can grade, manage lab days, view students</li>
+                <li><strong>Lead Instructor:</strong> Full access to cohorts, students, clinical</li>
                 <li>You can only assign roles at a lower level than your own</li>
                 <li>Protected superadmin accounts (Ben & Josh) cannot be demoted</li>
-                <li>Deactivated users cannot log in but their data is preserved</li>
               </ul>
             </div>
           </div>

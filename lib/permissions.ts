@@ -1,6 +1,6 @@
 // Role-based permission system for PMI Tools
 
-export type Role = 'superadmin' | 'admin' | 'lead_instructor' | 'instructor' | 'guest';
+export type Role = 'superadmin' | 'admin' | 'lead_instructor' | 'instructor' | 'guest' | 'pending';
 
 export const ROLE_LEVELS: Record<Role, number> = {
   superadmin: 5,
@@ -8,6 +8,7 @@ export const ROLE_LEVELS: Record<Role, number> = {
   lead_instructor: 3,
   instructor: 2,
   guest: 1,
+  pending: 0,  // Minimal access - new users awaiting approval
 };
 
 export const ROLE_LABELS: Record<Role, string> = {
@@ -16,6 +17,7 @@ export const ROLE_LABELS: Record<Role, string> = {
   lead_instructor: 'Lead Instructor',
   instructor: 'Instructor',
   guest: 'Guest',
+  pending: 'Pending Approval',
 };
 
 export const ROLE_COLORS: Record<Role, string> = {
@@ -24,6 +26,7 @@ export const ROLE_COLORS: Record<Role, string> = {
   lead_instructor: 'bg-blue-600 text-white',
   instructor: 'bg-green-600 text-white',
   guest: 'bg-gray-500 text-white',
+  pending: 'bg-yellow-500 text-white',
 };
 
 // Protected superadmin emails - cannot be demoted
@@ -135,13 +138,28 @@ export function isProtectedSuperadmin(email: string): boolean {
 
 export function getAssignableRoles(currentRole: Role | string): Role[] {
   if (currentRole === 'superadmin') {
-    return ['superadmin', 'admin', 'lead_instructor', 'instructor', 'guest'];
+    return ['superadmin', 'admin', 'lead_instructor', 'instructor', 'guest', 'pending'];
   }
   if (currentRole === 'admin') {
     // Admins can't create/modify superadmins
-    return ['admin', 'lead_instructor', 'instructor', 'guest'];
+    return ['admin', 'lead_instructor', 'instructor', 'guest', 'pending'];
   }
   return [];
+}
+
+/**
+ * Check if a user has a pending role (awaiting approval)
+ */
+export function isPendingRole(role: Role | string): boolean {
+  return role === 'pending';
+}
+
+/**
+ * Check if a user can access the main app features (not pending)
+ * Pending users can only see their profile and a "pending approval" message
+ */
+export function canAccessApp(role: Role | string): boolean {
+  return getRoleLevel(role) >= ROLE_LEVELS.guest;
 }
 
 // ============================================
