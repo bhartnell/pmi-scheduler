@@ -218,9 +218,9 @@ export default function SchedulingPage() {
                 </div>
               </Link>
 
-              {/* Manage Shifts */}
+              {/* Create Shift */}
               <Link
-                href="/scheduling/shifts/manage"
+                href="/scheduling/shifts/new"
                 className="bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-shadow p-6 group border-2 border-amber-200 dark:border-amber-800"
               >
                 <div className="flex items-start gap-4">
@@ -229,11 +229,11 @@ export default function SchedulingPage() {
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Manage Shifts</h3>
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Create Shift</h3>
                       <span className="text-xs px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded">Director</span>
                     </div>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Create and manage open shifts
+                      Create new open shifts for instructors
                     </p>
                   </div>
                   <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300" />
