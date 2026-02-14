@@ -151,10 +151,11 @@ export default function LabDayPage() {
   const searchParams = useSearchParams();
   const labDayId = params.id as string;
   const justGraded = searchParams.get('graded');
+  const openTimerParam = searchParams.get('timer') === 'open';
 
   const [labDay, setLabDay] = useState<LabDay | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showTimer, setShowTimer] = useState(false);
+  const [showTimer, setShowTimer] = useState(openTimerParam);
   const [labDayRoles, setLabDayRoles] = useState<LabDayRole[]>([]);
 
   // Edit station modal state

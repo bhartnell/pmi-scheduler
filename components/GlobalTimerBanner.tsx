@@ -180,7 +180,7 @@ export default function GlobalTimerBanner() {
           {/* Right: Link to timer page */}
           <div className="flex items-center gap-2">
             <Link
-              href={`/lab-management/schedule/${labDay.id}`}
+              href={`/lab-management/schedule/${labDay.id}?timer=open`}
               className="flex items-center gap-1 px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors"
             >
               <span className="hidden sm:inline">Open Timer</span>
