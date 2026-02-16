@@ -16,7 +16,9 @@ import {
   CheckCircle2,
   XCircle,
   AlertCircle,
-  X
+  X,
+  Edit2,
+  Trash2
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import NotificationBell from '@/components/NotificationBell';
@@ -70,6 +72,22 @@ function ShiftsPageContent() {
   // Shift detail modal state
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [detailShift, setDetailShift] = useState<OpenShift | null>(null);
+
+  // Edit shift modal state (directors only)
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingShift, setEditingShift] = useState<OpenShift | null>(null);
+  const [editForm, setEditForm] = useState({
+    title: '',
+    description: '',
+    date: '',
+    start_time: '',
+    end_time: '',
+    location: '',
+    department: '',
+    max_instructors: ''
+  });
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [deletingShift, setDeletingShift] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -195,6 +213,81 @@ function ShiftsPageContent() {
   const handleViewDetails = (shift: OpenShift) => {
     setDetailShift(shift);
     setShowDetailModal(true);
+  };
+
+  const handleEditClick = (shift: OpenShift) => {
+    setEditingShift(shift);
+    setEditForm({
+      title: shift.title,
+      description: shift.description || '',
+      date: shift.date,
+      start_time: shift.start_time,
+      end_time: shift.end_time,
+      location: shift.location || '',
+      department: shift.department || '',
+      max_instructors: shift.max_instructors?.toString() || ''
+    });
+    setShowEditModal(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingShift) return;
+
+    setSavingEdit(true);
+    try {
+      const res = await fetch(`/api/scheduling/shifts/${editingShift.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: editForm.title,
+          description: editForm.description || null,
+          date: editForm.date,
+          start_time: editForm.start_time,
+          end_time: editForm.end_time,
+          location: editForm.location || null,
+          department: editForm.department || null,
+          max_instructors: editForm.max_instructors ? parseInt(editForm.max_instructors) : null
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setShowEditModal(false);
+        setEditingShift(null);
+        fetchShifts();
+      } else {
+        alert(data.error || 'Failed to save changes');
+      }
+    } catch (error) {
+      console.error('Error saving shift:', error);
+      alert('Failed to save changes');
+    }
+    setSavingEdit(false);
+  };
+
+  const handleDeleteShift = async (shiftId: string) => {
+    if (!confirm('Are you sure you want to delete this shift? This will remove all signups and cannot be undone.')) {
+      return;
+    }
+
+    setDeletingShift(true);
+    try {
+      const res = await fetch(`/api/scheduling/shifts/${shiftId}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      if (data.success) {
+        setShowEditModal(false);
+        setShowDetailModal(false);
+        setEditingShift(null);
+        fetchShifts();
+      } else {
+        alert(data.error || 'Failed to delete shift');
+      }
+    } catch (error) {
+      console.error('Error deleting shift:', error);
+      alert('Failed to delete shift');
+    }
+    setDeletingShift(false);
   };
 
   const getShiftStatusColor = (shift: OpenShift) => {
@@ -397,6 +490,26 @@ function ShiftsPageContent() {
 
                       {/* Actions */}
                       <div className="flex items-center gap-2">
+                        {/* Director actions: Edit/Delete */}
+                        {userIsDirector && (
+                          <>
+                            <button
+                              onClick={() => handleEditClick(shift)}
+                              className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
+                              title="Edit shift"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteShift(shift.id)}
+                              className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                              title="Delete shift"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+
                         <button
                           onClick={() => handleViewDetails(shift)}
                           className="px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
@@ -682,6 +795,161 @@ function ShiftsPageContent() {
                   Sign Up
                 </button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Shift Modal (Directors only) */}
+      {showEditModal && editingShift && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Edit Shift</h2>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Title *
+                </label>
+                <input
+                  type="text"
+                  value={editForm.title}
+                  onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Description
+                </label>
+                <textarea
+                  value={editForm.description}
+                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Date *
+                  </label>
+                  <input
+                    type="date"
+                    value={editForm.date}
+                    onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Department
+                  </label>
+                  <select
+                    value={editForm.department}
+                    onChange={(e) => setEditForm({ ...editForm, department: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  >
+                    <option value="">Select...</option>
+                    <option value="EMT">EMT</option>
+                    <option value="AEMT">AEMT</option>
+                    <option value="Paramedic">Paramedic</option>
+                    <option value="General">General</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Start Time *
+                  </label>
+                  <input
+                    type="time"
+                    value={editForm.start_time}
+                    onChange={(e) => setEditForm({ ...editForm, start_time: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    End Time *
+                  </label>
+                  <input
+                    type="time"
+                    value={editForm.end_time}
+                    onChange={(e) => setEditForm({ ...editForm, end_time: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Location
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.location}
+                    onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    placeholder="e.g., Room 101"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Max Instructors
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={editForm.max_instructors}
+                    onChange={(e) => setEditForm({ ...editForm, max_instructors: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    placeholder="Unlimited"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between p-4 border-t dark:border-gray-700">
+              <button
+                onClick={() => handleDeleteShift(editingShift.id)}
+                disabled={deletingShift}
+                className="px-4 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {deletingShift ? 'Deleting...' : 'Delete Shift'}
+              </button>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowEditModal(false)}
+                  className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveEdit}
+                  disabled={savingEdit || !editForm.title || !editForm.date || !editForm.start_time || !editForm.end_time}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                >
+                  {savingEdit ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
