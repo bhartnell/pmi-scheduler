@@ -25,6 +25,27 @@ interface CurrentUser {
   role: string;
 }
 
+interface LabDay {
+  id: string;
+  date: string;
+  title: string | null;
+  start_time: string | null;
+  end_time: string | null;
+  cohort: {
+    cohort_number: string;
+    program: { name: string; abbreviation: string } | null;
+  } | null;
+}
+
+interface ExistingShift {
+  id: string;
+  title: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  department: string | null;
+}
+
 export default function CreateShiftPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -45,6 +66,10 @@ export default function CreateShiftPage() {
     repeat: '' as '' | 'weekly' | 'biweekly' | 'monthly',
     repeat_until: ''
   });
+
+  const [upcomingLabDays, setUpcomingLabDays] = useState<LabDay[]>([]);
+  const [existingShifts, setExistingShifts] = useState<ExistingShift[]>([]);
+  const [showCalendar, setShowCalendar] = useState(true);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -77,6 +102,39 @@ export default function CreateShiftPage() {
     }
     setLoading(false);
   };
+
+  // Fetch upcoming lab days and existing shifts
+  useEffect(() => {
+    const fetchScheduleData = async () => {
+      const today = new Date().toISOString().split('T')[0];
+      // Get next 60 days
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + 60);
+      const endDate = futureDate.toISOString().split('T')[0];
+
+      try {
+        // Fetch lab days and shifts in parallel
+        const [labDaysRes, shiftsRes] = await Promise.all([
+          fetch(`/api/lab-management/lab-days?startDate=${today}&endDate=${endDate}`),
+          fetch(`/api/scheduling/shifts?start_date=${today}&end_date=${endDate}`)
+        ]);
+
+        const labDaysData = await labDaysRes.json();
+        const shiftsData = await shiftsRes.json();
+
+        if (labDaysData.success) {
+          setUpcomingLabDays(labDaysData.labDays || []);
+        }
+        if (shiftsData.success) {
+          setExistingShifts(shiftsData.shifts || []);
+        }
+      } catch (error) {
+        console.error('Error fetching schedule data:', error);
+      }
+    };
+
+    fetchScheduleData();
+  }, []);
 
   // Calculate number of shifts that will be created
   const calculateRecurringDates = () => {
@@ -466,6 +524,170 @@ export default function CreateShiftPage() {
             </button>
           </div>
         </form>
+
+        {/* Upcoming Schedule Panel */}
+        <div className="mt-6 bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setShowCalendar(!showCalendar)}
+            className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Upcoming Schedule
+              </h2>
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                ({upcomingLabDays.length} lab days, {existingShifts.length} shifts)
+              </span>
+            </div>
+            <svg
+              className={`w-5 h-5 text-gray-500 transition-transform ${showCalendar ? 'rotate-180' : ''}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {showCalendar && (
+            <div className="px-6 pb-6 border-t dark:border-gray-700">
+              <div className="grid md:grid-cols-2 gap-6 mt-4">
+                {/* Lab Days */}
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-green-500"></span>
+                    Scheduled Lab Days
+                  </h3>
+                  {upcomingLabDays.length === 0 ? (
+                    <p className="text-sm text-gray-500 dark:text-gray-400 italic">No lab days scheduled</p>
+                  ) : (
+                    <ul className="space-y-2 max-h-64 overflow-y-auto">
+                      {upcomingLabDays.slice(0, 15).map((lab) => (
+                        <li
+                          key={lab.id}
+                          className={`text-sm p-2 rounded-lg border dark:border-gray-600 ${
+                            formData.date === lab.date
+                              ? 'bg-green-50 dark:bg-green-900/30 border-green-300 dark:border-green-600'
+                              : 'bg-gray-50 dark:bg-gray-700/50'
+                          }`}
+                        >
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <span className="font-medium text-gray-900 dark:text-white">
+                                {new Date(lab.date + 'T12:00:00').toLocaleDateString('en-US', {
+                                  weekday: 'short',
+                                  month: 'short',
+                                  day: 'numeric'
+                                })}
+                              </span>
+                              {lab.title && (
+                                <span className="ml-2 text-gray-600 dark:text-gray-400">
+                                  {lab.title}
+                                </span>
+                              )}
+                            </div>
+                            {lab.cohort && (
+                              <span className="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded">
+                                {lab.cohort.program?.abbreviation || 'PMD'} {lab.cohort.cohort_number}
+                              </span>
+                            )}
+                          </div>
+                          {lab.start_time && lab.end_time && (
+                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                              {lab.start_time.slice(0, 5)} - {lab.end_time.slice(0, 5)}
+                            </div>
+                          )}
+                        </li>
+                      ))}
+                      {upcomingLabDays.length > 15 && (
+                        <li className="text-sm text-gray-500 dark:text-gray-400 italic">
+                          +{upcomingLabDays.length - 15} more lab days...
+                        </li>
+                      )}
+                    </ul>
+                  )}
+                </div>
+
+                {/* Existing Shifts */}
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+                    <span className="w-3 h-3 rounded-full bg-amber-500"></span>
+                    Existing Shifts
+                  </h3>
+                  {existingShifts.length === 0 ? (
+                    <p className="text-sm text-gray-500 dark:text-gray-400 italic">No shifts scheduled</p>
+                  ) : (
+                    <ul className="space-y-2 max-h-64 overflow-y-auto">
+                      {existingShifts.slice(0, 15).map((shift) => (
+                        <li
+                          key={shift.id}
+                          className={`text-sm p-2 rounded-lg border dark:border-gray-600 ${
+                            formData.date === shift.date
+                              ? 'bg-amber-50 dark:bg-amber-900/30 border-amber-300 dark:border-amber-600'
+                              : 'bg-gray-50 dark:bg-gray-700/50'
+                          }`}
+                        >
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <span className="font-medium text-gray-900 dark:text-white">
+                                {new Date(shift.date + 'T12:00:00').toLocaleDateString('en-US', {
+                                  weekday: 'short',
+                                  month: 'short',
+                                  day: 'numeric'
+                                })}
+                              </span>
+                              <span className="ml-2 text-gray-600 dark:text-gray-400">
+                                {shift.title}
+                              </span>
+                            </div>
+                            {shift.department && (
+                              <span className="text-xs px-2 py-0.5 bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 rounded">
+                                {shift.department}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            {shift.start_time.slice(0, 5)} - {shift.end_time.slice(0, 5)}
+                          </div>
+                        </li>
+                      ))}
+                      {existingShifts.length > 15 && (
+                        <li className="text-sm text-gray-500 dark:text-gray-400 italic">
+                          +{existingShifts.length - 15} more shifts...
+                        </li>
+                      )}
+                    </ul>
+                  )}
+                </div>
+              </div>
+
+              {/* Conflict warning */}
+              {formData.date && (
+                (() => {
+                  const hasLabConflict = upcomingLabDays.some(l => l.date === formData.date);
+                  const hasShiftConflict = existingShifts.some(s => s.date === formData.date);
+                  if (!hasLabConflict && !hasShiftConflict) return null;
+
+                  return (
+                    <div className="mt-4 p-3 rounded-lg bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700">
+                      <p className="text-sm text-yellow-800 dark:text-yellow-200 flex items-center gap-2">
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                        Selected date ({new Date(formData.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}) already has:
+                        {hasLabConflict && <span className="font-medium"> a scheduled lab day</span>}
+                        {hasLabConflict && hasShiftConflict && ' and'}
+                        {hasShiftConflict && <span className="font-medium"> an existing shift</span>}
+                      </p>
+                    </div>
+                  );
+                })()
+              )}
+            </div>
+          )}
+        </div>
       </main>
     </div>
   );
