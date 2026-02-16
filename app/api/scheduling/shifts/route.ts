@@ -111,6 +111,36 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// Helper function to calculate recurring dates
+function calculateRecurringDates(
+  startDate: string,
+  repeatType: 'weekly' | 'biweekly' | 'monthly',
+  repeatUntil: string
+): string[] {
+  const dates: string[] = [];
+  const start = new Date(startDate + 'T12:00:00'); // Use noon to avoid timezone issues
+  const end = new Date(repeatUntil + 'T12:00:00');
+  let current = new Date(start);
+
+  while (current <= end) {
+    dates.push(current.toISOString().split('T')[0]);
+
+    if (repeatType === 'weekly') {
+      current.setDate(current.getDate() + 7);
+    } else if (repeatType === 'biweekly') {
+      current.setDate(current.getDate() + 14);
+    } else if (repeatType === 'monthly') {
+      const originalDay = start.getDate();
+      current.setMonth(current.getMonth() + 1);
+      // Handle months with fewer days (e.g., Jan 31 -> Feb 28)
+      const maxDays = new Date(current.getFullYear(), current.getMonth() + 1, 0).getDate();
+      current.setDate(Math.min(originalDay, maxDays));
+    }
+  }
+
+  return dates;
+}
+
 // POST - Create shift (directors only)
 export async function POST(request: NextRequest) {
   try {
@@ -133,7 +163,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, description, date, start_time, end_time, location, department, min_instructors, max_instructors } = body;
+    const { title, description, date, start_time, end_time, location, department, min_instructors, max_instructors, repeat, repeat_until } = body;
 
     if (!title || !date || !start_time || !end_time) {
       return NextResponse.json(
@@ -142,33 +172,53 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate recurring shift parameters
+    if (repeat && !repeat_until) {
+      return NextResponse.json(
+        { success: false, error: 'repeat_until is required for recurring shifts' },
+        { status: 400 }
+      );
+    }
+
     const supabase = getSupabase();
 
-    const { data: shift, error } = await supabase
+    // Calculate all dates for recurring shifts
+    const shiftDates = repeat && repeat_until
+      ? calculateRecurringDates(date, repeat, repeat_until)
+      : [date];
+
+    // Create shift records for all dates
+    const shiftRecords = shiftDates.map(shiftDate => ({
+      title,
+      description: description || null,
+      date: shiftDate,
+      start_time,
+      end_time,
+      location: location || null,
+      department: department || null,
+      created_by: currentUser.id,
+      min_instructors: min_instructors || 1,
+      max_instructors: max_instructors || null,
+    }));
+
+    const { data: shifts, error } = await supabase
       .from('open_shifts')
-      .insert({
-        title,
-        description: description || null,
-        date,
-        start_time,
-        end_time,
-        location: location || null,
-        department: department || null,
-        created_by: currentUser.id,
-        min_instructors: min_instructors || 1,
-        max_instructors: max_instructors || null,
-      })
+      .insert(shiftRecords)
       .select(`
         *,
         creator:created_by(id, name, email)
-      `)
-      .single();
+      `);
 
     if (error) throw error;
 
     // TODO: Send notification to available instructors
 
-    return NextResponse.json({ success: true, shift });
+    return NextResponse.json({
+      success: true,
+      shift: shifts?.[0] || null, // Return first shift for backwards compatibility
+      shifts, // Also return all shifts for recurring
+      count: shifts?.length || 0
+    });
   } catch (error) {
     console.error('Error creating shift:', error);
     return NextResponse.json({ success: false, error: 'Failed to create shift' }, { status: 500 });

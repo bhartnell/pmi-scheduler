@@ -11,7 +11,8 @@ import {
   Calendar,
   MapPin,
   Users,
-  FileText
+  FileText,
+  Repeat
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import NotificationBell from '@/components/NotificationBell';
@@ -40,7 +41,9 @@ export default function CreateShiftPage() {
     location: '',
     department: '' as ShiftDepartment | '',
     min_instructors: 1,
-    max_instructors: ''
+    max_instructors: '',
+    repeat: '' as '' | 'weekly' | 'biweekly' | 'monthly',
+    repeat_until: ''
   });
 
   useEffect(() => {
@@ -75,11 +78,46 @@ export default function CreateShiftPage() {
     setLoading(false);
   };
 
+  // Calculate number of shifts that will be created
+  const calculateRecurringDates = () => {
+    if (!formData.repeat || !formData.repeat_until || !formData.date) return [];
+
+    const dates: string[] = [];
+    const startDate = new Date(formData.date);
+    const endDate = new Date(formData.repeat_until);
+    let currentDate = new Date(startDate);
+
+    while (currentDate <= endDate) {
+      dates.push(currentDate.toISOString().split('T')[0]);
+
+      if (formData.repeat === 'weekly') {
+        currentDate.setDate(currentDate.getDate() + 7);
+      } else if (formData.repeat === 'biweekly') {
+        currentDate.setDate(currentDate.getDate() + 14);
+      } else if (formData.repeat === 'monthly') {
+        const originalDay = startDate.getDate();
+        currentDate.setMonth(currentDate.getMonth() + 1);
+        // Handle months with fewer days
+        const maxDays = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
+        currentDate.setDate(Math.min(originalDay, maxDays));
+      }
+    }
+
+    return dates;
+  };
+
+  const recurringDates = calculateRecurringDates();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.title || !formData.date || !formData.start_time || !formData.end_time) {
       alert('Please fill in all required fields');
+      return;
+    }
+
+    if (formData.repeat && !formData.repeat_until) {
+      alert('Please select an end date for recurring shifts');
       return;
     }
 
@@ -97,7 +135,9 @@ export default function CreateShiftPage() {
           location: formData.location || undefined,
           department: formData.department || undefined,
           min_instructors: formData.min_instructors,
-          max_instructors: formData.max_instructors ? parseInt(formData.max_instructors) : undefined
+          max_instructors: formData.max_instructors ? parseInt(formData.max_instructors) : undefined,
+          repeat: formData.repeat || undefined,
+          repeat_until: formData.repeat_until || undefined
         })
       });
 
@@ -322,6 +362,86 @@ export default function CreateShiftPage() {
                 />
               </div>
             </div>
+
+            {/* Recurring Shifts */}
+            <div className="border dark:border-gray-700 rounded-lg p-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+                <Repeat className="w-4 h-4 inline mr-1" />
+                Repeat
+              </label>
+              <div className="space-y-2">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="repeat"
+                    value=""
+                    checked={formData.repeat === ''}
+                    onChange={() => setFormData({ ...formData, repeat: '', repeat_until: '' })}
+                    className="text-blue-600"
+                  />
+                  <span className="text-gray-700 dark:text-gray-300">Does not repeat</span>
+                </label>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="repeat"
+                    value="weekly"
+                    checked={formData.repeat === 'weekly'}
+                    onChange={() => setFormData({ ...formData, repeat: 'weekly' })}
+                    className="text-blue-600"
+                  />
+                  <span className="text-gray-700 dark:text-gray-300">Weekly</span>
+                </label>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="repeat"
+                    value="biweekly"
+                    checked={formData.repeat === 'biweekly'}
+                    onChange={() => setFormData({ ...formData, repeat: 'biweekly' })}
+                    className="text-blue-600"
+                  />
+                  <span className="text-gray-700 dark:text-gray-300">Bi-weekly</span>
+                </label>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="repeat"
+                    value="monthly"
+                    checked={formData.repeat === 'monthly'}
+                    onChange={() => setFormData({ ...formData, repeat: 'monthly' })}
+                    className="text-blue-600"
+                  />
+                  <span className="text-gray-700 dark:text-gray-300">Monthly</span>
+                </label>
+              </div>
+
+              {formData.repeat && (
+                <div className="mt-4 pt-4 border-t dark:border-gray-600">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Repeat until <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.repeat_until}
+                    onChange={(e) => setFormData({ ...formData, repeat_until: e.target.value })}
+                    min={formData.date || new Date().toISOString().split('T')[0]}
+                    className="w-full md:w-1/2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    required={!!formData.repeat}
+                  />
+                  {recurringDates.length > 0 && (
+                    <p className="mt-2 text-sm text-blue-600 dark:text-blue-400">
+                      This will create <strong>{recurringDates.length}</strong> shift{recurringDates.length !== 1 ? 's' : ''}
+                      {recurringDates.length <= 10 && (
+                        <span className="text-gray-500 dark:text-gray-400">
+                          {' '}({recurringDates.map(d => new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })).join(', ')})
+                        </span>
+                      )}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Actions */}
@@ -334,10 +454,15 @@ export default function CreateShiftPage() {
             </Link>
             <button
               type="submit"
-              disabled={saving}
+              disabled={saving || (!!formData.repeat && !formData.repeat_until)}
               className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
             >
-              {saving ? 'Creating...' : 'Create Shift'}
+              {saving
+                ? `Creating${recurringDates.length > 1 ? ` ${recurringDates.length} shifts` : ''}...`
+                : recurringDates.length > 1
+                  ? `Create ${recurringDates.length} Shifts`
+                  : 'Create Shift'
+              }
             </button>
           </div>
         </form>
