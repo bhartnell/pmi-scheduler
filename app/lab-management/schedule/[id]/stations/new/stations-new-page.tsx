@@ -41,11 +41,21 @@ interface Scenario {
   difficulty: string;
 }
 
+interface SkillDocument {
+  id: string;
+  document_name: string;
+  document_url: string;
+  document_type: 'skill_sheet' | 'checkoff' | 'reference' | 'protocol';
+  file_type: string;
+  display_order: number;
+}
+
 interface Skill {
   id: string;
   name: string;
   category: string;
   certification_levels: string[];
+  documents?: SkillDocument[];
 }
 
 interface Instructor {
@@ -132,8 +142,8 @@ export default function AddStationPage() {
         setScenarios(scenariosData.scenarios || []);
       }
 
-      // Fetch skills
-      const skillsRes = await fetch('/api/lab-management/skills');
+      // Fetch skills with documents
+      const skillsRes = await fetch('/api/lab-management/skills?includeDocuments=true');
       const skillsData = await skillsRes.json();
       if (skillsData.success) {
         setSkills(skillsData.skills || []);
@@ -592,6 +602,41 @@ export default function AddStationPage() {
                   </button>
                 </div>
               </div>
+
+              {/* Skill Documents Info */}
+              {selectedSkills.length > 0 && (() => {
+                const allDocs = selectedSkills.flatMap(skillId => {
+                  const skill = skills.find(s => s.id === skillId);
+                  return skill?.documents?.map(doc => ({ ...doc, skillName: skill.name })) || [];
+                });
+                if (allDocs.length === 0) return null;
+                return (
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <FileText className="w-4 h-4 text-blue-600" />
+                      <span className="text-sm font-medium text-blue-900">
+                        Attached Skill Documents ({allDocs.length})
+                      </span>
+                    </div>
+                    <div className="space-y-1">
+                      {allDocs.map((doc) => (
+                        <div key={doc.id} className="flex items-center justify-between text-sm">
+                          <span className="text-blue-800">
+                            {doc.document_name}
+                            <span className="text-blue-500 text-xs ml-1">({doc.skillName})</span>
+                          </span>
+                          <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">
+                            {doc.document_type.replace('_', ' ')}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-xs text-blue-600 mt-2">
+                      These documents are attached to the selected skills and will be available on the station.
+                    </p>
+                  </div>
+                );
+              })()}
             </div>
           )}
 
@@ -883,6 +928,7 @@ export default function AddStationPage() {
                   <div className="space-y-1">
                     {categorySkills.map(skill => {
                       const isSelected = selectedSkills.includes(skill.id);
+                      const docCount = skill.documents?.length || 0;
                       return (
                         <label
                           key={skill.id}
@@ -896,7 +942,12 @@ export default function AddStationPage() {
                             onChange={() => toggleSkill(skill.id)}
                             className="w-4 h-4 text-green-600"
                           />
-                          <span className="text-sm text-gray-900">{skill.name}</span>
+                          <span className="flex-1 text-sm text-gray-900">{skill.name}</span>
+                          {docCount > 0 && (
+                            <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-xs rounded">
+                              {docCount} doc{docCount !== 1 ? 's' : ''}
+                            </span>
+                          )}
                         </label>
                       );
                     })}

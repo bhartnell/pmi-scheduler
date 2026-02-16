@@ -17,9 +17,14 @@ export async function GET(request: NextRequest) {
 
   try {
     const supabase = getSupabase();
+    const includeDocuments = searchParams.get('includeDocuments') === 'true';
+
     let query = supabase
       .from('skills')
-      .select('*')
+      .select(includeDocuments
+        ? '*, documents:skill_documents(id, document_name, document_url, document_type, file_type, display_order)'
+        : '*'
+      )
       .eq('is_active', true)
       .order('display_order')
       .order('name');
