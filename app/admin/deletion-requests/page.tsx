@@ -13,7 +13,8 @@ import {
   AlertCircle,
   FileText
 } from 'lucide-react';
-import { canAccessAdmin, type Role } from '@/lib/permissions';
+import { canAccessAdmin } from '@/lib/permissions';
+import type { CurrentUserMinimal } from '@/types';
 
 interface DeletionRequest {
   id: string;
@@ -27,16 +28,11 @@ interface DeletionRequest {
   status: 'pending' | 'approved' | 'denied';
 }
 
-interface CurrentUser {
-  id: string;
-  role: Role;
-}
-
 export default function DeletionRequestsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const [currentUser, setCurrentUser] = useState<CurrentUserMinimal | null>(null);
   const [requests, setRequests] = useState<DeletionRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);

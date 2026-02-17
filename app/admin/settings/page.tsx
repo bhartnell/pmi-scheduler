@@ -13,14 +13,16 @@ import {
   Database,
   RefreshCw,
   Trash2,
-  Download
+  Download,
+  Mail,
+  Bell
 } from 'lucide-react';
-import { type Role, PROTECTED_SUPERADMINS } from '@/lib/permissions';
+import { PROTECTED_SUPERADMINS } from '@/lib/permissions';
+import { PageLoader } from '@/components/ui';
+import type { CurrentUserMinimal, Role } from '@/types';
 
-interface CurrentUser {
-  id: string;
+interface CurrentUser extends CurrentUserMinimal {
   email: string;
-  role: Role;
 }
 
 interface SystemStats {
@@ -90,11 +92,7 @@ export default function SettingsPage() {
   };
 
   if (status === 'loading' || loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 dark:border-blue-400"></div>
-      </div>
-    );
+    return <PageLoader />;
   }
 
   if (!session || !currentUser) return null;
@@ -178,6 +176,41 @@ export default function SettingsPage() {
             </div>
           </div>
         )}
+
+        {/* Email & Notification Settings */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+          <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+            <Mail className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+            <h2 className="font-semibold text-gray-900 dark:text-white">Email & Notifications</h2>
+          </div>
+          <div className="p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-medium text-gray-900 dark:text-white">System Email Provider</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Resend is configured and active</p>
+              </div>
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                Active
+              </span>
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-medium text-gray-900 dark:text-white">Notification Categories</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Task assignments, clinical visits, scheduling, system alerts</p>
+              </div>
+              <span className="text-sm text-gray-500 dark:text-gray-400">4 categories</span>
+            </div>
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+              <Link
+                href="/settings"
+                className="inline-flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:underline text-sm"
+              >
+                <Bell className="w-4 h-4" />
+                Manage personal notification preferences
+              </Link>
+            </div>
+          </div>
+        </div>
 
         {/* Protected Accounts */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow">

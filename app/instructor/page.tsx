@@ -17,8 +17,9 @@ import {
   Users,
   Home
 } from 'lucide-react';
-import { canAccessAdmin, canManageContent, type Role } from '@/lib/permissions';
+import { canAccessAdmin, canManageContent } from '@/lib/permissions';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import type { CurrentUser } from '@/types';
 
 interface DashboardStats {
   total_certs: number;
@@ -50,13 +51,6 @@ interface UpcomingLab {
   scenario_title: string | null;
   cohort_number: number;
   program: string;
-}
-
-interface CurrentUser {
-  id: string;
-  name: string;
-  email: string;
-  role: Role;
 }
 
 // Parse date as local date

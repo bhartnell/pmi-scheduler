@@ -23,16 +23,10 @@ import {
   isSuperadmin,
   getRoleLabel,
   getRoleBadgeClasses,
-  type Role
 } from '@/lib/permissions';
 import { ThemeToggle } from '@/components/ThemeToggle';
-
-interface CurrentUser {
-  id: string;
-  name: string;
-  email: string;
-  role: Role;
-}
+import { PageLoader } from '@/components/ui';
+import type { CurrentUser } from '@/types';
 
 export default function AdminPage() {
   const { data: session, status } = useSession();
@@ -70,11 +64,7 @@ export default function AdminPage() {
   };
 
   if (status === 'loading' || loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
+    return <PageLoader />;
   }
 
   if (!session || !currentUser) return null;

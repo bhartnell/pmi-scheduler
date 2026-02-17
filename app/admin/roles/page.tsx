@@ -16,12 +16,8 @@ import {
   GraduationCap,
   Eye
 } from 'lucide-react';
-import { canAccessAdmin, PROTECTED_SUPERADMINS, type Role } from '@/lib/permissions';
-
-interface CurrentUser {
-  id: string;
-  role: Role;
-}
+import { canAccessAdmin, PROTECTED_SUPERADMINS } from '@/lib/permissions';
+import type { CurrentUserMinimal, Role } from '@/types';
 
 const ROLE_DEFINITIONS = [
   {
@@ -127,7 +123,7 @@ export default function RolesPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const [currentUser, setCurrentUser] = useState<CurrentUserMinimal | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

@@ -19,6 +19,8 @@ import {
   X
 } from 'lucide-react';
 
+import type { CurrentUser } from '@/types';
+
 interface Certification {
   id: string;
   cert_name: string;
@@ -34,13 +36,6 @@ interface Certification {
     total_hours_required: number;
     cycle_years: number;
   };
-}
-
-interface CurrentUser {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
 }
 
 // Parse date as local date

@@ -24,28 +24,9 @@ import {
   getRoleLabel,
   getRoleBadgeClasses,
   ROLE_LEVELS,
-  type Role
 } from '@/lib/permissions';
 import { ThemeToggle } from '@/components/ThemeToggle';
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: Role;
-  is_active: boolean;
-  approved_at: string | null;
-  approved_by: string | null;
-  created_at: string;
-  last_login: string | null;
-}
-
-interface CurrentUser {
-  id: string;
-  name: string;
-  email: string;
-  role: Role;
-}
+import type { User, CurrentUser, Role } from '@/types';
 
 const TABS = [
   { value: 'all', label: 'All Users' },

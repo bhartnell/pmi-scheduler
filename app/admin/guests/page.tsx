@@ -16,10 +16,11 @@ import {
   AlertCircle,
   Clock
 } from 'lucide-react';
-import { canManageGuestAccess, type Role } from '@/lib/permissions';
+import { canManageGuestAccess } from '@/lib/permissions';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import type { CurrentUserMinimal } from '@/types';
 
-interface GuestAccess {
+interface GuestAccessRecord {
   id: string;
   name: string;
   email: string | null;
@@ -51,17 +52,12 @@ interface LabDay {
   };
 }
 
-interface CurrentUser {
-  id: string;
-  role: Role;
-}
-
 export default function GuestAccessPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
-  const [guests, setGuests] = useState<GuestAccess[]>([]);
+  const [currentUser, setCurrentUser] = useState<CurrentUserMinimal | null>(null);
+  const [guests, setGuests] = useState<GuestAccessRecord[]>([]);
   const [labDays, setLabDays] = useState<LabDay[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);

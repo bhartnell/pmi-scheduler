@@ -22,7 +22,7 @@ import {
   CheckSquare,
   Clock
 } from 'lucide-react';
-import { canAccessAdmin, canAccessClinical, getRoleLabel, getRoleBadgeClasses, type Role } from '@/lib/permissions';
+import { canAccessAdmin, canAccessClinical, getRoleLabel, getRoleBadgeClasses } from '@/lib/permissions';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import NotificationBell from '@/components/NotificationBell';
 import CustomizeModal from '@/components/dashboard/CustomizeModal';
@@ -37,21 +37,17 @@ import {
   OnboardingWidget,
   ROLE_DEFAULTS,
 } from '@/components/dashboard/widgets';
+import type { CurrentUserMinimal } from '@/types';
 
-interface CurrentUser {
-  id: string;
-  role: Role;
-}
-
-interface UserPreferences {
+interface DashboardPreferences {
   dashboard_widgets: string[];
   quick_links: string[];
 }
 
 export default function HomePage() {
   const { data: session, status } = useSession();
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
-  const [preferences, setPreferences] = useState<UserPreferences | null>(null);
+  const [currentUser, setCurrentUser] = useState<CurrentUserMinimal | null>(null);
+  const [preferences, setPreferences] = useState<DashboardPreferences | null>(null);
   const [showCustomize, setShowCustomize] = useState(false);
   const [hasOnboarding, setHasOnboarding] = useState(false);
 

@@ -23,8 +23,8 @@ import {
 import { ThemeToggle } from '@/components/ThemeToggle';
 import NotificationBell from '@/components/NotificationBell';
 import {
-  OpenShift,
-  ShiftSignup,
+  type OpenShift,
+  type ShiftSignup,
   DEPARTMENT_COLORS,
   SIGNUP_STATUS_COLORS,
   SIGNUP_STATUS_LABELS,
@@ -33,15 +33,9 @@ import {
   formatShiftDate,
   formatFullDate,
   isShiftFull,
-  getAvailableSpots
-} from '@/types/scheduling';
-
-interface CurrentUser {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-}
+  getAvailableSpots,
+  type CurrentUser
+} from '@/types';
 
 function ShiftsPageContent() {
   const { data: session, status } = useSession();

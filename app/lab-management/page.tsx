@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Plus, Settings } from 'lucide-react';
 import LabHeader from '@/components/LabHeader';
-import { canManageContent, type Role } from '@/lib/permissions';
+import { canManageContent } from '@/lib/permissions';
 import CustomizeModal from '@/components/dashboard/CustomizeModal';
 import {
   NotificationsWidget,
@@ -18,14 +18,13 @@ import {
   RecentFeedbackWidget,
   ROLE_DEFAULTS,
 } from '@/components/dashboard/widgets';
+import type { CurrentUserMinimal } from '@/types';
 
-interface CurrentUser {
-  id: string;
-  role: Role;
+interface CurrentUser extends CurrentUserMinimal {
   name?: string;
 }
 
-interface UserPreferences {
+interface DashboardPreferences {
   dashboard_widgets: string[];
   quick_links: string[];
 }
@@ -34,7 +33,7 @@ export default function LabManagementDashboard() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
-  const [preferences, setPreferences] = useState<UserPreferences | null>(null);
+  const [preferences, setPreferences] = useState<DashboardPreferences | null>(null);
   const [loading, setLoading] = useState(true);
   const [showCustomize, setShowCustomize] = useState(false);
 

@@ -29,6 +29,8 @@ interface Certification {
   };
 }
 
+import type { CurrentUser } from '@/types';
+
 interface CERecord {
   id: string;
   certification_id: string | null;
@@ -38,12 +40,6 @@ interface CERecord {
   category: string | null;
   completion_date: string;
   notes: string | null;
-}
-
-interface CurrentUser {
-  id: string;
-  name: string;
-  email: string;
 }
 
 // Parse date as local date

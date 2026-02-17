@@ -13,14 +13,7 @@ import {
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import NotificationBell from '@/components/NotificationBell';
-import { InstructorAvailability, formatTime } from '@/types/scheduling';
-
-interface CurrentUser {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-}
+import { type InstructorAvailability, formatTime, type CurrentUser } from '@/types';
 
 export default function AllAvailabilityPage() {
   const { data: session, status } = useSession();

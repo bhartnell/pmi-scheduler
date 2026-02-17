@@ -15,14 +15,9 @@ import {
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import NotificationBell from '@/components/NotificationBell';
+import { PageLoader } from '@/components/ui';
 import { isDirector } from '@/lib/endorsements';
-
-interface CurrentUser {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-}
+import type { CurrentUser } from '@/types';
 
 export default function SchedulingPage() {
   const { data: session, status } = useSession();
@@ -78,11 +73,7 @@ export default function SchedulingPage() {
   };
 
   if (status === 'loading' || loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
+    return <PageLoader />;
   }
 
   if (!session || !currentUser) return null;

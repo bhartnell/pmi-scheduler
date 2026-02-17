@@ -16,14 +16,7 @@ import {
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import NotificationBell from '@/components/NotificationBell';
-import { DEPARTMENT_OPTIONS, ShiftDepartment } from '@/types/scheduling';
-
-interface CurrentUser {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-}
+import { DEPARTMENT_OPTIONS, type ShiftDepartment, type CurrentUser } from '@/types';
 
 interface LabDay {
   id: string;

@@ -14,7 +14,8 @@ import {
   Users,
   Search
 } from 'lucide-react';
-import { canAccessAdmin, type Role } from '@/lib/permissions';
+import { canAccessAdmin } from '@/lib/permissions';
+import type { CurrentUserMinimal } from '@/types';
 
 interface CertificationStatus {
   userId: string;
@@ -28,16 +29,11 @@ interface CertificationStatus {
   }[];
 }
 
-interface CurrentUser {
-  id: string;
-  role: Role;
-}
-
 export default function CertificationCompliancePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const [currentUser, setCurrentUser] = useState<CurrentUserMinimal | null>(null);
   const [certStatuses, setCertStatuses] = useState<CertificationStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'issues' | 'expiring'>('all');

@@ -38,16 +38,12 @@ interface TeachingEntry {
   };
 }
 
+import type { CurrentUser } from '@/types';
+
 interface Stats {
   totalClasses: number;
   totalHours: number;
   totalStudents: number;
-}
-
-interface CurrentUser {
-  id: string;
-  name: string;
-  email: string;
 }
 
 // Parse date as local date

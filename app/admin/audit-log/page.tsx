@@ -23,6 +23,8 @@ import {
   RefreshCw
 } from 'lucide-react';
 
+import type { CurrentUserMinimal } from '@/types';
+
 interface AuditLogEntry {
   id: string;
   user_id: string | null;
@@ -36,11 +38,6 @@ interface AuditLogEntry {
   user_agent: string | null;
   metadata: any;
   created_at: string;
-}
-
-interface CurrentUser {
-  id: string;
-  role: string;
 }
 
 const ACTION_ICONS: Record<string, any> = {
@@ -95,7 +92,7 @@ export default function AuditLogPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const [currentUser, setCurrentUser] = useState<CurrentUserMinimal | null>(null);
   const [logs, setLogs] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);

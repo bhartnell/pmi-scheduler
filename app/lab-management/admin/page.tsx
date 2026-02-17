@@ -18,17 +18,13 @@ import {
   MessageSquare,
   ExternalLink
 } from 'lucide-react';
-import { canManageContent, canAccessAdmin, type Role } from '@/lib/permissions';
-
-interface CurrentUser {
-  id: string;
-  role: Role;
-}
+import { canManageContent, canAccessAdmin } from '@/lib/permissions';
+import type { CurrentUserMinimal } from '@/types';
 
 export default function AdminPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const [currentUser, setCurrentUser] = useState<CurrentUserMinimal | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

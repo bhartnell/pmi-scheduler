@@ -16,6 +16,7 @@
   "dependencies": {
     "@auth/supabase-adapter": "^1.11.1",
     "@supabase/supabase-js": "^2.89.0",
+    "clsx": "^2.1.1",
     "html2pdf.js": "^0.14.0",
     "lucide-react": "^0.562.0",
     "nanoid": "^5.1.6",
@@ -26,6 +27,7 @@
     "react-barcode": "^1.6.1",
     "react-dom": "19.2.3",
     "resend": "^6.9.2",
+    "tailwind-merge": "^3.4.1",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

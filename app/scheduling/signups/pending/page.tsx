@@ -16,14 +16,7 @@ import {
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import NotificationBell from '@/components/NotificationBell';
-import { formatTime } from '@/types/scheduling';
-
-interface CurrentUser {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-}
+import { formatTime, type CurrentUser } from '@/types';
 
 interface PendingSignup {
   id: string;
