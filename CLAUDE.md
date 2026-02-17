@@ -36,9 +36,34 @@ PMI EMS Scheduler is a comprehensive scheduling and management system for the Pi
 
 ## Git Workflow
 
-- **Always push to `main` branch** - This session works directly on main
-- Commit completed work with descriptive messages
-- Run `npm run build` before committing to verify no errors
+### CRITICAL: Direct-to-Main Deployment
+
+**This project deploys directly to `main`. Do NOT use feature branches or PRs unless explicitly requested.**
+
+1. **Before starting work:** If on a worktree branch, merge to main first:
+   ```bash
+   git checkout main
+   git merge <worktree-branch> --no-edit
+   git push origin main
+   ```
+
+2. **During work:** Commit and push directly to `main`:
+   ```bash
+   git add <files>
+   git commit -m "descriptive message"
+   git push origin main
+   ```
+
+3. **Build verification:** Always run `npm run build` before pushing to catch errors
+
+4. **Worktree branches:** These are temporary workspaces only. Always merge completed work to `main` before ending a session.
+
+5. **Never leave work stranded:** If a session ends with unmerged changes on a worktree branch, the next session should merge those changes to main immediately.
+
+### Why Direct-to-Main?
+- Vercel auto-deploys from `main` - feature branches create preview URLs that aren't used
+- Preview branches cause deployment confusion and delays
+- Single developer workflow doesn't need PR review gates
 
 ## Conventions
 
