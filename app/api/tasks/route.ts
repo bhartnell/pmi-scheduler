@@ -43,23 +43,45 @@ export async function GET(request: NextRequest) {
 
     const supabase = getSupabase();
 
-    // Build query with joins
+    // Build query with joins - include assignees for multi-assign tasks
     let query = supabase
       .from('instructor_tasks')
       .select(`
         *,
         assigner:assigned_by(id, name, email),
-        assignee:assigned_to(id, name, email)
+        assignee:assigned_to(id, name, email),
+        assignees:task_assignees(
+          id,
+          assignee_id,
+          status,
+          completed_at,
+          assignee:assignee_id(id, name, email)
+        )
       `);
 
-    // Apply filter
+    // Apply filter - now check both assigned_to and task_assignees
     if (filter === 'assigned_to_me') {
-      query = query.eq('assigned_to', currentUser.id);
+      // Get tasks where user is assigned directly OR via task_assignees
+      const { data: assignedTaskIds } = await supabase
+        .from('task_assignees')
+        .select('task_id')
+        .eq('assignee_id', currentUser.id);
+
+      const taskIds = assignedTaskIds?.map(t => t.task_id) || [];
+
+      query = query.or(`assigned_to.eq.${currentUser.id}${taskIds.length > 0 ? `,id.in.(${taskIds.join(',')})` : ''}`);
     } else if (filter === 'assigned_by_me') {
       query = query.eq('assigned_by', currentUser.id);
     } else {
-      // 'all' - show tasks where user is either assigner or assignee
-      query = query.or(`assigned_to.eq.${currentUser.id},assigned_by.eq.${currentUser.id}`);
+      // 'all' - show tasks where user is either assigner or assignee (including via task_assignees)
+      const { data: assignedTaskIds } = await supabase
+        .from('task_assignees')
+        .select('task_id')
+        .eq('assignee_id', currentUser.id);
+
+      const taskIds = assignedTaskIds?.map(t => t.task_id) || [];
+
+      query = query.or(`assigned_to.eq.${currentUser.id},assigned_by.eq.${currentUser.id}${taskIds.length > 0 ? `,id.in.(${taskIds.join(',')})` : ''}`);
     }
 
     // Apply status filter
@@ -105,11 +127,20 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Add comment counts to tasks
-    const tasksWithCounts = tasks?.map(task => ({
-      ...task,
-      comment_count: commentCounts[task.id] || 0
-    }));
+    // Add comment counts to tasks and determine user's assignee status for multi-assign
+    const tasksWithCounts = tasks?.map(task => {
+      // For multi-assign tasks, find user's specific assignee record
+      const userAssignee = task.assignees?.find(
+        (a: { assignee_id: string }) => a.assignee_id === currentUser.id
+      );
+
+      return {
+        ...task,
+        comment_count: commentCounts[task.id] || 0,
+        user_assignee_status: userAssignee?.status || null,
+        user_assignee_id: userAssignee?.id || null
+      };
+    });
 
     return NextResponse.json({ success: true, tasks: tasksWithCounts });
   } catch (error) {
@@ -118,7 +149,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Create new task
+// POST - Create new task (supports multi-assign)
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession();
@@ -132,27 +163,50 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, description, assigned_to, due_date, priority, related_link } = body;
+    const {
+      title,
+      description,
+      assigned_to,      // Single assignee (legacy/single mode)
+      assignee_ids,     // Multiple assignees (array)
+      completion_mode,  // 'single', 'any', 'all'
+      due_date,
+      priority,
+      related_link
+    } = body;
 
-    if (!title || !assigned_to) {
+    if (!title) {
       return NextResponse.json(
-        { success: false, error: 'Title and assignee are required' },
+        { success: false, error: 'Title is required' },
+        { status: 400 }
+      );
+    }
+
+    // Determine assignees and mode
+    const isMultiAssign = assignee_ids && Array.isArray(assignee_ids) && assignee_ids.length > 0;
+    const finalAssigneeIds = isMultiAssign ? assignee_ids : (assigned_to ? [assigned_to] : []);
+    const finalMode = isMultiAssign ? (completion_mode || 'any') : 'single';
+
+    if (finalAssigneeIds.length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'At least one assignee is required' },
         { status: 400 }
       );
     }
 
     const supabase = getSupabase();
 
-    // Get assignee info for notification
-    const { data: assignee } = await supabase
+    // Get assignee info for notifications
+    const { data: assignees } = await supabase
       .from('lab_users')
       .select('id, name, email')
-      .eq('id', assigned_to)
-      .single();
+      .in('id', finalAssigneeIds);
 
-    if (!assignee) {
-      return NextResponse.json({ success: false, error: 'Assignee not found' }, { status: 404 });
+    if (!assignees || assignees.length === 0) {
+      return NextResponse.json({ success: false, error: 'Assignees not found' }, { status: 404 });
     }
+
+    // For single mode, use assigned_to directly; for multi-assign, leave assigned_to null
+    const primaryAssignee = finalMode === 'single' ? finalAssigneeIds[0] : null;
 
     // Create the task
     const { data: task, error } = await supabase
@@ -161,11 +215,12 @@ export async function POST(request: NextRequest) {
         title,
         description: description || null,
         assigned_by: currentUser.id,
-        assigned_to,
+        assigned_to: primaryAssignee,
         due_date: due_date || null,
         priority: priority || 'medium',
         related_link: related_link || null,
         status: 'pending',
+        completion_mode: finalMode
       })
       .select(`
         *,
@@ -176,16 +231,52 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error;
 
-    // Send notification to assignee (if not self-assigning)
-    if (assigned_to !== currentUser.id) {
-      await notifyTaskAssigned(assignee.email, {
-        taskId: task.id,
-        title,
-        assignerName: currentUser.name,
-      });
+    // For multi-assign, create task_assignees records
+    if (finalMode !== 'single') {
+      const assigneeRecords = finalAssigneeIds.map((assigneeId: string) => ({
+        task_id: task.id,
+        assignee_id: assigneeId,
+        status: 'pending'
+      }));
+
+      const { error: assigneesError } = await supabase
+        .from('task_assignees')
+        .insert(assigneeRecords);
+
+      if (assigneesError) {
+        console.error('Error creating task assignees:', assigneesError);
+      }
     }
 
-    return NextResponse.json({ success: true, task });
+    // Send notifications to all assignees (except self)
+    for (const assignee of assignees) {
+      if (assignee.id !== currentUser.id) {
+        await notifyTaskAssigned(assignee.email, {
+          taskId: task.id,
+          title,
+          assignerName: currentUser.name,
+        });
+      }
+    }
+
+    // Fetch the complete task with assignees
+    const { data: completeTask } = await supabase
+      .from('instructor_tasks')
+      .select(`
+        *,
+        assigner:assigned_by(id, name, email),
+        assignee:assigned_to(id, name, email),
+        assignees:task_assignees(
+          id,
+          assignee_id,
+          status,
+          assignee:assignee_id(id, name, email)
+        )
+      `)
+      .eq('id', task.id)
+      .single();
+
+    return NextResponse.json({ success: true, task: completeTask || task });
   } catch (error) {
     console.error('Error creating task:', error);
     return NextResponse.json({ success: false, error: 'Failed to create task' }, { status: 500 });

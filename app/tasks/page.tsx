@@ -18,7 +18,9 @@ import {
   X,
   Calendar,
   User,
-  ArrowUpDown
+  ArrowUpDown,
+  Users,
+  Check
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import NotificationBell from '@/components/NotificationBell';
@@ -38,12 +40,27 @@ interface LabUser {
   email: string;
 }
 
+interface TaskAssignee {
+  id: string;
+  assignee_id: string;
+  status: string;
+  completed_at: string | null;
+  assignee: LabUser;
+}
+
+interface ExtendedTask extends InstructorTask {
+  completion_mode?: 'single' | 'any' | 'all';
+  assignees?: TaskAssignee[];
+  user_assignee_status?: string | null;
+  user_assignee_id?: string | null;
+}
+
 function TasksPageContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [tasks, setTasks] = useState<InstructorTask[]>([]);
+  const [tasks, setTasks] = useState<ExtendedTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<LabUser | null>(null);
   const [instructors, setInstructors] = useState<LabUser[]>([]);
@@ -61,11 +78,14 @@ function TasksPageContent() {
     title: '',
     description: '',
     assigned_to: '',
+    assignee_ids: [] as string[],
+    completion_mode: 'any' as 'single' | 'any' | 'all',
     due_date: '',
     priority: 'medium' as TaskPriority,
     related_link: ''
   });
   const [creating, setCreating] = useState(false);
+  const [isMultiAssign, setIsMultiAssign] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -135,7 +155,9 @@ function TasksPageContent() {
 
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTask.title || !newTask.assigned_to) return;
+    if (!newTask.title) return;
+    if (!isMultiAssign && !newTask.assigned_to) return;
+    if (isMultiAssign && newTask.assignee_ids.length === 0) return;
 
     setCreating(true);
     try {
@@ -145,7 +167,14 @@ function TasksPageContent() {
         body: JSON.stringify({
           title: newTask.title,
           description: newTask.description || undefined,
-          assigned_to: newTask.assigned_to,
+          ...(isMultiAssign
+            ? {
+                assignee_ids: newTask.assignee_ids,
+                completion_mode: newTask.completion_mode
+              }
+            : {
+                assigned_to: newTask.assigned_to
+              }),
           due_date: newTask.due_date || undefined,
           priority: newTask.priority,
           related_link: newTask.related_link || undefined
@@ -158,10 +187,13 @@ function TasksPageContent() {
           title: '',
           description: '',
           assigned_to: '',
+          assignee_ids: [],
+          completion_mode: 'any',
           due_date: '',
           priority: 'medium',
           related_link: ''
         });
+        setIsMultiAssign(false);
         fetchTasks();
       } else {
         alert(data.error || 'Failed to create task');
@@ -187,6 +219,15 @@ function TasksPageContent() {
     } catch (error) {
       console.error('Error completing task:', error);
     }
+  };
+
+  const toggleAssignee = (instructorId: string) => {
+    setNewTask(prev => ({
+      ...prev,
+      assignee_ids: prev.assignee_ids.includes(instructorId)
+        ? prev.assignee_ids.filter(id => id !== instructorId)
+        : [...prev.assignee_ids, instructorId]
+    }));
   };
 
   const formatDueDate = (dateStr: string | null) => {
@@ -363,7 +404,15 @@ function TasksPageContent() {
               const dueInfo = formatDueDate(task.due_date);
               const priorityColor = PRIORITY_COLORS[task.priority];
               const statusColor = STATUS_COLORS[task.status];
-              const isAssignedToMe = task.assigned_to === currentUser?.id;
+              const isAssignedToMe = task.assigned_to === currentUser?.id || task.user_assignee_id;
+              const isMultiAssignTask = task.completion_mode && task.completion_mode !== 'single';
+              const assigneeCount = task.assignees?.length || 0;
+              const completedCount = task.assignees?.filter(a => a.status === 'completed').length || 0;
+
+              // Determine if user can complete this task
+              const canComplete = isAssignedToMe &&
+                (task.status === 'pending' || task.status === 'in_progress') &&
+                (task.user_assignee_status !== 'completed');
 
               return (
                 <div
@@ -385,12 +434,24 @@ function TasksPageContent() {
                             {task.title}
                           </Link>
                           <div className="flex flex-wrap items-center gap-3 mt-1 text-sm text-gray-600 dark:text-gray-400">
-                            <span className="flex items-center gap-1">
-                              <User className="w-3 h-3" />
-                              {isAssignedToMe
-                                ? `From: ${task.assigner?.name || 'Unknown'}`
-                                : `To: ${task.assignee?.name || 'Unknown'}`}
-                            </span>
+                            {/* Show assignee info based on mode */}
+                            {isMultiAssignTask ? (
+                              <span className="flex items-center gap-1">
+                                <Users className="w-3 h-3" />
+                                {task.completion_mode === 'any' ? (
+                                  <span>Anyone of {assigneeCount}</span>
+                                ) : (
+                                  <span>{completedCount}/{assigneeCount} completed</span>
+                                )}
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-1">
+                                <User className="w-3 h-3" />
+                                {isAssignedToMe
+                                  ? `From: ${task.assigner?.name || 'Unknown'}`
+                                  : `To: ${task.assignee?.name || 'Unknown'}`}
+                              </span>
+                            )}
                             {dueInfo && (
                               <span className={`flex items-center gap-1 ${
                                 dueInfo.isOverdue ? 'text-red-600 dark:text-red-400 font-medium' :
@@ -419,17 +480,45 @@ function TasksPageContent() {
                               </a>
                             )}
                           </div>
+
+                          {/* Show all assignees for multi-assign tasks in "Assigned by Me" tab */}
+                          {isMultiAssignTask && activeTab === 'assigned_by_me' && task.assignees && task.assignees.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {task.assignees.map((a) => (
+                                <span
+                                  key={a.id}
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs ${
+                                    a.status === 'completed'
+                                      ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                                  }`}
+                                >
+                                  {a.status === 'completed' && <Check className="w-3 h-3" />}
+                                  {a.assignee?.name || 'Unknown'}
+                                </span>
+                              ))}
+                            </div>
+                          )}
                         </div>
 
                         {/* Badges and actions */}
                         <div className="flex items-center gap-2 flex-shrink-0">
+                          {isMultiAssignTask && (
+                            <span className={`px-2 py-1 text-xs font-medium rounded ${
+                              task.completion_mode === 'any'
+                                ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400'
+                                : 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400'
+                            }`}>
+                              {task.completion_mode === 'any' ? 'Any' : 'All'}
+                            </span>
+                          )}
                           <span className={`px-2 py-1 text-xs font-medium rounded ${priorityColor.bg} ${priorityColor.text}`}>
                             {PRIORITY_LABELS[task.priority]}
                           </span>
                           <span className={`px-2 py-1 text-xs font-medium rounded ${statusColor.bg} ${statusColor.text}`}>
                             {STATUS_LABELS[task.status]}
                           </span>
-                          {isAssignedToMe && (task.status === 'pending' || task.status === 'in_progress') && (
+                          {canComplete && (
                             <button
                               onClick={(e) => {
                                 e.preventDefault();
@@ -458,7 +547,10 @@ function TasksPageContent() {
             <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
               <h2 className="text-xl font-bold text-gray-900 dark:text-white">New Task</h2>
               <button
-                onClick={() => setShowNewTaskModal(false)}
+                onClick={() => {
+                  setShowNewTaskModal(false);
+                  setIsMultiAssign(false);
+                }}
                 className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
               >
                 <X className="w-5 h-5" />
@@ -493,24 +585,127 @@ function TasksPageContent() {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Assign to <span className="text-red-500">*</span>
+              {/* Multi-assign toggle */}
+              <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <input
+                  type="checkbox"
+                  id="multiAssign"
+                  checked={isMultiAssign}
+                  onChange={(e) => {
+                    setIsMultiAssign(e.target.checked);
+                    if (!e.target.checked) {
+                      setNewTask({ ...newTask, assignee_ids: [], completion_mode: 'any' });
+                    } else {
+                      setNewTask({ ...newTask, assigned_to: '' });
+                    }
+                  }}
+                  className="w-4 h-4 text-blue-600 rounded"
+                />
+                <label htmlFor="multiAssign" className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <Users className="w-4 h-4" />
+                  Assign to multiple people
                 </label>
-                <select
-                  value={newTask.assigned_to}
-                  onChange={(e) => setNewTask({ ...newTask, assigned_to: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                  required
-                >
-                  <option value="">Select instructor...</option>
-                  {instructors.map((instructor) => (
-                    <option key={instructor.id} value={instructor.id}>
-                      {instructor.name} ({instructor.email})
-                    </option>
-                  ))}
-                </select>
               </div>
+
+              {!isMultiAssign ? (
+                /* Single assignee select */
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Assign to <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={newTask.assigned_to}
+                    onChange={(e) => setNewTask({ ...newTask, assigned_to: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    required={!isMultiAssign}
+                  >
+                    <option value="">Select instructor...</option>
+                    {instructors.map((instructor) => (
+                      <option key={instructor.id} value={instructor.id}>
+                        {instructor.name} ({instructor.email})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                /* Multi-assign section */
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Assign to <span className="text-red-500">*</span>
+                      {newTask.assignee_ids.length > 0 && (
+                        <span className="ml-2 text-blue-600 dark:text-blue-400">
+                          ({newTask.assignee_ids.length} selected)
+                        </span>
+                      )}
+                    </label>
+                    <div className="max-h-48 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-lg">
+                      {instructors.map((instructor) => (
+                        <label
+                          key={instructor.id}
+                          className={`flex items-center gap-3 p-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 border-b dark:border-gray-600 last:border-b-0 ${
+                            newTask.assignee_ids.includes(instructor.id)
+                              ? 'bg-blue-50 dark:bg-blue-900/20'
+                              : ''
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={newTask.assignee_ids.includes(instructor.id)}
+                            onChange={() => toggleAssignee(instructor.id)}
+                            className="w-4 h-4 text-blue-600 rounded"
+                          />
+                          <div>
+                            <div className="text-sm font-medium text-gray-900 dark:text-white">
+                              {instructor.name}
+                            </div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              {instructor.email}
+                            </div>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Completion mode */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Completion Mode
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setNewTask({ ...newTask, completion_mode: 'any' })}
+                        className={`p-3 rounded-lg border-2 text-left transition-colors ${
+                          newTask.completion_mode === 'any'
+                            ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/20'
+                            : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
+                        }`}
+                      >
+                        <div className="font-medium text-gray-900 dark:text-white">Anyone can complete</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          Task is done when any assignee marks it complete
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setNewTask({ ...newTask, completion_mode: 'all' })}
+                        className={`p-3 rounded-lg border-2 text-left transition-colors ${
+                          newTask.completion_mode === 'all'
+                            ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20'
+                            : 'border-gray-300 dark:border-gray-600 hover:border-gray-400'
+                        }`}
+                      >
+                        <div className="font-medium text-gray-900 dark:text-white">Each must complete</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          Task is done when all assignees mark it complete
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -557,14 +752,22 @@ function TasksPageContent() {
               <div className="flex justify-end gap-3 pt-4">
                 <button
                   type="button"
-                  onClick={() => setShowNewTaskModal(false)}
+                  onClick={() => {
+                    setShowNewTaskModal(false);
+                    setIsMultiAssign(false);
+                  }}
                   className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={creating || !newTask.title || !newTask.assigned_to}
+                  disabled={
+                    creating ||
+                    !newTask.title ||
+                    (!isMultiAssign && !newTask.assigned_to) ||
+                    (isMultiAssign && newTask.assignee_ids.length === 0)
+                  }
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {creating ? 'Creating...' : 'Create Task'}
