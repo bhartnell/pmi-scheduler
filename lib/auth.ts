@@ -36,8 +36,11 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
     async signIn({ user }) {
-      // Allow any @pmi.edu email
-      if (!user.email || !user.email.endsWith('@pmi.edu')) {
+      // Allow @pmi.edu (instructors) and @my.pmi.edu (students) emails
+      const isInstructorEmail = user.email?.endsWith('@pmi.edu') && !user.email?.endsWith('@my.pmi.edu');
+      const isStudentEmail = user.email?.endsWith('@my.pmi.edu');
+
+      if (!user.email || (!isInstructorEmail && !isStudentEmail)) {
         return false;
       }
 
@@ -58,27 +61,33 @@ export const authOptions: NextAuthOptions = {
           return true;
         }
 
-        // If user doesn't exist, create them with pending role
+        // If user doesn't exist, create them
         if (!existingUser) {
+          // Students (@my.pmi.edu) get auto-approved with 'student' role
+          // Instructors (@pmi.edu) get 'pending' role and require admin approval
+          const isStudent = isStudentEmail;
+          const newRole = isStudent ? 'student' : 'pending';
+
           const { data: newUser, error: insertError } = await supabase
             .from('lab_users')
             .insert({
               email: user.email,
               name: user.name || user.email.split('@')[0],
-              role: 'pending', // Default to pending - admin must approve and assign role
+              role: newRole,
               is_active: true,
-              // approved_at is left NULL until admin approves
+              // Students are auto-approved, instructors need admin approval
+              approved_at: isStudent ? new Date().toISOString() : null,
             })
-            .select('id, name, email')
+            .select('id, name, email, role')
             .single();
 
           if (insertError) {
             console.error('Error creating lab_user:', insertError);
             // Still allow sign in - we can try again later
           } else {
-            console.log(`Created new lab_user for ${user.email} with pending status`);
-            // Notify admins about the new pending user
-            if (newUser) {
+            console.log(`Created new lab_user for ${user.email} with ${newRole} role`);
+            // Only notify admins about new pending instructor users (not students)
+            if (newUser && !isStudent) {
               notifyAdminsNewPendingUser({
                 userId: newUser.id,
                 name: newUser.name,

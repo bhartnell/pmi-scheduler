@@ -1,14 +1,15 @@
 // Role-based permission system for PMI Tools
 
-export type Role = 'superadmin' | 'admin' | 'lead_instructor' | 'instructor' | 'guest' | 'pending';
+export type Role = 'superadmin' | 'admin' | 'lead_instructor' | 'instructor' | 'student' | 'guest' | 'pending';
 
 export const ROLE_LEVELS: Record<Role, number> = {
   superadmin: 5,
   admin: 4,
   lead_instructor: 3,
   instructor: 2,
-  guest: 1,
-  pending: 0,  // Minimal access - new users awaiting approval
+  student: 1,   // Student portal access only
+  guest: 1,     // Guest access (same level as student)
+  pending: 0,   // Minimal access - new users awaiting approval
 };
 
 export const ROLE_LABELS: Record<Role, string> = {
@@ -16,6 +17,7 @@ export const ROLE_LABELS: Record<Role, string> = {
   admin: 'Admin',
   lead_instructor: 'Lead Instructor',
   instructor: 'Instructor',
+  student: 'Student',
   guest: 'Guest',
   pending: 'Pending Approval',
 };
@@ -25,6 +27,7 @@ export const ROLE_COLORS: Record<Role, string> = {
   admin: 'bg-red-600 text-white',
   lead_instructor: 'bg-blue-600 text-white',
   instructor: 'bg-green-600 text-white',
+  student: 'bg-cyan-600 text-white',
   guest: 'bg-gray-500 text-white',
   pending: 'bg-yellow-500 text-white',
 };
@@ -138,13 +141,28 @@ export function isProtectedSuperadmin(email: string): boolean {
 
 export function getAssignableRoles(currentRole: Role | string): Role[] {
   if (currentRole === 'superadmin') {
-    return ['superadmin', 'admin', 'lead_instructor', 'instructor', 'guest', 'pending'];
+    return ['superadmin', 'admin', 'lead_instructor', 'instructor', 'student', 'guest', 'pending'];
   }
   if (currentRole === 'admin') {
     // Admins can't create/modify superadmins
-    return ['admin', 'lead_instructor', 'instructor', 'guest', 'pending'];
+    return ['admin', 'lead_instructor', 'instructor', 'student', 'guest', 'pending'];
   }
   return [];
+}
+
+/**
+ * Check if user is a student (has student role)
+ */
+export function isStudent(role: Role | string): boolean {
+  return role === 'student';
+}
+
+/**
+ * Check if user can access the student portal
+ * Only students can access the student portal
+ */
+export function canAccessStudentPortal(role: Role | string): boolean {
+  return role === 'student';
 }
 
 /**
