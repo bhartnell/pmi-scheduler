@@ -26,6 +26,7 @@ import {
   MapPin
 } from 'lucide-react';
 import { canAccessClinical, type Role } from '@/lib/permissions';
+import SiteVisitAlerts from '@/components/SiteVisitAlerts';
 
 interface ClinicalSite {
   id: string;
@@ -499,6 +500,11 @@ export default function SiteVisitsPage() {
             </button>
           </div>
         )}
+
+        {/* Site Visit Coverage Alerts */}
+        <div className="mb-6">
+          <SiteVisitAlerts showOnlyWhenNeeded={false} />
+        </div>
 
         {/* Filters */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow mb-6">
