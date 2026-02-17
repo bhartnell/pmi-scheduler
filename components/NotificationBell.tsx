@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
-import { Bell, Check, CheckCheck, ExternalLink, Settings, Filter, X } from 'lucide-react';
+import { Bell, Check, CheckCheck, ExternalLink, Settings, Filter, X, Mail } from 'lucide-react';
 import Link from 'next/link';
 
 interface Notification {
@@ -369,17 +369,25 @@ export default function NotificationBell() {
           </div>
 
           {/* Footer */}
-          {notifications.length > 0 && (
-            <div className="border-t border-gray-200 dark:border-gray-700">
+          <div className="border-t border-gray-200 dark:border-gray-700">
+            {notifications.length > 0 && (
               <Link
                 href="/notifications"
                 onClick={() => setIsOpen(false)}
-                className="block px-4 py-3 text-center text-sm text-blue-600 dark:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                className="block px-4 py-2 text-center text-sm text-blue-600 dark:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors border-b border-gray-100 dark:border-gray-700"
               >
                 View All Notifications
               </Link>
-            </div>
-          )}
+            )}
+            <Link
+              href="/settings"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center justify-center gap-2 px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+            >
+              <Mail className="w-4 h-4" />
+              Email & Notification Settings
+            </Link>
+          </div>
         </div>
       )}
     </div>

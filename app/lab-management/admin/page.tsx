@@ -6,20 +6,19 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   ChevronRight,
-  Users,
   GraduationCap,
   Settings,
   UserCog,
   FolderKanban,
   Home,
-  Shield,
-  Trash2,
   Award,
   Brain,
   Layout,
-  Monitor
+  Monitor,
+  MessageSquare,
+  ExternalLink
 } from 'lucide-react';
-import { canManageContent, type Role } from '@/lib/permissions';
+import { canManageContent, canAccessAdmin, type Role } from '@/lib/permissions';
 
 interface CurrentUser {
   id: string;
@@ -71,49 +70,8 @@ export default function AdminPage() {
 
   if (!session || !currentUser) return null;
 
+  // Lab content administration links
   const adminLinks = [
-    {
-      href: '/lab-management/admin/users',
-      icon: Shield,
-      title: 'Manage Users',
-      description: 'Approve users and assign roles (admin, instructor, user)',
-      color: 'bg-indigo-500'
-    },
-    {
-      href: '/lab-management/admin/deletion-requests',
-      icon: Trash2,
-      title: 'Deletion Requests',
-      description: 'Review and approve deletion requests from instructors',
-      color: 'bg-red-500'
-    },
-    {
-      href: '/lab-management/admin/certifications',
-      icon: Award,
-      title: 'Certifications',
-      description: 'Monitor instructor certifications and expiration dates',
-      color: 'bg-purple-500'
-    },
-    {
-      href: '/lab-management/seating/learning-styles',
-      icon: Brain,
-      title: 'Learning Styles',
-      description: 'Manage student learning style assessments for seating',
-      color: 'bg-cyan-500'
-    },
-    {
-      href: '/lab-management/seating/preferences',
-      icon: Layout,
-      title: 'Seating Preferences',
-      description: 'Manage student seating preferences and conflicts',
-      color: 'bg-orange-500'
-    },
-    {
-      href: '/lab-management/seating/charts',
-      icon: Layout,
-      title: 'Seating Charts',
-      description: 'Create and manage classroom seating arrangements',
-      color: 'bg-indigo-500'
-    },
     {
       href: '/lab-management/admin/cohorts',
       icon: GraduationCap,
@@ -136,11 +94,46 @@ export default function AdminPage() {
       color: 'bg-orange-500'
     },
     {
+      href: '/lab-management/admin/certifications',
+      icon: Award,
+      title: 'Certification Records',
+      description: 'View and manage individual instructor certification records',
+      color: 'bg-purple-500'
+    },
+    {
+      href: '/lab-management/admin/feedback',
+      icon: MessageSquare,
+      title: 'Feedback Reports',
+      description: 'Review bug reports and feature requests from users',
+      color: 'bg-teal-500'
+    },
+    {
       href: '/lab-management/admin/timer-displays',
       icon: Monitor,
       title: 'Timer Displays',
       description: 'Manage kiosk display tokens for Raspberry Pi or wall monitors',
       color: 'bg-green-500'
+    },
+    {
+      href: '/lab-management/seating/learning-styles',
+      icon: Brain,
+      title: 'Learning Styles',
+      description: 'Manage student learning style assessments for seating',
+      color: 'bg-cyan-500'
+    },
+    {
+      href: '/lab-management/seating/preferences',
+      icon: Layout,
+      title: 'Seating Preferences',
+      description: 'Manage student seating preferences and conflicts',
+      color: 'bg-orange-500'
+    },
+    {
+      href: '/lab-management/seating/charts',
+      icon: Layout,
+      title: 'Seating Charts',
+      description: 'Create and manage classroom seating arrangements',
+      color: 'bg-indigo-500'
     }
   ];
 
@@ -204,6 +197,24 @@ export default function AdminPage() {
             </Link>
           ))}
         </div>
+
+        {/* System Admin Link - for admin/superadmin only */}
+        {canAccessAdmin(currentUser.role) && (
+          <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+            <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">System Administration</h2>
+            <Link
+              href="/admin"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            >
+              <Settings className="w-4 h-4" />
+              User Management & System Settings
+              <ExternalLink className="w-3 h-3 ml-1" />
+            </Link>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+              Manage users, roles, deletion requests, guest access, and system configuration
+            </p>
+          </div>
+        )}
       </main>
     </div>
   );

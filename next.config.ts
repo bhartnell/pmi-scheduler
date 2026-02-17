@@ -29,6 +29,27 @@ const nextConfig: NextConfig = {
 
   // Output settings
   output: 'standalone',
+
+  // Redirects for consolidated admin pages
+  async redirects() {
+    return [
+      {
+        source: '/lab-management/admin/users',
+        destination: '/admin/users',
+        permanent: true,
+      },
+      {
+        source: '/lab-management/admin/deletion-requests',
+        destination: '/admin/deletion-requests',
+        permanent: true,
+      },
+      {
+        source: '/admin/create',
+        destination: '/scheduler',
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;
