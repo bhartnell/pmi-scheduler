@@ -20,10 +20,13 @@ import {
   User,
   ArrowUpDown,
   Users,
-  Check
+  Check,
+  LayoutList,
+  Kanban
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import NotificationBell from '@/components/NotificationBell';
+import TaskKanban from '@/components/TaskKanban';
 import {
   InstructorTask,
   TaskPriority,
@@ -86,6 +89,7 @@ function TasksPageContent() {
   });
   const [creating, setCreating] = useState(false);
   const [isMultiAssign, setIsMultiAssign] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -221,6 +225,25 @@ function TasksPageContent() {
     }
   };
 
+  const handleStatusChange = async (taskId: string, newStatus: string) => {
+    try {
+      const res = await fetch(`/api/tasks/${taskId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+      const data = await res.json();
+      if (data.success) {
+        fetchTasks();
+      } else {
+        throw new Error(data.error || 'Failed to update status');
+      }
+    } catch (error) {
+      console.error('Error updating task status:', error);
+      throw error;
+    }
+  };
+
   const toggleAssignee = (instructorId: string) => {
     setNewTask(prev => ({
       ...prev,
@@ -333,56 +356,87 @@ function TasksPageContent() {
           </button>
         </div>
 
-        {/* Filters */}
-        <div className="flex flex-wrap gap-4 mb-6">
-          <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-gray-500" />
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as TaskStatus | '')}
-              className="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm"
+        {/* View Toggle and Filters */}
+        <div className="flex flex-wrap items-center gap-4 mb-6">
+          {/* View mode toggle */}
+          <div className="flex bg-white dark:bg-gray-800 rounded-lg p-1 shadow-sm">
+            <button
+              onClick={() => setViewMode('list')}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                viewMode === 'list'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+              }`}
             >
-              <option value="">All Statuses</option>
-              <option value="pending">Pending</option>
-              <option value="in_progress">In Progress</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
+              <LayoutList className="w-4 h-4" />
+              List
+            </button>
+            <button
+              onClick={() => setViewMode('kanban')}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                viewMode === 'kanban'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+              }`}
+            >
+              <Kanban className="w-4 h-4" />
+              Kanban
+            </button>
           </div>
 
-          <select
-            value={priorityFilter}
-            onChange={(e) => setPriorityFilter(e.target.value as TaskPriority | '')}
-            className="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm"
-          >
-            <option value="">All Priorities</option>
-            <option value="high">High</option>
-            <option value="medium">Medium</option>
-            <option value="low">Low</option>
-          </select>
+          {/* Filters - only show in list view */}
+          {viewMode === 'list' && (
+            <>
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-gray-500" />
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value as TaskStatus | '')}
+                  className="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm"
+                >
+                  <option value="">All Statuses</option>
+                  <option value="pending">Pending</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
 
-          <div className="flex items-center gap-2 ml-auto">
-            <ArrowUpDown className="w-4 h-4 text-gray-500" />
-            <select
-              value={`${sortBy}-${sortOrder}`}
-              onChange={(e) => {
-                const [field, order] = e.target.value.split('-');
-                setSortBy(field);
-                setSortOrder(order as 'asc' | 'desc');
-              }}
-              className="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm"
-            >
-              <option value="due_date-asc">Due Date (earliest)</option>
-              <option value="due_date-desc">Due Date (latest)</option>
-              <option value="created_at-desc">Newest First</option>
-              <option value="created_at-asc">Oldest First</option>
-              <option value="priority-desc">Priority (high to low)</option>
-              <option value="priority-asc">Priority (low to high)</option>
-            </select>
-          </div>
+              <select
+                value={priorityFilter}
+                onChange={(e) => setPriorityFilter(e.target.value as TaskPriority | '')}
+                className="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm"
+              >
+                <option value="">All Priorities</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+              </select>
+
+              <div className="flex items-center gap-2 ml-auto">
+                <ArrowUpDown className="w-4 h-4 text-gray-500" />
+                <select
+                  value={`${sortBy}-${sortOrder}`}
+                  onChange={(e) => {
+                    const [field, order] = e.target.value.split('-');
+                    setSortBy(field);
+                    setSortOrder(order as 'asc' | 'desc');
+                  }}
+                  className="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm"
+                >
+                  <option value="due_date-asc">Due Date (earliest)</option>
+                  <option value="due_date-desc">Due Date (latest)</option>
+                  <option value="created_at-desc">Newest First</option>
+                  <option value="created_at-asc">Oldest First</option>
+                  <option value="priority-desc">Priority (high to low)</option>
+                  <option value="priority-asc">Priority (low to high)</option>
+                </select>
+              </div>
+            </>
+          )}
         </div>
 
-        {/* Task List */}
+        {/* Task Display */}
         {loading ? (
           <div className="flex justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -398,7 +452,15 @@ function TasksPageContent() {
               Create your first task
             </button>
           </div>
+        ) : viewMode === 'kanban' ? (
+          /* Kanban View */
+          <TaskKanban
+            tasks={tasks}
+            currentUserId={currentUser.id}
+            onStatusChange={handleStatusChange}
+          />
         ) : (
+          /* List View */
           <div className="space-y-3">
             {tasks.map((task) => {
               const dueInfo = formatDueDate(task.due_date);
