@@ -1,4 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
+import {
+  sendTaskAssignedEmail,
+  sendTaskCompletedEmail,
+  sendShiftAvailableEmail,
+  sendShiftConfirmedEmail,
+  sendLabAssignedEmail,
+  sendLabReminderEmail,
+  EmailTemplate
+} from './email';
 
 // Create Supabase client lazily to avoid build-time errors
 function getSupabase() {
@@ -6,6 +15,115 @@ function getSupabase() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
+}
+
+// Email preferences interface
+interface EmailPreferences {
+  enabled: boolean;
+  mode: 'immediate' | 'daily_digest' | 'off';
+  digest_time: string;
+  categories: {
+    tasks: boolean;
+    labs: boolean;
+    scheduling: boolean;
+    feedback: boolean;
+    clinical: boolean;
+    system: boolean;
+  };
+}
+
+// Default email preferences
+const DEFAULT_EMAIL_PREFS: EmailPreferences = {
+  enabled: false,
+  mode: 'immediate',
+  digest_time: '08:00',
+  categories: {
+    tasks: true,
+    labs: true,
+    scheduling: true,
+    feedback: false,
+    clinical: false,
+    system: false
+  }
+};
+
+/**
+ * Get user's email preferences
+ */
+async function getUserEmailPrefs(userEmail: string): Promise<EmailPreferences> {
+  try {
+    const supabase = getSupabase();
+
+    const { data } = await supabase
+      .from('user_preferences')
+      .select('email_preferences')
+      .eq('user_id', (
+        await supabase
+          .from('lab_users')
+          .select('id')
+          .ilike('email', userEmail)
+          .single()
+      ).data?.id)
+      .single();
+
+    return data?.email_preferences || DEFAULT_EMAIL_PREFS;
+  } catch (error) {
+    return DEFAULT_EMAIL_PREFS;
+  }
+}
+
+/**
+ * Check if email should be sent for this notification
+ */
+async function shouldSendEmail(
+  userEmail: string,
+  category: NotificationCategory
+): Promise<boolean> {
+  const prefs = await getUserEmailPrefs(userEmail);
+
+  if (!prefs.enabled || prefs.mode === 'off') {
+    return false;
+  }
+
+  if (prefs.mode === 'daily_digest') {
+    // For digest mode, we don't send immediately - handled by cron job
+    return false;
+  }
+
+  // Check if category is enabled
+  return prefs.categories[category] ?? false;
+}
+
+/**
+ * Queue an email for later processing (for digest mode or retries)
+ */
+async function queueEmail(
+  userEmail: string,
+  template: string,
+  templateData: Record<string, unknown>,
+  subject: string
+): Promise<void> {
+  try {
+    const supabase = getSupabase();
+
+    // Get user ID
+    const { data: user } = await supabase
+      .from('lab_users')
+      .select('id')
+      .ilike('email', userEmail)
+      .single();
+
+    await supabase.from('email_queue').insert({
+      user_id: user?.id || null,
+      to_email: userEmail,
+      subject,
+      template,
+      template_data: templateData,
+      status: 'pending'
+    });
+  } catch (error) {
+    console.error('Error queueing email:', error);
+  }
 }
 
 export type NotificationType =
@@ -133,6 +251,8 @@ export async function notifyInstructorAssigned(
     stationTitle: string;
     labDate: string;
     cohortName: string;
+    startTime?: string;
+    role?: string;
   }
 ): Promise<void> {
   const formattedDate = new Date(stationInfo.labDate + 'T12:00:00').toLocaleDateString('en-US', {
@@ -141,6 +261,7 @@ export async function notifyInstructorAssigned(
     day: 'numeric',
   });
 
+  // Create in-app notification
   await createNotification({
     userEmail: instructorEmail,
     title: `Assigned to ${stationInfo.stationTitle}`,
@@ -150,6 +271,16 @@ export async function notifyInstructorAssigned(
     referenceType: 'lab_station',
     referenceId: stationInfo.stationId,
   });
+
+  // Send email if enabled
+  if (await shouldSendEmail(instructorEmail, 'labs')) {
+    await sendLabAssignedEmail(instructorEmail, {
+      labName: `${stationInfo.stationTitle} - ${stationInfo.cohortName}`,
+      date: formattedDate,
+      time: stationInfo.startTime ? formatTime(stationInfo.startTime) : undefined,
+      role: stationInfo.role
+    });
+  }
 }
 
 /**
@@ -222,12 +353,20 @@ export async function notifyLabReminder(
     labDate: string;
     startTime?: string;
     cohortName: string;
+    role?: string;
   }
 ): Promise<void> {
   const timeStr = labInfo.startTime
     ? ` at ${formatTime(labInfo.startTime)}`
     : '';
 
+  const formattedDate = new Date(labInfo.labDate + 'T12:00:00').toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+  });
+
+  // Create in-app notification
   await createNotification({
     userEmail: instructorEmail,
     title: 'Lab reminder',
@@ -237,6 +376,16 @@ export async function notifyLabReminder(
     referenceType: 'lab_station',
     referenceId: labInfo.stationId,
   });
+
+  // Send email if enabled
+  if (await shouldSendEmail(instructorEmail, 'labs')) {
+    await sendLabReminderEmail(instructorEmail, {
+      labName: `${labInfo.stationTitle} - ${labInfo.cohortName}`,
+      date: formattedDate,
+      time: labInfo.startTime ? formatTime(labInfo.startTime) : undefined,
+      role: labInfo.role
+    });
+  }
 }
 
 function formatTime(timeString: string): string {
@@ -256,8 +405,11 @@ export async function notifyTaskAssigned(
     taskId: string;
     title: string;
     assignerName: string;
+    description?: string;
+    dueDate?: string;
   }
 ): Promise<void> {
+  // Create in-app notification
   await createNotification({
     userEmail: assigneeEmail,
     title: 'New task assigned',
@@ -267,6 +419,17 @@ export async function notifyTaskAssigned(
     referenceType: 'instructor_task',
     referenceId: taskInfo.taskId,
   });
+
+  // Send email if enabled
+  if (await shouldSendEmail(assigneeEmail, 'tasks')) {
+    await sendTaskAssignedEmail(assigneeEmail, {
+      taskId: taskInfo.taskId,
+      title: taskInfo.title,
+      assignerName: taskInfo.assignerName,
+      description: taskInfo.description,
+      dueDate: taskInfo.dueDate
+    });
+  }
 }
 
 /**
@@ -278,8 +441,10 @@ export async function notifyTaskCompleted(
     taskId: string;
     title: string;
     assigneeName: string;
+    completionNotes?: string;
   }
 ): Promise<void> {
+  // Create in-app notification
   await createNotification({
     userEmail: assignerEmail,
     title: 'Task completed',
@@ -289,6 +454,16 @@ export async function notifyTaskCompleted(
     referenceType: 'instructor_task',
     referenceId: taskInfo.taskId,
   });
+
+  // Send email if enabled
+  if (await shouldSendEmail(assignerEmail, 'tasks')) {
+    await sendTaskCompletedEmail(assignerEmail, {
+      taskId: taskInfo.taskId,
+      title: taskInfo.title,
+      assigneeName: taskInfo.assigneeName,
+      completionNotes: taskInfo.completionNotes
+    });
+  }
 }
 
 /**
