@@ -17,13 +17,37 @@ export type NotificationType =
   | 'task_completed'
   | 'task_comment'
   | 'role_approved'
+  | 'shift_available'
+  | 'shift_confirmed'
+  | 'clinical_hours'
+  | 'compliance_due'
   | 'general';
+
+export type NotificationCategory = 'tasks' | 'labs' | 'scheduling' | 'feedback' | 'clinical' | 'system';
+
+// Map notification types to categories
+export const TYPE_TO_CATEGORY: Record<NotificationType, NotificationCategory> = {
+  task_assigned: 'tasks',
+  task_completed: 'tasks',
+  task_comment: 'tasks',
+  lab_assignment: 'labs',
+  lab_reminder: 'labs',
+  shift_available: 'scheduling',
+  shift_confirmed: 'scheduling',
+  feedback_new: 'feedback',
+  feedback_resolved: 'feedback',
+  clinical_hours: 'clinical',
+  compliance_due: 'clinical',
+  role_approved: 'system',
+  general: 'system',
+};
 
 interface CreateNotificationParams {
   userEmail: string;
   title: string;
   message: string;
   type?: NotificationType;
+  category?: NotificationCategory;
   linkUrl?: string;
   referenceType?: string;
   referenceId?: string;
@@ -37,17 +61,22 @@ export async function createNotification({
   title,
   message,
   type = 'general',
+  category,
   linkUrl,
   referenceType,
   referenceId,
 }: CreateNotificationParams): Promise<{ success: boolean; error?: string }> {
   try {
     const supabase = getSupabase();
+    // Use provided category or derive from type
+    const notificationCategory = category || TYPE_TO_CATEGORY[type] || 'system';
+
     const { error } = await supabase.from('user_notifications').insert({
       user_email: userEmail,
       title,
       message,
       type,
+      category: notificationCategory,
       link_url: linkUrl || null,
       reference_type: referenceType || null,
       reference_id: referenceId || null,
@@ -69,15 +98,20 @@ export async function createBulkNotifications(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const supabase = getSupabase();
-    const records = notifications.map(n => ({
-      user_email: n.userEmail,
-      title: n.title,
-      message: n.message,
-      type: n.type || 'general',
-      link_url: n.linkUrl || null,
-      reference_type: n.referenceType || null,
-      reference_id: n.referenceId || null,
-    }));
+    const records = notifications.map(n => {
+      const notificationType = n.type || 'general';
+      const notificationCategory = n.category || TYPE_TO_CATEGORY[notificationType] || 'system';
+      return {
+        user_email: n.userEmail,
+        title: n.title,
+        message: n.message,
+        type: notificationType,
+        category: notificationCategory,
+        link_url: n.linkUrl || null,
+        reference_type: n.referenceType || null,
+        reference_id: n.referenceId || null,
+      };
+    });
 
     const { error } = await supabase.from('user_notifications').insert(records);
 

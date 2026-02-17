@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
-import { Bell, Check, CheckCheck, ExternalLink } from 'lucide-react';
+import { Bell, Check, CheckCheck, ExternalLink, Settings, Filter, X } from 'lucide-react';
 import Link from 'next/link';
 
 interface Notification {
@@ -10,18 +10,44 @@ interface Notification {
   title: string;
   message: string;
   type: 'lab_assignment' | 'lab_reminder' | 'feedback_new' | 'feedback_resolved' | 'task_assigned' | 'general';
+  category?: 'tasks' | 'labs' | 'scheduling' | 'feedback' | 'clinical' | 'system';
   link_url: string | null;
   is_read: boolean;
   created_at: string;
 }
 
+interface CategoryPreferences {
+  tasks: boolean;
+  labs: boolean;
+  scheduling: boolean;
+  feedback: boolean;
+  clinical: boolean;
+  system: boolean;
+}
+
 const TYPE_ICONS: Record<string, string> = {
-  lab_assignment: '\uD83D\uDCCB',
-  lab_reminder: '\u23F0',
-  feedback_new: '\uD83D\uDCDD',
-  feedback_resolved: '\u2705',
-  task_assigned: '\uD83D\uDCCC',
-  general: '\u2139\uFE0F',
+  lab_assignment: '📋',
+  lab_reminder: '⏰',
+  feedback_new: '📝',
+  feedback_resolved: '✅',
+  task_assigned: '📌',
+  task_completed: '✔️',
+  task_comment: '💬',
+  shift_available: '📅',
+  shift_confirmed: '✅',
+  clinical_hours: '🏥',
+  compliance_due: '⚠️',
+  role_approved: '🎉',
+  general: 'ℹ️',
+};
+
+const CATEGORY_LABELS: Record<string, { label: string; emoji: string }> = {
+  tasks: { label: 'Tasks', emoji: '📌' },
+  labs: { label: 'Labs & Schedule', emoji: '📋' },
+  scheduling: { label: 'Shift Scheduling', emoji: '📅' },
+  feedback: { label: 'Feedback & Bugs', emoji: '📝' },
+  clinical: { label: 'Clinical', emoji: '🏥' },
+  system: { label: 'System', emoji: 'ℹ️' },
 };
 
 function formatTimeAgo(dateString: string): string {
@@ -46,13 +72,47 @@ export default function NotificationBell() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showSettings, setShowSettings] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [categoryPrefs, setCategoryPrefs] = useState<CategoryPreferences>({
+    tasks: true, labs: true, scheduling: true, feedback: true, clinical: true, system: true,
+  });
+  const [savingPrefs, setSavingPrefs] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Fetch notifications
+  // Fetch notifications and preferences
   useEffect(() => {
     if (!session?.user?.email) return;
 
-    const fetchNotifications = async () => {
+    const fetchData = async () => {
+      try {
+        // Fetch notifications
+        const notifRes = await fetch('/api/notifications');
+        if (notifRes.ok) {
+          const data = await notifRes.json();
+          setNotifications(data.notifications || []);
+          setUnreadCount(data.unreadCount || 0);
+        }
+
+        // Fetch notification preferences
+        const prefsRes = await fetch('/api/notifications/preferences');
+        if (prefsRes.ok) {
+          const prefsData = await prefsRes.json();
+          if (prefsData.preferences?.categories) {
+            setCategoryPrefs(prefsData.preferences.categories);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch notifications:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+
+    // Poll for new notifications every 60 seconds
+    const interval = setInterval(async () => {
       try {
         const res = await fetch('/api/notifications');
         if (res.ok) {
@@ -62,15 +122,8 @@ export default function NotificationBell() {
         }
       } catch (error) {
         console.error('Failed to fetch notifications:', error);
-      } finally {
-        setLoading(false);
       }
-    };
-
-    fetchNotifications();
-
-    // Poll for new notifications every 60 seconds
-    const interval = setInterval(fetchNotifications, 60000);
+    }, 60000);
     return () => clearInterval(interval);
   }, [session?.user?.email]);
 
@@ -127,6 +180,40 @@ export default function NotificationBell() {
     setIsOpen(false);
   };
 
+  const saveCategoryPrefs = async (newPrefs: CategoryPreferences) => {
+    setSavingPrefs(true);
+    try {
+      const res = await fetch('/api/notifications/preferences', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ categories: newPrefs }),
+      });
+      if (res.ok) {
+        setCategoryPrefs(newPrefs);
+        // Refetch notifications with new preferences
+        const notifRes = await fetch('/api/notifications');
+        if (notifRes.ok) {
+          const data = await notifRes.json();
+          setNotifications(data.notifications || []);
+          setUnreadCount(data.unreadCount || 0);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to save preferences:', error);
+    }
+    setSavingPrefs(false);
+  };
+
+  const toggleCategory = (category: keyof CategoryPreferences) => {
+    const newPrefs = { ...categoryPrefs, [category]: !categoryPrefs[category] };
+    saveCategoryPrefs(newPrefs);
+  };
+
+  // Filter notifications by selected category
+  const filteredNotifications = categoryFilter === 'all'
+    ? notifications
+    : notifications.filter(n => n.category === categoryFilter);
+
   if (!session) return null;
 
   return (
@@ -151,30 +238,109 @@ export default function NotificationBell() {
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
             <h3 className="font-semibold text-gray-900 dark:text-white">Notifications</h3>
-            {unreadCount > 0 && (
+            <div className="flex items-center gap-2">
+              {unreadCount > 0 && (
+                <button
+                  onClick={markAllAsRead}
+                  className="flex items-center gap-1 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+                >
+                  <CheckCheck className="w-4 h-4" />
+                </button>
+              )}
               <button
-                onClick={markAllAsRead}
-                className="flex items-center gap-1 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+                onClick={() => setShowSettings(!showSettings)}
+                className={`p-1 rounded transition-colors ${
+                  showSettings
+                    ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400'
+                    : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
+                }`}
+                title="Notification Settings"
               >
-                <CheckCheck className="w-4 h-4" />
-                Mark All
+                <Settings className="w-4 h-4" />
               </button>
-            )}
+            </div>
+          </div>
+
+          {/* Settings Panel */}
+          {showSettings && (
+            <div className="px-4 py-3 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                  Show notifications for:
+                </span>
+                <button
+                  onClick={() => setShowSettings(false)}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="space-y-1">
+                {Object.entries(CATEGORY_LABELS).map(([key, { label, emoji }]) => (
+                  <label
+                    key={key}
+                    className="flex items-center gap-2 py-1 cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={categoryPrefs[key as keyof CategoryPreferences]}
+                      onChange={() => toggleCategory(key as keyof CategoryPreferences)}
+                      disabled={savingPrefs}
+                      className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm">{emoji}</span>
+                    <span className="text-sm text-gray-700 dark:text-gray-300">{label}</span>
+                    {!categoryPrefs[key as keyof CategoryPreferences] && (
+                      <span className="text-xs text-gray-400 dark:text-gray-500 ml-auto">muted</span>
+                    )}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Filter Tabs */}
+          <div className="flex items-center gap-1 px-3 py-2 border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
+            <button
+              onClick={() => setCategoryFilter('all')}
+              className={`px-2 py-1 text-xs rounded-full whitespace-nowrap transition-colors ${
+                categoryFilter === 'all'
+                  ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300'
+                  : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+              }`}
+            >
+              All
+            </button>
+            {Object.entries(CATEGORY_LABELS).map(([key, { label, emoji }]) => (
+              categoryPrefs[key as keyof CategoryPreferences] && (
+                <button
+                  key={key}
+                  onClick={() => setCategoryFilter(key)}
+                  className={`px-2 py-1 text-xs rounded-full whitespace-nowrap transition-colors ${
+                    categoryFilter === key
+                      ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300'
+                      : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  {emoji} {label.split(' ')[0]}
+                </button>
+              )
+            ))}
           </div>
 
           {/* Notifications List */}
-          <div className="max-h-96 overflow-y-auto">
+          <div className="max-h-80 overflow-y-auto">
             {loading ? (
               <div className="p-4 text-center text-gray-500 dark:text-gray-400">
                 Loading...
               </div>
-            ) : notifications.length === 0 ? (
+            ) : filteredNotifications.length === 0 ? (
               <div className="p-8 text-center text-gray-500 dark:text-gray-400">
                 <Bell className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                <p>No notifications yet</p>
+                <p>{categoryFilter === 'all' ? 'No notifications yet' : `No ${CATEGORY_LABELS[categoryFilter]?.label || categoryFilter} notifications`}</p>
               </div>
             ) : (
-              notifications.slice(0, 5).map(notification => (
+              filteredNotifications.slice(0, 5).map(notification => (
                 <div
                   key={notification.id}
                   className={`border-b border-gray-100 dark:border-gray-700 last:border-0 ${

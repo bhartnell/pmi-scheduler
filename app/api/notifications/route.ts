@@ -10,6 +10,15 @@ function getSupabase() {
   );
 }
 
+// Default category preferences by role (same as preferences API)
+const ROLE_DEFAULTS: Record<string, Record<string, boolean>> = {
+  superadmin: { tasks: true, labs: true, scheduling: true, feedback: true, clinical: true, system: true },
+  admin: { tasks: true, labs: true, scheduling: true, feedback: true, clinical: true, system: true },
+  lead_instructor: { tasks: true, labs: true, scheduling: true, feedback: false, clinical: true, system: true },
+  instructor: { tasks: true, labs: true, scheduling: true, feedback: false, clinical: false, system: true },
+  guest: { tasks: false, labs: true, scheduling: false, feedback: false, clinical: false, system: true },
+};
+
 // GET - Fetch notifications for current user
 export async function GET(request: NextRequest) {
   try {
@@ -23,6 +32,34 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const unreadOnly = searchParams.get('unread') === 'true';
     const limit = parseInt(searchParams.get('limit') || '20');
+    const categoryFilter = searchParams.get('category'); // Optional category filter
+    const applyPrefs = searchParams.get('applyPrefs') !== 'false'; // Default true
+
+    // Get user role and preferences
+    const { data: user } = await supabase
+      .from('lab_users')
+      .select('role')
+      .eq('email', session.user.email)
+      .single();
+
+    const role = user?.role || 'instructor';
+
+    // Get user's notification preferences
+    let enabledCategories: string[] = [];
+    if (applyPrefs) {
+      const { data: prefs } = await supabase
+        .from('user_preferences')
+        .select('notification_settings')
+        .eq('user_email', session.user.email)
+        .single();
+
+      const categoryPrefs = prefs?.notification_settings?.category_preferences || ROLE_DEFAULTS[role] || ROLE_DEFAULTS.instructor;
+
+      // Build list of enabled categories
+      enabledCategories = Object.entries(categoryPrefs)
+        .filter(([_, enabled]) => enabled)
+        .map(([cat]) => cat);
+    }
 
     // Build query
     let query = supabase
@@ -36,21 +73,36 @@ export async function GET(request: NextRequest) {
       query = query.eq('is_read', false);
     }
 
+    // Apply category filter if specified
+    if (categoryFilter) {
+      query = query.eq('category', categoryFilter);
+    } else if (applyPrefs && enabledCategories.length > 0 && enabledCategories.length < 6) {
+      // Only filter if user has disabled some categories
+      query = query.in('category', enabledCategories);
+    }
+
     const { data: notifications, error } = await query;
 
     if (error) throw error;
 
-    // Get unread count
-    const { count: unreadCount } = await supabase
+    // Get unread count (also respecting category filters)
+    let countQuery = supabase
       .from('user_notifications')
       .select('*', { count: 'exact', head: true })
       .eq('user_email', session.user.email)
       .eq('is_read', false);
 
+    if (applyPrefs && enabledCategories.length > 0 && enabledCategories.length < 6) {
+      countQuery = countQuery.in('category', enabledCategories);
+    }
+
+    const { count: unreadCount } = await countQuery;
+
     return NextResponse.json({
       success: true,
       notifications: notifications || [],
       unreadCount: unreadCount || 0,
+      enabledCategories: applyPrefs ? enabledCategories : undefined,
     });
   } catch (error: any) {
     console.error('Error fetching notifications:', error);
@@ -96,11 +148,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Map type to category if not provided
+    const TYPE_TO_CATEGORY: Record<string, string> = {
+      task_assigned: 'tasks', task_completed: 'tasks', task_comment: 'tasks',
+      lab_assignment: 'labs', lab_reminder: 'labs',
+      shift_available: 'scheduling', shift_confirmed: 'scheduling',
+      feedback_new: 'feedback', feedback_resolved: 'feedback',
+      clinical_hours: 'clinical', compliance_due: 'clinical',
+      role_approved: 'system', general: 'system',
+    };
+
+    const notificationType = body.type || 'general';
+    const notificationCategory = body.category || TYPE_TO_CATEGORY[notificationType] || 'system';
+
     const notificationData = {
       user_email: body.user_email,
       title: body.title,
       message: body.message,
-      type: body.type || 'general',
+      type: notificationType,
+      category: notificationCategory,
       link_url: body.link_url || null,
       reference_type: body.reference_type || null,
       reference_id: body.reference_id || null,
