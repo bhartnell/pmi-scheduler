@@ -21,6 +21,86 @@ async function getCurrentUser(email: string) {
   return data;
 }
 
+// Check if task_assignees table exists and is queryable
+async function checkTaskAssigneesTable(): Promise<boolean> {
+  try {
+    const supabase = getSupabase();
+    const { error } = await supabase
+      .from('task_assignees')
+      .select('id')
+      .limit(0);
+    return !error;
+  } catch {
+    return false;
+  }
+}
+
+// Build the select query string based on whether task_assignees exists
+function getTaskSelectQuery(includeAssignees: boolean): string {
+  if (includeAssignees) {
+    return `
+      *,
+      assigner:assigned_by(id, name, email),
+      assignee:assigned_to(id, name, email),
+      assignees:task_assignees(
+        id,
+        assignee_id,
+        status,
+        completed_at,
+        completion_notes,
+        assignee:assignee_id(id, name, email)
+      )
+    `;
+  }
+  return `
+    *,
+    assigner:assigned_by(id, name, email),
+    assignee:assigned_to(id, name, email)
+  `;
+}
+
+// Fetch a task with fallback if task_assignees join fails
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function fetchTaskById(id: string, hasAssigneesTable: boolean): Promise<{ task: any; error: any }> {
+  const supabase = getSupabase();
+
+  const { data: task, error } = await supabase
+    .from('instructor_tasks')
+    .select(getTaskSelectQuery(hasAssigneesTable))
+    .eq('id', id)
+    .single();
+
+  if (error) {
+    // If task_assignees join failed, retry without
+    if (error.message?.includes('task_assignees') || error.message?.includes('relationship') || error.code === 'PGRST200') {
+      console.warn('Task detail: task_assignees join failed, retrying without:', error.message);
+      const { data: taskNoAssignees, error: retryError } = await supabase
+        .from('instructor_tasks')
+        .select(getTaskSelectQuery(false))
+        .eq('id', id)
+        .single();
+
+      if (retryError) return { task: null, error: retryError };
+      if (taskNoAssignees) {
+        const taskWithAssignees = Object.assign({}, taskNoAssignees, { assignees: [] });
+        return { task: taskWithAssignees, error: null };
+      }
+      return { task: null, error: null };
+    }
+    return { task: null, error };
+  }
+
+  // Ensure assignees array always exists
+  if (task) {
+    const taskObj = task as unknown as Record<string, unknown>;
+    if (!taskObj.assignees) {
+      taskObj.assignees = [];
+    }
+  }
+
+  return { task, error: null };
+}
+
 // GET - Get task details with comments and assignees
 export async function GET(
   request: NextRequest,
@@ -40,25 +120,9 @@ export async function GET(
     }
 
     const supabase = getSupabase();
+    const hasAssigneesTable = await checkTaskAssigneesTable();
 
-    // Get task with assigner/assignee info and multi-assign assignees
-    const { data: task, error: taskError } = await supabase
-      .from('instructor_tasks')
-      .select(`
-        *,
-        assigner:assigned_by(id, name, email),
-        assignee:assigned_to(id, name, email),
-        assignees:task_assignees(
-          id,
-          assignee_id,
-          status,
-          completed_at,
-          completion_notes,
-          assignee:assignee_id(id, name, email)
-        )
-      `)
-      .eq('id', id)
-      .single();
+    const { task, error: taskError } = await fetchTaskById(id, hasAssigneesTable);
 
     if (taskError || !task) {
       return NextResponse.json({ success: false, error: 'Task not found' }, { status: 404 });
@@ -126,23 +190,10 @@ export async function PATCH(
     }
 
     const supabase = getSupabase();
+    const hasAssigneesTable = await checkTaskAssigneesTable();
 
     // Get existing task
-    const { data: existingTask, error: fetchError } = await supabase
-      .from('instructor_tasks')
-      .select(`
-        *,
-        assigner:assigned_by(id, name, email),
-        assignee:assigned_to(id, name, email),
-        assignees:task_assignees(
-          id,
-          assignee_id,
-          status,
-          assignee:assignee_id(id, name, email)
-        )
-      `)
-      .eq('id', id)
-      .single();
+    const { task: existingTask, error: fetchError } = await fetchTaskById(id, hasAssigneesTable);
 
     if (fetchError || !existingTask) {
       return NextResponse.json({ success: false, error: 'Task not found' }, { status: 404 });
@@ -189,7 +240,7 @@ export async function PATCH(
         }
 
         // For multi-assign tasks, update the user's specific assignee record
-        if (completionMode !== 'single' && userAssigneeRecord) {
+        if (hasAssigneesTable && completionMode !== 'single' && userAssigneeRecord) {
           const { error: assigneeError } = await supabase
             .from('task_assignees')
             .update({
@@ -201,21 +252,15 @@ export async function PATCH(
 
           if (assigneeError) throw assigneeError;
 
-          // The database trigger will update the main task status if needed
-          // But we should also handle it here for immediate response
-
           if (completionMode === 'any') {
-            // Any mode: task is done when anyone completes
             updateData.status = 'completed';
             updateData.completed_at = new Date().toISOString();
           } else if (completionMode === 'all') {
-            // All mode: check if everyone has completed
             const { data: allAssignees } = await supabase
               .from('task_assignees')
               .select('status, assignee_id')
               .eq('task_id', id);
 
-            // Count how many will be completed (including this one we're about to update)
             const completedCount = (allAssignees || []).filter(
               (a: { status: string; assignee_id: string }) => a.status === 'completed' || a.assignee_id === currentUser.id
             ).length;
@@ -239,15 +284,13 @@ export async function PATCH(
         }
         updateData.status = status;
       } else if (status === 'in_progress') {
-        // Anyone assigned can start the task
         if (isAssignee) {
-          if (userAssigneeRecord) {
+          if (hasAssigneesTable && userAssigneeRecord) {
             await supabase
               .from('task_assignees')
               .update({ status: 'in_progress' })
               .eq('id', userAssigneeRecord.id);
           }
-          // Also update main task if still pending
           if (existingTask.status === 'pending') {
             updateData.status = 'in_progress';
           }
@@ -258,7 +301,7 @@ export async function PATCH(
     }
 
     // Completion notes for single-assign mode
-    if (completion_notes !== undefined && isAssignee && existingTask.completion_mode === 'single') {
+    if (completion_notes !== undefined && isAssignee && (existingTask.completion_mode || 'single') === 'single') {
       updateData.completion_notes = completion_notes;
     }
 
@@ -269,41 +312,29 @@ export async function PATCH(
         .from('instructor_tasks')
         .update(updateData)
         .eq('id', id)
-        .select(`
-          *,
-          assigner:assigned_by(id, name, email),
-          assignee:assigned_to(id, name, email),
-          assignees:task_assignees(
-            id,
-            assignee_id,
-            status,
-            completed_at,
-            assignee:assignee_id(id, name, email)
-          )
-        `)
+        .select(getTaskSelectQuery(hasAssigneesTable))
         .single();
 
-      if (error) throw error;
-      task = updatedTask;
+      if (error) {
+        // Retry without assignees join if it fails
+        if (error.message?.includes('task_assignees') || error.code === 'PGRST200') {
+          const { data: retryTask, error: retryErr } = await supabase
+            .from('instructor_tasks')
+            .update(updateData)
+            .eq('id', id)
+            .select(getTaskSelectQuery(false))
+            .single();
+          if (retryErr) throw retryErr;
+          task = retryTask ? Object.assign({}, retryTask, { assignees: [] }) : existingTask;
+        } else {
+          throw error;
+        }
+      } else {
+        task = updatedTask;
+      }
     } else {
       // Re-fetch to get updated assignee status
-      const { data: refreshedTask } = await supabase
-        .from('instructor_tasks')
-        .select(`
-          *,
-          assigner:assigned_by(id, name, email),
-          assignee:assigned_to(id, name, email),
-          assignees:task_assignees(
-            id,
-            assignee_id,
-            status,
-            completed_at,
-            assignee:assignee_id(id, name, email)
-          )
-        `)
-        .eq('id', id)
-        .single();
-
+      const { task: refreshedTask } = await fetchTaskById(id, hasAssigneesTable);
       if (refreshedTask) task = refreshedTask;
     }
 
