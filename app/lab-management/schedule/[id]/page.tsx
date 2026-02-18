@@ -127,6 +127,29 @@ interface LabDayRole {
   };
 }
 
+interface Student {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string | null;
+  cohort_id: string;
+}
+
+interface ScenarioParticipation {
+  id: string;
+  student_id: string;
+  scenario_id: string | null;
+  scenario_name: string | null;
+  role: 'team_lead' | 'med_tech' | 'monitor_tech' | 'airway_tech' | 'observer';
+  lab_day_id: string | null;
+  date: string;
+  student?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+  };
+}
+
 const STATION_TYPES = [
   { value: 'scenario', label: 'Scenario', description: 'Full scenario with grading' },
   { value: 'skills', label: 'Skills', description: 'Skills practice station' },
@@ -169,6 +192,20 @@ export default function LabDayPage() {
   const [labDayRoles, setLabDayRoles] = useState<LabDayRole[]>([]);
   const [stationSkillDocs, setStationSkillDocs] = useState<Record<string, SkillDocument[]>>({});
 
+  // Role logging state
+  const [showRoleModal, setShowRoleModal] = useState(false);
+  const [roleModalStation, setRoleModalStation] = useState<Station | null>(null);
+  const [cohortStudents, setCohortStudents] = useState<Student[]>([]);
+  const [scenarioParticipation, setScenarioParticipation] = useState<ScenarioParticipation[]>([]);
+  const [roleAssignments, setRoleAssignments] = useState<Record<string, string>>({
+    team_lead: '',
+    med_tech: '',
+    monitor_tech: '',
+    airway_tech: '',
+    observer: ''
+  });
+  const [savingRoles, setSavingRoles] = useState(false);
+
   // Edit station modal state
   const [editingStation, setEditingStation] = useState<Station | null>(null);
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
@@ -207,8 +244,42 @@ export default function LabDayPage() {
   useEffect(() => {
     if (session && labDayId) {
       fetchLabDay();
+      fetchScenarioParticipation();
     }
   }, [session, labDayId]);
+
+  // Fetch students when lab day is loaded
+  useEffect(() => {
+    if (labDay?.cohort?.id) {
+      fetchCohortStudents();
+    }
+  }, [labDay?.cohort?.id]);
+
+  const fetchCohortStudents = async () => {
+    if (!labDay?.cohort?.id) return;
+
+    try {
+      const res = await fetch(`/api/lab-management/students?cohortId=${labDay.cohort.id}&status=active`);
+      const data = await res.json();
+      if (data.success) {
+        setCohortStudents(data.students || []);
+      }
+    } catch (error) {
+      console.error('Error fetching students:', error);
+    }
+  };
+
+  const fetchScenarioParticipation = async () => {
+    try {
+      const res = await fetch(`/api/tracking/scenarios?labDayId=${labDayId}`);
+      const data = await res.json();
+      if (data.success) {
+        setScenarioParticipation(data.participation || []);
+      }
+    } catch (error) {
+      console.error('Error fetching scenario participation:', error);
+    }
+  };
 
   const fetchLabDay = async () => {
     setLoading(true);
@@ -766,6 +837,81 @@ export default function LabDayPage() {
     setDeletingStation(false);
   };
 
+  const openRoleModal = (station: Station) => {
+    if (!station.scenario) return;
+
+    setRoleModalStation(station);
+    setShowRoleModal(true);
+
+    // Pre-fill existing role assignments for this scenario on this lab day
+    const existingRoles = scenarioParticipation.filter(
+      sp => sp.scenario_id === station.scenario?.id && sp.lab_day_id === labDayId
+    );
+
+    const prefilledRoles: Record<string, string> = {
+      team_lead: '',
+      med_tech: '',
+      monitor_tech: '',
+      airway_tech: '',
+      observer: ''
+    };
+
+    existingRoles.forEach(sp => {
+      if (sp.role && sp.student_id) {
+        prefilledRoles[sp.role] = sp.student_id;
+      }
+    });
+
+    setRoleAssignments(prefilledRoles);
+  };
+
+  const closeRoleModal = () => {
+    setShowRoleModal(false);
+    setRoleModalStation(null);
+    setRoleAssignments({
+      team_lead: '',
+      med_tech: '',
+      monitor_tech: '',
+      airway_tech: '',
+      observer: ''
+    });
+  };
+
+  const handleSaveRoles = async () => {
+    if (!roleModalStation?.scenario || !labDay) return;
+
+    setSavingRoles(true);
+    try {
+      const rolesToLog = Object.entries(roleAssignments).filter(([_, studentId]) => studentId);
+
+      for (const [role, studentId] of rolesToLog) {
+        await fetch('/api/tracking/scenarios', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            student_id: studentId,
+            scenario_id: roleModalStation.scenario.id,
+            scenario_name: roleModalStation.scenario.title,
+            role: role,
+            lab_day_id: labDayId,
+            date: labDay.date
+          })
+        });
+      }
+
+      // Refresh participation data
+      await fetchScenarioParticipation();
+      closeRoleModal();
+
+      // Show success message
+      alert(`Successfully logged ${rolesToLog.length} role assignment(s)`);
+    } catch (error) {
+      console.error('Error saving roles:', error);
+      alert('Failed to save roles');
+    }
+    setSavingRoles(false);
+  };
+
   if (status === 'loading' || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
@@ -1095,13 +1241,22 @@ export default function LabDayPage() {
                       Edit
                     </button>
                     {station.scenario && (
-                      <Link
-                        href={`/lab-management/scenarios/${station.scenario.id}`}
-                        className="inline-flex items-center justify-center gap-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
-                      >
-                        <FileText className="w-4 h-4" />
-                        Scenario
-                      </Link>
+                      <>
+                        <Link
+                          href={`/lab-management/scenarios/${station.scenario.id}`}
+                          className="inline-flex items-center justify-center gap-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+                        >
+                          <FileText className="w-4 h-4" />
+                          Scenario
+                        </Link>
+                        <button
+                          onClick={() => openRoleModal(station)}
+                          className="inline-flex items-center justify-center gap-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+                        >
+                          <Users className="w-4 h-4" />
+                          Log Roles
+                        </button>
+                      </>
                     )}
                     <Link
                       href={`/lab-management/grade/station/${station.id}`}
@@ -1722,6 +1877,171 @@ export default function LabDayPage() {
                 className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               >
                 Done ({editForm.selectedSkills.length} skills selected)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Role Logging Modal */}
+      {showRoleModal && roleModalStation?.scenario && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-lg w-full">
+            <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Log Scenario Roles
+                </h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  {roleModalStation.scenario.title}
+                </p>
+              </div>
+              <button
+                onClick={closeRoleModal}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              {/* Team Lead */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Team Lead
+                </label>
+                <select
+                  value={roleAssignments.team_lead}
+                  onChange={(e) => setRoleAssignments(prev => ({ ...prev, team_lead: e.target.value }))}
+                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                >
+                  <option value="">Select student...</option>
+                  {cohortStudents.map(student => (
+                    <option key={student.id} value={student.id}>
+                      {student.last_name}, {student.first_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Med Tech */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Med Tech
+                </label>
+                <select
+                  value={roleAssignments.med_tech}
+                  onChange={(e) => setRoleAssignments(prev => ({ ...prev, med_tech: e.target.value }))}
+                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                >
+                  <option value="">Select student...</option>
+                  {cohortStudents.map(student => (
+                    <option key={student.id} value={student.id}>
+                      {student.last_name}, {student.first_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Monitor Tech */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Monitor Tech
+                </label>
+                <select
+                  value={roleAssignments.monitor_tech}
+                  onChange={(e) => setRoleAssignments(prev => ({ ...prev, monitor_tech: e.target.value }))}
+                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                >
+                  <option value="">Select student...</option>
+                  {cohortStudents.map(student => (
+                    <option key={student.id} value={student.id}>
+                      {student.last_name}, {student.first_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Airway Tech */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Airway Tech
+                </label>
+                <select
+                  value={roleAssignments.airway_tech}
+                  onChange={(e) => setRoleAssignments(prev => ({ ...prev, airway_tech: e.target.value }))}
+                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                >
+                  <option value="">Select student...</option>
+                  {cohortStudents.map(student => (
+                    <option key={student.id} value={student.id}>
+                      {student.last_name}, {student.first_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Observer */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Observer
+                </label>
+                <select
+                  value={roleAssignments.observer}
+                  onChange={(e) => setRoleAssignments(prev => ({ ...prev, observer: e.target.value }))}
+                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                >
+                  <option value="">Select student...</option>
+                  {cohortStudents.map(student => (
+                    <option key={student.id} value={student.id}>
+                      {student.last_name}, {student.first_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Previously logged roles for this scenario */}
+              {scenarioParticipation.filter(sp =>
+                sp.scenario_id === roleModalStation.scenario?.id &&
+                sp.lab_day_id === labDayId
+              ).length > 0 && (
+                <div className="p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg border border-blue-200 dark:border-blue-700">
+                  <h4 className="text-xs font-medium text-blue-800 dark:text-blue-300 mb-2">
+                    Previously Logged
+                  </h4>
+                  <div className="space-y-1 text-xs text-blue-700 dark:text-blue-400">
+                    {scenarioParticipation
+                      .filter(sp => sp.scenario_id === roleModalStation.scenario?.id && sp.lab_day_id === labDayId)
+                      .map(sp => (
+                        <div key={sp.id}>
+                          {sp.role.replace(/_/g, ' ')}: {sp.student?.last_name}, {sp.student?.first_name}
+                        </div>
+                      ))
+                    }
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex items-center justify-end gap-3 p-4 border-t dark:border-gray-700">
+              <button
+                onClick={closeRoleModal}
+                className="px-4 py-2 border dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveRoles}
+                disabled={savingRoles || !Object.values(roleAssignments).some(v => v)}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              >
+                {savingRoles ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                Log All
               </button>
             </div>
           </div>
