@@ -54,20 +54,15 @@ async function getUserEmailPrefs(userEmail: string): Promise<EmailPreferences> {
   try {
     const supabase = getSupabase();
 
+    // user_preferences uses user_email (TEXT, UNIQUE) as its key
     const { data } = await supabase
       .from('user_preferences')
       .select('email_preferences')
-      .eq('user_id', (
-        await supabase
-          .from('lab_users')
-          .select('id')
-          .ilike('email', userEmail)
-          .single()
-      ).data?.id)
+      .ilike('user_email', userEmail)
       .single();
 
     return data?.email_preferences || DEFAULT_EMAIL_PREFS;
-  } catch (error) {
+  } catch {
     return DEFAULT_EMAIL_PREFS;
   }
 }
