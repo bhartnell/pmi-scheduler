@@ -16,7 +16,8 @@ import {
   X,
   Plus,
   Trash2,
-  AlertCircle
+  AlertCircle,
+  ExternalLink
 } from 'lucide-react';
 
 interface LabDay {
@@ -46,11 +47,21 @@ interface Scenario {
   estimated_duration: number | null;
 }
 
+interface SkillDocument {
+  id: string;
+  document_name: string;
+  document_url: string;
+  document_type: string;
+  file_type: string;
+  display_order: number;
+}
+
 interface Skill {
   id: string;
   name: string;
   category: string;
   certification_levels: string[];
+  documents?: SkillDocument[];
 }
 
 interface Station {
@@ -146,8 +157,8 @@ export default function NewStationPage() {
         setScenarios(scenariosData.scenarios || []);
       }
 
-      // Fetch skills
-      const skillsRes = await fetch('/api/lab-management/skills');
+      // Fetch skills with documents
+      const skillsRes = await fetch('/api/lab-management/skills?includeDocuments=true');
       const skillsData = await skillsRes.json();
       if (skillsData.success) {
         setSkills(skillsData.skills || []);
@@ -607,6 +618,32 @@ export default function NewStationPage() {
                     </button>
                   </div>
                 </div>
+
+                {/* Auto-loaded documents from selected skills */}
+                {selectedSkills.some(skillId => {
+                  const skill = skills.find(s => s.id === skillId);
+                  return skill?.documents && skill.documents.length > 0;
+                }) && (
+                  <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <h4 className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-2 flex items-center gap-2">
+                      <FileText className="w-4 h-4" />
+                      Linked Skill Documents
+                    </h4>
+                    <div className="space-y-1">
+                      {selectedSkills.flatMap(skillId => {
+                        const skill = skills.find(s => s.id === skillId);
+                        return (skill?.documents || []).map(doc => (
+                          <a key={doc.id} href={doc.document_url} target="_blank" rel="noopener noreferrer"
+                            className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-300 hover:underline">
+                            <ExternalLink className="w-3 h-3" />
+                            {doc.document_name}
+                            <span className="text-xs text-blue-500 px-1 py-0.5 bg-blue-100 rounded">{doc.document_type}</span>
+                          </a>
+                        ));
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 {/* Station Documentation */}
                 <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">

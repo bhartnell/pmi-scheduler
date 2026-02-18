@@ -90,11 +90,21 @@ interface Scenario {
   difficulty: string;
 }
 
+interface SkillDocument {
+  id: string;
+  document_name: string;
+  document_url: string;
+  document_type: string;
+  file_type: string;
+  display_order: number;
+}
+
 interface Skill {
   id: string;
   name: string;
   category: string;
   certification_levels?: string[];
+  documents?: SkillDocument[];
 }
 
 interface Instructor {
@@ -157,6 +167,7 @@ export default function LabDayPage() {
   const [loading, setLoading] = useState(true);
   const [showTimer, setShowTimer] = useState(openTimerParam);
   const [labDayRoles, setLabDayRoles] = useState<LabDayRole[]>([]);
+  const [stationSkillDocs, setStationSkillDocs] = useState<Record<string, SkillDocument[]>>({});
 
   // Edit station modal state
   const [editingStation, setEditingStation] = useState<Station | null>(null);
@@ -230,6 +241,53 @@ export default function LabDayPage() {
 
       if (rolesData.success) {
         setLabDayRoles(rolesData.roles || []);
+      }
+
+      // Fetch station skill documents
+      if (labDayData.success && labDayData.labDay?.stations) {
+        // Fetch all skills with documents once
+        const allSkillsRes = await fetch('/api/lab-management/skills?includeDocuments=true');
+        const allSkillsData = await allSkillsRes.json();
+
+        if (allSkillsData.success && allSkillsData.skills) {
+          const skillsMap = new Map<string, Skill>();
+          allSkillsData.skills.forEach((skill: Skill) => {
+            skillsMap.set(skill.id, skill);
+          });
+
+          const skillDocsMap: Record<string, SkillDocument[]> = {};
+
+          for (const station of labDayData.labDay.stations) {
+            // Only fetch for skills or skill_drill stations
+            if (station.station_type === 'skills' || station.station_type === 'skill_drill') {
+              try {
+                // Fetch station skills
+                const stationSkillsRes = await fetch(`/api/lab-management/station-skills?stationId=${station.id}`);
+                const stationSkillsData = await stationSkillsRes.json();
+
+                if (stationSkillsData.success && stationSkillsData.stationSkills) {
+                  const docs: SkillDocument[] = [];
+
+                  // Collect documents from all linked skills
+                  for (const stationSkill of stationSkillsData.stationSkills) {
+                    if (stationSkill.skill?.id) {
+                      const skill = skillsMap.get(stationSkill.skill.id);
+                      if (skill?.documents) {
+                        docs.push(...skill.documents);
+                      }
+                    }
+                  }
+
+                  skillDocsMap[station.id] = docs;
+                }
+              } catch (error) {
+                console.error(`Error fetching skill documents for station ${station.id}:`, error);
+              }
+            }
+          }
+
+          setStationSkillDocs(skillDocsMap);
+        }
       }
     } catch (error) {
       console.error('Error fetching lab day:', error);
@@ -312,7 +370,7 @@ export default function LabDayPage() {
     try {
       const [scenariosRes, skillsRes] = await Promise.all([
         fetch('/api/lab-management/scenarios'),
-        fetch('/api/lab-management/skills')
+        fetch('/api/lab-management/skills?includeDocuments=true')
       ]);
       const scenariosData = await scenariosRes.json();
       const skillsData = await skillsRes.json();
@@ -985,7 +1043,7 @@ export default function LabDayPage() {
                   </div>
 
                   {/* Document Links */}
-                  {(station.skill_sheet_url || station.instructions_url) && (
+                  {(station.skill_sheet_url || station.instructions_url || (stationSkillDocs[station.id] && stationSkillDocs[station.id].length > 0)) && (
                     <div className="flex flex-wrap gap-2 mb-3 print:hidden">
                       {station.skill_sheet_url && (
                         <a
@@ -1011,6 +1069,19 @@ export default function LabDayPage() {
                           <ExternalLink className="w-3 h-3" />
                         </a>
                       )}
+                      {stationSkillDocs[station.id] && stationSkillDocs[station.id].map((doc) => (
+                        <a
+                          key={doc.id}
+                          href={doc.document_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded hover:bg-purple-100 dark:hover:bg-purple-900/50"
+                        >
+                          <FileText className="w-3 h-3" />
+                          {doc.document_name}
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                      ))}
                     </div>
                   )}
 
@@ -1281,6 +1352,32 @@ export default function LabDayPage() {
                   <FileText className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                   <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Station Documentation</h3>
                 </div>
+
+                {/* Auto-loaded documents from selected skills */}
+                {(editForm.station_type === 'skills' || editForm.station_type === 'skill_drill') && editForm.selectedSkills.some(skillId => {
+                  const skill = skills.find(s => s.id === skillId);
+                  return skill?.documents && skill.documents.length > 0;
+                }) && (
+                  <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <h4 className="text-xs font-medium text-blue-800 dark:text-blue-300 mb-2 flex items-center gap-2">
+                      <FileText className="w-3 h-3" />
+                      Linked Skill Documents
+                    </h4>
+                    <div className="space-y-1">
+                      {editForm.selectedSkills.flatMap(skillId => {
+                        const skill = skills.find(s => s.id === skillId);
+                        return (skill?.documents || []).map(doc => (
+                          <a key={doc.id} href={doc.document_url} target="_blank" rel="noopener noreferrer"
+                            className="flex items-center gap-2 text-xs text-blue-700 dark:text-blue-300 hover:underline">
+                            <ExternalLink className="w-3 h-3" />
+                            {doc.document_name}
+                            <span className="text-xs text-blue-500 px-1 py-0.5 bg-blue-100 rounded">{doc.document_type}</span>
+                          </a>
+                        ));
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
