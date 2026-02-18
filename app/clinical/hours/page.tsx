@@ -723,6 +723,11 @@ export default function ClinicalHoursTrackerPage() {
   const matchedCount = importPreview.filter(r => r.matchedStudent).length;
   const cohortStats = getCohortStats();
 
+  // Check if selected cohort is Paramedic program
+  const selectedCohortData = cohorts.find(c => c.id === selectedCohort);
+  const isParamedicCohort = selectedCohortData?.program?.abbreviation === 'PMD' ||
+                            selectedCohortData?.program?.abbreviation === 'Paramedic';
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50 to-cyan-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
@@ -837,8 +842,24 @@ export default function ClinicalHoursTrackerPage() {
           </div>
         </div>
 
+        {/* Non-Paramedic Cohort Message */}
+        {selectedCohort && !isParamedicCohort && (
+          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg shadow p-8 text-center">
+            <AlertTriangle className="w-12 h-12 text-blue-500 mx-auto mb-3" />
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              Clinical Hours Tracking Not Applicable
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400">
+              Clinical hours tracking is only applicable to the Paramedic program.
+            </p>
+            <p className="text-sm text-gray-500 dark:text-gray-500 mt-2">
+              Selected cohort: {selectedCohortData?.program?.abbreviation || 'Unknown'} Group {selectedCohortData?.cohort_number}
+            </p>
+          </div>
+        )}
+
         {/* Cohort Summary Stats */}
-        {selectedCohort && students.length > 0 && (
+        {selectedCohort && isParamedicCohort && students.length > 0 && (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-6">
@@ -871,7 +892,7 @@ export default function ClinicalHoursTrackerPage() {
         )}
 
         {/* Dashboard View */}
-        {selectedCohort && viewMode === 'dashboard' && (
+        {selectedCohort && isParamedicCohort && viewMode === 'dashboard' && (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -964,7 +985,7 @@ export default function ClinicalHoursTrackerPage() {
         )}
 
         {/* Detailed View (original editable grid) */}
-        {selectedCohort && viewMode === 'detailed' && (
+        {selectedCohort && isParamedicCohort && viewMode === 'detailed' && (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
