@@ -503,7 +503,7 @@ export default function SiteVisitsPage() {
 
         {/* Site Visit Coverage Alerts */}
         <div className="mb-6">
-          <SiteVisitAlerts showOnlyWhenNeeded={false} />
+          <SiteVisitAlerts showOnlyWhenNeeded={false} onLogVisit={() => { resetForm(); setShowForm(true); }} />
         </div>
 
         {/* Filters */}

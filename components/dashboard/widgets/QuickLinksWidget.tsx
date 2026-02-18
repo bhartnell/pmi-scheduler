@@ -16,6 +16,7 @@ import {
   BarChart3,
   ClipboardCheck,
   Timer,
+  ListTodo,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -127,6 +128,12 @@ export const QUICK_LINK_DEFINITIONS: Record<string, {
     icon: Timer,
     label: "Today's Labs",
     color: 'bg-emerald-500',
+  },
+  tasks: {
+    href: '/tasks',
+    icon: ListTodo,
+    label: 'Tasks',
+    color: 'bg-rose-500',
   },
 };
 

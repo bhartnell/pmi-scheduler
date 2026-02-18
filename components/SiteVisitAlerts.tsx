@@ -39,11 +39,13 @@ interface CoverageResponse {
 interface SiteVisitAlertsProps {
   showOnlyWhenNeeded?: boolean;
   compact?: boolean;
+  onLogVisit?: () => void;
 }
 
 export default function SiteVisitAlerts({
   showOnlyWhenNeeded = true,
-  compact = false
+  compact = false,
+  onLogVisit,
 }: SiteVisitAlertsProps) {
   const [data, setData] = useState<CoverageResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -211,15 +213,26 @@ export default function SiteVisitAlerts({
           ))}
         </div>
 
-        {/* Action link */}
-        <Link
-          href="/clinical/site-visits"
-          className="flex items-center justify-center gap-2 mt-4 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors"
-        >
-          <Calendar className="w-4 h-4" />
-          Log a Visit
-          <ChevronRight className="w-4 h-4" />
-        </Link>
+        {/* Action button */}
+        {onLogVisit ? (
+          <button
+            onClick={onLogVisit}
+            className="flex items-center justify-center gap-2 mt-4 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors w-full"
+          >
+            <Calendar className="w-4 h-4" />
+            Log a Visit
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        ) : (
+          <Link
+            href="/clinical/site-visits"
+            className="flex items-center justify-center gap-2 mt-4 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors"
+          >
+            <Calendar className="w-4 h-4" />
+            Log a Visit
+            <ChevronRight className="w-4 h-4" />
+          </Link>
+        )}
       </div>
     </div>
   );
