@@ -15,7 +15,8 @@ import {
   StickyNote,
   X,
   Save,
-  Trash2
+  Trash2,
+  Lock
 } from 'lucide-react';
 
 interface Cohort {
@@ -548,18 +549,29 @@ function SchedulePageContent() {
                     }`}>
                       {date.getDate()}
                     </span>
-                    {/* Note indicator / add note button */}
-                    <button
-                      onClick={(e) => openNoteModal(date, e)}
-                      className={`p-0.5 rounded transition-all ${
-                        note
-                          ? 'text-yellow-500 dark:text-yellow-400 hover:text-yellow-600 dark:hover:text-yellow-300'
-                          : 'text-gray-300 dark:text-gray-600 opacity-0 group-hover:opacity-100 hover:text-gray-500 dark:hover:text-gray-400'
-                      }`}
-                      title={note ? 'Edit note' : 'Add note'}
-                    >
-                      <StickyNote className="w-3.5 h-3.5" />
-                    </button>
+                    <div className="flex items-center gap-0.5">
+                      {/* Add lab button - shows on hover */}
+                      <Link
+                        href={`/lab-management/schedule/new?date=${date.toISOString().split('T')[0]}`}
+                        className="p-0.5 rounded text-gray-300 dark:text-gray-600 opacity-0 group-hover:opacity-100 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all"
+                        title="Create lab day"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                      </Link>
+                      {/* Note indicator / add note button */}
+                      <button
+                        onClick={(e) => openNoteModal(date, e)}
+                        className={`p-0.5 rounded transition-all ${
+                          note
+                            ? 'text-yellow-500 dark:text-yellow-400 hover:text-yellow-600 dark:hover:text-yellow-300'
+                            : 'text-gray-300 dark:text-gray-600 opacity-0 group-hover:opacity-100 hover:text-gray-500 dark:hover:text-gray-400'
+                        }`}
+                        title={note ? 'Edit private note (only visible to you)' : 'Add private note (only visible to you)'}
+                      >
+                        <StickyNote className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
 
                   {/* Note preview */}
@@ -744,9 +756,12 @@ function SchedulePageContent() {
                 placeholder="Lab observations, notes, reminders..."
                 className="w-full h-40 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400 dark:placeholder-gray-500"
               />
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                Personal note — only visible to you
-              </p>
+              <div className="flex items-center gap-1.5 mt-2 px-2 py-1.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <Lock className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                <p className="text-xs text-blue-700 dark:text-blue-300 font-medium">
+                  Personal note — only visible to you
+                </p>
+              </div>
             </div>
 
             {/* Modal Footer */}

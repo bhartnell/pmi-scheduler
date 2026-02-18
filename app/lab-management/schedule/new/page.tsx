@@ -1,8 +1,8 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import {
   ChevronRight,
@@ -83,9 +83,10 @@ const STATION_TYPES = [
   { value: 'documentation', label: 'Documentation', icon: FileText, color: 'bg-blue-500', description: 'Documentation/PCR station' }
 ];
 
-export default function NewLabDayPage() {
+function NewLabDayPageContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [cohorts, setCohorts] = useState<Cohort[]>([]);
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
@@ -102,7 +103,7 @@ export default function NewLabDayPage() {
 
   // Form state
   const [selectedCohort, setSelectedCohort] = useState('');
-  const [labDate, setLabDate] = useState('');
+  const [labDate, setLabDate] = useState(searchParams.get('date') || '');
   const [startTime, setStartTime] = useState('08:00');
   const [endTime, setEndTime] = useState('12:00');
   const [labTitle, setLabTitle] = useState('');
@@ -113,6 +114,11 @@ export default function NewLabDayPage() {
   const [stations, setStations] = useState<Station[]>([
     createEmptyStation(1)
   ]);
+
+  // Lab-day level rotation settings (defaults for stations)
+  const [numRotationsLabDay, setNumRotationsLabDay] = useState(4);
+  const [rotationDurationLabDay, setRotationDurationLabDay] = useState(30);
+  const [durationInputValueLabDay, setDurationInputValueLabDay] = useState('30');
 
   // Custom duration input display state (for station rotation minutes)
   const [durationInputValues, setDurationInputValues] = useState<Record<string, string>>({});
@@ -288,7 +294,9 @@ export default function NewLabDayPage() {
           notes: labNotes || null,
           semester: semester ? parseInt(semester) : null,
           week_number: weekNumber ? parseInt(weekNumber) : null,
-          day_number: dayNumber ? parseInt(dayNumber) : null
+          day_number: dayNumber ? parseInt(dayNumber) : null,
+          num_rotations: numRotationsLabDay,
+          rotation_duration: rotationDurationLabDay
         })
       });
 
@@ -610,6 +618,72 @@ export default function NewLabDayPage() {
                 placeholder="e.g., 1"
                 className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
               />
+            </div>
+
+            {/* Lab Day Rotation Settings */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Rotations
+              </label>
+              <select
+                value={numRotationsLabDay}
+                onChange={(e) => setNumRotationsLabDay(parseInt(e.target.value))}
+                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+              >
+                {[2, 3, 4, 5, 6].map(n => (
+                  <option key={n} value={n}>{n} rotations</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Rotation Duration
+              </label>
+              <div className="space-y-2">
+                <input
+                  type="number"
+                  min="1"
+                  max="120"
+                  value={durationInputValueLabDay}
+                  onChange={(e) => {
+                    // Allow free typing - just update display value
+                    setDurationInputValueLabDay(e.target.value);
+                  }}
+                  onBlur={(e) => {
+                    // Validate and clamp only when user leaves the field
+                    let val = parseInt(e.target.value) || 15;
+                    val = Math.max(1, Math.min(120, val));
+                    setDurationInputValueLabDay(val.toString());
+                    setRotationDurationLabDay(val);
+                  }}
+                  onFocus={(e) => {
+                    // Select all text for easy replacement
+                    e.target.select();
+                  }}
+                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                />
+                <div className="flex flex-wrap gap-1">
+                  {[15, 20, 30, 45, 60].map(n => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => {
+                        // Update both the display value and actual state
+                        setDurationInputValueLabDay(n.toString());
+                        setRotationDurationLabDay(n);
+                      }}
+                      className={`px-2 py-1 text-xs rounded transition-colors ${
+                        rotationDurationLabDay === n
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      }`}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1450,5 +1524,20 @@ export default function NewLabDayPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function NewLabDayPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-700 dark:text-gray-300">Loading...</p>
+        </div>
+      </div>
+    }>
+      <NewLabDayPageContent />
+    </Suspense>
   );
 }
