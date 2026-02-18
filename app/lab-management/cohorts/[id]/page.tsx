@@ -21,7 +21,12 @@ import {
   BarChart3,
   Layout,
   UserPlus,
-  Edit2
+  Edit2,
+  UserMinus,
+  UserCheck,
+  Eye,
+  EyeOff,
+  Download
 } from 'lucide-react';
 import ExportDropdown from '@/components/ExportDropdown';
 import FieldTripAttendance from '@/components/FieldTripAttendance';
@@ -162,6 +167,10 @@ export default function CohortHubPage() {
 
   const [cohort, setCohort] = useState<Cohort | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
+  const [withdrawnStudents, setWithdrawnStudents] = useState<Student[]>([]);
+  const [showWithdrawn, setShowWithdrawn] = useState(false);
+  const [removingStudent, setRemovingStudent] = useState<Student | null>(null);
+  const [processing, setProcessing] = useState(false);
   const [learningStyles, setLearningStyles] = useState<LearningStyle[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -188,11 +197,18 @@ export default function CohortHubPage() {
         setCohort(cohortData.cohort);
       }
 
-      // Fetch students
+      // Fetch active students
       const studentsRes = await fetch(`/api/lab-management/students?cohortId=${cohortId}&status=active`);
       const studentsData = await studentsRes.json();
       if (studentsData.success) {
         setStudents(studentsData.students || []);
+      }
+
+      // Fetch withdrawn students
+      const withdrawnRes = await fetch(`/api/lab-management/students?cohortId=${cohortId}&status=withdrawn`);
+      const withdrawnData = await withdrawnRes.json();
+      if (withdrawnData.success) {
+        setWithdrawnStudents(withdrawnData.students || []);
       }
 
       // Fetch learning styles
@@ -220,6 +236,86 @@ export default function CohortHubPage() {
 
   const getLearningStyle = (studentId: string) => {
     return learningStyles.find(ls => ls.student_id === studentId);
+  };
+
+  const handleRemoveStudent = async () => {
+    if (!removingStudent) return;
+
+    setProcessing(true);
+    try {
+      const res = await fetch(`/api/lab-management/students/${removingStudent.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'withdrawn' })
+      });
+
+      if (res.ok) {
+        // Move student from students to withdrawnStudents
+        setStudents(prev => prev.filter(s => s.id !== removingStudent.id));
+        setWithdrawnStudents(prev => [...prev, { ...removingStudent, status: 'withdrawn' }]);
+        setRemovingStudent(null);
+      } else {
+        console.error('Failed to remove student');
+        alert('Failed to remove student. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error removing student:', error);
+      alert('An error occurred. Please try again.');
+    }
+    setProcessing(false);
+  };
+
+  const handleRestoreStudent = async (student: Student) => {
+    setProcessing(true);
+    try {
+      const res = await fetch(`/api/lab-management/students/${student.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'active' })
+      });
+
+      if (res.ok) {
+        // Move student from withdrawnStudents to students
+        setWithdrawnStudents(prev => prev.filter(s => s.id !== student.id));
+        setStudents(prev => [...prev, { ...student, status: 'active' }]);
+      } else {
+        console.error('Failed to restore student');
+        alert('Failed to restore student. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error restoring student:', error);
+      alert('An error occurred. Please try again.');
+    }
+    setProcessing(false);
+  };
+
+  const handleExportCSV = () => {
+    if (students.length === 0) return;
+
+    // Create CSV content compatible with Gmail Contacts
+    const csvRows = [
+      ['First Name', 'Last Name', 'Email'], // Header row
+      ...students.map(s => [
+        s.first_name,
+        s.last_name,
+        '' // Email field - would need to be added to Student type if available
+      ])
+    ];
+
+    const csvContent = csvRows.map(row =>
+      row.map(cell => `"${cell}"`).join(',')
+    ).join('\n');
+
+    // Create download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${cohortLabel.replace(/\s+/g, '-').toLowerCase()}-contacts.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   if (status === 'loading' || loading) {
@@ -326,6 +422,15 @@ export default function CohortHubPage() {
                 <Edit2 className="w-4 h-4" />
                 Edit
               </Link>
+              <button
+                onClick={handleExportCSV}
+                disabled={students.length === 0}
+                className="inline-flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-700 border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 text-sm text-gray-700 dark:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Export CSV for Gmail Contacts"
+              >
+                <Download className="w-4 h-4" />
+                CSV
+              </button>
               <ExportDropdown config={exportConfig} disabled={students.length === 0} />
             </div>
           </div>
@@ -455,10 +560,21 @@ export default function CohortHubPage() {
         {/* Student List */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
           <div className="p-4 border-b dark:border-gray-700 flex items-center justify-between">
-            <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-              <Users className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-              Students ({students.length})
-            </h2>
+            <div className="flex items-center gap-4">
+              <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <Users className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                Students ({students.length})
+              </h2>
+              {withdrawnStudents.length > 0 && (
+                <button
+                  onClick={() => setShowWithdrawn(!showWithdrawn)}
+                  className="inline-flex items-center gap-2 px-3 py-1 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                  {showWithdrawn ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  {showWithdrawn ? 'Hide' : 'Show'} Withdrawn ({withdrawnStudents.length})
+                </button>
+              )}
+            </div>
             <Link
               href={`/lab-management/students?cohortId=${cohortId}`}
               className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
@@ -484,71 +600,213 @@ export default function CohortHubPage() {
               {students.map((student) => {
                 const ls = getLearningStyle(student.id);
                 return (
-                  <Link
+                  <div
                     key={student.id}
-                    href={`/lab-management/students/${student.id}`}
-                    className="flex items-center gap-4 p-4 hover:bg-gray-50 dark:hover:bg-gray-700"
+                    className="flex items-center gap-4 p-4 hover:bg-gray-50 dark:hover:bg-gray-700 group"
                   >
-                    {/* Photo */}
-                    <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 flex-shrink-0">
-                      {student.photo_url ? (
-                        <img src={student.photo_url} alt="" className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-gray-400 dark:text-gray-500 text-sm font-medium">
-                          {student.first_name[0]}{student.last_name[0]}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Name & Agency */}
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-gray-900 dark:text-white">
-                        {student.first_name} {student.last_name}
+                    <Link
+                      href={`/lab-management/students/${student.id}`}
+                      className="flex items-center gap-4 flex-1 min-w-0"
+                    >
+                      {/* Photo */}
+                      <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 flex-shrink-0">
+                        {student.photo_url ? (
+                          <img src={student.photo_url} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-gray-400 dark:text-gray-500 text-sm font-medium">
+                            {student.first_name[0]}{student.last_name[0]}
+                          </div>
+                        )}
                       </div>
-                      {student.agency && (
-                        <div className="text-sm text-gray-500 dark:text-gray-400">{student.agency}</div>
-                      )}
-                    </div>
 
-                    {/* Learning Style Badges */}
-                    <div className="flex items-center gap-1">
-                      {ls ? (
-                        <>
-                          {ls.primary_style && (
-                            <span className={`w-6 h-6 rounded flex items-center justify-center text-xs font-bold ${STYLE_BADGES[ls.primary_style]?.bg} ${STYLE_BADGES[ls.primary_style]?.text}`}>
-                              {STYLE_BADGES[ls.primary_style]?.label}
-                            </span>
-                          )}
-                          {ls.social_style && (
-                            <span className={`w-6 h-6 rounded flex items-center justify-center text-xs font-bold ${STYLE_BADGES[ls.social_style]?.bg} ${STYLE_BADGES[ls.social_style]?.text}`}>
-                              {STYLE_BADGES[ls.social_style]?.label}
-                            </span>
-                          )}
-                        </>
-                      ) : (
-                        <span className="text-xs text-gray-400 dark:text-gray-500 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">
-                          Not assessed
-                        </span>
-                      )}
-                    </div>
+                      {/* Name & Agency */}
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-gray-900 dark:text-white">
+                          {student.first_name} {student.last_name}
+                        </div>
+                        {student.agency && (
+                          <div className="text-sm text-gray-500 dark:text-gray-400">{student.agency}</div>
+                        )}
+                      </div>
 
-                    {/* Photo indicator */}
-                    <div className="flex-shrink-0">
-                      {student.photo_url ? (
-                        <CheckCircle className="w-4 h-4 text-green-500" />
-                      ) : (
-                        <Camera className="w-4 h-4 text-gray-300 dark:text-gray-600" />
-                      )}
-                    </div>
+                      {/* Learning Style Badges */}
+                      <div className="flex items-center gap-1">
+                        {ls ? (
+                          <>
+                            {ls.primary_style && (
+                              <span className={`w-6 h-6 rounded flex items-center justify-center text-xs font-bold ${STYLE_BADGES[ls.primary_style]?.bg} ${STYLE_BADGES[ls.primary_style]?.text}`}>
+                                {STYLE_BADGES[ls.primary_style]?.label}
+                              </span>
+                            )}
+                            {ls.social_style && (
+                              <span className={`w-6 h-6 rounded flex items-center justify-center text-xs font-bold ${STYLE_BADGES[ls.social_style]?.bg} ${STYLE_BADGES[ls.social_style]?.text}`}>
+                                {STYLE_BADGES[ls.social_style]?.label}
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          <span className="text-xs text-gray-400 dark:text-gray-500 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">
+                            Not assessed
+                          </span>
+                        )}
+                      </div>
 
-                    <ChevronRight className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                  </Link>
+                      {/* Photo indicator */}
+                      <div className="flex-shrink-0">
+                        {student.photo_url ? (
+                          <CheckCircle className="w-4 h-4 text-green-500" />
+                        ) : (
+                          <Camera className="w-4 h-4 text-gray-300 dark:text-gray-600" />
+                        )}
+                      </div>
+                    </Link>
+
+                    {/* Remove button */}
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setRemovingStudent(student);
+                      }}
+                      className="flex-shrink-0 p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Remove from cohort"
+                    >
+                      <UserMinus className="w-4 h-4" />
+                    </button>
+
+                    <ChevronRight className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
+                  </div>
                 );
               })}
             </div>
           )}
+
+          {/* Withdrawn Students */}
+          {showWithdrawn && withdrawnStudents.length > 0 && (
+            <div className="border-t dark:border-gray-700">
+              <div className="p-4 bg-gray-50 dark:bg-gray-900/50">
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                  <UserMinus className="w-4 h-4" />
+                  Withdrawn Students ({withdrawnStudents.length})
+                </h3>
+              </div>
+              <div className="divide-y dark:divide-gray-700 max-h-64 overflow-y-auto">
+                {withdrawnStudents.map((student) => {
+                  const ls = getLearningStyle(student.id);
+                  return (
+                    <div
+                      key={student.id}
+                      className="flex items-center gap-4 p-4 opacity-60 hover:opacity-100 transition-opacity bg-gray-50/50 dark:bg-gray-900/30"
+                    >
+                      <Link
+                        href={`/lab-management/students/${student.id}`}
+                        className="flex items-center gap-4 flex-1 min-w-0"
+                      >
+                        {/* Photo */}
+                        <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700 flex-shrink-0">
+                          {student.photo_url ? (
+                            <img src={student.photo_url} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-gray-400 dark:text-gray-500 text-sm font-medium">
+                              {student.first_name[0]}{student.last_name[0]}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Name & Agency */}
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
+                            {student.first_name} {student.last_name}
+                            <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded text-xs font-medium">
+                              Withdrawn
+                            </span>
+                          </div>
+                          {student.agency && (
+                            <div className="text-sm text-gray-500 dark:text-gray-400">{student.agency}</div>
+                          )}
+                        </div>
+
+                        {/* Learning Style Badges */}
+                        <div className="flex items-center gap-1">
+                          {ls ? (
+                            <>
+                              {ls.primary_style && (
+                                <span className={`w-6 h-6 rounded flex items-center justify-center text-xs font-bold ${STYLE_BADGES[ls.primary_style]?.bg} ${STYLE_BADGES[ls.primary_style]?.text}`}>
+                                  {STYLE_BADGES[ls.primary_style]?.label}
+                                </span>
+                              )}
+                              {ls.social_style && (
+                                <span className={`w-6 h-6 rounded flex items-center justify-center text-xs font-bold ${STYLE_BADGES[ls.social_style]?.bg} ${STYLE_BADGES[ls.social_style]?.text}`}>
+                                  {STYLE_BADGES[ls.social_style]?.label}
+                                </span>
+                              )}
+                            </>
+                          ) : (
+                            <span className="text-xs text-gray-400 dark:text-gray-500 px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded">
+                              Not assessed
+                            </span>
+                          )}
+                        </div>
+                      </Link>
+
+                      {/* Restore button */}
+                      <button
+                        onClick={() => handleRestoreStudent(student)}
+                        disabled={processing}
+                        className="flex-shrink-0 inline-flex items-center gap-1 px-3 py-1 text-sm text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg border border-green-300 dark:border-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Restore to active"
+                      >
+                        <UserCheck className="w-4 h-4" />
+                        Restore
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       </main>
+
+      {/* Confirmation Modal */}
+      {removingStudent && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              Remove from Cohort?
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              Remove {removingStudent.first_name} {removingStudent.last_name} from {cohortLabel}? Their data will be preserved and they can be re-added later.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setRemovingStudent(null)}
+                disabled={processing}
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRemoveStudent}
+                disabled={processing}
+                className="px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded-lg disabled:opacity-50 flex items-center gap-2"
+              >
+                {processing ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Removing...
+                  </>
+                ) : (
+                  <>
+                    <UserMinus className="w-4 h-4" />
+                    Remove
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
