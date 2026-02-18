@@ -319,11 +319,17 @@ export async function POST(request: NextRequest) {
     // Send notifications to all assignees (except self)
     for (const assignee of assignees) {
       if (assignee.id !== currentUser.id) {
-        await notifyTaskAssigned(assignee.email, {
-          taskId: (task as TaskRecord).id,
-          title,
-          assignerName: currentUser.name,
-        });
+        try {
+          await notifyTaskAssigned(assignee.email, {
+            taskId: (task as TaskRecord).id,
+            title,
+            assignerName: currentUser.name,
+            description: description || undefined,
+            dueDate: due_date || undefined,
+          });
+        } catch (notifyError) {
+          console.error('Error sending task notification to', assignee.email, notifyError);
+        }
       }
     }
 
