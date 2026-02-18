@@ -132,7 +132,9 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// DELETE - Remove a role assignment
+// DELETE - Remove role assignment(s)
+// Supports: ?id=<roleId> to delete a single role
+//           ?lab_day_id=<labDayId> to delete ALL roles for a lab day
 export async function DELETE(request: NextRequest) {
   try {
     const session = await getServerSession();
@@ -142,19 +144,29 @@ export async function DELETE(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const roleId = searchParams.get('id');
-
-    if (!roleId) {
-      return NextResponse.json({ success: false, error: 'Role ID required' }, { status: 400 });
-    }
+    const labDayId = searchParams.get('lab_day_id') || searchParams.get('labDayId');
 
     const supabase = getSupabase();
 
-    const { error } = await supabase
-      .from('lab_day_roles')
-      .delete()
-      .eq('id', roleId);
+    if (roleId) {
+      // Delete a single role by ID
+      const { error } = await supabase
+        .from('lab_day_roles')
+        .delete()
+        .eq('id', roleId);
 
-    if (error) throw error;
+      if (error) throw error;
+    } else if (labDayId) {
+      // Delete ALL roles for a lab day (used by edit page before re-inserting)
+      const { error } = await supabase
+        .from('lab_day_roles')
+        .delete()
+        .eq('lab_day_id', labDayId);
+
+      if (error) throw error;
+    } else {
+      return NextResponse.json({ success: false, error: 'Either id or lab_day_id is required' }, { status: 400 });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
