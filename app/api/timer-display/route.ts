@@ -21,7 +21,11 @@ export async function GET() {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { data: tokens, error } = await supabase
+    // First try with location join
+    let tokens = null;
+    let queryError = null;
+
+    const { data: tokensWithJoin, error: joinError } = await supabase
       .from('timer_display_tokens')
       .select(`
         *,
@@ -29,13 +33,35 @@ export async function GET() {
       `)
       .order('created_at', { ascending: false });
 
-    if (error) {
+    if (joinError) {
       // Table might not exist
-      if (error.code === '42P01') {
+      if (joinError.code === '42P01') {
         return NextResponse.json({ success: true, tokens: [], tableExists: false });
       }
-      throw error;
+      // If the join fails (e.g., locations table issue), try without join
+      if (joinError.message?.includes('relationship') || joinError.message?.includes('locations') || joinError.code === 'PGRST200') {
+        console.warn('Timer display: locations join failed, fetching without join:', joinError.message);
+        const { data: tokensNoJoin, error: noJoinError } = await supabase
+          .from('timer_display_tokens')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (noJoinError) {
+          if (noJoinError.code === '42P01') {
+            return NextResponse.json({ success: true, tokens: [], tableExists: false });
+          }
+          queryError = noJoinError;
+        } else {
+          tokens = tokensNoJoin;
+        }
+      } else {
+        queryError = joinError;
+      }
+    } else {
+      tokens = tokensWithJoin;
     }
+
+    if (queryError) throw queryError;
 
     return NextResponse.json({ success: true, tokens: tokens || [] });
   } catch (error: unknown) {

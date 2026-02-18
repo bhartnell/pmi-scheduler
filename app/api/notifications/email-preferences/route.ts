@@ -34,30 +34,25 @@ export async function GET() {
 
     const supabase = getSupabase();
 
-    // Get user
-    const { data: user } = await supabase
-      .from('lab_users')
-      .select('id, email')
-      .ilike('email', session.user.email)
-      .single();
-
-    if (!user) {
-      return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
-    }
-
-    // Get preferences
-    const { data: prefs } = await supabase
+    // Get preferences by user_email (the unique key in user_preferences table)
+    const { data: prefs, error } = await supabase
       .from('user_preferences')
       .select('email_preferences')
-      .eq('user_id', user.id)
+      .ilike('user_email', session.user.email)
       .single();
+
+    // If no row found, that's fine — return defaults
+    if (error && error.code !== 'PGRST116') {
+      // PGRST116 = "no rows returned" - not a real error
+      console.error('Error querying preferences:', error);
+    }
 
     const emailPrefs = prefs?.email_preferences || DEFAULT_EMAIL_PREFS;
 
     return NextResponse.json({
       success: true,
       preferences: emailPrefs,
-      userEmail: user.email
+      userEmail: session.user.email
     });
   } catch (error) {
     console.error('Error fetching email preferences:', error);
@@ -77,17 +72,6 @@ export async function PUT(request: NextRequest) {
     const { enabled, mode, digest_time, categories } = body;
 
     const supabase = getSupabase();
-
-    // Get user
-    const { data: user } = await supabase
-      .from('lab_users')
-      .select('id')
-      .ilike('email', session.user.email)
-      .single();
-
-    if (!user) {
-      return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
-    }
 
     // Build the new preferences object
     const newPrefs = {
@@ -114,15 +98,15 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Invalid digest_time format' }, { status: 400 });
     }
 
-    // Upsert preferences
+    // Upsert preferences using user_email (the unique key in user_preferences table)
     const { error } = await supabase
       .from('user_preferences')
       .upsert({
-        user_id: user.id,
+        user_email: session.user.email,
         email_preferences: newPrefs,
         updated_at: new Date().toISOString()
       }, {
-        onConflict: 'user_id'
+        onConflict: 'user_email'
       });
 
     if (error) throw error;
