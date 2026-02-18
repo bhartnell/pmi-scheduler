@@ -392,15 +392,32 @@ export default function EditLabDayPage() {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Rotation Duration
               </label>
-              <select
-                value={rotationDuration}
-                onChange={(e) => setRotationDuration(parseInt(e.target.value))}
-                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
-              >
-                {[15, 20, 25, 30, 45, 60].map(n => (
-                  <option key={n} value={n}>{n} minutes</option>
-                ))}
-              </select>
+              <div className="space-y-2">
+                <input
+                  type="number"
+                  min="1"
+                  max="120"
+                  value={rotationDuration}
+                  onChange={(e) => setRotationDuration(Math.max(1, Math.min(120, parseInt(e.target.value) || 1)))}
+                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                />
+                <div className="flex flex-wrap gap-2">
+                  {[15, 20, 30, 45, 60].map(n => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setRotationDuration(n)}
+                      className={`px-3 py-1 text-xs rounded-lg transition-colors ${
+                        rotationDuration === n
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      }`}
+                    >
+                      {n} min
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
             {/* Notes */}

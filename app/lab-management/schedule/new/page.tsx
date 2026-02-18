@@ -1058,15 +1058,32 @@ export default function NewLabDayPage() {
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Minutes</label>
-                        <select
-                          value={station.rotation_minutes}
-                          onChange={(e) => updateStation(index, { rotation_minutes: parseInt(e.target.value) })}
-                          className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
-                        >
-                          {[15, 20, 25, 30, 45, 60].map(n => (
-                            <option key={n} value={n}>{n} min</option>
-                          ))}
-                        </select>
+                        <div className="space-y-2">
+                          <input
+                            type="number"
+                            min="1"
+                            max="120"
+                            value={station.rotation_minutes}
+                            onChange={(e) => updateStation(index, { rotation_minutes: Math.max(1, Math.min(120, parseInt(e.target.value) || 1)) })}
+                            className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                          />
+                          <div className="flex flex-wrap gap-1">
+                            {[15, 20, 30, 45, 60].map(n => (
+                              <button
+                                key={n}
+                                type="button"
+                                onClick={() => updateStation(index, { rotation_minutes: n })}
+                                className={`px-2 py-1 text-xs rounded transition-colors ${
+                                  station.rotation_minutes === n
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                                }`}
+                              >
+                                {n}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                     </div>
 
