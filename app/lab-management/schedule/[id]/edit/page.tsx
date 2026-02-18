@@ -90,6 +90,9 @@ export default function EditLabDayPage() {
   const [rotationDuration, setRotationDuration] = useState(30);
   const [notes, setNotes] = useState('');
 
+  // Custom duration input display state (for free typing)
+  const [durationInputValue, setDurationInputValue] = useState('30');
+
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/signin');
@@ -156,7 +159,9 @@ export default function EditLabDayPage() {
         setWeekNumber(data.labDay.week_number || '');
         setDayNumber(data.labDay.day_number || '');
         setNumRotations(data.labDay.num_rotations || 4);
-        setRotationDuration(data.labDay.rotation_duration || 30);
+        const duration = data.labDay.rotation_duration || 30;
+        setRotationDuration(duration);
+        setDurationInputValue(duration.toString());
         setNotes(data.labDay.notes || '');
         setAssignedTimerId(data.labDay.assigned_timer_id || null);
 
@@ -397,8 +402,22 @@ export default function EditLabDayPage() {
                   type="number"
                   min="1"
                   max="120"
-                  value={rotationDuration}
-                  onChange={(e) => setRotationDuration(Math.max(1, Math.min(120, parseInt(e.target.value) || 1)))}
+                  value={durationInputValue}
+                  onChange={(e) => {
+                    // Allow free typing - just update display value
+                    setDurationInputValue(e.target.value);
+                  }}
+                  onBlur={(e) => {
+                    // Validate and clamp only when user leaves the field
+                    let val = parseInt(e.target.value) || 15;
+                    val = Math.max(1, Math.min(120, val));
+                    setDurationInputValue(val.toString());
+                    setRotationDuration(val);
+                  }}
+                  onFocus={(e) => {
+                    // Select all text for easy replacement
+                    e.target.select();
+                  }}
                   className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                 />
                 <div className="flex flex-wrap gap-2">
@@ -406,7 +425,11 @@ export default function EditLabDayPage() {
                     <button
                       key={n}
                       type="button"
-                      onClick={() => setRotationDuration(n)}
+                      onClick={() => {
+                        // Update both the display value and actual state
+                        setDurationInputValue(n.toString());
+                        setRotationDuration(n);
+                      }}
                       className={`px-3 py-1 text-xs rounded-lg transition-colors ${
                         rotationDuration === n
                           ? 'bg-blue-600 text-white'

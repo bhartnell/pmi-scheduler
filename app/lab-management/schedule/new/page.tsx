@@ -114,6 +114,9 @@ export default function NewLabDayPage() {
     createEmptyStation(1)
   ]);
 
+  // Custom duration input display state (for station rotation minutes)
+  const [durationInputValues, setDurationInputValues] = useState<Record<string, string>>({});
+
   // Skills search
   const [skillSearch, setSkillSearch] = useState('');
   const [skillsModalStation, setSkillsModalStation] = useState<number | null>(null);
@@ -1063,8 +1066,28 @@ export default function NewLabDayPage() {
                             type="number"
                             min="1"
                             max="120"
-                            value={station.rotation_minutes}
-                            onChange={(e) => updateStation(index, { rotation_minutes: Math.max(1, Math.min(120, parseInt(e.target.value) || 1)) })}
+                            value={durationInputValues[station.id] ?? station.rotation_minutes}
+                            onChange={(e) => {
+                              // Allow free typing - just update display value
+                              setDurationInputValues(prev => ({
+                                ...prev,
+                                [station.id]: e.target.value
+                              }));
+                            }}
+                            onBlur={(e) => {
+                              // Validate and clamp only when user leaves the field
+                              let val = parseInt(e.target.value) || 15;
+                              val = Math.max(1, Math.min(120, val));
+                              setDurationInputValues(prev => ({
+                                ...prev,
+                                [station.id]: val.toString()
+                              }));
+                              updateStation(index, { rotation_minutes: val });
+                            }}
+                            onFocus={(e) => {
+                              // Select all text for easy replacement
+                              e.target.select();
+                            }}
                             className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                           />
                           <div className="flex flex-wrap gap-1">
@@ -1072,7 +1095,14 @@ export default function NewLabDayPage() {
                               <button
                                 key={n}
                                 type="button"
-                                onClick={() => updateStation(index, { rotation_minutes: n })}
+                                onClick={() => {
+                                  // Update both the display value and actual state
+                                  setDurationInputValues(prev => ({
+                                    ...prev,
+                                    [station.id]: n.toString()
+                                  }));
+                                  updateStation(index, { rotation_minutes: n });
+                                }}
                                 className={`px-2 py-1 text-xs rounded transition-colors ${
                                   station.rotation_minutes === n
                                     ? 'bg-blue-600 text-white'
