@@ -19,7 +19,8 @@ import {
   Clock,
   AlertCircle,
   CheckCircle,
-  XCircle
+  XCircle,
+  Users
 } from 'lucide-react';
 
 interface StudentUser {
@@ -57,10 +58,65 @@ interface DashboardData {
   message?: string;
 }
 
+interface EKGData {
+  success: boolean;
+  student: {
+    id: string;
+    first_name: string;
+    last_name: string;
+  } | null;
+  ekg_scores: Array<{
+    id: string;
+    score: number;
+    max_score: number;
+    is_baseline: boolean;
+    missed_rhythms: string[];
+    date: string;
+    notes: string | null;
+  }>;
+  scenario_participation: Array<{
+    id: string;
+    scenario_name: string;
+    role: string;
+    date: string;
+    notes: string | null;
+  }>;
+  summary: {
+    ekg: {
+      total_tests: number;
+      avg_score: number;
+      latest_score: {
+        score: number;
+        max_score: number;
+        percentage: number;
+        date: string;
+      } | null;
+      baseline_score: {
+        score: number;
+        max_score: number;
+        percentage: number;
+        date: string;
+      } | null;
+    };
+    scenarios: {
+      total: number;
+      by_role: {
+        team_lead: number;
+        med_tech: number;
+        monitor_tech: number;
+        airway_tech: number;
+        observer: number;
+      };
+    };
+  };
+  message?: string;
+}
+
 export default function StudentDashboard() {
   const { data: session } = useSession();
   const [user, setUser] = useState<StudentUser | null>(null);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [ekgData, setEkgData] = useState<EKGData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -98,6 +154,14 @@ export default function StudentDashboard() {
             },
             message: completionsData.message,
           });
+        }
+
+        // Fetch EKG and scenario data
+        const ekgRes = await fetch('/api/student/ekg-scenarios');
+        const ekgResponseData = await ekgRes.json();
+
+        if (ekgResponseData.success) {
+          setEkgData(ekgResponseData);
         }
       }
     } catch (error) {
@@ -305,29 +369,167 @@ export default function StudentDashboard() {
           </div>
         </div>
 
-        {/* Coming Soon - EKG & Scenarios */}
+        {/* EKG Progress */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm">
           <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Activity className="w-5 h-5 text-green-600 dark:text-green-400" />
-              <h2 className="font-semibold text-gray-900 dark:text-white">EKG & Scenarios</h2>
+              <h2 className="font-semibold text-gray-900 dark:text-white">EKG Progress</h2>
             </div>
-            <span className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-2 py-1 rounded-full">
-              Coming Soon
+            <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-2 py-1 rounded-full">
+              {ekgData?.summary.ekg.total_tests || 0} tests
             </span>
           </div>
-          <div className="p-6">
-            <div className="flex flex-col items-center justify-center py-4 text-center">
-              <div className="p-3 bg-gray-100 dark:bg-gray-700 rounded-full mb-3">
-                <TrendingUp className="w-6 h-6 text-gray-400 dark:text-gray-500" />
+          <div className="p-4">
+            {!ekgData || ekgData.summary.ekg.total_tests === 0 ? (
+              <div className="flex flex-col items-center justify-center py-6 text-center">
+                <div className="p-3 bg-gray-100 dark:bg-gray-700 rounded-full mb-3">
+                  <Activity className="w-6 h-6 text-gray-400 dark:text-gray-500" />
+                </div>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  No EKG scores recorded yet
+                </p>
               </div>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
-                EKG progress and scenario history coming soon
-              </p>
-              <p className="text-xs text-gray-400 dark:text-gray-500">
-                Track your rhythm recognition scores and scenario roles
-              </p>
+            ) : (
+              <div className="space-y-4">
+                {/* Latest Score */}
+                {ekgData.summary.ekg.latest_score && (
+                  <div className="text-center pb-4 border-b border-gray-200 dark:border-gray-700">
+                    <div className="text-4xl font-bold text-gray-900 dark:text-white mb-1">
+                      {ekgData.summary.ekg.latest_score.score}/{ekgData.summary.ekg.latest_score.max_score}
+                    </div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                      Latest Score ({new Date(ekgData.summary.ekg.latest_score.date).toLocaleDateString()})
+                    </div>
+                  </div>
+                )}
+
+                {/* Stats */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Average</div>
+                    <div className="text-lg font-semibold text-gray-900 dark:text-white">
+                      {ekgData.summary.ekg.avg_score}%
+                    </div>
+                  </div>
+                  {ekgData.summary.ekg.baseline_score && (
+                    <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Baseline</div>
+                      <div className="text-lg font-semibold text-gray-900 dark:text-white">
+                        {ekgData.summary.ekg.baseline_score.score}/{ekgData.summary.ekg.baseline_score.max_score}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Recent Scores Mini Chart */}
+                {ekgData.ekg_scores.length > 0 && (
+                  <div className="pt-2">
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">Recent Tests</div>
+                    <div className="flex items-end gap-1 h-16">
+                      {ekgData.ekg_scores.slice(0, 10).reverse().map((score, idx) => {
+                        const percentage = (score.score / score.max_score) * 100;
+                        return (
+                          <div
+                            key={score.id}
+                            className="flex-1 bg-green-200 dark:bg-green-900/40 rounded-t hover:bg-green-300 dark:hover:bg-green-800/60 transition-colors relative group"
+                            style={{ height: `${percentage}%` }}
+                            title={`${score.score}/${score.max_score} (${Math.round(percentage)}%)`}
+                          >
+                            <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 bg-gray-900 dark:bg-gray-700 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap">
+                              {score.score}/{score.max_score}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Scenario History */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm">
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              <h2 className="font-semibold text-gray-900 dark:text-white">Scenario Roles</h2>
             </div>
+            <span className="text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-2 py-1 rounded-full">
+              {ekgData?.summary.scenarios.total || 0} scenarios
+            </span>
+          </div>
+          <div className="p-4">
+            {!ekgData || ekgData.summary.scenarios.total === 0 ? (
+              <div className="flex flex-col items-center justify-center py-6 text-center">
+                <div className="p-3 bg-gray-100 dark:bg-gray-700 rounded-full mb-3">
+                  <Users className="w-6 h-6 text-gray-400 dark:text-gray-500" />
+                </div>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  No scenarios logged yet
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Role Breakdown */}
+                <div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">Role Distribution</div>
+                  <div className="flex flex-wrap gap-2">
+                    {ekgData.summary.scenarios.by_role.team_lead > 0 && (
+                      <span className="inline-flex items-center gap-1 text-xs bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 px-2 py-1 rounded-full">
+                        <span className="font-medium">Team Lead:</span> {ekgData.summary.scenarios.by_role.team_lead}
+                      </span>
+                    )}
+                    {ekgData.summary.scenarios.by_role.med_tech > 0 && (
+                      <span className="inline-flex items-center gap-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 px-2 py-1 rounded-full">
+                        <span className="font-medium">Med Tech:</span> {ekgData.summary.scenarios.by_role.med_tech}
+                      </span>
+                    )}
+                    {ekgData.summary.scenarios.by_role.monitor_tech > 0 && (
+                      <span className="inline-flex items-center gap-1 text-xs bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400 px-2 py-1 rounded-full">
+                        <span className="font-medium">Monitor Tech:</span> {ekgData.summary.scenarios.by_role.monitor_tech}
+                      </span>
+                    )}
+                    {ekgData.summary.scenarios.by_role.airway_tech > 0 && (
+                      <span className="inline-flex items-center gap-1 text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-2 py-1 rounded-full">
+                        <span className="font-medium">Airway Tech:</span> {ekgData.summary.scenarios.by_role.airway_tech}
+                      </span>
+                    )}
+                    {ekgData.summary.scenarios.by_role.observer > 0 && (
+                      <span className="inline-flex items-center gap-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-400 px-2 py-1 rounded-full">
+                        <span className="font-medium">Observer:</span> {ekgData.summary.scenarios.by_role.observer}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Recent Scenarios */}
+                {ekgData.scenario_participation.length > 0 && (
+                  <div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">Recent Scenarios</div>
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {ekgData.scenario_participation.slice(0, 3).map(scenario => (
+                        <div
+                          key={scenario.id}
+                          className="flex items-center gap-3 p-2 rounded-lg bg-gray-50 dark:bg-gray-700/50"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                              {scenario.scenario_name}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              {scenario.role.replace(/_/g, ' ')} • {new Date(scenario.date).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
