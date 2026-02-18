@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import {
   ChevronRight,
@@ -11,7 +11,11 @@ import {
   Plus,
   Filter,
   Users,
-  Timer
+  Timer,
+  StickyNote,
+  X,
+  Save,
+  Trash2
 } from 'lucide-react';
 
 interface Cohort {
@@ -41,6 +45,15 @@ interface LabDay {
   stations: any[];
 }
 
+interface DailyNote {
+  id: string;
+  instructor_id: string;
+  note_date: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+}
+
 function SchedulePageContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -54,6 +67,13 @@ function SchedulePageContent() {
 
   // Calendar state
   const [currentMonth, setCurrentMonth] = useState(new Date());
+
+  // Daily notes state
+  const [dailyNotes, setDailyNotes] = useState<Record<string, DailyNote>>({});
+  const [noteModalDate, setNoteModalDate] = useState<Date | null>(null);
+  const [noteContent, setNoteContent] = useState('');
+  const [savingNote, setSavingNote] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -70,8 +90,16 @@ function SchedulePageContent() {
   useEffect(() => {
     if (session) {
       fetchLabDays();
+      fetchDailyNotes();
     }
   }, [session, currentMonth, selectedCohort]);
+
+  // Focus textarea when modal opens
+  useEffect(() => {
+    if (noteModalDate && textareaRef.current) {
+      setTimeout(() => textareaRef.current?.focus(), 100);
+    }
+  }, [noteModalDate]);
 
   const fetchCohorts = async () => {
     try {
@@ -114,6 +142,114 @@ function SchedulePageContent() {
       console.error('Error fetching lab days:', error);
     }
     setLoading(false);
+  };
+
+  const fetchDailyNotes = async () => {
+    try {
+      const startDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+      startDate.setDate(startDate.getDate() - startDate.getDay());
+
+      const endDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
+      endDate.setDate(endDate.getDate() + (6 - endDate.getDay()));
+
+      const params = new URLSearchParams({
+        startDate: startDate.toISOString().split('T')[0],
+        endDate: endDate.toISOString().split('T')[0],
+      });
+
+      const res = await fetch(`/api/lab-management/daily-notes?${params}`);
+      const data = await res.json();
+
+      if (data.success) {
+        const notesMap: Record<string, DailyNote> = {};
+        data.notes.forEach((note: DailyNote) => {
+          notesMap[note.note_date] = note;
+        });
+        setDailyNotes(notesMap);
+      }
+    } catch (error) {
+      console.error('Error fetching daily notes:', error);
+    }
+  };
+
+  const openNoteModal = (date: Date, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const dateStr = date.toISOString().split('T')[0];
+    const existingNote = dailyNotes[dateStr];
+    setNoteContent(existingNote?.content || '');
+    setNoteModalDate(date);
+  };
+
+  const saveNote = async () => {
+    if (!noteModalDate) return;
+    setSavingNote(true);
+
+    const dateStr = noteModalDate.toISOString().split('T')[0];
+
+    try {
+      const res = await fetch('/api/lab-management/daily-notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          date: dateStr,
+          content: noteContent,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        if (data.deleted) {
+          // Remove from local state
+          setDailyNotes(prev => {
+            const updated = { ...prev };
+            delete updated[dateStr];
+            return updated;
+          });
+        } else {
+          // Update local state
+          setDailyNotes(prev => ({
+            ...prev,
+            [dateStr]: data.note,
+          }));
+        }
+        setNoteModalDate(null);
+      }
+    } catch (error) {
+      console.error('Error saving note:', error);
+    }
+    setSavingNote(false);
+  };
+
+  const deleteNote = async () => {
+    if (!noteModalDate) return;
+    setNoteContent('');
+    // Save with empty content triggers deletion
+    setSavingNote(true);
+    const dateStr = noteModalDate.toISOString().split('T')[0];
+
+    try {
+      const res = await fetch('/api/lab-management/daily-notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          date: dateStr,
+          content: '',
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setDailyNotes(prev => {
+          const updated = { ...prev };
+          delete updated[dateStr];
+          return updated;
+        });
+        setNoteModalDate(null);
+      }
+    } catch (error) {
+      console.error('Error deleting note:', error);
+    }
+    setSavingNote(false);
   };
 
   const goToPreviousMonth = () => {
@@ -163,6 +299,32 @@ function SchedulePageContent() {
 
   const isCurrentMonth = (date: Date) => {
     return date.getMonth() === currentMonth.getMonth();
+  };
+
+  const getNoteForDate = (date: Date) => {
+    const dateStr = date.toISOString().split('T')[0];
+    return dailyNotes[dateStr] || null;
+  };
+
+  // Get week/day info for the note modal header
+  const getDateContext = (date: Date) => {
+    const dateStr = date.toISOString().split('T')[0];
+    const dayLabs = labDays.filter(ld => ld.date === dateStr);
+    if (dayLabs.length === 0) return null;
+
+    return dayLabs.map(ld => {
+      const parts = [];
+      if (ld.cohort) {
+        parts.push(`${ld.cohort.program.abbreviation} G${ld.cohort.cohort_number}`);
+      }
+      if (ld.week_number && ld.day_number) {
+        parts.push(`W${ld.week_number}D${ld.day_number}`);
+      }
+      if (ld.title) {
+        parts.push(ld.title);
+      }
+      return parts.join(' - ');
+    });
   };
 
   const calendarDays = generateCalendarDays();
@@ -367,27 +529,52 @@ function SchedulePageContent() {
               const dayLabDays = getLabDaysForDate(date);
               const today = isToday(date);
               const currentMo = isCurrentMonth(date);
+              const note = getNoteForDate(date);
 
               return (
                 <div
                   key={idx}
-                  className={`min-h-[100px] md:min-h-[120px] border-b border-r dark:border-gray-600 p-1 md:p-2 ${
+                  className={`min-h-[100px] md:min-h-[120px] border-b border-r dark:border-gray-600 p-1 md:p-2 relative group ${
                     !currentMo ? 'bg-gray-50 dark:bg-gray-700' : ''
                   } ${today ? 'bg-blue-50 dark:bg-blue-900/30' : ''}`}
                 >
-                  <div className={`text-sm font-medium mb-1 ${
-                    today
-                      ? 'text-blue-600 dark:text-blue-400'
-                      : currentMo
-                        ? 'text-gray-900 dark:text-white'
-                        : 'text-gray-400 dark:text-gray-500'
-                  }`}>
-                    {date.getDate()}
+                  <div className="flex items-center justify-between mb-1">
+                    <span className={`text-sm font-medium ${
+                      today
+                        ? 'text-blue-600 dark:text-blue-400'
+                        : currentMo
+                          ? 'text-gray-900 dark:text-white'
+                          : 'text-gray-400 dark:text-gray-500'
+                    }`}>
+                      {date.getDate()}
+                    </span>
+                    {/* Note indicator / add note button */}
+                    <button
+                      onClick={(e) => openNoteModal(date, e)}
+                      className={`p-0.5 rounded transition-all ${
+                        note
+                          ? 'text-yellow-500 dark:text-yellow-400 hover:text-yellow-600 dark:hover:text-yellow-300'
+                          : 'text-gray-300 dark:text-gray-600 opacity-0 group-hover:opacity-100 hover:text-gray-500 dark:hover:text-gray-400'
+                      }`}
+                      title={note ? 'Edit note' : 'Add note'}
+                    >
+                      <StickyNote className="w-3.5 h-3.5" />
+                    </button>
                   </div>
+
+                  {/* Note preview */}
+                  {note && (
+                    <button
+                      onClick={(e) => openNoteModal(date, e)}
+                      className="w-full text-left mb-1 px-1 py-0.5 text-[10px] leading-tight bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 rounded border border-yellow-200 dark:border-yellow-800 truncate hover:bg-yellow-100 dark:hover:bg-yellow-900/30 transition-colors"
+                    >
+                      {note.content.length > 40 ? note.content.substring(0, 40) + '...' : note.content}
+                    </button>
+                  )}
 
                   {/* Lab day entries */}
                   <div className="space-y-1">
-                    {dayLabDays.slice(0, 3).map(labDay => (
+                    {dayLabDays.slice(0, note ? 2 : 3).map(labDay => (
                       <Link
                         key={labDay.id}
                         href={`/lab-management/schedule/${labDay.id}`}
@@ -414,9 +601,9 @@ function SchedulePageContent() {
                         )}
                       </Link>
                     ))}
-                    {dayLabDays.length > 3 && (
+                    {dayLabDays.length > (note ? 2 : 3) && (
                       <div className="text-xs text-gray-500 dark:text-gray-400 px-1">
-                        +{dayLabDays.length - 3} more
+                        +{dayLabDays.length - (note ? 2 : 3)} more
                       </div>
                     )}
                   </div>
@@ -501,6 +688,101 @@ function SchedulePageContent() {
           </div>
         </div>
       </main>
+
+      {/* Daily Note Modal */}
+      {noteModalDate && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setNoteModalDate(null)}>
+          <div
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-700">
+              <div>
+                <div className="flex items-center gap-2">
+                  <StickyNote className="w-5 h-5 text-yellow-500" />
+                  <h3 className="font-semibold text-gray-900 dark:text-white">
+                    Daily Note
+                  </h3>
+                </div>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                  {noteModalDate.toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    month: 'long',
+                    day: 'numeric',
+                    year: 'numeric'
+                  })}
+                </p>
+                {/* Lab day context */}
+                {getDateContext(noteModalDate) && (
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {getDateContext(noteModalDate)!.map((ctx, i) => (
+                      <span
+                        key={i}
+                        className="inline-flex items-center px-2 py-0.5 text-xs bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded"
+                      >
+                        {ctx}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={() => setNoteModalDate(null)}
+                className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-5">
+              <textarea
+                ref={textareaRef}
+                value={noteContent}
+                onChange={(e) => setNoteContent(e.target.value)}
+                placeholder="Lab observations, notes, reminders..."
+                className="w-full h-40 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 placeholder-gray-400 dark:placeholder-gray-500"
+              />
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                Personal note — only visible to you
+              </p>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between px-5 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 rounded-b-xl">
+              <div>
+                {dailyNotes[noteModalDate.toISOString().split('T')[0]] && (
+                  <button
+                    onClick={deleteNote}
+                    disabled={savingNote}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setNoteModalDate(null)}
+                  className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={saveNote}
+                  disabled={savingNote}
+                  className="flex items-center gap-1.5 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 font-medium"
+                >
+                  <Save className="w-4 h-4" />
+                  {savingNote ? 'Saving...' : 'Save'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
