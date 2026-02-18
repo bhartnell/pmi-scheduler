@@ -17,6 +17,7 @@ import {
   ClipboardCheck,
   Timer,
   ListTodo,
+  Activity,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -134,6 +135,12 @@ export const QUICK_LINK_DEFINITIONS: Record<string, {
     icon: ListTodo,
     label: 'Tasks',
     color: 'bg-rose-500',
+  },
+  ekg_warmup: {
+    href: '/lab-management/ekg-warmup',
+    icon: Activity,
+    label: 'EKG Warmup',
+    color: 'bg-red-600',
   },
 };
 
