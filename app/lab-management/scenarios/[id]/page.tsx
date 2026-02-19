@@ -24,7 +24,8 @@ import {
   MessageSquare,
   Clock,
   Printer,
-  ArrowLeft
+  ArrowLeft,
+  Users
 } from 'lucide-react';
 
 // Helper to safely convert DB values to arrays (handles string, array, null)
@@ -202,7 +203,7 @@ const LUNG_SOUND_OPTIONS = [
 ];
 
 const SKIN_OPTIONS = [
-  'Warm, dry, pink', 'Cool, pale, dry', 'Cool, pale, diaphoretic',
+  'Warm, dry, pink', 'Cool, pale, dry', 'Cool, pale, diaphoretic', 'Cool, pale, clammy',
   'Hot, dry, flushed', 'Hot, moist', 'Cyanotic', 'Mottled', 'Jaundiced', 'Other'
 ];
 
@@ -748,6 +749,7 @@ export default function ScenarioEditorPage() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [studentPrintMode, setStudentPrintMode] = useState(false);
   const [scenario, setScenario] = useState<Scenario>({
     title: '',
     applicable_programs: ['Paramedic'],
@@ -877,6 +879,14 @@ export default function ScenarioEditorPage() {
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleStudentPrint = () => {
+    setStudentPrintMode(true);
+    setTimeout(() => {
+      window.print();
+      setStudentPrintMode(false);
+    }, 100);
   };
 
   const handleSave = async () => {
@@ -1022,14 +1032,24 @@ export default function ScenarioEditorPage() {
             </div>
             <div className="flex items-center gap-2 print:hidden">
               {isEditing && (
-                <button
-                  onClick={handlePrint}
-                  className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
-                  title="Print or save as PDF"
-                >
-                  <Printer className="w-5 h-5" />
-                  Print / PDF
-                </button>
+                <>
+                  <button
+                    onClick={handleStudentPrint}
+                    className="flex items-center gap-2 px-4 py-2 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-lg hover:bg-green-200 dark:hover:bg-green-900/50"
+                    title="Print student handout (peer-to-peer)"
+                  >
+                    <Users className="w-5 h-5" />
+                    Print Student Handout
+                  </button>
+                  <button
+                    onClick={handlePrint}
+                    className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
+                    title="Print full scenario or save as PDF"
+                  >
+                    <Printer className="w-5 h-5" />
+                    Print / PDF
+                  </button>
+                </>
               )}
               <button
                 onClick={handleSave}
@@ -1058,7 +1078,357 @@ export default function ScenarioEditorPage() {
         </p>
       </div>
 
-      <main className="max-w-4xl mx-auto px-4 py-6 space-y-4">
+      {/* Student Handout Print View - only visible when printing in student mode */}
+      {studentPrintMode && (
+        <div className="hidden print:block max-w-4xl mx-auto px-4 py-6">
+          <div className="text-center mb-6 pb-4 border-b-2 border-gray-800">
+            <h1 className="text-2xl font-bold mb-1">{scenario.title}</h1>
+            <p className="text-lg font-semibold text-gray-700">PEER-TO-PEER SCENARIO</p>
+            <p className="text-sm text-gray-600 mt-1">
+              {scenario.category && `${scenario.category} | `}
+              {scenario.difficulty && `${scenario.difficulty} | `}
+              {scenario.estimated_duration && `${scenario.estimated_duration} min`}
+            </p>
+          </div>
+
+          {/* Dispatch Information */}
+          {(scenario.dispatch_time || scenario.dispatch_location || scenario.chief_complaint || scenario.dispatch_notes) && (
+            <div className="mb-6 pb-4 border-b border-gray-300">
+              <h2 className="text-lg font-bold mb-3 text-gray-900">Dispatch Information</h2>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                {scenario.dispatch_time && (
+                  <>
+                    <div className="font-semibold">Time:</div>
+                    <div>{scenario.dispatch_time}</div>
+                  </>
+                )}
+                {scenario.dispatch_location && (
+                  <>
+                    <div className="font-semibold">Location:</div>
+                    <div>{scenario.dispatch_location}</div>
+                  </>
+                )}
+                {scenario.chief_complaint && (
+                  <>
+                    <div className="font-semibold">Chief Complaint:</div>
+                    <div>{scenario.chief_complaint}</div>
+                  </>
+                )}
+              </div>
+              {scenario.dispatch_notes && (
+                <div className="mt-2 text-sm">
+                  <div className="font-semibold mb-1">Additional Notes:</div>
+                  <div>{scenario.dispatch_notes}</div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Patient Information */}
+          <div className="mb-6 pb-4 border-b border-gray-300">
+            <h2 className="text-lg font-bold mb-3 text-gray-900">Patient Information</h2>
+            <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm mb-3">
+              {scenario.patient_name && (
+                <>
+                  <div className="font-semibold">Name:</div>
+                  <div>{scenario.patient_name}</div>
+                </>
+              )}
+              {scenario.patient_age && (
+                <>
+                  <div className="font-semibold">Age:</div>
+                  <div>{scenario.patient_age} years</div>
+                </>
+              )}
+              {scenario.patient_sex && (
+                <>
+                  <div className="font-semibold">Sex:</div>
+                  <div>{scenario.patient_sex}</div>
+                </>
+              )}
+              {scenario.patient_weight && (
+                <>
+                  <div className="font-semibold">Weight:</div>
+                  <div>{scenario.patient_weight} kg</div>
+                </>
+              )}
+            </div>
+            {scenario.medical_history.length > 0 && (
+              <div className="text-sm mb-2">
+                <span className="font-semibold">Medical History: </span>
+                <span>{scenario.medical_history.join(', ')}</span>
+              </div>
+            )}
+            {scenario.medications.length > 0 && (
+              <div className="text-sm mb-2">
+                <span className="font-semibold">Medications: </span>
+                <span>{scenario.medications.join(', ')}</span>
+              </div>
+            )}
+            {scenario.allergies && (
+              <div className="text-sm">
+                <span className="font-semibold">Allergies: </span>
+                <span>{scenario.allergies}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Primary Assessment - XABCDE */}
+          {(scenario.assessment_x || scenario.assessment_a || scenario.assessment_e ||
+            (scenario.phases[0]?.vitals?.hemorrhage_control || scenario.phases[0]?.vitals?.airway_status || scenario.phases[0]?.vitals?.expose_findings)) && (
+            <div className="mb-6 pb-4 border-b border-gray-300">
+              <h2 className="text-lg font-bold mb-3 text-gray-900">Primary Assessment (XABCDE)</h2>
+              <div className="text-sm space-y-1">
+                {(scenario.assessment_x || scenario.phases[0]?.vitals?.hemorrhage_control) && (
+                  <div>
+                    <span className="font-semibold">X - Hemorrhage Control: </span>
+                    <span>{scenario.phases[0]?.vitals?.hemorrhage_control || scenario.assessment_x}</span>
+                  </div>
+                )}
+                {(scenario.assessment_a || scenario.phases[0]?.vitals?.airway_status) && (
+                  <div>
+                    <span className="font-semibold">A - Airway: </span>
+                    <span>{scenario.phases[0]?.vitals?.airway_status || scenario.assessment_a}</span>
+                  </div>
+                )}
+                {/* B - Breathing (from vitals) */}
+                {scenario.phases[0]?.vitals && (
+                  <div>
+                    <span className="font-semibold">B - Breathing: </span>
+                    <span>
+                      RR {scenario.phases[0].vitals.rr || '__'},
+                      SpO2 {scenario.phases[0].vitals.spo2 || '__'}
+                      {scenario.phases[0].vitals.lung_sounds && `, ${scenario.phases[0].vitals.lung_sounds}`}
+                    </span>
+                  </div>
+                )}
+                {/* C - Circulation (from vitals) */}
+                {scenario.phases[0]?.vitals && (
+                  <div>
+                    <span className="font-semibold">C - Circulation: </span>
+                    <span>
+                      BP {scenario.phases[0].vitals.bp || '__'},
+                      HR {scenario.phases[0].vitals.hr || '__'}
+                      {scenario.phases[0].vitals.skin && `, Skin: ${scenario.phases[0].vitals.skin}`}
+                    </span>
+                  </div>
+                )}
+                {/* D - Disability (from vitals) */}
+                {scenario.phases[0]?.vitals && (
+                  <div>
+                    <span className="font-semibold">D - Disability: </span>
+                    <span>
+                      GCS {scenario.phases[0].vitals.gcs_total || '__'}
+                      {scenario.phases[0].vitals.loc && `, ${scenario.phases[0].vitals.loc}`}
+                      {scenario.phases[0].vitals.pupils && `, Pupils: ${scenario.phases[0].vitals.pupils}`}
+                    </span>
+                  </div>
+                )}
+                {(scenario.assessment_e || scenario.phases[0]?.vitals?.expose_findings) && (
+                  <div>
+                    <span className="font-semibold">E - Expose/Environment: </span>
+                    <span>{scenario.phases[0]?.vitals?.expose_findings || scenario.assessment_e}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* SAMPLE History */}
+          {(scenario.sample_history?.signs_symptoms || scenario.sample_history?.last_oral_intake || scenario.sample_history?.events_leading) && (
+            <div className="mb-6 pb-4 border-b border-gray-300">
+              <h2 className="text-lg font-bold mb-3 text-gray-900">SAMPLE History</h2>
+              <div className="text-sm space-y-1">
+                {scenario.sample_history.signs_symptoms && (
+                  <div>
+                    <span className="font-semibold">S - Signs/Symptoms: </span>
+                    <span>{scenario.sample_history.signs_symptoms}</span>
+                  </div>
+                )}
+                {scenario.allergies && (
+                  <div>
+                    <span className="font-semibold">A - Allergies: </span>
+                    <span>{scenario.allergies}</span>
+                  </div>
+                )}
+                {scenario.medications.length > 0 && (
+                  <div>
+                    <span className="font-semibold">M - Medications: </span>
+                    <span>{scenario.medications.join(', ')}</span>
+                  </div>
+                )}
+                {scenario.medical_history.length > 0 && (
+                  <div>
+                    <span className="font-semibold">P - Past Medical History: </span>
+                    <span>{scenario.medical_history.join(', ')}</span>
+                  </div>
+                )}
+                {scenario.sample_history.last_oral_intake && (
+                  <div>
+                    <span className="font-semibold">L - Last Oral Intake: </span>
+                    <span>{scenario.sample_history.last_oral_intake}</span>
+                  </div>
+                )}
+                {scenario.sample_history.events_leading && (
+                  <div>
+                    <span className="font-semibold">E - Events Leading: </span>
+                    <span>{scenario.sample_history.events_leading}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* OPQRST */}
+          {(scenario.opqrst?.onset || scenario.opqrst?.provocation || scenario.opqrst?.quality ||
+            scenario.opqrst?.radiation || scenario.opqrst?.severity || scenario.opqrst?.time_onset) && (
+            <div className="mb-6 pb-4 border-b border-gray-300">
+              <h2 className="text-lg font-bold mb-3 text-gray-900">OPQRST (Pain/Symptom Assessment)</h2>
+              <div className="text-sm space-y-1">
+                {scenario.opqrst.onset && (
+                  <div>
+                    <span className="font-semibold">O - Onset: </span>
+                    <span>{scenario.opqrst.onset}</span>
+                  </div>
+                )}
+                {scenario.opqrst.provocation && (
+                  <div>
+                    <span className="font-semibold">P - Provocation/Palliation: </span>
+                    <span>{scenario.opqrst.provocation}</span>
+                  </div>
+                )}
+                {scenario.opqrst.quality && (
+                  <div>
+                    <span className="font-semibold">Q - Quality: </span>
+                    <span>{scenario.opqrst.quality}</span>
+                  </div>
+                )}
+                {scenario.opqrst.radiation && (
+                  <div>
+                    <span className="font-semibold">R - Radiation/Region: </span>
+                    <span>{scenario.opqrst.radiation}</span>
+                  </div>
+                )}
+                {scenario.opqrst.severity && (
+                  <div>
+                    <span className="font-semibold">S - Severity: </span>
+                    <span>{scenario.opqrst.severity}</span>
+                  </div>
+                )}
+                {scenario.opqrst.time_onset && (
+                  <div>
+                    <span className="font-semibold">T - Time/Duration: </span>
+                    <span>{scenario.opqrst.time_onset}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Initial Vital Signs */}
+          {scenario.phases[0]?.vitals && (
+            <div className="mb-6">
+              <h2 className="text-lg font-bold mb-3 text-gray-900">Initial Vital Signs</h2>
+              <table className="w-full text-sm border-collapse">
+                <tbody>
+                  {scenario.phases[0].vitals.bp && (
+                    <tr>
+                      <td className="font-semibold py-1 border border-gray-300 px-2 bg-gray-50">Blood Pressure</td>
+                      <td className="py-1 border border-gray-300 px-2">{scenario.phases[0].vitals.bp}</td>
+                    </tr>
+                  )}
+                  {scenario.phases[0].vitals.hr && (
+                    <tr>
+                      <td className="font-semibold py-1 border border-gray-300 px-2 bg-gray-50">Heart Rate</td>
+                      <td className="py-1 border border-gray-300 px-2">{scenario.phases[0].vitals.hr}</td>
+                    </tr>
+                  )}
+                  {scenario.phases[0].vitals.rr && (
+                    <tr>
+                      <td className="font-semibold py-1 border border-gray-300 px-2 bg-gray-50">Respiratory Rate</td>
+                      <td className="py-1 border border-gray-300 px-2">{scenario.phases[0].vitals.rr}</td>
+                    </tr>
+                  )}
+                  {scenario.phases[0].vitals.spo2 && (
+                    <tr>
+                      <td className="font-semibold py-1 border border-gray-300 px-2 bg-gray-50">SpO2</td>
+                      <td className="py-1 border border-gray-300 px-2">{scenario.phases[0].vitals.spo2}</td>
+                    </tr>
+                  )}
+                  {scenario.phases[0].vitals.etco2 && (
+                    <tr>
+                      <td className="font-semibold py-1 border border-gray-300 px-2 bg-gray-50">EtCO2</td>
+                      <td className="py-1 border border-gray-300 px-2">{scenario.phases[0].vitals.etco2}</td>
+                    </tr>
+                  )}
+                  {scenario.phases[0].vitals.temp && (
+                    <tr>
+                      <td className="font-semibold py-1 border border-gray-300 px-2 bg-gray-50">Temperature</td>
+                      <td className="py-1 border border-gray-300 px-2">{scenario.phases[0].vitals.temp}</td>
+                    </tr>
+                  )}
+                  {scenario.phases[0].vitals.blood_glucose && (
+                    <tr>
+                      <td className="font-semibold py-1 border border-gray-300 px-2 bg-gray-50">Blood Glucose</td>
+                      <td className="py-1 border border-gray-300 px-2">{scenario.phases[0].vitals.blood_glucose}</td>
+                    </tr>
+                  )}
+                  {scenario.phases[0].vitals.gcs_total && (
+                    <tr>
+                      <td className="font-semibold py-1 border border-gray-300 px-2 bg-gray-50">GCS</td>
+                      <td className="py-1 border border-gray-300 px-2">
+                        {scenario.phases[0].vitals.gcs_total}
+                        {(scenario.phases[0].vitals.gcs_e || scenario.phases[0].vitals.gcs_v || scenario.phases[0].vitals.gcs_m) &&
+                          ` (E${scenario.phases[0].vitals.gcs_e}V${scenario.phases[0].vitals.gcs_v}M${scenario.phases[0].vitals.gcs_m})`
+                        }
+                      </td>
+                    </tr>
+                  )}
+                  {scenario.phases[0].vitals.pupils && (
+                    <tr>
+                      <td className="font-semibold py-1 border border-gray-300 px-2 bg-gray-50">Pupils</td>
+                      <td className="py-1 border border-gray-300 px-2">{scenario.phases[0].vitals.pupils}</td>
+                    </tr>
+                  )}
+                  {scenario.phases[0].vitals.skin && (
+                    <tr>
+                      <td className="font-semibold py-1 border border-gray-300 px-2 bg-gray-50">Skin</td>
+                      <td className="py-1 border border-gray-300 px-2">{scenario.phases[0].vitals.skin}</td>
+                    </tr>
+                  )}
+                  {scenario.phases[0].vitals.lung_sounds && (
+                    <tr>
+                      <td className="font-semibold py-1 border border-gray-300 px-2 bg-gray-50">Lung Sounds</td>
+                      <td className="py-1 border border-gray-300 px-2">{scenario.phases[0].vitals.lung_sounds}</td>
+                    </tr>
+                  )}
+                  {scenario.phases[0].vitals.pain && (
+                    <tr>
+                      <td className="font-semibold py-1 border border-gray-300 px-2 bg-gray-50">Pain (0-10)</td>
+                      <td className="py-1 border border-gray-300 px-2">{scenario.phases[0].vitals.pain}</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Notes Section */}
+          <div className="mt-8 pt-4 border-t-2 border-gray-400">
+            <h2 className="text-lg font-bold mb-3 text-gray-900">Assessment Notes</h2>
+            <div className="space-y-8">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="border-b border-gray-200 pb-2">
+                  <div className="text-xs text-gray-500 mb-1">Note {i}:</div>
+                  <div className="border-b border-gray-300" style={{ height: '20px' }}></div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <main className={`max-w-4xl mx-auto px-4 py-6 space-y-4 ${studentPrintMode ? 'print:hidden' : ''}`}>
         {/* Basic Info */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
           <h2 className="font-semibold text-gray-900 dark:text-white mb-4">Basic Information</h2>

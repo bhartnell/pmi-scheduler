@@ -151,7 +151,7 @@ const LUNG_SOUND_OPTIONS = [
 ];
 
 const SKIN_OPTIONS = [
-  'Warm, dry, pink', 'Cool, pale, dry', 'Cool, pale, diaphoretic',
+  'Warm, dry, pink', 'Cool, pale, dry', 'Cool, pale, diaphoretic', 'Cool, pale, clammy',
   'Hot, dry, flushed', 'Hot, moist', 'Cyanotic', 'Mottled', 'Jaundiced', 'Other'
 ];
 
