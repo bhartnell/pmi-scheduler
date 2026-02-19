@@ -9,18 +9,18 @@ function getSupabase() {
   );
 }
 
-// Default email preferences
+// Default email preferences — enabled out of the box, users opt-out via settings
 const DEFAULT_EMAIL_PREFS = {
-  enabled: false,
+  enabled: true,
   mode: 'immediate' as const, // 'immediate' | 'daily_digest' | 'off'
   digest_time: '08:00',
   categories: {
     tasks: true,
     labs: true,
     scheduling: true,
-    feedback: false,
-    clinical: false,
-    system: false
+    feedback: true,
+    clinical: true,
+    system: true
   }
 };
 
