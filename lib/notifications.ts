@@ -64,14 +64,19 @@ async function getUserEmailPrefs(userEmail: string): Promise<EmailPreferences> {
       .ilike('user_email', userEmail)
       .single();
 
+    console.log('[EMAIL PREFS] Query for:', userEmail, '| error:', error?.message || 'none', '| data:', JSON.stringify(data));
+
     // No record found — user hasn't set preferences, use defaults (enabled)
     if (error || !data?.email_preferences) {
+      console.log('[EMAIL PREFS] No record/prefs found, returning DEFAULTS (enabled=true)');
       return DEFAULT_EMAIL_PREFS;
     }
 
     // User has explicit preferences — respect them
+    console.log('[EMAIL PREFS] Found explicit prefs:', JSON.stringify(data.email_preferences));
     return data.email_preferences;
-  } catch {
+  } catch (err) {
+    console.error('[EMAIL PREFS] Exception:', err);
     return DEFAULT_EMAIL_PREFS;
   }
 }
@@ -85,17 +90,22 @@ async function shouldSendEmail(
 ): Promise<boolean> {
   const prefs = await getUserEmailPrefs(userEmail);
 
+  console.log('[SHOULD SEND] Checking for:', userEmail, '| category:', category, '| enabled:', prefs.enabled, '| mode:', prefs.mode, '| categories:', JSON.stringify(prefs.categories));
+
   if (!prefs.enabled || prefs.mode === 'off') {
+    console.log('[SHOULD SEND] BLOCKED - enabled:', prefs.enabled, '| mode:', prefs.mode);
     return false;
   }
 
   if (prefs.mode === 'daily_digest') {
-    // For digest mode, we don't send immediately - handled by cron job
+    console.log('[SHOULD SEND] BLOCKED - daily_digest mode');
     return false;
   }
 
   // Check if category is enabled
-  return prefs.categories[category] ?? false;
+  const result = prefs.categories[category] ?? false;
+  console.log('[SHOULD SEND] Category', category, '=', result);
+  return result;
 }
 
 /**
@@ -413,26 +423,44 @@ export async function notifyTaskAssigned(
     dueDate?: string;
   }
 ): Promise<void> {
+  console.log('[NOTIFY] notifyTaskAssigned called for:', assigneeEmail, '| taskId:', taskInfo.taskId, '| assigner:', taskInfo.assignerName);
+
   // Create in-app notification
-  await createNotification({
-    userEmail: assigneeEmail,
-    title: 'New task assigned',
-    message: `${taskInfo.assignerName} assigned you a task: ${taskInfo.title}`,
-    type: 'task_assigned',
-    linkUrl: `/tasks/${taskInfo.taskId}`,
-    referenceType: 'instructor_task',
-    referenceId: taskInfo.taskId,
-  });
+  try {
+    await createNotification({
+      userEmail: assigneeEmail,
+      title: 'New task assigned',
+      message: `${taskInfo.assignerName} assigned you a task: ${taskInfo.title}`,
+      type: 'task_assigned',
+      linkUrl: `/tasks/${taskInfo.taskId}`,
+      referenceType: 'instructor_task',
+      referenceId: taskInfo.taskId,
+    });
+    console.log('[NOTIFY] In-app notification created successfully for:', assigneeEmail);
+  } catch (notifError) {
+    console.error('[NOTIFY] In-app notification FAILED for:', assigneeEmail, notifError);
+  }
 
   // Send email if enabled
-  if (await shouldSendEmail(assigneeEmail, 'tasks')) {
-    await sendTaskAssignedEmail(assigneeEmail, {
-      taskId: taskInfo.taskId,
-      title: taskInfo.title,
-      assignerName: taskInfo.assignerName,
-      description: taskInfo.description,
-      dueDate: taskInfo.dueDate
-    });
+  const shouldSend = await shouldSendEmail(assigneeEmail, 'tasks');
+  console.log('[NOTIFY] shouldSendEmail result for', assigneeEmail, ':', shouldSend);
+
+  if (shouldSend) {
+    console.log('[NOTIFY] Sending email to:', assigneeEmail);
+    try {
+      await sendTaskAssignedEmail(assigneeEmail, {
+        taskId: taskInfo.taskId,
+        title: taskInfo.title,
+        assignerName: taskInfo.assignerName,
+        description: taskInfo.description,
+        dueDate: taskInfo.dueDate
+      });
+      console.log('[NOTIFY] Email sent successfully to:', assigneeEmail);
+    } catch (emailError) {
+      console.error('[NOTIFY] Email send FAILED for:', assigneeEmail, emailError);
+    }
+  } else {
+    console.log('[NOTIFY] Email SKIPPED for:', assigneeEmail, '(shouldSendEmail returned false)');
   }
 }
 

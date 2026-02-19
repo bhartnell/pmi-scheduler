@@ -317,9 +317,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Send notifications to all assignees (except self)
+    console.log('[TASK NOTIFY] Task created successfully, ID:', (task as TaskRecord).id, '| Assignees:', assignees.map((a: { id: string; email: string }) => a.email), '| Current user:', currentUser.id);
     for (const assignee of assignees) {
+      console.log('[TASK NOTIFY] Checking assignee:', assignee.email, '| assignee.id:', assignee.id, '| currentUser.id:', currentUser.id, '| skip self?', assignee.id === currentUser.id);
       if (assignee.id !== currentUser.id) {
         try {
+          console.log('[TASK NOTIFY] Calling notifyTaskAssigned for:', assignee.email);
           await notifyTaskAssigned(assignee.email, {
             taskId: (task as TaskRecord).id,
             title,
