@@ -334,12 +334,29 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch the complete task with assignees if supported
-    const selectQuery = hasAssigneesTable ? SELECT_WITH_ASSIGNEES : SELECT_WITHOUT_ASSIGNEES;
-    const { data: completeTask } = await supabase
-      .from('instructor_tasks')
-      .select(selectQuery)
-      .eq('id', (task as TaskRecord).id)
-      .single();
+    let completeTask = null;
+    try {
+      const selectQuery = hasAssigneesTable ? SELECT_WITH_ASSIGNEES : SELECT_WITHOUT_ASSIGNEES;
+      const { data, error: refetchError } = await supabase
+        .from('instructor_tasks')
+        .select(selectQuery)
+        .eq('id', (task as TaskRecord).id)
+        .single();
+
+      if (refetchError && hasAssigneesTable) {
+        // Retry without assignees join
+        const { data: fallbackData } = await supabase
+          .from('instructor_tasks')
+          .select(SELECT_WITHOUT_ASSIGNEES)
+          .eq('id', (task as TaskRecord).id)
+          .single();
+        completeTask = fallbackData ? Object.assign({}, fallbackData, { assignees: [] }) : task;
+      } else {
+        completeTask = data;
+      }
+    } catch {
+      completeTask = task;
+    }
 
     return NextResponse.json({ success: true, task: completeTask || task });
   } catch (error) {
