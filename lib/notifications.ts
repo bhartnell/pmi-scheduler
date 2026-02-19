@@ -32,36 +32,45 @@ interface EmailPreferences {
   };
 }
 
-// Default email preferences
+// Default email preferences — emails enabled out of the box for all users
+// Users can opt-out via settings if they want
 const DEFAULT_EMAIL_PREFS: EmailPreferences = {
-  enabled: false,
+  enabled: true,
   mode: 'immediate',
   digest_time: '08:00',
   categories: {
     tasks: true,
     labs: true,
     scheduling: true,
-    feedback: false,
-    clinical: false,
-    system: false
+    feedback: true,
+    clinical: true,
+    system: true
   }
 };
 
 /**
  * Get user's email preferences
+ * If no record exists, returns defaults with emails enabled.
+ * Only returns disabled if user has explicitly set that preference.
  */
 async function getUserEmailPrefs(userEmail: string): Promise<EmailPreferences> {
   try {
     const supabase = getSupabase();
 
     // user_preferences uses user_email (TEXT, UNIQUE) as its key
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('user_preferences')
       .select('email_preferences')
       .ilike('user_email', userEmail)
       .single();
 
-    return data?.email_preferences || DEFAULT_EMAIL_PREFS;
+    // No record found — user hasn't set preferences, use defaults (enabled)
+    if (error || !data?.email_preferences) {
+      return DEFAULT_EMAIL_PREFS;
+    }
+
+    // User has explicit preferences — respect them
+    return data.email_preferences;
   } catch {
     return DEFAULT_EMAIL_PREFS;
   }
