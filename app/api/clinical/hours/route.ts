@@ -63,44 +63,42 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { student_id, department, shifts, hours, notes } = body;
+    const { student_id, cohort_id, ...hoursData } = body;
 
-    if (!student_id || !department) {
-      return NextResponse.json({ success: false, error: 'Student ID and department required' }, { status: 400 });
+    if (!student_id) {
+      return NextResponse.json({ success: false, error: 'Student ID required' }, { status: 400 });
     }
 
-    // Check if record exists
+    // Check if record exists for this student
     const { data: existing } = await supabase
       .from('student_clinical_hours')
       .select('id')
       .eq('student_id', student_id)
-      .eq('department', department)
-      .single();
+      .maybeSingle();
+
+    // Build update data (only include fields that are present in the request)
+    const updateData: Record<string, unknown> = {
+      ...hoursData,
+      updated_at: new Date().toISOString(),
+    };
 
     let result;
     if (existing) {
-      // Update existing
+      // Update existing record
       result = await supabase
         .from('student_clinical_hours')
-        .update({
-          shifts: shifts || 0,
-          hours: hours || 0,
-          notes: notes || null,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq('id', existing.id)
         .select()
         .single();
     } else {
-      // Insert new
+      // Insert new record with student_id and cohort_id
       result = await supabase
         .from('student_clinical_hours')
         .insert({
           student_id,
-          department,
-          shifts: shifts || 0,
-          hours: hours || 0,
-          notes: notes || null,
+          cohort_id,
+          ...hoursData,
         })
         .select()
         .single();
