@@ -210,18 +210,22 @@ export async function GET(request: NextRequest) {
 
 // POST - Create new task (supports multi-assign)
 export async function POST(request: NextRequest) {
+  console.log('[TASK POST] ====== POST /api/tasks called ======');
   try {
     const session = await getServerSession();
+    console.log('[TASK POST] Session email:', session?.user?.email || 'NO SESSION');
     if (!session?.user?.email) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
     const currentUser = await getCurrentUser(session.user.email);
+    console.log('[TASK POST] Current user:', currentUser?.id, currentUser?.name || 'NOT FOUND');
     if (!currentUser) {
       return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
     }
 
     const body = await request.json();
+    console.log('[TASK POST] Request body:', JSON.stringify(body));
     const {
       title,
       description,
@@ -297,7 +301,11 @@ export async function POST(request: NextRequest) {
       `)
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('[TASK POST] Insert FAILED:', error.message, error.code);
+      throw error;
+    }
+    console.log('[TASK POST] Insert SUCCESS, task ID:', (task as TaskRecord).id);
 
     // For multi-assign, create task_assignees records
     if (hasAssigneesTable && finalMode !== 'single') {
@@ -361,9 +369,10 @@ export async function POST(request: NextRequest) {
       completeTask = task;
     }
 
+    console.log('[TASK POST] ====== Returning 200 success for task:', (task as TaskRecord).id, '======');
     return NextResponse.json({ success: true, task: completeTask || task });
   } catch (error) {
-    console.error('Error creating task:', error);
+    console.error('[TASK POST] ====== CAUGHT ERROR ======', error);
     return NextResponse.json({ success: false, error: 'Failed to create task' }, { status: 500 });
   }
 }
