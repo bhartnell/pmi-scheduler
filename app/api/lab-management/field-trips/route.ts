@@ -27,12 +27,31 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'cohortId is required' }, { status: 400 });
     }
 
-    const { data: fieldTrips, error } = await supabase
+    let fieldTrips = null;
+    let error = null;
+
+    // Try with is_active filter first
+    const result = await supabase
       .from('field_trips')
       .select('*')
       .eq('cohort_id', cohortId)
       .eq('is_active', true)
       .order('trip_date', { ascending: false });
+
+    fieldTrips = result.data;
+    error = result.error;
+
+    // If is_active column doesn't exist, retry without filter
+    if (error && (error.message?.includes('is_active') || error.code === '42703')) {
+      console.warn('field_trips: is_active column not found, querying without filter');
+      const fallback = await supabase
+        .from('field_trips')
+        .select('*')
+        .eq('cohort_id', cohortId)
+        .order('trip_date', { ascending: false });
+      fieldTrips = fallback.data;
+      error = fallback.error;
+    }
 
     if (error) {
       // Table might not exist yet
