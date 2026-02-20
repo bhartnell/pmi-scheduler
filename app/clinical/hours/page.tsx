@@ -1038,16 +1038,18 @@ export default function ClinicalHoursTrackerPage() {
                               <td key={col.key} className="px-3 py-2 text-center">
                                 {isEditing ? (
                                   <div className="flex flex-col gap-1 min-w-[80px]">
-                                    <div className="text-[10px] text-gray-400 text-left">Shifts:</div>
+                                    <label htmlFor={`shifts-${cellKey}`} className="text-[10px] text-gray-400 text-left">Shifts:</label>
                                     <input
+                                      id={`shifts-${cellKey}`}
                                       type="number"
                                       value={editValue.shifts}
                                       onChange={(e) => setEditValue({ ...editValue, shifts: parseInt(e.target.value) || 0 })}
                                       className="w-full px-2 py-1 text-xs border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
                                       min="0"
                                     />
-                                    <div className="text-[10px] text-gray-400 text-left">Hours:</div>
+                                    <label htmlFor={`hours-${cellKey}`} className="text-[10px] text-gray-400 text-left">Hours:</label>
                                     <input
+                                      id={`hours-${cellKey}`}
                                       type="number"
                                       value={editValue.hours}
                                       onChange={(e) => setEditValue({ ...editValue, hours: parseFloat(e.target.value) || 0 })}

@@ -216,6 +216,7 @@ export default function SiteVisitAlerts({
         {/* Action button */}
         {onLogVisit ? (
           <button
+            type="button"
             onClick={onLogVisit}
             className="flex items-center justify-center gap-2 mt-4 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors w-full"
           >
