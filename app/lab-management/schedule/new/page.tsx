@@ -20,7 +20,8 @@ import {
   ClipboardCheck,
   Search,
   X,
-  Users
+  Users,
+  HelpCircle
 } from 'lucide-react';
 
 interface Cohort {
@@ -67,6 +68,7 @@ interface Station {
   station_number: number;
   station_type: 'scenario' | 'skills' | 'documentation';
   scenario_id: string;
+  custom_title: string;  // Auto-generated station name
   selected_skills: string[];  // For skills stations
   custom_skills: string[];  // For freetext custom skills
   instructor_name: string;
@@ -75,6 +77,10 @@ interface Station {
   notes: string;
   rotation_minutes: number;
   num_rotations: number;
+  // Skills station document fields
+  skill_sheet_url: string;
+  instructions_url: string;
+  station_notes: string;
 }
 
 const STATION_TYPES = [
@@ -100,6 +106,11 @@ function NewLabDayPageContent() {
   const [labLeads, setLabLeads] = useState<string[]>([]);
   const [roamers, setRoamers] = useState<string[]>([]);
   const [observers, setObservers] = useState<string[]>([]);
+
+  // Coverage Request state
+  const [needsCoverage, setNeedsCoverage] = useState(false);
+  const [coverageNeeded, setCoverageNeeded] = useState(1);
+  const [coverageNote, setCoverageNote] = useState('');
 
   // Form state
   const [selectedCohort, setSelectedCohort] = useState('');
@@ -140,6 +151,7 @@ function NewLabDayPageContent() {
       station_number: stationNumber,
       station_type: 'scenario',
       scenario_id: '',
+      custom_title: '',
       selected_skills: [],
       custom_skills: [],
       instructor_name: '',
@@ -147,7 +159,10 @@ function NewLabDayPageContent() {
       room: '',
       notes: '',
       rotation_minutes: 30,
-      num_rotations: 4
+      num_rotations: 4,
+      skill_sheet_url: '',
+      instructions_url: '',
+      station_notes: ''
     };
   }
 
@@ -259,14 +274,58 @@ function NewLabDayPageContent() {
     const station = stations[stationIndex];
     const currentSkills = station.selected_skills;
     if (currentSkills.includes(skillId)) {
-      updateStation(stationIndex, { 
-        selected_skills: currentSkills.filter(id => id !== skillId) 
+      updateStation(stationIndex, {
+        selected_skills: currentSkills.filter(id => id !== skillId)
       });
     } else {
-      updateStation(stationIndex, { 
-        selected_skills: [...currentSkills, skillId] 
+      updateStation(stationIndex, {
+        selected_skills: [...currentSkills, skillId]
       });
     }
+  };
+
+  // Generate descriptive station name with cohort, date, and content
+  const generateStationName = (station: Station) => {
+    // Build cohort abbreviation (e.g., "PM14", "AEMT3", "EMT5")
+    const cohortData = cohorts.find(c => c.id === selectedCohort);
+    if (!cohortData) return 'Station';
+
+    const cohortAbbrev = `${cohortData.program.abbreviation}${cohortData.cohort_number}`;
+
+    // Format date (e.g., "01/26/26")
+    const dateStr = labDate ? new Date(labDate + 'T12:00:00').toLocaleDateString('en-US', {
+      month: '2-digit',
+      day: '2-digit',
+      year: '2-digit'
+    }) : '';
+
+    // Get content name based on station type
+    let contentName = '';
+    if (station.station_type === 'scenario') {
+      const scenario = scenarios.find(s => s.id === station.scenario_id);
+      if (scenario) {
+        contentName = scenario.title;
+      } else {
+        contentName = 'Scenario';
+      }
+    } else if (station.station_type === 'skills') {
+      const skillNames = station.selected_skills
+        .map(skillId => skills.find(s => s.id === skillId)?.name)
+        .filter(Boolean) as string[];
+      const allSkillNames = [...skillNames, ...station.custom_skills.filter(s => s.trim())];
+      if (allSkillNames.length > 0) {
+        contentName = allSkillNames.slice(0, 2).join(', ');
+        if (allSkillNames.length > 2) {
+          contentName += '...';
+        }
+      } else {
+        contentName = 'Skills';
+      }
+    } else if (station.station_type === 'documentation') {
+      contentName = 'Documentation';
+    }
+
+    return dateStr ? `${cohortAbbrev} ${dateStr} - ${contentName}` : `${cohortAbbrev} - ${contentName}`;
   };
 
   const handleSave = async () => {
@@ -296,7 +355,10 @@ function NewLabDayPageContent() {
           week_number: weekNumber ? parseInt(weekNumber) : null,
           day_number: dayNumber ? parseInt(dayNumber) : null,
           num_rotations: numRotationsLabDay,
-          rotation_duration: rotationDurationLabDay
+          rotation_duration: rotationDurationLabDay,
+          needs_coverage: needsCoverage,
+          coverage_needed: needsCoverage ? coverageNeeded : 0,
+          coverage_note: needsCoverage ? (coverageNote || null) : null
         })
       });
 
@@ -306,6 +368,24 @@ function NewLabDayPageContent() {
       }
 
       const labDayId = labDayData.labDay.id;
+
+      // Send coverage request notification to directors if requested
+      if (needsCoverage) {
+        try {
+          await fetch('/api/lab-management/request-coverage', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              lab_day_id: labDayId,
+              coverage_needed: coverageNeeded,
+              coverage_note: coverageNote || ''
+            })
+          });
+        } catch (error) {
+          console.error('Error sending coverage notification:', error);
+          // Don't fail the save if notification fails
+        }
+      }
 
       // Save lab day roles
       const allRoles = [
@@ -328,6 +408,9 @@ function NewLabDayPageContent() {
 
       // Create stations
       for (const station of stations) {
+        // Generate custom_title for the station
+        const customTitle = generateStationName(station);
+
         const stationRes = await fetch('/api/lab-management/stations', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -336,17 +419,22 @@ function NewLabDayPageContent() {
             station_number: station.station_number,
             station_type: station.station_type,
             scenario_id: station.station_type === 'scenario' ? station.scenario_id || null : null,
+            custom_title: customTitle,
             instructor_name: station.instructor_name || null,
             instructor_email: station.instructor_email || null,
             room: station.room || null,
             notes: station.notes || null,
             rotation_minutes: station.rotation_minutes,
-            num_rotations: station.num_rotations
+            num_rotations: station.num_rotations,
+            // Skills station document fields
+            skill_sheet_url: station.station_type === 'skills' ? station.skill_sheet_url || null : null,
+            instructions_url: station.station_type === 'skills' ? station.instructions_url || null : null,
+            station_notes: station.station_type === 'skills' ? station.station_notes || null : null
           })
         });
 
         const stationData = await stationRes.json();
-        
+
         // If skills station, add the skill links
         if (station.station_type === 'skills' && stationData.success) {
           // Add library skills
@@ -688,6 +776,65 @@ function NewLabDayPageContent() {
           </div>
         </div>
 
+        {/* Request Coverage */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+          <h2 className="font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+            <HelpCircle className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+            Request Additional Instructors
+          </h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            Need more instructors for this lab day? Directors will be notified of your request.
+          </p>
+
+          <div className="space-y-4">
+            {/* Toggle */}
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={needsCoverage}
+                onChange={(e) => setNeedsCoverage(e.target.checked)}
+                className="w-4 h-4 text-orange-600 rounded"
+              />
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                This lab day needs additional instructor coverage
+              </span>
+            </label>
+
+            {needsCoverage && (
+              <div className="pl-7 space-y-3">
+                {/* Number needed */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    How many instructors needed?
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="10"
+                    value={coverageNeeded}
+                    onChange={(e) => setCoverageNeeded(parseInt(e.target.value) || 1)}
+                    className="w-32 px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  />
+                </div>
+
+                {/* Note */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Note for directors (optional)
+                  </label>
+                  <textarea
+                    value={coverageNote}
+                    onChange={(e) => setCoverageNote(e.target.value)}
+                    rows={2}
+                    placeholder="e.g., Need help with high-acuity scenarios..."
+                    className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Lab Day Roles */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
           <h2 className="font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
@@ -907,6 +1054,14 @@ function NewLabDayPageContent() {
                   </div>
 
                   <div className="p-4 space-y-4">
+                    {/* Auto-generated Station Name Display */}
+                    <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                      <div className="text-xs text-blue-600 dark:text-blue-400 font-medium mb-1">Station Name (auto-generated)</div>
+                      <div className="text-sm text-blue-900 dark:text-blue-100 font-medium">
+                        {generateStationName(station)}
+                      </div>
+                    </div>
+
                     {/* Scenario Selection (only for scenario type) */}
                     {station.station_type === 'scenario' && (
                       <div>
@@ -1025,6 +1180,46 @@ function NewLabDayPageContent() {
                             >
                               <Plus className="w-4 h-4" /> Add custom skill
                             </button>
+                          </div>
+                        </div>
+
+                        {/* Skills Station Documentation */}
+                        <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                          <h4 className="text-sm font-medium text-green-800 dark:text-green-300 mb-3 flex items-center gap-2">
+                            <FileText className="w-4 h-4" />
+                            Station Documentation
+                          </h4>
+                          <div className="space-y-3">
+                            <div>
+                              <label className="block text-xs text-green-700 dark:text-green-400 mb-1">Skill Sheet URL</label>
+                              <input
+                                type="url"
+                                value={station.skill_sheet_url}
+                                onChange={(e) => updateStation(index, { skill_sheet_url: e.target.value })}
+                                placeholder="https://drive.google.com/... or paste URL"
+                                className="w-full px-3 py-2 border border-green-300 dark:border-green-700 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-green-700 dark:text-green-400 mb-1">Instructions URL</label>
+                              <input
+                                type="url"
+                                value={station.instructions_url}
+                                onChange={(e) => updateStation(index, { instructions_url: e.target.value })}
+                                placeholder="https://drive.google.com/... or paste URL"
+                                className="w-full px-3 py-2 border border-green-300 dark:border-green-700 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-green-700 dark:text-green-400 mb-1">Station Notes</label>
+                              <textarea
+                                value={station.station_notes}
+                                onChange={(e) => updateStation(index, { station_notes: e.target.value })}
+                                placeholder="Equipment needed, setup instructions, special notes..."
+                                rows={3}
+                                className="w-full px-3 py-2 border border-green-300 dark:border-green-700 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800"
+                              />
+                            </div>
                           </div>
                         </div>
                       </div>
