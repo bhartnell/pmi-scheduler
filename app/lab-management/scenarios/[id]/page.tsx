@@ -750,6 +750,7 @@ export default function ScenarioEditorPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [studentPrintMode, setStudentPrintMode] = useState(false);
+  const [instructorPrintMode, setInstructorPrintMode] = useState(false);
   const [scenario, setScenario] = useState<Scenario>({
     title: '',
     applicable_programs: ['Paramedic'],
@@ -878,7 +879,11 @@ export default function ScenarioEditorPage() {
   };
 
   const handlePrint = () => {
-    window.print();
+    setInstructorPrintMode(true);
+    setTimeout(() => {
+      window.print();
+      setInstructorPrintMode(false);
+    }, 100);
   };
 
   const handleStudentPrint = () => {
@@ -1428,7 +1433,420 @@ export default function ScenarioEditorPage() {
         </div>
       )}
 
-      <main className={`max-w-4xl mx-auto px-4 py-6 space-y-4 ${studentPrintMode ? 'print:hidden' : ''}`}>
+      {/* Instructor Print View - Professional formatted document */}
+      {instructorPrintMode && (
+        <div className="hidden print:block" style={{ WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+          <style>{`
+            @media print {
+              body { font-size: 11pt; margin: 0.5in 0.75in !important; padding: 0 !important; }
+              .avoid-break { page-break-inside: avoid; }
+              * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            }
+            @page { margin: 0.5in 0.75in; }
+          `}</style>
+
+          {/* Header */}
+          <div className="text-center border-b-2 border-black pb-3 mb-4">
+            <h1 className="text-xl font-bold uppercase mb-1">{scenario.title}</h1>
+            <h2 className="text-base font-bold">EMS SCENARIO</h2>
+            <p className="text-sm mt-1">
+              {scenario.category && `${scenario.category} | `}
+              {scenario.difficulty && `${scenario.difficulty} | `}
+              {scenario.estimated_duration && `${scenario.estimated_duration} min`}
+            </p>
+          </div>
+
+          {/* Instructor Summary */}
+          {scenario.instructor_summary && (
+            <div className="avoid-break border-2 border-black p-3 mb-3 bg-gray-100">
+              <h3 className="text-xs font-bold uppercase border-b-2 border-black pb-1 mb-2">INSTRUCTOR NOTES (READ FIRST)</h3>
+              <p className="text-sm">{scenario.instructor_summary}</p>
+            </div>
+          )}
+
+          {/* Dispatch Information */}
+          {(scenario.dispatch_time || scenario.dispatch_location || scenario.chief_complaint || scenario.dispatch_notes) && (
+            <div className="avoid-break border border-black p-2 mb-3">
+              <h3 className="text-xs font-bold uppercase border-b-2 border-black pb-1 mb-2">DISPATCH INFORMATION</h3>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm mb-2">
+                {scenario.dispatch_time && (
+                  <>
+                    <div className="font-semibold">Time:</div>
+                    <div>{scenario.dispatch_time}</div>
+                  </>
+                )}
+                {scenario.dispatch_location && (
+                  <>
+                    <div className="font-semibold">Location:</div>
+                    <div>{scenario.dispatch_location}</div>
+                  </>
+                )}
+              </div>
+              {scenario.chief_complaint && (
+                <p className="text-sm mb-1"><strong>Chief Complaint:</strong> {scenario.chief_complaint}</p>
+              )}
+              {scenario.dispatch_notes && (
+                <p className="text-sm"><strong>Dispatch Notes:</strong> {scenario.dispatch_notes}</p>
+              )}
+            </div>
+          )}
+
+          {/* Patient Information */}
+          {(scenario.patient_name || scenario.patient_age || scenario.patient_sex || scenario.patient_weight ||
+            scenario.general_impression) && (
+            <div className="avoid-break border border-black p-2 mb-3">
+              <h3 className="text-xs font-bold uppercase border-b-2 border-black pb-1 mb-2">PATIENT INFORMATION</h3>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm mb-2">
+                {scenario.patient_name && (
+                  <>
+                    <div className="font-semibold">Name:</div>
+                    <div>{scenario.patient_name}</div>
+                  </>
+                )}
+                {scenario.patient_age && (
+                  <>
+                    <div className="font-semibold">Age:</div>
+                    <div>{scenario.patient_age} years</div>
+                  </>
+                )}
+                {scenario.patient_sex && (
+                  <>
+                    <div className="font-semibold">Sex:</div>
+                    <div>{scenario.patient_sex}</div>
+                  </>
+                )}
+                {scenario.patient_weight && (
+                  <>
+                    <div className="font-semibold">Weight:</div>
+                    <div>{scenario.patient_weight} kg</div>
+                  </>
+                )}
+              </div>
+              {scenario.general_impression && (
+                <p className="text-sm p-2 bg-gray-100 border-l-2 border-black"><strong>General Impression:</strong> {scenario.general_impression}</p>
+              )}
+            </div>
+          )}
+
+          {/* Primary Assessment - XABCDE */}
+          {(scenario.assessment_x || scenario.assessment_a || scenario.assessment_e ||
+            scenario.phases[0]?.vitals) && (
+            <div className="avoid-break border-2 border-black p-2 mb-3">
+              <h3 className="text-xs font-bold uppercase border-b-2 border-black pb-1 mb-2">PRIMARY ASSESSMENT (XABCDE)</h3>
+              <table className="w-full border-collapse text-sm">
+                <tbody>
+                  {(scenario.assessment_x || scenario.phases[0]?.vitals?.hemorrhage_control) && (
+                    <tr>
+                      <td className="w-7 font-bold text-center border-2 border-black bg-gray-200 p-1">X</td>
+                      <td className="font-semibold border border-black p-1">Hemorrhage Control:</td>
+                      <td className="border border-black p-1">{scenario.phases[0]?.vitals?.hemorrhage_control || scenario.assessment_x}</td>
+                    </tr>
+                  )}
+                  {(scenario.assessment_a || scenario.phases[0]?.vitals?.airway_status) && (
+                    <tr>
+                      <td className="w-7 font-bold text-center border-2 border-black bg-gray-200 p-1">A</td>
+                      <td className="font-semibold border border-black p-1">Airway:</td>
+                      <td className="border border-black p-1">{scenario.phases[0]?.vitals?.airway_status || scenario.assessment_a}</td>
+                    </tr>
+                  )}
+                  {scenario.phases[0]?.vitals && (scenario.phases[0].vitals.rr || scenario.phases[0].vitals.spo2 || scenario.phases[0].vitals.lung_sounds) && (
+                    <tr>
+                      <td className="w-7 font-bold text-center border-2 border-black bg-gray-200 p-1">B</td>
+                      <td className="font-semibold border border-black p-1">Breathing:</td>
+                      <td className="border border-black p-1">
+                        {scenario.phases[0].vitals.rr && `RR ${scenario.phases[0].vitals.rr}`}
+                        {scenario.phases[0].vitals.spo2 && `, SpO2 ${scenario.phases[0].vitals.spo2}`}
+                        {scenario.phases[0].vitals.lung_sounds && `, ${scenario.phases[0].vitals.lung_sounds}`}
+                      </td>
+                    </tr>
+                  )}
+                  {scenario.phases[0]?.vitals && (scenario.phases[0].vitals.bp || scenario.phases[0].vitals.hr || scenario.phases[0].vitals.skin) && (
+                    <tr>
+                      <td className="w-7 font-bold text-center border-2 border-black bg-gray-200 p-1">C</td>
+                      <td className="font-semibold border border-black p-1">Circulation:</td>
+                      <td className="border border-black p-1">
+                        {scenario.phases[0].vitals.bp && `BP ${scenario.phases[0].vitals.bp}`}
+                        {scenario.phases[0].vitals.hr && `, HR ${scenario.phases[0].vitals.hr}`}
+                        {scenario.phases[0].vitals.skin && `, Skin: ${scenario.phases[0].vitals.skin}`}
+                      </td>
+                    </tr>
+                  )}
+                  {scenario.phases[0]?.vitals && (scenario.phases[0].vitals.gcs_total || scenario.phases[0].vitals.loc || scenario.phases[0].vitals.pupils) && (
+                    <tr>
+                      <td className="w-7 font-bold text-center border-2 border-black bg-gray-200 p-1">D</td>
+                      <td className="font-semibold border border-black p-1">Disability:</td>
+                      <td className="border border-black p-1">
+                        {scenario.phases[0].vitals.gcs_total && `GCS ${scenario.phases[0].vitals.gcs_total}`}
+                        {(scenario.phases[0].vitals.gcs_e || scenario.phases[0].vitals.gcs_v || scenario.phases[0].vitals.gcs_m) &&
+                          ` (E${scenario.phases[0].vitals.gcs_e}V${scenario.phases[0].vitals.gcs_v}M${scenario.phases[0].vitals.gcs_m})`}
+                        {scenario.phases[0].vitals.loc && `, ${scenario.phases[0].vitals.loc}`}
+                        {scenario.phases[0].vitals.pupils && `, Pupils: ${scenario.phases[0].vitals.pupils}`}
+                      </td>
+                    </tr>
+                  )}
+                  {(scenario.assessment_e || scenario.phases[0]?.vitals?.expose_findings) && (
+                    <tr>
+                      <td className="w-7 font-bold text-center border-2 border-black bg-gray-200 p-1">E</td>
+                      <td className="font-semibold border border-black p-1">Expose/Environment:</td>
+                      <td className="border border-black p-1">{scenario.phases[0]?.vitals?.expose_findings || scenario.assessment_e}</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Medical History */}
+          {(scenario.medical_history.length > 0 || scenario.medications.length > 0 || scenario.allergies) && (
+            <div className="avoid-break border border-black p-2 mb-3">
+              <h3 className="text-xs font-bold uppercase border-b-2 border-black pb-1 mb-2">MEDICAL HISTORY</h3>
+              <div className="grid grid-cols-3 gap-3 text-sm">
+                {scenario.medical_history.length > 0 && (
+                  <div>
+                    <strong className="block mb-1">Past Medical History:</strong>
+                    <ul className="list-disc list-inside">
+                      {scenario.medical_history.map((h, i) => <li key={i}>{h}</li>)}
+                    </ul>
+                  </div>
+                )}
+                {scenario.medications.length > 0 && (
+                  <div>
+                    <strong className="block mb-1">Medications:</strong>
+                    <ul className="list-disc list-inside">
+                      {scenario.medications.map((m, i) => <li key={i}>{m}</li>)}
+                    </ul>
+                  </div>
+                )}
+                {scenario.allergies && (
+                  <div>
+                    <strong className="block mb-1">Allergies:</strong>
+                    <p>{scenario.allergies}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* SAMPLE History */}
+          <div className="avoid-break border border-black p-2 mb-3">
+            <h3 className="text-xs font-bold uppercase border-b-2 border-black pb-1 mb-2">SAMPLE HISTORY</h3>
+            <table className="w-full border-collapse text-sm">
+              <tbody>
+                <tr>
+                  <td className="w-7 font-bold text-center border-2 border-black bg-gray-200 p-1">S</td>
+                  <td className="font-semibold border border-black p-1 bg-gray-100" style={{ width: '110px' }}>Signs/Symptoms</td>
+                  <td className="border border-black p-1">{scenario.sample_history?.signs_symptoms || scenario.chief_complaint || '—'}</td>
+                </tr>
+                <tr>
+                  <td className="w-7 font-bold text-center border-2 border-black bg-gray-200 p-1">A</td>
+                  <td className="font-semibold border border-black p-1 bg-gray-100">Allergies</td>
+                  <td className="border border-black p-1">{scenario.allergies || 'NKDA'}</td>
+                </tr>
+                <tr>
+                  <td className="w-7 font-bold text-center border-2 border-black bg-gray-200 p-1">M</td>
+                  <td className="font-semibold border border-black p-1 bg-gray-100">Medications</td>
+                  <td className="border border-black p-1">{scenario.medications.length > 0 ? scenario.medications.join(', ') : 'None'}</td>
+                </tr>
+                <tr>
+                  <td className="w-7 font-bold text-center border-2 border-black bg-gray-200 p-1">P</td>
+                  <td className="font-semibold border border-black p-1 bg-gray-100">Past Medical Hx</td>
+                  <td className="border border-black p-1">{scenario.medical_history.length > 0 ? scenario.medical_history.join(', ') : 'None'}</td>
+                </tr>
+                <tr>
+                  <td className="w-7 font-bold text-center border-2 border-black bg-gray-200 p-1">L</td>
+                  <td className="font-semibold border border-black p-1 bg-gray-100">Last Oral Intake</td>
+                  <td className="border border-black p-1">{scenario.sample_history?.last_oral_intake || '—'}</td>
+                </tr>
+                <tr>
+                  <td className="w-7 font-bold text-center border-2 border-black bg-gray-200 p-1">E</td>
+                  <td className="font-semibold border border-black p-1 bg-gray-100">Events Leading</td>
+                  <td className="border border-black p-1">{scenario.sample_history?.events_leading || '—'}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          {/* OPQRST */}
+          {(scenario.opqrst?.onset || scenario.opqrst?.provocation || scenario.opqrst?.quality ||
+            scenario.opqrst?.radiation || scenario.opqrst?.severity || scenario.opqrst?.time_onset) && (
+            <div className="avoid-break border border-black p-2 mb-3">
+              <h3 className="text-xs font-bold uppercase border-b-2 border-black pb-1 mb-2">OPQRST (PAIN ASSESSMENT)</h3>
+              <table className="w-full border-collapse text-sm">
+                <tbody>
+                  {scenario.opqrst.onset && (
+                    <tr>
+                      <td className="w-7 font-bold text-center border-2 border-black bg-gray-200 p-1">O</td>
+                      <td className="font-semibold border border-black p-1 bg-gray-100" style={{ width: '110px' }}>Onset</td>
+                      <td className="border border-black p-1">{scenario.opqrst.onset}</td>
+                    </tr>
+                  )}
+                  {scenario.opqrst.provocation && (
+                    <tr>
+                      <td className="w-7 font-bold text-center border-2 border-black bg-gray-200 p-1">P</td>
+                      <td className="font-semibold border border-black p-1 bg-gray-100">Provocation</td>
+                      <td className="border border-black p-1">{scenario.opqrst.provocation}</td>
+                    </tr>
+                  )}
+                  {scenario.opqrst.quality && (
+                    <tr>
+                      <td className="w-7 font-bold text-center border-2 border-black bg-gray-200 p-1">Q</td>
+                      <td className="font-semibold border border-black p-1 bg-gray-100">Quality</td>
+                      <td className="border border-black p-1">{scenario.opqrst.quality}</td>
+                    </tr>
+                  )}
+                  {scenario.opqrst.radiation && (
+                    <tr>
+                      <td className="w-7 font-bold text-center border-2 border-black bg-gray-200 p-1">R</td>
+                      <td className="font-semibold border border-black p-1 bg-gray-100">Radiation/Region</td>
+                      <td className="border border-black p-1">{scenario.opqrst.radiation}</td>
+                    </tr>
+                  )}
+                  {scenario.opqrst.severity && (
+                    <tr>
+                      <td className="w-7 font-bold text-center border-2 border-black bg-gray-200 p-1">S</td>
+                      <td className="font-semibold border border-black p-1 bg-gray-100">Severity</td>
+                      <td className="border border-black p-1">{scenario.opqrst.severity}</td>
+                    </tr>
+                  )}
+                  {scenario.opqrst.time_onset && (
+                    <tr>
+                      <td className="w-7 font-bold text-center border-2 border-black bg-gray-200 p-1">T</td>
+                      <td className="font-semibold border border-black p-1 bg-gray-100">Time/Duration</td>
+                      <td className="border border-black p-1">{scenario.opqrst.time_onset}</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Critical Actions */}
+          {scenario.critical_actions.length > 0 && (
+            <div className="avoid-break border-2 border-black p-2 mb-3 bg-gray-100">
+              <h3 className="text-xs font-bold uppercase border-b-2 border-black pb-1 mb-2">✓ CRITICAL ACTIONS (MUST PERFORM)</h3>
+              <ul className="list-disc ml-5 text-sm font-semibold">
+                {scenario.critical_actions.map((action, i) => (
+                  <li key={i} className="py-1">{action.description}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Scenario Phases */}
+          {scenario.phases.length > 0 && (
+            <div className="avoid-break border border-black p-2 mb-3">
+              <h3 className="text-xs font-bold uppercase border-b-2 border-black pb-1 mb-2">SCENARIO PHASES</h3>
+              {scenario.phases.map((phase, idx) => (
+                <div key={phase.id} className="avoid-break border border-black p-2 mb-2 last:mb-0">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="font-bold text-xs bg-black text-white px-2 py-1">PHASE {idx + 1}</span>
+                    <span className="font-bold text-sm">{phase.name}</span>
+                  </div>
+                  {phase.trigger && (
+                    <p className="text-sm mb-2"><strong>Trigger:</strong> {phase.trigger}</p>
+                  )}
+                  {phase.general_impression && (
+                    <p className="text-sm mb-2 p-1 bg-gray-100"><strong>General Impression:</strong> {phase.general_impression}</p>
+                  )}
+                  {phase.vitals && (
+                    <div className="mb-2">
+                      <table className="w-full border-collapse text-xs">
+                        <thead>
+                          <tr className="bg-gray-200">
+                            {phase.vitals.bp && <th className="border border-black p-1 text-center">BP</th>}
+                            {phase.vitals.hr && <th className="border border-black p-1 text-center">HR</th>}
+                            {phase.vitals.rr && <th className="border border-black p-1 text-center">RR</th>}
+                            {phase.vitals.spo2 && <th className="border border-black p-1 text-center">SpO2</th>}
+                            {phase.vitals.etco2 && <th className="border border-black p-1 text-center">EtCO2</th>}
+                            {phase.vitals.temp && <th className="border border-black p-1 text-center">Temp</th>}
+                            {phase.vitals.blood_glucose && <th className="border border-black p-1 text-center">BGL</th>}
+                            {phase.vitals.gcs_total && <th className="border border-black p-1 text-center">GCS</th>}
+                            {phase.vitals.pupils && <th className="border border-black p-1 text-center">Pupils</th>}
+                            {phase.vitals.skin && <th className="border border-black p-1 text-center">Skin</th>}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr className="font-semibold">
+                            {phase.vitals.bp && <td className="border border-black p-1 text-center">{phase.vitals.bp}</td>}
+                            {phase.vitals.hr && <td className="border border-black p-1 text-center">{phase.vitals.hr}</td>}
+                            {phase.vitals.rr && <td className="border border-black p-1 text-center">{phase.vitals.rr}</td>}
+                            {phase.vitals.spo2 && <td className="border border-black p-1 text-center">{phase.vitals.spo2}</td>}
+                            {phase.vitals.etco2 && <td className="border border-black p-1 text-center">{phase.vitals.etco2}</td>}
+                            {phase.vitals.temp && <td className="border border-black p-1 text-center">{phase.vitals.temp}</td>}
+                            {phase.vitals.blood_glucose && <td className="border border-black p-1 text-center">{phase.vitals.blood_glucose}</td>}
+                            {phase.vitals.gcs_total && <td className="border border-black p-1 text-center">
+                              {phase.vitals.gcs_total}
+                              {(phase.vitals.gcs_e || phase.vitals.gcs_v || phase.vitals.gcs_m) &&
+                                ` (E${phase.vitals.gcs_e}V${phase.vitals.gcs_v}M${phase.vitals.gcs_m})`}
+                            </td>}
+                            {phase.vitals.pupils && <td className="border border-black p-1 text-center">{phase.vitals.pupils}</td>}
+                            {phase.vitals.skin && <td className="border border-black p-1 text-center">{phase.vitals.skin}</td>}
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                  {phase.presentation_notes && (
+                    <div className="text-sm mb-2">
+                      <strong>Presentation:</strong>
+                      <p className="mt-1">{phase.presentation_notes}</p>
+                    </div>
+                  )}
+                  {phase.expected_actions && (
+                    <div className="text-sm">
+                      <strong>Expected Actions:</strong>
+                      <p className="mt-1 whitespace-pre-wrap">{phase.expected_actions}</p>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Learning Objectives */}
+          {scenario.key_decision_points.length > 0 && (
+            <div className="avoid-break border border-black p-2 mb-3">
+              <h3 className="text-xs font-bold uppercase border-b-2 border-black pb-1 mb-2">LEARNING OBJECTIVES</h3>
+              <ul className="list-disc ml-5 text-sm">
+                {scenario.key_decision_points.map((point, i) => (
+                  <li key={i} className="py-1">{point}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Evaluation Criteria */}
+          {scenario.evaluation_criteria.length > 0 && (
+            <div className="avoid-break border border-black p-2 mb-3">
+              <h3 className="text-xs font-bold uppercase border-b-2 border-black pb-1 mb-2">EVALUATION CRITERIA</h3>
+              <table className="w-full border-collapse text-sm">
+                <tbody>
+                  {scenario.evaluation_criteria.map((criteria, i) => (
+                    <tr key={criteria.id}>
+                      <td className="border border-black p-1 font-semibold bg-gray-100" style={{ width: '30%' }}>{criteria.name}</td>
+                      <td className="border border-black p-1">{criteria.description}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Debrief Points */}
+          {scenario.debrief_points.length > 0 && (
+            <div className="avoid-break border-2 border-black p-2 mb-3 bg-gray-100">
+              <h3 className="text-xs font-bold uppercase border-b-2 border-black pb-1 mb-2">DEBRIEF DISCUSSION POINTS</h3>
+              <ul className="list-disc ml-5 text-sm">
+                {scenario.debrief_points.map((point, i) => (
+                  <li key={i} className="py-1">{point}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+
+      <main className={`max-w-4xl mx-auto px-4 py-6 space-y-4 ${(studentPrintMode || instructorPrintMode) ? 'print:hidden' : ''}`}>
         {/* Basic Info */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
           <h2 className="font-semibold text-gray-900 dark:text-white mb-4">Basic Information</h2>
