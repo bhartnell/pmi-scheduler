@@ -14,7 +14,8 @@ import {
   Smartphone,
   Check,
   Users,
-  X
+  X,
+  HelpCircle
 } from 'lucide-react';
 
 interface LabDay {
@@ -27,6 +28,9 @@ interface LabDay {
   notes: string | null;
   room: string | null;
   assigned_timer_id: string | null;
+  needs_coverage: boolean;
+  coverage_needed: number;
+  coverage_note: string | null;
   cohort: {
     id: string;
     cohort_number: number;
@@ -81,6 +85,11 @@ export default function EditLabDayPage() {
   const [labLeads, setLabLeads] = useState<string[]>([]);
   const [roamers, setRoamers] = useState<string[]>([]);
   const [observers, setObservers] = useState<string[]>([]);
+
+  // Coverage Request state
+  const [needsCoverage, setNeedsCoverage] = useState(false);
+  const [coverageNeeded, setCoverageNeeded] = useState(1);
+  const [coverageNote, setCoverageNote] = useState('');
 
   // Form state
   const [labDate, setLabDate] = useState('');
@@ -164,6 +173,9 @@ export default function EditLabDayPage() {
         setDurationInputValue(duration.toString());
         setNotes(data.labDay.notes || '');
         setAssignedTimerId(data.labDay.assigned_timer_id || null);
+        setNeedsCoverage(data.labDay.needs_coverage || false);
+        setCoverageNeeded(data.labDay.coverage_needed || 1);
+        setCoverageNote(data.labDay.coverage_note || '');
 
         // Check if room has a fixed timer
         if (data.labDay.room && timerTokens.length > 0) {
@@ -208,7 +220,10 @@ export default function EditLabDayPage() {
           num_rotations: numRotations,
           rotation_duration: rotationDuration,
           notes: notes || null,
-          assigned_timer_id: fixedTimer ? null : (assignedTimerId || null)
+          assigned_timer_id: fixedTimer ? null : (assignedTimerId || null),
+          needs_coverage: needsCoverage,
+          coverage_needed: needsCoverage ? coverageNeeded : 0,
+          coverage_note: needsCoverage ? (coverageNote || null) : null
         })
       });
 
@@ -217,6 +232,24 @@ export default function EditLabDayPage() {
         alert('Failed to save: ' + (data.error || 'Unknown error'));
         setSaving(false);
         return;
+      }
+
+      // Send coverage request notification to directors if enabled and changed
+      if (needsCoverage && (!labDay?.needs_coverage || labDay.coverage_needed !== coverageNeeded || labDay.coverage_note !== coverageNote)) {
+        try {
+          await fetch('/api/lab-management/request-coverage', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              lab_day_id: labDayId,
+              coverage_needed: coverageNeeded,
+              coverage_note: coverageNote || ''
+            })
+          });
+        } catch (error) {
+          console.error('Error sending coverage notification:', error);
+          // Don't fail the save if notification fails
+        }
       }
 
       // Save roles - first delete all existing roles for this lab day
@@ -507,6 +540,65 @@ export default function EditLabDayPage() {
                   )}
                 </div>
               )}
+            </div>
+
+            {/* Request Coverage */}
+            <div className="md:col-span-2 pt-4 border-t dark:border-gray-700">
+              <div className="flex items-center gap-2 mb-4">
+                <HelpCircle className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">Request Additional Instructors</h3>
+              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                Need more instructors for this lab day? Directors will be notified of your request.
+              </p>
+
+              <div className="space-y-4">
+                {/* Toggle */}
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={needsCoverage}
+                    onChange={(e) => setNeedsCoverage(e.target.checked)}
+                    className="w-4 h-4 text-orange-600 rounded"
+                  />
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    This lab day needs additional instructor coverage
+                  </span>
+                </label>
+
+                {needsCoverage && (
+                  <div className="pl-7 space-y-3">
+                    {/* Number needed */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        How many instructors needed?
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="10"
+                        value={coverageNeeded}
+                        onChange={(e) => setCoverageNeeded(parseInt(e.target.value) || 1)}
+                        className="w-32 px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                      />
+                    </div>
+
+                    {/* Note */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Note for directors (optional)
+                      </label>
+                      <textarea
+                        value={coverageNote}
+                        onChange={(e) => setCoverageNote(e.target.value)}
+                        rows={2}
+                        placeholder="e.g., Need help with high-acuity scenarios..."
+                        className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Lab Day Roles */}

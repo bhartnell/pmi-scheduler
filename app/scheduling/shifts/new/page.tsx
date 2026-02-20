@@ -57,7 +57,8 @@ export default function CreateShiftPage() {
     min_instructors: 1,
     max_instructors: '',
     repeat: '' as '' | 'weekly' | 'biweekly' | 'monthly',
-    repeat_until: ''
+    repeat_until: '',
+    lab_day_id: ''
   });
 
   const [upcomingLabDays, setUpcomingLabDays] = useState<LabDay[]>([]);
@@ -188,7 +189,8 @@ export default function CreateShiftPage() {
           min_instructors: formData.min_instructors,
           max_instructors: formData.max_instructors ? parseInt(formData.max_instructors) : undefined,
           repeat: formData.repeat || undefined,
-          repeat_until: formData.repeat_until || undefined
+          repeat_until: formData.repeat_until || undefined,
+          lab_day_id: formData.lab_day_id || undefined
         })
       });
 
@@ -412,6 +414,34 @@ export default function CreateShiftPage() {
                   placeholder="Leave blank for unlimited"
                 />
               </div>
+            </div>
+
+            {/* Link to Lab Day */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Link to Lab Day (optional)
+              </label>
+              <select
+                value={formData.lab_day_id}
+                onChange={(e) => setFormData({ ...formData, lab_day_id: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              >
+                <option value="">Not linked to any lab day</option>
+                {upcomingLabDays.map(labDay => (
+                  <option key={labDay.id} value={labDay.id}>
+                    {new Date(labDay.date + 'T12:00:00').toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric'
+                    })}
+                    {' - '}
+                    {labDay.cohort?.program?.abbreviation || 'PMD'} {labDay.cohort?.cohort_number}
+                    {labDay.title && ` - ${labDay.title}`}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Link this shift to a scheduled lab day for better organization
+              </p>
             </div>
 
             {/* Recurring Shifts */}

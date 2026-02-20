@@ -1,0 +1,96 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { createClient } from '@supabase/supabase-js';
+import { createBulkNotifications } from '@/lib/notifications';
+
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+}
+
+export async function POST(request: NextRequest) {
+  const session = await getServerSession();
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const { lab_day_id, coverage_needed, coverage_note } = await request.json();
+
+    if (!lab_day_id || !coverage_needed) {
+      return NextResponse.json(
+        { error: 'lab_day_id and coverage_needed are required' },
+        { status: 400 }
+      );
+    }
+
+    const supabase = getSupabase();
+
+    // Get lab day details for notification
+    const { data: labDay, error: labDayError } = await supabase
+      .from('lab_days')
+      .select(`
+        id,
+        date,
+        title,
+        cohort:cohorts(
+          cohort_number,
+          program:programs(name, abbreviation)
+        )
+      `)
+      .eq('id', lab_day_id)
+      .single();
+
+    if (labDayError || !labDay) {
+      return NextResponse.json({ error: 'Lab day not found' }, { status: 404 });
+    }
+
+    // Get all admin/superadmin users
+    const { data: directors, error: directorsError } = await supabase
+      .from('lab_users')
+      .select('id, name, email')
+      .in('role', ['admin', 'superadmin'])
+      .eq('is_active', true);
+
+    if (directorsError || !directors || directors.length === 0) {
+      console.error('No directors found:', directorsError);
+      return NextResponse.json({ error: 'No directors found to notify' }, { status: 404 });
+    }
+
+    // Format date for notification
+    const formattedDate = new Date(labDay.date + 'T12:00:00').toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+
+    const cohortInfo = Array.isArray(labDay.cohort) ? labDay.cohort[0] : labDay.cohort;
+    const programInfo = Array.isArray(cohortInfo.program) ? cohortInfo.program[0] : cohortInfo.program;
+    const cohortName = `${programInfo.abbreviation} G${cohortInfo.cohort_number}`;
+    const labTitle = labDay.title || 'Lab Day';
+
+    // Create notifications for all directors
+    const notifications = directors.map(director => ({
+      userEmail: director.email,
+      title: `Coverage Request: ${cohortName}`,
+      message: `Instructor coverage needed for ${labTitle} on ${formattedDate}. ${coverage_needed} instructor${coverage_needed > 1 ? 's' : ''} needed.${coverage_note ? ` Note: ${coverage_note}` : ''}`,
+      type: 'lab_assignment' as const,
+      linkUrl: `/lab-management/schedule/${lab_day_id}/edit`,
+      referenceType: 'lab_day',
+      referenceId: lab_day_id
+    }));
+
+    await createBulkNotifications(notifications);
+
+    return NextResponse.json({
+      success: true,
+      message: `Notified ${directors.length} director${directors.length > 1 ? 's' : ''}`
+    });
+  } catch (error) {
+    console.error('Error sending coverage request:', error);
+    return NextResponse.json({ error: 'Failed to send coverage request' }, { status: 500 });
+  }
+}
