@@ -48,13 +48,14 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '100');
     const offset = parseInt(searchParams.get('offset') || '0');
 
+    // Try with explicit FK name first, fall back to column-based hint
     let query = supabase
       .from('scenario_participation')
       .select(`
         *,
         student:students(id, first_name, last_name, cohort_id),
         scenario:scenarios(id, title, category),
-        logged_by_user:lab_users!scenario_participation_logged_by_fkey(id, name),
+        logged_by_user:lab_users!logged_by(id, name),
         lab_day:lab_days(id, date)
       `, { count: 'exact' })
       .order('date', { ascending: false })
@@ -181,7 +182,7 @@ export async function POST(request: NextRequest) {
         *,
         student:students(id, first_name, last_name),
         scenario:scenarios(id, title, category),
-        logged_by_user:lab_users!scenario_participation_logged_by_fkey(id, name)
+        logged_by_user:lab_users!logged_by(id, name)
       `)
       .single();
 

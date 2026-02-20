@@ -19,29 +19,54 @@ export async function GET(request: NextRequest) {
     const supabase = getSupabase();
     const includeDocuments = searchParams.get('includeDocuments') === 'true';
 
-    let query = supabase
-      .from('skills')
-      .select(includeDocuments
-        ? '*, documents:skill_documents(id, document_name, document_url, document_type, file_type, display_order)'
-        : '*'
-      )
-      .eq('is_active', true)
-      .order('display_order')
-      .order('name');
+    const buildQuery = (withDocuments: boolean, docSelect?: string) => {
+      let selectStr = '*';
+      if (withDocuments && docSelect) {
+        selectStr = `*, documents:skill_documents(${docSelect})`;
+      }
 
-    if (category) {
-      query = query.eq('category', category);
+      let q = supabase
+        .from('skills')
+        .select(selectStr)
+        .eq('is_active', true)
+        .order('display_order')
+        .order('name');
+
+      if (category) q = q.eq('category', category);
+      if (level) q = q.contains('certification_levels', [level]);
+      if (search) q = q.or(`name.ilike.%${search}%,category.ilike.%${search}%`);
+
+      return q;
+    };
+
+    let data, error;
+
+    if (includeDocuments) {
+      // Try full select with file_type
+      const result = await buildQuery(true, 'id, document_name, document_url, document_type, file_type, display_order');
+      data = result.data;
+      error = result.error;
+
+      // If file_type column doesn't exist, retry without it
+      if (error && (error.message?.includes('file_type') || error.code === '42703')) {
+        console.warn('skill_documents: file_type column not found, querying without it');
+        const fallback = await buildQuery(true, 'id, document_name, document_url, document_type, display_order');
+        data = fallback.data;
+        error = fallback.error;
+      }
+
+      // If skill_documents table/relationship doesn't exist, query without join
+      if (error && (error.message?.includes('skill_documents') || error.message?.includes('relationship') || error.code === 'PGRST200')) {
+        console.warn('skill_documents: join failed, querying skills only');
+        const fallback = await buildQuery(false);
+        data = fallback.data;
+        error = fallback.error;
+      }
+    } else {
+      const result = await buildQuery(false);
+      data = result.data;
+      error = result.error;
     }
-
-    if (level) {
-      query = query.contains('certification_levels', [level]);
-    }
-
-    if (search) {
-      query = query.or(`name.ilike.%${search}%,category.ilike.%${search}%`);
-    }
-
-    const { data, error } = await query;
 
     if (error) throw error;
 
