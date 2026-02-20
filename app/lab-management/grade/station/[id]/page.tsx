@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import {
   ChevronRight,
@@ -17,7 +17,9 @@ import {
   ChevronUp,
   Clock,
   ExternalLink,
-  ClipboardCheck
+  ClipboardCheck,
+  Loader2,
+  Check
 } from 'lucide-react';
 import TimerBanner from '@/components/TimerBanner';
 import StudentPicker from '@/components/StudentPicker';
@@ -284,6 +286,12 @@ export default function GradeStationPage() {
   const [issueLevel, setIssueLevel] = useState<'none' | 'minor' | 'needs_followup'>('none');
   const [flagCategories, setFlagCategories] = useState<string[]>([]);
 
+  // Auto-save state
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const savedIndicatorTimerRef = useRef<NodeJS.Timeout | null>(null);
+
   // Computed values
   const selectedGroup = labGroups.find(g => g.id === selectedGroupId);
   const satisfactoryCount = criteriaRatings.filter(r => r.rating === 'S').length;
@@ -420,12 +428,14 @@ export default function GradeStationPage() {
         return r;
       })
     );
+    triggerAutoSave();
   };
 
   const updateNotes = (criteriaId: string, notes: string) => {
-    setCriteriaRatings(prev => 
+    setCriteriaRatings(prev =>
       prev.map(r => r.criteria_id === criteriaId ? { ...r, notes } : r)
     );
+    triggerAutoSave();
   };
 
   const handleSave = async () => {
@@ -519,6 +529,7 @@ export default function GradeStationPage() {
           });
         }
 
+        setHasUnsavedChanges(false);
         alert('Assessment saved successfully!');
         router.push(`/lab-management/schedule/${station?.lab_day?.id}`);
       } else {
@@ -530,6 +541,125 @@ export default function GradeStationPage() {
     }
     setSaving(false);
   };
+
+  // Auto-save function (no validation, silent save)
+  const autoSave = useCallback(async () => {
+    // Skip auto-save if no meaningful data yet
+    if (isSkillsStation && !selectedStudentId) return;
+    if (!isSkillsStation && !selectedGroupId) return;
+
+    setSaveStatus('saving');
+    setHasUnsavedChanges(false);
+
+    try {
+      const payload = {
+        lab_station_id: stationId,
+        lab_day_id: station?.lab_day?.id,
+        cohort_id: station?.lab_day?.cohort?.id,
+        rotation_number: rotationNumber,
+        team_lead_id: isSkillsStation ? null : teamLeaderId,
+        graded_by: session?.user?.email,
+        criteria_ratings: criteriaRatings,
+        overall_comments: overallComments,
+        overall_score: satisfactoryCount,
+        issue_level: issueLevel,
+        flag_categories: flagCategories.length > 0 ? flagCategories : null,
+        flagged_for_review: issueLevel === 'needs_followup'
+      };
+
+      const res = await fetch('/api/lab-management/assessments/scenario', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        // Only log team lead for scenario stations
+        if (!isSkillsStation && teamLeaderId) {
+          await fetch('/api/lab-management/team-leads', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              student_id: teamLeaderId,
+              lab_station_id: stationId,
+              scenario_type: station?.scenario?.category || 'General',
+              date: station?.lab_day?.date,
+              performance_score: satisfactoryCount,
+              notes: `Rotation ${rotationNumber}: ${satisfactoryCount}/8 S ratings`
+            })
+          });
+        }
+
+        setSaveStatus('saved');
+
+        // Clear "saved" indicator after 3 seconds
+        if (savedIndicatorTimerRef.current) {
+          clearTimeout(savedIndicatorTimerRef.current);
+        }
+        savedIndicatorTimerRef.current = setTimeout(() => {
+          setSaveStatus('idle');
+        }, 3000);
+      } else {
+        setSaveStatus('error');
+      }
+    } catch (error) {
+      console.error('Auto-save error:', error);
+      setSaveStatus('error');
+    }
+  }, [
+    stationId,
+    station,
+    rotationNumber,
+    teamLeaderId,
+    selectedStudentId,
+    selectedGroupId,
+    criteriaRatings,
+    overallComments,
+    satisfactoryCount,
+    issueLevel,
+    flagCategories,
+    isSkillsStation,
+    session?.user?.email
+  ]);
+
+  // Trigger auto-save with debounce
+  const triggerAutoSave = useCallback(() => {
+    setHasUnsavedChanges(true);
+
+    // Clear existing timer
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+
+    // Set new 2-second debounce timer
+    autoSaveTimerRef.current = setTimeout(() => {
+      autoSave();
+    }, 2000);
+  }, [autoSave]);
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+      if (savedIndicatorTimerRef.current) {
+        clearTimeout(savedIndicatorTimerRef.current);
+      }
+    };
+  }, []);
+
+  // Warn about unsaved changes before leaving
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
 
   if (status === 'loading' || loading) {
     return (
@@ -593,18 +723,40 @@ export default function GradeStationPage() {
                 {labDay.cohort.program.abbreviation} Group {labDay.cohort.cohort_number}
               </p>
             </div>
-            <button
-              onClick={handleSave}
-              disabled={saving || (isSkillsStation ? !selectedStudentId : (!allRated || !selectedGroupId || !teamLeaderId))}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-            >
-              {saving ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-              ) : (
-                <Save className="w-5 h-5" />
+            <div className="flex items-center gap-3">
+              {/* Auto-save status indicator */}
+              {saveStatus === 'saving' && (
+                <div className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Saving...</span>
+                </div>
               )}
-              Save
-            </button>
+              {saveStatus === 'saved' && (
+                <div className="flex items-center gap-1.5 text-sm text-green-600 dark:text-green-400">
+                  <Check className="w-4 h-4" />
+                  <span>Saved</span>
+                </div>
+              )}
+              {saveStatus === 'error' && (
+                <div className="flex items-center gap-1.5 text-sm text-red-600 dark:text-red-400">
+                  <XCircle className="w-4 h-4" />
+                  <span>Save failed</span>
+                </div>
+              )}
+
+              <button
+                onClick={handleSave}
+                disabled={saving || (isSkillsStation ? !selectedStudentId : (!allRated || !selectedGroupId || !teamLeaderId))}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              >
+                {saving ? (
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                ) : (
+                  <Save className="w-5 h-5" />
+                )}
+                Save
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -1335,7 +1487,10 @@ export default function GradeStationPage() {
                 <StudentPicker
                   students={allStudents}
                   value={selectedStudentId}
-                  onChange={setSelectedStudentId}
+                  onChange={(id) => {
+                    setSelectedStudentId(id);
+                    triggerAutoSave();
+                  }}
                   placeholder="Select a student..."
                 />
               )}
@@ -1351,7 +1506,10 @@ export default function GradeStationPage() {
                   <button
                     key={num}
                     type="button"
-                    onClick={() => setRotationNumber(num)}
+                    onClick={() => {
+                      setRotationNumber(num);
+                      triggerAutoSave();
+                    }}
                     className={`w-12 h-12 rounded-lg font-medium ${
                       rotationNumber === num
                         ? 'bg-green-600 text-white'
@@ -1380,7 +1538,10 @@ export default function GradeStationPage() {
                   <button
                     key={num}
                     type="button"
-                    onClick={() => setRotationNumber(num)}
+                    onClick={() => {
+                      setRotationNumber(num);
+                      triggerAutoSave();
+                    }}
                     className={`w-12 h-12 rounded-lg font-medium ${
                       rotationNumber === num
                         ? 'bg-blue-600 text-white'
@@ -1414,6 +1575,7 @@ export default function GradeStationPage() {
                       onClick={() => {
                         setSelectedGroupId(group.id);
                         setTeamLeaderId('');
+                        triggerAutoSave();
                       }}
                       className={`p-3 rounded-lg border-2 text-left ${
                         selectedGroupId === group.id
@@ -1440,7 +1602,10 @@ export default function GradeStationPage() {
                     <button
                       key={member.student.id}
                       type="button"
-                      onClick={() => setTeamLeaderId(member.student.id)}
+                      onClick={() => {
+                        setTeamLeaderId(member.student.id);
+                        triggerAutoSave();
+                      }}
                       className={`flex items-center gap-3 p-3 rounded-lg border-2 ${
                         teamLeaderId === member.student.id
                           ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/30'
@@ -1492,10 +1657,13 @@ export default function GradeStationPage() {
                   <input
                     type="checkbox"
                     checked={criticalActions[`action-${index}`] || false}
-                    onChange={(e) => setCriticalActions(prev => ({
-                      ...prev,
-                      [`action-${index}`]: e.target.checked
-                    }))}
+                    onChange={(e) => {
+                      setCriticalActions(prev => ({
+                        ...prev,
+                        [`action-${index}`]: e.target.checked
+                      }));
+                      triggerAutoSave();
+                    }}
                     className="mt-1 w-5 h-5"
                   />
                   <span className={`text-sm ${
@@ -1678,7 +1846,10 @@ export default function GradeStationPage() {
           <h2 className="font-semibold text-gray-900 dark:text-white mb-3">Overall Comments</h2>
           <textarea
             value={overallComments}
-            onChange={(e) => setOverallComments(e.target.value)}
+            onChange={(e) => {
+              setOverallComments(e.target.value);
+              triggerAutoSave();
+            }}
             placeholder="Additional comments, feedback, or observations..."
             rows={4}
             className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
@@ -1704,7 +1875,11 @@ export default function GradeStationPage() {
                   name="issueLevel"
                   value="none"
                   checked={issueLevel === 'none'}
-                  onChange={() => { setIssueLevel('none'); setFlagCategories([]); }}
+                  onChange={() => {
+                    setIssueLevel('none');
+                    setFlagCategories([]);
+                    triggerAutoSave();
+                  }}
                   className="w-4 h-4 text-green-600"
                 />
                 <span className="text-gray-900 dark:text-white">No Issues</span>
@@ -1717,7 +1892,10 @@ export default function GradeStationPage() {
                   name="issueLevel"
                   value="minor"
                   checked={issueLevel === 'minor'}
-                  onChange={() => setIssueLevel('minor')}
+                  onChange={() => {
+                    setIssueLevel('minor');
+                    triggerAutoSave();
+                  }}
                   className="w-4 h-4 text-yellow-600"
                 />
                 <span className="text-gray-900 dark:text-white">Minor - Learning Opportunity</span>
@@ -1730,7 +1908,10 @@ export default function GradeStationPage() {
                   name="issueLevel"
                   value="needs_followup"
                   checked={issueLevel === 'needs_followup'}
-                  onChange={() => setIssueLevel('needs_followup')}
+                  onChange={() => {
+                    setIssueLevel('needs_followup');
+                    triggerAutoSave();
+                  }}
                   className="w-4 h-4 text-red-600"
                 />
                 <span className="text-gray-900 dark:text-white flex items-center gap-2">
@@ -1772,6 +1953,7 @@ export default function GradeStationPage() {
                         } else {
                           setFlagCategories(flagCategories.filter(c => c !== category.value));
                         }
+                        triggerAutoSave();
                       }}
                       className="w-4 h-4 text-blue-600"
                     />
