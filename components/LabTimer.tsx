@@ -22,6 +22,7 @@ import {
   Trash2,
   AlertTriangle
 } from 'lucide-react';
+import { useVisibilityPolling } from '@/hooks/useVisibilityPolling';
 
 interface LabTimerProps {
   labDayId: string;
@@ -328,34 +329,26 @@ export default function LabTimer({
     init();
   }, [labDayId, fetchTimerState, fetchReadyStatuses, initializeTimer, isController]);
 
-  // Poll for updates - optimized intervals based on timer status
-  useEffect(() => {
-    // Determine polling intervals based on timer state
-    // When timer modal is open, user is actively managing the lab
-    const getTimerPollInterval = () => {
-      if (!timerState || timerState.status === 'stopped') return 30000; // 30s when stopped (user may restart)
-      if (timerState.status === 'paused') return 5000; // 5s when paused
-      // When running: faster polling in final 30 seconds for smooth countdown
-      if (timerState.status === 'running' && displaySeconds <= 30) return 2000; // 2s in final 30s
-      return 5000; // 5s normally when running
-    };
+  // Determine polling intervals based on timer state
+  // When timer modal is open, user is actively managing the lab
+  const getTimerPollInterval = () => {
+    if (!timerState || timerState.status === 'stopped') return 30000; // 30s when stopped (user may restart)
+    if (timerState.status === 'paused') return 5000; // 5s when paused
+    // When running: faster polling in final 30 seconds for smooth countdown
+    if (timerState.status === 'running' && displaySeconds <= 30) return 2000; // 2s in final 30s
+    return 5000; // 5s normally when running
+  };
 
-    const getReadyPollInterval = () => {
-      if (!timerState || timerState.status === 'stopped') return 30000; // 30s when stopped
-      return 5000; // 5s when active (instructors marking ready)
-    };
+  const getReadyPollInterval = () => {
+    if (!timerState || timerState.status === 'stopped') return 30000; // 30s when stopped
+    return 5000; // 5s when active (instructors marking ready)
+  };
 
-    const timerInterval = getTimerPollInterval();
-    const readyInterval = getReadyPollInterval();
+  // Poll for updates with visibility awareness - timer state
+  useVisibilityPolling(fetchTimerState, getTimerPollInterval(), { immediate: false });
 
-    const timerPoll = setInterval(fetchTimerState, timerInterval);
-    const readyPoll = setInterval(fetchReadyStatuses, readyInterval);
-
-    return () => {
-      clearInterval(timerPoll);
-      clearInterval(readyPoll);
-    };
-  }, [fetchTimerState, fetchReadyStatuses, timerState?.status, displaySeconds]);
+  // Poll for updates with visibility awareness - ready statuses
+  useVisibilityPolling(fetchReadyStatuses, getReadyPollInterval(), { immediate: false });
 
   // Sync timer duration when lab day settings change
   useEffect(() => {
@@ -439,9 +432,28 @@ export default function LabTimer({
     };
 
     updateDisplay();
-    const displayInterval = setInterval(updateDisplay, 100);
 
-    return () => clearInterval(displayInterval);
+    // Only run display timer when page is visible
+    let displayInterval: NodeJS.Timeout | null = setInterval(updateDisplay, 100);
+
+    const handleVisibility = () => {
+      if (document.hidden) {
+        if (displayInterval) {
+          clearInterval(displayInterval);
+          displayInterval = null;
+        }
+      } else {
+        updateDisplay(); // Catch up immediately
+        displayInterval = setInterval(updateDisplay, 100);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      if (displayInterval) clearInterval(displayInterval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [timerState, playWarningBeep, playLoudAlert, debriefAlertShown, lastAlertRotation]);
 
   // Reset debrief alert shown flag when rotation changes
@@ -454,21 +466,40 @@ export default function LabTimer({
   // Auto-dismiss rotate alert after 30 seconds and update countdown
   useEffect(() => {
     if (showRotateAlert && rotateAlertStartTime) {
-      // Update countdown every second
-      const countdownInterval = setInterval(() => {
+      const updateCountdown = () => {
         const elapsed = Date.now() - rotateAlertStartTime;
         const remaining = Math.ceil((ROTATE_ALERT_TIMEOUT - elapsed) / 1000);
         setRotateAlertCountdown(Math.max(0, remaining));
-      }, 100);
+      };
+
+      updateCountdown();
+
+      // Only run countdown timer when page is visible
+      let countdownInterval: NodeJS.Timeout | null = setInterval(updateCountdown, 100);
 
       // Auto-dismiss timeout
       const timeoutId = setTimeout(() => {
         acknowledgeRotation();
       }, ROTATE_ALERT_TIMEOUT);
 
+      const handleVisibility = () => {
+        if (document.hidden) {
+          if (countdownInterval) {
+            clearInterval(countdownInterval);
+            countdownInterval = null;
+          }
+        } else {
+          updateCountdown(); // Catch up immediately
+          countdownInterval = setInterval(updateCountdown, 100);
+        }
+      };
+
+      document.addEventListener('visibilitychange', handleVisibility);
+
       return () => {
-        clearInterval(countdownInterval);
+        if (countdownInterval) clearInterval(countdownInterval);
         clearTimeout(timeoutId);
+        document.removeEventListener('visibilitychange', handleVisibility);
       };
     } else {
       setRotateAlertCountdown(30);

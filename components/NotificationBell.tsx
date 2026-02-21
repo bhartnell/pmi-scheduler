@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { Bell, Check, CheckCheck, ExternalLink, Settings, Filter, X, Mail } from 'lucide-react';
 import Link from 'next/link';
+import { useVisibilityPolling } from '@/hooks/useVisibilityPolling';
 
 interface Notification {
   id: string;
@@ -80,19 +81,30 @@ export default function NotificationBell() {
   const [savingPrefs, setSavingPrefs] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Fetch notifications and preferences
+  // Fetch notifications
+  const fetchNotifications = useCallback(async () => {
+    if (!session?.user?.email) return;
+
+    try {
+      const res = await fetch('/api/notifications');
+      if (res.ok) {
+        const data = await res.json();
+        setNotifications(data.notifications || []);
+        setUnreadCount(data.unreadCount || 0);
+      }
+    } catch (error) {
+      console.error('Failed to fetch notifications:', error);
+    }
+  }, [session?.user?.email]);
+
+  // Fetch notifications and preferences on mount
   useEffect(() => {
     if (!session?.user?.email) return;
 
     const fetchData = async () => {
       try {
         // Fetch notifications
-        const notifRes = await fetch('/api/notifications');
-        if (notifRes.ok) {
-          const data = await notifRes.json();
-          setNotifications(data.notifications || []);
-          setUnreadCount(data.unreadCount || 0);
-        }
+        await fetchNotifications();
 
         // Fetch notification preferences
         const prefsRes = await fetch('/api/notifications/preferences');
@@ -110,22 +122,12 @@ export default function NotificationBell() {
     };
 
     fetchData();
+  }, [session?.user?.email, fetchNotifications]);
 
-    // Poll for new notifications every 60 seconds
-    const interval = setInterval(async () => {
-      try {
-        const res = await fetch('/api/notifications');
-        if (res.ok) {
-          const data = await res.json();
-          setNotifications(data.notifications || []);
-          setUnreadCount(data.unreadCount || 0);
-        }
-      } catch (error) {
-        console.error('Failed to fetch notifications:', error);
-      }
-    }, 60000);
-    return () => clearInterval(interval);
-  }, [session?.user?.email]);
+  // Poll for new notifications every 60 seconds with visibility awareness
+  useVisibilityPolling(fetchNotifications, session?.user?.email ? 60000 : null, {
+    immediate: false, // Already fetched on mount
+  });
 
   // Close dropdown on click outside
   useEffect(() => {

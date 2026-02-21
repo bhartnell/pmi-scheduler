@@ -2,6 +2,7 @@
 
 import { useParams } from 'next/navigation';
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { useVisibilityPolling } from '@/hooks/useVisibilityPolling';
 
 interface TimerState {
   id: string;
@@ -72,12 +73,8 @@ export default function TimerDisplayPage() {
     }
   }, [token]);
 
-  // Initial fetch and polling
-  useEffect(() => {
-    fetchTimerStatus();
-    const interval = setInterval(fetchTimerStatus, 5000); // Poll every 5 seconds
-    return () => clearInterval(interval);
-  }, [fetchTimerStatus]);
+  // Initial fetch and polling with visibility awareness
+  useVisibilityPolling(fetchTimerStatus, 5000);
 
   // Calculate current time display
   useEffect(() => {
@@ -115,12 +112,32 @@ export default function TimerDisplayPage() {
 
     setCurrentTime(calculateTime());
 
-    // Update every second when running
+    // Update every second when running, pause when page is hidden
     if (timer.status === 'running') {
-      const interval = setInterval(() => {
+      let interval: NodeJS.Timeout | null = setInterval(() => {
         setCurrentTime(calculateTime());
       }, 1000);
-      return () => clearInterval(interval);
+
+      const handleVisibility = () => {
+        if (document.hidden) {
+          if (interval) {
+            clearInterval(interval);
+            interval = null;
+          }
+        } else {
+          setCurrentTime(calculateTime()); // Catch up immediately
+          interval = setInterval(() => {
+            setCurrentTime(calculateTime());
+          }, 1000);
+        }
+      };
+
+      document.addEventListener('visibilitychange', handleVisibility);
+
+      return () => {
+        if (interval) clearInterval(interval);
+        document.removeEventListener('visibilitychange', handleVisibility);
+      };
     }
   }, [timer, serverTimeOffset]);
 
