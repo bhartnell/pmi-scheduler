@@ -20,7 +20,8 @@ import {
   Building2,
   Plus,
   CheckSquare,
-  Clock
+  Clock,
+  CalendarDays
 } from 'lucide-react';
 import { canAccessAdmin, canAccessClinical, getRoleLabel, getRoleBadgeClasses } from '@/lib/permissions';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -372,6 +373,27 @@ export default function HomePage() {
                 <span className="px-2 py-1 bg-cyan-50 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400 rounded-full">Availability</span>
                 <span className="px-2 py-1 bg-cyan-50 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400 rounded-full">Shifts</span>
                 <span className="px-2 py-1 bg-cyan-50 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400 rounded-full">Sign Up</span>
+              </div>
+            </div>
+          </Link>
+
+          {/* Unified Calendar Card */}
+          <Link
+            href="/calendar"
+            className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
+          >
+            <div className="flex flex-col items-center text-center">
+              <div className="w-16 h-16 bg-rose-100 dark:bg-rose-900/30 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-rose-200 dark:group-hover:bg-rose-900/50 transition-colors">
+                <CalendarDays className="w-8 h-8 text-rose-600 dark:text-rose-400" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Calendar</h3>
+              <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
+                Unified view of lab days, open shifts, and coverage needs.
+              </p>
+              <div className="flex flex-wrap justify-center gap-2 text-xs">
+                <span className="px-2 py-1 bg-rose-50 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 rounded-full">Lab Days</span>
+                <span className="px-2 py-1 bg-rose-50 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 rounded-full">Shifts</span>
+                <span className="px-2 py-1 bg-rose-50 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 rounded-full">Coverage</span>
               </div>
             </div>
           </Link>
