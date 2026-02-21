@@ -364,6 +364,28 @@ export default function EditLabDayPage() {
       </div>
 
       <main className="max-w-4xl mx-auto px-4 py-8">
+        {/* Coverage Request Status Banner */}
+        {labDay.needs_coverage && (
+          <div className="mb-6 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-orange-600 dark:text-orange-400 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <h3 className="font-medium text-orange-800 dark:text-orange-300">
+                  Coverage Requested — {labDay.coverage_needed} instructor{labDay.coverage_needed > 1 ? 's' : ''} needed
+                </h3>
+                {labDay.coverage_note && (
+                  <p className="text-sm text-orange-700 dark:text-orange-400 mt-1">
+                    {labDay.coverage_note}
+                  </p>
+                )}
+                <p className="text-xs text-orange-600 dark:text-orange-500 mt-2">
+                  Directors have been notified. Edit the &ldquo;Request Additional Instructors&rdquo; section below to update or cancel this request.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Date */}

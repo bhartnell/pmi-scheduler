@@ -403,18 +403,30 @@ export default function CalendarPage() {
                       <Link
                         key={labDay.id}
                         href={`/lab-management/schedule/${labDay.id}/edit`}
-                        className="block px-1.5 py-1 text-xs rounded bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/70 relative"
-                        title={labDay.title || `${labDay.cohort.program.abbreviation} G${labDay.cohort.cohort_number}`}
+                        className={`block px-1.5 py-1 text-xs rounded relative ${
+                          labDay.needs_coverage
+                            ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-800 dark:text-orange-300 hover:bg-orange-200 dark:hover:bg-orange-900/60 ring-1 ring-orange-300 dark:ring-orange-700'
+                            : 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/70'
+                        }`}
+                        title={labDay.needs_coverage
+                          ? `${labDay.cohort.program.abbreviation} G${labDay.cohort.cohort_number} — Needs ${labDay.coverage_needed} instructor${labDay.coverage_needed > 1 ? 's' : ''}`
+                          : (labDay.title || `${labDay.cohort.program.abbreviation} G${labDay.cohort.cohort_number}`)
+                        }
                       >
                         <div className="font-medium truncate flex items-center gap-1">
-                          {labDay.cohort.program.abbreviation} G{labDay.cohort.cohort_number}
                           {labDay.needs_coverage && (
                             <span title="Needs coverage"><AlertCircle className="w-3 h-3 text-orange-500 flex-shrink-0" /></span>
                           )}
+                          {labDay.cohort.program.abbreviation} G{labDay.cohort.cohort_number}
                         </div>
                         {labDay.title && (
-                          <div className="text-[10px] text-blue-600 dark:text-blue-400 truncate">
+                          <div className={`text-[10px] truncate ${labDay.needs_coverage ? 'text-orange-600 dark:text-orange-400' : 'text-blue-600 dark:text-blue-400'}`}>
                             {labDay.title}
+                          </div>
+                        )}
+                        {labDay.needs_coverage && (
+                          <div className="text-[10px] text-orange-600 dark:text-orange-400 font-medium">
+                            Needs {labDay.coverage_needed} instructor{labDay.coverage_needed > 1 ? 's' : ''}
                           </div>
                         )}
                       </Link>
