@@ -219,49 +219,41 @@ export async function GET(request: NextRequest) {
     }
 
     // Build student breakdown with per-student stats
+    // BATCH QUERIES: Fetch all data once, then process in memory
     const studentBreakdown: any[] = [];
     const flaggedStudents: any[] = [];
 
-    for (const student of students || []) {
-      let scenarioCount = 0;
-      let averageScore = 0;
-      let skillsCompleted = 0;
-      let teamLeadCount = 0;
-      let attendance = 100; // Default to 100% if we don't track attendance
+    // Batch fetch all scenario assessments for all students
+    let allScenarioAssessments: any[] = [];
+    if (includeScenarios && labDays && labDays.length > 0 && studentIds.length > 0) {
+      const labDayIds = labDays.map((d: any) => d.id);
+      const { data } = await supabase
+        .from('scenario_assessments')
+        .select('team_lead_id, overall_score')
+        .in('team_lead_id', studentIds)
+        .in('lab_day_id', labDayIds);
 
-      // Get scenario assessments for this student (through team lead)
-      if (includeScenarios && labDays && labDays.length > 0) {
-        const labDayIds = labDays.map((d: any) => d.id);
-        const { data: studentScenarios } = await supabase
-          .from('scenario_assessments')
-          .select('overall_score')
-          .eq('team_lead_id', student.id)
-          .in('lab_day_id', labDayIds);
+      allScenarioAssessments = data || [];
+    }
 
-        if (studentScenarios && studentScenarios.length > 0) {
-          scenarioCount = studentScenarios.length;
-          const totalScore = studentScenarios.reduce((sum: number, s: any) => sum + (s.overall_score || 0), 0);
-          averageScore = totalScore / scenarioCount;
-        }
-      }
+    // Batch fetch all skill assessments for all students
+    let allSkillAssessments: any[] = [];
+    if (includeSkills && studentIds.length > 0) {
+      const { data } = await supabase
+        .from('skill_assessments')
+        .select('student_id, passed')
+        .in('student_id', studentIds);
 
-      // Get skill assessments for this student
-      if (includeSkills) {
-        const { data: studentSkills } = await supabase
-          .from('skill_assessments')
-          .select('passed')
-          .eq('student_id', student.id);
+      allSkillAssessments = data || [];
+    }
 
-        if (studentSkills) {
-          skillsCompleted = studentSkills.filter((s: any) => s.passed).length;
-        }
-      }
-
-      // Get team lead count
+    // Batch fetch all team lead logs for all students
+    let allTeamLeadLogs: any[] = [];
+    if (studentIds.length > 0) {
       let tlQuery = supabase
         .from('team_lead_log')
-        .select('id')
-        .eq('student_id', student.id);
+        .select('student_id, id')
+        .in('student_id', studentIds);
 
       if (startDate) {
         tlQuery = tlQuery.gte('date', startDate);
@@ -270,8 +262,61 @@ export async function GET(request: NextRequest) {
         tlQuery = tlQuery.lte('date', endDate);
       }
 
-      const { data: studentTL } = await tlQuery;
-      teamLeadCount = studentTL?.length || 0;
+      const { data } = await tlQuery;
+      allTeamLeadLogs = data || [];
+    }
+
+    // Group data by student_id in memory using Maps
+    const scenariosByStudent = new Map<string, any[]>();
+    allScenarioAssessments.forEach((assessment) => {
+      const studentId = assessment.team_lead_id;
+      if (!scenariosByStudent.has(studentId)) {
+        scenariosByStudent.set(studentId, []);
+      }
+      scenariosByStudent.get(studentId)!.push(assessment);
+    });
+
+    const skillsByStudent = new Map<string, any[]>();
+    allSkillAssessments.forEach((skill) => {
+      const studentId = skill.student_id;
+      if (!skillsByStudent.has(studentId)) {
+        skillsByStudent.set(studentId, []);
+      }
+      skillsByStudent.get(studentId)!.push(skill);
+    });
+
+    const teamLeadByStudent = new Map<string, any[]>();
+    allTeamLeadLogs.forEach((log) => {
+      const studentId = log.student_id;
+      if (!teamLeadByStudent.has(studentId)) {
+        teamLeadByStudent.set(studentId, []);
+      }
+      teamLeadByStudent.get(studentId)!.push(log);
+    });
+
+    // Process each student using the batched data
+    for (const student of students || []) {
+      let scenarioCount = 0;
+      let averageScore = 0;
+      let skillsCompleted = 0;
+      let teamLeadCount = 0;
+      let attendance = 100; // Default to 100% if we don't track attendance
+
+      // Get scenario assessments from batched data
+      const studentScenarios = scenariosByStudent.get(student.id) || [];
+      if (studentScenarios.length > 0) {
+        scenarioCount = studentScenarios.length;
+        const totalScore = studentScenarios.reduce((sum: number, s: any) => sum + (s.overall_score || 0), 0);
+        averageScore = totalScore / scenarioCount;
+      }
+
+      // Get skill assessments from batched data
+      const studentSkills = skillsByStudent.get(student.id) || [];
+      skillsCompleted = studentSkills.filter((s: any) => s.passed).length;
+
+      // Get team lead count from batched data
+      const studentTL = teamLeadByStudent.get(student.id) || [];
+      teamLeadCount = studentTL.length;
 
       // Add to breakdown
       const studentData = {

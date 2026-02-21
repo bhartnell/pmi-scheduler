@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Clock, Wifi, WifiOff, Volume2, VolumeX, AlertTriangle, CheckCircle, Circle } from 'lucide-react';
+import { useVisibilityPolling } from '@/hooks/useVisibilityPolling';
 
 interface TimerBannerProps {
   labDayId: string;
@@ -192,33 +193,22 @@ export default function TimerBanner({
     setSettingReady(false);
   };
 
-  // Initialize on mount and poll for updates - optimized intervals
-  useEffect(() => {
-    fetchTimerState();
-    fetchReadyStatus();
+  // Determine poll interval based on timer state
+  // TimerBanner is on grading page - user is actively grading
+  const getPollInterval = () => {
+    if (!timerState || timerState.status === 'stopped') return 30000; // 30s when stopped (waiting for lab to start)
+    if (timerState.status === 'paused') return 5000; // 5s when paused
+    // When running: faster polling in final 30 seconds
+    if (timerState.status === 'running' && displaySeconds <= 30) return 2000; // 2s in final 30s
+    return 5000; // 5s normally when running
+  };
 
-    // Determine poll interval based on timer state
-    // TimerBanner is on grading page - user is actively grading
-    const getPollInterval = () => {
-      if (!timerState || timerState.status === 'stopped') return 30000; // 30s when stopped (waiting for lab to start)
-      if (timerState.status === 'paused') return 5000; // 5s when paused
-      // When running: faster polling in final 30 seconds
-      if (timerState.status === 'running' && displaySeconds <= 30) return 2000; // 2s in final 30s
-      return 5000; // 5s normally when running
-    };
+  // Combined polling with visibility awareness
+  const pollCombined = useCallback(async () => {
+    await Promise.all([fetchTimerState(), fetchReadyStatus()]);
+  }, [fetchTimerState, fetchReadyStatus]);
 
-    const interval = getPollInterval();
-    pollIntervalRef.current = setInterval(() => {
-      fetchTimerState();
-      fetchReadyStatus();
-    }, interval);
-
-    return () => {
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-      }
-    };
-  }, [fetchTimerState, fetchReadyStatus, timerState?.status, displaySeconds]);
+  useVisibilityPolling(pollCombined, getPollInterval());
 
   // Calculate display time from timer state
   useEffect(() => {
@@ -291,9 +281,28 @@ export default function TimerBanner({
     };
 
     updateDisplay();
-    const displayInterval = setInterval(updateDisplay, 100);
 
-    return () => clearInterval(displayInterval);
+    // Only run display timer when page is visible
+    let displayInterval: NodeJS.Timeout | null = setInterval(updateDisplay, 100);
+
+    const handleVisibility = () => {
+      if (document.hidden) {
+        if (displayInterval) {
+          clearInterval(displayInterval);
+          displayInterval = null;
+        }
+      } else {
+        updateDisplay(); // Catch up immediately
+        displayInterval = setInterval(updateDisplay, 100);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      if (displayInterval) clearInterval(displayInterval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [timerState, playWarningBeep, playLoudAlert, debriefAlertShown, lastAlertRotation]);
 
   // Reset alerts when rotation changes

@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Clock, ChevronRight, Pause, Play } from 'lucide-react';
+import { useVisibilityPolling } from '@/hooks/useVisibilityPolling';
 
 interface TimerState {
   id: string;
@@ -25,11 +27,17 @@ interface LabDay {
 const BANNER_HEIGHT = 44; // Height in pixels
 
 export default function GlobalTimerBanner() {
+  const pathname = usePathname();
   const [timer, setTimer] = useState<TimerState | null>(null);
   const [labDay, setLabDay] = useState<LabDay | null>(null);
   const [displaySeconds, setDisplaySeconds] = useState(0);
   const [isDismissed, setIsDismissed] = useState(false);
   const [lastRotation, setLastRotation] = useState<number | null>(null);
+
+  // Only show timer banner on relevant pages
+  const isTimerRelevantPage = pathname === '/' ||
+    pathname.startsWith('/lab-management') ||
+    pathname.startsWith('/calendar');
 
   // Fetch active timer
   const fetchActiveTimer = useCallback(async () => {
@@ -57,16 +65,11 @@ export default function GlobalTimerBanner() {
   }, [lastRotation]);
 
   // Poll for active timer - optimized interval based on state
-  useEffect(() => {
-    fetchActiveTimer();
-
-    // Determine polling interval:
-    // - Running timer: 5s (need responsive updates)
-    // - No timer/stopped: 60s (just checking if a new lab started)
-    const interval = timer?.status === 'running' ? 5000 : 60000;
-    const pollId = setInterval(fetchActiveTimer, interval);
-    return () => clearInterval(pollId);
-  }, [fetchActiveTimer, timer?.status]);
+  // Uses visibility-aware polling to pause when tab is hidden
+  const pollInterval = isTimerRelevantPage
+    ? (timer?.status === 'running' ? 5000 : 60000)
+    : null;
+  useVisibilityPolling(fetchActiveTimer, pollInterval);
 
   // Add/remove body class and padding when banner is visible
   const isActive = timer && labDay && !isDismissed;
@@ -84,7 +87,7 @@ export default function GlobalTimerBanner() {
     };
   }, [isActive]);
 
-  // Calculate display time
+  // Calculate display time with visibility-aware updates
   useEffect(() => {
     if (!timer) return;
 
@@ -113,8 +116,28 @@ export default function GlobalTimerBanner() {
     };
 
     updateDisplay();
-    const interval = setInterval(updateDisplay, 1000);
-    return () => clearInterval(interval);
+
+    // Only run display timer when page is visible
+    let intervalId: NodeJS.Timeout | null = setInterval(updateDisplay, 1000);
+
+    const handleVisibility = () => {
+      if (document.hidden) {
+        if (intervalId) {
+          clearInterval(intervalId);
+          intervalId = null;
+        }
+      } else {
+        updateDisplay(); // Catch up immediately
+        intervalId = setInterval(updateDisplay, 1000);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [timer]);
 
   // Format time as MM:SS
@@ -140,6 +163,11 @@ export default function GlobalTimerBanner() {
 
   // Auto-dismiss when countdown reaches 0
   const isTimeUp = timer?.mode === 'countdown' && displaySeconds <= 0 && timer?.status === 'running';
+
+  // Don't render if not on a timer-relevant page
+  if (!isTimerRelevantPage) {
+    return null;
+  }
 
   // Don't render if no active timer, user dismissed, timer is not running, or time is up
   if (!timer || !labDay || isDismissed || timer.status !== 'running' || isTimeUp) {
