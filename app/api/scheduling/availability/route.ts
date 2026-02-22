@@ -1,17 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
-
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-}
+import { getSupabaseAdmin } from '@/lib/supabase';
 
 // Helper to get current user
 async function getCurrentUser(email: string) {
-  const supabase = getSupabase();
+  const supabase = getSupabaseAdmin();
   const { data } = await supabase
     .from('lab_users')
     .select('id, name, email, role')
@@ -39,7 +33,7 @@ export async function GET(request: NextRequest) {
     const endDate = searchParams.get('end_date');
     const viewAll = searchParams.get('view_all') === 'true';
 
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
 
     let query = supabase
       .from('instructor_availability')
@@ -105,7 +99,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
 
     const { data: entry, error } = await supabase
       .from('instructor_availability')

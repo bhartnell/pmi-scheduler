@@ -1,17 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
-
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-}
+import { getSupabaseAdmin } from '@/lib/supabase';
 
 // Helper to get current user
 async function getCurrentUser(email: string) {
-  const supabase = getSupabase();
+  const supabase = getSupabaseAdmin();
   const { data } = await supabase
     .from('lab_users')
     .select('id, name, email, role')
@@ -45,7 +39,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Maximum 52 entries allowed per request' }, { status: 400 });
     }
 
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
 
     // Prepare entries with instructor_id
     const records = entries.map((entry: {
@@ -108,7 +102,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'IDs array is required' }, { status: 400 });
     }
 
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
 
     // Delete only entries belonging to the current user
     const { error, count } = await supabase

@@ -2,16 +2,9 @@
 // Role = what you CAN do (superadmin, admin, instructor)
 // Endorsement = special authority (director, mentor, preceptor)
 
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseAdmin } from './supabase';
 
 // Create Supabase client lazily to avoid build-time errors
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-}
-
 // ============================================
 // Endorsement Types
 // ============================================
@@ -65,7 +58,7 @@ export async function hasEndorsement(
   userId: string,
   endorsementType: EndorsementType
 ): Promise<boolean> {
-  const supabase = getSupabase();
+  const supabase = getSupabaseAdmin();
   const { data } = await supabase
     .from('user_endorsements')
     .select('id')
@@ -87,7 +80,7 @@ export async function isDirector(userId: string): Promise<boolean> {
  * Get all active endorsements for a user (server-side)
  */
 export async function getUserEndorsements(userId: string): Promise<Endorsement[]> {
-  const supabase = getSupabase();
+  const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from('user_endorsements')
     .select('*')
@@ -105,7 +98,7 @@ export async function getUserEndorsements(userId: string): Promise<Endorsement[]
  * Get all active endorsements for a user by email (server-side)
  */
 export async function getUserEndorsementsByEmail(email: string): Promise<Endorsement[]> {
-  const supabase = getSupabase();
+  const supabase = getSupabaseAdmin();
   // First get user ID
   const { data: user } = await supabase
     .from('lab_users')
@@ -137,7 +130,7 @@ export async function grantEndorsement(
   departmentId: string | null,
   grantedBy: string
 ): Promise<{ success: boolean; error?: string }> {
-  const supabase = getSupabase();
+  const supabase = getSupabaseAdmin();
   const { error } = await supabase
     .from('user_endorsements')
     .upsert({
@@ -163,7 +156,7 @@ export async function grantEndorsement(
  * Revoke an endorsement (server-side, admin only)
  */
 export async function revokeEndorsement(endorsementId: string): Promise<{ success: boolean; error?: string }> {
-  const supabase = getSupabase();
+  const supabase = getSupabaseAdmin();
   const { error } = await supabase
     .from('user_endorsements')
     .update({ is_active: false })

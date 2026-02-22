@@ -2,17 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
 import { isDirector } from '@/lib/endorsements';
-
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-}
+import { getSupabaseAdmin } from '@/lib/supabase';
 
 // Helper to get current user
 async function getCurrentUser(email: string) {
-  const supabase = getSupabase();
+  const supabase = getSupabaseAdmin();
   const { data } = await supabase
     .from('lab_users')
     .select('id, name, email, role')
@@ -42,7 +36,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Only directors can view pending signups' }, { status: 403 });
     }
 
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
 
     // Fetch all pending signups with shift and instructor details
     const { data: signups, error } = await supabase

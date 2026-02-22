@@ -2,17 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
 import { notifyTaskComment } from '@/lib/notifications';
-
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-}
+import { getSupabaseAdmin } from '@/lib/supabase';
 
 // Helper to get current user
 async function getCurrentUser(email: string) {
-  const supabase = getSupabase();
+  const supabase = getSupabaseAdmin();
   const { data } = await supabase
     .from('lab_users')
     .select('id, name, email, role')
@@ -39,7 +33,7 @@ export async function GET(
       return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
     }
 
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
 
     // Verify task exists and user has access
     const { data: task, error: taskError } = await supabase
@@ -100,7 +94,7 @@ export async function POST(
       return NextResponse.json({ success: false, error: 'Comment is required' }, { status: 400 });
     }
 
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
 
     // Get task with participant info
     const { data: task, error: taskError } = await supabase

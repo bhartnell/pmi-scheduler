@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseAdmin } from './supabase';
 import {
   sendTaskAssignedEmail,
   sendTaskCompletedEmail,
@@ -10,13 +10,6 @@ import {
 } from './email';
 
 // Create Supabase client lazily to avoid build-time errors
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-}
-
 // Email preferences interface
 interface EmailPreferences {
   enabled: boolean;
@@ -55,7 +48,7 @@ const DEFAULT_EMAIL_PREFS: EmailPreferences = {
  */
 async function getUserEmailPrefs(userEmail: string): Promise<EmailPreferences> {
   try {
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
 
     // user_preferences uses user_email (TEXT, UNIQUE) as its key
     const { data, error } = await supabase
@@ -118,7 +111,7 @@ async function queueEmail(
   subject: string
 ): Promise<void> {
   try {
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
 
     // Get user ID
     const { data: user } = await supabase
@@ -199,7 +192,7 @@ export async function createNotification({
   referenceId,
 }: CreateNotificationParams): Promise<{ success: boolean; error?: string }> {
   try {
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
     // Use provided category or derive from type
     const notificationCategory = category || TYPE_TO_CATEGORY[type] || 'system';
 
@@ -229,7 +222,7 @@ export async function createBulkNotifications(
   notifications: CreateNotificationParams[]
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
     const records = notifications.map(n => {
       const notificationType = n.type || 'general';
       const notificationCategory = n.category || TYPE_TO_CATEGORY[notificationType] || 'system';
@@ -309,7 +302,7 @@ export async function notifyAdminsNewFeedback(
   }
 ): Promise<void> {
   try {
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
     // Get all admin and superadmin users
     const { data: admins } = await supabase
       .from('lab_users')
@@ -554,7 +547,7 @@ export async function notifyAdminsNewPendingUser(
   }
 ): Promise<void> {
   try {
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
     // Get all admin and superadmin users
     const { data: admins } = await supabase
       .from('lab_users')

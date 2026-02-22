@@ -3,17 +3,11 @@ import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { hasMinRole, canManageContent } from '@/lib/permissions';
+import { getSupabaseAdmin } from '@/lib/supabase';
 
 // Create Supabase client lazily to avoid build-time errors
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-}
-
 // Helper to get current user with role
-async function getCurrentUser(supabase: ReturnType<typeof getSupabase>, email: string) {
+async function getCurrentUser(supabase: ReturnType<typeof getSupabaseAdmin>, email: string) {
   const { data: user, error } = await supabase
     .from('lab_users')
     .select('id, name, email, role')
@@ -35,7 +29,7 @@ interface RouteContext {
 export async function GET(request: NextRequest, context: RouteContext) {
   try {
     const { id } = await context.params;
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.email) {
@@ -104,7 +98,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 export async function PATCH(request: NextRequest, context: RouteContext) {
   try {
     const { id } = await context.params;
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.email) {
@@ -186,7 +180,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 export async function DELETE(request: NextRequest, context: RouteContext) {
   try {
     const { id } = await context.params;
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.email) {

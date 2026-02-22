@@ -1,15 +1,16 @@
 // Role-based permission system for PMI Tools
 
-export type Role = 'superadmin' | 'admin' | 'lead_instructor' | 'instructor' | 'student' | 'guest' | 'pending';
+export type Role = 'superadmin' | 'admin' | 'lead_instructor' | 'instructor' | 'volunteer_instructor' | 'student' | 'guest' | 'pending';
 
 export const ROLE_LEVELS: Record<Role, number> = {
   superadmin: 5,
   admin: 4,
   lead_instructor: 3,
   instructor: 2,
-  student: 1,   // Student portal access only
-  guest: 1,     // Guest access (same level as student)
-  pending: 0,   // Minimal access - new users awaiting approval
+  volunteer_instructor: 1.5, // Can access scheduling and lab schedule (read-only), no student data
+  student: 1,                // Student portal access only
+  guest: 1,                  // Guest access (same level as student)
+  pending: 0,                // Minimal access - new users awaiting approval
 };
 
 export const ROLE_LABELS: Record<Role, string> = {
@@ -17,6 +18,7 @@ export const ROLE_LABELS: Record<Role, string> = {
   admin: 'Admin',
   lead_instructor: 'Lead Instructor',
   instructor: 'Instructor',
+  volunteer_instructor: 'Volunteer Instructor',
   student: 'Student',
   guest: 'Guest',
   pending: 'Pending Approval',
@@ -27,6 +29,7 @@ export const ROLE_COLORS: Record<Role, string> = {
   admin: 'bg-red-600 text-white',
   lead_instructor: 'bg-blue-600 text-white',
   instructor: 'bg-green-600 text-white',
+  volunteer_instructor: 'bg-teal-600 text-white',
   student: 'bg-cyan-600 text-white',
   guest: 'bg-gray-500 text-white',
   pending: 'bg-yellow-500 text-white',
@@ -141,11 +144,11 @@ export function isProtectedSuperadmin(email: string): boolean {
 
 export function getAssignableRoles(currentRole: Role | string): Role[] {
   if (currentRole === 'superadmin') {
-    return ['superadmin', 'admin', 'lead_instructor', 'instructor', 'student', 'guest', 'pending'];
+    return ['superadmin', 'admin', 'lead_instructor', 'instructor', 'volunteer_instructor', 'student', 'guest', 'pending'];
   }
   if (currentRole === 'admin') {
     // Admins can't create/modify superadmins
-    return ['admin', 'lead_instructor', 'instructor', 'student', 'guest', 'pending'];
+    return ['admin', 'lead_instructor', 'instructor', 'volunteer_instructor', 'student', 'guest', 'pending'];
   }
   return [];
 }
@@ -178,6 +181,30 @@ export function isPendingRole(role: Role | string): boolean {
  */
 export function canAccessApp(role: Role | string): boolean {
   return getRoleLevel(role) >= ROLE_LEVELS.guest;
+}
+
+/**
+ * Check if user can access scheduling features (availability, shifts)
+ * Available to instructors, volunteer instructors, and above
+ */
+export function canAccessScheduling(role: Role | string): boolean {
+  return getRoleLevel(role) >= ROLE_LEVELS.volunteer_instructor && role !== 'student';
+}
+
+/**
+ * Check if user can view lab schedules
+ * Volunteer instructors can view but not modify
+ */
+export function canViewLabSchedule(role: Role | string): boolean {
+  return getRoleLevel(role) >= ROLE_LEVELS.volunteer_instructor && role !== 'student';
+}
+
+/**
+ * Check if user can modify lab schedules (create/edit lab days)
+ * Volunteer instructors cannot - instructors and above only
+ */
+export function canModifyLabSchedule(role: Role | string): boolean {
+  return getRoleLevel(role) >= ROLE_LEVELS.instructor;
 }
 
 // ============================================

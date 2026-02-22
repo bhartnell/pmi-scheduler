@@ -1,15 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { createClient } from '@supabase/supabase-js';
+import { getSupabaseAdmin } from '@/lib/supabase';
 
 // Create Supabase client lazily to avoid build-time errors
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-}
-
 // Default category preferences by role (same as preferences API)
 const ROLE_DEFAULTS: Record<string, Record<string, boolean>> = {
   superadmin: { tasks: true, labs: true, scheduling: true, feedback: true, clinical: true, system: true },
@@ -22,7 +16,7 @@ const ROLE_DEFAULTS: Record<string, Record<string, boolean>> = {
 // GET - Fetch notifications for current user
 export async function GET(request: NextRequest) {
   try {
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
 
     const session = await getServerSession();
     if (!session?.user?.email) {
@@ -116,7 +110,7 @@ export async function GET(request: NextRequest) {
 // POST - Create a new notification (admin/system only)
 export async function POST(request: NextRequest) {
   try {
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
 
     const session = await getServerSession();
     if (!session?.user?.email) {

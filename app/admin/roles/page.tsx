@@ -83,6 +83,22 @@ const ROLE_DEFINITIONS = [
     ]
   },
   {
+    role: 'volunteer_instructor' as Role,
+    label: 'Volunteer Instructor',
+    level: 1.5,
+    icon: Users,
+    color: 'text-teal-600 dark:text-teal-400 bg-teal-100 dark:bg-teal-900/30',
+    description: 'Limited volunteer/guest instructor access',
+    permissions: [
+      'View lab schedules (read-only)',
+      'View part-timer shift schedules',
+      'Input availability for shifts',
+      'View own assignments',
+      'No access to student data',
+      'No access to grading or clinical data'
+    ]
+  },
+  {
     role: 'guest' as Role,
     label: 'Guest',
     level: 1,
@@ -99,24 +115,26 @@ const ROLE_DEFINITIONS = [
 ];
 
 const PERMISSION_MATRIX = [
-  { permission: 'View own profile', superadmin: true, admin: true, lead_instructor: true, instructor: true, guest: false },
-  { permission: 'Track certifications', superadmin: true, admin: true, lead_instructor: true, instructor: true, guest: false },
-  { permission: 'Log CE hours', superadmin: true, admin: true, lead_instructor: true, instructor: true, guest: false },
-  { permission: 'View lab schedules', superadmin: true, admin: true, lead_instructor: true, instructor: true, guest: true },
-  { permission: 'View scenarios', superadmin: true, admin: true, lead_instructor: true, instructor: true, guest: false },
-  { permission: 'Create scenarios', superadmin: true, admin: true, lead_instructor: true, instructor: false, guest: false },
-  { permission: 'Edit scenarios', superadmin: true, admin: true, lead_instructor: true, instructor: false, guest: false },
-  { permission: 'Delete scenarios', superadmin: true, admin: true, lead_instructor: true, instructor: false, guest: false },
-  { permission: 'Manage lab days', superadmin: true, admin: true, lead_instructor: true, instructor: false, guest: false },
-  { permission: 'Manage students', superadmin: true, admin: true, lead_instructor: true, instructor: false, guest: false },
-  { permission: 'Manage cohorts', superadmin: true, admin: true, lead_instructor: true, instructor: false, guest: false },
-  { permission: 'Access admin panel', superadmin: true, admin: true, lead_instructor: false, instructor: false, guest: false },
-  { permission: 'Manage users', superadmin: true, admin: true, lead_instructor: false, instructor: false, guest: false },
-  { permission: 'Manage guest access', superadmin: true, admin: true, lead_instructor: false, instructor: false, guest: false },
-  { permission: 'Review deletion requests', superadmin: true, admin: true, lead_instructor: false, instructor: false, guest: false },
-  { permission: 'View certification compliance', superadmin: true, admin: true, lead_instructor: false, instructor: false, guest: false },
-  { permission: 'Manage system settings', superadmin: true, admin: false, lead_instructor: false, instructor: false, guest: false },
-  { permission: 'Delete users', superadmin: true, admin: false, lead_instructor: false, instructor: false, guest: false },
+  { permission: 'View own profile', superadmin: true, admin: true, lead_instructor: true, instructor: true, volunteer_instructor: true, guest: false },
+  { permission: 'Track certifications', superadmin: true, admin: true, lead_instructor: true, instructor: true, volunteer_instructor: false, guest: false },
+  { permission: 'Log CE hours', superadmin: true, admin: true, lead_instructor: true, instructor: true, volunteer_instructor: false, guest: false },
+  { permission: 'View lab schedules', superadmin: true, admin: true, lead_instructor: true, instructor: true, volunteer_instructor: true, guest: true },
+  { permission: 'Access scheduling/shifts', superadmin: true, admin: true, lead_instructor: true, instructor: true, volunteer_instructor: true, guest: false },
+  { permission: 'View scenarios', superadmin: true, admin: true, lead_instructor: true, instructor: true, volunteer_instructor: false, guest: false },
+  { permission: 'View student data', superadmin: true, admin: true, lead_instructor: true, instructor: true, volunteer_instructor: false, guest: false },
+  { permission: 'Create scenarios', superadmin: true, admin: true, lead_instructor: true, instructor: false, volunteer_instructor: false, guest: false },
+  { permission: 'Edit scenarios', superadmin: true, admin: true, lead_instructor: true, instructor: false, volunteer_instructor: false, guest: false },
+  { permission: 'Delete scenarios', superadmin: true, admin: true, lead_instructor: true, instructor: false, volunteer_instructor: false, guest: false },
+  { permission: 'Manage lab days', superadmin: true, admin: true, lead_instructor: true, instructor: false, volunteer_instructor: false, guest: false },
+  { permission: 'Manage students', superadmin: true, admin: true, lead_instructor: true, instructor: false, volunteer_instructor: false, guest: false },
+  { permission: 'Manage cohorts', superadmin: true, admin: true, lead_instructor: true, instructor: false, volunteer_instructor: false, guest: false },
+  { permission: 'Access admin panel', superadmin: true, admin: true, lead_instructor: false, instructor: false, volunteer_instructor: false, guest: false },
+  { permission: 'Manage users', superadmin: true, admin: true, lead_instructor: false, instructor: false, volunteer_instructor: false, guest: false },
+  { permission: 'Manage guest access', superadmin: true, admin: true, lead_instructor: false, instructor: false, volunteer_instructor: false, guest: false },
+  { permission: 'Review deletion requests', superadmin: true, admin: true, lead_instructor: false, instructor: false, volunteer_instructor: false, guest: false },
+  { permission: 'View certification compliance', superadmin: true, admin: true, lead_instructor: false, instructor: false, volunteer_instructor: false, guest: false },
+  { permission: 'Manage system settings', superadmin: true, admin: false, lead_instructor: false, instructor: false, volunteer_instructor: false, guest: false },
+  { permission: 'Delete users', superadmin: true, admin: false, lead_instructor: false, instructor: false, volunteer_instructor: false, guest: false },
 ];
 
 export default function RolesPage() {
@@ -254,6 +272,7 @@ export default function RolesPage() {
                   <th className="px-3 py-3 text-center text-sm font-medium text-orange-700 dark:text-orange-400">Admin</th>
                   <th className="px-3 py-3 text-center text-sm font-medium text-blue-700 dark:text-blue-400">Lead</th>
                   <th className="px-3 py-3 text-center text-sm font-medium text-green-700 dark:text-green-400">Instructor</th>
+                  <th className="px-3 py-3 text-center text-sm font-medium text-teal-700 dark:text-teal-400">Volunteer</th>
                   <th className="px-3 py-3 text-center text-sm font-medium text-gray-700 dark:text-gray-400">Guest</th>
                 </tr>
               </thead>
@@ -284,6 +303,13 @@ export default function RolesPage() {
                     </td>
                     <td className="px-3 py-2 text-center">
                       {row.instructor ? (
+                        <Check className="w-4 h-4 text-green-500 mx-auto" />
+                      ) : (
+                        <X className="w-4 h-4 text-gray-300 dark:text-gray-600 mx-auto" />
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-center">
+                      {row.volunteer_instructor ? (
                         <Check className="w-4 h-4 text-green-500 mx-auto" />
                       ) : (
                         <X className="w-4 h-4 text-gray-300 dark:text-gray-600 mx-auto" />

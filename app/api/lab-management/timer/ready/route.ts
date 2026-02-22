@@ -1,13 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-
-// Create Supabase client lazily to avoid build-time errors
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-}
+import { getSupabaseAdmin } from '@/lib/supabase';
 
 // GET - Get all ready statuses for a lab day
 export async function GET(request: NextRequest) {
@@ -19,7 +12,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
 
     // Get ready statuses with station info
     const { data, error } = await supabase
@@ -67,7 +60,7 @@ export async function GET(request: NextRequest) {
 // POST - Set ready status for a station
 export async function POST(request: NextRequest) {
   try {
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
 
     const body = await request.json();
     const { labDayId, stationId, userEmail, userName, isReady } = body;
@@ -107,7 +100,7 @@ export async function POST(request: NextRequest) {
 // Also sets rotation_acknowledged = true in lab_timer_state
 export async function PATCH(request: NextRequest) {
   try {
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
 
     const body = await request.json();
     const { labDayId, acknowledgeRotation } = body;
@@ -149,7 +142,7 @@ export async function DELETE(request: NextRequest) {
   }
 
   try {
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
 
     const { error } = await supabase
       .from('lab_timer_ready_status')

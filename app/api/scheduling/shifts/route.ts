@@ -2,17 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
 import { isDirector } from '@/lib/endorsements';
-
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-}
+import { getSupabaseAdmin } from '@/lib/supabase';
 
 // Helper to get current user
 async function getCurrentUser(email: string) {
-  const supabase = getSupabase();
+  const supabase = getSupabaseAdmin();
   const { data } = await supabase
     .from('lab_users')
     .select('id, name, email, role')
@@ -41,7 +35,7 @@ export async function GET(request: NextRequest) {
     const includeFilled = searchParams.get('include_filled') !== 'false';
     const includeCancelled = searchParams.get('include_cancelled') === 'true';
 
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
 
     let query = supabase
       .from('open_shifts')
@@ -180,7 +174,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
 
     // Calculate all dates for recurring shifts
     const shiftDates = repeat && repeat_until

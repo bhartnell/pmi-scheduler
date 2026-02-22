@@ -1,13 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
-
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-}
+import { getSupabaseAdmin } from '@/lib/supabase';
 
 export interface LabDayRole {
   id: string;
@@ -39,7 +33,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, roles: [] }); // Return empty array instead of error to prevent retry loops
     }
 
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
 
     const { data: roles, error } = await supabase
       .from('lab_day_roles')
@@ -88,7 +82,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Invalid role' }, { status: 400 });
     }
 
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
 
     // Check if role already exists
     const { data: existing } = await supabase
@@ -146,7 +140,7 @@ export async function DELETE(request: NextRequest) {
     const roleId = searchParams.get('id');
     const labDayId = searchParams.get('lab_day_id') || searchParams.get('labDayId');
 
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
 
     if (roleId) {
       // Delete a single role by ID
