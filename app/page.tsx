@@ -168,7 +168,7 @@ export default function HomePage() {
           </div>
 
           {/* Skeleton Cards */}
-          <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 max-w-5xl mx-auto">
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <div
                 key={i}
@@ -317,7 +317,7 @@ export default function HomePage() {
 
         {/* Main Navigation Cards */}
         <ErrorBoundary>
-        <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 max-w-5xl mx-auto">
           {/* Lab Management Card - Not for volunteer instructors */}
           {currentUser && currentUser.role !== 'volunteer_instructor' && (
             <Link

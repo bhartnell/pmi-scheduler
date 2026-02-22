@@ -253,7 +253,7 @@ export default function CalendarPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1">
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1 overflow-x-auto whitespace-nowrap">
                 <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400">Home</Link>
                 <ChevronRight className="w-4 h-4" />
                 <span>Calendar</span>
@@ -351,12 +351,13 @@ export default function CalendarPage() {
         </div>
 
         {/* Calendar Grid */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden hidden md:block">
           {/* Week day headers */}
           <div className="grid grid-cols-7 bg-gray-50 dark:bg-gray-700 border-b dark:border-gray-600">
             {weekDays.map(day => (
-              <div key={day} className="py-3 text-center text-sm font-medium text-gray-600 dark:text-gray-300">
-                {day}
+              <div key={day} className="py-2 lg:py-3 text-center text-xs lg:text-sm font-medium text-gray-600 dark:text-gray-300">
+                <span className="lg:hidden">{day.charAt(0)}</span>
+                <span className="hidden lg:inline">{day}</span>
               </div>
             ))}
           </div>
@@ -380,7 +381,7 @@ export default function CalendarPage() {
               return (
                 <div
                   key={idx}
-                  className={`min-h-[100px] md:min-h-[120px] border-b border-r dark:border-gray-600 p-1 md:p-2 relative ${
+                  className={`min-h-[80px] lg:min-h-[120px] border-b border-r dark:border-gray-600 p-1 md:p-2 relative ${
                     !currentMo ? 'bg-gray-50 dark:bg-gray-700' : ''
                   } ${today ? 'bg-blue-50 dark:bg-blue-900/30' : ''}`}
                 >
@@ -497,6 +498,88 @@ export default function CalendarPage() {
                 </div>
               );
             })}
+          </div>
+        </div>
+
+        {/* Mobile List View */}
+        <div className="md:hidden bg-white dark:bg-gray-800 rounded-lg shadow">
+          <div className="p-4 border-b dark:border-gray-600">
+            <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <CalendarIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              Upcoming Events
+            </h3>
+          </div>
+          <div className="divide-y dark:divide-gray-600">
+            {(() => {
+              const now = new Date(new Date().toDateString());
+              const upcomingLabs = (showLabDays ? labDays : [])
+                .filter(ld => new Date(ld.date + 'T12:00:00') >= now)
+                .map(ld => ({ ...ld, _type: 'lab' as const }));
+              const upcomingShifts = shifts
+                .filter(s => !s.is_cancelled && new Date(s.date + 'T12:00:00') >= now)
+                .map(s => ({ ...s, _type: 'shift' as const }));
+              const combined = [...upcomingLabs, ...upcomingShifts]
+                .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                .slice(0, 15);
+
+              if (combined.length === 0) {
+                return (
+                  <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+                    <CalendarIcon className="w-12 h-12 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
+                    <p>No upcoming events</p>
+                  </div>
+                );
+              }
+
+              return combined.map(item => {
+                const itemDate = new Date(item.date + 'T12:00:00');
+                const isLab = item._type === 'lab';
+                const isItemToday = itemDate.toDateString() === new Date().toDateString();
+
+                return (
+                  <Link
+                    key={`${item._type}-${item.id}`}
+                    href={isLab ? `/lab-management/schedule/${item.id}/edit` : '/scheduling/shifts'}
+                    className="p-4 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700"
+                  >
+                    <div className={`text-center p-2 rounded-lg min-w-[50px] ${
+                      isItemToday ? 'bg-blue-100 dark:bg-blue-900/50' : 'bg-gray-100 dark:bg-gray-700'
+                    }`}>
+                      <div className={`text-xs font-medium ${
+                        isItemToday ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'
+                      }`}>
+                        {itemDate.toLocaleDateString('en-US', { weekday: 'short' })}
+                      </div>
+                      <div className={`text-lg font-bold ${
+                        isItemToday ? 'text-blue-700 dark:text-blue-300' : 'text-gray-900 dark:text-white'
+                      }`}>
+                        {itemDate.getDate()}
+                      </div>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-gray-900 dark:text-white truncate flex items-center gap-2">
+                        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${isLab ? 'bg-blue-500' : 'bg-orange-500'}`} />
+                        {isLab
+                          ? `${(item as LabDay).cohort.program.abbreviation} G${(item as LabDay).cohort.cohort_number}`
+                          : (item as Shift).title
+                        }
+                      </div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                        {isLab ? 'Lab Day' : `${(item as Shift).start_time || ''} - ${(item as Shift).end_time || ''}`}
+                        {isLab && (item as LabDay).needs_coverage && (
+                          <span className="ml-2 text-orange-600 dark:text-orange-400">Needs coverage</span>
+                        )}
+                      </div>
+                    </div>
+                    {isItemToday && (
+                      <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-xs font-medium rounded flex-shrink-0">
+                        Today
+                      </span>
+                    )}
+                  </Link>
+                );
+              });
+            })()}
           </div>
         </div>
 

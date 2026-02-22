@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import ExportDropdown from '@/components/ExportDropdown';
 import FieldTripAttendance from '@/components/FieldTripAttendance';
+import { useToast } from '@/components/Toast';
 import type { ExportConfig } from '@/lib/export-utils';
 
 interface Cohort {
@@ -49,6 +50,7 @@ interface Student {
   id: string;
   first_name: string;
   last_name: string;
+  email: string | null;
   agency: string | null;
   photo_url: string | null;
   status: string;
@@ -174,6 +176,7 @@ export default function CohortHubPage() {
   const [learningStyles, setLearningStyles] = useState<LearningStyle[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
+  const toast = useToast();
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -254,13 +257,14 @@ export default function CohortHubPage() {
         setStudents(prev => prev.filter(s => s.id !== removingStudent.id));
         setWithdrawnStudents(prev => [...prev, { ...removingStudent, status: 'withdrawn' }]);
         setRemovingStudent(null);
+        toast.success(`${removingStudent.first_name} ${removingStudent.last_name} removed from cohort`);
       } else {
         console.error('Failed to remove student');
-        alert('Failed to remove student. Please try again.');
+        toast.error('Failed to remove student. Please try again.');
       }
     } catch (error) {
       console.error('Error removing student:', error);
-      alert('An error occurred. Please try again.');
+      toast.error('An error occurred. Please try again.');
     }
     setProcessing(false);
   };
@@ -278,13 +282,14 @@ export default function CohortHubPage() {
         // Move student from withdrawnStudents to students
         setWithdrawnStudents(prev => prev.filter(s => s.id !== student.id));
         setStudents(prev => [...prev, { ...student, status: 'active' }]);
+        toast.success(`${student.first_name} ${student.last_name} restored to active`);
       } else {
         console.error('Failed to restore student');
-        alert('Failed to restore student. Please try again.');
+        toast.error('Failed to restore student. Please try again.');
       }
     } catch (error) {
       console.error('Error restoring student:', error);
-      alert('An error occurred. Please try again.');
+      toast.error('An error occurred. Please try again.');
     }
     setProcessing(false);
   };
@@ -292,30 +297,36 @@ export default function CohortHubPage() {
   const handleExportCSV = () => {
     if (students.length === 0) return;
 
-    // Create CSV content compatible with Gmail Contacts
+    // Google Contacts CSV format
+    // Ref: https://support.google.com/contacts/answer/1069522
     const csvRows = [
-      ['First Name', 'Last Name', 'Email'], // Header row
+      ['Name', 'Given Name', 'Family Name', 'Group Membership', 'E-mail 1 - Value', 'Phone 1 - Value'],
       ...students.map(s => [
+        `${s.first_name} ${s.last_name}`,
         s.first_name,
         s.last_name,
-        '' // Email field - would need to be added to Student type if available
+        cohortLabel,
+        s.email || '',
+        '' // Phone not stored in student records
       ])
     ];
 
     const csvContent = csvRows.map(row =>
-      row.map(cell => `"${cell}"`).join(',')
+      row.map(cell => `"${(cell || '').replace(/"/g, '""')}"`).join(',')
     ).join('\n');
 
-    // Create download
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    // Add BOM for proper Excel/Google Sheets UTF-8 encoding
+    const BOM = '\uFEFF';
+    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `${cohortLabel.replace(/\s+/g, '-').toLowerCase()}-contacts.csv`);
+    link.setAttribute('download', `${cohortLabel.replace(/\s+/g, '-').toLowerCase()}-google-contacts.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   if (status === 'loading' || loading) {
@@ -366,7 +377,7 @@ export default function CohortHubPage() {
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-6">
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2 overflow-x-auto whitespace-nowrap">
             <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1">
               <Home className="w-3 h-3" />
               Home
@@ -400,7 +411,7 @@ export default function CohortHubPage() {
               </div>
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Link
                 href={`/lab-management/students/new?cohortId=${cohortId}&returnTo=${encodeURIComponent(`/lab-management/cohorts/${cohortId}`)}`}
                 className="inline-flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-700 border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 text-sm text-gray-700 dark:text-gray-200"
@@ -668,7 +679,7 @@ export default function CohortHubPage() {
                         e.stopPropagation();
                         setRemovingStudent(student);
                       }}
-                      className="flex-shrink-0 p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="flex-shrink-0 p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                       title="Remove from cohort"
                     >
                       <UserMinus className="w-4 h-4" />

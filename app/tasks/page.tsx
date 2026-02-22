@@ -341,7 +341,7 @@ function TasksPageContent() {
           </div>
 
           {/* Breadcrumbs */}
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mt-4 mb-2">
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mt-4 mb-2 overflow-x-auto whitespace-nowrap">
             <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1">
               <Home className="w-3 h-3" />
               <span className="hidden sm:inline">Home</span>
@@ -462,7 +462,7 @@ function TasksPageContent() {
                 <option value="low">Low</option>
               </select>
 
-              <div className="flex items-center gap-2 ml-auto">
+              <div className="flex items-center gap-2 sm:ml-auto w-full sm:w-auto">
                 <ArrowUpDown className="w-4 h-4 text-gray-500" aria-hidden="true" />
                 <select
                   aria-label="Sort tasks"
