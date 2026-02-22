@@ -178,7 +178,7 @@ export default function GlobalTimerBanner() {
 
   return (
     <div
-      className={`fixed top-0 left-0 right-0 z-[100] ${getBannerColor()} text-white shadow-lg transition-colors duration-300`}
+      className={`fixed top-0 left-0 right-0 z-[100] ${getBannerColor()} text-white shadow-lg transition-colors duration-300 print:hidden`}
       style={{ height: `${BANNER_HEIGHT}px` }}
     >
       <div className="max-w-7xl mx-auto px-4 h-full">

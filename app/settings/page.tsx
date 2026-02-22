@@ -15,6 +15,7 @@ import {
 import { ThemeToggle } from '@/components/ThemeToggle';
 import NotificationBell from '@/components/NotificationBell';
 import EmailSettingsPanel from '@/components/EmailSettingsPanel';
+import { useToast } from '@/components/Toast';
 
 function SettingsPageContent() {
   const { data: session, status } = useSession();
@@ -144,6 +145,7 @@ function SettingsPageContent() {
 
 // Component to manage in-app notification category preferences
 function InAppNotificationSettings() {
+  const toast = useToast();
   const [prefs, setPrefs] = useState<Record<string, boolean>>({
     tasks: true,
     labs: true,
@@ -189,15 +191,21 @@ function InAppNotificationSettings() {
     setSaving(true);
 
     try {
-      await fetch('/api/notifications/preferences', {
+      const res = await fetch('/api/notifications/preferences', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newPrefs),
       });
+      if (res.ok) {
+        toast.success('Settings saved');
+      } else {
+        throw new Error('Failed to save');
+      }
     } catch (error) {
       console.error('Error saving preferences:', error);
       // Revert on error
       setPrefs(prefs);
+      toast.error('Failed to save settings');
     }
     setSaving(false);
   };

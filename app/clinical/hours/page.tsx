@@ -19,10 +19,13 @@ import {
   FileSpreadsheet,
   LayoutGrid,
   Table2,
-  TrendingUp
+  TrendingUp,
+  Printer
 } from 'lucide-react';
 import { canAccessClinical, canEditClinical, type Role } from '@/lib/permissions';
 import * as XLSX from 'xlsx';
+import { useToast } from '@/components/Toast';
+import { PageErrorBoundary } from '@/components/PageErrorBoundary';
 
 interface Student {
   id: string;
@@ -113,6 +116,7 @@ export default function ClinicalHoursTrackerPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const toast = useToast();
 
   const [cohorts, setCohorts] = useState<CohortOption[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
@@ -282,12 +286,15 @@ export default function ClinicalHoursTrackerPage() {
 
       if (res.ok) {
         await fetchCohortData();
+        toast.success('Hours saved');
       } else {
         const errorData = await res.json();
         console.error('Error saving hours:', errorData);
+        toast.error('Failed to save hours');
       }
     } catch (error) {
       console.error('Error saving hours:', error);
+      toast.error('Failed to save hours');
     }
     setSaving(null);
     setEditingCell(null);
@@ -712,10 +719,14 @@ export default function ClinicalHoursTrackerPage() {
       if (results.failed === 0) {
         setShowImportModal(false);
         setImportPreview([]);
+        toast.success(`Imported ${results.success} student${results.success !== 1 ? 's' : ''} successfully`);
+      } else {
+        toast.error(`Import completed with errors: ${results.failed} failed`);
       }
     } else {
       setShowImportModal(false);
       setImportPreview([]);
+      toast.success(`Imported ${results.success} student${results.success !== 1 ? 's' : ''} successfully`);
     }
 
     setImporting(false);
@@ -744,7 +755,7 @@ export default function ClinicalHoursTrackerPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50 to-cyan-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 shadow-sm">
+      <div className="bg-white dark:bg-gray-800 shadow-sm print:hidden">
         <div className="max-w-full mx-auto px-4 py-6">
           <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
             <Link href="/" className="hover:text-teal-600 dark:hover:text-teal-400 flex items-center gap-1">
@@ -793,6 +804,15 @@ export default function ClinicalHoursTrackerPage() {
                 </button>
               </div>
 
+              <button
+                onClick={() => window.print()}
+                className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+                aria-label="Print this page"
+              >
+                <Printer className="w-4 h-4" />
+                Print
+              </button>
+
               {canEdit && selectedCohort && (
                 <>
                   <input
@@ -817,12 +837,15 @@ export default function ClinicalHoursTrackerPage() {
       </div>
 
       <main className="max-w-full mx-auto px-4 py-6 space-y-4">
+        <PageErrorBoundary>
         {/* Filters */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 print:hidden">
           <div className="flex flex-wrap gap-4 items-center">
             <div className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-gray-400" />
+              <Users className="w-5 h-5 text-gray-400" aria-hidden="true" />
+              <label htmlFor="clinical-cohort-select" className="sr-only">Select Cohort</label>
               <select
+                id="clinical-cohort-select"
                 value={selectedCohort}
                 onChange={(e) => setSelectedCohort(e.target.value)}
                 className="px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 min-w-[200px]"
@@ -837,8 +860,10 @@ export default function ClinicalHoursTrackerPage() {
             </div>
 
             <div className="flex-1 min-w-[200px] relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" aria-hidden="true" />
+              <label htmlFor="clinical-student-search" className="sr-only">Search student</label>
               <input
+                id="clinical-student-search"
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -1082,7 +1107,8 @@ export default function ClinicalHoursTrackerPage() {
                                       <button
                                         onClick={() => saveHours(student.id, col)}
                                         disabled={isSaving}
-                                        className="flex-1 px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 disabled:opacity-50"
+                                        className="flex-1 px-2 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        title="Save hours"
                                       >
                                         {isSaving ? <Loader2 className="w-3 h-3 animate-spin mx-auto" /> : <Save className="w-3 h-3 mx-auto" />}
                                       </button>
@@ -1138,22 +1164,29 @@ export default function ClinicalHoursTrackerPage() {
             <p className="text-gray-500 dark:text-gray-400">Select a cohort to view clinical hours</p>
           </div>
         )}
+        </PageErrorBoundary>
       </main>
 
       {/* Import Preview Modal */}
       {showImportModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="import-modal-title"
+        >
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <FileSpreadsheet className="w-5 h-5 text-green-600" />
                 <div>
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Import Preview</h2>
+                  <h2 id="import-modal-title" className="text-lg font-semibold text-gray-900 dark:text-white">Import Preview</h2>
                   <p className="text-xs text-gray-500">Values will REPLACE existing data (Platinum shows cumulative totals)</p>
                 </div>
               </div>
               <button
                 onClick={() => { setShowImportModal(false); setImportPreview([]); }}
+                aria-label="Close import preview"
                 className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
               >
                 <X className="w-5 h-5 text-gray-500" />
@@ -1318,7 +1351,7 @@ export default function ClinicalHoursTrackerPage() {
               <button
                 onClick={executeImport}
                 disabled={importing || matchedCount === 0}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {importing ? (
                   <>

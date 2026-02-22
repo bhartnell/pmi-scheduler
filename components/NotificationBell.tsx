@@ -244,13 +244,16 @@ export default function NotificationBell() {
               {unreadCount > 0 && (
                 <button
                   onClick={markAllAsRead}
+                  aria-label="Mark all notifications as read"
                   className="flex items-center gap-1 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
                 >
-                  <CheckCheck className="w-4 h-4" />
+                  <CheckCheck className="w-4 h-4" aria-hidden="true" />
                 </button>
               )}
               <button
                 onClick={() => setShowSettings(!showSettings)}
+                aria-label="Notification settings"
+                aria-expanded={showSettings}
                 className={`p-1 rounded transition-colors ${
                   showSettings
                     ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400'
@@ -258,7 +261,7 @@ export default function NotificationBell() {
                 }`}
                 title="Notification Settings"
               >
-                <Settings className="w-4 h-4" />
+                <Settings className="w-4 h-4" aria-hidden="true" />
               </button>
             </div>
           </div>
@@ -272,9 +275,10 @@ export default function NotificationBell() {
                 </span>
                 <button
                   onClick={() => setShowSettings(false)}
+                  aria-label="Close notification settings"
                   className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-4 h-4" aria-hidden="true" />
                 </button>
               </div>
               <div className="space-y-1">
