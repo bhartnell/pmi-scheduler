@@ -15,16 +15,21 @@ async function getCurrentUser(email: string) {
   return data;
 }
 
-// Check if task_assignees table exists and is queryable
+// Cache task_assignees table existence check
+let taskAssigneesTableExists: boolean | null = null;
+
 async function checkTaskAssigneesTable(): Promise<boolean> {
+  if (taskAssigneesTableExists !== null) return taskAssigneesTableExists;
   try {
     const supabase = getSupabaseAdmin();
     const { error } = await supabase
       .from('task_assignees')
       .select('id')
       .limit(0);
-    return !error;
+    taskAssigneesTableExists = !error;
+    return taskAssigneesTableExists;
   } catch {
+    taskAssigneesTableExists = false;
     return false;
   }
 }
@@ -212,22 +217,18 @@ export async function GET(request: NextRequest) {
 
 // POST - Create new task (supports multi-assign)
 export async function POST(request: NextRequest) {
-  console.log('[TASK POST] ====== POST /api/tasks called ======');
   try {
     const session = await getServerSession();
-    console.log('[TASK POST] Session email:', session?.user?.email || 'NO SESSION');
     if (!session?.user?.email) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
     const currentUser = await getCurrentUser(session.user.email);
-    console.log('[TASK POST] Current user:', currentUser?.id, currentUser?.name || 'NOT FOUND');
     if (!currentUser) {
       return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
     }
 
     const body = await request.json();
-    console.log('[TASK POST] Request body:', JSON.stringify(body));
     const {
       title,
       description,
@@ -307,7 +308,6 @@ export async function POST(request: NextRequest) {
       console.error('[TASK POST] Insert FAILED:', error.message, error.code);
       throw error;
     }
-    console.log('[TASK POST] Insert SUCCESS, task ID:', (task as TaskRecord).id);
 
     // For multi-assign, create task_assignees records
     if (hasAssigneesTable && finalMode !== 'single') {
@@ -326,25 +326,23 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Send notifications to all assignees (except self)
-    console.log('[TASK NOTIFY] Task created successfully, ID:', (task as TaskRecord).id, '| Assignees:', assignees.map((a: { id: string; email: string }) => a.email), '| Current user:', currentUser.id);
-    for (const assignee of assignees) {
-      console.log('[TASK NOTIFY] Checking assignee:', assignee.email, '| assignee.id:', assignee.id, '| currentUser.id:', currentUser.id, '| skip self?', assignee.id === currentUser.id);
-      if (assignee.id !== currentUser.id) {
-        try {
-          console.log('[TASK NOTIFY] Calling notifyTaskAssigned for:', assignee.email);
-          await notifyTaskAssigned(assignee.email, {
-            taskId: (task as TaskRecord).id,
-            title,
-            assignerName: currentUser.name,
-            description: description || undefined,
-            dueDate: due_date || undefined,
-          });
-        } catch (notifyError) {
+    // Send notifications to all assignees in parallel (except self)
+    const notificationPromises = assignees
+      .filter((assignee: { id: string }) => assignee.id !== currentUser.id)
+      .map((assignee: { id: string; email: string }) => {
+        console.log('[TASK NOTIFY] Sending notification to:', assignee.email);
+        return notifyTaskAssigned(assignee.email, {
+          taskId: (task as TaskRecord).id,
+          title,
+          assignerName: currentUser.name,
+          description: description || undefined,
+          dueDate: due_date || undefined,
+        }).catch(notifyError => {
           console.error('Error sending task notification to', assignee.email, notifyError);
-        }
-      }
-    }
+        });
+      });
+
+    await Promise.allSettled(notificationPromises);
 
     // Fetch the complete task with assignees if supported
     let completeTask = null;
@@ -371,7 +369,6 @@ export async function POST(request: NextRequest) {
       completeTask = task;
     }
 
-    console.log('[TASK POST] ====== Returning 200 success for task:', (task as TaskRecord).id, '======');
     return NextResponse.json({ success: true, task: completeTask || task });
   } catch (error) {
     console.error('[TASK POST] ====== CAUGHT ERROR ======', error);
