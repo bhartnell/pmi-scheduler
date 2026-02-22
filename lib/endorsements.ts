@@ -4,7 +4,6 @@
 
 import { getSupabaseAdmin } from './supabase';
 
-// Create Supabase client lazily to avoid build-time errors
 // ============================================
 // Endorsement Types
 // ============================================
@@ -37,7 +36,11 @@ export const ENDORSEMENT_BADGES: Record<EndorsementType, { abbrev: string; bg: s
   lead_instructor: { abbrev: 'LI', bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-800 dark:text-blue-300' },
 };
 
-// Short title abbreviations for badges (PD = Program Director, CD = Clinical Director)
+/**
+ * Get the short badge abbreviation for an endorsement.
+ * @param endorsement - The endorsement object
+ * @returns Short abbreviation (e.g., "PD" for Program Director, "CD" for Clinical Director)
+ */
 export function getEndorsementAbbrev(endorsement: Endorsement): string {
   if (endorsement.endorsement_type === 'director') {
     if (endorsement.title?.includes('Program')) return 'PD';

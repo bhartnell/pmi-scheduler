@@ -4,7 +4,6 @@ import { getServerSession } from 'next-auth';
 import { canAccessAdmin } from '@/lib/permissions';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
-// Create Supabase client lazily to avoid build-time errors
 // Helper to get current user with role
 async function getCurrentUser(email: string) {
   const supabase = getSupabaseAdmin();

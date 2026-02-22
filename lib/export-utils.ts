@@ -15,7 +15,8 @@ export interface ExportConfig {
 }
 
 /**
- * Export data to Excel (.xlsx)
+ * Export data to Excel (.xlsx) file.
+ * @param config - Export configuration including data, columns, and formatting
  */
 export function exportToExcel(config: ExportConfig) {
   const { title, subtitle, filename, columns, data } = config;
@@ -64,7 +65,8 @@ export function exportToExcel(config: ExportConfig) {
 }
 
 /**
- * Export data to PDF using html2pdf.js
+ * Export data to PDF using html2pdf.js.
+ * @param config - Export configuration including data, columns, and formatting
  */
 export async function exportToPDF(config: ExportConfig) {
   const { title, subtitle, filename, columns, data } = config;
@@ -109,7 +111,8 @@ export async function exportToPDF(config: ExportConfig) {
 }
 
 /**
- * Open print dialog with formatted content
+ * Open print dialog with formatted content.
+ * @param config - Export configuration including data, columns, and formatting
  */
 export function printRoster(config: ExportConfig) {
   const html = generatePrintHTML(config, false);
@@ -129,7 +132,10 @@ export function printRoster(config: ExportConfig) {
 }
 
 /**
- * Generate formatted HTML for print/PDF
+ * Generate formatted HTML for print/PDF.
+ * @param config - Export configuration
+ * @param forPDF - Whether output is for PDF (affects font sizes)
+ * @returns Complete HTML document string
  */
 function generatePrintHTML(config: ExportConfig, forPDF: boolean): string {
   const { title, subtitle, columns, data } = config;

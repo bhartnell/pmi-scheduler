@@ -4,7 +4,6 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
-// Create Supabase client lazily to avoid build-time errors
 /**
  * GET /api/student/completions
  * Get the current student's station completions

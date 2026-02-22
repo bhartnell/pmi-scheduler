@@ -6,6 +6,10 @@ import { Resend } from 'resend';
 // Lazy initialization to avoid build errors when env vars aren't set
 let resendClient: Resend | null = null;
 
+/**
+ * Get or create the Resend email client.
+ * @returns Resend client instance or null if API key not configured
+ */
 function getResend(): Resend | null {
   if (!process.env.RESEND_API_KEY) {
     console.warn('RESEND_API_KEY not configured - emails will not be sent');
@@ -37,7 +41,12 @@ interface EmailData {
   data: Record<string, string | number | boolean | undefined>;
 }
 
-// Base HTML template wrapper
+/**
+ * Wrap email content in the standard PMI email template with header and footer.
+ * @param content - HTML content to wrap
+ * @param preferencesUrl - URL for email preferences link
+ * @returns Complete HTML email template
+ */
 function wrapInTemplate(content: string, preferencesUrl: string): string {
   return `
 <!DOCTYPE html>
@@ -100,7 +109,13 @@ function wrapInTemplate(content: string, preferencesUrl: string): string {
 `;
 }
 
-// Button component for emails
+/**
+ * Generate a styled button for email templates.
+ * @param text - Button text
+ * @param url - Button destination URL
+ * @param color - Background color (default: blue)
+ * @returns HTML button component
+ */
 function emailButton(text: string, url: string, color: string = '#2563eb'): string {
   return `
     <table cellpadding="0" cellspacing="0" style="margin: 24px 0;">
@@ -262,7 +277,11 @@ const templates: Record<EmailTemplate, (data: Record<string, unknown>) => { subj
   })
 };
 
-// Main send email function
+/**
+ * Send an email using the Resend API.
+ * @param emailData - Email data including recipient, template, and template data
+ * @returns Result object with success status, optional error message, and email ID
+ */
 export async function sendEmail(emailData: EmailData): Promise<{ success: boolean; error?: string; id?: string }> {
   const resend = getResend();
 
@@ -296,7 +315,11 @@ export async function sendEmail(emailData: EmailData): Promise<{ success: boolea
   }
 }
 
-// Convenience functions for specific notification types
+/**
+ * Send task assignment notification email.
+ * @param toEmail - Recipient email address
+ * @param data - Task information
+ */
 export async function sendTaskAssignedEmail(
   toEmail: string,
   data: { taskId: string; title: string; assignerName: string; description?: string; dueDate?: string }
@@ -309,6 +332,11 @@ export async function sendTaskAssignedEmail(
   });
 }
 
+/**
+ * Send task completion notification email.
+ * @param toEmail - Recipient email address
+ * @param data - Task completion information
+ */
 export async function sendTaskCompletedEmail(
   toEmail: string,
   data: { taskId: string; title: string; assigneeName: string; completionNotes?: string }
@@ -321,6 +349,11 @@ export async function sendTaskCompletedEmail(
   });
 }
 
+/**
+ * Send new shift available notification email.
+ * @param toEmail - Recipient email address
+ * @param data - Shift information
+ */
 export async function sendShiftAvailableEmail(
   toEmail: string,
   data: { title: string; date: string; startTime: string; endTime: string; location?: string }
@@ -333,6 +366,11 @@ export async function sendShiftAvailableEmail(
   });
 }
 
+/**
+ * Send shift signup confirmation email.
+ * @param toEmail - Recipient email address
+ * @param data - Shift confirmation information
+ */
 export async function sendShiftConfirmedEmail(
   toEmail: string,
   data: { title: string; date: string; startTime: string; endTime: string; location?: string }
@@ -345,6 +383,11 @@ export async function sendShiftConfirmedEmail(
   });
 }
 
+/**
+ * Send lab assignment notification email.
+ * @param toEmail - Recipient email address
+ * @param data - Lab assignment information
+ */
 export async function sendLabAssignedEmail(
   toEmail: string,
   data: { labName: string; date: string; time?: string; role?: string }
@@ -357,6 +400,11 @@ export async function sendLabAssignedEmail(
   });
 }
 
+/**
+ * Send lab reminder email (for upcoming labs).
+ * @param toEmail - Recipient email address
+ * @param data - Lab reminder information
+ */
 export async function sendLabReminderEmail(
   toEmail: string,
   data: { labName: string; date: string; time?: string; role?: string }

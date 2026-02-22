@@ -11,7 +11,6 @@ import {
 } from '@/lib/permissions';
 import { notifyRoleApproved } from '@/lib/notifications';
 
-// Create Supabase client lazily to avoid build-time errors
 // Helper to get current user with role
 async function getCurrentUser(email: string) {
   const supabase = getSupabaseAdmin();

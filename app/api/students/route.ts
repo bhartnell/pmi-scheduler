@@ -4,7 +4,6 @@ import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
-// Create Supabase client lazily to avoid build-time errors
 // GET - List students, optionally filtered by cohort
 export async function GET(request: NextRequest) {
   try {

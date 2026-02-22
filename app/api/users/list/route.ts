@@ -3,7 +3,6 @@ import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
-// Create Supabase client lazily to avoid build-time errors
 /**
  * GET /api/users/list
  * Returns a list of active users for dropdowns (task assignment, etc.)

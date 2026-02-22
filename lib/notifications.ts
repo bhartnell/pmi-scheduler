@@ -9,7 +9,6 @@ import {
   EmailTemplate
 } from './email';
 
-// Create Supabase client lazily to avoid build-time errors
 // Email preferences interface
 interface EmailPreferences {
   enabled: boolean;

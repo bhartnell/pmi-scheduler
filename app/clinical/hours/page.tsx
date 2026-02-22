@@ -151,6 +151,19 @@ export default function ClinicalHoursTrackerPage() {
     }
   }, [selectedCohort]);
 
+  // ESC key to close import modal
+  useEffect(() => {
+    if (!showImportModal) return;
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowImportModal(false);
+        setImportPreview([]);
+      }
+    };
+    document.addEventListener('keydown', handleEsc);
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, [showImportModal]);
+
   const fetchInitialData = async () => {
     setLoading(true);
     try {
@@ -924,8 +937,12 @@ export default function ClinicalHoursTrackerPage() {
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                   {filteredStudents.length === 0 ? (
                     <tr>
-                      <td colSpan={DEPT_COLUMNS.length + 3} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
-                        No students found
+                      <td colSpan={DEPT_COLUMNS.length + 3} className="px-4 py-12 text-center">
+                        <div className="flex flex-col items-center gap-2 text-gray-500 dark:text-gray-400">
+                          <Users className="w-12 h-12 text-gray-300 dark:text-gray-600" />
+                          <p className="font-medium">No students found</p>
+                          <p className="text-sm">Try adjusting your search or select a different cohort</p>
+                        </div>
                       </td>
                     </tr>
                   ) : (
@@ -1012,8 +1029,12 @@ export default function ClinicalHoursTrackerPage() {
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                   {filteredStudents.length === 0 ? (
                     <tr>
-                      <td colSpan={DEPT_COLUMNS.length + 2} className="px-4 py-8 text-center text-gray-500 dark:text-gray-400">
-                        No students found
+                      <td colSpan={DEPT_COLUMNS.length + 2} className="px-4 py-12 text-center">
+                        <div className="flex flex-col items-center gap-2 text-gray-500 dark:text-gray-400">
+                          <Users className="w-12 h-12 text-gray-300 dark:text-gray-600" />
+                          <p className="font-medium">No students found</p>
+                          <p className="text-sm">Try adjusting your search or select a different cohort</p>
+                        </div>
                       </td>
                     </tr>
                   ) : (

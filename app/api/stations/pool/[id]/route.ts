@@ -5,7 +5,6 @@ import { authOptions } from '@/lib/auth';
 import { hasMinRole, canManageContent } from '@/lib/permissions';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
-// Create Supabase client lazily to avoid build-time errors
 // Helper to get current user with role
 async function getCurrentUser(supabase: ReturnType<typeof getSupabaseAdmin>, email: string) {
   const { data: user, error } = await supabase
