@@ -1,16 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getSupabaseAdmin } from '@/lib/supabase';
 import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
 import crypto from 'crypto';
 
 // Create Supabase client lazily to avoid build-time errors
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-}
-
 // Generate a secure random token
 function generateToken(): string {
   return crypto.randomBytes(32).toString('hex');
@@ -24,7 +18,7 @@ export async function GET() {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { data, error } = await getSupabase()
+    const { data, error } = await getSupabaseAdmin()
       .from('timer_display_tokens')
       .select('*')
       .order('created_at', { ascending: false });
@@ -54,7 +48,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get user ID
-    const { data: userData } = await getSupabase()
+    const { data: userData } = await getSupabaseAdmin()
       .from('users')
       .select('id')
       .eq('email', session.user.email)
@@ -62,7 +56,7 @@ export async function POST(request: NextRequest) {
 
     const token = generateToken();
 
-    const { data, error } = await getSupabase()
+    const { data, error } = await getSupabaseAdmin()
       .from('timer_display_tokens')
       .insert({
         token,

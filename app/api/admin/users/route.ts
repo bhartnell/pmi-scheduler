@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
+import { getSupabaseAdmin } from '@/lib/supabase';
 import {
   canAccessAdmin,
   canModifyUser,
@@ -11,16 +12,9 @@ import {
 import { notifyRoleApproved } from '@/lib/notifications';
 
 // Create Supabase client lazily to avoid build-time errors
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-}
-
 // Helper to get current user with role
 async function getCurrentUser(email: string) {
-  const supabase = getSupabase();
+  const supabase = getSupabaseAdmin();
   const { data } = await supabase
     .from('lab_users')
     .select('id, name, email, role')
@@ -45,7 +39,7 @@ export async function GET(request: NextRequest) {
     const role = searchParams.get('role');
     const activeOnly = searchParams.get('activeOnly') !== 'false';
 
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
     let query = supabase
       .from('lab_users')
       .select('*')
@@ -89,7 +83,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Email is required' }, { status: 400 });
     }
 
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
 
     // Check if user already exists
     const { data: existingUser } = await supabase
@@ -144,7 +138,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'User ID is required' }, { status: 400 });
     }
 
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
 
     // Get target user
     const { data: targetUser } = await supabase
@@ -235,7 +229,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'User ID is required' }, { status: 400 });
     }
 
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
 
     // Get target user
     const { data: targetUser } = await supabase

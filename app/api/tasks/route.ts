@@ -2,17 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
 import { notifyTaskAssigned } from '@/lib/notifications';
-
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-}
+import { getSupabaseAdmin } from '@/lib/supabase';
 
 // Helper to get current user
 async function getCurrentUser(email: string) {
-  const supabase = getSupabase();
+  const supabase = getSupabaseAdmin();
   const { data } = await supabase
     .from('lab_users')
     .select('id, name, email, role')
@@ -24,7 +18,7 @@ async function getCurrentUser(email: string) {
 // Check if task_assignees table exists and is queryable
 async function checkTaskAssigneesTable(): Promise<boolean> {
   try {
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
     const { error } = await supabase
       .from('task_assignees')
       .select('id')
@@ -78,7 +72,7 @@ export async function GET(request: NextRequest) {
     const sortBy = searchParams.get('sortBy') || 'due_date';
     const sortOrder = searchParams.get('sortOrder') || 'asc';
 
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
 
     // Check if task_assignees table exists
     const hasAssigneesTable = await checkTaskAssigneesTable();
@@ -259,7 +253,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
 
     // Get assignee info for notifications
     const { data: assignees } = await supabase

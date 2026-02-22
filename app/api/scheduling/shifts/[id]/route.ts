@@ -2,17 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
 import { isDirector } from '@/lib/endorsements';
-
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-}
+import { getSupabaseAdmin } from '@/lib/supabase';
 
 // Helper to get current user
 async function getCurrentUser(email: string) {
-  const supabase = getSupabase();
+  const supabase = getSupabaseAdmin();
   const { data } = await supabase
     .from('lab_users')
     .select('id, name, email, role')
@@ -39,7 +33,7 @@ export async function GET(
       return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
     }
 
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
 
     const { data: shift, error } = await supabase
       .from('open_shifts')
@@ -118,7 +112,7 @@ export async function PUT(
     const body = await request.json();
     const { title, description, date, start_time, end_time, location, department, min_instructors, max_instructors } = body;
 
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
 
     const updateData: Record<string, unknown> = {};
     if (title !== undefined) updateData.title = title;
@@ -176,7 +170,7 @@ export async function DELETE(
       return NextResponse.json({ success: false, error: 'Only directors can cancel shifts' }, { status: 403 });
     }
 
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
 
     // Mark as cancelled rather than hard delete
     const { data: shift, error } = await supabase

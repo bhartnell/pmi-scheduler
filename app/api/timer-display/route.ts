@@ -2,19 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { createClient } from '@supabase/supabase-js';
+import { getSupabaseAdmin } from '@/lib/supabase';
 
 // Create Supabase client lazily to avoid build-time errors
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-}
-
 // GET - List all timer display tokens (admin only)
 export async function GET() {
   try {
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
 
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
@@ -74,7 +68,7 @@ export async function GET() {
 // POST - Create a new timer display token
 export async function POST(request: NextRequest) {
   try {
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
 
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
@@ -112,7 +106,7 @@ export async function POST(request: NextRequest) {
 // PATCH - Update a timer display token
 export async function PATCH(request: NextRequest) {
   try {
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
 
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
@@ -152,7 +146,7 @@ export async function PATCH(request: NextRequest) {
 // DELETE - Delete a timer display token
 export async function DELETE(request: NextRequest) {
   try {
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
 
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {

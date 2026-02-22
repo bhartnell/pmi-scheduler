@@ -1,15 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getSupabaseAdmin } from '@/lib/supabase';
 import { getServerSession } from 'next-auth';
-import { createClient } from '@supabase/supabase-js';
 import { createNotification } from '@/lib/notifications';
-
-// Create Supabase client lazily to avoid build-time errors
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-}
 
 // GET - List all onboarding assignments (admin view)
 export async function GET(request: NextRequest) {
@@ -20,7 +12,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Verify admin/superadmin role
-    const { data: currentUser } = await getSupabase()
+    const { data: currentUser } = await getSupabaseAdmin()
       .from('lab_users')
       .select('role')
       .eq('email', session.user.email)
@@ -35,7 +27,7 @@ export async function GET(request: NextRequest) {
     const statusFilter = searchParams.get('status'); // Optional: filter by status
 
     // Build query for assignments
-    let query = getSupabase()
+    let query = getSupabaseAdmin()
       .from('onboarding_assignments')
       .select(`
         id,
@@ -64,7 +56,7 @@ export async function GET(request: NextRequest) {
     const enrichedAssignments = await Promise.all(
       (assignments || []).map(async (assignment) => {
         // Get instructor name
-        const { data: instructor } = await getSupabase()
+        const { data: instructor } = await getSupabaseAdmin()
           .from('lab_users')
           .select('name')
           .eq('email', assignment.instructor_email)
@@ -73,7 +65,7 @@ export async function GET(request: NextRequest) {
         // Get mentor name
         let mentorName = null;
         if (assignment.mentor_email) {
-          const { data: mentor } = await getSupabase()
+          const { data: mentor } = await getSupabaseAdmin()
             .from('lab_users')
             .select('name')
             .eq('email', assignment.mentor_email)
@@ -82,7 +74,7 @@ export async function GET(request: NextRequest) {
         }
 
         // Get progress summary from view
-        const { data: summary } = await getSupabase()
+        const { data: summary } = await getSupabaseAdmin()
           .from('onboarding_assignment_summary')
           .select('*')
           .eq('assignment_id', assignment.id)
@@ -124,7 +116,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify admin/superadmin role
-    const { data: currentUser } = await getSupabase()
+    const { data: currentUser } = await getSupabaseAdmin()
       .from('lab_users')
       .select('role')
       .eq('email', session.user.email)
@@ -154,7 +146,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify instructor exists in lab_users
-    const { data: instructor, error: instructorError } = await getSupabase()
+    const { data: instructor, error: instructorError } = await getSupabaseAdmin()
       .from('lab_users')
       .select('email, name')
       .eq('email', instructor_email)
@@ -169,7 +161,7 @@ export async function POST(request: NextRequest) {
 
     // If mentor_email provided, verify it exists
     if (mentor_email) {
-      const { data: mentor, error: mentorError } = await getSupabase()
+      const { data: mentor, error: mentorError } = await getSupabaseAdmin()
         .from('lab_users')
         .select('email')
         .eq('email', mentor_email)
@@ -186,7 +178,7 @@ export async function POST(request: NextRequest) {
     // Determine template_id: use provided or default to first active template
     let resolvedTemplateId = template_id;
     if (!resolvedTemplateId) {
-      const { data: defaultTemplate, error: templateError } = await getSupabase()
+      const { data: defaultTemplate, error: templateError } = await getSupabaseAdmin()
         .from('onboarding_templates')
         .select('id')
         .eq('is_active', true)
@@ -204,7 +196,7 @@ export async function POST(request: NextRequest) {
       resolvedTemplateId = defaultTemplate.id;
     } else {
       // Verify the template exists and is active
-      const { data: template, error: templateError } = await getSupabase()
+      const { data: template, error: templateError } = await getSupabaseAdmin()
         .from('onboarding_templates')
         .select('id')
         .eq('id', resolvedTemplateId)
@@ -220,7 +212,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check for existing active assignment for this instructor
-    const { data: existingAssignment } = await getSupabase()
+    const { data: existingAssignment } = await getSupabaseAdmin()
       .from('onboarding_assignments')
       .select('id, status')
       .eq('instructor_email', instructor_email)
@@ -257,7 +249,7 @@ export async function POST(request: NextRequest) {
       status: 'active',
     };
 
-    const { data: newAssignment, error: insertError } = await getSupabase()
+    const { data: newAssignment, error: insertError } = await getSupabaseAdmin()
       .from('onboarding_assignments')
       .insert(assignmentData)
       .select()
@@ -276,7 +268,7 @@ export async function POST(request: NextRequest) {
 
     // Initialize task_progress rows for all tasks in the template
     // Get all phases for this template
-    const { data: phases, error: phasesError } = await getSupabase()
+    const { data: phases, error: phasesError } = await getSupabaseAdmin()
       .from('onboarding_phases')
       .select('id')
       .eq('template_id', resolvedTemplateId);
@@ -287,7 +279,7 @@ export async function POST(request: NextRequest) {
       const phaseIds = phases.map(p => p.id);
 
       // Get all tasks for these phases
-      const { data: tasks, error: tasksError } = await getSupabase()
+      const { data: tasks, error: tasksError } = await getSupabaseAdmin()
         .from('onboarding_tasks')
         .select('id, applicable_types')
         .in('phase_id', phaseIds);
@@ -315,7 +307,7 @@ export async function POST(request: NextRequest) {
         }));
 
         if (progressRows.length > 0) {
-          const { error: progressError } = await getSupabase()
+          const { error: progressError } = await getSupabaseAdmin()
             .from('onboarding_task_progress')
             .insert(progressRows);
 
@@ -329,7 +321,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Log the event
-    await getSupabase()
+    await getSupabaseAdmin()
       .from('onboarding_event_log')
       .insert({
         assignment_id: newAssignment.id,
@@ -378,7 +370,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Verify admin/superadmin role
-    const { data: currentUser } = await getSupabase()
+    const { data: currentUser } = await getSupabaseAdmin()
       .from('lab_users')
       .select('role')
       .eq('email', session.user.email)
@@ -397,7 +389,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Get assignment details for logging
-    const { data: assignment } = await getSupabase()
+    const { data: assignment } = await getSupabaseAdmin()
       .from('onboarding_assignments')
       .select('instructor_email, status')
       .eq('id', assignmentId)
@@ -408,19 +400,19 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Delete task progress records first (foreign key constraint)
-    await getSupabase()
+    await getSupabaseAdmin()
       .from('onboarding_task_progress')
       .delete()
       .eq('assignment_id', assignmentId);
 
     // Delete event log entries
-    await getSupabase()
+    await getSupabaseAdmin()
       .from('onboarding_event_log')
       .delete()
       .eq('assignment_id', assignmentId);
 
     // Delete the assignment
-    const { error: deleteError } = await getSupabase()
+    const { error: deleteError } = await getSupabaseAdmin()
       .from('onboarding_assignments')
       .delete()
       .eq('id', assignmentId);

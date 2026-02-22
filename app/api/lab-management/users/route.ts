@@ -1,18 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
-
-// Create Supabase client lazily to avoid build-time errors
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-}
+import { getSupabaseAdmin } from '@/lib/supabase';
 
 // Helper to check if requester is admin
 async function isRequesterAdmin(email: string): Promise<boolean> {
-  const supabase = getSupabase();
+  const supabase = getSupabaseAdmin();
   const { data } = await supabase
     .from('lab_users')
     .select('role')
@@ -27,7 +20,7 @@ export async function GET(request: NextRequest) {
   const activeOnly = searchParams.get('activeOnly') !== 'false';
 
   try {
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
     let query = supabase
       .from('lab_users')
       .select('*')
@@ -54,7 +47,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
 
     const body = await request.json();
     const { email, name } = body;
@@ -97,7 +90,7 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
 
     const session = await getServerSession();
     if (!session?.user?.email) {

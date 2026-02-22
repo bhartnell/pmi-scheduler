@@ -1,16 +1,9 @@
 // FERPA Compliance Audit Logging
 // Tracks access to protected educational records
 
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseAdmin } from './supabase';
 
 // Create Supabase client lazily to avoid build-time errors
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-}
-
 // ============================================
 // Types
 // ============================================
@@ -67,7 +60,7 @@ export interface AuditLogEntry {
  */
 export async function logAuditEvent(entry: AuditLogEntry): Promise<void> {
   try {
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
     await supabase.from('audit_log').insert({
       user_id: entry.user?.id || null,
       user_email: entry.user?.email || null,
@@ -309,7 +302,7 @@ export interface AuditLogFilters {
  * Retrieve audit logs with filters (for superadmin audit log viewer)
  */
 export async function getAuditLogs(filters: AuditLogFilters = {}) {
-  const supabase = getSupabase();
+  const supabase = getSupabaseAdmin();
   let query = supabase
     .from('audit_log')
     .select('*', { count: 'exact' })

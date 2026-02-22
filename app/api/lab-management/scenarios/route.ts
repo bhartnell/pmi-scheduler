@@ -1,16 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
+import { getSupabaseAdmin } from '@/lib/supabase';
 
 // Use service role key for server-side operations to bypass RLS
-// Create Supabase client lazily to avoid build-time errors
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-}
-
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const category = searchParams.get('category');
@@ -20,7 +13,7 @@ export async function GET(request: NextRequest) {
   const activeOnly = searchParams.get('activeOnly') !== 'false';
 
   try {
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
     let query = supabase
       .from('scenarios')
       .select('*')
@@ -59,7 +52,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
 
     // Check authentication
     const session = await getServerSession();

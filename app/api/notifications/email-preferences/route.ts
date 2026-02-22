@@ -1,13 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
-
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-}
+import { getSupabaseAdmin } from '@/lib/supabase';
 
 // Default email preferences — enabled out of the box, users opt-out via settings
 const DEFAULT_EMAIL_PREFS = {
@@ -32,7 +26,7 @@ export async function GET() {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
 
     // Get preferences by user_email (the unique key in user_preferences table)
     const { data: prefs, error } = await supabase
@@ -71,7 +65,7 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const { enabled, mode, digest_time, categories } = body;
 
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
 
     // Build the new preferences object
     const newPrefs = {

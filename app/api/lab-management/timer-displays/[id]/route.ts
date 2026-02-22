@@ -1,15 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { getSupabaseAdmin } from '@/lib/supabase';
 import { getServerSession } from 'next-auth';
-
-// Create Supabase client lazily to avoid build-time errors
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-}
-
 // PATCH - Update token (activate/deactivate)
 export async function PATCH(
   request: NextRequest,
@@ -33,7 +24,7 @@ export async function PATCH(
       updates.room_name = body.room_name.trim();
     }
 
-    const { data, error } = await getSupabase()
+    const { data, error } = await getSupabaseAdmin()
       .from('timer_display_tokens')
       .update(updates)
       .eq('id', id)
@@ -62,7 +53,7 @@ export async function DELETE(
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { error } = await getSupabase()
+    const { error } = await getSupabaseAdmin()
       .from('timer_display_tokens')
       .delete()
       .eq('id', id);

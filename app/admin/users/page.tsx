@@ -32,6 +32,7 @@ const TABS = [
   { value: 'all', label: 'All Users' },
   { value: 'pending', label: 'Pending' },
   { value: 'instructor', label: 'Instructors' },
+  { value: 'volunteer_instructor', label: 'Volunteers' },
   { value: 'lead_instructor', label: 'Lead Instructors' },
   { value: 'admin', label: 'Admins' },
   { value: 'guest', label: 'Guests' }
@@ -241,7 +242,7 @@ export default function UserManagementPage() {
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
           <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Role Hierarchy</h3>
           <div className="flex flex-wrap gap-3">
-            {(['superadmin', 'admin', 'lead_instructor', 'instructor', 'guest', 'pending'] as Role[]).map(role => (
+            {(['superadmin', 'admin', 'lead_instructor', 'instructor', 'volunteer_instructor', 'student', 'guest', 'pending'] as Role[]).map(role => (
               <div key={role} className="flex items-center gap-2">
                 <span className={`px-2 py-1 rounded text-xs font-medium ${getRoleBadgeClasses(role)}`}>
                   {getRoleLabel(role)}

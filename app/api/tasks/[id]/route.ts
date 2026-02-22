@@ -2,17 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
 import { notifyTaskCompleted } from '@/lib/notifications';
-
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-}
+import { getSupabaseAdmin } from '@/lib/supabase';
 
 // Helper to get current user
 async function getCurrentUser(email: string) {
-  const supabase = getSupabase();
+  const supabase = getSupabaseAdmin();
   const { data } = await supabase
     .from('lab_users')
     .select('id, name, email, role')
@@ -24,7 +18,7 @@ async function getCurrentUser(email: string) {
 // Check if task_assignees table exists and is queryable
 async function checkTaskAssigneesTable(): Promise<boolean> {
   try {
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
     const { error } = await supabase
       .from('task_assignees')
       .select('id')
@@ -62,7 +56,7 @@ function getTaskSelectQuery(includeAssignees: boolean): string {
 // Fetch a task with fallback if task_assignees join fails
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function fetchTaskById(id: string, hasAssigneesTable: boolean): Promise<{ task: any; error: any }> {
-  const supabase = getSupabase();
+  const supabase = getSupabaseAdmin();
 
   const { data: task, error } = await supabase
     .from('instructor_tasks')
@@ -119,7 +113,7 @@ export async function GET(
       return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
     }
 
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
     const hasAssigneesTable = await checkTaskAssigneesTable();
 
     const { task, error: taskError } = await fetchTaskById(id, hasAssigneesTable);
@@ -189,7 +183,7 @@ export async function PATCH(
       return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
     }
 
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
     const hasAssigneesTable = await checkTaskAssigneesTable();
 
     // Get existing task
@@ -372,7 +366,7 @@ export async function DELETE(
       return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
     }
 
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
 
     // Get task to check ownership
     const { data: task, error: fetchError } = await supabase

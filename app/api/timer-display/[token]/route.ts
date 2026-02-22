@@ -1,14 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getSupabaseAdmin } from '@/lib/supabase';
 
 // Create Supabase client lazily to avoid build-time errors
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-}
-
 // GET - Get timer status for a display token (polled by kiosk)
 // NO AUTH REQUIRED - This is a public endpoint for kiosk displays
 // Simplified: Shows global active timer (same as GlobalTimerBanner)
@@ -17,7 +11,7 @@ export async function GET(
   { params }: { params: Promise<{ token: string }> }
 ) {
   try {
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
     const { token } = await params;
 
     // 1. Validate the display token is active

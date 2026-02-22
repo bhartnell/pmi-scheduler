@@ -1,13 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { createClient } from '@supabase/supabase-js';
-
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-}
+import { getSupabaseAdmin } from '@/lib/supabase';
 
 // Default notification category preferences by role
 const ROLE_DEFAULTS: Record<string, Record<string, boolean>> = {
@@ -70,7 +64,7 @@ export async function GET() {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
 
     // Get user role for defaults
     const { data: user } = await supabase
@@ -127,7 +121,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
 
     // Get current notification settings
     const { data: currentPrefs } = await supabase
@@ -211,7 +205,7 @@ export async function DELETE() {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    const supabase = getSupabase();
+    const supabase = getSupabaseAdmin();
 
     // Get current notification settings
     const { data: currentPrefs } = await supabase
