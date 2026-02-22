@@ -4,7 +4,6 @@ import { authOptions } from '@/lib/auth';
 import { createClient } from '@supabase/supabase-js';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
-// Create Supabase client lazily to avoid build-time errors
 // GET - List all timer display tokens (admin only)
 export async function GET() {
   try {

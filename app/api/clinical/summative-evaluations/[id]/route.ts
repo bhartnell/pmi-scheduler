@@ -3,7 +3,6 @@ import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
-// Create Supabase client lazily to avoid build-time errors
 // GET - Get single evaluation with all scores (v2)
 export async function GET(
   request: NextRequest,

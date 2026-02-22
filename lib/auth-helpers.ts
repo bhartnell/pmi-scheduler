@@ -1,6 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Create Supabase client lazily to avoid build-time errors
+/**
+ * Get a new Supabase client for auth operations.
+ * @returns Supabase client with public anon key
+ */
 function getSupabase() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

@@ -4,7 +4,6 @@ import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
 import crypto from 'crypto';
 
-// Create Supabase client lazily to avoid build-time errors
 // Generate a secure random token
 function generateToken(): string {
   return crypto.randomBytes(32).toString('hex');

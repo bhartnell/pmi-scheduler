@@ -3,7 +3,6 @@
 
 import { getSupabaseAdmin } from './supabase';
 
-// Create Supabase client lazily to avoid build-time errors
 // ============================================
 // Types
 // ============================================

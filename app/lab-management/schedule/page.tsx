@@ -102,6 +102,16 @@ function SchedulePageContent() {
     }
   }, [noteModalDate]);
 
+  // ESC key to close note modal
+  useEffect(() => {
+    if (!noteModalDate) return;
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setNoteModalDate(null);
+    };
+    document.addEventListener('keydown', handleEsc);
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, [noteModalDate]);
+
   const fetchCohorts = async () => {
     try {
       const res = await fetch('/api/lab-management/cohorts');

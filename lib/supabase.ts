@@ -3,7 +3,11 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 // Lazy-initialized singleton for client-side use
 let _supabaseClient: SupabaseClient | null = null;
 
-// Get or create the Supabase client (client-side anon key)
+/**
+ * Get or create the Supabase client for client-side use (anon key).
+ * Uses singleton pattern to reuse the same client instance.
+ * @returns Supabase client with public anon key
+ */
 export function getSupabase(): SupabaseClient {
   if (!_supabaseClient) {
     _supabaseClient = createClient(
@@ -14,8 +18,11 @@ export function getSupabase(): SupabaseClient {
   return _supabaseClient;
 }
 
-// Server-side client with service role key (for API routes)
-// Creates a new client each call since service role should not be cached
+/**
+ * Get a new Supabase client with service role key (for API routes).
+ * Creates a fresh client on each call for security - service role keys should not be cached.
+ * @returns Supabase client with admin privileges
+ */
 export function getSupabaseAdmin(): SupabaseClient {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
-// Create Supabase client lazily to avoid build-time errors
 // GET - Get timer status for a display token (polled by kiosk)
 // NO AUTH REQUIRED - This is a public endpoint for kiosk displays
 // Simplified: Shows global active timer (same as GlobalTimerBanner)

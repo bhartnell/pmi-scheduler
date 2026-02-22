@@ -4,7 +4,6 @@ import { getServerSession } from 'next-auth';
 import { canAccessData } from '@/lib/permissions';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
-// Create Supabase client lazily to avoid build-time errors
 export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseAdmin();

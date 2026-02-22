@@ -3,7 +3,6 @@ import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
-// Create Supabase client lazily to avoid build-time errors
 // Wide-table columns for compliance docs (matches DB schema)
 const DOC_COLUMNS = [
   { key: 'mmr_complete', label: 'mmr' },

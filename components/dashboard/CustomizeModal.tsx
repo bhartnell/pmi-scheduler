@@ -34,6 +34,16 @@ export default function CustomizeModal({
     }
   }, [isOpen, initialWidgets, initialQuickLinks]);
 
+  // ESC key to close modal
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleEsc);
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const allWidgetIds = Object.keys(WIDGET_DEFINITIONS);

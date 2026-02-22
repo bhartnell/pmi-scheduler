@@ -3,7 +3,6 @@ import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
-// Create Supabase client lazily to avoid build-time errors
 // Valid file types for skill documents
 const VALID_TYPES = [
   'application/pdf',

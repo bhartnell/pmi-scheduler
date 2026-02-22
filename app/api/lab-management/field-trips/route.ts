@@ -3,7 +3,6 @@ import { getServerSession } from 'next-auth';
 import { createClient } from '@supabase/supabase-js';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
-// Create Supabase client lazily to avoid build-time errors
 // GET - List field trips for a cohort
 export async function GET(request: NextRequest) {
   try {

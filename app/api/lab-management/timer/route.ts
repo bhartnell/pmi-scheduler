@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
-// Create Supabase client lazily to avoid build-time errors
 // GET - Get timer state for a lab day
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;

@@ -90,6 +90,7 @@ function TasksPageContent() {
   const [creating, setCreating] = useState(false);
   const [isMultiAssign, setIsMultiAssign] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -109,6 +110,26 @@ function TasksPageContent() {
       fetchTasks();
     }
   }, [currentUser, activeTab, statusFilter, priorityFilter, sortBy, sortOrder]);
+
+  // ESC key to close new task modal
+  useEffect(() => {
+    if (!showNewTaskModal) return;
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowNewTaskModal(false);
+        setIsMultiAssign(false);
+      }
+    };
+    document.addEventListener('keydown', handleEsc);
+    return () => document.removeEventListener('keydown', handleEsc);
+  }, [showNewTaskModal]);
+
+  // Auto-dismiss error after 5 seconds
+  useEffect(() => {
+    if (!error) return;
+    const timer = setTimeout(() => setError(null), 5000);
+    return () => clearTimeout(timer);
+  }, [error]);
 
   const fetchCurrentUser = async () => {
     try {
@@ -200,11 +221,11 @@ function TasksPageContent() {
         setIsMultiAssign(false);
         fetchTasks();
       } else {
-        alert(data.error || 'Failed to create task');
+        setError(data.error || 'Failed to create task');
       }
     } catch (error) {
       console.error('Error creating task:', error);
-      alert('Failed to create task');
+      setError('Failed to create task. Please try again.');
     }
     setCreating(false);
   };
@@ -332,6 +353,19 @@ function TasksPageContent() {
 
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-4 py-6">
+        {/* Error Banner */}
+        {error && (
+          <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center justify-between">
+            <div className="flex items-center gap-2 text-red-700 dark:text-red-400">
+              <AlertCircle className="w-4 h-4" />
+              <span className="text-sm">{error}</span>
+            </div>
+            <button onClick={() => setError(null)} className="text-red-500 hover:text-red-700">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
         {/* Tabs */}
         <div className="flex gap-2 mb-6">
           <button

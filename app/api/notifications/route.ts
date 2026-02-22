@@ -3,7 +3,6 @@ import { getServerSession } from 'next-auth';
 import { createClient } from '@supabase/supabase-js';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
-// Create Supabase client lazily to avoid build-time errors
 // Default category preferences by role (same as preferences API)
 const ROLE_DEFAULTS: Record<string, Record<string, boolean>> = {
   superadmin: { tasks: true, labs: true, scheduling: true, feedback: true, clinical: true, system: true },
