@@ -12,10 +12,12 @@ export async function GET(request: NextRequest) {
     const supabase = getSupabaseAdmin();
     const includeDocuments = searchParams.get('includeDocuments') === 'true';
 
+    const baseColumns = 'id, name, category, description, certification_levels, required_count, display_order, is_active';
+
     const buildQuery = (withDocuments: boolean, docSelect?: string) => {
-      let selectStr = '*';
+      let selectStr = baseColumns;
       if (withDocuments && docSelect) {
-        selectStr = `*, documents:skill_documents(${docSelect})`;
+        selectStr = `${baseColumns}, documents:skill_documents(${docSelect})`;
       }
 
       let q = supabase
@@ -63,7 +65,9 @@ export async function GET(request: NextRequest) {
 
     if (error) throw error;
 
-    return NextResponse.json({ success: true, skills: data });
+    const response = NextResponse.json({ success: true, skills: data });
+    response.headers.set('Cache-Control', 'private, max-age=14400, stale-while-revalidate=1800');
+    return response;
   } catch (error) {
     console.error('Error fetching skills:', error);
     return NextResponse.json({ success: false, error: 'Failed to fetch skills' }, { status: 500 });

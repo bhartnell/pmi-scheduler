@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
     // Build query
     let query = supabase
       .from('audit_log')
-      .select('*', { count: 'exact' })
+      .select('id, user_email, action, resource_type, resource_id, description, ip_address, created_at', { count: 'exact' })
       .order('created_at', { ascending: false });
 
     if (userEmail) {
@@ -61,6 +61,11 @@ export async function GET(request: NextRequest) {
 
     if (startDate) {
       query = query.gte('created_at', startDate);
+    } else {
+      // Default to last 30 days if no start date specified
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      query = query.gte('created_at', thirtyDaysAgo.toISOString());
     }
 
     if (endDate) {

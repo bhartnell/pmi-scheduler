@@ -22,7 +22,9 @@ export async function GET(request: NextRequest) {
 
     if (error) throw error;
 
-    return NextResponse.json({ success: true, instructors: data });
+    const response = NextResponse.json({ success: true, instructors: data });
+    response.headers.set('Cache-Control', 'private, max-age=3600, stale-while-revalidate=600');
+    return response;
   } catch (error) {
     console.error('Error fetching instructors:', error);
     return NextResponse.json({ success: false, error: 'Failed to fetch instructors' }, { status: 500 });

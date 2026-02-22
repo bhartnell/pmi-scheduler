@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
     // Fetch all internships
     const { data: internships, error: internshipsError } = await supabase
       .from('student_internships')
-      .select('*');
+      .select('id, student_id, status, current_phase, cleared_for_nremt, internship_start_date, placement_date, orientation_date, phase_1_eval_scheduled, phase_1_eval_completed, phase_2_eval_scheduled, phase_2_eval_completed, closeout_meeting_date, closeout_completed');
 
     if (internshipsError) {
       console.error('Error fetching internships:', internshipsError);
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
     // Fetch EMT tracking
     const { data: emtTracking, error: emtError } = await supabase
       .from('emt_student_tracking')
-      .select('*');
+      .select('student_id, mce_complete, vax_complete, ride_along_complete, vitals_complete');
 
     if (emtError) {
       console.error('Error fetching EMT tracking:', emtError);
@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
     // Fetch AEMT tracking
     const { data: aemtTracking, error: aemtError } = await supabase
       .from('aemt_student_tracking')
-      .select('*');
+      .select('student_id, mce_complete, vax_complete, ride_along_complete, clinical_1_complete, clinical_2_complete, clinical_3_complete, vitals_complete');
 
     if (aemtError) {
       console.error('Error fetching AEMT tracking:', aemtError);

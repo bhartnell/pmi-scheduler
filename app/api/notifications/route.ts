@@ -24,7 +24,8 @@ export async function GET(request: NextRequest) {
 
     const searchParams = request.nextUrl.searchParams;
     const unreadOnly = searchParams.get('unread') === 'true';
-    const limit = parseInt(searchParams.get('limit') || '20');
+    const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 100);
+    const offset = parseInt(searchParams.get('offset') || '0');
     const categoryFilter = searchParams.get('category'); // Optional category filter
     const applyPrefs = searchParams.get('applyPrefs') !== 'false'; // Default true
 
@@ -57,10 +58,10 @@ export async function GET(request: NextRequest) {
     // Build query
     let query = supabase
       .from('user_notifications')
-      .select('*')
+      .select('id, type, title, message, link_url, is_read, created_at, reference_type, reference_id, category', { count: 'exact' })
       .eq('user_email', session.user.email)
       .order('created_at', { ascending: false })
-      .limit(limit);
+      .range(offset, offset + limit - 1);
 
     if (unreadOnly) {
       query = query.eq('is_read', false);
@@ -74,7 +75,7 @@ export async function GET(request: NextRequest) {
       query = query.in('category', enabledCategories);
     }
 
-    const { data: notifications, error } = await query;
+    const { data: notifications, error, count: totalCount } = await query;
 
     if (error) throw error;
 
@@ -96,6 +97,7 @@ export async function GET(request: NextRequest) {
       notifications: notifications || [],
       unreadCount: unreadCount || 0,
       enabledCategories: applyPrefs ? enabledCategories : undefined,
+      pagination: { limit, offset, total: totalCount || 0 },
     });
   } catch (error: any) {
     console.error('Error fetching notifications:', error);

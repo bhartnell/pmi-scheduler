@@ -21,7 +21,9 @@ export async function GET(request: NextRequest) {
 
     if (error) throw error;
 
-    return NextResponse.json({ success: true, customSkills: data });
+    const response = NextResponse.json({ success: true, customSkills: data });
+    response.headers.set('Cache-Control', 'private, max-age=14400, stale-while-revalidate=1800');
+    return response;
   } catch (error) {
     console.error('Error fetching custom skills:', error);
     return NextResponse.json({ success: false, error: 'Failed to fetch custom skills' }, { status: 500 });

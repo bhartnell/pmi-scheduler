@@ -14,6 +14,8 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const cohortId = searchParams.get('cohortId');
+    const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
+    const offset = parseInt(searchParams.get('offset') || '0');
 
     if (!cohortId) {
       return NextResponse.json({ success: false, error: 'Cohort ID required' }, { status: 400 });
@@ -28,18 +30,22 @@ export async function GET(request: NextRequest) {
     const studentIds = students?.map(s => s.id) || [];
 
     if (studentIds.length === 0) {
-      return NextResponse.json({ success: true, hours: [] });
+      return NextResponse.json({ success: true, hours: [], pagination: { limit, offset, total: 0 } });
     }
 
     // Get clinical hours for these students
-    const { data: hours, error } = await supabase
+    const { data: hours, error, count } = await supabase
       .from('student_clinical_hours')
-      .select('*')
-      .in('student_id', studentIds);
+      .select(
+        'id, student_id, cohort_id, psych_hours, psych_shifts, ed_hours, ed_shifts, icu_hours, icu_shifts, ob_hours, ob_shifts, or_hours, or_shifts, peds_ed_hours, peds_ed_shifts, peds_icu_hours, peds_icu_shifts, ems_field_hours, ems_field_shifts, cardiology_hours, cardiology_shifts, ems_ridealong_hours, ems_ridealong_shifts, total_hours, total_shifts, updated_at',
+        { count: 'exact' }
+      )
+      .in('student_id', studentIds)
+      .range(offset, offset + limit - 1);
 
     if (error) throw error;
 
-    return NextResponse.json({ success: true, hours: hours || [] });
+    return NextResponse.json({ success: true, hours: hours || [], pagination: { limit, offset, total: count || 0 } });
   } catch (error) {
     console.error('Error fetching clinical hours:', error);
     return NextResponse.json({ success: false, error: 'Failed to fetch clinical hours' }, { status: 500 });

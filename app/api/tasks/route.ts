@@ -31,7 +31,7 @@ async function checkTaskAssigneesTable(): Promise<boolean> {
 
 // Select strings for queries
 const SELECT_WITH_ASSIGNEES = `
-  *,
+  id, title, description, status, priority, due_date, created_at, updated_at, created_by, assigned_to, assigned_by, related_link, completion_mode,
   assigner:assigned_by(id, name, email),
   assignee:assigned_to(id, name, email),
   assignees:task_assignees(
@@ -44,7 +44,7 @@ const SELECT_WITH_ASSIGNEES = `
 ` as const;
 
 const SELECT_WITHOUT_ASSIGNEES = `
-  *,
+  id, title, description, status, priority, due_date, created_at, updated_at, created_by, assigned_to, assigned_by, related_link,
   assigner:assigned_by(id, name, email),
   assignee:assigned_to(id, name, email)
 ` as const;
@@ -71,6 +71,8 @@ export async function GET(request: NextRequest) {
     const priority = searchParams.get('priority');
     const sortBy = searchParams.get('sortBy') || 'due_date';
     const sortOrder = searchParams.get('sortOrder') || 'asc';
+    const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
+    const offset = parseInt(searchParams.get('offset') || '0');
 
     const supabase = getSupabaseAdmin();
 
@@ -111,6 +113,8 @@ export async function GET(request: NextRequest) {
         q = q.order(sortBy, { ascending: sortOrder === 'asc' });
       }
 
+      q = q.range(offset, offset + limit - 1);
+
       return q;
     };
 
@@ -127,38 +131,42 @@ export async function GET(request: NextRequest) {
     // Build and execute query
     let tasks: TaskRecord[] | null = null;
 
+    let totalCount = 0;
     if (hasAssigneesTable) {
       const query = applyFiltersAndSort(
-        supabase.from('instructor_tasks').select(SELECT_WITH_ASSIGNEES),
+        supabase.from('instructor_tasks').select(SELECT_WITH_ASSIGNEES, { count: 'exact' }),
         assigneeTaskIds
       );
-      const { data, error } = await query;
+      const { data, error, count } = await query;
 
       if (error) {
         // If join fails, fall back to without assignees
         if (error.message?.includes('task_assignees') || error.message?.includes('relationship') || error.code === 'PGRST200') {
           console.warn('Tasks: task_assignees join failed, retrying without:', error.message);
           const fallbackQuery = applyFiltersAndSort(
-            supabase.from('instructor_tasks').select(SELECT_WITHOUT_ASSIGNEES),
+            supabase.from('instructor_tasks').select(SELECT_WITHOUT_ASSIGNEES, { count: 'exact' }),
             []
           );
-          const { data: fallbackData, error: fallbackError } = await fallbackQuery;
+          const { data: fallbackData, error: fallbackError, count: fallbackCount } = await fallbackQuery;
           if (fallbackError) throw fallbackError;
           tasks = (fallbackData || []).map((t: TaskRecord) => ({ ...t, assignees: [] }));
+          totalCount = fallbackCount || 0;
         } else {
           throw error;
         }
       } else {
         tasks = data;
+        totalCount = count || 0;
       }
     } else {
       const query = applyFiltersAndSort(
-        supabase.from('instructor_tasks').select(SELECT_WITHOUT_ASSIGNEES),
+        supabase.from('instructor_tasks').select(SELECT_WITHOUT_ASSIGNEES, { count: 'exact' }),
         []
       );
-      const { data, error } = await query;
+      const { data, error, count } = await query;
       if (error) throw error;
       tasks = (data || []).map((t: TaskRecord) => ({ ...t, assignees: [] }));
+      totalCount = count || 0;
     }
 
     if (!tasks) tasks = [];
@@ -195,7 +203,7 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    return NextResponse.json({ success: true, tasks: tasksWithCounts });
+    return NextResponse.json({ success: true, tasks: tasksWithCounts, pagination: { limit, offset, total: totalCount } });
   } catch (error) {
     console.error('Error fetching tasks:', error);
     return NextResponse.json({ success: false, error: 'Failed to fetch tasks' }, { status: 500 });

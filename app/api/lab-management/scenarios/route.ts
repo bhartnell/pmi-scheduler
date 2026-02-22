@@ -11,13 +11,16 @@ export async function GET(request: NextRequest) {
   const program = searchParams.get('program');
   const search = searchParams.get('search');
   const activeOnly = searchParams.get('activeOnly') !== 'false';
+  const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
+  const offset = parseInt(searchParams.get('offset') || '0');
 
   try {
     const supabase = getSupabaseAdmin();
     let query = supabase
       .from('scenarios')
-      .select('*')
-      .order('title');
+      .select('id, title, chief_complaint, difficulty, category, subcategory, applicable_programs, estimated_duration, is_active, created_at, updated_at', { count: 'exact' })
+      .order('title')
+      .range(offset, offset + limit - 1);
 
     if (activeOnly) {
       query = query.eq('is_active', true);
@@ -39,11 +42,11 @@ export async function GET(request: NextRequest) {
       query = query.or(`title.ilike.%${search}%,category.ilike.%${search}%,chief_complaint.ilike.%${search}%`);
     }
 
-    const { data, error } = await query;
+    const { data, error, count } = await query;
 
     if (error) throw error;
 
-    return NextResponse.json({ success: true, scenarios: data });
+    return NextResponse.json({ success: true, scenarios: data, pagination: { limit, offset, total: count || 0 } });
   } catch (error) {
     console.error('Error fetching scenarios:', error);
     return NextResponse.json({ success: false, error: 'Failed to fetch scenarios' }, { status: 500 });
