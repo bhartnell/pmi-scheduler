@@ -105,28 +105,34 @@ export default function FeedbackButton() {
       <button
         onClick={() => setIsOpen(true)}
         className="fixed bottom-4 right-4 z-40 flex items-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg transition-all hover:shadow-xl print:hidden"
-        title="Submit Feedback"
+        aria-label="Submit Feedback"
       >
-        <MessageSquare className="w-5 h-5" />
+        <MessageSquare className="w-5 h-5" aria-hidden="true" />
         <span className="font-medium">Feedback</span>
       </button>
 
       {/* Modal Backdrop */}
       {isOpen && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 print:hidden">
+        <div
+          className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 print:hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="feedback-modal-title"
+        >
           {/* Modal */}
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-hidden">
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                <MessageSquare className="w-5 h-5 text-blue-600" />
+              <h2 id="feedback-modal-title" className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <MessageSquare className="w-5 h-5 text-blue-600" aria-hidden="true" />
                 Submit Feedback
               </h2>
               <button
                 onClick={() => setIsOpen(false)}
+                aria-label="Close feedback form"
                 className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               >
-                <X className="w-5 h-5 text-gray-500" />
+                <X className="w-5 h-5 text-gray-500" aria-hidden="true" />
               </button>
             </div>
 
@@ -193,11 +199,17 @@ export default function FeedbackButton() {
                   {/* Description */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      {reportType === 'bug' ? 'What happened?' : reportType === 'feature' ? 'What would you like?' : 'Your feedback'}
+                      {reportType === 'bug' ? 'What happened?' : reportType === 'feature' ? 'What would you like?' : 'Your feedback'}{' '}
+                      <span className="text-red-500">*</span>
                     </label>
                     <textarea
                       value={description}
-                      onChange={(e) => setDescription(e.target.value)}
+                      onChange={(e) => {
+                        if (e.target.value.length <= 1000) {
+                          setDescription(e.target.value);
+                          if (error) setError(null);
+                        }
+                      }}
                       placeholder={
                         reportType === 'bug'
                           ? 'Describe the issue you encountered...'
@@ -206,9 +218,19 @@ export default function FeedbackButton() {
                           : 'Share your thoughts...'
                       }
                       rows={4}
-                      className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      maxLength={1000}
+                      className={`w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                        error && !description.trim()
+                          ? 'border-red-500 dark:border-red-500'
+                          : 'border-gray-300 dark:border-gray-600'
+                      }`}
                       autoFocus
                     />
+                    <div className="flex justify-end text-xs text-gray-400 mt-1">
+                      <span className={description.length >= 900 ? 'text-amber-500' : ''}>
+                        {description.length}/1000
+                      </span>
+                    </div>
                   </div>
 
                   {/* Error Message */}

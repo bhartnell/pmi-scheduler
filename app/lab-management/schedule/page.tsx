@@ -16,8 +16,11 @@ import {
   X,
   Save,
   Trash2,
-  Lock
+  Lock,
+  Printer
 } from 'lucide-react';
+import { useToast } from '@/components/Toast';
+import { PageErrorBoundary } from '@/components/PageErrorBoundary';
 
 interface Cohort {
   id: string;
@@ -59,6 +62,7 @@ function SchedulePageContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const toast = useToast();
 
   const [cohorts, setCohorts] = useState<Cohort[]>([]);
   const [labDays, setLabDays] = useState<LabDay[]>([]);
@@ -216,17 +220,22 @@ function SchedulePageContent() {
             delete updated[dateStr];
             return updated;
           });
+          toast.success('Note deleted');
         } else {
           // Update local state
           setDailyNotes(prev => ({
             ...prev,
             [dateStr]: data.note,
           }));
+          toast.success('Note saved');
         }
         setNoteModalDate(null);
+      } else {
+        toast.error('Failed to save note');
       }
     } catch (error) {
       console.error('Error saving note:', error);
+      toast.error('Failed to save note');
     }
     setSavingNote(false);
   };
@@ -256,9 +265,13 @@ function SchedulePageContent() {
           return updated;
         });
         setNoteModalDate(null);
+        toast.success('Note deleted');
+      } else {
+        toast.error('Failed to delete note');
       }
     } catch (error) {
       console.error('Error deleting note:', error);
+      toast.error('Failed to delete note');
     }
     setSavingNote(false);
   };
@@ -357,7 +370,7 @@ function SchedulePageContent() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
-      <div className="bg-white shadow-sm dark:bg-gray-800">
+      <div className="bg-white shadow-sm dark:bg-gray-800 print:hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
@@ -368,37 +381,50 @@ function SchedulePageContent() {
               </div>
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Lab Schedule</h1>
             </div>
-            <Link
-              href="/lab-management/schedule/new"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
-            >
-              <Plus className="w-5 h-5" />
-              New Lab Day
-            </Link>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => window.print()}
+                className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+                aria-label="Print this page"
+              >
+                <Printer className="w-4 h-4" />
+                Print
+              </button>
+              <Link
+                href="/lab-management/schedule/new"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+              >
+                <Plus className="w-5 h-5" />
+                New Lab Day
+              </Link>
+            </div>
           </div>
         </div>
       </div>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <PageErrorBoundary>
         {/* Calendar Controls */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6 print:hidden">
           <div className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
             {/* Month Navigation */}
             <div className="flex items-center gap-4">
               <button
                 onClick={goToPreviousMonth}
+                aria-label="Go to previous month"
                 className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
               >
-                <ChevronLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                <ChevronLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" aria-hidden="true" />
               </button>
               <h2 className="text-xl font-semibold text-gray-900 dark:text-white min-w-[200px] text-center">
                 {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
               </h2>
               <button
                 onClick={goToNextMonth}
+                aria-label="Go to next month"
                 className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
               >
-                <ChevronRight className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                <ChevronRight className="w-5 h-5 text-gray-600 dark:text-gray-400" aria-hidden="true" />
               </button>
               <button
                 onClick={goToToday}
@@ -425,8 +451,9 @@ function SchedulePageContent() {
 
               {/* Cohort Filter */}
               <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                <Filter className="w-4 h-4 text-gray-500 dark:text-gray-400" aria-hidden="true" />
                 <select
+                  aria-label="Filter by cohort"
                   value={selectedCohort}
                   onChange={(e) => setSelectedCohort(e.target.value)}
                   className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
@@ -709,11 +736,18 @@ function SchedulePageContent() {
             )}
           </div>
         </div>
+        </PageErrorBoundary>
       </main>
 
       {/* Daily Note Modal */}
       {noteModalDate && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setNoteModalDate(null)}>
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setNoteModalDate(null)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="daily-note-modal-title"
+        >
           <div
             className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg"
             onClick={(e) => e.stopPropagation()}
@@ -722,8 +756,8 @@ function SchedulePageContent() {
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-700">
               <div>
                 <div className="flex items-center gap-2">
-                  <StickyNote className="w-5 h-5 text-yellow-500" />
-                  <h3 className="font-semibold text-gray-900 dark:text-white">
+                  <StickyNote className="w-5 h-5 text-yellow-500" aria-hidden="true" />
+                  <h3 id="daily-note-modal-title" className="font-semibold text-gray-900 dark:text-white">
                     Daily Note
                   </h3>
                 </div>
@@ -751,9 +785,10 @@ function SchedulePageContent() {
               </div>
               <button
                 onClick={() => setNoteModalDate(null)}
+                aria-label="Close daily note"
                 className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
               >
-                <X className="w-5 h-5" />
+                <X className="w-5 h-5" aria-hidden="true" />
               </button>
             </div>
 

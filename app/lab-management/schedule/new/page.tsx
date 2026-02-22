@@ -101,6 +101,7 @@ function NewLabDayPageContent() {
   const [users, setUsers] = useState<LabUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   // Lab Day Roles state
   const [labLeads, setLabLeads] = useState<string[]>([]);
@@ -329,14 +330,21 @@ function NewLabDayPageContent() {
   };
 
   const handleSave = async () => {
+    // Inline validation
+    const newErrors: Record<string, string> = {};
     if (!selectedCohort) {
-      alert('Please select a cohort');
-      return;
+      newErrors.cohort = 'Please select a cohort';
     }
     if (!labDate) {
-      alert('Please select a date');
+      newErrors.date = 'Please select a date';
+    }
+    if (Object.keys(newErrors).length > 0) {
+      setFormErrors(newErrors);
+      // Scroll to top to show errors
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
+    setFormErrors({});
 
     setSaving(true);
     try {
@@ -555,14 +563,22 @@ function NewLabDayPageContent() {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {saving ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                <>
+                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Saving...
+                </>
               ) : (
-                <Save className="w-5 h-5" />
+                <>
+                  <Save className="w-5 h-5" />
+                  Save Lab Day
+                </>
               )}
-              {saving ? 'Saving...' : 'Save Lab Day'}
             </button>
           </div>
         </div>
@@ -583,8 +599,13 @@ function NewLabDayPageContent() {
               </label>
               <select
                 value={selectedCohort}
-                onChange={(e) => setSelectedCohort(e.target.value)}
-                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                onChange={(e) => {
+                  setSelectedCohort(e.target.value);
+                  if (formErrors.cohort) setFormErrors(prev => ({ ...prev, cohort: '' }));
+                }}
+                className={`w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 ${
+                  formErrors.cohort ? 'border-red-500' : 'dark:border-gray-600'
+                }`}
               >
                 <option value="">Select cohort...</option>
                 {cohorts.map(cohort => (
@@ -593,6 +614,9 @@ function NewLabDayPageContent() {
                   </option>
                 ))}
               </select>
+              {formErrors.cohort && (
+                <p className="text-sm text-red-500 mt-1">{formErrors.cohort}</p>
+              )}
             </div>
 
             <div>
@@ -602,9 +626,17 @@ function NewLabDayPageContent() {
               <input
                 type="date"
                 value={labDate}
-                onChange={(e) => setLabDate(e.target.value)}
-                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                onChange={(e) => {
+                  setLabDate(e.target.value);
+                  if (formErrors.date) setFormErrors(prev => ({ ...prev, date: '' }));
+                }}
+                className={`w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 ${
+                  formErrors.date ? 'border-red-500' : 'dark:border-gray-600'
+                }`}
               />
+              {formErrors.date && (
+                <p className="text-sm text-red-500 mt-1">{formErrors.date}</p>
+              )}
             </div>
 
             <div>
@@ -824,11 +856,19 @@ function NewLabDayPageContent() {
                   </label>
                   <textarea
                     value={coverageNote}
-                    onChange={(e) => setCoverageNote(e.target.value)}
+                    onChange={(e) => {
+                      if (e.target.value.length <= 500) setCoverageNote(e.target.value);
+                    }}
                     rows={2}
                     placeholder="e.g., Need help with high-acuity scenarios..."
                     className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                    maxLength={500}
                   />
+                  <div className="flex justify-end text-xs text-gray-400 mt-1">
+                    <span className={coverageNote.length >= 450 ? 'text-amber-500' : ''}>
+                      {coverageNote.length}/500
+                    </span>
+                  </div>
                 </div>
               </div>
             )}
@@ -1431,15 +1471,23 @@ function NewLabDayPageContent() {
           </Link>
           <button
             onClick={handleSave}
-            disabled={saving || !selectedCohort || !labDate}
-            className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+            disabled={saving}
+            className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {saving ? (
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+              <>
+                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Saving...
+              </>
             ) : (
-              <Save className="w-5 h-5" />
+              <>
+                <Save className="w-5 h-5" />
+                Save Lab Day
+              </>
             )}
-            {saving ? 'Saving...' : 'Save Lab Day'}
           </button>
         </div>
       </main>

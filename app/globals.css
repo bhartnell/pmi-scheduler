@@ -1,5 +1,20 @@
 @import "tailwindcss";
 
+/* Toast animations */
+@keyframes slide-in-from-right {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.animate-in {
+  animation-duration: 300ms;
+  animation-fill-mode: both;
+}
+
+.slide-in-from-right {
+  animation-name: slide-in-from-right;
+}
+
 /* Enable class-based dark mode for next-themes (Tailwind v4) */
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -140,5 +155,86 @@ body {
   /* Ensure vitals grid prints nicely */
   .grid {
     display: grid !important;
+  }
+
+  /* === ENHANCED PRINT STYLES === */
+
+  /* === LAYOUT RESET === */
+  /* Hide all non-content elements */
+  header,
+  footer,
+  aside,
+  .sidebar,
+  [data-no-print],
+  .fixed,
+  .sticky:not(.print-include) {
+    display: none !important;
+  }
+
+  /* Full-width content */
+  main,
+  .main-content,
+  [role="main"] {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Remove decorative elements */
+  .shadow-sm, .shadow-md, .shadow-lg, .shadow-xl {
+    box-shadow: none !important;
+  }
+
+  .rounded-lg, .rounded-xl, .rounded-2xl {
+    border-radius: 0 !important;
+  }
+
+  /* === TYPOGRAPHY === */
+  body {
+    font-size: 12pt !important;
+    line-height: 1.4 !important;
+  }
+
+  h1 { font-size: 18pt !important; }
+  h2 { font-size: 15pt !important; }
+  h3 { font-size: 13pt !important; }
+
+  /* === COLORS === */
+  /* Force black text on white background for dark mode */
+  .dark body,
+  .dark main,
+  .dark .bg-gray-900,
+  .dark .bg-gray-800 {
+    background: white !important;
+    color: black !important;
+  }
+
+  .dark .text-white,
+  .dark .text-gray-100,
+  .dark .text-gray-200,
+  .dark .text-gray-300 {
+    color: black !important;
+  }
+
+  /* === LINKS === */
+  a[href]:after {
+    content: none !important;
+  }
+
+  /* === PAGE BREAKS === */
+  tr, .card, .list-item {
+    page-break-inside: avoid;
+  }
+
+  h1, h2, h3 {
+    page-break-after: avoid;
+  }
+
+  /* === TOAST/MODAL CLEANUP === */
+  [role="dialog"],
+  .z-50,
+  .z-\[100\] {
+    display: none !important;
   }
 }

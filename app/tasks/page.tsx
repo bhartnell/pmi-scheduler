@@ -9,12 +9,9 @@ import {
   CheckSquare,
   ClipboardList,
   Home,
-  Clock,
-  AlertCircle,
   MessageSquare,
   ExternalLink,
   Filter,
-  ChevronDown,
   X,
   Calendar,
   User,
@@ -22,11 +19,14 @@ import {
   Users,
   Check,
   LayoutList,
-  Kanban
+  Kanban,
+  Printer
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import NotificationBell from '@/components/NotificationBell';
 import TaskKanban from '@/components/TaskKanban';
+import { useToast } from '@/components/Toast';
+import { PageErrorBoundary } from '@/components/PageErrorBoundary';
 import {
   InstructorTask,
   TaskPriority,
@@ -62,6 +62,7 @@ function TasksPageContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const toast = useToast();
 
   const [tasks, setTasks] = useState<ExtendedTask[]>([]);
   const [loading, setLoading] = useState(true);
@@ -90,7 +91,7 @@ function TasksPageContent() {
   const [creating, setCreating] = useState(false);
   const [isMultiAssign, setIsMultiAssign] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
-  const [error, setError] = useState<string | null>(null);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -118,18 +119,12 @@ function TasksPageContent() {
       if (e.key === 'Escape') {
         setShowNewTaskModal(false);
         setIsMultiAssign(false);
+        setFormErrors({});
       }
     };
     document.addEventListener('keydown', handleEsc);
     return () => document.removeEventListener('keydown', handleEsc);
   }, [showNewTaskModal]);
-
-  // Auto-dismiss error after 5 seconds
-  useEffect(() => {
-    if (!error) return;
-    const timer = setTimeout(() => setError(null), 5000);
-    return () => clearTimeout(timer);
-  }, [error]);
 
   const fetchCurrentUser = async () => {
     try {
@@ -145,7 +140,6 @@ function TasksPageContent() {
 
   const fetchInstructors = async () => {
     try {
-      // Use /api/users/list which is accessible to all authenticated users
       const res = await fetch('/api/users/list?activeOnly=true');
       const data = await res.json();
       if (data.success) {
@@ -180,9 +174,23 @@ function TasksPageContent() {
 
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTask.title) return;
-    if (!isMultiAssign && !newTask.assigned_to) return;
-    if (isMultiAssign && newTask.assignee_ids.length === 0) return;
+
+    // Inline validation
+    const newErrors: Record<string, string> = {};
+    if (!newTask.title.trim()) {
+      newErrors.title = 'Title is required';
+    }
+    if (!isMultiAssign && !newTask.assigned_to) {
+      newErrors.assigned_to = 'Please select an assignee';
+    }
+    if (isMultiAssign && newTask.assignee_ids.length === 0) {
+      newErrors.assignee_ids = 'Please select at least one assignee';
+    }
+    if (Object.keys(newErrors).length > 0) {
+      setFormErrors(newErrors);
+      return;
+    }
+    setFormErrors({});
 
     setCreating(true);
     try {
@@ -219,13 +227,15 @@ function TasksPageContent() {
           related_link: ''
         });
         setIsMultiAssign(false);
+        setFormErrors({});
         fetchTasks();
+        toast.success('Task created');
       } else {
-        setError(data.error || 'Failed to create task');
+        toast.error(data.error || 'Failed to create task');
       }
     } catch (error) {
       console.error('Error creating task:', error);
-      setError('Failed to create task. Please try again.');
+      toast.error('Failed to create task. Please try again.');
     }
     setCreating(false);
   };
@@ -240,9 +250,13 @@ function TasksPageContent() {
       const data = await res.json();
       if (data.success) {
         fetchTasks();
+        toast.success('Task marked as completed');
+      } else {
+        toast.error(data.error || 'Failed to complete task');
       }
     } catch (error) {
       console.error('Error completing task:', error);
+      toast.error('Failed to complete task');
     }
   };
 
@@ -256,7 +270,9 @@ function TasksPageContent() {
       const data = await res.json();
       if (data.success) {
         fetchTasks();
+        toast.success('Task updated');
       } else {
+        toast.error(data.error || 'Failed to update status');
         throw new Error(data.error || 'Failed to update status');
       }
     } catch (error) {
@@ -287,8 +303,8 @@ function TasksPageContent() {
     return { text: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }), isOverdue: false };
   };
 
-  // Get pending task count for badge
-  const pendingCount = tasks.filter(t => t.status === 'pending' || t.status === 'in_progress').length;
+  // Suppress unused searchParams warning - used for potential future query params
+  void searchParams;
 
   if (status === 'loading' || !currentUser) {
     return (
@@ -301,7 +317,7 @@ function TasksPageContent() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
-      <header className="bg-white dark:bg-gray-800 shadow-sm">
+      <header className="bg-white dark:bg-gray-800 shadow-sm print:hidden">
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -340,34 +356,31 @@ function TasksPageContent() {
               <ClipboardList className="w-7 h-7 text-blue-600 dark:text-blue-400" />
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Tasks</h1>
             </div>
-            <button
-              onClick={() => setShowNewTaskModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-              New Task
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => window.print()}
+                className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+                aria-label="Print this page"
+              >
+                <Printer className="w-4 h-4" />
+                Print
+              </button>
+              <button
+                onClick={() => setShowNewTaskModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                New Task
+              </button>
+            </div>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-4 py-6">
-        {/* Error Banner */}
-        {error && (
-          <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex items-center justify-between">
-            <div className="flex items-center gap-2 text-red-700 dark:text-red-400">
-              <AlertCircle className="w-4 h-4" />
-              <span className="text-sm">{error}</span>
-            </div>
-            <button onClick={() => setError(null)} className="text-red-500 hover:text-red-700">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        )}
-
         {/* Tabs */}
-        <div className="flex gap-2 mb-6">
+        <div className="flex gap-2 mb-6 print:hidden">
           <button
             onClick={() => setActiveTab('assigned_to_me')}
             className={`px-4 py-2 rounded-lg font-medium transition-colors ${
@@ -391,7 +404,7 @@ function TasksPageContent() {
         </div>
 
         {/* View Toggle and Filters */}
-        <div className="flex flex-wrap items-center gap-4 mb-6">
+        <div className="flex flex-wrap items-center gap-4 mb-6 print:hidden">
           {/* View mode toggle */}
           <div className="flex bg-white dark:bg-gray-800 rounded-lg p-1 shadow-sm">
             <button
@@ -422,8 +435,9 @@ function TasksPageContent() {
           {viewMode === 'list' && (
             <>
               <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4 text-gray-500" />
+                <Filter className="w-4 h-4 text-gray-500" aria-hidden="true" />
                 <select
+                  aria-label="Filter by status"
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value as TaskStatus | '')}
                   className="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm"
@@ -437,6 +451,7 @@ function TasksPageContent() {
               </div>
 
               <select
+                aria-label="Filter by priority"
                 value={priorityFilter}
                 onChange={(e) => setPriorityFilter(e.target.value as TaskPriority | '')}
                 className="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-sm"
@@ -448,8 +463,9 @@ function TasksPageContent() {
               </select>
 
               <div className="flex items-center gap-2 ml-auto">
-                <ArrowUpDown className="w-4 h-4 text-gray-500" />
+                <ArrowUpDown className="w-4 h-4 text-gray-500" aria-hidden="true" />
                 <select
+                  aria-label="Sort tasks"
                   value={`${sortBy}-${sortOrder}`}
                   onChange={(e) => {
                     const [field, order] = e.target.value.split('-');
@@ -638,15 +654,22 @@ function TasksPageContent() {
 
       {/* New Task Modal */}
       {showNewTaskModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="new-task-modal-title"
+        >
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">New Task</h2>
+              <h2 id="new-task-modal-title" className="text-xl font-bold text-gray-900 dark:text-white">New Task</h2>
               <button
                 onClick={() => {
                   setShowNewTaskModal(false);
                   setIsMultiAssign(false);
+                  setFormErrors({});
                 }}
+                aria-label="Close new task modal"
                 className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
               >
                 <X className="w-5 h-5" />
@@ -654,31 +677,54 @@ function TasksPageContent() {
             </div>
 
             <form onSubmit={handleCreateTask} className="p-4 space-y-4">
+              {/* Title */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label htmlFor="new-task-title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Title <span className="text-red-500">*</span>
                 </label>
                 <input
+                  id="new-task-title"
                   type="text"
                   value={newTask.title}
-                  onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  onChange={(e) => {
+                    setNewTask({ ...newTask, title: e.target.value });
+                    if (formErrors.title) setFormErrors(prev => ({ ...prev, title: '' }));
+                  }}
+                  className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
+                    formErrors.title
+                      ? 'border-red-500 dark:border-red-500'
+                      : 'border-gray-300 dark:border-gray-600'
+                  }`}
                   placeholder="Task title"
-                  required
                 />
+                {formErrors.title && (
+                  <p className="text-sm text-red-500 mt-1">{formErrors.title}</p>
+                )}
               </div>
 
+              {/* Description with character count */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label htmlFor="new-task-description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Description
                 </label>
                 <textarea
+                  id="new-task-description"
                   value={newTask.description}
-                  onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+                  onChange={(e) => {
+                    if (e.target.value.length <= 500) {
+                      setNewTask({ ...newTask, description: e.target.value });
+                    }
+                  }}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   rows={3}
                   placeholder="Optional description"
+                  maxLength={500}
                 />
+                <div className="flex justify-end text-xs text-gray-400 mt-1">
+                  <span className={newTask.description.length >= 450 ? 'text-amber-500' : ''}>
+                    {newTask.description.length}/500
+                  </span>
+                </div>
               </div>
 
               {/* Multi-assign toggle */}
@@ -694,6 +740,7 @@ function TasksPageContent() {
                     } else {
                       setNewTask({ ...newTask, assigned_to: '' });
                     }
+                    setFormErrors(prev => ({ ...prev, assigned_to: '', assignee_ids: '' }));
                   }}
                   className="w-4 h-4 text-blue-600 rounded"
                 />
@@ -706,14 +753,21 @@ function TasksPageContent() {
               {!isMultiAssign ? (
                 /* Single assignee select */
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label htmlFor="new-task-assignee" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Assign to <span className="text-red-500">*</span>
                   </label>
                   <select
+                    id="new-task-assignee"
                     value={newTask.assigned_to}
-                    onChange={(e) => setNewTask({ ...newTask, assigned_to: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    required={!isMultiAssign}
+                    onChange={(e) => {
+                      setNewTask({ ...newTask, assigned_to: e.target.value });
+                      if (formErrors.assigned_to) setFormErrors(prev => ({ ...prev, assigned_to: '' }));
+                    }}
+                    className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
+                      formErrors.assigned_to
+                        ? 'border-red-500 dark:border-red-500'
+                        : 'border-gray-300 dark:border-gray-600'
+                    }`}
                   >
                     <option value="">Select instructor...</option>
                     {instructors.map((instructor) => (
@@ -722,6 +776,9 @@ function TasksPageContent() {
                       </option>
                     ))}
                   </select>
+                  {formErrors.assigned_to && (
+                    <p className="text-sm text-red-500 mt-1">{formErrors.assigned_to}</p>
+                  )}
                 </div>
               ) : (
                 /* Multi-assign section */
@@ -735,7 +792,11 @@ function TasksPageContent() {
                         </span>
                       )}
                     </label>
-                    <div className="max-h-48 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-lg">
+                    <div className={`max-h-48 overflow-y-auto border rounded-lg ${
+                      formErrors.assignee_ids
+                        ? 'border-red-500 dark:border-red-500'
+                        : 'border-gray-300 dark:border-gray-600'
+                    }`}>
                       {instructors.map((instructor) => (
                         <label
                           key={instructor.id}
@@ -748,7 +809,10 @@ function TasksPageContent() {
                           <input
                             type="checkbox"
                             checked={newTask.assignee_ids.includes(instructor.id)}
-                            onChange={() => toggleAssignee(instructor.id)}
+                            onChange={() => {
+                              toggleAssignee(instructor.id);
+                              if (formErrors.assignee_ids) setFormErrors(prev => ({ ...prev, assignee_ids: '' }));
+                            }}
                             className="w-4 h-4 text-blue-600 rounded"
                           />
                           <div>
@@ -762,6 +826,9 @@ function TasksPageContent() {
                         </label>
                       ))}
                     </div>
+                    {formErrors.assignee_ids && (
+                      <p className="text-sm text-red-500 mt-1">{formErrors.assignee_ids}</p>
+                    )}
                   </div>
 
                   {/* Completion mode */}
@@ -805,10 +872,11 @@ function TasksPageContent() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label htmlFor="new-task-due-date" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Due Date
                   </label>
                   <input
+                    id="new-task-due-date"
                     type="date"
                     value={newTask.due_date}
                     onChange={(e) => setNewTask({ ...newTask, due_date: e.target.value })}
@@ -817,10 +885,11 @@ function TasksPageContent() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <label htmlFor="new-task-priority" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Priority
                   </label>
                   <select
+                    id="new-task-priority"
                     value={newTask.priority}
                     onChange={(e) => setNewTask({ ...newTask, priority: e.target.value as TaskPriority })}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
@@ -833,10 +902,11 @@ function TasksPageContent() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label htmlFor="new-task-related-link" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Related Link
                 </label>
                 <input
+                  id="new-task-related-link"
                   type="url"
                   value={newTask.related_link}
                   onChange={(e) => setNewTask({ ...newTask, related_link: e.target.value })}
@@ -851,6 +921,7 @@ function TasksPageContent() {
                   onClick={() => {
                     setShowNewTaskModal(false);
                     setIsMultiAssign(false);
+                    setFormErrors({});
                   }}
                   className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                 >
@@ -858,15 +929,18 @@ function TasksPageContent() {
                 </button>
                 <button
                   type="submit"
-                  disabled={
-                    creating ||
-                    !newTask.title ||
-                    (!isMultiAssign && !newTask.assigned_to) ||
-                    (isMultiAssign && newTask.assignee_ids.length === 0)
-                  }
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  disabled={creating}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  {creating ? 'Creating...' : 'Create Task'}
+                  {creating ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-1 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Creating...
+                    </>
+                  ) : 'Create Task'}
                 </button>
               </div>
             </form>
@@ -884,7 +958,9 @@ export default function TasksPage() {
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     }>
-      <TasksPageContent />
+      <PageErrorBoundary>
+        <TasksPageContent />
+      </PageErrorBoundary>
     </Suspense>
   );
 }
