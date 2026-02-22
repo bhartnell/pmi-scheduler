@@ -551,12 +551,13 @@ function SchedulePageContent() {
         )}
 
         {/* Calendar Grid */}
-        <div className={`bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden ${showTodayOnly ? 'hidden' : ''}`}>
+        <div className={`bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden ${showTodayOnly ? 'hidden' : 'hidden md:block'}`}>
           {/* Week day headers */}
           <div className="grid grid-cols-7 bg-gray-50 dark:bg-gray-700 border-b dark:border-gray-600">
             {weekDays.map(day => (
-              <div key={day} className="py-3 text-center text-sm font-medium text-gray-600 dark:text-gray-300">
-                {day}
+              <div key={day} className="py-2 lg:py-3 text-center text-xs lg:text-sm font-medium text-gray-600 dark:text-gray-300">
+                <span className="lg:hidden">{day.charAt(0)}</span>
+                <span className="hidden lg:inline">{day}</span>
               </div>
             ))}
           </div>
@@ -572,7 +573,7 @@ function SchedulePageContent() {
               return (
                 <div
                   key={idx}
-                  className={`min-h-[100px] md:min-h-[120px] border-b border-r dark:border-gray-600 p-1 md:p-2 relative group ${
+                  className={`min-h-[80px] lg:min-h-[120px] border-b border-r dark:border-gray-600 p-1 md:p-2 relative group ${
                     !currentMo ? 'bg-gray-50 dark:bg-gray-700' : ''
                   } ${today ? 'bg-blue-50 dark:bg-blue-900/30' : ''}`}
                 >
