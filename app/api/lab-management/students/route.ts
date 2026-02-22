@@ -7,6 +7,8 @@ export async function GET(request: NextRequest) {
   const cohortId = searchParams.get('cohortId');
   const status = searchParams.get('status');
   const search = searchParams.get('search');
+  const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
+  const offset = parseInt(searchParams.get('offset') || '0');
 
   try {
     const supabase = getSupabaseAdmin();
@@ -14,14 +16,15 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from('students')
       .select(`
-        *,
+        id, first_name, last_name, email, status, cohort_id, agency, photo_url,
         cohort:cohorts(
           id,
           cohort_number,
           program:programs(name, abbreviation)
         )
-      `)
-      .order('last_name');
+      `, { count: 'exact' })
+      .order('last_name')
+      .range(offset, offset + limit - 1);
 
     if (cohortId) {
       query = query.eq('cohort_id', cohortId);
@@ -35,13 +38,13 @@ export async function GET(request: NextRequest) {
       query = query.or(`first_name.ilike.%${search}%,last_name.ilike.%${search}%,email.ilike.%${search}%`);
     }
 
-    const { data, error } = await query;
+    const { data, error, count } = await query;
 
     if (error) throw error;
 
     // Get team lead counts for all students
     const studentIds = data.map((s: any) => s.id);
-    
+
     if (studentIds.length > 0) {
       const { data: tlCounts } = await supabase
         .from('team_lead_log')
@@ -58,10 +61,10 @@ export async function GET(request: NextRequest) {
         team_lead_count: countMap[student.id] || 0
       }));
 
-      return NextResponse.json({ success: true, students: studentsWithCounts });
+      return NextResponse.json({ success: true, students: studentsWithCounts, pagination: { limit, offset, total: count || 0 } });
     }
 
-    return NextResponse.json({ success: true, students: data });
+    return NextResponse.json({ success: true, students: data, pagination: { limit, offset, total: count || 0 } });
   } catch (error) {
     console.error('Error fetching students:', error);
     return NextResponse.json({ success: false, error: 'Failed to fetch students' }, { status: 500 });

@@ -37,12 +37,15 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const role = searchParams.get('role');
     const activeOnly = searchParams.get('activeOnly') !== 'false';
+    const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
+    const offset = parseInt(searchParams.get('offset') || '0');
 
     const supabase = getSupabaseAdmin();
     let query = supabase
       .from('lab_users')
-      .select('*')
-      .order('created_at', { ascending: false });
+      .select('id, name, email, role, photo_url, created_at, last_login, is_active', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
 
     if (role) {
       query = query.eq('role', role);
@@ -52,11 +55,11 @@ export async function GET(request: NextRequest) {
       query = query.eq('is_active', true);
     }
 
-    const { data, error } = await query;
+    const { data, error, count } = await query;
 
     if (error) throw error;
 
-    return NextResponse.json({ success: true, users: data });
+    return NextResponse.json({ success: true, users: data, pagination: { limit, offset, total: count || 0 } });
   } catch (error) {
     console.error('Error fetching users:', error);
     return NextResponse.json({ success: false, error: 'Failed to fetch users' }, { status: 500 });

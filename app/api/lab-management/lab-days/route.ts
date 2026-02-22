@@ -7,21 +7,24 @@ export async function GET(request: NextRequest) {
   const cohortId = searchParams.get('cohortId');
   const startDate = searchParams.get('startDate');
   const endDate = searchParams.get('endDate');
+  const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
+  const offset = parseInt(searchParams.get('offset') || '0');
 
   try {
     const supabase = getSupabaseAdmin();
     let query = supabase
       .from('lab_days')
       .select(`
-        *,
+        id, date, cohort_id, title, start_time, end_time, semester, week_number, day_number, num_rotations, rotation_duration, notes,
         cohort:cohorts(
           id,
           cohort_number,
           program:programs(name, abbreviation)
         ),
         stations:lab_stations(id)
-      `)
-      .order('date', { ascending: true });
+      `, { count: 'exact' })
+      .order('date', { ascending: true })
+      .range(offset, offset + limit - 1);
 
     if (cohortId) {
       query = query.eq('cohort_id', cohortId);
@@ -35,11 +38,11 @@ export async function GET(request: NextRequest) {
       query = query.lte('date', endDate);
     }
 
-    const { data, error } = await query;
+    const { data, error, count } = await query;
 
     if (error) throw error;
 
-    return NextResponse.json({ success: true, labDays: data });
+    return NextResponse.json({ success: true, labDays: data, pagination: { limit, offset, total: count || 0 } });
   } catch (error) {
     console.error('Error fetching lab days:', error);
     return NextResponse.json({ success: false, error: 'Failed to fetch lab days' }, { status: 500 });

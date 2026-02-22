@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
     // Fetch user preferences
     const { data: preferences, error } = await supabase
       .from('user_preferences')
-      .select('*')
+      .select('user_email, dashboard_widgets, quick_links, notification_settings, updated_at')
       .eq('user_email', session.user.email)
       .single();
 
@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       preferences: {
         dashboard_widgets: preferences.dashboard_widgets || [],
@@ -82,6 +82,8 @@ export async function GET(request: NextRequest) {
       },
       isDefault: false,
     });
+    response.headers.set('Cache-Control', 'private, max-age=300, stale-while-revalidate=60');
+    return response;
   } catch (error: any) {
     console.error('Error fetching preferences:', error);
     return NextResponse.json(

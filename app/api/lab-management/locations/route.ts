@@ -31,7 +31,9 @@ export async function GET(request: NextRequest) {
       throw error;
     }
 
-    return NextResponse.json({ success: true, locations: locations || [] });
+    const response = NextResponse.json({ success: true, locations: locations || [] });
+    response.headers.set('Cache-Control', 'private, max-age=86400, stale-while-revalidate=3600');
+    return response;
   } catch (error: any) {
     console.error('Error fetching locations:', error);
     return NextResponse.json(

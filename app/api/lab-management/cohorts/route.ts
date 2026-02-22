@@ -35,7 +35,9 @@ export async function GET(request: NextRequest) {
       student_count: cohort.student_count?.[0]?.count || 0
     }));
 
-    return NextResponse.json({ success: true, cohorts });
+    const response = NextResponse.json({ success: true, cohorts });
+    response.headers.set('Cache-Control', 'private, max-age=3600, stale-while-revalidate=600');
+    return response;
   } catch (error) {
     console.error('Error fetching cohorts:', error);
     return NextResponse.json({ success: false, error: 'Failed to fetch cohorts' }, { status: 500 });

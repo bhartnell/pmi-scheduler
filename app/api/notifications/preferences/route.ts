@@ -90,7 +90,7 @@ export async function GET() {
     // If user has set preferences, use them; otherwise use role defaults
     const categories: NotificationCategoryPreferences = categoryPrefs || defaults;
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       preferences: {
         categories,
@@ -103,6 +103,8 @@ export async function GET() {
       isDefault: !categoryPrefs,
       role,
     });
+    response.headers.set('Cache-Control', 'private, max-age=300, stale-while-revalidate=60');
+    return response;
   } catch (error: any) {
     console.error('Error fetching notification preferences:', error);
     return NextResponse.json(
