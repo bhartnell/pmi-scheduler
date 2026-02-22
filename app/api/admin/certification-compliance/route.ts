@@ -52,9 +52,18 @@ export async function GET(request: NextRequest) {
     const now = new Date();
     const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
+    // Build certification lookup map: user_id -> certification[]
+    const certsByUser = new Map<string, any[]>();
+    (certifications || []).forEach((c: any) => {
+      if (!certsByUser.has(c.user_id)) {
+        certsByUser.set(c.user_id, []);
+      }
+      certsByUser.get(c.user_id)!.push(c);
+    });
+
     // Build status for each user
     const statuses = (users || []).map(user => {
-      const userCerts = (certifications || []).filter(c => c.user_id === user.id);
+      const userCerts = certsByUser.get(user.id) || [];
 
       const certStatuses = REQUIRED_CERTS.map(certName => {
         const cert = userCerts.find(c =>

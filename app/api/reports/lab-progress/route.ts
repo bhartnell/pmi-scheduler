@@ -91,138 +91,18 @@ export async function GET(request: NextRequest) {
       });
     });
 
-    // Fetch scenario assessments for the cohort in date range
-    let scenarioScores = {
-      averageAssessment: 0,
-      averageTreatment: 0,
-      averageCommunication: 0,
-      averageOverall: 0,
-    };
-
-    if (includeScenarios && labDays && labDays.length > 0) {
-      const labDayIds = labDays.map((d: any) => d.id);
-      const { data: scenarioAssessments } = await supabase
-        .from('scenario_assessments')
-        .select('*')
-        .eq('cohort_id', cohortId)
-        .in('lab_day_id', labDayIds);
-
-      if (scenarioAssessments && scenarioAssessments.length > 0) {
-        // Parse criteria ratings to calculate averages
-        let assessmentTotal = 0, treatmentTotal = 0, communicationTotal = 0, overallTotal = 0;
-        let count = 0;
-
-        scenarioAssessments.forEach((assessment: any) => {
-          const ratings = assessment.criteria_ratings || [];
-          ratings.forEach((rating: any) => {
-            const category = rating.category?.toLowerCase() || '';
-            const score = rating.satisfactory ? 1 : 0;
-
-            if (category.includes('assessment') || category.includes('patient')) {
-              assessmentTotal += score;
-            } else if (category.includes('treatment') || category.includes('intervention')) {
-              treatmentTotal += score;
-            } else if (category.includes('communication') || category.includes('team')) {
-              communicationTotal += score;
-            }
-          });
-
-          overallTotal += assessment.overall_score || 0;
-          count++;
-        });
-
-        if (count > 0) {
-          // Convert to percentage (assuming max of count for each category)
-          scenarioScores = {
-            averageAssessment: count > 0 ? (assessmentTotal / count) * 100 : 0,
-            averageTreatment: count > 0 ? (treatmentTotal / count) * 100 : 0,
-            averageCommunication: count > 0 ? (communicationTotal / count) * 100 : 0,
-            averageOverall: count > 0 ? (overallTotal / count) : 0,
-          };
-        }
-      }
-    }
-
-    // Fetch skill assessments
-    let skillsProgress = {
-      completed: 0,
-      total: 0,
-      completionRate: 0,
-    };
-
-    if (includeSkills && studentIds.length > 0) {
-      const { data: skillAssessments } = await supabase
-        .from('skill_assessments')
-        .select('student_id, skill_name, passed')
-        .in('student_id', studentIds);
-
-      if (skillAssessments) {
-        const passedSkills = skillAssessments.filter((a: any) => a.passed);
-        skillsProgress = {
-          completed: passedSkills.length,
-          total: skillAssessments.length,
-          completionRate: skillAssessments.length > 0
-            ? (passedSkills.length / skillAssessments.length) * 100
-            : 0,
-        };
-      }
-    }
-
-    // Fetch team lead rotations
-    let teamLeadStats = {
-      totalRotations: 0,
-      averagePerStudent: 0,
-      studentsWithZero: 0,
-    };
-
-    if (studentIds.length > 0) {
-      let tlQuery = supabase
-        .from('team_lead_log')
-        .select('student_id, date')
-        .in('student_id', studentIds);
-
-      if (startDate) {
-        tlQuery = tlQuery.gte('date', startDate);
-      }
-      if (endDate) {
-        tlQuery = tlQuery.lte('date', endDate);
-      }
-
-      const { data: tlLogs } = await tlQuery;
-
-      const tlCountMap: Record<string, number> = {};
-      studentIds.forEach(id => {
-        tlCountMap[id] = 0;
-      });
-
-      if (tlLogs) {
-        tlLogs.forEach((log: any) => {
-          tlCountMap[log.student_id] = (tlCountMap[log.student_id] || 0) + 1;
-        });
-      }
-
-      const tlCounts = Object.values(tlCountMap);
-      teamLeadStats = {
-        totalRotations: tlCounts.reduce((sum, c) => sum + c, 0),
-        averagePerStudent: studentIds.length > 0
-          ? tlCounts.reduce((sum, c) => sum + c, 0) / studentIds.length
-          : 0,
-        studentsWithZero: tlCounts.filter(c => c === 0).length,
-      };
-    }
-
     // Build student breakdown with per-student stats
-    // BATCH QUERIES: Fetch all data once, then process in memory
+    // BATCH QUERIES: Fetch all data once, then process in memory for both cohort stats and per-student breakdown
     const studentBreakdown: any[] = [];
     const flaggedStudents: any[] = [];
 
-    // Batch fetch all scenario assessments for all students
+    // Batch fetch all scenario assessments for all students (includes criteria_ratings for cohort averages)
     let allScenarioAssessments: any[] = [];
     if (includeScenarios && labDays && labDays.length > 0 && studentIds.length > 0) {
       const labDayIds = labDays.map((d: any) => d.id);
       const { data } = await supabase
         .from('scenario_assessments')
-        .select('team_lead_id, overall_score')
+        .select('team_lead_id, overall_score, criteria_ratings, cohort_id, lab_day_id')
         .in('team_lead_id', studentIds)
         .in('lab_day_id', labDayIds);
 
@@ -286,6 +166,76 @@ export async function GET(request: NextRequest) {
       }
       teamLeadByStudent.get(studentId)!.push(log);
     });
+
+    // Compute cohort-level scenario scores from batched data
+    let scenarioScores = {
+      averageAssessment: 0,
+      averageTreatment: 0,
+      averageCommunication: 0,
+      averageOverall: 0,
+    };
+
+    if (allScenarioAssessments.length > 0) {
+      let assessmentTotal = 0, treatmentTotal = 0, communicationTotal = 0, overallTotal = 0;
+      const count = allScenarioAssessments.length;
+
+      allScenarioAssessments.forEach((assessment: any) => {
+        const ratings = assessment.criteria_ratings || [];
+        ratings.forEach((rating: any) => {
+          const category = rating.category?.toLowerCase() || '';
+          const score = rating.satisfactory ? 1 : 0;
+
+          if (category.includes('assessment') || category.includes('patient')) {
+            assessmentTotal += score;
+          } else if (category.includes('treatment') || category.includes('intervention')) {
+            treatmentTotal += score;
+          } else if (category.includes('communication') || category.includes('team')) {
+            communicationTotal += score;
+          }
+        });
+
+        overallTotal += assessment.overall_score || 0;
+      });
+
+      scenarioScores = {
+        averageAssessment: (assessmentTotal / count) * 100,
+        averageTreatment: (treatmentTotal / count) * 100,
+        averageCommunication: (communicationTotal / count) * 100,
+        averageOverall: overallTotal / count,
+      };
+    }
+
+    // Compute cohort-level skills progress from batched data
+    let skillsProgress = {
+      completed: 0,
+      total: 0,
+      completionRate: 0,
+    };
+
+    if (allSkillAssessments.length > 0) {
+      const passedCount = allSkillAssessments.filter((a: any) => a.passed).length;
+      skillsProgress = {
+        completed: passedCount,
+        total: allSkillAssessments.length,
+        completionRate: (passedCount / allSkillAssessments.length) * 100,
+      };
+    }
+
+    // Compute cohort-level team lead stats from batched data
+    const tlCountMap: Record<string, number> = {};
+    studentIds.forEach(id => {
+      tlCountMap[id] = 0;
+    });
+    allTeamLeadLogs.forEach((log: any) => {
+      tlCountMap[log.student_id] = (tlCountMap[log.student_id] || 0) + 1;
+    });
+    const tlCounts = Object.values(tlCountMap);
+    const tlTotal = tlCounts.reduce((sum, c) => sum + c, 0);
+    const teamLeadStats = {
+      totalRotations: tlTotal,
+      averagePerStudent: studentIds.length > 0 ? tlTotal / studentIds.length : 0,
+      studentsWithZero: tlCounts.filter(c => c === 0).length,
+    };
 
     // Process each student using the batched data
     for (const student of students || []) {

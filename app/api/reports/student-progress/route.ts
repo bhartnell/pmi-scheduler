@@ -124,7 +124,7 @@ export async function GET(request: NextRequest) {
     // Fetch skill assessments for this student
     const { data: skillAssessments } = await supabase
       .from('skill_assessments')
-      .select('*')
+      .select('id, student_id, skill_name, passed, assessed_at')
       .eq('student_id', studentId)
       .order('assessed_at', { ascending: false });
 
@@ -183,7 +183,7 @@ export async function GET(request: NextRequest) {
       const studentIds = cohortStudents.map(s => s.id);
       let cohortTlQuery = supabase
         .from('team_lead_log')
-        .select('student_id')
+        .select('id', { count: 'exact', head: true })
         .in('student_id', studentIds);
 
       if (startDate) {
@@ -193,8 +193,8 @@ export async function GET(request: NextRequest) {
         cohortTlQuery = cohortTlQuery.lte('date', endDate);
       }
 
-      const { data: cohortTlLogs } = await cohortTlQuery;
-      cohortTlAverage = cohortTlLogs ? cohortTlLogs.length / cohortStudents.length : 0;
+      const { count: tlCount } = await cohortTlQuery;
+      cohortTlAverage = tlCount ? tlCount / cohortStudents.length : 0;
     }
 
     // Calculate attendance (placeholder - would need attendance tracking table)
