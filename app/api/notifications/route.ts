@@ -184,3 +184,55 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+// DELETE - Delete notifications for current user
+export async function DELETE(request: NextRequest) {
+  try {
+    const supabase = getSupabaseAdmin();
+
+    const session = await getServerSession();
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json();
+
+    if (body.all) {
+      // Delete all notifications for this user
+      const { data, error } = await supabase
+        .from('user_notifications')
+        .delete()
+        .eq('user_email', session.user.email)
+        .select('id');
+
+      if (error) throw error;
+
+      return NextResponse.json({
+        success: true,
+        deleted: data?.length || 0,
+        message: `${data?.length || 0} notification(s) cleared`
+      });
+    }
+
+    // Delete specific notification by id
+    if (body.id) {
+      const { error } = await supabase
+        .from('user_notifications')
+        .delete()
+        .eq('id', body.id)
+        .eq('user_email', session.user.email);
+
+      if (error) throw error;
+
+      return NextResponse.json({ success: true, deleted: 1 });
+    }
+
+    return NextResponse.json({ error: 'Provide "all: true" or "id"' }, { status: 400 });
+  } catch (error: any) {
+    console.error('Error deleting notifications:', error);
+    return NextResponse.json(
+      { success: false, error: error?.message || 'Failed to delete notifications' },
+      { status: 500 }
+    );
+  }
+}

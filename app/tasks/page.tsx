@@ -20,7 +20,9 @@ import {
   Check,
   LayoutList,
   Kanban,
-  Printer
+  Printer,
+  Trash2,
+  Square
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import NotificationBell from '@/components/NotificationBell';
@@ -92,6 +94,11 @@ function TasksPageContent() {
   const [isMultiAssign, setIsMultiAssign] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+  // Bulk selection state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [bulkLoading, setBulkLoading] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -279,6 +286,80 @@ function TasksPageContent() {
       console.error('Error updating task status:', error);
       throw error;
     }
+  };
+
+  // Clear selection when filters/tab change
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [activeTab, statusFilter, priorityFilter]);
+
+  const toggleSelection = (taskId: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(taskId)) {
+        next.delete(taskId);
+      } else {
+        next.add(taskId);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === tasks.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(tasks.map(t => t.id)));
+    }
+  };
+
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const handleBulkComplete = async () => {
+    if (selectedIds.size === 0) return;
+    setBulkLoading(true);
+    try {
+      const res = await fetch('/api/tasks/bulk', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: Array.from(selectedIds) })
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`${data.completed} task(s) marked as completed`);
+        clearSelection();
+        fetchTasks();
+      } else {
+        toast.error(data.error || 'Failed to complete tasks');
+      }
+    } catch {
+      toast.error('Failed to complete tasks');
+    }
+    setBulkLoading(false);
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    setBulkLoading(true);
+    try {
+      const res = await fetch('/api/tasks/bulk', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: Array.from(selectedIds) })
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`${data.deleted} task(s) deleted`);
+        clearSelection();
+        setShowDeleteConfirm(false);
+        fetchTasks();
+      } else {
+        toast.error(data.error || 'Failed to delete tasks');
+      }
+    } catch {
+      toast.error('Failed to delete tasks');
+    }
+    setBulkLoading(false);
   };
 
   const toggleAssignee = (instructorId: string) => {
@@ -486,6 +567,42 @@ function TasksPageContent() {
           )}
         </div>
 
+        {/* Bulk Action Bar */}
+        {viewMode === 'list' && selectedIds.size > 0 && (
+          <div className="flex flex-wrap items-center gap-3 mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-xl print:hidden">
+            <span className="text-sm font-medium text-blue-900 dark:text-blue-200">
+              {selectedIds.size} selected
+            </span>
+            <div className="flex items-center gap-2 ml-auto">
+              <button
+                onClick={handleBulkComplete}
+                disabled={bulkLoading}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
+              >
+                <Check className="w-4 h-4" />
+                Mark Complete ({selectedIds.size})
+              </button>
+              {activeTab === 'assigned_by_me' && (
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  disabled={bulkLoading}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete ({selectedIds.size})
+                </button>
+              )}
+              <button
+                onClick={clearSelection}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                <X className="w-4 h-4" />
+                Clear
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Task Display */}
         {loading ? (
           <div className="flex justify-center py-12">
@@ -512,6 +629,26 @@ function TasksPageContent() {
         ) : (
           /* List View */
           <div className="space-y-3">
+            {/* Select All header */}
+            <div className="flex items-center gap-3 px-4 py-2 print:hidden">
+              <button
+                onClick={toggleSelectAll}
+                className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                aria-label={selectedIds.size === tasks.length ? 'Deselect all' : 'Select all'}
+              >
+                {selectedIds.size === tasks.length && tasks.length > 0 ? (
+                  <CheckSquare className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                ) : (
+                  <Square className="w-5 h-5" />
+                )}
+                <span>{selectedIds.size === tasks.length && tasks.length > 0 ? 'Deselect All' : 'Select All'}</span>
+              </button>
+              {selectedIds.size > 0 && selectedIds.size < tasks.length && (
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  ({selectedIds.size} of {tasks.length})
+                </span>
+              )}
+            </div>
             {tasks.map((task) => {
               const dueInfo = formatDueDate(task.due_date);
               const priorityColor = PRIORITY_COLORS[task.priority];
@@ -532,6 +669,21 @@ function TasksPageContent() {
                   className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 hover:shadow-md transition-shadow"
                 >
                   <div className="flex items-start gap-4">
+                    {/* Selection checkbox */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleSelection(task.id);
+                      }}
+                      className="flex-shrink-0 mt-1 print:hidden"
+                      aria-label={selectedIds.has(task.id) ? 'Deselect task' : 'Select task'}
+                    >
+                      {selectedIds.has(task.id) ? (
+                        <CheckSquare className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                      ) : (
+                        <Square className="w-5 h-5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" />
+                      )}
+                    </button>
                     {/* Priority indicator */}
                     <div className={`w-1 h-full min-h-[60px] rounded-full ${priorityColor.bg}`} />
 
@@ -651,6 +803,54 @@ function TasksPageContent() {
           </div>
         )}
       </main>
+
+      {/* Bulk Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-confirm-title"
+        >
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6">
+            <h3 id="delete-confirm-title" className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+              Delete {selectedIds.size} Task{selectedIds.size !== 1 ? 's' : ''}?
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              This will permanently delete the selected task{selectedIds.size !== 1 ? 's' : ''} and all associated comments. This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={bulkLoading}
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                disabled={bulkLoading}
+                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+              >
+                {bulkLoading ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    Delete
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* New Task Modal */}
       {showNewTaskModal && (
