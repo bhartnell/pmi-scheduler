@@ -44,7 +44,8 @@ export async function GET(request: NextRequest) {
     }
 
     if (search) {
-      query = query.or(`title.ilike.%${search}%,category.ilike.%${search}%,chief_complaint.ilike.%${search}%`);
+      const safeSearch = search.replace(/[%_,.()\\/]/g, '');
+      query = query.or(`title.ilike.%${safeSearch}%,category.ilike.%${safeSearch}%,chief_complaint.ilike.%${safeSearch}%`);
     }
 
     const { data, error, count } = await query;

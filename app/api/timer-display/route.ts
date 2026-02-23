@@ -14,6 +14,16 @@ export async function GET() {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { data: currentUser } = await supabase
+      .from('lab_users')
+      .select('role')
+      .eq('email', session.user.email)
+      .single();
+
+    if (!currentUser || !['superadmin', 'admin', 'lead_instructor', 'instructor'].includes(currentUser.role)) {
+      return NextResponse.json({ error: 'Forbidden: Instructor access required' }, { status: 403 });
+    }
+
     // First try with location join
     let tokens = null;
     let queryError = null;
@@ -74,6 +84,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { data: currentUser } = await supabase
+      .from('lab_users')
+      .select('role')
+      .eq('email', session.user.email)
+      .single();
+
+    if (!currentUser || !['superadmin', 'admin', 'lead_instructor', 'instructor'].includes(currentUser.role)) {
+      return NextResponse.json({ error: 'Forbidden: Instructor access required' }, { status: 403 });
+    }
+
     const body = await request.json();
     const { room_name, lab_room_id, timer_type } = body;
 
@@ -110,6 +130,16 @@ export async function PATCH(request: NextRequest) {
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { data: currentUser } = await supabase
+      .from('lab_users')
+      .select('role')
+      .eq('email', session.user.email)
+      .single();
+
+    if (!currentUser || !['superadmin', 'admin', 'lead_instructor', 'instructor'].includes(currentUser.role)) {
+      return NextResponse.json({ error: 'Forbidden: Instructor access required' }, { status: 403 });
     }
 
     const body = await request.json();
@@ -150,6 +180,16 @@ export async function DELETE(request: NextRequest) {
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { data: currentUser } = await supabase
+      .from('lab_users')
+      .select('role')
+      .eq('email', session.user.email)
+      .single();
+
+    if (!currentUser || !['superadmin', 'admin', 'lead_instructor', 'instructor'].includes(currentUser.role)) {
+      return NextResponse.json({ error: 'Forbidden: Instructor access required' }, { status: 403 });
     }
 
     const { searchParams } = new URL(request.url);

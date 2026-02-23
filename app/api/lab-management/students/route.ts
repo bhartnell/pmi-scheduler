@@ -40,7 +40,8 @@ export async function GET(request: NextRequest) {
     }
 
     if (search) {
-      query = query.or(`first_name.ilike.%${search}%,last_name.ilike.%${search}%,email.ilike.%${search}%`);
+      const safeSearch = search.replace(/[%_,.()\\/]/g, '');
+      query = query.or(`first_name.ilike.%${safeSearch}%,last_name.ilike.%${safeSearch}%,email.ilike.%${safeSearch}%`);
     }
 
     const { data, error, count } = await query;

@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseAdmin();
     const includeDocuments = searchParams.get('includeDocuments') === 'true';
+    const safeSearch = search ? search.replace(/[%_,.()\\/]/g, '') : null;
 
     const baseColumns = 'id, name, category, description, certification_levels, required_count, display_order, is_active';
 
@@ -35,7 +36,7 @@ export async function GET(request: NextRequest) {
 
       if (category) q = q.eq('category', category);
       if (level) q = q.contains('certification_levels', [level]);
-      if (search) q = q.or(`name.ilike.%${search}%,category.ilike.%${search}%`);
+      if (safeSearch) q = q.or(`name.ilike.%${safeSearch}%,category.ilike.%${safeSearch}%`);
 
       return q;
     };

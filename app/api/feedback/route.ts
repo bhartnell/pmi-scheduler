@@ -14,6 +14,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { data: currentUser } = await supabase
+      .from('lab_users')
+      .select('role')
+      .eq('email', session.user.email)
+      .single();
+
+    const role = currentUser?.role || 'pending';
+    if (!['superadmin', 'admin', 'lead_instructor', 'instructor'].includes(role)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const searchParams = request.nextUrl.searchParams;
     const status = searchParams.get('status');
     const reportType = searchParams.get('type');
@@ -197,6 +208,17 @@ export async function PATCH(request: NextRequest) {
     const session = await getServerSession();
     if (!session?.user?.email) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { data: currentUser } = await supabase
+      .from('lab_users')
+      .select('role')
+      .eq('email', session.user.email)
+      .single();
+
+    const role = currentUser?.role || 'pending';
+    if (!['superadmin', 'admin', 'lead_instructor', 'instructor'].includes(role)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const body = await request.json();
