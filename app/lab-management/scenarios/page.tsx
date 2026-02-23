@@ -16,7 +16,8 @@ import {
   Baby,
   AlertTriangle,
   Thermometer,
-  X
+  X,
+  Star
 } from 'lucide-react';
 
 interface Scenario {
@@ -74,6 +75,8 @@ export default function ScenariosPage() {
   const [difficultyFilter, setDifficultyFilter] = useState('');
   const [programFilter, setProgramFilter] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -84,8 +87,51 @@ export default function ScenariosPage() {
   useEffect(() => {
     if (session) {
       fetchScenarios();
+      fetchFavorites();
     }
   }, [session, categoryFilter, difficultyFilter, programFilter]);
+
+  const fetchFavorites = async () => {
+    try {
+      const res = await fetch('/api/lab-management/scenarios/favorites');
+      if (res.ok) {
+        const data = await res.json();
+        setFavorites(new Set(data.map((f: { scenario_id: string }) => f.scenario_id)));
+      }
+    } catch (error) {
+      console.error('Error fetching favorites:', error);
+    }
+  };
+
+  const toggleFavorite = async (scenarioId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+
+    const isFav = favorites.has(scenarioId);
+    // Optimistic update
+    setFavorites(prev => {
+      const next = new Set(prev);
+      if (isFav) next.delete(scenarioId);
+      else next.add(scenarioId);
+      return next;
+    });
+
+    try {
+      await fetch('/api/lab-management/scenarios/favorites', {
+        method: isFav ? 'DELETE' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scenario_id: scenarioId }),
+      });
+    } catch {
+      // Revert on error
+      setFavorites(prev => {
+        const next = new Set(prev);
+        if (isFav) next.add(scenarioId);
+        else next.delete(scenarioId);
+        return next;
+      });
+    }
+  };
 
   const fetchScenarios = async () => {
     setLoading(true);
@@ -106,21 +152,31 @@ export default function ScenariosPage() {
     setLoading(false);
   };
 
-  const filteredScenarios = scenarios.filter(s =>
-    search === '' ||
-    s.title.toLowerCase().includes(search.toLowerCase()) ||
-    s.chief_complaint?.toLowerCase().includes(search.toLowerCase()) ||
-    s.category.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredScenarios = scenarios.filter(s => {
+    const matchesSearch =
+      search === '' ||
+      s.title.toLowerCase().includes(search.toLowerCase()) ||
+      s.chief_complaint?.toLowerCase().includes(search.toLowerCase()) ||
+      s.category.toLowerCase().includes(search.toLowerCase());
+    const matchesFavorites = !showFavoritesOnly || favorites.has(s.id);
+    return matchesSearch && matchesFavorites;
+  });
+
+  const sortedScenarios = [...filteredScenarios].sort((a, b) => {
+    const aFav = favorites.has(a.id) ? -1 : 0;
+    const bFav = favorites.has(b.id) ? -1 : 0;
+    return aFav - bFav;
+  });
 
   const clearFilters = () => {
     setCategoryFilter('');
     setDifficultyFilter('');
     setProgramFilter('');
     setSearch('');
+    setShowFavoritesOnly(false);
   };
 
-  const hasActiveFilters = categoryFilter || difficultyFilter || programFilter || search;
+  const hasActiveFilters = categoryFilter || difficultyFilter || programFilter || search || showFavoritesOnly;
 
   if (status === 'loading' || loading) {
     return (
@@ -176,16 +232,30 @@ export default function ScenariosPage() {
                 />
               </div>
               <button
+                onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+                className={`inline-flex items-center gap-2 px-4 py-2 border rounded-lg transition-colors ${
+                  showFavoritesOnly
+                    ? 'border-amber-400 bg-amber-50 text-amber-700 dark:border-amber-500 dark:bg-amber-900/30 dark:text-amber-300'
+                    : 'text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700'
+                }`}
+                title={showFavoritesOnly ? 'Show all scenarios' : 'Show favorites only'}
+              >
+                <Star
+                  className={`w-5 h-5 ${showFavoritesOnly ? 'fill-amber-400 text-amber-400' : ''}`}
+                />
+                Favorites
+              </button>
+              <button
                 onClick={() => setShowFilters(!showFilters)}
                 className={`inline-flex items-center gap-2 px-4 py-2 border rounded-lg ${
-                  hasActiveFilters
+                  categoryFilter || difficultyFilter || programFilter
                     ? 'border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-400 dark:bg-blue-900/30 dark:text-blue-300'
                     : 'text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700'
                 }`}
               >
                 <Filter className="w-5 h-5" />
                 Filters
-                {hasActiveFilters && (
+                {(categoryFilter || difficultyFilter || programFilter) && (
                   <span className="w-5 h-5 bg-blue-600 text-white text-xs rounded-full flex items-center justify-center dark:bg-blue-500">
                     {[categoryFilter, difficultyFilter, programFilter].filter(Boolean).length}
                   </span>
@@ -253,16 +323,21 @@ export default function ScenariosPage() {
 
         {/* Results count */}
         <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
-          {filteredScenarios.length} scenario{filteredScenarios.length !== 1 ? 's' : ''} found
+          {sortedScenarios.length} scenario{sortedScenarios.length !== 1 ? 's' : ''} found
+          {showFavoritesOnly && (
+            <span className="ml-2 text-amber-600 dark:text-amber-400">• Favorites only</span>
+          )}
         </div>
 
         {/* Scenarios Grid */}
-        {filteredScenarios.length === 0 ? (
+        {sortedScenarios.length === 0 ? (
           <div className="bg-white rounded-lg shadow p-12 text-center dark:bg-gray-800">
             <FileText className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No scenarios found</h3>
             <p className="text-gray-600 dark:text-gray-400 mb-4">
-              {hasActiveFilters
+              {showFavoritesOnly
+                ? 'You have no favorited scenarios yet. Click the star on any scenario to save it here.'
+                : hasActiveFilters
                 ? 'Try adjusting your filters or search term'
                 : 'Get started by creating your first scenario'}
             </p>
@@ -278,16 +353,32 @@ export default function ScenariosPage() {
           </div>
         ) : (
           <div className="grid gap-4">
-            {filteredScenarios.map((scenario) => {
+            {sortedScenarios.map((scenario) => {
               const CategoryIcon = CATEGORY_ICONS[scenario.category] || FileText;
+              const isFavorited = favorites.has(scenario.id);
 
               return (
                 <Link
                   key={scenario.id}
                   href={`/lab-management/scenarios/${scenario.id}`}
-                  className="bg-white rounded-lg shadow p-4 hover:shadow-lg transition-shadow dark:bg-gray-800 dark:hover:bg-gray-750"
+                  className="relative bg-white rounded-lg shadow p-4 hover:shadow-lg transition-shadow dark:bg-gray-800 dark:hover:bg-gray-750"
                 >
-                  <div className="flex items-start gap-4">
+                  {/* Favorite star button */}
+                  <button
+                    onClick={(e) => toggleFavorite(scenario.id, e)}
+                    className="absolute top-3 right-3 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+                  >
+                    <Star
+                      className={`h-5 w-5 transition-all ${
+                        isFavorited
+                          ? 'fill-amber-400 text-amber-400'
+                          : 'text-gray-400 hover:text-amber-400'
+                      }`}
+                    />
+                  </button>
+
+                  <div className="flex items-start gap-4 pr-8">
                     <div className="p-3 bg-blue-100 rounded-lg shrink-0 dark:bg-blue-900/50">
                       <CategoryIcon className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                     </div>

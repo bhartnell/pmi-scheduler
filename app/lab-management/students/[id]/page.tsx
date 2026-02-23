@@ -25,7 +25,8 @@ import {
   X,
   ExternalLink,
   Brain,
-  Barcode as BarcodeIcon
+  Barcode as BarcodeIcon,
+  TrendingUp,
 } from 'lucide-react';
 import Barcode from 'react-barcode';
 import { canManageStudentRoster, type Role } from '@/lib/permissions';
@@ -742,7 +743,14 @@ export default function StudentDetailPage() {
                         <p className="text-gray-600 dark:text-gray-400">{student.cohort.program.abbreviation} Group {student.cohort.cohort_number}</p>
                       )}
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 items-center">
+                      <Link
+                        href={`/students/${studentId}/progress`}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded-lg font-medium"
+                      >
+                        <TrendingUp className="w-4 h-4" />
+                        View Progress
+                      </Link>
                       <button onClick={() => setEditing(true)} className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
                         <Edit2 className="w-5 h-5" />
                       </button>
