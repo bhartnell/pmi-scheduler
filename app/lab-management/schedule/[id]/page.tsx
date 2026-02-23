@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import LabTimer from '@/components/LabTimer';
 import BLSPlatinumChecklist from '@/components/BLSPlatinumChecklist';
+import AttendanceSection from '@/components/AttendanceSection';
 
 interface LabDay {
   id: string;
@@ -1269,6 +1270,16 @@ export default function LabDayPage() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Student Attendance */}
+        {labDay.cohort?.id && (
+          <div className="mt-6 print:hidden">
+            <AttendanceSection
+              labDayId={labDayId}
+              cohortId={labDay.cohort.id}
+            />
           </div>
         )}
 

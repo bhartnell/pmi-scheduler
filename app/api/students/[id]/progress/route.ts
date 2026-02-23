@@ -326,7 +326,34 @@ export async function GET(
     });
 
     // -----------------------------------------------
-    // 7. Recent activity (last 30 days)
+    // 7. Lab day attendance
+    // -----------------------------------------------
+    const { data: attendanceData } = await supabase
+      .from('lab_day_attendance')
+      .select('status')
+      .eq('student_id', studentId);
+
+    const attendanceRecords = attendanceData || [];
+    const attendanceTotal = attendanceRecords.length;
+    const attendancePresent = attendanceRecords.filter(a => a.status === 'present').length;
+    const attendanceAbsent = attendanceRecords.filter(a => a.status === 'absent').length;
+    const attendanceExcused = attendanceRecords.filter(a => a.status === 'excused').length;
+    const attendanceLate = attendanceRecords.filter(a => a.status === 'late').length;
+    const attendanceRate = attendanceTotal > 0
+      ? Math.round(((attendancePresent + attendanceLate) / attendanceTotal) * 100)
+      : 0;
+
+    const attendance = {
+      total: attendanceTotal,
+      present: attendancePresent,
+      absent: attendanceAbsent,
+      excused: attendanceExcused,
+      late: attendanceLate,
+      rate: attendanceRate,
+    };
+
+    // -----------------------------------------------
+    // 8. Recent activity (last 30 days)
     // -----------------------------------------------
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -405,6 +432,7 @@ export async function GET(
           .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
       },
       clinicalHours,
+      attendance,
       milestones,
       recentActivity: topActivity,
     });
