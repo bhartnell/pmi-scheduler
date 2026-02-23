@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
 // GET - Fetch daily notes for a date range
+// ?all=true  → return all instructors' notes (for "All Notes" toggle)
+// default    → return only the current user's notes
 export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseAdmin();
@@ -16,8 +17,9 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
     const date = searchParams.get('date');
+    const all = searchParams.get('all') === 'true';
 
-    // Get instructor
+    // Get current user
     const { data: user } = await supabase
       .from('lab_users')
       .select('id')
@@ -28,11 +30,23 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
     }
 
+    // Join with lab_users to get display name for "All Notes" view
     let query = supabase
       .from('instructor_daily_notes')
-      .select('*')
-      .eq('instructor_id', user.id)
+      .select(`
+        *,
+        lab_users!instructor_id (
+          id,
+          email,
+          name
+        )
+      `)
       .order('note_date', { ascending: false });
+
+    // Filter by instructor unless ?all=true
+    if (!all) {
+      query = query.eq('instructor_id', user.id);
+    }
 
     if (date) {
       query = query.eq('note_date', date);
@@ -46,7 +60,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, notes: notes || [] });
+    // Normalize: attach instructor display info at the top level
+    const normalized = (notes || []).map((n: any) => ({
+      id: n.id,
+      instructor_id: n.instructor_id,
+      instructor_email: n.instructor_email || n.lab_users?.email || null,
+      instructor_name: n.lab_users?.name || n.lab_users?.email || null,
+      note_date: n.note_date,
+      content: n.content,
+      created_at: n.created_at,
+      updated_at: n.updated_at,
+    }));
+
+    return NextResponse.json({ success: true, notes: normalized });
   } catch (error) {
     console.error('Error fetching daily notes:', error);
     return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
@@ -72,7 +98,7 @@ export async function POST(request: NextRequest) {
     // Get instructor
     const { data: user } = await supabase
       .from('lab_users')
-      .select('id')
+      .select('id, email, name')
       .eq('email', session.user.email)
       .single();
 
@@ -95,12 +121,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, note: null, deleted: true });
     }
 
-    // Upsert: insert or update
+    // Upsert: insert or update — always stamp instructor_email for display
     const { data: note, error } = await supabase
       .from('instructor_daily_notes')
       .upsert(
         {
           instructor_id: user.id,
+          instructor_email: user.email,
           note_date: date,
           content: content.trim(),
           updated_at: new Date().toISOString(),
@@ -116,7 +143,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, note });
+    // Attach instructor display info for the client
+    return NextResponse.json({
+      success: true,
+      note: {
+        ...note,
+        instructor_name: user.name || user.email,
+      },
+    });
   } catch (error) {
     console.error('Error saving daily note:', error);
     return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
