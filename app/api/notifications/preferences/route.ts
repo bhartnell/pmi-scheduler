@@ -139,15 +139,16 @@ export async function PUT(request: NextRequest) {
       ...currentSettings,
     };
 
-    // Update category preferences if provided
-    if (body.categories) {
+    // Support both legacy shape (body.categories) and new unified shape (body.category_preferences)
+    const inAppCategories = body.category_preferences || body.categories;
+    if (inAppCategories) {
       updatedSettings.category_preferences = {
-        tasks: body.categories.tasks ?? true,
-        labs: body.categories.labs ?? true,
-        scheduling: body.categories.scheduling ?? true,
-        feedback: body.categories.feedback ?? true,
-        clinical: body.categories.clinical ?? true,
-        system: body.categories.system ?? true,
+        tasks: inAppCategories.tasks ?? true,
+        labs: inAppCategories.labs ?? true,
+        scheduling: inAppCategories.scheduling ?? true,
+        feedback: inAppCategories.feedback ?? true,
+        clinical: inAppCategories.clinical ?? true,
+        system: inAppCategories.system ?? true,
       };
     }
 
