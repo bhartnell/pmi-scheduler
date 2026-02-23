@@ -458,8 +458,11 @@ export default function SeatingChartBuilderPage() {
     { row: 4, tables: [7, 8], zone: 'Back (Kinesthetic)' },
   ];
 
-  // Reverse row ORDER only (not left/right within rows) when flipped (student view)
-  const rows = isFlipped ? [...baseRows].reverse() : baseRows;
+  // In instructor view (!isFlipped): rows go front-to-back top-to-bottom, tables within each row
+  // are mirrored left/right to match what the instructor sees standing at the front facing students.
+  // In student view (isFlipped): rows are reversed so back is at top, tables in natural order.
+  const mirroredBaseRows = baseRows.map(r => ({ ...r, tables: [...r.tables].reverse() }));
+  const rows = isFlipped ? [...baseRows].reverse() : mirroredBaseRows;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 print:bg-white">
