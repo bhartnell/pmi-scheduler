@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
-// Valid file types for skill documents
+// Valid file types for drill documents
 const VALID_TYPES = [
   'application/pdf',
   'application/msword',
@@ -16,12 +15,12 @@ const VALID_TYPES = [
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
-// GET - Fetch all documents for a skill
+// GET - Fetch all documents for a drill
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id: skillId } = await params;
+  const { id: drillId } = await params;
 
   try {
     const supabase = getSupabaseAdmin();
@@ -29,7 +28,7 @@ export async function GET(
     const { data, error } = await supabase
       .from('skill_documents')
       .select('*')
-      .eq('skill_id', skillId)
+      .eq('drill_id', drillId)
       .order('display_order')
       .order('document_name');
 
@@ -37,17 +36,17 @@ export async function GET(
 
     return NextResponse.json({ success: true, documents: data });
   } catch (error) {
-    console.error('Error fetching skill documents:', error);
-    return NextResponse.json({ success: false, error: 'Failed to fetch skill documents' }, { status: 500 });
+    console.error('Error fetching drill documents:', error);
+    return NextResponse.json({ success: false, error: 'Failed to fetch drill documents' }, { status: 500 });
   }
 }
 
-// POST - Upload a new document for a skill
+// POST - Upload a new document for a drill (file upload OR URL)
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id: skillId } = await params;
+  const { id: drillId } = await params;
 
   try {
     const supabase = getSupabaseAdmin();
@@ -59,7 +58,7 @@ export async function POST(
 
     const contentType = request.headers.get('content-type') || '';
 
-    // --- URL-only path (JSON body) ---
+    // --- URL-only path ---
     if (contentType.includes('application/json')) {
       const body = await request.json();
       const { url, documentName, documentType, displayOrder } = body;
@@ -77,7 +76,7 @@ export async function POST(
       const { data, error } = await supabase
         .from('skill_documents')
         .insert({
-          skill_id: skillId,
+          drill_id: drillId,
           document_name: documentName.trim(),
           document_url: url,
           document_type: documentType || 'reference',
@@ -127,7 +126,7 @@ export async function POST(
     // Get file extension
     const fileExt = file.name.split('.').pop()?.toLowerCase() || 'pdf';
     const timestamp = Date.now();
-    const fileName = `skills/${skillId}/${timestamp}_${documentType}.${fileExt}`;
+    const fileName = `drills/${drillId}/${timestamp}_${documentType}.${fileExt}`;
 
     // Convert file to buffer
     const arrayBuffer = await file.arrayBuffer();
@@ -143,7 +142,6 @@ export async function POST(
 
     if (uploadError) {
       console.error('Upload error:', uploadError);
-      // If bucket doesn't exist, provide helpful error
       if (uploadError.message?.includes('not found') || uploadError.message?.includes('Bucket')) {
         return NextResponse.json({
           success: false,
@@ -166,11 +164,11 @@ export async function POST(
     else if (file.type.startsWith('image/')) fileTypeCategory = 'image';
     else if (file.type.includes('word')) fileTypeCategory = 'docx';
 
-    // Create skill_documents record
+    // Create skill_documents record with drill_id
     const { data, error } = await supabase
       .from('skill_documents')
       .insert({
-        skill_id: skillId,
+        drill_id: drillId,
         document_name: documentName,
         document_url: documentUrl,
         document_type: documentType,
@@ -193,17 +191,17 @@ export async function POST(
       fileName: file.name
     });
   } catch (error) {
-    console.error('Error uploading skill document:', error);
+    console.error('Error uploading drill document:', error);
     return NextResponse.json({ success: false, error: 'Failed to upload document' }, { status: 500 });
   }
 }
 
-// DELETE - Remove a document from a skill
+// DELETE - Remove a document from a drill
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id: skillId } = await params;
+  const { id: drillId } = await params;
 
   try {
     const supabase = getSupabaseAdmin();
@@ -223,18 +221,22 @@ export async function DELETE(
     // Get document to find storage path
     const { data: doc } = await supabase
       .from('skill_documents')
-      .select('document_url')
+      .select('document_url, file_type')
       .eq('id', documentId)
-      .eq('skill_id', skillId)
+      .eq('drill_id', drillId)
       .single();
 
-    if (doc?.document_url) {
-      // Extract storage path from URL
-      const url = new URL(doc.document_url);
-      const pathParts = url.pathname.split('/skill-documents/');
-      if (pathParts.length > 1) {
-        const storagePath = decodeURIComponent(pathParts[1]);
-        await supabase.storage.from('skill-documents').remove([storagePath]);
+    if (doc?.document_url && doc.file_type !== 'link') {
+      // Extract storage path from URL and attempt cleanup
+      try {
+        const url = new URL(doc.document_url);
+        const pathParts = url.pathname.split('/skill-documents/');
+        if (pathParts.length > 1) {
+          const storagePath = decodeURIComponent(pathParts[1]);
+          await supabase.storage.from('skill-documents').remove([storagePath]);
+        }
+      } catch {
+        // Non-fatal — storage cleanup failure should not block record deletion
       }
     }
 
@@ -243,13 +245,13 @@ export async function DELETE(
       .from('skill_documents')
       .delete()
       .eq('id', documentId)
-      .eq('skill_id', skillId);
+      .eq('drill_id', drillId);
 
     if (error) throw error;
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting skill document:', error);
+    console.error('Error deleting drill document:', error);
     return NextResponse.json({ success: false, error: 'Failed to delete document' }, { status: 500 });
   }
 }
@@ -259,7 +261,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id: skillId } = await params;
+  const { id: drillId } = await params;
 
   try {
     const supabase = getSupabaseAdmin();
@@ -285,7 +287,7 @@ export async function PATCH(
       .from('skill_documents')
       .update(updateData)
       .eq('id', documentId)
-      .eq('skill_id', skillId)
+      .eq('drill_id', drillId)
       .select()
       .single();
 
@@ -293,7 +295,7 @@ export async function PATCH(
 
     return NextResponse.json({ success: true, document: data });
   } catch (error) {
-    console.error('Error updating skill document:', error);
+    console.error('Error updating drill document:', error);
     return NextResponse.json({ success: false, error: 'Failed to update document' }, { status: 500 });
   }
 }

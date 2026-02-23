@@ -85,6 +85,13 @@ interface SkillDrill {
   equipment_needed: string[] | null;
 }
 
+interface DrillDocument {
+  id: string;
+  document_name: string;
+  document_url: string;
+  document_type: string;
+}
+
 const STATION_TYPES = [
   { value: 'scenario', label: 'Scenario', icon: Stethoscope, color: 'bg-purple-500', description: 'Full scenario with grading' },
   { value: 'skills', label: 'Skills', icon: ClipboardCheck, color: 'bg-green-500', description: 'Skills practice station' },
@@ -108,6 +115,9 @@ export default function NewStationPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [selectedInstructor, setSelectedInstructor] = useState('');
+
+  // Drill documents state
+  const [drillDocuments, setDrillDocuments] = useState<DrillDocument[]>([]);
 
   // Form state
   const [stationType, setStationType] = useState<'scenario' | 'skills' | 'skill_drill' | 'documentation'>('scenario');
@@ -151,6 +161,32 @@ export default function NewStationPage() {
       fetchData();
     }
   }, [session, labDayId]);
+
+  // Fetch documents for selected drills when selection changes
+  useEffect(() => {
+    if (stationType !== 'skill_drill' || selectedDrillIds.length === 0) {
+      setDrillDocuments([]);
+      return;
+    }
+    const fetchDrillDocs = async () => {
+      const allDocs: DrillDocument[] = [];
+      await Promise.all(
+        selectedDrillIds.map(async (drillId) => {
+          try {
+            const res = await fetch(`/api/lab-management/skill-drills/${drillId}/documents`);
+            const data = await res.json();
+            if (data.success && data.documents?.length) {
+              allDocs.push(...data.documents);
+            }
+          } catch {
+            // Non-critical; skip on error
+          }
+        })
+      );
+      setDrillDocuments(allDocs);
+    };
+    fetchDrillDocs();
+  }, [stationType, selectedDrillIds]);
 
   const fetchData = async () => {
     try {
@@ -727,6 +763,33 @@ export default function NewStationPage() {
                   {selectedDrillIds.length === 0 ? 'No drills selected — station will show as open drill time.' : `${selectedDrillIds.length} drill${selectedDrillIds.length !== 1 ? 's' : ''} selected.`}
                   {' '}<Link href="/lab-management/skill-drills" target="_blank" className="text-blue-600 dark:text-blue-400 hover:underline">Manage drill library</Link>
                 </p>
+
+                {/* Auto-loaded documents from selected drills */}
+                {drillDocuments.length > 0 && (
+                  <div className="p-3 bg-orange-50 dark:bg-orange-900/10 rounded-lg border border-orange-200 dark:border-orange-800">
+                    <h4 className="text-sm font-medium text-orange-800 dark:text-orange-300 mb-2 flex items-center gap-2">
+                      <FileText className="w-4 h-4" />
+                      Linked Drill Documents
+                    </h4>
+                    <div className="space-y-1">
+                      {drillDocuments.map(doc => (
+                        <a
+                          key={doc.id}
+                          href={doc.document_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 text-sm text-orange-700 dark:text-orange-300 hover:underline"
+                        >
+                          <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                          {doc.document_name}
+                          <span className="text-xs text-orange-500 px-1 py-0.5 bg-orange-100 dark:bg-orange-900/30 rounded">
+                            {doc.document_type.replace(/_/g, ' ')}
+                          </span>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
