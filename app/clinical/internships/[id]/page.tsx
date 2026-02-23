@@ -70,6 +70,8 @@ interface Internship {
   internship_completion_date: string | null;
   snhd_submitted: boolean;
   snhd_submitted_date: string | null;
+  snhd_field_doc_submitted_date: string | null;
+  snhd_course_completion_submitted_date: string | null;
   cleared_for_nremt: boolean;
   nremt_clearance_date: string | null;
   ryan_notified: boolean;
@@ -183,7 +185,8 @@ const PHASE2_ITEMS: ChecklistItem[] = [
 // New organized closeout workflow: Internship Completion → SNHD Requirements → NREMT Clearance → Closeout Meeting
 const CLOSEOUT_ITEMS: ChecklistItem[] = [
   { key: 'internship_completion_date', label: 'Internship Completed', dateKey: 'internship_completion_date', required: true },
-  { key: 'snhd_submitted', label: 'SNHD Requirements Submitted', dateKey: 'snhd_submitted_date', required: true },
+  { key: 'snhd_field_doc_submitted_date', label: 'Field Internship Documentation Submitted', dateKey: 'snhd_field_doc_submitted_date', required: true },
+  { key: 'snhd_course_completion_submitted_date', label: 'SNHD Course Completion Record Submitted', dateKey: 'snhd_course_completion_submitted_date', required: true },
   { key: 'cleared_for_nremt', label: 'NREMT Clearance', dateKey: 'nremt_clearance_date', required: true },
   { key: 'closeout_completed', label: 'Closeout Meeting Completed', dateKey: 'closeout_meeting_date', required: true },
 ];
@@ -294,6 +297,8 @@ export default function InternshipDetailPage() {
           internship_completion_date: i.internship_completion_date || '',
           snhd_submitted: i.snhd_submitted || false,
           snhd_submitted_date: i.snhd_submitted_date || '',
+          snhd_field_doc_submitted_date: i.snhd_field_doc_submitted_date || '',
+          snhd_course_completion_submitted_date: i.snhd_course_completion_submitted_date || '',
           cleared_for_nremt: i.cleared_for_nremt || false,
           nremt_clearance_date: i.nremt_clearance_date || '',
           ryan_notified: i.ryan_notified || false,
@@ -346,6 +351,13 @@ export default function InternshipDetailPage() {
       }
       if (field === 'phase_1_start_date') {
         updated.internship_start_date = value;
+      }
+
+      // Sync snhd_submitted boolean: true when either SNHD date is set
+      if (field === 'snhd_field_doc_submitted_date' || field === 'snhd_course_completion_submitted_date') {
+        const fieldDoc = field === 'snhd_field_doc_submitted_date' ? value : updated.snhd_field_doc_submitted_date;
+        const courseCompletion = field === 'snhd_course_completion_submitted_date' ? value : updated.snhd_course_completion_submitted_date;
+        updated.snhd_submitted = !!(fieldDoc || courseCompletion);
       }
 
       return updated;
@@ -1292,30 +1304,137 @@ export default function InternshipDetailPage() {
                   buttonLabel="Complete"
                 />
 
-                {/* Step 2: SNHD Requirements */}
-                <CloseoutStep
-                  step={2}
-                  label="SNHD Requirements"
-                  description="Southern Nevada Health District paperwork submitted"
-                  dateKey="snhd_submitted_date"
-                  dateValue={formData.snhd_submitted_date}
-                  isComplete={formData.snhd_submitted}
-                  onMarkComplete={() => {
-                    const today = new Date().toISOString().split('T')[0];
-                    handleInputChange('snhd_submitted', true);
-                    handleInputChange('snhd_submitted_date', today);
-                  }}
-                  onDateChange={(date) => {
-                    handleInputChange('snhd_submitted_date', date);
-                    if (date) handleInputChange('snhd_submitted', true);
-                  }}
-                  onClear={() => {
-                    handleInputChange('snhd_submitted', false);
-                    handleInputChange('snhd_submitted_date', '');
-                  }}
-                  canEdit={canEdit}
-                  buttonLabel="Submit"
-                />
+                {/* Step 2: SNHD Requirements (two separate submission dates) */}
+                {(() => {
+                  const fieldDocComplete = !!formData.snhd_field_doc_submitted_date;
+                  const courseComplete = !!formData.snhd_course_completion_submitted_date;
+                  const bothComplete = fieldDocComplete && courseComplete;
+                  return (
+                    <div className={`p-3 rounded-lg border-2 transition-all ${
+                      bothComplete
+                        ? 'bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700'
+                        : 'bg-gray-50 dark:bg-gray-700/30 border-gray-200 dark:border-gray-600'
+                    }`}>
+                      <div className="flex items-start gap-3 mb-3">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${
+                          bothComplete
+                            ? 'bg-green-500 text-white'
+                            : 'bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-300'
+                        }`}>
+                          {bothComplete ? <CheckCircle2 className="w-5 h-5" /> : 2}
+                        </div>
+                        <div>
+                          <div className={`font-medium ${bothComplete ? 'text-green-800 dark:text-green-300' : 'text-gray-900 dark:text-white'}`}>
+                            SNHD Requirements
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">Southern Nevada Health District paperwork submitted</div>
+                        </div>
+                      </div>
+
+                      {/* Sub-field 1: Field Internship Documentation */}
+                      <div className={`ml-11 p-2 rounded-lg mb-2 ${
+                        fieldDocComplete ? 'bg-green-100 dark:bg-green-900/30' : 'bg-white dark:bg-gray-700'
+                      }`}>
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2 min-w-0">
+                            {fieldDocComplete
+                              ? <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />
+                              : <Circle className="w-4 h-4 text-gray-400 flex-shrink-0" />}
+                            <div>
+                              <div className={`text-sm font-medium ${fieldDocComplete ? 'text-green-800 dark:text-green-300' : 'text-gray-700 dark:text-gray-300'}`}>
+                                Field Internship Documentation Submitted
+                              </div>
+                              {formData.snhd_field_doc_submitted_date && (
+                                <div className="text-xs text-green-600 dark:text-green-400">
+                                  Submitted: {formatDate(formData.snhd_field_doc_submitted_date)}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          {canEdit && (
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              {!fieldDocComplete ? (
+                                <button
+                                  onClick={() => handleInputChange('snhd_field_doc_submitted_date', new Date().toISOString().split('T')[0])}
+                                  className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                                >
+                                  Mark Submitted
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handleInputChange('snhd_field_doc_submitted_date', '')}
+                                  className="px-2 py-1 text-xs bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
+                                >
+                                  Undo
+                                </button>
+                              )}
+                              <input
+                                type="date"
+                                value={formData.snhd_field_doc_submitted_date || ''}
+                                onChange={(e) => handleInputChange('snhd_field_doc_submitted_date', e.target.value)}
+                                className="px-2 py-1 text-xs border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white w-32"
+                              />
+                            </div>
+                          )}
+                          {!canEdit && formData.snhd_field_doc_submitted_date && (
+                            <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">{formatDate(formData.snhd_field_doc_submitted_date)}</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Sub-field 2: SNHD Course Completion Record */}
+                      <div className={`ml-11 p-2 rounded-lg ${
+                        courseComplete ? 'bg-green-100 dark:bg-green-900/30' : 'bg-white dark:bg-gray-700'
+                      }`}>
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2 min-w-0">
+                            {courseComplete
+                              ? <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0" />
+                              : <Circle className="w-4 h-4 text-gray-400 flex-shrink-0" />}
+                            <div>
+                              <div className={`text-sm font-medium ${courseComplete ? 'text-green-800 dark:text-green-300' : 'text-gray-700 dark:text-gray-300'}`}>
+                                SNHD Course Completion Record Submitted
+                              </div>
+                              {formData.snhd_course_completion_submitted_date && (
+                                <div className="text-xs text-green-600 dark:text-green-400">
+                                  Submitted: {formatDate(formData.snhd_course_completion_submitted_date)}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          {canEdit && (
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              {!courseComplete ? (
+                                <button
+                                  onClick={() => handleInputChange('snhd_course_completion_submitted_date', new Date().toISOString().split('T')[0])}
+                                  className="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                                >
+                                  Mark Submitted
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handleInputChange('snhd_course_completion_submitted_date', '')}
+                                  className="px-2 py-1 text-xs bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
+                                >
+                                  Undo
+                                </button>
+                              )}
+                              <input
+                                type="date"
+                                value={formData.snhd_course_completion_submitted_date || ''}
+                                onChange={(e) => handleInputChange('snhd_course_completion_submitted_date', e.target.value)}
+                                className="px-2 py-1 text-xs border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white w-32"
+                              />
+                            </div>
+                          )}
+                          {!canEdit && formData.snhd_course_completion_submitted_date && (
+                            <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">{formatDate(formData.snhd_course_completion_submitted_date)}</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Step 3: NREMT Clearance */}
                 <CloseoutStep
