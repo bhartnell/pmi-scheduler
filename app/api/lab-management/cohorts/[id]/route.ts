@@ -1,13 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const session = await getServerSession();
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const { id } = await params;
-  
+
   try {
     const supabase = getSupabaseAdmin();
 
@@ -33,16 +39,33 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const session = await getServerSession();
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const { id } = await params;
-  
+
   try {
     const supabase = getSupabaseAdmin();
 
     const body = await request.json();
-    
+
+    const allowedFields: Record<string, unknown> = {};
+    if (body.name !== undefined) allowedFields.name = body.name;
+    if (body.start_date !== undefined) allowedFields.start_date = body.start_date;
+    if (body.end_date !== undefined) allowedFields.end_date = body.end_date;
+    if (body.status !== undefined) allowedFields.status = body.status;
+    if (body.program_id !== undefined) allowedFields.program_id = body.program_id;
+    if (body.description !== undefined) allowedFields.description = body.description;
+
+    if (Object.keys(allowedFields).length === 0) {
+      return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
+    }
+
     const { data, error } = await supabase
       .from('cohorts')
-      .update(body)
+      .update(allowedFields)
       .eq('id', id)
       .select(`
         *,
@@ -63,8 +86,13 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const session = await getServerSession();
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const { id } = await params;
-  
+
   try {
     const supabase = getSupabaseAdmin();
 

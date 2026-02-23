@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { getServerSession } from 'next-auth';
 
 export async function POST(request: NextRequest) {
+  const session = await getServerSession();
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
     const { pollId, name, email, agency, meetingType, respondentRole, availability } = body;
-
-    console.log('POST submission - received:', { pollId, name, email, agency });
 
     // Check if submission already exists
     const { data: existing, error: checkError } = await supabase
@@ -80,6 +84,11 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
+  const session = await getServerSession();
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const searchParams = request.nextUrl.searchParams;
   const pollId = searchParams.get('pollId');
 

@@ -68,8 +68,8 @@ export async function POST(request: NextRequest) {
     }
 
     const currentUser = await getCurrentUser(session.user.email);
-    if (!currentUser) {
-      return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
+    if (!currentUser || !canAccessAdmin(currentUser.role)) {
+      return NextResponse.json({ success: false, error: 'Access denied' }, { status: 403 });
     }
 
     const body = await request.json();

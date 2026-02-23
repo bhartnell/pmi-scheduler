@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
 
     // Verify the certification belongs to this instructor (or admin)
-    if (currentUser.role !== 'admin') {
+    if (currentUser.role !== 'admin' && currentUser.role !== 'superadmin') {
       const { data: cert } = await supabase
         .from('instructor_certifications')
         .select('instructor_id')

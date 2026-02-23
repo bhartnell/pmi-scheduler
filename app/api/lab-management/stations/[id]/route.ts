@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getServerSession } from 'next-auth';
 import { notifyInstructorAssigned } from '@/lib/notifications';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
@@ -7,8 +8,13 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const session = await getServerSession();
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const { id } = await params;
-  
+
   try {
     const supabase = getSupabaseAdmin();
 
@@ -92,13 +98,18 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const session = await getServerSession();
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const { id } = await params;
-  
+
   try {
     const supabase = getSupabaseAdmin();
 
     const body = await request.json();
-    
+
     // Build update object with only provided fields
     const updateData: any = {};
 
@@ -214,8 +225,13 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const session = await getServerSession();
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const { id } = await params;
-  
+
   try {
     const supabase = getSupabaseAdmin();
 

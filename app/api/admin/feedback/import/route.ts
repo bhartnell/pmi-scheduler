@@ -75,6 +75,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Check admin role
+    const { data: user } = await supabase
+      .from('lab_users')
+      .select('role')
+      .eq('email', session.user.email)
+      .single();
+
+    if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) {
+      return NextResponse.json({ success: false, error: 'Forbidden: Admin access required' }, { status: 403 });
+    }
+
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
 

@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
     const instructorId = searchParams.get('instructorId') || currentUser.id;
 
     // Only admins can view other instructors' CE records
-    if (instructorId !== currentUser.id && currentUser.role !== 'admin') {
+    if (instructorId !== currentUser.id && currentUser.role !== 'admin' && currentUser.role !== 'superadmin') {
       return NextResponse.json({ success: false, error: 'Access denied' }, { status: 403 });
     }
 

@@ -5,6 +5,11 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 
 // Use service role key for server-side operations to bypass RLS
 export async function GET(request: NextRequest) {
+  const session = await getServerSession();
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const searchParams = request.nextUrl.searchParams;
   const category = searchParams.get('category');
   const difficulty = searchParams.get('difficulty');
@@ -108,8 +113,6 @@ export async function POST(request: NextRequest) {
       initial_vitals: body.phases?.[0]?.vitals || null,
       general_impression: body.phases?.[0]?.presentation_notes || null,
     };
-
-    console.log('Creating scenario with data:', JSON.stringify(insertData, null, 2));
 
     const { data, error } = await supabase
       .from('scenarios')

@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { getServerSession } from 'next-auth';
 
 // GET - Get timer state for a lab day
 export async function GET(request: NextRequest) {
+  const session = await getServerSession();
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const searchParams = request.nextUrl.searchParams;
   const labDayId = searchParams.get('labDayId');
 
@@ -64,13 +70,16 @@ export async function GET(request: NextRequest) {
 
 // POST - Create or reset timer state for a lab day
 export async function POST(request: NextRequest) {
+  const session = await getServerSession();
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const supabase = getSupabaseAdmin();
 
     const body = await request.json();
     const { labDayId, durationSeconds, debriefSeconds, mode } = body;
-
-    console.log('POST timer - received:', { labDayId, durationSeconds, debriefSeconds, mode });
 
     if (!labDayId || !durationSeconds) {
       return NextResponse.json({
@@ -116,6 +125,11 @@ export async function POST(request: NextRequest) {
 
 // DELETE - Completely remove timer state for a lab day (end lab)
 export async function DELETE(request: NextRequest) {
+  const session = await getServerSession();
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const searchParams = request.nextUrl.searchParams;
   const labDayId = searchParams.get('labDayId');
 
@@ -157,6 +171,11 @@ export async function DELETE(request: NextRequest) {
 
 // PATCH - Update timer state (start, pause, stop, next rotation)
 export async function PATCH(request: NextRequest) {
+  const session = await getServerSession();
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const supabase = getSupabaseAdmin();
 

@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { getServerSession } from 'next-auth';
 
 // GET - Fetch assessments
 export async function GET(request: NextRequest) {
+  const session = await getServerSession();
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const searchParams = request.nextUrl.searchParams;
   const labStationId = searchParams.get('labStationId') || searchParams.get('stationId');
   const labDayId = searchParams.get('labDayId');
@@ -45,13 +51,15 @@ export async function GET(request: NextRequest) {
 
 // POST - Create a new assessment
 export async function POST(request: NextRequest) {
+  const session = await getServerSession();
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const supabase = getSupabaseAdmin();
 
     const body = await request.json();
-
-    // Debug logging
-    console.log('Scenario assessment request body:', JSON.stringify(body, null, 2));
 
     // Validate required fields - use correct DB column names
     // Accept both old names (station_id) and new names (lab_station_id)
@@ -83,7 +91,6 @@ export async function POST(request: NextRequest) {
           .eq('email', body.graded_by)
           .single();
         gradedByUserId = user?.id || null;
-        console.log('Looked up graded_by:', body.graded_by, '->', gradedByUserId);
       } else {
         // Assume it's already a UUID
         gradedByUserId = body.graded_by;
@@ -117,8 +124,6 @@ export async function POST(request: NextRequest) {
       issue_level: body.issue_level || 'none',
       flag_categories: body.flag_categories || null
     };
-
-    console.log('Assessment data to insert:', JSON.stringify(assessmentData, null, 2));
 
     const { data, error } = await supabase
       .from('scenario_assessments')

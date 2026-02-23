@@ -33,7 +33,7 @@ export async function DELETE(
     }
 
     // Check if user owns this record or is admin
-    if (currentUser.role !== 'admin') {
+    if (currentUser.role !== 'admin' && currentUser.role !== 'superadmin') {
       const { data: record } = await supabase
         .from('ce_records')
         .select('instructor_id')

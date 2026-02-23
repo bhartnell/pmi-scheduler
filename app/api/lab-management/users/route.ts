@@ -11,10 +11,15 @@ async function isRequesterAdmin(email: string): Promise<boolean> {
     .select('role')
     .ilike('email', email)
     .single();
-  return data?.role === 'admin';
+  return data?.role === 'admin' || data?.role === 'superadmin';
 }
 
 export async function GET(request: NextRequest) {
+  const session = await getServerSession();
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const searchParams = request.nextUrl.searchParams;
   const role = searchParams.get('role');
   const activeOnly = searchParams.get('activeOnly') !== 'false';
@@ -46,6 +51,11 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const session = await getServerSession();
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const supabase = getSupabaseAdmin();
 
