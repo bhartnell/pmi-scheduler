@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {
+  const session = await getServerSession();
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
   const searchParams = request.nextUrl.searchParams;
   const programId = searchParams.get('programId');
   const activeOnly = searchParams.get('activeOnly') !== 'false';
@@ -45,11 +50,16 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const session = await getServerSession();
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const supabase = getSupabaseAdmin();
 
     const body = await request.json();
-    
+
     const { data, error } = await supabase
       .from('cohorts')
       .insert({

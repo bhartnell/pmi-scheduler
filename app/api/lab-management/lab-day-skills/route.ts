@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { getServerSession } from 'next-auth';
 
 // GET - Get all skills assigned to any station on a lab day
 export async function GET(request: NextRequest) {
+  const session = await getServerSession();
+  if (!session?.user?.email) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const searchParams = request.nextUrl.searchParams;
   const labDayId = searchParams.get('labDayId');
   const category = searchParams.get('category'); // Optional filter for BLS/Platinum

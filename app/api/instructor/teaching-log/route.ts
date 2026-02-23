@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
     const year = searchParams.get('year');
 
     // Only admins can view other instructors' teaching logs
-    if (instructorId !== currentUser.id && currentUser.role !== 'admin') {
+    if (instructorId !== currentUser.id && currentUser.role !== 'admin' && currentUser.role !== 'superadmin') {
       return NextResponse.json({ success: false, error: 'Access denied' }, { status: 403 });
     }
 

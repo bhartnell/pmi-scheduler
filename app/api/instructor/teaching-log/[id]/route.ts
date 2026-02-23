@@ -43,7 +43,7 @@ export async function DELETE(
       return NextResponse.json({ success: false, error: 'Entry not found' }, { status: 404 });
     }
 
-    if (entry.instructor_id !== currentUser.id && currentUser.role !== 'admin') {
+    if (entry.instructor_id !== currentUser.id && currentUser.role !== 'admin' && currentUser.role !== 'superadmin') {
       return NextResponse.json({ success: false, error: 'Access denied' }, { status: 403 });
     }
 
