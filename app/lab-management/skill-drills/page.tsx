@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import {
   ChevronRight,
@@ -19,9 +19,24 @@ import {
   Save,
   CheckCircle,
   AlertCircle,
+  FileText,
+  Upload,
+  Link as LinkIcon,
+  ExternalLink,
+  Loader2,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import NotificationBell from '@/components/NotificationBell';
+
+interface DrillDocument {
+  id: string;
+  document_name: string;
+  document_url: string;
+  document_type: string;
+  file_type: string | null;
+  display_order: number;
+  created_at: string;
+}
 
 interface SkillDrill {
   id: string;
@@ -47,6 +62,20 @@ const CATEGORIES = [
   { value: 'general', label: 'General', color: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300' },
 ];
 
+const DOC_TYPE_STYLES: Record<string, string> = {
+  skill_sheet: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
+  checkoff: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
+  reference: 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300',
+  protocol: 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300',
+};
+
+const DOC_TYPE_LABELS: Record<string, string> = {
+  skill_sheet: 'Skill Sheet',
+  checkoff: 'Checkoff',
+  reference: 'Reference',
+  protocol: 'Protocol',
+};
+
 const EMPTY_FORM = {
   name: '',
   description: '',
@@ -54,6 +83,13 @@ const EMPTY_FORM = {
   estimated_duration: 15,
   equipment_needed: [''],
   instructions: '',
+};
+
+const EMPTY_DOC_FORM = {
+  documentName: '',
+  documentType: 'reference' as string,
+  mode: 'file' as 'file' | 'url',
+  url: '',
 };
 
 function getCategoryStyle(category: string) {
@@ -81,6 +117,20 @@ export default function SkillDrillsPage() {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
 
+  // Documents state (inside edit modal)
+  const [drillDocs, setDrillDocs] = useState<DrillDocument[]>([]);
+  const [docsLoading, setDocsLoading] = useState(false);
+  const [showDocForm, setShowDocForm] = useState(false);
+  const [docForm, setDocForm] = useState({ ...EMPTY_DOC_FORM });
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [docUploading, setDocUploading] = useState(false);
+  const [docError, setDocError] = useState('');
+  const [deletingDocId, setDeletingDocId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Per-drill doc count cache (so we can show badges on cards)
+  const [docCounts, setDocCounts] = useState<Record<string, number>>({});
+
   // Delete state
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -107,11 +157,46 @@ export default function SkillDrillsPage() {
       const data = await res.json();
       if (data.success) {
         setDrills(data.drills || []);
+        // Fetch doc counts for all drills
+        fetchDocCounts(data.drills || []);
       }
     } catch (error) {
       console.error('Error fetching skill drills:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchDocCounts = async (drillList: SkillDrill[]) => {
+    // Fetch counts in parallel (limited to avoid rate limits)
+    const counts: Record<string, number> = {};
+    await Promise.all(
+      drillList.map(async (drill) => {
+        try {
+          const res = await fetch(`/api/lab-management/skill-drills/${drill.id}/documents`);
+          const data = await res.json();
+          counts[drill.id] = data.success ? (data.documents?.length || 0) : 0;
+        } catch {
+          counts[drill.id] = 0;
+        }
+      })
+    );
+    setDocCounts(counts);
+  };
+
+  const fetchDrillDocs = async (drillId: string) => {
+    setDocsLoading(true);
+    try {
+      const res = await fetch(`/api/lab-management/skill-drills/${drillId}/documents`);
+      const data = await res.json();
+      if (data.success) {
+        setDrillDocs(data.documents || []);
+        setDocCounts(prev => ({ ...prev, [drillId]: data.documents?.length || 0 }));
+      }
+    } catch (err) {
+      console.error('Error fetching drill documents:', err);
+    } finally {
+      setDocsLoading(false);
     }
   };
 
@@ -125,6 +210,9 @@ export default function SkillDrillsPage() {
     setEditingDrill(null);
     setForm({ ...EMPTY_FORM, equipment_needed: [''] });
     setFormError('');
+    setDrillDocs([]);
+    setShowDocForm(false);
+    setDocForm({ ...EMPTY_DOC_FORM });
     setShowModal(true);
   };
 
@@ -139,13 +227,21 @@ export default function SkillDrillsPage() {
       instructions: drill.instructions || '',
     });
     setFormError('');
+    setShowDocForm(false);
+    setDocForm({ ...EMPTY_DOC_FORM });
+    setSelectedFile(null);
+    setDocError('');
     setShowModal(true);
+    // Fetch documents for this drill
+    fetchDrillDocs(drill.id);
   };
 
   const closeModal = () => {
     setShowModal(false);
     setEditingDrill(null);
     setFormError('');
+    setDrillDocs([]);
+    setShowDocForm(false);
   };
 
   const handleSave = async () => {
@@ -192,7 +288,7 @@ export default function SkillDrillsPage() {
       closeModal();
       await fetchDrills();
       showToast(editingDrill ? 'Drill updated successfully' : 'Drill created successfully');
-    } catch (error) {
+    } catch {
       setFormError('An unexpected error occurred');
     } finally {
       setSaving(false);
@@ -213,7 +309,7 @@ export default function SkillDrillsPage() {
       setDeleteId(null);
       await fetchDrills();
       showToast(data.message || 'Drill deactivated');
-    } catch (error) {
+    } catch {
       showToast('An unexpected error occurred', 'error');
     } finally {
       setDeleting(false);
@@ -232,6 +328,116 @@ export default function SkillDrillsPage() {
 
   const removeEquipment = (index: number) => {
     setForm(f => ({ ...f, equipment_needed: f.equipment_needed.filter((_, i) => i !== index) }));
+  };
+
+  // --- Document handlers ---
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    setSelectedFile(file);
+    if (file && !docForm.documentName) {
+      const nameWithoutExt = file.name.replace(/\.[^/.]+$/, '');
+      setDocForm(f => ({ ...f, documentName: nameWithoutExt }));
+    }
+  };
+
+  const handleDocUpload = async () => {
+    if (!editingDrill) return;
+
+    if (!docForm.documentName.trim()) {
+      setDocError('Document name is required.');
+      return;
+    }
+
+    if (docForm.mode === 'url') {
+      if (!docForm.url.trim()) {
+        setDocError('Please enter a URL.');
+        return;
+      }
+      setDocUploading(true);
+      setDocError('');
+      try {
+        const res = await fetch(`/api/lab-management/skill-drills/${editingDrill.id}/documents`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            documentName: docForm.documentName.trim(),
+            documentType: docForm.documentType,
+            url: docForm.url.trim(),
+          }),
+        });
+        const data = await res.json();
+        if (!data.success) {
+          setDocError(data.error || 'Failed to add document.');
+          return;
+        }
+        setShowDocForm(false);
+        setDocForm({ ...EMPTY_DOC_FORM });
+        await fetchDrillDocs(editingDrill.id);
+        showToast('Document added.');
+      } catch {
+        setDocError('An unexpected error occurred.');
+      } finally {
+        setDocUploading(false);
+      }
+      return;
+    }
+
+    // File upload
+    if (!selectedFile) {
+      setDocError('Please select a file.');
+      return;
+    }
+
+    setDocUploading(true);
+    setDocError('');
+    try {
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      formData.append('documentName', docForm.documentName.trim());
+      formData.append('documentType', docForm.documentType);
+
+      const res = await fetch(`/api/lab-management/skill-drills/${editingDrill.id}/documents`, {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (!data.success) {
+        setDocError(data.error || 'Upload failed.');
+        return;
+      }
+      setShowDocForm(false);
+      setDocForm({ ...EMPTY_DOC_FORM });
+      setSelectedFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      await fetchDrillDocs(editingDrill.id);
+      showToast('Document uploaded.');
+    } catch {
+      setDocError('An unexpected error occurred.');
+    } finally {
+      setDocUploading(false);
+    }
+  };
+
+  const handleDeleteDoc = async (docId: string) => {
+    if (!editingDrill) return;
+    setDeletingDocId(docId);
+    try {
+      const res = await fetch(
+        `/api/lab-management/skill-drills/${editingDrill.id}/documents?documentId=${docId}`,
+        { method: 'DELETE' }
+      );
+      const data = await res.json();
+      if (!data.success) {
+        showToast(data.error || 'Failed to delete document.', 'error');
+        return;
+      }
+      await fetchDrillDocs(editingDrill.id);
+      showToast('Document deleted.');
+    } catch {
+      showToast('An unexpected error occurred.', 'error');
+    } finally {
+      setDeletingDocId(null);
+    }
   };
 
   // Filtering
@@ -436,6 +642,13 @@ export default function SkillDrillsPage() {
                               <Clock className="w-3 h-3" />
                               {drill.estimated_duration} min
                             </span>
+                            {/* Document count badge */}
+                            {(docCounts[drill.id] ?? 0) > 0 && (
+                              <span className="flex items-center gap-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded">
+                                <FileText className="w-3 h-3" />
+                                {docCounts[drill.id]} doc{docCounts[drill.id] !== 1 ? 's' : ''}
+                              </span>
+                            )}
                           </div>
                           {drill.description && (
                             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
@@ -628,6 +841,224 @@ export default function SkillDrillsPage() {
                   className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 text-sm"
                 />
               </div>
+
+              {/* Documents Section (only when editing an existing drill) */}
+              {editingDrill && (
+                <div className="border dark:border-gray-700 rounded-lg overflow-hidden">
+                  {/* Section header */}
+                  <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700/50 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                      <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Documents
+                        {drillDocs.length > 0 && (
+                          <span className="ml-1.5 text-xs text-gray-400">({drillDocs.length})</span>
+                        )}
+                      </h3>
+                    </div>
+                    {!showDocForm && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowDocForm(true);
+                          setDocForm({ ...EMPTY_DOC_FORM });
+                          setSelectedFile(null);
+                          setDocError('');
+                        }}
+                        className="flex items-center gap-1 text-xs text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-300 font-medium"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        Add Document
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="p-4 space-y-3">
+                    {/* Existing documents */}
+                    {docsLoading ? (
+                      <div className="flex items-center justify-center py-4">
+                        <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                      </div>
+                    ) : drillDocs.length === 0 && !showDocForm ? (
+                      <p className="text-xs text-gray-400 dark:text-gray-500 italic text-center py-2">
+                        No documents attached yet
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {drillDocs.map(doc => (
+                          <div
+                            key={doc.id}
+                            className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg group"
+                          >
+                            <span className={`text-xs font-medium px-1.5 py-0.5 rounded flex-shrink-0 ${DOC_TYPE_STYLES[doc.document_type] || 'bg-gray-100 text-gray-700'}`}>
+                              {DOC_TYPE_LABELS[doc.document_type] || doc.document_type}
+                            </span>
+                            <a
+                              href={doc.document_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex-1 text-sm text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 min-w-0"
+                            >
+                              <span className="truncate">{doc.document_name}</span>
+                              <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                            </a>
+                            <button
+                              onClick={() => handleDeleteDoc(doc.id)}
+                              disabled={deletingDocId === doc.id}
+                              className="text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 transition-colors flex-shrink-0 opacity-0 group-hover:opacity-100"
+                              title="Delete document"
+                            >
+                              {deletingDocId === doc.id ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              ) : (
+                                <Trash2 className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Inline add document form */}
+                    {showDocForm && (
+                      <div className="border dark:border-gray-600 rounded-lg p-3 space-y-3 bg-white dark:bg-gray-800">
+                        {docError && (
+                          <div className="flex items-center gap-2 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded text-red-700 dark:text-red-400 text-xs">
+                            <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                            {docError}
+                          </div>
+                        )}
+
+                        {/* Doc name */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Name <span className="text-red-500">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={docForm.documentName}
+                            onChange={(e) => setDocForm(f => ({ ...f, documentName: e.target.value }))}
+                            placeholder="Document name..."
+                            className="w-full px-2.5 py-1.5 border dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                          />
+                        </div>
+
+                        {/* Doc type + mode row */}
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Type</label>
+                            <select
+                              value={docForm.documentType}
+                              onChange={(e) => setDocForm(f => ({ ...f, documentType: e.target.value }))}
+                              className="w-full px-2.5 py-1.5 border dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                            >
+                              <option value="skill_sheet">Skill Sheet</option>
+                              <option value="checkoff">Checkoff</option>
+                              <option value="reference">Reference</option>
+                              <option value="protocol">Protocol</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Source</label>
+                            <div className="flex rounded border dark:border-gray-600 overflow-hidden h-[34px]">
+                              <button
+                                type="button"
+                                onClick={() => setDocForm(f => ({ ...f, mode: 'file' }))}
+                                className={`flex-1 flex items-center justify-center gap-1 text-xs transition-colors ${
+                                  docForm.mode === 'file'
+                                    ? 'bg-orange-500 text-white'
+                                    : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50'
+                                }`}
+                              >
+                                <Upload className="w-3 h-3" />
+                                File
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setDocForm(f => ({ ...f, mode: 'url' }))}
+                                className={`flex-1 flex items-center justify-center gap-1 text-xs transition-colors ${
+                                  docForm.mode === 'url'
+                                    ? 'bg-orange-500 text-white'
+                                    : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-50'
+                                }`}
+                              >
+                                <LinkIcon className="w-3 h-3" />
+                                URL
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* File or URL input */}
+                        {docForm.mode === 'file' ? (
+                          <div>
+                            <input
+                              ref={fileInputRef}
+                              type="file"
+                              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp,.gif"
+                              onChange={handleFileChange}
+                              className="hidden"
+                              id="drill-doc-file"
+                            />
+                            <label
+                              htmlFor="drill-doc-file"
+                              className="flex items-center gap-2 px-3 py-2 border-2 border-dashed dark:border-gray-600 rounded cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                            >
+                              {selectedFile ? (
+                                <span className="text-xs text-gray-700 dark:text-gray-300 truncate">{selectedFile.name}</span>
+                              ) : (
+                                <>
+                                  <Upload className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                  <span className="text-xs text-gray-500 dark:text-gray-400">Click to choose file (PDF, DOCX, image — max 10 MB)</span>
+                                </>
+                              )}
+                            </label>
+                          </div>
+                        ) : (
+                          <div>
+                            <input
+                              type="url"
+                              value={docForm.url}
+                              onChange={(e) => setDocForm(f => ({ ...f, url: e.target.value }))}
+                              placeholder="https://drive.google.com/..."
+                              className="w-full px-2.5 py-1.5 border dark:border-gray-600 rounded text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                            />
+                          </div>
+                        )}
+
+                        {/* Form actions */}
+                        <div className="flex justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowDocForm(false);
+                              setDocForm({ ...EMPTY_DOC_FORM });
+                              setSelectedFile(null);
+                              setDocError('');
+                            }}
+                            className="px-3 py-1.5 text-xs border dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-50 dark:hover:bg-gray-700"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleDocUpload}
+                            disabled={docUploading}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-orange-500 text-white rounded hover:bg-orange-600 disabled:bg-gray-400"
+                          >
+                            {docUploading ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Plus className="w-3.5 h-3.5" />
+                            )}
+                            {docUploading ? 'Saving...' : 'Add'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Modal Footer */}

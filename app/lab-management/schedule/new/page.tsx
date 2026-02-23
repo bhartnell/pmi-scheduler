@@ -26,7 +26,8 @@ import {
   HelpCircle,
   LayoutTemplate,
   CheckCircle,
-  RefreshCw
+  RefreshCw,
+  ExternalLink
 } from 'lucide-react';
 
 interface LabDayTemplate {
@@ -125,6 +126,13 @@ interface SkillDrill {
   equipment_needed: string[] | null;
 }
 
+interface DrillDocument {
+  id: string;
+  document_name: string;
+  document_url: string;
+  document_type: string;
+}
+
 const STATION_TYPES = [
   { value: 'scenario', label: 'Scenario', icon: Stethoscope, color: 'bg-purple-500', description: 'Full scenario with grading' },
   { value: 'skills', label: 'Skills', icon: ClipboardCheck, color: 'bg-green-500', description: 'Skills practice station' },
@@ -193,6 +201,9 @@ function NewLabDayPageContent() {
   // Drill picker per-station
   const [drillSearchValues, setDrillSearchValues] = useState<Record<string, string>>({});
   const [drillCategoryFilters, setDrillCategoryFilters] = useState<Record<string, string>>({});
+
+  // Drill documents per-station (keyed by station.id)
+  const [drillDocsByStation, setDrillDocsByStation] = useState<Record<string, DrillDocument[]>>({});
 
   // Templates
   const [templates, setTemplates] = useState<LabDayTemplate[]>([]);
@@ -329,6 +340,40 @@ function NewLabDayPageContent() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [templateIdParam, templates.length, loading]);
+
+  // Fetch documents for all skill_drill stations whenever stations change
+  useEffect(() => {
+    const drillStations = stations.filter(s => s.station_type === 'skill_drill' && (s.drill_ids || []).length > 0);
+    if (drillStations.length === 0) return;
+
+    const fetchAllDrillDocs = async () => {
+      const updates: Record<string, DrillDocument[]> = {};
+      await Promise.all(
+        drillStations.map(async (station) => {
+          const allDocs: DrillDocument[] = [];
+          await Promise.all(
+            (station.drill_ids || []).map(async (drillId) => {
+              try {
+                const res = await fetch(`/api/lab-management/skill-drills/${drillId}/documents`);
+                const data = await res.json();
+                if (data.success && data.documents?.length) {
+                  allDocs.push(...data.documents);
+                }
+              } catch {
+                // Non-critical; skip on error
+              }
+            })
+          );
+          updates[station.id] = allDocs;
+        })
+      );
+      setDrillDocsByStation(prev => ({ ...prev, ...updates }));
+    };
+
+    fetchAllDrillDocs();
+    // We intentionally only trigger on station type / drill_ids changes; full deps would cause excessive re-fetches
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stations.map(s => `${s.id}:${s.station_type}:${(s.drill_ids || []).join(',')}`).join('|')]);
 
   const fetchData = async () => {
     try {
@@ -1680,6 +1725,33 @@ function NewLabDayPageContent() {
                             ? 'No drills selected — station will be open drill time.'
                             : `${(station.drill_ids || []).length} drill${(station.drill_ids || []).length !== 1 ? 's' : ''} selected.`}
                         </p>
+
+                        {/* Auto-loaded documents from selected drills */}
+                        {(drillDocsByStation[station.id] || []).length > 0 && (
+                          <div className="p-3 bg-orange-50 dark:bg-orange-900/10 rounded-lg border border-orange-200 dark:border-orange-800">
+                            <h4 className="text-sm font-medium text-orange-800 dark:text-orange-300 mb-2 flex items-center gap-2">
+                              <FileText className="w-4 h-4" />
+                              Linked Drill Documents
+                            </h4>
+                            <div className="space-y-1">
+                              {(drillDocsByStation[station.id] || []).map(doc => (
+                                <a
+                                  key={doc.id}
+                                  href={doc.document_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-2 text-sm text-orange-700 dark:text-orange-300 hover:underline"
+                                >
+                                  <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                                  {doc.document_name}
+                                  <span className="text-xs text-orange-500 px-1 py-0.5 bg-orange-100 dark:bg-orange-900/30 rounded">
+                                    {doc.document_type.replace(/_/g, ' ')}
+                                  </span>
+                                </a>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
 
