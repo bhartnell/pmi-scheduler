@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Bell, Check, CheckCheck, ExternalLink, ArrowLeft, Trash2, Settings } from 'lucide-react';
 import LabHeader from '@/components/LabHeader';
+import { useToast } from '@/components/Toast';
 
 interface Notification {
   id: string;
@@ -64,6 +65,7 @@ export default function NotificationsPage() {
   const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  const toast = useToast();
   const [filter, setFilter] = useState<'all' | 'unread'>('all');
   const [showSettings, setShowSettings] = useState(false);
   const [settings, setSettings] = useState<NotificationSettings>({
@@ -73,6 +75,8 @@ export default function NotificationsPage() {
     show_desktop_notifications: false,
   });
   const [savingSettings, setSavingSettings] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [clearing, setClearing] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -164,6 +168,30 @@ export default function NotificationsPage() {
     }
   };
 
+  const clearAllNotifications = async () => {
+    setClearing(true);
+    try {
+      const res = await fetch('/api/notifications', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ all: true }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setNotifications([]);
+        setShowClearConfirm(false);
+        toast.success(`${data.deleted} notification(s) cleared`);
+      } else {
+        toast.error('Failed to clear notifications');
+      }
+    } catch (error) {
+      console.error('Failed to clear notifications:', error);
+      toast.error('Failed to clear notifications');
+    } finally {
+      setClearing(false);
+    }
+  };
+
   if (status === 'loading' || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
@@ -232,6 +260,17 @@ export default function NotificationsPage() {
               >
                 <CheckCheck className="w-4 h-4" />
                 Mark All Read
+              </button>
+            )}
+
+            {/* Clear All */}
+            {notifications.length > 0 && (
+              <button
+                onClick={() => setShowClearConfirm(true)}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
+              >
+                <Trash2 className="w-4 h-4" />
+                Clear All
               </button>
             )}
 
@@ -427,6 +466,54 @@ export default function NotificationsPage() {
           )}
         </div>
       </main>
+
+      {/* Clear All Confirmation Modal */}
+      {showClearConfirm && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="clear-confirm-title"
+        >
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6">
+            <h3 id="clear-confirm-title" className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+              Clear All Notifications?
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              This will permanently delete all {notifications.length} notification{notifications.length !== 1 ? 's' : ''}. This action cannot be undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowClearConfirm(false)}
+                disabled={clearing}
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={clearAllNotifications}
+                disabled={clearing}
+                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+              >
+                {clearing ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Clearing...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    Clear All
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
