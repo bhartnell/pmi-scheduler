@@ -23,8 +23,37 @@ import {
   Search,
   X,
   Users,
-  HelpCircle
+  HelpCircle,
+  LayoutTemplate,
+  CheckCircle
 } from 'lucide-react';
+
+interface LabDayTemplate {
+  id: string;
+  name: string;
+  description: string | null;
+  template_data: {
+    stations: Array<{
+      station_type: string;
+      scenario_id?: string;
+      selected_skills?: string[];
+      custom_skills?: string[];
+      notes?: string;
+      room?: string;
+      rotation_minutes?: number;
+      num_rotations?: number;
+      skill_sheet_url?: string;
+      instructions_url?: string;
+      station_notes?: string;
+    }>;
+    rotation_duration?: number;
+    num_rotations?: number;
+  };
+  is_shared: boolean;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
 
 interface Cohort {
   id: string;
@@ -148,6 +177,19 @@ function NewLabDayPageContent() {
   const [scenarioFilterDifficulty, setScenarioFilterDifficulty] = useState('');
   const [scenarioFilterProgram, setScenarioFilterProgram] = useState('');
 
+  // Templates
+  const [templates, setTemplates] = useState<LabDayTemplate[]>([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState('');
+  const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false);
+  const [templateName, setTemplateName] = useState('');
+  const [templateDescription, setTemplateDescription] = useState('');
+  const [templateShared, setTemplateShared] = useState(false);
+  const [templateSaving, setTemplateSaving] = useState(false);
+  const [templateToast, setTemplateToast] = useState('');
+  const [showLoadConfirm, setShowLoadConfirm] = useState(false);
+  const [pendingTemplateId, setPendingTemplateId] = useState('');
+
   // --- Auto-save draft ---
   // Compose a snapshot of the user-editable form fields to track changes.
   // We exclude fetched reference data (cohorts, scenarios, skills, etc.) and
@@ -261,6 +303,15 @@ function NewLabDayPageContent() {
     }
   }, [session]);
 
+  // Auto-apply template from URL param after templates are loaded
+  const templateIdParam = searchParams.get('templateId');
+  useEffect(() => {
+    if (templateIdParam && templates.length > 0 && !loading) {
+      applyTemplate(templateIdParam);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [templateIdParam, templates.length, loading]);
+
   const fetchData = async () => {
     try {
       // Fetch cohorts
@@ -296,6 +347,20 @@ function NewLabDayPageContent() {
       const usersData = await usersRes.json();
       if (usersData.success) {
         setUsers(usersData.users || []);
+      }
+
+      // Fetch templates
+      setTemplatesLoading(true);
+      try {
+        const templatesRes = await fetch('/api/lab-management/templates');
+        const templatesData = await templatesRes.json();
+        if (templatesData.success) {
+          setTemplates(templatesData.templates || []);
+        }
+      } catch {
+        // Templates are non-critical; silently ignore
+      } finally {
+        setTemplatesLoading(false);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -409,6 +474,149 @@ function NewLabDayPageContent() {
     }
 
     return dateStr ? `${cohortAbbrev} ${dateStr} - ${contentName}` : `${cohortAbbrev} - ${contentName}`;
+  };
+
+  const showToast = (message: string) => {
+    setTemplateToast(message);
+    setTimeout(() => setTemplateToast(''), 3000);
+  };
+
+  const hasFormData = () => {
+    return (
+      selectedCohort !== '' ||
+      labDate !== '' ||
+      labTitle !== '' ||
+      stations.some(s => s.scenario_id || s.selected_skills.length > 0 || s.custom_skills.some(c => c.trim()))
+    );
+  };
+
+  const applyTemplate = (templateId: string) => {
+    const template = templates.find(t => t.id === templateId);
+    if (!template) return;
+
+    const td = template.template_data;
+
+    // Apply rotation settings if present
+    if (td.num_rotations) {
+      setNumRotationsLabDay(td.num_rotations);
+    }
+    if (td.rotation_duration) {
+      setRotationDurationLabDay(td.rotation_duration);
+      setDurationInputValueLabDay(td.rotation_duration.toString());
+    }
+
+    // Apply stations
+    if (td.stations && td.stations.length > 0) {
+      const newStations: Station[] = td.stations.map((s, i) => ({
+        ...createEmptyStation(i + 1),
+        station_type: (s.station_type as Station['station_type']) || 'scenario',
+        scenario_id: s.scenario_id || '',
+        selected_skills: s.selected_skills || [],
+        custom_skills: s.custom_skills || [],
+        notes: s.notes || '',
+        room: s.room || '',
+        rotation_minutes: s.rotation_minutes ?? 30,
+        num_rotations: s.num_rotations ?? 4,
+        skill_sheet_url: s.skill_sheet_url || '',
+        instructions_url: s.instructions_url || '',
+        station_notes: s.station_notes || '',
+      }));
+      setStations(newStations);
+    }
+
+    setSelectedTemplateId('');
+    setPendingTemplateId('');
+    setShowLoadConfirm(false);
+    showToast(`Template "${template.name}" loaded`);
+  };
+
+  const handleTemplateSelect = (templateId: string) => {
+    if (!templateId) {
+      setSelectedTemplateId('');
+      return;
+    }
+
+    if (hasFormData()) {
+      setPendingTemplateId(templateId);
+      setShowLoadConfirm(true);
+    } else {
+      setSelectedTemplateId(templateId);
+      applyTemplate(templateId);
+    }
+  };
+
+  const handleSaveTemplate = async () => {
+    if (!templateName.trim()) return;
+
+    setTemplateSaving(true);
+    try {
+      // Check for name conflict
+      const existing = templates.find(
+        t => t.name.toLowerCase() === templateName.trim().toLowerCase() && t.created_by === (session?.user?.email || '')
+      );
+
+      const templateData = {
+        stations: stations.map(s => ({
+          station_type: s.station_type,
+          scenario_id: s.scenario_id || undefined,
+          selected_skills: s.selected_skills,
+          custom_skills: s.custom_skills,
+          notes: s.notes || undefined,
+          room: s.room || undefined,
+          rotation_minutes: s.rotation_minutes,
+          num_rotations: s.num_rotations,
+          skill_sheet_url: s.skill_sheet_url || undefined,
+          instructions_url: s.instructions_url || undefined,
+          station_notes: s.station_notes || undefined,
+        })),
+        rotation_duration: rotationDurationLabDay,
+        num_rotations: numRotationsLabDay,
+      };
+
+      if (existing) {
+        // Update existing template
+        const res = await fetch(`/api/lab-management/templates/${existing.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: templateName.trim(),
+            description: templateDescription.trim() || null,
+            template_data: templateData,
+            is_shared: templateShared,
+          }),
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Failed to update template');
+        setTemplates(prev => prev.map(t => (t.id === existing.id ? data.template : t)));
+        showToast('Template updated!');
+      } else {
+        // Create new template
+        const res = await fetch('/api/lab-management/templates', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: templateName.trim(),
+            description: templateDescription.trim() || null,
+            template_data: templateData,
+            is_shared: templateShared,
+          }),
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Failed to create template');
+        setTemplates(prev => [data.template, ...prev]);
+        showToast('Template saved!');
+      }
+
+      setShowSaveTemplateModal(false);
+      setTemplateName('');
+      setTemplateDescription('');
+      setTemplateShared(false);
+    } catch (error) {
+      console.error('Error saving template:', error);
+      alert('Failed to save template. Please try again.');
+    } finally {
+      setTemplateSaving(false);
+    }
   };
 
   const handleSave = async () => {
@@ -678,6 +886,81 @@ function NewLabDayPageContent() {
           onDiscard={autoSave.discardDraft}
           onDismiss={autoSave.dismissRestorePrompt}
         />
+
+        {/* Template Toolbar */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <LayoutTemplate className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Templates</span>
+            </div>
+            <div className="flex flex-1 items-center gap-3 w-full sm:w-auto">
+              <select
+                value={selectedTemplateId}
+                onChange={(e) => handleTemplateSelect(e.target.value)}
+                disabled={templatesLoading}
+                className="flex-1 px-3 py-2 border dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 disabled:opacity-50"
+              >
+                <option value="">
+                  {templatesLoading ? 'Loading templates...' : templates.length === 0 ? 'No templates yet' : 'Load from template...'}
+                </option>
+                {templates.length > 0 && (
+                  <>
+                    {templates.filter(t => t.created_by === session?.user?.email).length > 0 && (
+                      <optgroup label="My Templates">
+                        {templates
+                          .filter(t => t.created_by === session?.user?.email)
+                          .map(t => (
+                            <option key={t.id} value={t.id}>
+                              {t.name} ({t.template_data.stations?.length ?? 0} stations)
+                            </option>
+                          ))}
+                      </optgroup>
+                    )}
+                    {templates.filter(t => t.is_shared && t.created_by !== session?.user?.email).length > 0 && (
+                      <optgroup label="Shared Templates">
+                        {templates
+                          .filter(t => t.is_shared && t.created_by !== session?.user?.email)
+                          .map(t => (
+                            <option key={t.id} value={t.id}>
+                              {t.name} ({t.template_data.stations?.length ?? 0} stations)
+                            </option>
+                          ))}
+                      </optgroup>
+                    )}
+                  </>
+                )}
+              </select>
+              <button
+                type="button"
+                onClick={() => {
+                  setTemplateName('');
+                  setTemplateDescription('');
+                  setTemplateShared(false);
+                  setShowSaveTemplateModal(true);
+                }}
+                className="flex items-center gap-2 px-3 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex-shrink-0"
+              >
+                <Save className="w-4 h-4" />
+                Save as Template
+              </button>
+            </div>
+          </div>
+          {templates.length === 0 && !templatesLoading && (
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+              Save your current station setup as a template to reuse it on future lab days.
+            </p>
+          )}
+        </div>
+
+        {/* Toast notification */}
+        {templateToast && (
+          <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg shadow-lg animate-in fade-in slide-in-from-bottom-2">
+            <CheckCircle className="w-4 h-4 flex-shrink-0" />
+            <span className="text-sm font-medium">{templateToast}</span>
+          </div>
+        )}
+
         {/* Basic Info */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
           <h2 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
@@ -1584,6 +1867,140 @@ function NewLabDayPageContent() {
           </button>
         </div>
       </main>
+
+      {/* Load Template Confirmation Modal */}
+      {showLoadConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-sm w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+                <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+              </div>
+              <h3 className="font-semibold text-gray-900 dark:text-white">Replace form data?</h3>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+              Loading this template will replace your current station setup and rotation settings.
+              Lab details (cohort, date, times) will be kept.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => {
+                  setShowLoadConfirm(false);
+                  setPendingTemplateId('');
+                }}
+                className="px-4 py-2 border dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => applyTemplate(pendingTemplateId)}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm"
+              >
+                Load Template
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Save as Template Modal */}
+      {showSaveTemplateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-4 border-b dark:border-gray-700 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <LayoutTemplate className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                <h3 className="font-semibold text-gray-900 dark:text-white">Save as Template</h3>
+              </div>
+              <button
+                onClick={() => setShowSaveTemplateModal(false)}
+                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+              >
+                <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+              </button>
+            </div>
+            <div className="p-4 space-y-4">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Saves the current station setup ({stations.length} station{stations.length !== 1 ? 's' : ''}) and rotation settings as a reusable template.
+              </p>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Template Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={templateName}
+                  onChange={(e) => setTemplateName(e.target.value)}
+                  placeholder="e.g., Cardiac Day - 4 Stations"
+                  maxLength={100}
+                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  autoFocus
+                />
+                {templates.some(
+                  t => t.name.toLowerCase() === templateName.trim().toLowerCase() && t.created_by === session?.user?.email
+                ) && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                    A template with this name already exists. Saving will overwrite it.
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Description (optional)
+                </label>
+                <textarea
+                  value={templateDescription}
+                  onChange={(e) => setTemplateDescription(e.target.value)}
+                  placeholder="What scenarios or skills does this template cover?"
+                  rows={3}
+                  maxLength={500}
+                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                />
+              </div>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={templateShared}
+                  onChange={(e) => setTemplateShared(e.target.checked)}
+                  className="w-4 h-4 text-indigo-600 rounded"
+                />
+                <div>
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Share with team</span>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">All instructors can load this template</p>
+                </div>
+              </label>
+            </div>
+            <div className="p-4 border-t dark:border-gray-700 flex gap-3 justify-end">
+              <button
+                onClick={() => setShowSaveTemplateModal(false)}
+                className="px-4 py-2 border dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveTemplate}
+                disabled={!templateName.trim() || templateSaving}
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {templateSaving ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    Save Template
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Skills Selection Modal */}
       {skillsModalStation !== null && (
