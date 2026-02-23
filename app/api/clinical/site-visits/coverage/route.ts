@@ -8,7 +8,7 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 const KEY_SITES = ['Siena', 'SHMC', 'SVH']; // St Rose Siena, Summerlin, Spring Valley
 
 // Default days threshold for alerts (no visits in X days = alert)
-const DEFAULT_DAYS_THRESHOLD = 7;
+const DEFAULT_DAYS_THRESHOLD = 14;
 
 interface SiteCoverage {
   siteId: string;
@@ -150,5 +150,59 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error checking site visit coverage:', error);
     return NextResponse.json({ success: false, error: 'Failed to check coverage' }, { status: 500 });
+  }
+}
+
+// POST - Send overdue site visit notifications to directors
+export async function POST(request: NextRequest) {
+  try {
+    const supabase = getSupabaseAdmin();
+    const session = await getServerSession();
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json();
+
+    if (body.action === 'notify_overdue') {
+      const { createNotification } = await import('@/lib/notifications');
+
+      // Get all admin and lead_instructor users to notify
+      const { data: directors } = await supabase
+        .from('lab_users')
+        .select('email, role')
+        .in('role', ['superadmin', 'admin', 'lead_instructor']);
+
+      if (!directors || directors.length === 0) {
+        return NextResponse.json({ success: true, notified: 0 });
+      }
+
+      const siteList = (body.sites || [])
+        .map((s: { abbreviation: string; daysSinceVisit: number | null }) =>
+          `${s.abbreviation}: ${s.daysSinceVisit !== null ? s.daysSinceVisit + ' days' : 'never visited'}`
+        )
+        .join(', ');
+
+      const notifications = directors.map((director: { email: string }) =>
+        createNotification({
+          userEmail: director.email,
+          title: 'Clinical sites need visits',
+          message: `Overdue sites: ${siteList}. Please schedule a site visit.`,
+          type: 'compliance_due',
+          category: 'clinical',
+          linkUrl: '/clinical/site-visits',
+          referenceType: 'site_visit_reminder',
+        })
+      );
+
+      await Promise.allSettled(notifications);
+
+      return NextResponse.json({ success: true, notified: directors.length });
+    }
+
+    return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
+  } catch (error) {
+    console.error('Error sending site visit notifications:', error);
+    return NextResponse.json({ error: 'Failed to send notifications' }, { status: 500 });
   }
 }

@@ -68,9 +68,38 @@ export default function SiteVisitAlerts({
     setLoading(false);
   };
 
+  // Send notification to directors about overdue sites (once per day)
+  const sendOverdueNotification = async (sites: SiteCoverage[]) => {
+    const storageKey = 'site-visit-reminder-sent';
+    const lastSent = localStorage.getItem(storageKey);
+    const today = new Date().toISOString().split('T')[0];
+
+    if (lastSent === today) return; // Already sent today
+
+    try {
+      await fetch('/api/clinical/site-visits/coverage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'notify_overdue',
+          sites: sites.map(s => ({ name: s.siteName, abbreviation: s.abbreviation, daysSinceVisit: s.daysSinceVisit }))
+        })
+      });
+      localStorage.setItem(storageKey, today);
+    } catch {
+      // Silently fail - notification is best-effort
+    }
+  };
+
   useEffect(() => {
     fetchCoverage();
   }, []);
+
+  useEffect(() => {
+    if (data?.sitesNeedingAttention && data.sitesNeedingAttention.length > 0 && data.hasSemester3Cohorts) {
+      sendOverdueNotification(data.sitesNeedingAttention);
+    }
+  }, [data]);
 
   // Don't show if there are no Semester 3 cohorts
   if (!loading && data && !data.hasSemester3Cohorts) {
@@ -172,8 +201,16 @@ export default function SiteVisitAlerts({
               className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-lg border border-amber-200 dark:border-amber-700"
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-amber-100 dark:bg-amber-900/40 rounded-lg flex items-center justify-center">
-                  <MapPin className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                  site.daysSinceVisit === null || site.daysSinceVisit >= 21
+                    ? 'bg-red-100 dark:bg-red-900/40'
+                    : 'bg-amber-100 dark:bg-amber-900/40'
+                }`}>
+                  <MapPin className={`w-5 h-5 ${
+                    site.daysSinceVisit === null || site.daysSinceVisit >= 21
+                      ? 'text-red-600 dark:text-red-400'
+                      : 'text-amber-600 dark:text-amber-400'
+                  }`} />
                 </div>
                 <div>
                   <div className="font-medium text-gray-900 dark:text-white">
@@ -199,13 +236,25 @@ export default function SiteVisitAlerts({
               </div>
               <div className="text-right">
                 {site.daysSinceVisit !== null ? (
-                  <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-medium">
+                  <div className={`flex items-center gap-1 font-medium ${
+                    site.daysSinceVisit >= 21
+                      ? 'text-red-600 dark:text-red-400'
+                      : 'text-amber-600 dark:text-amber-400'
+                  }`}>
                     <Clock className="w-4 h-4" />
-                    {site.daysSinceVisit} days ago
+                    <span>{site.daysSinceVisit}d ago</span>
+                    {site.daysSinceVisit >= 21 && (
+                      <span className="ml-1 px-1.5 py-0.5 text-xs bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 rounded-full">
+                        Overdue
+                      </span>
+                    )}
                   </div>
                 ) : (
-                  <div className="text-red-500 dark:text-red-400 font-medium text-sm">
-                    Never visited
+                  <div className="flex items-center gap-1 text-red-500 dark:text-red-400 font-medium text-sm">
+                    <span>Never visited</span>
+                    <span className="ml-1 px-1.5 py-0.5 text-xs bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 rounded-full">
+                      Overdue
+                    </span>
                   </div>
                 )}
               </div>

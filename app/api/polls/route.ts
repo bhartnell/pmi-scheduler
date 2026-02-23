@@ -77,10 +77,11 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    const safeLink = link.replace(/[%_,.()\\/]/g, '');
     const { data, error } = await supabase
       .from('polls')
       .select('*')
-      .or(`participant_link.eq.${link},admin_link.eq.${link}`)
+      .or(`participant_link.eq.${safeLink},admin_link.eq.${safeLink}`)
       .single();
 
     if (error) throw error;

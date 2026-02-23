@@ -22,13 +22,16 @@ import {
   Kanban,
   Printer,
   Trash2,
-  Square
+  Square,
+  Keyboard
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import NotificationBell from '@/components/NotificationBell';
 import TaskKanban from '@/components/TaskKanban';
 import { useToast } from '@/components/Toast';
 import { PageErrorBoundary } from '@/components/PageErrorBoundary';
+import { useKeyboardShortcuts, KeyboardShortcut } from '@/hooks/useKeyboardShortcuts';
+import KeyboardShortcutsHelp from '@/components/KeyboardShortcutsHelp';
 import {
   InstructorTask,
   TaskPriority,
@@ -99,6 +102,10 @@ function TasksPageContent() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [bulkLoading, setBulkLoading] = useState(false);
+
+  // Keyboard shortcuts state
+  const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
+  const [focusedIndex, setFocusedIndex] = useState(-1);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -293,6 +300,11 @@ function TasksPageContent() {
     setSelectedIds(new Set());
   }, [activeTab, statusFilter, priorityFilter]);
 
+  // Reset focused index when tasks list changes
+  useEffect(() => {
+    setFocusedIndex(-1);
+  }, [tasks]);
+
   const toggleSelection = (taskId: string) => {
     setSelectedIds(prev => {
       const next = new Set(prev);
@@ -361,6 +373,93 @@ function TasksPageContent() {
     }
     setBulkLoading(false);
   };
+
+  // Keyboard shortcuts
+  const shortcuts: KeyboardShortcut[] = [
+    {
+      key: '?',
+      shift: true,
+      handler: () => setShowShortcutsHelp(prev => !prev),
+      description: 'Show keyboard shortcuts',
+      category: 'Global',
+    },
+    {
+      key: 'n',
+      ctrl: true,
+      handler: () => setShowNewTaskModal(true),
+      description: 'New task',
+      category: 'Global',
+    },
+    {
+      key: 'j',
+      handler: () => {
+        if (viewMode !== 'list' || tasks.length === 0) return;
+        setFocusedIndex(prev => Math.min(prev + 1, tasks.length - 1));
+      },
+      description: 'Move down in list',
+      category: 'Navigation',
+    },
+    {
+      key: 'k',
+      handler: () => {
+        if (viewMode !== 'list' || tasks.length === 0) return;
+        setFocusedIndex(prev => Math.max(prev - 1, 0));
+      },
+      description: 'Move up in list',
+      category: 'Navigation',
+    },
+    {
+      key: 'enter',
+      handler: () => {
+        if (focusedIndex >= 0 && focusedIndex < tasks.length) {
+          router.push(`/tasks/${tasks[focusedIndex].id}`);
+        }
+      },
+      description: 'Open focused task',
+      category: 'Navigation',
+    },
+    {
+      key: 'c',
+      handler: () => {
+        if (focusedIndex >= 0 && focusedIndex < tasks.length) {
+          const task = tasks[focusedIndex];
+          const isAssignedToMe = task.assigned_to === currentUser?.id || task.user_assignee_id;
+          const canComplete = isAssignedToMe && (task.status === 'pending' || task.status === 'in_progress') && task.user_assignee_status !== 'completed';
+          if (canComplete) {
+            handleQuickComplete(task.id);
+          }
+        }
+      },
+      description: 'Mark focused task complete',
+      category: 'Tasks',
+    },
+    {
+      key: 'x',
+      handler: () => {
+        if (focusedIndex >= 0 && focusedIndex < tasks.length) {
+          toggleSelection(tasks[focusedIndex].id);
+        }
+      },
+      description: 'Toggle selection on focused task',
+      category: 'Tasks',
+    },
+    {
+      key: 'escape',
+      handler: () => {
+        if (showShortcutsHelp) {
+          setShowShortcutsHelp(false);
+        } else if (selectedIds.size > 0) {
+          clearSelection();
+        } else {
+          setFocusedIndex(-1);
+        }
+      },
+      description: 'Clear selection / close modal',
+      category: 'Global',
+    },
+  ];
+
+  useKeyboardShortcuts(shortcuts, !showNewTaskModal);
 
   const toggleAssignee = (instructorId: string) => {
     setNewTask(prev => ({
@@ -438,6 +537,14 @@ function TasksPageContent() {
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Tasks</h1>
             </div>
             <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowShortcutsHelp(true)}
+                className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+                aria-label="Keyboard shortcuts"
+                title="Keyboard shortcuts (?)"
+              >
+                <Keyboard className="w-4 h-4" />
+              </button>
               <button
                 onClick={() => window.print()}
                 className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
@@ -649,7 +756,7 @@ function TasksPageContent() {
                 </span>
               )}
             </div>
-            {tasks.map((task) => {
+            {tasks.map((task, index) => {
               const dueInfo = formatDueDate(task.due_date);
               const priorityColor = PRIORITY_COLORS[task.priority];
               const statusColor = STATUS_COLORS[task.status];
@@ -666,7 +773,9 @@ function TasksPageContent() {
               return (
                 <div
                   key={task.id}
-                  className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 hover:shadow-md transition-shadow"
+                  className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 hover:shadow-md transition-shadow ${
+                    index === focusedIndex ? 'ring-2 ring-blue-500 dark:ring-blue-400' : ''
+                  }`}
                 >
                   <div className="flex items-start gap-4">
                     {/* Selection checkbox */}
@@ -803,6 +912,13 @@ function TasksPageContent() {
           </div>
         )}
       </main>
+
+      {/* Keyboard Shortcuts Help */}
+      <KeyboardShortcutsHelp
+        shortcuts={shortcuts}
+        isOpen={showShortcutsHelp}
+        onClose={() => setShowShortcutsHelp(false)}
+      />
 
       {/* Bulk Delete Confirmation Modal */}
       {showDeleteConfirm && (
