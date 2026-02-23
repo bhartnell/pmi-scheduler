@@ -52,10 +52,33 @@ interface LabDay {
 interface DailyNote {
   id: string;
   instructor_id: string;
+  instructor_email: string | null;
+  instructor_name: string | null;
   note_date: string;
   content: string;
   created_at: string;
   updated_at: string;
+}
+
+// Helper: derive display initials from a name or email
+function getInitials(nameOrEmail: string | null): string {
+  if (!nameOrEmail) return '?';
+  const base = nameOrEmail.includes('@') ? nameOrEmail.split('@')[0] : nameOrEmail;
+  const parts = base.trim().split(/[\s._-]+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+  return base.substring(0, 2).toUpperCase();
+}
+
+// Helper: derive a stable hue from an email string for the author badge color
+function emailToHue(email: string | null): number {
+  if (!email) return 200;
+  let hash = 0;
+  for (let i = 0; i < email.length; i++) {
+    hash = email.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return Math.abs(hash) % 360;
 }
 
 function SchedulePageContent() {
@@ -74,7 +97,11 @@ function SchedulePageContent() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   // Daily notes state
-  const [dailyNotes, setDailyNotes] = useState<Record<string, DailyNote>>({});
+  // showAllNotes=false → only current user's notes (one per date)
+  // showAllNotes=true  → all instructors' notes (multiple per date possible)
+  const [showAllNotes, setShowAllNotes] = useState(false);
+  const [myNotes, setMyNotes] = useState<Record<string, DailyNote>>({});
+  const [allNotes, setAllNotes] = useState<Record<string, DailyNote[]>>({});
   const [noteModalDate, setNoteModalDate] = useState<Date | null>(null);
   const [noteContent, setNoteContent] = useState('');
   const [savingNote, setSavingNote] = useState(false);
@@ -97,7 +124,7 @@ function SchedulePageContent() {
       fetchLabDays();
       fetchDailyNotes();
     }
-  }, [session, currentMonth, selectedCohort]);
+  }, [session, currentMonth, selectedCohort, showAllNotes]);
 
   // Focus textarea when modal opens
   useEffect(() => {
@@ -172,26 +199,59 @@ function SchedulePageContent() {
         endDate: endDate.toISOString().split('T')[0],
       });
 
+      if (showAllNotes) {
+        params.set('all', 'true');
+      }
+
       const res = await fetch(`/api/lab-management/daily-notes?${params}`);
       const data = await res.json();
 
       if (data.success) {
-        const notesMap: Record<string, DailyNote> = {};
-        data.notes.forEach((note: DailyNote) => {
-          notesMap[note.note_date] = note;
-        });
-        setDailyNotes(notesMap);
+        if (showAllNotes) {
+          // Group by date — multiple notes per date possible
+          const grouped: Record<string, DailyNote[]> = {};
+          data.notes.forEach((note: DailyNote) => {
+            if (!grouped[note.note_date]) grouped[note.note_date] = [];
+            grouped[note.note_date].push(note);
+          });
+          setAllNotes(grouped);
+        } else {
+          const notesMap: Record<string, DailyNote> = {};
+          data.notes.forEach((note: DailyNote) => {
+            notesMap[note.note_date] = note;
+          });
+          setMyNotes(notesMap);
+        }
       }
     } catch (error) {
       console.error('Error fetching daily notes:', error);
     }
   };
 
+  // Returns my own note for a date (used for the note modal)
+  const getMyNoteForDate = (date: Date): DailyNote | null => {
+    const dateStr = date.toISOString().split('T')[0];
+    if (showAllNotes) {
+      const notes = allNotes[dateStr] || [];
+      return notes.find(n => n.instructor_email === session?.user?.email) || null;
+    }
+    return myNotes[dateStr] || null;
+  };
+
+  // Returns notes to display on the calendar cell
+  const getNotesForDate = (date: Date): DailyNote[] => {
+    const dateStr = date.toISOString().split('T')[0];
+    if (showAllNotes) {
+      return allNotes[dateStr] || [];
+    }
+    const mine = myNotes[dateStr];
+    return mine ? [mine] : [];
+  };
+
   const openNoteModal = (date: Date, e: React.MouseEvent) => {
     e.stopPropagation();
-    const dateStr = date.toISOString().split('T')[0];
-    const existingNote = dailyNotes[dateStr];
-    setNoteContent(existingNote?.content || '');
+    const myNote = getMyNoteForDate(date);
+    setNoteContent(myNote?.content || '');
     setNoteModalDate(date);
   };
 
@@ -214,19 +274,49 @@ function SchedulePageContent() {
       const data = await res.json();
       if (data.success) {
         if (data.deleted) {
-          // Remove from local state
-          setDailyNotes(prev => {
-            const updated = { ...prev };
-            delete updated[dateStr];
-            return updated;
-          });
+          // Remove my note from local state
+          if (showAllNotes) {
+            setAllNotes(prev => {
+              const updated = { ...prev };
+              if (updated[dateStr]) {
+                updated[dateStr] = updated[dateStr].filter(
+                  n => n.instructor_email !== session?.user?.email
+                );
+                if (updated[dateStr].length === 0) delete updated[dateStr];
+              }
+              return updated;
+            });
+          } else {
+            setMyNotes(prev => {
+              const updated = { ...prev };
+              delete updated[dateStr];
+              return updated;
+            });
+          }
           toast.success('Note deleted');
         } else {
           // Update local state
-          setDailyNotes(prev => ({
-            ...prev,
-            [dateStr]: data.note,
-          }));
+          if (showAllNotes) {
+            setAllNotes(prev => {
+              const updated = { ...prev };
+              const existing = [...(updated[dateStr] || [])];
+              const idx = existing.findIndex(
+                n => n.instructor_email === session?.user?.email
+              );
+              if (idx >= 0) {
+                existing[idx] = data.note;
+              } else {
+                existing.push(data.note);
+              }
+              updated[dateStr] = existing;
+              return updated;
+            });
+          } else {
+            setMyNotes(prev => ({
+              ...prev,
+              [dateStr]: data.note,
+            }));
+          }
           toast.success('Note saved');
         }
         setNoteModalDate(null);
@@ -259,11 +349,24 @@ function SchedulePageContent() {
 
       const data = await res.json();
       if (data.success) {
-        setDailyNotes(prev => {
-          const updated = { ...prev };
-          delete updated[dateStr];
-          return updated;
-        });
+        if (showAllNotes) {
+          setAllNotes(prev => {
+            const updated = { ...prev };
+            if (updated[dateStr]) {
+              updated[dateStr] = updated[dateStr].filter(
+                n => n.instructor_email !== session?.user?.email
+              );
+              if (updated[dateStr].length === 0) delete updated[dateStr];
+            }
+            return updated;
+          });
+        } else {
+          setMyNotes(prev => {
+            const updated = { ...prev };
+            delete updated[dateStr];
+            return updated;
+          });
+        }
         setNoteModalDate(null);
         toast.success('Note deleted');
       } else {
@@ -325,9 +428,12 @@ function SchedulePageContent() {
     return date.getMonth() === currentMonth.getMonth();
   };
 
-  const getNoteForDate = (date: Date) => {
-    const dateStr = date.toISOString().split('T')[0];
-    return dailyNotes[dateStr] || null;
+  const isPastDate = (date: Date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    return d < today;
   };
 
   // Get week/day info for the note modal header
@@ -435,7 +541,36 @@ function SchedulePageContent() {
             </div>
 
             {/* Filters */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap justify-end">
+              {/* Notes toggle: My Notes | All Notes */}
+              <div className="flex items-center rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden text-sm">
+                <button
+                  onClick={() => setShowAllNotes(false)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 transition-colors ${
+                    !showAllNotes
+                      ? 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-800 dark:text-yellow-300 font-medium'
+                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  }`}
+                  title="Show only your notes"
+                >
+                  <Lock className="w-3.5 h-3.5" />
+                  My Notes
+                </button>
+                <div className="w-px h-5 bg-gray-300 dark:bg-gray-600" />
+                <button
+                  onClick={() => setShowAllNotes(true)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 transition-colors ${
+                    showAllNotes
+                      ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 font-medium'
+                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  }`}
+                  title="Show notes from all instructors"
+                >
+                  <Users className="w-3.5 h-3.5" />
+                  All Notes
+                </button>
+              </div>
+
               {/* Today's Labs toggle */}
               <button
                 onClick={() => setShowTodayOnly(!showTodayOnly)}
@@ -568,14 +703,29 @@ function SchedulePageContent() {
               const dayLabDays = getLabDaysForDate(date);
               const today = isToday(date);
               const currentMo = isCurrentMonth(date);
-              const note = getNoteForDate(date);
+              const notesForDate = getNotesForDate(date);
+              const myNote = getMyNoteForDate(date);
+              const hasNote = notesForDate.length > 0;
+              const past = isPastDate(date);
+              const isEmpty = dayLabDays.length === 0;
+              const isClickable = isEmpty && !past;
 
               return (
                 <div
                   key={idx}
+                  onClick={() => {
+                    if (isClickable) {
+                      router.push(`/lab-management/schedule/new?date=${date.toISOString().split('T')[0]}`);
+                    }
+                  }}
                   className={`min-h-[80px] lg:min-h-[120px] border-b border-r dark:border-gray-600 p-1 md:p-2 relative group ${
                     !currentMo ? 'bg-gray-50 dark:bg-gray-700' : ''
-                  } ${today ? 'bg-blue-50 dark:bg-blue-900/30' : ''}`}
+                  } ${today ? 'bg-blue-50 dark:bg-blue-900/30' : ''} ${
+                    isClickable
+                      ? 'cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors'
+                      : ''
+                  }`}
+                  title={isClickable ? 'Click to add lab on this day' : undefined}
                 >
                   <div className="flex items-center justify-between mb-1">
                     <span className={`text-sm font-medium ${
@@ -601,30 +751,55 @@ function SchedulePageContent() {
                       <button
                         onClick={(e) => openNoteModal(date, e)}
                         className={`p-0.5 rounded transition-all ${
-                          note
+                          myNote
                             ? 'text-yellow-500 dark:text-yellow-400 hover:text-yellow-600 dark:hover:text-yellow-300'
-                            : 'text-gray-300 dark:text-gray-600 opacity-0 group-hover:opacity-100 hover:text-gray-500 dark:hover:text-gray-400'
+                            : showAllNotes && hasNote
+                              ? 'text-blue-400 dark:text-blue-500 hover:text-blue-500 dark:hover:text-blue-400'
+                              : 'text-gray-300 dark:text-gray-600 opacity-0 group-hover:opacity-100 hover:text-gray-500 dark:hover:text-gray-400'
                         }`}
-                        title={note ? 'Edit private note (only visible to you)' : 'Add private note (only visible to you)'}
+                        title={myNote ? 'Edit your note' : 'Add your note'}
                       >
                         <StickyNote className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>
 
-                  {/* Note preview */}
-                  {note && (
-                    <button
-                      onClick={(e) => openNoteModal(date, e)}
-                      className="w-full text-left mb-1 px-1 py-0.5 text-[10px] leading-tight bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 rounded border border-yellow-200 dark:border-yellow-800 truncate hover:bg-yellow-100 dark:hover:bg-yellow-900/30 transition-colors"
-                    >
-                      {note.content.length > 40 ? note.content.substring(0, 40) + '...' : note.content}
-                    </button>
-                  )}
+                  {/* Note previews */}
+                  {notesForDate.map((note) => {
+                    const isMyNote = note.instructor_email === session?.user?.email;
+                    const initials = showAllNotes ? getInitials(note.instructor_name || note.instructor_email) : null;
+                    const hue = showAllNotes ? emailToHue(note.instructor_email) : null;
+                    return (
+                      <button
+                        key={note.id}
+                        onClick={(e) => isMyNote ? openNoteModal(date, e) : e.stopPropagation()}
+                        className={`w-full text-left mb-0.5 px-1 py-0.5 text-[10px] leading-tight rounded border transition-colors ${
+                          isMyNote
+                            ? 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800 hover:bg-yellow-100 dark:hover:bg-yellow-900/30 cursor-pointer'
+                            : 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800 cursor-default'
+                        }`}
+                        title={showAllNotes ? `${note.instructor_name || note.instructor_email}: ${note.content}` : note.content}
+                      >
+                        <div className="flex items-center gap-0.5 min-w-0">
+                          {showAllNotes && initials && hue !== null && (
+                            <span
+                              className="flex-shrink-0 w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-bold text-white leading-none"
+                              style={{ backgroundColor: `hsl(${hue}, 55%, 45%)` }}
+                            >
+                              {initials}
+                            </span>
+                          )}
+                          <span className="truncate">
+                            {note.content.length > 35 ? note.content.substring(0, 35) + '...' : note.content}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
 
                   {/* Lab day entries */}
                   <div className="space-y-1">
-                    {dayLabDays.slice(0, note ? 2 : 3).map(labDay => (
+                    {dayLabDays.slice(0, notesForDate.length > 0 ? Math.max(0, 3 - notesForDate.length) : 3).map(labDay => (
                       <Link
                         key={labDay.id}
                         href={`/lab-management/schedule/${labDay.id}`}
@@ -651,11 +826,14 @@ function SchedulePageContent() {
                         )}
                       </Link>
                     ))}
-                    {dayLabDays.length > (note ? 2 : 3) && (
-                      <div className="text-xs text-gray-500 dark:text-gray-400 px-1">
-                        +{dayLabDays.length - (note ? 2 : 3)} more
-                      </div>
-                    )}
+                    {(() => {
+                      const maxSlots = notesForDate.length > 0 ? Math.max(0, 3 - notesForDate.length) : 3;
+                      return dayLabDays.length > maxSlots ? (
+                        <div className="text-xs text-gray-500 dark:text-gray-400 px-1">
+                          +{dayLabDays.length - maxSlots} more
+                        </div>
+                      ) : null;
+                    })()}
                   </div>
                 </div>
               );
@@ -793,6 +971,52 @@ function SchedulePageContent() {
               </button>
             </div>
 
+            {/* "All Notes" read-only section: other instructors' notes for this date */}
+            {showAllNotes && (() => {
+              const dateStr = noteModalDate.toISOString().split('T')[0];
+              const othersNotes = (allNotes[dateStr] || []).filter(
+                n => n.instructor_email !== session?.user?.email
+              );
+              if (othersNotes.length === 0) return null;
+              return (
+                <div className="px-5 pt-4 space-y-2">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                    Other instructors
+                  </p>
+                  {othersNotes.map(n => {
+                    const hue = emailToHue(n.instructor_email);
+                    const initials = getInitials(n.instructor_name || n.instructor_email);
+                    return (
+                      <div
+                        key={n.id}
+                        className="flex gap-2 p-2.5 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600"
+                      >
+                        <span
+                          className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white leading-none mt-0.5"
+                          style={{ backgroundColor: `hsl(${hue}, 55%, 45%)` }}
+                        >
+                          {initials}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate">
+                            {n.instructor_name || n.instructor_email}
+                          </p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap mt-0.5">
+                            {n.content}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div className="border-t border-gray-200 dark:border-gray-700 pt-2">
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                      Your note
+                    </p>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Modal Body */}
             <div className="p-5">
               <textarea
@@ -805,7 +1029,9 @@ function SchedulePageContent() {
               <div className="flex items-center gap-1.5 mt-2 px-2 py-1.5 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
                 <Lock className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
                 <p className="text-xs text-blue-700 dark:text-blue-300 font-medium">
-                  Personal note — only visible to you
+                  {showAllNotes
+                    ? 'Editing your note — other instructors can see all notes in "All Notes" mode'
+                    : 'Personal note — only visible to you in "My Notes" mode'}
                 </p>
               </div>
             </div>
@@ -813,7 +1039,7 @@ function SchedulePageContent() {
             {/* Modal Footer */}
             <div className="flex items-center justify-between px-5 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 rounded-b-xl">
               <div>
-                {dailyNotes[noteModalDate.toISOString().split('T')[0]] && (
+                {getMyNoteForDate(noteModalDate) && (
                   <button
                     onClick={deleteNote}
                     disabled={savingNote}

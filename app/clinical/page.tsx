@@ -9,18 +9,13 @@ import {
   Home,
   Briefcase,
   Users,
-  Calendar,
   Building2,
   ClipboardList,
-  Car,
-  AlertTriangle,
   TrendingUp,
   Clock,
   FileCheck,
-  BookOpen,
   LayoutDashboard,
-  GraduationCap,
-  Settings
+  GraduationCap
 } from 'lucide-react';
 import { canAccessClinical, type Role } from '@/lib/permissions';
 
@@ -327,28 +322,6 @@ export default function ClinicalDashboardPage() {
             </div>
           </Link>
 
-          {/* mCE Module Tracker */}
-          <Link
-            href="/clinical/mce"
-            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
-          >
-            <div className="flex items-start gap-4">
-              <div className="p-3 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl group-hover:bg-indigo-200 dark:group-hover:bg-indigo-900/50 transition-colors">
-                <BookOpen className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">mCE Modules</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                  Track continuing education module completion
-                </p>
-                <div className="flex items-center text-indigo-600 dark:text-indigo-400 text-sm font-medium">
-                  View tracker
-                  <ChevronRight className="w-4 h-4 ml-1" />
-                </div>
-              </div>
-            </div>
-          </Link>
-
           {/* EMT Tracking */}
           <Link
             href="/clinical/emt-tracking"
@@ -437,84 +410,6 @@ export default function ClinicalDashboardPage() {
             </div>
           </Link>
 
-          {/* Meetings - Coming Soon */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 opacity-60">
-            <div className="flex items-start gap-4">
-              <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
-                <Calendar className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Meetings</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                  Schedule and track internship meetings
-                </p>
-                <span className="inline-block px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-xs rounded-full">
-                  Coming Soon
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Ride Requests - Coming Soon */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 opacity-60">
-            <div className="flex items-start gap-4">
-              <div className="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-xl">
-                <Car className="w-6 h-6 text-orange-600 dark:text-orange-400" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Ride Requests</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                  Manage student field ride requests
-                </p>
-                <span className="inline-block px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-xs rounded-full">
-                  Coming Soon
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Agencies - Coming Soon */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 opacity-60">
-            <div className="flex items-start gap-4">
-              <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-xl">
-                <Building2 className="w-6 h-6 text-green-600 dark:text-green-400" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Agencies & Contacts</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                  EMS agencies and hospital contacts
-                </p>
-                <span className="inline-block px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 text-xs rounded-full">
-                  Coming Soon
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Action Items (Placeholder) */}
-        <div className="mt-8 bg-white dark:bg-gray-800 rounded-xl shadow p-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-yellow-500" />
-            Action Items
-          </h3>
-          <div className="text-gray-500 dark:text-gray-400 text-sm">
-            <p>Action items and alerts will appear here once internship tracking is enabled.</p>
-            <ul className="mt-3 space-y-2">
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 bg-gray-300 dark:bg-gray-600 rounded-full"></span>
-                Overdue phase evaluations
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 bg-gray-300 dark:bg-gray-600 rounded-full"></span>
-                Upcoming meetings this week
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 bg-gray-300 dark:bg-gray-600 rounded-full"></span>
-                Pending ride requests
-              </li>
-            </ul>
-          </div>
         </div>
       </main>
     </div>

@@ -25,7 +25,8 @@ import {
   Users,
   HelpCircle,
   LayoutTemplate,
-  CheckCircle
+  CheckCircle,
+  RefreshCw
 } from 'lucide-react';
 
 interface LabDayTemplate {
@@ -97,7 +98,7 @@ interface LabUser {
 interface Station {
   id: string;
   station_number: number;
-  station_type: 'scenario' | 'skills' | 'documentation';
+  station_type: 'scenario' | 'skills' | 'skill_drill' | 'documentation';
   scenario_id: string;
   custom_title: string;  // Auto-generated station name
   selected_skills: string[];  // For skills stations
@@ -117,6 +118,7 @@ interface Station {
 const STATION_TYPES = [
   { value: 'scenario', label: 'Scenario', icon: Stethoscope, color: 'bg-purple-500', description: 'Full scenario with grading' },
   { value: 'skills', label: 'Skills', icon: ClipboardCheck, color: 'bg-green-500', description: 'Skills practice station' },
+  { value: 'skill_drill', label: 'Skill Drill', icon: RefreshCw, color: 'bg-orange-500', description: 'Practice specific skills repeatedly' },
   { value: 'documentation', label: 'Documentation', icon: FileText, color: 'bg-blue-500', description: 'Documentation/PCR station' }
 ];
 
@@ -456,7 +458,7 @@ function NewLabDayPageContent() {
       } else {
         contentName = 'Scenario';
       }
-    } else if (station.station_type === 'skills') {
+    } else if (station.station_type === 'skills' || station.station_type === 'skill_drill') {
       const skillNames = station.selected_skills
         .map(skillId => skills.find(s => s.id === skillId)?.name)
         .filter(Boolean) as string[];
@@ -467,7 +469,7 @@ function NewLabDayPageContent() {
           contentName += '...';
         }
       } else {
-        contentName = 'Skills';
+        contentName = station.station_type === 'skill_drill' ? 'Skill Drill' : 'Skills';
       }
     } else if (station.station_type === 'documentation') {
       contentName = 'Documentation';
@@ -725,16 +727,16 @@ function NewLabDayPageContent() {
             rotation_minutes: station.rotation_minutes,
             num_rotations: station.num_rotations,
             // Skills station document fields
-            skill_sheet_url: station.station_type === 'skills' ? station.skill_sheet_url || null : null,
-            instructions_url: station.station_type === 'skills' ? station.instructions_url || null : null,
-            station_notes: station.station_type === 'skills' ? station.station_notes || null : null
+            skill_sheet_url: (station.station_type === 'skills' || station.station_type === 'skill_drill') ? station.skill_sheet_url || null : null,
+            instructions_url: (station.station_type === 'skills' || station.station_type === 'skill_drill') ? station.instructions_url || null : null,
+            station_notes: (station.station_type === 'skills' || station.station_type === 'skill_drill') ? station.station_notes || null : null
           })
         });
 
         const stationData = await stationRes.json();
 
-        // If skills station, add the skill links
-        if (station.station_type === 'skills' && stationData.success) {
+        // If skills or skill_drill station, add the skill links
+        if ((station.station_type === 'skills' || station.station_type === 'skill_drill') && stationData.success) {
           // Add library skills
           for (const skillId of station.selected_skills) {
             await fetch('/api/lab-management/station-skills', {
@@ -1525,8 +1527,8 @@ function NewLabDayPageContent() {
                       </div>
                     )}
 
-                    {/* Skills Selection (only for skills type) */}
-                    {station.station_type === 'skills' && (
+                    {/* Skills Selection (for skills and skill_drill types) */}
+                    {(station.station_type === 'skills' || station.station_type === 'skill_drill') && (
                       <div className="space-y-3">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
