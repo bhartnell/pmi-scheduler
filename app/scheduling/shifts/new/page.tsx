@@ -1,8 +1,8 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
 import {
   Clock,
@@ -39,9 +39,10 @@ interface ExistingShift {
   department: string | null;
 }
 
-export default function CreateShiftPage() {
+function CreateShiftPageInner() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -49,16 +50,16 @@ export default function CreateShiftPage() {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    date: '',
-    start_time: '08:00',
-    end_time: '17:00',
+    date: searchParams.get('date') || '',
+    start_time: searchParams.get('start') || '08:00',
+    end_time: searchParams.get('end') || '17:00',
     location: '',
     department: '' as ShiftDepartment | '',
     min_instructors: 1,
     max_instructors: '',
     repeat: '' as '' | 'weekly' | 'biweekly' | 'monthly',
     repeat_until: '',
-    lab_day_id: ''
+    lab_day_id: searchParams.get('labDayId') || ''
   });
 
   const [upcomingLabDays, setUpcomingLabDays] = useState<LabDay[]>([]);
@@ -713,5 +714,13 @@ export default function CreateShiftPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function CreateShiftPage() {
+  return (
+    <Suspense>
+      <CreateShiftPageInner />
+    </Suspense>
   );
 }

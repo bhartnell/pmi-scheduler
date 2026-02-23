@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { Users, BookOpen, Calendar, MessageSquare, BarChart3 } from 'lucide-react';
 
 interface Stats {
@@ -8,6 +9,14 @@ interface Stats {
   totalScenarios: number;
   labsThisWeek: number;
   openFeedback: number;
+}
+
+interface StatItem {
+  label: string;
+  value: number;
+  icon: React.ComponentType<{ className?: string }>;
+  color: string;
+  href: string;
 }
 
 export default function OverviewStatsWidget() {
@@ -53,30 +62,34 @@ export default function OverviewStatsWidget() {
     fetchStats();
   }, []);
 
-  const statItems = [
+  const statItems: StatItem[] = [
     {
       label: 'Active Students',
       value: stats.activeStudents,
       icon: Users,
       color: 'bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400',
+      href: '/lab-management/students',
     },
     {
       label: 'Scenarios',
       value: stats.totalScenarios,
       icon: BookOpen,
       color: 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400',
+      href: '/lab-management/scenarios',
     },
     {
       label: 'Labs This Week',
       value: stats.labsThisWeek,
       icon: Calendar,
       color: 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400',
+      href: '/lab-management/schedule',
     },
     {
       label: 'Open Feedback',
       value: stats.openFeedback,
       icon: MessageSquare,
       color: 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400',
+      href: '/lab-management/admin/feedback',
     },
   ];
 
@@ -96,15 +109,19 @@ export default function OverviewStatsWidget() {
         ) : (
           <div className="grid grid-cols-2 gap-3">
             {statItems.map(item => (
-              <div key={item.label} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50">
+              <Link
+                key={item.label}
+                href={item.href}
+                className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer group"
+              >
                 <div className={`p-2 rounded-lg ${item.color}`}>
                   <item.icon className="w-5 h-5" />
                 </div>
                 <div>
-                  <div className="text-xl font-bold text-gray-900 dark:text-white">{item.value}</div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">{item.label}</div>
+                  <div className="text-xl font-bold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{item.value}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 group-hover:underline">{item.label}</div>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         )}

@@ -195,6 +195,7 @@ export async function POST(request: NextRequest) {
         station_number: body.station_number || 1,
         station_type: body.station_type || 'scenario',
         scenario_id: body.scenario_id || null,
+        drill_ids: Array.isArray(body.drill_ids) && body.drill_ids.length > 0 ? body.drill_ids : null,
         custom_title: body.custom_title || null,
         instructor_name: body.instructor_name || null,
         instructor_email: body.instructor_email || null,

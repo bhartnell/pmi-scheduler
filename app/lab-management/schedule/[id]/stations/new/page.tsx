@@ -76,6 +76,15 @@ interface Instructor {
   email: string;
 }
 
+interface SkillDrill {
+  id: string;
+  name: string;
+  description: string | null;
+  category: string;
+  estimated_duration: number;
+  equipment_needed: string[] | null;
+}
+
 const STATION_TYPES = [
   { value: 'scenario', label: 'Scenario', icon: Stethoscope, color: 'bg-purple-500', description: 'Full scenario with grading' },
   { value: 'skills', label: 'Skills', icon: ClipboardCheck, color: 'bg-green-500', description: 'Skills practice station' },
@@ -92,6 +101,7 @@ export default function NewStationPage() {
   const [labDay, setLabDay] = useState<LabDay | null>(null);
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
+  const [skillDrills, setSkillDrills] = useState<SkillDrill[]>([]);
   const [existingStations, setExistingStations] = useState<Station[]>([]);
   const [instructors, setInstructors] = useState<Instructor[]>([]);
   const [locations, setLocations] = useState<{ id: string; name: string }[]>([]);
@@ -105,6 +115,9 @@ export default function NewStationPage() {
   const [scenarioId, setScenarioId] = useState('');
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [customSkills, setCustomSkills] = useState<string[]>([]);
+  const [selectedDrillIds, setSelectedDrillIds] = useState<string[]>([]);
+  const [drillSearch, setDrillSearch] = useState('');
+  const [drillCategoryFilter, setDrillCategoryFilter] = useState('');
   const [instructorName, setInstructorName] = useState('');
   const [instructorEmail, setInstructorEmail] = useState('');
   const [room, setRoom] = useState('');
@@ -167,6 +180,13 @@ export default function NewStationPage() {
       const skillsData = await skillsRes.json();
       if (skillsData.success) {
         setSkills(skillsData.skills || []);
+      }
+
+      // Fetch skill drills
+      const drillsRes = await fetch('/api/lab-management/skill-drills');
+      const drillsData = await drillsRes.json();
+      if (drillsData.success) {
+        setSkillDrills(drillsData.drills || []);
       }
 
       // Fetch instructors
@@ -256,7 +276,17 @@ export default function NewStationPage() {
       } else {
         contentName = 'Scenario';
       }
-    } else if (stationType === 'skills' || stationType === 'skill_drill') {
+    } else if (stationType === 'skill_drill') {
+      if (selectedDrillIds.length > 0) {
+        const drillNames = selectedDrillIds
+          .map(id => skillDrills.find(d => d.id === id)?.name)
+          .filter(Boolean) as string[];
+        contentName = drillNames.slice(0, 2).join(', ');
+        if (drillNames.length > 2) contentName += '...';
+      } else {
+        contentName = 'Skill Drill';
+      }
+    } else if (stationType === 'skills') {
       const skillNames = selectedSkills
         .map(skillId => skills.find(s => s.id === skillId)?.name)
         .filter(Boolean) as string[];
@@ -267,7 +297,7 @@ export default function NewStationPage() {
           contentName += '...';
         }
       } else {
-        contentName = stationType === 'skill_drill' ? 'Skill Drill' : 'Skills';
+        contentName = 'Skills';
       }
     } else if (stationType === 'documentation') {
       contentName = 'Documentation';
@@ -296,6 +326,7 @@ export default function NewStationPage() {
           station_number: nextStationNumber,
           station_type: stationType,
           scenario_id: stationType === 'scenario' ? scenarioId || null : null,
+          drill_ids: stationType === 'skill_drill' ? selectedDrillIds : [],
           custom_title: finalTitle,
           instructor_name: instructorName || null,
           instructor_email: instructorEmail || null,
@@ -314,8 +345,8 @@ export default function NewStationPage() {
         throw new Error(stationData.error || 'Failed to create station');
       }
 
-      // If skills or skill_drill station, add skill links
-      if ((stationType === 'skills' || stationType === 'skill_drill') && stationData.station) {
+      // If skills station, add skill links
+      if (stationType === 'skills' && stationData.station) {
         // Add library skills
         for (const skillId of selectedSkills) {
           await fetch('/api/lab-management/station-skills', {
@@ -502,6 +533,7 @@ export default function NewStationPage() {
                     setScenarioId('');
                     setSelectedSkills([]);
                     setCustomSkills([]);
+                    setSelectedDrillIds([]);
                   }}
                   className={`p-3 rounded-lg border-2 text-center transition-all ${
                     stationType === type.value
@@ -583,12 +615,117 @@ export default function NewStationPage() {
               </div>
             )}
 
-            {/* Skill Drill Info */}
+            {/* Skill Drill Picker */}
             {stationType === 'skill_drill' && (
-              <div className="p-4 bg-orange-50 dark:bg-orange-900/30 rounded-lg">
-                <p className="text-orange-800 dark:text-orange-300 text-sm">
-                  <strong>Skill Drill:</strong> Student-led practice station where students independently practice skills.
-                  No instructor grading required.
+              <div className="space-y-3">
+                <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
+                  <p className="text-orange-800 dark:text-orange-300 text-sm">
+                    <strong>Skill Drill:</strong> Student-led practice station. Select one or more drills from the library below.
+                  </p>
+                </div>
+
+                {/* Selected drills display */}
+                {selectedDrillIds.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {selectedDrillIds.map(id => {
+                      const drill = skillDrills.find(d => d.id === id);
+                      return drill ? (
+                        <span
+                          key={id}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 text-sm rounded-full"
+                        >
+                          {drill.name}
+                          <button
+                            type="button"
+                            onClick={() => setSelectedDrillIds(prev => prev.filter(x => x !== id))}
+                            className="hover:text-orange-600 dark:hover:text-orange-200"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ) : null;
+                    })}
+                  </div>
+                )}
+
+                {/* Search + category filter */}
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      value={drillSearch}
+                      onChange={(e) => setDrillSearch(e.target.value)}
+                      placeholder="Search drills..."
+                      className="w-full pl-10 pr-4 py-2 border dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                    />
+                  </div>
+                  <select
+                    value={drillCategoryFilter}
+                    onChange={(e) => setDrillCategoryFilter(e.target.value)}
+                    className="px-3 py-2 border dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  >
+                    <option value="">All Categories</option>
+                    {[...new Set(skillDrills.map(d => d.category))].sort().map(cat => (
+                      <option key={cat} value={cat}>{cat.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Drill list */}
+                <div className="border dark:border-gray-600 rounded-lg overflow-hidden max-h-64 overflow-y-auto">
+                  {skillDrills
+                    .filter(d =>
+                      (!drillSearch || d.name.toLowerCase().includes(drillSearch.toLowerCase()) || (d.description || '').toLowerCase().includes(drillSearch.toLowerCase())) &&
+                      (!drillCategoryFilter || d.category === drillCategoryFilter)
+                    )
+                    .map(drill => {
+                      const isSelected = selectedDrillIds.includes(drill.id);
+                      return (
+                        <label
+                          key={drill.id}
+                          className={`flex items-start gap-3 p-3 cursor-pointer border-b last:border-0 dark:border-gray-700 transition-colors ${
+                            isSelected
+                              ? 'bg-orange-50 dark:bg-orange-900/20'
+                              : 'hover:bg-gray-50 dark:hover:bg-gray-700'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => {
+                              setSelectedDrillIds(prev =>
+                                isSelected ? prev.filter(x => x !== drill.id) : [...prev, drill.id]
+                              );
+                            }}
+                            className="mt-0.5 w-4 h-4 text-orange-500"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-medium text-sm text-gray-900 dark:text-white">{drill.name}</span>
+                              <span className="text-xs text-gray-500 dark:text-gray-400">{drill.estimated_duration} min</span>
+                              <span className="text-xs px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded">
+                                {drill.category.replace(/_/g, ' ')}
+                              </span>
+                            </div>
+                            {drill.description && (
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-1">
+                                {drill.description}
+                              </p>
+                            )}
+                          </div>
+                        </label>
+                      );
+                    })
+                  }
+                  {skillDrills.length === 0 && (
+                    <p className="p-4 text-sm text-gray-500 dark:text-gray-400 text-center">No skill drills available</p>
+                  )}
+                </div>
+
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {selectedDrillIds.length === 0 ? 'No drills selected — station will show as open drill time.' : `${selectedDrillIds.length} drill${selectedDrillIds.length !== 1 ? 's' : ''} selected.`}
+                  {' '}<Link href="/lab-management/skill-drills" target="_blank" className="text-blue-600 dark:text-blue-400 hover:underline">Manage drill library</Link>
                 </p>
               </div>
             )}

@@ -28,6 +28,8 @@ export async function POST(request: NextRequest) {
         id,
         date,
         title,
+        start_time,
+        end_time,
         cohort:cohorts(
           cohort_number,
           program:programs(name, abbreviation)
@@ -65,13 +67,19 @@ export async function POST(request: NextRequest) {
     const cohortName = `${programInfo.abbreviation} G${cohortInfo.cohort_number}`;
     const labTitle = labDay.title || 'Lab Day';
 
+    // Build the new shift URL with pre-filled query params
+    const shiftParams = new URLSearchParams({ date: labDay.date, labDayId: lab_day_id });
+    if (labDay.start_time) shiftParams.set('start', labDay.start_time.slice(0, 5));
+    if (labDay.end_time) shiftParams.set('end', labDay.end_time.slice(0, 5));
+    const shiftUrl = `/scheduling/shifts/new?${shiftParams.toString()}`;
+
     // Create notifications for all directors
     const notifications = directors.map(director => ({
       userEmail: director.email,
       title: `Coverage Request: ${cohortName}`,
       message: `Instructor coverage needed for ${labTitle} on ${formattedDate}. ${coverage_needed} instructor${coverage_needed > 1 ? 's' : ''} needed.${coverage_note ? ` Note: ${coverage_note}` : ''}`,
       type: 'lab_assignment' as const,
-      linkUrl: `/lab-management/schedule/${lab_day_id}/edit`,
+      linkUrl: shiftUrl,
       referenceType: 'lab_day',
       referenceId: lab_day_id
     }));

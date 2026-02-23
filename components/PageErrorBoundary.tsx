@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 
 interface PageErrorBoundaryProps {
@@ -57,13 +58,13 @@ export class PageErrorBoundary extends React.Component<PageErrorBoundaryProps, P
                 <RefreshCw className="w-4 h-4" />
                 Try Again
               </button>
-              <a
+              <Link
                 href="/"
                 className="flex items-center gap-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
               >
                 <Home className="w-4 h-4" />
                 Go to Dashboard
-              </a>
+              </Link>
             </div>
           </div>
         </div>
