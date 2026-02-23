@@ -89,6 +89,7 @@ export default function EditLabDayPage() {
   // Coverage Request state
   const [needsCoverage, setNeedsCoverage] = useState(false);
   const [coverageNeeded, setCoverageNeeded] = useState(1);
+  const [coverageNeededInput, setCoverageNeededInput] = useState('1');
   const [coverageNote, setCoverageNote] = useState('');
 
   // Form state
@@ -174,7 +175,9 @@ export default function EditLabDayPage() {
         setNotes(data.labDay.notes || '');
         setAssignedTimerId(data.labDay.assigned_timer_id || null);
         setNeedsCoverage(data.labDay.needs_coverage || false);
-        setCoverageNeeded(data.labDay.coverage_needed || 1);
+        const cn = data.labDay.coverage_needed || 1;
+        setCoverageNeeded(cn);
+        setCoverageNeededInput(cn.toString());
         setCoverageNote(data.labDay.coverage_note || '');
 
         // Check if room has a fixed timer
@@ -456,21 +459,18 @@ export default function EditLabDayPage() {
                 <input
                   type="number"
                   min="1"
-                  max="120"
+                  max="999"
                   value={durationInputValue}
                   onChange={(e) => {
-                    // Allow free typing - just update display value
                     setDurationInputValue(e.target.value);
                   }}
                   onBlur={(e) => {
-                    // Validate and clamp only when user leaves the field
-                    let val = parseInt(e.target.value) || 15;
-                    val = Math.max(1, Math.min(120, val));
-                    setDurationInputValue(val.toString());
-                    setRotationDuration(val);
+                    const val = parseInt(e.target.value);
+                    const clamped = isNaN(val) || val < 1 ? 30 : Math.min(val, 999);
+                    setDurationInputValue(clamped.toString());
+                    setRotationDuration(clamped);
                   }}
                   onFocus={(e) => {
-                    // Select all text for easy replacement
                     e.target.select();
                   }}
                   className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
@@ -598,9 +598,16 @@ export default function EditLabDayPage() {
                       <input
                         type="number"
                         min="1"
-                        max="10"
-                        value={coverageNeeded}
-                        onChange={(e) => setCoverageNeeded(parseInt(e.target.value) || 1)}
+                        max="99"
+                        value={coverageNeededInput}
+                        onChange={(e) => setCoverageNeededInput(e.target.value)}
+                        onBlur={(e) => {
+                          const val = parseInt(e.target.value);
+                          const clamped = isNaN(val) || val < 1 ? 1 : Math.min(val, 99);
+                          setCoverageNeededInput(clamped.toString());
+                          setCoverageNeeded(clamped);
+                        }}
+                        onFocus={(e) => e.target.select()}
                         className="w-32 px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                       />
                     </div>

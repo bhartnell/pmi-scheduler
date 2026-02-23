@@ -17,8 +17,10 @@ import {
   Plus,
   Trash2,
   AlertCircle,
-  ExternalLink
+  ExternalLink,
+  RefreshCw
 } from 'lucide-react';
+import BLSPlatinumChecklist from '@/components/BLSPlatinumChecklist';
 
 interface LabDay {
   id: string;
@@ -77,6 +79,7 @@ interface Instructor {
 const STATION_TYPES = [
   { value: 'scenario', label: 'Scenario', icon: Stethoscope, color: 'bg-purple-500', description: 'Full scenario with grading' },
   { value: 'skills', label: 'Skills', icon: ClipboardCheck, color: 'bg-green-500', description: 'Skills practice station' },
+  { value: 'skill_drill', label: 'Skill Drill', icon: RefreshCw, color: 'bg-orange-500', description: 'Student-led practice' },
   { value: 'documentation', label: 'Documentation', icon: FileText, color: 'bg-blue-500', description: 'Documentation/PCR station' }
 ];
 
@@ -91,12 +94,14 @@ export default function NewStationPage() {
   const [skills, setSkills] = useState<Skill[]>([]);
   const [existingStations, setExistingStations] = useState<Station[]>([]);
   const [instructors, setInstructors] = useState<Instructor[]>([]);
+  const [locations, setLocations] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [selectedInstructor, setSelectedInstructor] = useState('');
 
   // Form state
-  const [stationType, setStationType] = useState<'scenario' | 'skills' | 'documentation'>('scenario');
+  const [stationType, setStationType] = useState<'scenario' | 'skills' | 'skill_drill' | 'documentation'>('scenario');
+  const [customTitle, setCustomTitle] = useState('');
   const [scenarioId, setScenarioId] = useState('');
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [customSkills, setCustomSkills] = useState<string[]>([]);
@@ -169,6 +174,13 @@ export default function NewStationPage() {
       const instructorsData = await instructorsRes.json();
       if (instructorsData.success) {
         setInstructors(instructorsData.instructors || []);
+      }
+
+      // Fetch locations for room dropdown
+      const locationsRes = await fetch('/api/lab-management/locations?type=room');
+      const locationsData = await locationsRes.json();
+      if (locationsData.success) {
+        setLocations(locationsData.locations || []);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -244,7 +256,7 @@ export default function NewStationPage() {
       } else {
         contentName = 'Scenario';
       }
-    } else if (stationType === 'skills') {
+    } else if (stationType === 'skills' || stationType === 'skill_drill') {
       const skillNames = selectedSkills
         .map(skillId => skills.find(s => s.id === skillId)?.name)
         .filter(Boolean) as string[];
@@ -255,7 +267,7 @@ export default function NewStationPage() {
           contentName += '...';
         }
       } else {
-        contentName = 'Skills';
+        contentName = stationType === 'skill_drill' ? 'Skill Drill' : 'Skills';
       }
     } else if (stationType === 'documentation') {
       contentName = 'Documentation';
@@ -272,8 +284,8 @@ export default function NewStationPage() {
         ? Math.max(...existingStations.map(s => s.station_number)) + 1
         : 1;
 
-      // Generate descriptive station name
-      const customTitle = generateStationName();
+      // Use custom title if provided, otherwise auto-generate
+      const finalTitle = customTitle.trim() || generateStationName();
 
       // Create station
       const stationRes = await fetch('/api/lab-management/stations', {
@@ -284,15 +296,15 @@ export default function NewStationPage() {
           station_number: nextStationNumber,
           station_type: stationType,
           scenario_id: stationType === 'scenario' ? scenarioId || null : null,
-          custom_title: customTitle,
+          custom_title: finalTitle,
           instructor_name: instructorName || null,
           instructor_email: instructorEmail || null,
           room: room || null,
           notes: notes || null,
-          // Skills station document fields
-          skill_sheet_url: stationType === 'skills' ? skillSheetUrl || null : null,
-          instructions_url: stationType === 'skills' ? instructionsUrl || null : null,
-          station_notes: stationType === 'skills' ? stationNotes || null : null
+          // Document fields available for all station types
+          skill_sheet_url: skillSheetUrl || null,
+          instructions_url: instructionsUrl || null,
+          station_notes: stationNotes || null
         })
       });
 
@@ -302,8 +314,8 @@ export default function NewStationPage() {
         throw new Error(stationData.error || 'Failed to create station');
       }
 
-      // If skills station, add skill links
-      if (stationType === 'skills' && stationData.station) {
+      // If skills or skill_drill station, add skill links
+      if ((stationType === 'skills' || stationType === 'skill_drill') && stationData.station) {
         // Add library skills
         for (const skillId of selectedSkills) {
           await fetch('/api/lab-management/station-skills', {
@@ -433,8 +445,6 @@ export default function NewStationPage() {
     );
   }
 
-  const stationTypeConfig = STATION_TYPES.find(t => t.value === stationType);
-  const TypeIcon = stationTypeConfig?.icon || Stethoscope;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
@@ -478,42 +488,61 @@ export default function NewStationPage() {
       <main className="max-w-4xl mx-auto px-4 py-6">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
           {/* Station Type Selection */}
-          <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700 rounded-t-lg border-b dark:border-gray-600">
-            <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-lg ${stationTypeConfig?.color || 'bg-gray-500'}`}>
-                <TypeIcon className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h3 className="font-medium text-gray-900 dark:text-white">Station Type</h3>
-                <div className="flex gap-2 mt-1">
-                  {STATION_TYPES.map(type => (
-                    <button
-                      key={type.value}
-                      type="button"
-                      onClick={() => {
-                        setStationType(type.value as any);
-                        setScenarioId('');
-                        setSelectedSkills([]);
-                        setCustomSkills([]);
-                        setSkillSheetUrl('');
-                        setInstructionsUrl('');
-                        setStationNotes('');
-                      }}
-                      className={`px-3 py-1 text-sm rounded-lg transition-colors ${
-                        stationType === type.value
-                          ? `${type.color} text-white`
-                          : 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-500'
-                      }`}
-                    >
-                      {type.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+          <div className="px-4 py-4 bg-gray-50 dark:bg-gray-700 rounded-t-lg border-b dark:border-gray-600">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Station Type
+            </label>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {STATION_TYPES.map(type => (
+                <button
+                  key={type.value}
+                  type="button"
+                  onClick={() => {
+                    setStationType(type.value as any);
+                    setScenarioId('');
+                    setSelectedSkills([]);
+                    setCustomSkills([]);
+                  }}
+                  className={`p-3 rounded-lg border-2 text-center transition-all ${
+                    stationType === type.value
+                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
+                      : 'border-gray-200 dark:border-gray-600 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="font-medium text-sm text-gray-900 dark:text-white">{type.label}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">{type.description}</div>
+                </button>
+              ))}
             </div>
           </div>
 
           <div className="p-4 space-y-6">
+            {/* Station Name */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Station Name
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={customTitle}
+                  onChange={(e) => setCustomTitle(e.target.value)}
+                  placeholder={generateStationName() || 'e.g., PM14 01/23/26 - Chest Pain Scenario'}
+                  className="flex-1 px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                />
+                <button
+                  type="button"
+                  onClick={() => setCustomTitle(generateStationName() || '')}
+                  className="px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 text-sm whitespace-nowrap"
+                >
+                  Auto-generate
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Descriptive name shown on dashboard and schedule. Leave blank to auto-generate.
+              </p>
+            </div>
+
             {/* Scenario Selection (only for scenario type) */}
             {stationType === 'scenario' && (
               <div>
@@ -554,8 +583,18 @@ export default function NewStationPage() {
               </div>
             )}
 
-            {/* Skills Selection (only for skills type) */}
-            {stationType === 'skills' && (
+            {/* Skill Drill Info */}
+            {stationType === 'skill_drill' && (
+              <div className="p-4 bg-orange-50 dark:bg-orange-900/30 rounded-lg">
+                <p className="text-orange-800 dark:text-orange-300 text-sm">
+                  <strong>Skill Drill:</strong> Student-led practice station where students independently practice skills.
+                  No instructor grading required.
+                </p>
+              </div>
+            )}
+
+            {/* Skills Selection (for skills or skill_drill type) */}
+            {(stationType === 'skills' || stationType === 'skill_drill') && (
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -645,45 +684,20 @@ export default function NewStationPage() {
                   </div>
                 )}
 
-                {/* Station Documentation */}
-                <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
-                  <h4 className="text-sm font-medium text-green-800 dark:text-green-300 mb-3 flex items-center gap-2">
-                    <FileText className="w-4 h-4" />
-                    Station Documentation
-                  </h4>
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-xs text-green-700 dark:text-green-400 mb-1">Skill Sheet URL</label>
-                      <input
-                        type="url"
-                        value={skillSheetUrl}
-                        onChange={(e) => setSkillSheetUrl(e.target.value)}
-                        placeholder="https://drive.google.com/... or paste URL"
-                        className="w-full px-3 py-2 border border-green-300 dark:border-green-700 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-green-700 dark:text-green-400 mb-1">Instructions URL</label>
-                      <input
-                        type="url"
-                        value={instructionsUrl}
-                        onChange={(e) => setInstructionsUrl(e.target.value)}
-                        placeholder="https://drive.google.com/... or paste URL"
-                        className="w-full px-3 py-2 border border-green-300 dark:border-green-700 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs text-green-700 dark:text-green-400 mb-1">Station Notes</label>
-                      <textarea
-                        value={stationNotes}
-                        onChange={(e) => setStationNotes(e.target.value)}
-                        placeholder="Equipment needed, setup instructions, special notes..."
-                        rows={3}
-                        className="w-full px-3 py-2 border border-green-300 dark:border-green-700 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800"
-                      />
-                    </div>
-                  </div>
-                </div>
+                {/* BLS/Platinum Checklist */}
+                {labDay && (
+                  <BLSPlatinumChecklist
+                    labDayId={labDay.id}
+                    selectedSkillIds={selectedSkills}
+                    onToggleSkill={(skillId) => {
+                      if (selectedSkills.includes(skillId)) {
+                        setSelectedSkills(selectedSkills.filter(id => id !== skillId));
+                      } else {
+                        setSelectedSkills([...selectedSkills, skillId]);
+                      }
+                    }}
+                  />
+                )}
               </div>
             )}
 
@@ -695,6 +709,59 @@ export default function NewStationPage() {
                 </p>
               </div>
             )}
+
+            {/* Station Documentation Section (all station types) */}
+            <div className="space-y-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-2 mb-2">
+                <FileText className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Station Documentation</h3>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Skill Sheet URL
+                </label>
+                <input
+                  type="url"
+                  value={skillSheetUrl}
+                  onChange={(e) => setSkillSheetUrl(e.target.value)}
+                  placeholder="https://drive.google.com/..."
+                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Link to skill sheet or reference document
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Instructions URL
+                </label>
+                <input
+                  type="url"
+                  value={instructionsUrl}
+                  onChange={(e) => setInstructionsUrl(e.target.value)}
+                  placeholder="https://drive.google.com/..."
+                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Link to instructor instructions or setup guide
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Station Notes
+                </label>
+                <textarea
+                  value={stationNotes}
+                  onChange={(e) => setStationNotes(e.target.value)}
+                  placeholder="Equipment needed, setup instructions, special considerations..."
+                  rows={3}
+                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Internal notes about station setup, equipment, or special requirements
+                </p>
+              </div>
+            </div>
 
             {/* Instructor Section */}
             <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
@@ -758,14 +825,17 @@ export default function NewStationPage() {
             {/* Room and Notes */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Room</label>
-                <input
-                  type="text"
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Room / Location</label>
+                <select
                   value={room}
                   onChange={(e) => setRoom(e.target.value)}
-                  placeholder="e.g., Sim Lab A"
                   className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
-                />
+                >
+                  <option value="">Select room...</option>
+                  {locations.map(loc => (
+                    <option key={loc.id} value={loc.name}>{loc.name}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>
