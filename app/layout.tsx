@@ -4,6 +4,7 @@ import './globals.css';
 import { Providers } from './providers';
 import FeedbackButton from '@/components/FeedbackButton';
 import GlobalTimerBanner from '@/components/GlobalTimerBanner';
+import CommandPalette from '@/components/CommandPalette';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -27,6 +28,7 @@ export default function RootLayout({
           <GlobalTimerBanner />
           {children}
           <FeedbackButton />
+          <CommandPalette />
         </Providers>
       </body>
     </html>

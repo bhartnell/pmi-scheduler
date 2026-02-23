@@ -4,6 +4,8 @@ import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useAutoSave } from '@/hooks/useAutoSave';
+import AutoSaveIndicator from '@/components/AutoSaveIndicator';
 import {
   ChevronRight,
   ChevronDown,
@@ -804,6 +806,15 @@ export default function ScenarioEditorPage() {
   const [newCriticalAction, setNewCriticalAction] = useState('');
   const [newDebriefPoint, setNewDebriefPoint] = useState('');
 
+  // Auto-save draft to localStorage (only when editing/creating a scenario)
+  const autoSave = useAutoSave({
+    key: `scenario-draft-${scenarioId ?? 'new'}`,
+    data: scenario,
+    onRestore: (saved) => setScenario(saved),
+    debounceMs: 5000,
+    enabled: !loading,
+  });
+
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/signin');
@@ -948,6 +959,8 @@ export default function ScenarioEditorPage() {
 
       const data = await res.json();
       if (data.success) {
+        // Clear the local draft before navigating away
+        autoSave.clearDraft();
         // Redirect to scenarios list after successful save
         router.push('/lab-management/scenarios');
       } else {
@@ -1847,6 +1860,15 @@ export default function ScenarioEditorPage() {
       )}
 
       <main className={`max-w-4xl mx-auto px-4 py-6 space-y-4 ${(studentPrintMode || instructorPrintMode) ? 'print:hidden' : ''}`}>
+        {/* Auto-save indicator and restore prompt */}
+        <AutoSaveIndicator
+          saveStatus={autoSave.saveStatus}
+          showRestorePrompt={autoSave.showRestorePrompt}
+          draftTimestamp={autoSave.draftTimestamp}
+          onRestore={autoSave.restoreDraft}
+          onDiscard={autoSave.discardDraft}
+          onDismiss={autoSave.dismissRestorePrompt}
+        />
         {/* Basic Info */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
           <h2 className="font-semibold text-gray-900 dark:text-white mb-4">Basic Information</h2>
