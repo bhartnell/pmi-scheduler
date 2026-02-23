@@ -27,7 +27,8 @@ import {
   Clock,
   Printer,
   ArrowLeft,
-  Users
+  Users,
+  Copy
 } from 'lucide-react';
 
 // Helper to safely convert DB values to arrays (handles string, array, null)
@@ -751,6 +752,7 @@ export default function ScenarioEditorPage() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [duplicating, setDuplicating] = useState(false);
   const [studentPrintMode, setStudentPrintMode] = useState(false);
   const [instructorPrintMode, setInstructorPrintMode] = useState(false);
   const [scenario, setScenario] = useState<Scenario>({
@@ -903,6 +905,27 @@ export default function ScenarioEditorPage() {
       window.print();
       setStudentPrintMode(false);
     }, 100);
+  };
+
+  const handleDuplicate = async () => {
+    setDuplicating(true);
+    try {
+      const res = await fetch(`/api/lab-management/scenarios/${scenarioId}/duplicate`, {
+        method: 'POST',
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        alert('Failed to duplicate scenario: ' + (errData.error || 'Unknown error'));
+        return;
+      }
+      const data = await res.json();
+      router.push(`/lab-management/scenarios/${data.id}`);
+    } catch (err) {
+      console.error('Error duplicating scenario:', err);
+      alert('Failed to duplicate scenario');
+    } finally {
+      setDuplicating(false);
+    }
   };
 
   const handleSave = async () => {
@@ -1066,6 +1089,15 @@ export default function ScenarioEditorPage() {
                   >
                     <Printer className="w-5 h-5" />
                     Print / PDF
+                  </button>
+                  <button
+                    onClick={handleDuplicate}
+                    disabled={duplicating}
+                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
+                    title="Duplicate this scenario"
+                  >
+                    <Copy className="w-4 h-4" />
+                    {duplicating ? 'Duplicating...' : 'Duplicate'}
                   </button>
                 </>
               )}

@@ -16,7 +16,8 @@ import {
   Key,
   Database,
   AlertCircle,
-  FileText
+  FileText,
+  Mail
 } from 'lucide-react';
 import {
   canAccessAdmin,
@@ -97,6 +98,13 @@ export default function AdminPage() {
       title: 'Certification Compliance',
       description: 'Monitor instructor certifications and expiration dates',
       color: 'bg-purple-500'
+    },
+    {
+      href: '/admin/email-templates',
+      icon: Mail,
+      title: 'Email Templates',
+      description: 'Customize notification email templates sent by the system',
+      color: 'bg-blue-500'
     }
   ];
 
