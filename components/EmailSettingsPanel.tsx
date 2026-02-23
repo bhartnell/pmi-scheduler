@@ -141,7 +141,7 @@ export default function EmailSettingsPanel({ compact = false }: EmailSettingsPan
         </div>
       )}
 
-      <div className={compact ? '' : 'p-6 space-y-6'}>
+      <div className={compact ? 'space-y-6' : 'p-6 space-y-6'}>
         {/* Message */}
         {message && (
           <div className={`flex items-center gap-2 p-3 rounded-lg ${

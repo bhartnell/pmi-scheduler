@@ -38,6 +38,9 @@ import {
   OpenStationsWidget,
   RecentFeedbackWidget,
   OnboardingWidget,
+  OverdueTasksWidget,
+  RecentActivityWidget,
+  QuickStatsWidget,
   ROLE_DEFAULTS,
 } from '@/components/dashboard/widgets';
 import type { CurrentUserMinimal } from '@/types';
@@ -134,6 +137,12 @@ export default function HomePage() {
         return <RecentFeedbackWidget key={widgetId} />;
       case 'onboarding':
         return <OnboardingWidget key={widgetId} />;
+      case 'overdue_tasks':
+        return <OverdueTasksWidget key={widgetId} />;
+      case 'recent_activity':
+        return <RecentActivityWidget key={widgetId} />;
+      case 'quick_stats':
+        return <QuickStatsWidget key={widgetId} />;
       default:
         return null;
     }

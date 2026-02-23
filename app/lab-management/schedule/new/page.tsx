@@ -2,8 +2,10 @@
 
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, Suspense, useMemo } from 'react';
 import Link from 'next/link';
+import { useAutoSave } from '@/hooks/useAutoSave';
+import AutoSaveIndicator from '@/components/AutoSaveIndicator';
 import {
   ChevronRight,
   Plus,
@@ -145,6 +147,86 @@ function NewLabDayPageContent() {
   const [scenarioFilterCategory, setScenarioFilterCategory] = useState('');
   const [scenarioFilterDifficulty, setScenarioFilterDifficulty] = useState('');
   const [scenarioFilterProgram, setScenarioFilterProgram] = useState('');
+
+  // --- Auto-save draft ---
+  // Compose a snapshot of the user-editable form fields to track changes.
+  // We exclude fetched reference data (cohorts, scenarios, skills, etc.) and
+  // UI-only state (modal open flags, search text) so only meaningful form
+  // data triggers the auto-save debounce.
+  interface LabDayDraft {
+    selectedCohort: string;
+    labDate: string;
+    startTime: string;
+    endTime: string;
+    labTitle: string;
+    labNotes: string;
+    semester: string;
+    weekNumber: string;
+    dayNumber: string;
+    numRotationsLabDay: number;
+    rotationDurationLabDay: number;
+    stations: Station[];
+    labLeads: string[];
+    roamers: string[];
+    observers: string[];
+    needsCoverage: boolean;
+    coverageNeeded: number;
+    coverageNote: string;
+  }
+
+  const labDayDraft = useMemo<LabDayDraft>(() => ({
+    selectedCohort,
+    labDate,
+    startTime,
+    endTime,
+    labTitle,
+    labNotes,
+    semester,
+    weekNumber,
+    dayNumber,
+    numRotationsLabDay,
+    rotationDurationLabDay,
+    stations,
+    labLeads,
+    roamers,
+    observers,
+    needsCoverage,
+    coverageNeeded,
+    coverageNote,
+  }), [
+    selectedCohort, labDate, startTime, endTime, labTitle, labNotes,
+    semester, weekNumber, dayNumber, numRotationsLabDay, rotationDurationLabDay,
+    stations, labLeads, roamers, observers, needsCoverage, coverageNeeded, coverageNote,
+  ]);
+
+  const autoSave = useAutoSave<LabDayDraft>({
+    key: 'lab-day-draft-new',
+    data: labDayDraft,
+    onRestore: (saved) => {
+      setSelectedCohort(saved.selectedCohort);
+      setLabDate(saved.labDate);
+      setStartTime(saved.startTime);
+      setEndTime(saved.endTime);
+      setLabTitle(saved.labTitle);
+      setLabNotes(saved.labNotes);
+      setSemester(saved.semester);
+      setWeekNumber(saved.weekNumber);
+      setDayNumber(saved.dayNumber);
+      setNumRotationsLabDay(saved.numRotationsLabDay);
+      setRotationDurationLabDay(saved.rotationDurationLabDay);
+      setDurationInputValueLabDay(saved.rotationDurationLabDay.toString());
+      setStations(saved.stations);
+      setLabLeads(saved.labLeads);
+      setRoamers(saved.roamers);
+      setObservers(saved.observers);
+      setNeedsCoverage(saved.needsCoverage);
+      setCoverageNeeded(saved.coverageNeeded);
+      setCoverageNote(saved.coverageNote);
+    },
+    debounceMs: 5000,
+    enabled: !loading,
+  });
+  // --- End auto-save draft ---
 
   function createEmptyStation(stationNumber: number): Station {
     return {
@@ -473,6 +555,8 @@ function NewLabDayPageContent() {
         }
       }
 
+      // Clear local draft after successful save
+      autoSave.clearDraft();
       router.push(`/lab-management/schedule/${labDayId}`);
     } catch (error) {
       console.error('Error saving lab day:', error);
@@ -585,6 +669,15 @@ function NewLabDayPageContent() {
       </div>
 
       <main className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+        {/* Auto-save indicator and restore prompt */}
+        <AutoSaveIndicator
+          saveStatus={autoSave.saveStatus}
+          showRestorePrompt={autoSave.showRestorePrompt}
+          draftTimestamp={autoSave.draftTimestamp}
+          onRestore={autoSave.restoreDraft}
+          onDiscard={autoSave.discardDraft}
+          onDismiss={autoSave.dismissRestorePrompt}
+        />
         {/* Basic Info */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
           <h2 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
