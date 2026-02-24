@@ -15,13 +15,16 @@ import {
   Clock,
   FileCheck,
   LayoutDashboard,
-  GraduationCap
+  GraduationCap,
+  Hospital,
+  Ambulance
 } from 'lucide-react';
 import { canAccessClinical, type Role } from '@/lib/permissions';
 
 interface DashboardStats {
   activePreceptors: number;
-  totalAgencies: number;
+  totalClinicalSites: number;
+  totalInternshipAgencies: number;
   inPhase1: number;
   inPhase2: number;
   atRisk: number;
@@ -36,7 +39,8 @@ export default function ClinicalDashboardPage() {
   const [userRole, setUserRole] = useState<Role | null>(null);
   const [stats, setStats] = useState<DashboardStats>({
     activePreceptors: 0,
-    totalAgencies: 0,
+    totalClinicalSites: 0,
+    totalInternshipAgencies: 0,
     inPhase1: 0,
     inPhase2: 0,
     atRisk: 0,
@@ -71,15 +75,17 @@ export default function ClinicalDashboardPage() {
         }
       }
 
-      // Fetch stats
-      const [preceptorsRes, agenciesRes, internshipsRes] = await Promise.all([
+      // Fetch stats — fetch clinical sites (hospitals) and internship agencies (EMS) separately
+      const [preceptorsRes, clinicalSitesRes, internshipAgenciesRes, internshipsRes] = await Promise.all([
         fetch('/api/clinical/preceptors?activeOnly=true'),
-        fetch('/api/clinical/agencies'),
+        fetch('/api/clinical/agencies?type=hospital'),
+        fetch('/api/clinical/agencies?type=ems'),
         fetch('/api/clinical/internships'),
       ]);
 
       const preceptorsData = await preceptorsRes.json();
-      const agenciesData = await agenciesRes.json();
+      const clinicalSitesData = await clinicalSitesRes.json();
+      const internshipAgenciesData = await internshipAgenciesRes.json();
       const internshipsData = await internshipsRes.json();
 
       const internships = internshipsData.internships || [];
@@ -89,7 +95,8 @@ export default function ClinicalDashboardPage() {
 
       setStats({
         activePreceptors: preceptorsData.preceptors?.length || 0,
-        totalAgencies: agenciesData.agencies?.length || 0,
+        totalClinicalSites: clinicalSitesData.agencies?.length || 0,
+        totalInternshipAgencies: internshipAgenciesData.agencies?.length || 0,
         inPhase1,
         inPhase2,
         atRisk,
@@ -154,11 +161,23 @@ export default function ClinicalDashboardPage() {
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-4">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                <Building2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                <Hospital className="w-5 h-5 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalAgencies}</div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">Agencies</div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalClinicalSites}</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">Clinical Sites</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
+                <Ambulance className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalInternshipAgencies}</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">Field Agencies</div>
               </div>
             </div>
           </div>
@@ -169,22 +188,73 @@ export default function ClinicalDashboardPage() {
                 <TrendingUp className="w-5 h-5 text-purple-600 dark:text-purple-400" />
               </div>
               <div>
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.inPhase1}</div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">In Phase 1</div>
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.inPhase1 + stats.inPhase2}</div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">In Internship</div>
               </div>
             </div>
           </div>
+        </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                <Clock className="w-5 h-5 text-green-600 dark:text-green-400" />
+        {/* Sites & Agencies Section */}
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <Building2 className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+            Sites &amp; Agencies
+          </h2>
+          <div className="grid md:grid-cols-2 gap-4">
+            {/* Clinical Sites */}
+            <Link
+              href="/clinical/agencies?type=hospital"
+              className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group border-l-4 border-blue-500"
+            >
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl group-hover:bg-blue-200 dark:group-hover:bg-blue-900/50 transition-colors">
+                  <Hospital className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Clinical Sites</h3>
+                    <span className="px-2.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-sm font-medium rounded-full">
+                      {stats.totalClinicalSites}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                    Hospitals and ERs where students complete clinical rotations
+                  </p>
+                  <div className="flex items-center text-blue-600 dark:text-blue-400 text-sm font-medium">
+                    View clinical sites
+                    <ChevronRight className="w-4 h-4 ml-1" />
+                  </div>
+                </div>
               </div>
-              <div>
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.inPhase2}</div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">In Phase 2</div>
+            </Link>
+
+            {/* Internship Agencies */}
+            <Link
+              href="/clinical/agencies?type=ems"
+              className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group border-l-4 border-orange-500"
+            >
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-xl group-hover:bg-orange-200 dark:group-hover:bg-orange-900/50 transition-colors">
+                  <Ambulance className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Internship Agencies</h3>
+                    <span className="px-2.5 py-0.5 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 text-sm font-medium rounded-full">
+                      {stats.totalInternshipAgencies}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                    Fire departments and ambulance services for field internships
+                  </p>
+                  <div className="flex items-center text-orange-600 dark:text-orange-400 text-sm font-medium">
+                    View field agencies
+                    <ChevronRight className="w-4 h-4 ml-1" />
+                  </div>
+                </div>
               </div>
-            </div>
+            </Link>
           </div>
         </div>
 
