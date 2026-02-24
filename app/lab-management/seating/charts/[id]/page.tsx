@@ -18,7 +18,8 @@ import {
   X,
   AlertCircle,
   Download,
-  FlipVertical
+  FlipVertical,
+  Shuffle
 } from 'lucide-react';
 
 interface Student {
@@ -428,6 +429,42 @@ export default function SeatingChartBuilderPage() {
     setGenerating(false);
   };
 
+  const handleRandomize = () => {
+    if (assignments.length === 0) return;
+    if (!confirm('Randomize all seat assignments? This will shuffle students into random seats.')) return;
+
+    // Collect all current seat positions (slots)
+    const slots = assignments.map(a => ({
+      table_number: a.table_number,
+      seat_position: a.seat_position,
+      row_number: a.row_number,
+      is_overflow: a.is_overflow,
+    }));
+
+    // Collect all currently assigned students
+    const students = assignments.map(a => a.student).filter(Boolean) as Student[];
+
+    // Fisher-Yates shuffle on a copy of the students array
+    const shuffled = [...students];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+
+    // Map shuffled students back into the same slots
+    const newAssignments: Assignment[] = slots.map((slot, idx) => ({
+      student_id: shuffled[idx].id,
+      table_number: slot.table_number,
+      seat_position: slot.seat_position,
+      row_number: slot.row_number,
+      is_overflow: slot.is_overflow,
+      student: shuffled[idx],
+    }));
+
+    setAssignments(newAssignments);
+    setHasChanges(true);
+  };
+
   if (status === 'loading' || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
@@ -503,6 +540,15 @@ export default function SeatingChartBuilderPage() {
               >
                 <Wand2 className="w-4 h-4" />
                 {generating ? 'Generating...' : 'Auto-Generate'}
+              </button>
+              <button
+                onClick={handleRandomize}
+                disabled={assignments.length === 0}
+                className="inline-flex items-center gap-1 px-3 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 dark:disabled:bg-gray-600"
+                title="Randomly shuffle students into different seats"
+              >
+                <Shuffle className="w-4 h-4" />
+                Randomize
               </button>
               <button
                 onClick={() => setIsFlipped(!isFlipped)}

@@ -29,6 +29,7 @@ import {
   Copy
 } from 'lucide-react';
 import LabTimer from '@/components/LabTimer';
+import InlineTimerWidget from '@/components/InlineTimerWidget';
 import BLSPlatinumChecklist from '@/components/BLSPlatinumChecklist';
 import AttendanceSection from '@/components/AttendanceSection';
 
@@ -1037,7 +1038,13 @@ export default function LabDayPage() {
                 </span>
               </div>
             </div>
-            <div className="flex gap-2 print:hidden">
+            <div className="flex flex-col gap-2 items-end print:hidden">
+              {/* Inline timer widget — only visible when timer is active */}
+              <InlineTimerWidget
+                labDayId={labDayId}
+                onOpenFullTimer={() => setShowTimer(true)}
+              />
+              <div className="flex gap-2">
               <button
                 onClick={() => setShowTimer(true)}
                 className="inline-flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
@@ -1083,6 +1090,7 @@ export default function LabDayPage() {
                 <Plus className="w-4 h-4" />
                 Add Station
               </Link>
+              </div>
             </div>
           </div>
         </div>

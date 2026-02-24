@@ -2,6 +2,7 @@
 
 import { useParams } from 'next/navigation';
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { Maximize2, Minimize2, Volume2, VolumeX } from 'lucide-react';
 import { useVisibilityPolling } from '@/hooks/useVisibilityPolling';
 
 interface TimerState {
@@ -41,7 +42,61 @@ export default function TimerDisplayPage() {
   const [error, setError] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [serverTimeOffset, setServerTimeOffset] = useState(0);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(true);
   const lastFetchRef = useRef<number>(0);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const hasPlayedChimeRef = useRef<number | null>(null); // track which rotation we played for
+
+  // Play 3 short chime beeps when timer hits zero
+  const playChime = useCallback(() => {
+    if (!soundEnabled) return;
+    try {
+      if (!audioContextRef.current) {
+        audioContextRef.current = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+      }
+      const ctx = audioContextRef.current;
+      const beepCount = 3;
+      for (let i = 0; i < beepCount; i++) {
+        setTimeout(() => {
+          const oscillator = ctx.createOscillator();
+          const gainNode = ctx.createGain();
+          oscillator.connect(gainNode);
+          gainNode.connect(ctx.destination);
+          oscillator.frequency.value = 880;
+          oscillator.type = 'sine';
+          gainNode.gain.setValueAtTime(0.6, ctx.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+          oscillator.start(ctx.currentTime);
+          oscillator.stop(ctx.currentTime + 0.4);
+        }, i * 500);
+      }
+    } catch (e) {
+      console.warn('Audio not available:', e);
+    }
+  }, [soundEnabled]);
+
+  // Fullscreen toggle
+  const toggleFullscreen = useCallback(async () => {
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      } else {
+        await document.exitFullscreen();
+      }
+    } catch (e) {
+      console.warn('Fullscreen not available:', e);
+    }
+  }, []);
+
+  // Listen for external fullscreen changes (e.g. Esc key)
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
 
   // Poll for timer status
   const fetchTimerStatus = useCallback(async () => {
@@ -115,7 +170,17 @@ export default function TimerDisplayPage() {
     // Update every second when running, pause when page is hidden
     if (timer.status === 'running') {
       let interval: NodeJS.Timeout | null = setInterval(() => {
-        setCurrentTime(calculateTime());
+        const t = calculateTime();
+        setCurrentTime(t);
+        // Play chime when countdown hits zero (once per rotation)
+        if (
+          timer.mode === 'countdown' &&
+          t <= 0 &&
+          hasPlayedChimeRef.current !== timer.rotation_number
+        ) {
+          hasPlayedChimeRef.current = timer.rotation_number;
+          playChime();
+        }
       }, 1000);
 
       const handleVisibility = () => {
@@ -139,7 +204,17 @@ export default function TimerDisplayPage() {
         document.removeEventListener('visibilitychange', handleVisibility);
       };
     }
-  }, [timer, serverTimeOffset]);
+  }, [timer, serverTimeOffset, playChime]);
+
+  // Reset chime tracker when rotation changes
+  useEffect(() => {
+    if (timer?.rotation_number !== undefined) {
+      // Only reset if we're moving to a new rotation (not null → number)
+      if (hasPlayedChimeRef.current !== null && hasPlayedChimeRef.current !== timer.rotation_number) {
+        hasPlayedChimeRef.current = null;
+      }
+    }
+  }, [timer?.rotation_number]);
 
   // Format time as MM:SS or HH:MM:SS
   const formatTime = (seconds: number): string => {
@@ -188,6 +263,23 @@ export default function TimerDisplayPage() {
         <h1 className="text-4xl md:text-6xl font-bold mb-4 text-center">{display.room_name}</h1>
         <p className="text-2xl md:text-4xl text-gray-400">No Active Timer</p>
         <p className="text-lg text-gray-600 mt-4">Waiting for lab session to start...</p>
+        {/* Controls overlay - always visible */}
+        <div className="absolute top-4 right-4 flex items-center gap-2">
+          <button
+            onClick={() => setSoundEnabled(v => !v)}
+            className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white/60 hover:text-white transition-colors"
+            title={soundEnabled ? 'Mute sound' : 'Enable sound'}
+          >
+            {soundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+          </button>
+          <button
+            onClick={toggleFullscreen}
+            className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white/60 hover:text-white transition-colors"
+            title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+          >
+            {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
+          </button>
+        </div>
       </div>
     );
   }
@@ -211,10 +303,26 @@ export default function TimerDisplayPage() {
           <h2 className="text-xl md:text-2xl text-white/80 font-medium">{display.room_name}</h2>
           <p className="text-sm md:text-lg text-white/60">{labDay.displayName}</p>
         </div>
-        <div className="text-right">
+        <div className="flex items-center gap-3">
           <p className="text-xl md:text-3xl text-white/80 font-bold">
             Rotation {timer.rotation_number}
           </p>
+          {/* Sound toggle */}
+          <button
+            onClick={() => setSoundEnabled(v => !v)}
+            className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white/60 hover:text-white transition-colors"
+            title={soundEnabled ? 'Mute chime' : 'Enable chime'}
+          >
+            {soundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
+          </button>
+          {/* Fullscreen toggle */}
+          <button
+            onClick={toggleFullscreen}
+            className="p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white/60 hover:text-white transition-colors"
+            title={isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'}
+          >
+            {isFullscreen ? <Minimize2 className="w-5 h-5" /> : <Maximize2 className="w-5 h-5" />}
+          </button>
         </div>
       </div>
 
