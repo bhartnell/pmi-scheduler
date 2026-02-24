@@ -20,7 +20,8 @@ import {
   LayoutGrid,
   Table2,
   TrendingUp,
-  Printer
+  Printer,
+  Filter
 } from 'lucide-react';
 import { canAccessClinical, canEditClinical, type Role } from '@/lib/permissions';
 import * as XLSX from 'xlsx';
@@ -118,6 +119,7 @@ export default function ClinicalHoursTrackerPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const toast = useToast();
 
+  const [allCohorts, setAllCohorts] = useState<CohortOption[]>([]);
   const [cohorts, setCohorts] = useState<CohortOption[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [hoursData, setHoursData] = useState<StudentHours[]>([]);
@@ -125,6 +127,7 @@ export default function ClinicalHoursTrackerPage() {
   const [saving, setSaving] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<Role | null>(null);
 
+  const [selectedProgram, setSelectedProgram] = useState<string>('Paramedic');
   const [selectedCohort, setSelectedCohort] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [editingCell, setEditingCell] = useState<string | null>(null);
@@ -168,6 +171,36 @@ export default function ClinicalHoursTrackerPage() {
     return () => document.removeEventListener('keydown', handleEsc);
   }, [showImportModal]);
 
+  // Helper: check if an abbreviation belongs to the Paramedic program
+  const isParamedicAbbrev = (abbrev: string | undefined): boolean => {
+    if (!abbrev) return false;
+    const a = abbrev.toUpperCase();
+    return a === 'PMD' || a === 'PM' || a === 'PARAMEDIC';
+  };
+
+  // Helper: check if an abbreviation matches the selected program filter
+  const matchesProgram = (abbrev: string | undefined, program: string): boolean => {
+    if (program === 'All') return true;
+    if (program === 'Paramedic') return isParamedicAbbrev(abbrev);
+    if (!abbrev) return false;
+    return abbrev.toUpperCase() === program.toUpperCase();
+  };
+
+  // When program filter changes, re-filter cohorts and auto-select first match
+  useEffect(() => {
+    if (allCohorts.length === 0) return;
+    const filtered = selectedProgram === 'All'
+      ? allCohorts
+      : allCohorts.filter(c => matchesProgram(c.program?.abbreviation, selectedProgram));
+    setCohorts(filtered);
+    if (filtered.length > 0) {
+      setSelectedCohort(filtered[0].id);
+    } else {
+      setSelectedCohort('');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedProgram, allCohorts]);
+
   const fetchInitialData = async () => {
     setLoading(true);
     try {
@@ -184,9 +217,16 @@ export default function ClinicalHoursTrackerPage() {
       const cohortsRes = await fetch('/api/lab-management/cohorts?activeOnly=true');
       const cohortsData = await cohortsRes.json();
       if (cohortsData.success) {
-        setCohorts(cohortsData.cohorts || []);
-        if (cohortsData.cohorts?.length > 0) {
-          setSelectedCohort(cohortsData.cohorts[0].id);
+        const fetched: CohortOption[] = cohortsData.cohorts || [];
+        setAllCohorts(fetched);
+        // Default to Paramedic program filter
+        const paramedicCohorts = fetched.filter(c =>
+          isParamedicAbbrev(c.program?.abbreviation)
+        );
+        const filtered = paramedicCohorts.length > 0 ? paramedicCohorts : fetched;
+        setCohorts(filtered);
+        if (filtered.length > 0) {
+          setSelectedCohort(filtered[0].id);
         }
       }
     } catch (error) {
@@ -841,6 +881,22 @@ export default function ClinicalHoursTrackerPage() {
         {/* Filters */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 print:hidden">
           <div className="flex flex-wrap gap-4 items-center">
+            <div className="flex items-center gap-2">
+              <Filter className="w-5 h-5 text-gray-400" aria-hidden="true" />
+              <label htmlFor="clinical-program-select" className="sr-only">Filter by Program</label>
+              <select
+                id="clinical-program-select"
+                value={selectedProgram}
+                onChange={(e) => setSelectedProgram(e.target.value)}
+                className="px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+              >
+                <option value="Paramedic">Paramedic</option>
+                <option value="AEMT">AEMT</option>
+                <option value="EMT">EMT</option>
+                <option value="All">All Programs</option>
+              </select>
+            </div>
+
             <div className="flex items-center gap-2">
               <Users className="w-5 h-5 text-gray-400" aria-hidden="true" />
               <label htmlFor="clinical-cohort-select" className="sr-only">Select Cohort</label>

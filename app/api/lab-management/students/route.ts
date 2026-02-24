@@ -2,12 +2,25 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { hasMinRole } from '@/lib/permissions';
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession();
   if (!session?.user?.email) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  const supabaseForRole = getSupabaseAdmin();
+  const { data: callerUser } = await supabaseForRole
+    .from('lab_users')
+    .select('role')
+    .ilike('email', session.user.email)
+    .single();
+
+  if (!callerUser || !hasMinRole(callerUser.role, 'instructor')) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   const searchParams = request.nextUrl.searchParams;
   const cohortId = searchParams.get('cohortId');
   const status = searchParams.get('status');
@@ -85,6 +98,16 @@ export async function POST(request: NextRequest) {
 
   try {
     const supabase = getSupabaseAdmin();
+
+    const { data: callerUser } = await supabase
+      .from('lab_users')
+      .select('role')
+      .ilike('email', session.user.email)
+      .single();
+
+    if (!callerUser || !hasMinRole(callerUser.role, 'instructor')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     const body = await request.json();
     

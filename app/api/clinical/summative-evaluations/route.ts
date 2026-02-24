@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { hasMinRole } from '@/lib/permissions';
 
 // GET - List summative evaluations
 export async function GET(request: NextRequest) {
@@ -10,6 +11,16 @@ export async function GET(request: NextRequest) {
     const session = await getServerSession();
     if (!session?.user?.email) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { data: callerUser } = await supabase
+      .from('lab_users')
+      .select('role')
+      .ilike('email', session.user.email)
+      .single();
+
+    if (!callerUser || !hasMinRole(callerUser.role, 'lead_instructor')) {
+      return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
     }
 
     const searchParams = request.nextUrl.searchParams;
@@ -87,6 +98,16 @@ export async function POST(request: NextRequest) {
     const session = await getServerSession();
     if (!session?.user?.email) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { data: callerUser } = await supabase
+      .from('lab_users')
+      .select('role')
+      .ilike('email', session.user.email)
+      .single();
+
+    if (!callerUser || !hasMinRole(callerUser.role, 'lead_instructor')) {
+      return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
     }
 
     const body = await request.json();

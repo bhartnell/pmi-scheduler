@@ -2,6 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { hasMinRole } from '@/lib/permissions';
+
+async function getCallerRole(email: string): Promise<string | null> {
+  const supabase = getSupabaseAdmin();
+  const { data } = await supabase
+    .from('lab_users')
+    .select('role')
+    .ilike('email', email)
+    .single();
+  return data?.role ?? null;
+}
 
 export async function GET(
   request: NextRequest,
@@ -10,6 +21,11 @@ export async function GET(
   const session = await getServerSession();
   if (!session?.user?.email) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const callerRole = await getCallerRole(session.user.email);
+  if (!callerRole || !hasMinRole(callerRole, 'instructor')) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   const { id } = await params;
@@ -68,6 +84,11 @@ export async function PATCH(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const callerRole = await getCallerRole(session.user.email);
+  if (!callerRole || !hasMinRole(callerRole, 'instructor')) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   const { id } = await params;
 
   try {
@@ -122,6 +143,11 @@ export async function DELETE(
   const session = await getServerSession();
   if (!session?.user?.email) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const callerRole = await getCallerRole(session.user.email);
+  if (!callerRole || !hasMinRole(callerRole, 'instructor')) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
   const { id } = await params;
