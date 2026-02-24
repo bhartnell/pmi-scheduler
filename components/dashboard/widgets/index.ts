@@ -9,6 +9,7 @@ export { default as OnboardingWidget } from './OnboardingWidget';
 export { default as OverdueTasksWidget } from './OverdueTasksWidget';
 export { default as RecentActivityWidget } from './RecentActivityWidget';
 export { default as QuickStatsWidget } from './QuickStatsWidget';
+export { default as MyTasksWidget } from './MyTasksWidget';
 
 // Widget configuration for the customize modal
 export const WIDGET_DEFINITIONS = {
@@ -67,6 +68,12 @@ export const WIDGET_DEFINITIONS = {
     description: 'Tasks past their due date requiring immediate attention',
     defaultFor: ['all'],
   },
+  my_tasks: {
+    id: 'my_tasks',
+    name: 'My Tasks',
+    description: 'Tasks assigned to you with quick mark-complete action',
+    defaultFor: ['all'],
+  },
   recent_activity: {
     id: 'recent_activity',
     name: 'Recent Activity',
@@ -86,19 +93,19 @@ export type WidgetId = keyof typeof WIDGET_DEFINITIONS;
 // Role-based default configurations
 export const ROLE_DEFAULTS: Record<string, { widgets: string[]; quickLinks: string[] }> = {
   superadmin: {
-    widgets: ['notifications', 'my_labs', 'quick_links', 'needs_attention', 'overview_stats', 'recent_feedback', 'quick_stats', 'recent_activity', 'overdue_tasks'],
+    widgets: ['notifications', 'my_tasks', 'my_labs', 'quick_links', 'needs_attention', 'overview_stats', 'recent_feedback', 'quick_stats', 'recent_activity', 'overdue_tasks'],
     quickLinks: ['scenarios', 'students', 'schedule', 'emt_tracker', 'clinical', 'feedback', 'admin'],
   },
   admin: {
-    widgets: ['notifications', 'my_labs', 'quick_links', 'needs_attention', 'overview_stats', 'recent_feedback', 'quick_stats', 'recent_activity', 'overdue_tasks'],
+    widgets: ['notifications', 'my_tasks', 'my_labs', 'quick_links', 'needs_attention', 'overview_stats', 'recent_feedback', 'quick_stats', 'recent_activity', 'overdue_tasks'],
     quickLinks: ['scenarios', 'students', 'schedule', 'emt_tracker', 'clinical', 'feedback', 'admin'],
   },
   lead_instructor: {
-    widgets: ['notifications', 'my_labs', 'quick_links', 'open_stations', 'overview_stats', 'quick_stats', 'overdue_tasks'],
+    widgets: ['notifications', 'my_tasks', 'my_labs', 'quick_links', 'open_stations', 'overview_stats', 'quick_stats', 'overdue_tasks'],
     quickLinks: ['scenarios', 'students', 'schedule', 'emt_tracker', 'clinical'],
   },
   instructor: {
-    widgets: ['notifications', 'onboarding', 'my_labs', 'quick_links', 'open_stations', 'overdue_tasks'],
+    widgets: ['notifications', 'my_tasks', 'onboarding', 'my_labs', 'quick_links', 'open_stations', 'overdue_tasks'],
     quickLinks: ['scenarios', 'students', 'schedule', 'my_certs', 'onboarding'],
   },
   guest: {
