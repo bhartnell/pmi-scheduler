@@ -2,9 +2,34 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
-import { Bell, Check, CheckCheck, ExternalLink, Settings, Filter, X, Mail } from 'lucide-react';
+import { Bell, CheckCheck, ExternalLink, Settings, X, Mail } from 'lucide-react';
 import Link from 'next/link';
 import { useVisibilityPolling } from '@/hooks/useVisibilityPolling';
+
+// Play a gentle single-tone chime (440 Hz, 150 ms, low gain)
+function playNotificationChime() {
+  try {
+    const AudioContextClass =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextClass) return;
+    const ctx = new AudioContextClass();
+    const oscillator = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    oscillator.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    oscillator.frequency.value = 440;
+    oscillator.type = 'sine';
+    gainNode.gain.setValueAtTime(0.15, ctx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+    oscillator.start(ctx.currentTime);
+    oscillator.stop(ctx.currentTime + 0.15);
+    // Close context after sound finishes to free resources
+    setTimeout(() => ctx.close(), 500);
+  } catch (e) {
+    console.warn('Notification chime not available:', e);
+  }
+}
 
 interface Notification {
   id: string;
@@ -80,8 +105,25 @@ export default function NotificationBell() {
   });
   const [savingPrefs, setSavingPrefs] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  // Sound preference — loaded from user preferences, defaults to false (opt-in)
+  const [notificationSound, setNotificationSound] = useState(false);
+  // Track previous unread count to detect new notifications during polling
+  const prevUnreadCountRef = useRef<number | null>(null);
+  // Track whether the user has interacted with the page (required for autoplay policy)
+  const hasInteractedRef = useRef(false);
 
-  // Fetch notifications
+  // Mark that the user has interacted so chime can play
+  useEffect(() => {
+    const markInteracted = () => { hasInteractedRef.current = true; };
+    window.addEventListener('click', markInteracted, { once: true });
+    window.addEventListener('keydown', markInteracted, { once: true });
+    return () => {
+      window.removeEventListener('click', markInteracted);
+      window.removeEventListener('keydown', markInteracted);
+    };
+  }, []);
+
+  // Fetch notifications — plays a chime when new unread notifications arrive during polling
   const fetchNotifications = useCallback(async () => {
     if (!session?.user?.email) return;
 
@@ -89,13 +131,27 @@ export default function NotificationBell() {
       const res = await fetch('/api/notifications');
       if (res.ok) {
         const data = await res.json();
+        const newCount: number = data.unreadCount || 0;
+
+        // Play chime when new unread notifications arrive (only after initial load
+        // and only after user interaction, per browser autoplay policy)
+        if (
+          notificationSound &&
+          hasInteractedRef.current &&
+          prevUnreadCountRef.current !== null &&
+          newCount > prevUnreadCountRef.current
+        ) {
+          playNotificationChime();
+        }
+
+        prevUnreadCountRef.current = newCount;
         setNotifications(data.notifications || []);
-        setUnreadCount(data.unreadCount || 0);
+        setUnreadCount(newCount);
       }
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
     }
-  }, [session?.user?.email]);
+  }, [session?.user?.email, notificationSound]);
 
   // Fetch notifications and preferences on mount
   useEffect(() => {
@@ -103,16 +159,34 @@ export default function NotificationBell() {
 
     const fetchData = async () => {
       try {
-        // Fetch notifications
-        await fetchNotifications();
+        // Fetch notifications, in-app category prefs, and user sound preference in parallel
+        const [notifRes, prefsRes, userPrefsRes] = await Promise.all([
+          fetch('/api/notifications'),
+          fetch('/api/notifications/preferences'),
+          fetch('/api/user/preferences'),
+        ]);
 
-        // Fetch notification preferences
-        const prefsRes = await fetch('/api/notifications/preferences');
+        if (notifRes.ok) {
+          const data = await notifRes.json();
+          const initialCount: number = data.unreadCount || 0;
+          // Set the baseline so the first poll doesn't trigger a false chime
+          prevUnreadCountRef.current = initialCount;
+          setNotifications(data.notifications || []);
+          setUnreadCount(initialCount);
+        }
+
         if (prefsRes.ok) {
           const prefsData = await prefsRes.json();
           if (prefsData.preferences?.categories) {
             setCategoryPrefs(prefsData.preferences.categories);
           }
+        }
+
+        if (userPrefsRes.ok) {
+          const userPrefsData = await userPrefsRes.json();
+          const soundEnabled =
+            userPrefsData.preferences?.notification_settings?.notification_sound ?? false;
+          setNotificationSound(soundEnabled);
         }
       } catch (error) {
         console.error('Failed to fetch notifications:', error);
@@ -122,7 +196,7 @@ export default function NotificationBell() {
     };
 
     fetchData();
-  }, [session?.user?.email, fetchNotifications]);
+  }, [session?.user?.email]);
 
   // Poll for new notifications every 60 seconds with visibility awareness
   useVisibilityPolling(fetchNotifications, session?.user?.email ? 60000 : null, {

@@ -17,6 +17,8 @@ import {
   Stethoscope,
   Clock,
   Loader2,
+  Volume2,
+  Play,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import NotificationBell from '@/components/NotificationBell';
@@ -68,6 +70,31 @@ const DEFAULT_EMAIL_PREFS: EmailPreferences = {
   categories: { tasks: true, labs: true, scheduling: true, feedback: true, clinical: true, system: true },
 };
 
+// ---- Notification chime preview (Web Audio API) ----
+
+function playNotificationChime() {
+  try {
+    const AudioContextClass =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextClass) return;
+    const ctx = new AudioContextClass();
+    const oscillator = ctx.createOscillator();
+    const gainNode = ctx.createGain();
+    oscillator.connect(gainNode);
+    gainNode.connect(ctx.destination);
+    oscillator.frequency.value = 440;
+    oscillator.type = 'sine';
+    gainNode.gain.setValueAtTime(0.15, ctx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+    oscillator.start(ctx.currentTime);
+    oscillator.stop(ctx.currentTime + 0.15);
+    setTimeout(() => ctx.close(), 500);
+  } catch (e) {
+    console.warn('Audio not available:', e);
+  }
+}
+
 // ---- Toggle switch sub-component ----
 
 function ToggleSwitch({
@@ -106,6 +133,8 @@ function NotificationPreferencesPanel() {
   const [savingInApp, setSavingInApp] = useState<CategoryKey | null>(null);
   const [savingEmail, setSavingEmail] = useState<CategoryKey | null>(null);
   const [savingFrequency, setSavingFrequency] = useState(false);
+  const [notificationSound, setNotificationSound] = useState(false);
+  const [savingSound, setSavingSound] = useState(false);
 
   useEffect(() => {
     fetchAllPrefs();
@@ -114,9 +143,10 @@ function NotificationPreferencesPanel() {
 
   const fetchAllPrefs = async () => {
     try {
-      const [inAppRes, emailRes] = await Promise.all([
+      const [inAppRes, emailRes, userPrefsRes] = await Promise.all([
         fetch('/api/notifications/preferences'),
         fetch('/api/notifications/email-preferences'),
+        fetch('/api/user/preferences'),
       ]);
 
       if (inAppRes.ok) {
@@ -135,6 +165,13 @@ function NotificationPreferencesPanel() {
         if (data.success && data.preferences) {
           setEmailPrefs(data.preferences);
         }
+      }
+
+      if (userPrefsRes.ok) {
+        const data = await userPrefsRes.json();
+        const soundEnabled =
+          data.preferences?.notification_settings?.notification_sound ?? false;
+        setNotificationSound(soundEnabled);
       }
     } catch (error) {
       console.error('Error fetching preferences:', error);
@@ -211,6 +248,34 @@ function NotificationPreferencesPanel() {
     setSavingFrequency(false);
   };
 
+  // ---- Notification sound toggle ----
+  const handleSoundToggle = async () => {
+    const newValue = !notificationSound;
+    setNotificationSound(newValue);
+    setSavingSound(true);
+
+    try {
+      // Fetch current notification_settings first so we don't overwrite other keys
+      const existingRes = await fetch('/api/user/preferences');
+      const existingData = existingRes.ok ? await existingRes.json() : {};
+      const currentSettings = existingData.preferences?.notification_settings ?? {};
+
+      const res = await fetch('/api/user/preferences', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          notification_settings: { ...currentSettings, notification_sound: newValue },
+        }),
+      });
+      if (!res.ok) throw new Error('Failed to save');
+      toast.success('Sound preference saved');
+    } catch {
+      setNotificationSound(!newValue);
+      toast.error('Failed to save sound preference');
+    }
+    setSavingSound(false);
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center py-10">
@@ -281,6 +346,43 @@ function NotificationPreferencesPanel() {
               </div>
             );
           })}
+        </div>
+      </div>
+
+      {/* ---- Notification sound section ---- */}
+      <div className="border dark:border-gray-700 rounded-xl p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center flex-shrink-0">
+              <Volume2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div>
+              <div className="font-medium text-gray-900 dark:text-white text-sm">
+                Notification Sound
+              </div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">
+                Play a soft chime when new notifications arrive
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            {notificationSound && (
+              <button
+                onClick={playNotificationChime}
+                title="Preview sound"
+                className="flex items-center gap-1 px-2 py-1 text-xs text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+              >
+                <Play className="w-3 h-3" />
+                Preview
+              </button>
+            )}
+            <ToggleSwitch
+              checked={notificationSound}
+              onChange={handleSoundToggle}
+              disabled={savingSound}
+              label="Play sound for new notifications"
+            />
+          </div>
         </div>
       </div>
 
