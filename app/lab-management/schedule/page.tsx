@@ -17,10 +17,13 @@ import {
   Save,
   Trash2,
   Lock,
-  Printer
+  Printer,
+  Keyboard
 } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import { PageErrorBoundary } from '@/components/PageErrorBoundary';
+import { useKeyboardShortcuts, KeyboardShortcut } from '@/hooks/useKeyboardShortcuts';
+import KeyboardShortcutsHelp from '@/components/KeyboardShortcutsHelp';
 
 interface Cohort {
   id: string;
@@ -95,6 +98,9 @@ function SchedulePageContent() {
 
   // Calendar state
   const [currentMonth, setCurrentMonth] = useState(new Date());
+
+  // Keyboard shortcuts state
+  const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
 
   // Daily notes state
   // showAllNotes=false → only current user's notes (one per date)
@@ -391,6 +397,49 @@ function SchedulePageContent() {
     setCurrentMonth(new Date());
   };
 
+  // Keyboard shortcuts
+  const shortcuts: KeyboardShortcut[] = [
+    {
+      key: '?',
+      shift: true,
+      handler: () => setShowShortcutsHelp(prev => !prev),
+      description: 'Show keyboard shortcuts',
+      category: 'Global',
+    },
+    {
+      key: 'arrowleft',
+      handler: () => goToPreviousMonth(),
+      description: 'Go to previous month',
+      category: 'Navigation',
+    },
+    {
+      key: 'arrowright',
+      handler: () => goToNextMonth(),
+      description: 'Go to next month',
+      category: 'Navigation',
+    },
+    {
+      key: 't',
+      handler: () => goToToday(),
+      description: 'Jump to today\'s month',
+      category: 'Navigation',
+    },
+    {
+      key: 'n',
+      handler: () => router.push('/lab-management/schedule/new'),
+      description: 'New lab day',
+      category: 'Actions',
+    },
+    {
+      key: 'escape',
+      handler: () => setShowShortcutsHelp(false),
+      description: 'Close shortcuts help',
+      category: 'Global',
+    },
+  ];
+
+  useKeyboardShortcuts(shortcuts, !noteModalDate);
+
   // Generate calendar days
   const generateCalendarDays = () => {
     const days = [];
@@ -480,6 +529,14 @@ function SchedulePageContent() {
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Lab Schedule</h1>
             </div>
             <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowShortcutsHelp(true)}
+                className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+                aria-label="Keyboard shortcuts"
+                title="Keyboard shortcuts (?)"
+              >
+                <Keyboard className="w-4 h-4" />
+              </button>
               <button
                 onClick={() => window.print()}
                 className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
@@ -916,6 +973,13 @@ function SchedulePageContent() {
         </div>
         </PageErrorBoundary>
       </main>
+
+      {/* Keyboard Shortcuts Help */}
+      <KeyboardShortcutsHelp
+        shortcuts={shortcuts}
+        isOpen={showShortcutsHelp}
+        onClose={() => setShowShortcutsHelp(false)}
+      />
 
       {/* Daily Note Modal */}
       {noteModalDate && (

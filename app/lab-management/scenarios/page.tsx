@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
 import {
   Search,
@@ -17,8 +17,11 @@ import {
   AlertTriangle,
   Thermometer,
   X,
-  Star
+  Star,
+  Keyboard
 } from 'lucide-react';
+import { useKeyboardShortcuts, KeyboardShortcut } from '@/hooks/useKeyboardShortcuts';
+import KeyboardShortcutsHelp from '@/components/KeyboardShortcutsHelp';
 
 interface Scenario {
   id: string;
@@ -77,6 +80,11 @@ export default function ScenariosPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+
+  // Keyboard shortcuts state
+  const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
+  const selectedIndexRef = useRef(selectedIndex);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -178,6 +186,105 @@ export default function ScenariosPage() {
 
   const hasActiveFilters = categoryFilter || difficultyFilter || programFilter || search || showFavoritesOnly;
 
+  // Keep ref in sync so shortcut handlers always see latest index
+  useEffect(() => {
+    selectedIndexRef.current = selectedIndex;
+  }, [selectedIndex]);
+
+  // Reset selection when list changes
+  useEffect(() => {
+    setSelectedIndex(-1);
+  }, [scenarios, search, categoryFilter, difficultyFilter, programFilter, showFavoritesOnly]);
+
+  // Keyboard shortcuts
+  const shortcuts: KeyboardShortcut[] = [
+    {
+      key: '?',
+      shift: true,
+      handler: () => setShowShortcutsHelp(prev => !prev),
+      description: 'Show keyboard shortcuts',
+      category: 'Global',
+    },
+    {
+      key: 'j',
+      handler: () => {
+        setSelectedIndex(prev => Math.min(prev + 1, sortedScenarios.length - 1));
+      },
+      description: 'Move selection down',
+      category: 'Navigation',
+    },
+    {
+      key: 'k',
+      handler: () => {
+        setSelectedIndex(prev => Math.max(prev - 1, 0));
+      },
+      description: 'Move selection up',
+      category: 'Navigation',
+    },
+    {
+      key: 'enter',
+      handler: () => {
+        const idx = selectedIndexRef.current;
+        if (idx >= 0 && idx < sortedScenarios.length) {
+          router.push(`/lab-management/scenarios/${sortedScenarios[idx].id}`);
+        }
+      },
+      description: 'Open selected scenario',
+      category: 'Navigation',
+    },
+    {
+      key: 'n',
+      handler: () => router.push('/lab-management/scenarios/new'),
+      description: 'New scenario',
+      category: 'Actions',
+    },
+    {
+      key: 'f',
+      handler: () => {
+        const idx = selectedIndexRef.current;
+        if (idx >= 0 && idx < sortedScenarios.length) {
+          const scenario = sortedScenarios[idx];
+          const isFav = favorites.has(scenario.id);
+          setFavorites(prev => {
+            const next = new Set(prev);
+            if (isFav) next.delete(scenario.id);
+            else next.add(scenario.id);
+            return next;
+          });
+          fetch('/api/lab-management/scenarios/favorites', {
+            method: isFav ? 'DELETE' : 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ scenario_id: scenario.id }),
+          }).catch(() => {
+            // Revert on error
+            setFavorites(prev => {
+              const next = new Set(prev);
+              if (isFav) next.add(scenario.id);
+              else next.delete(scenario.id);
+              return next;
+            });
+          });
+        }
+      },
+      description: 'Toggle favorite on selected scenario',
+      category: 'Actions',
+    },
+    {
+      key: 'escape',
+      handler: () => {
+        if (showShortcutsHelp) {
+          setShowShortcutsHelp(false);
+        } else {
+          setSelectedIndex(-1);
+        }
+      },
+      description: 'Clear selection / close modal',
+      category: 'Global',
+    },
+  ];
+
+  useKeyboardShortcuts(shortcuts, true);
+
   if (status === 'loading' || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
@@ -205,6 +312,14 @@ export default function ScenariosPage() {
               </div>
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Scenario Library</h1>
             </div>
+            <button
+              onClick={() => setShowShortcutsHelp(true)}
+              className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+              aria-label="Keyboard shortcuts"
+              title="Keyboard shortcuts (?)"
+            >
+              <Keyboard className="w-4 h-4" />
+            </button>
             <Link
               href="/lab-management/scenarios/new"
               className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 font-medium"
@@ -353,15 +468,18 @@ export default function ScenariosPage() {
           </div>
         ) : (
           <div className="grid gap-4">
-            {sortedScenarios.map((scenario) => {
+            {sortedScenarios.map((scenario, index) => {
               const CategoryIcon = CATEGORY_ICONS[scenario.category] || FileText;
               const isFavorited = favorites.has(scenario.id);
+              const isSelected = index === selectedIndex;
 
               return (
                 <Link
                   key={scenario.id}
                   href={`/lab-management/scenarios/${scenario.id}`}
-                  className="relative bg-white rounded-lg shadow p-4 hover:shadow-lg transition-shadow dark:bg-gray-800 dark:hover:bg-gray-750"
+                  className={`relative bg-white rounded-lg shadow p-4 hover:shadow-lg transition-shadow dark:bg-gray-800 dark:hover:bg-gray-750 ${
+                    isSelected ? 'ring-2 ring-blue-500 dark:ring-blue-400' : ''
+                  }`}
                 >
                   {/* Favorite star button */}
                   <button
@@ -422,6 +540,13 @@ export default function ScenariosPage() {
           </div>
         )}
       </main>
+
+      {/* Keyboard Shortcuts Help */}
+      <KeyboardShortcutsHelp
+        shortcuts={shortcuts}
+        isOpen={showShortcutsHelp}
+        onClose={() => setShowShortcutsHelp(false)}
+      />
     </div>
   );
 }

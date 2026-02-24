@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Bell, Check, CheckCheck, ExternalLink, ArrowLeft, Trash2, Settings } from 'lucide-react';
+import { Bell, Check, CheckCheck, ExternalLink, ArrowLeft, Trash2, Settings, Keyboard } from 'lucide-react';
 import LabHeader from '@/components/LabHeader';
 import { useToast } from '@/components/Toast';
+import { useKeyboardShortcuts, KeyboardShortcut } from '@/hooks/useKeyboardShortcuts';
+import KeyboardShortcutsHelp from '@/components/KeyboardShortcutsHelp';
 
 interface Notification {
   id: string;
@@ -77,6 +79,11 @@ export default function NotificationsPage() {
   const [savingSettings, setSavingSettings] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [clearing, setClearing] = useState(false);
+
+  // Keyboard shortcuts state
+  const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(-1);
+  const selectedIndexRef = useRef(selectedIndex);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -192,6 +199,98 @@ export default function NotificationsPage() {
     }
   };
 
+  const filteredNotifications = filter === 'unread'
+    ? notifications.filter(n => !n.is_read)
+    : notifications;
+
+  const unreadCount = notifications.filter(n => !n.is_read).length;
+
+  // Keep ref in sync so shortcut handlers always see latest index
+  useEffect(() => {
+    selectedIndexRef.current = selectedIndex;
+  }, [selectedIndex]);
+
+  // Reset selection when list changes
+  useEffect(() => {
+    setSelectedIndex(-1);
+  }, [filter]);
+
+  // Keyboard shortcuts
+  const shortcuts: KeyboardShortcut[] = [
+    {
+      key: '?',
+      shift: true,
+      handler: () => setShowShortcutsHelp(prev => !prev),
+      description: 'Show keyboard shortcuts',
+      category: 'Global',
+    },
+    {
+      key: 'j',
+      handler: () => {
+        setSelectedIndex(prev => Math.min(prev + 1, filteredNotifications.length - 1));
+      },
+      description: 'Move selection down',
+      category: 'Navigation',
+    },
+    {
+      key: 'k',
+      handler: () => {
+        setSelectedIndex(prev => Math.max(prev - 1, 0));
+      },
+      description: 'Move selection up',
+      category: 'Navigation',
+    },
+    {
+      key: 'enter',
+      handler: () => {
+        const idx = selectedIndexRef.current;
+        if (idx >= 0 && idx < filteredNotifications.length) {
+          const notification = filteredNotifications[idx];
+          if (notification.link_url) {
+            if (!notification.is_read) markAsRead(notification.id);
+            router.push(notification.link_url);
+          }
+        }
+      },
+      description: 'Follow notification link',
+      category: 'Navigation',
+    },
+    {
+      key: 'r',
+      handler: () => {
+        const idx = selectedIndexRef.current;
+        if (idx >= 0 && idx < filteredNotifications.length) {
+          const notification = filteredNotifications[idx];
+          if (!notification.is_read) markAsRead(notification.id);
+        }
+      },
+      description: 'Mark selected as read',
+      category: 'Actions',
+    },
+    {
+      key: 'a',
+      handler: () => {
+        if (unreadCount > 0) markAllAsRead();
+      },
+      description: 'Mark all notifications as read',
+      category: 'Actions',
+    },
+    {
+      key: 'escape',
+      handler: () => {
+        if (showShortcutsHelp) {
+          setShowShortcutsHelp(false);
+        } else {
+          setSelectedIndex(-1);
+        }
+      },
+      description: 'Clear selection / close modal',
+      category: 'Global',
+    },
+  ];
+
+  useKeyboardShortcuts(shortcuts, !showClearConfirm);
+
   if (status === 'loading' || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
@@ -201,12 +300,6 @@ export default function NotificationsPage() {
   }
 
   if (!session) return null;
-
-  const filteredNotifications = filter === 'unread'
-    ? notifications.filter(n => !n.is_read)
-    : notifications;
-
-  const unreadCount = notifications.filter(n => !n.is_read).length;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
@@ -228,6 +321,16 @@ export default function NotificationsPage() {
             </Link>
           </div>
           <div className="flex items-center gap-4">
+            {/* Keyboard shortcuts */}
+            <button
+              onClick={() => setShowShortcutsHelp(true)}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+              aria-label="Keyboard shortcuts"
+              title="Keyboard shortcuts (?)"
+            >
+              <Keyboard className="w-4 h-4" />
+            </button>
+
             {/* Filter */}
             <div className="flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden">
               <button
@@ -396,12 +499,14 @@ export default function NotificationsPage() {
             </div>
           ) : (
             <div className="divide-y divide-gray-200 dark:divide-gray-700">
-              {filteredNotifications.map(notification => (
+              {filteredNotifications.map((notification, index) => {
+                const isSelected = index === selectedIndex;
+                return (
                 <div
                   key={notification.id}
                   className={`p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${
                     !notification.is_read ? 'bg-blue-50 dark:bg-blue-900/20' : ''
-                  }`}
+                  } ${isSelected ? 'ring-2 ring-inset ring-blue-500 dark:ring-blue-400' : ''}`}
                 >
                   <div className="flex items-start gap-4">
                     {/* Read indicator */}
@@ -461,11 +566,19 @@ export default function NotificationsPage() {
                     </div>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
       </main>
+
+      {/* Keyboard Shortcuts Help */}
+      <KeyboardShortcutsHelp
+        shortcuts={shortcuts}
+        isOpen={showShortcutsHelp}
+        onClose={() => setShowShortcutsHelp(false)}
+      />
 
       {/* Clear All Confirmation Modal */}
       {showClearConfirm && (
