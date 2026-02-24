@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
     let instructorQuery = supabase
       .from('lab_users')
       .select('id, name, email, role, is_active')
-      .in('role', ['instructor', 'lead_instructor', 'admin', 'superadmin'])
+      .in('role', ['instructor', 'lead_instructor', 'admin', 'superadmin', 'volunteer_instructor'])
       .eq('is_active', true)
       .order('name');
 

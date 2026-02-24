@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
       .single();
 
     const role = currentUser?.role || 'pending';
-    if (!['superadmin', 'admin', 'lead_instructor', 'instructor'].includes(role)) {
+    if (!['superadmin', 'admin', 'lead_instructor', 'instructor', 'volunteer_instructor'].includes(role)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -217,7 +217,7 @@ export async function PATCH(request: NextRequest) {
       .single();
 
     const role = currentUser?.role || 'pending';
-    if (!['superadmin', 'admin', 'lead_instructor', 'instructor'].includes(role)) {
+    if (!['superadmin', 'admin', 'lead_instructor', 'instructor', 'volunteer_instructor'].includes(role)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

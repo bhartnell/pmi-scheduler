@@ -20,7 +20,7 @@ export async function GET() {
       .eq('email', session.user.email)
       .single();
 
-    if (!currentUser || !['superadmin', 'admin', 'lead_instructor', 'instructor'].includes(currentUser.role)) {
+    if (!currentUser || !['superadmin', 'admin', 'lead_instructor', 'instructor', 'volunteer_instructor'].includes(currentUser.role)) {
       return NextResponse.json({ error: 'Forbidden: Instructor access required' }, { status: 403 });
     }
 
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
       .eq('email', session.user.email)
       .single();
 
-    if (!currentUser || !['superadmin', 'admin', 'lead_instructor', 'instructor'].includes(currentUser.role)) {
+    if (!currentUser || !['superadmin', 'admin', 'lead_instructor', 'instructor', 'volunteer_instructor'].includes(currentUser.role)) {
       return NextResponse.json({ error: 'Forbidden: Instructor access required' }, { status: 403 });
     }
 
@@ -138,7 +138,7 @@ export async function PATCH(request: NextRequest) {
       .eq('email', session.user.email)
       .single();
 
-    if (!currentUser || !['superadmin', 'admin', 'lead_instructor', 'instructor'].includes(currentUser.role)) {
+    if (!currentUser || !['superadmin', 'admin', 'lead_instructor', 'instructor', 'volunteer_instructor'].includes(currentUser.role)) {
       return NextResponse.json({ error: 'Forbidden: Instructor access required' }, { status: 403 });
     }
 
@@ -188,7 +188,7 @@ export async function DELETE(request: NextRequest) {
       .eq('email', session.user.email)
       .single();
 
-    if (!currentUser || !['superadmin', 'admin', 'lead_instructor', 'instructor'].includes(currentUser.role)) {
+    if (!currentUser || !['superadmin', 'admin', 'lead_instructor', 'instructor', 'volunteer_instructor'].includes(currentUser.role)) {
       return NextResponse.json({ error: 'Forbidden: Instructor access required' }, { status: 403 });
     }
 

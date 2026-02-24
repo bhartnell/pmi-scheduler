@@ -40,7 +40,7 @@ export const authOptions: NextAuthOptions = {
       const isInstructorEmail = user.email?.endsWith('@pmi.edu') && !user.email?.endsWith('@my.pmi.edu');
       const isStudentEmail = user.email?.endsWith('@my.pmi.edu');
 
-      if (!user.email || (!isInstructorEmail && !isStudentEmail)) {
+      if (!user.email) {
         return false;
       }
 
@@ -59,6 +59,18 @@ export const authOptions: NextAuthOptions = {
           console.error('Error checking for existing user:', fetchError);
           // Still allow sign in, user will be created on first API call
           return true;
+        }
+
+        // If user already exists in DB with an approved (non-pending) role, allow sign in
+        // regardless of email domain. This supports volunteer_instructor users who may
+        // use non-pmi.edu email addresses.
+        if (existingUser && existingUser.role !== 'pending') {
+          return true;
+        }
+
+        // For new users, require a recognized email domain
+        if (!isInstructorEmail && !isStudentEmail) {
+          return false;
         }
 
         // If user doesn't exist, create them
