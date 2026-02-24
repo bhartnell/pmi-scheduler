@@ -428,14 +428,6 @@ function SchedulePageContent() {
     return date.getMonth() === currentMonth.getMonth();
   };
 
-  const isPastDate = (date: Date) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const d = new Date(date);
-    d.setHours(0, 0, 0, 0);
-    return d < today;
-  };
-
   // Get week/day info for the note modal header
   const getDateContext = (date: Date) => {
     const dateStr = date.toISOString().split('T')[0];
@@ -706,26 +698,27 @@ function SchedulePageContent() {
               const notesForDate = getNotesForDate(date);
               const myNote = getMyNoteForDate(date);
               const hasNote = notesForDate.length > 0;
-              const past = isPastDate(date);
               const isEmpty = dayLabDays.length === 0;
-              const isClickable = isEmpty && !past;
+              // Empty cells (no lab) are clickable to open the note modal on any date
+              // Cells with labs use the note button in the header for notes
+              const isEmptyClickable = isEmpty;
 
               return (
                 <div
                   key={idx}
-                  onClick={() => {
-                    if (isClickable) {
-                      router.push(`/lab-management/schedule/new?date=${date.toISOString().split('T')[0]}`);
+                  onClick={(e) => {
+                    if (isEmptyClickable) {
+                      openNoteModal(date, e);
                     }
                   }}
                   className={`min-h-[80px] lg:min-h-[120px] border-b border-r dark:border-gray-600 p-1 md:p-2 relative group ${
                     !currentMo ? 'bg-gray-50 dark:bg-gray-700' : ''
                   } ${today ? 'bg-blue-50 dark:bg-blue-900/30' : ''} ${
-                    isClickable
-                      ? 'cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors'
+                    isEmptyClickable
+                      ? 'cursor-pointer hover:bg-yellow-50/60 dark:hover:bg-yellow-900/10 transition-colors'
                       : ''
                   }`}
-                  title={isClickable ? 'Click to add lab on this day' : undefined}
+                  title={isEmptyClickable ? 'Click to add a note for this day' : undefined}
                 >
                   <div className="flex items-center justify-between mb-1">
                     <span className={`text-sm font-medium ${
@@ -747,7 +740,11 @@ function SchedulePageContent() {
                       >
                         <Plus className="w-3.5 h-3.5" />
                       </Link>
-                      {/* Note indicator / add note button */}
+                      {/* Note indicator / add note button
+                          - Always visible (not hidden) when a note exists
+                          - On hover on cells with no existing note
+                          - On empty cells (no lab), the whole cell is clickable so this button
+                            acts as a visual indicator; the cell click opens the modal */}
                       <button
                         onClick={(e) => openNoteModal(date, e)}
                         className={`p-0.5 rounded transition-all ${
@@ -755,9 +752,11 @@ function SchedulePageContent() {
                             ? 'text-yellow-500 dark:text-yellow-400 hover:text-yellow-600 dark:hover:text-yellow-300'
                             : showAllNotes && hasNote
                               ? 'text-blue-400 dark:text-blue-500 hover:text-blue-500 dark:hover:text-blue-400'
-                              : 'text-gray-300 dark:text-gray-600 opacity-0 group-hover:opacity-100 hover:text-gray-500 dark:hover:text-gray-400'
+                              : isEmpty
+                                ? 'text-gray-300 dark:text-gray-600 group-hover:text-yellow-400 dark:group-hover:text-yellow-500 hover:text-yellow-500 dark:hover:text-yellow-400 transition-colors'
+                                : 'text-gray-300 dark:text-gray-600 opacity-0 group-hover:opacity-100 hover:text-gray-500 dark:hover:text-gray-400'
                         }`}
-                        title={myNote ? 'Edit your note' : 'Add your note'}
+                        title={myNote ? 'Edit your note' : 'Add a note for this day'}
                       >
                         <StickyNote className="w-3.5 h-3.5" />
                       </button>
