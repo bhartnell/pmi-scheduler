@@ -403,7 +403,7 @@ export default function CalendarPage() {
                     {dayLabDays.map(labDay => (
                       <Link
                         key={labDay.id}
-                        href={`/lab-management/schedule/${labDay.id}/edit`}
+                        href={`/lab-management/schedule/${labDay.id}`}
                         className={`block px-1.5 py-1 text-xs rounded relative ${
                           labDay.needs_coverage
                             ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-800 dark:text-orange-300 hover:bg-orange-200 dark:hover:bg-orange-900/60 ring-1 ring-orange-300 dark:ring-orange-700'
@@ -539,7 +539,7 @@ export default function CalendarPage() {
                 return (
                   <Link
                     key={`${item._type}-${item.id}`}
-                    href={isLab ? `/lab-management/schedule/${item.id}/edit` : '/scheduling/shifts'}
+                    href={isLab ? `/lab-management/schedule/${item.id}` : '/scheduling/shifts'}
                     className="p-4 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700"
                   >
                     <div className={`text-center p-2 rounded-lg min-w-[50px] ${
