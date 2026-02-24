@@ -25,7 +25,8 @@ import {
   Timer,
   Repeat,
   Upload,
-  ExternalLink
+  ExternalLink,
+  Copy
 } from 'lucide-react';
 import LabTimer from '@/components/LabTimer';
 import BLSPlatinumChecklist from '@/components/BLSPlatinumChecklist';
@@ -206,6 +207,11 @@ export default function LabDayPage() {
     observer: ''
   });
   const [savingRoles, setSavingRoles] = useState(false);
+
+  // Duplicate lab day modal state
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  const [duplicateDate, setDuplicateDate] = useState('');
+  const [duplicating, setDuplicating] = useState(false);
 
   // Edit station modal state
   const [editingStation, setEditingStation] = useState<Station | null>(null);
@@ -436,6 +442,29 @@ export default function LabDayPage() {
       printHiddenElements.forEach(el => (el as HTMLElement).style.display = '');
       printBlockElements.forEach(el => (el as HTMLElement).style.display = '');
     }
+  };
+
+  const handleDuplicate = async () => {
+    if (!duplicateDate) return;
+    setDuplicating(true);
+    try {
+      const res = await fetch(`/api/lab-management/lab-days/${labDayId}/duplicate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ new_date: duplicateDate })
+      });
+      const data = await res.json();
+      if (data.success && data.newLabDayId) {
+        setShowDuplicateModal(false);
+        router.push(`/lab-management/schedule/${data.newLabDayId}/edit`);
+      } else {
+        alert('Failed to duplicate: ' + (data.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error duplicating lab day:', error);
+      alert('An error occurred while duplicating the lab day.');
+    }
+    setDuplicating(false);
   };
 
   const fetchScenariosAndSkills = async () => {
@@ -1029,6 +1058,16 @@ export default function LabDayPage() {
               >
                 <Download className="w-4 h-4" />
                 PDF
+              </button>
+              <button
+                onClick={() => {
+                  setDuplicateDate('');
+                  setShowDuplicateModal(true);
+                }}
+                className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+              >
+                <Copy className="w-4 h-4" />
+                Duplicate
               </button>
               <Link
                 href={`/lab-management/schedule/${labDayId}/edit`}
@@ -2053,6 +2092,74 @@ export default function LabDayPage() {
                   <Save className="w-4 h-4" />
                 )}
                 Log All
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Duplicate Lab Day Modal */}
+      {showDuplicateModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <Copy className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                Duplicate Lab Day
+              </h2>
+              <button
+                onClick={() => setShowDuplicateModal(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                This will create a copy of <strong className="text-gray-900 dark:text-white">{labDay?.date ? formatDate(labDay.date) : 'this lab day'}</strong> with all its stations, skills, and configuration on a new date.
+              </p>
+
+              {labDay && (
+                <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                  <p><span className="font-medium">Stations:</span> {labDay.stations?.length ?? 0}</p>
+                  <p><span className="font-medium">Rotations:</span> {labDay.num_rotations} x {labDay.rotation_duration} min</p>
+                  {labDay.title && <p><span className="font-medium">Title:</span> {labDay.title}</p>}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  New Date
+                </label>
+                <input
+                  type="date"
+                  value={duplicateDate}
+                  onChange={e => setDuplicateDate(e.target.value)}
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 p-4 border-t dark:border-gray-700">
+              <button
+                onClick={() => setShowDuplicateModal(false)}
+                disabled={duplicating}
+                className="px-4 py-2 border dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDuplicate}
+                disabled={!duplicateDate || duplicating}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              >
+                {duplicating ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                ) : (
+                  <Copy className="w-4 h-4" />
+                )}
+                {duplicating ? 'Duplicating...' : 'Duplicate'}
               </button>
             </div>
           </div>

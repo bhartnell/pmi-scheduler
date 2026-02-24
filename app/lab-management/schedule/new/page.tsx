@@ -27,7 +27,11 @@ import {
   LayoutTemplate,
   CheckCircle,
   RefreshCw,
-  ExternalLink
+  ExternalLink,
+  History,
+  ChevronDown,
+  ChevronUp,
+  Copy
 } from 'lucide-react';
 
 interface LabDayTemplate {
@@ -133,6 +137,44 @@ interface DrillDocument {
   document_type: string;
 }
 
+interface SuggestionStation {
+  id: string;
+  station_number: number;
+  station_type: 'scenario' | 'skills' | 'skill_drill' | 'documentation';
+  scenario_id: string | null;
+  drill_ids: string[];
+  selected_skills: string[];
+  custom_skill_names: string[];
+  room: string | null;
+  notes: string | null;
+  rotation_minutes: number;
+  num_rotations: number;
+  skill_sheet_url: string | null;
+  instructions_url: string | null;
+  station_notes: string | null;
+  scenario: { id: string; title: string; category: string; difficulty: string } | null;
+  library_skills: { id: string; name: string; category: string }[];
+  custom_skills: { id: string; name: string }[];
+  drills: { id: string; name: string; category: string }[];
+}
+
+interface Suggestion {
+  lab_day_id: string;
+  date: string;
+  title: string | null;
+  week_number: number | null;
+  day_number: number | null;
+  num_rotations: number;
+  rotation_duration: number;
+  week_offset: number | null;
+  cohort: {
+    id: string;
+    cohort_number: number;
+    program: { id: string; name: string; abbreviation: string };
+  } | null;
+  stations: SuggestionStation[];
+}
+
 const STATION_TYPES = [
   { value: 'scenario', label: 'Scenario', icon: Stethoscope, color: 'bg-purple-500', description: 'Full scenario with grading' },
   { value: 'skills', label: 'Skills', icon: ClipboardCheck, color: 'bg-green-500', description: 'Skills practice station' },
@@ -217,6 +259,12 @@ function NewLabDayPageContent() {
   const [templateToast, setTemplateToast] = useState('');
   const [showLoadConfirm, setShowLoadConfirm] = useState(false);
   const [pendingTemplateId, setPendingTemplateId] = useState('');
+
+  // Previous labs suggestions
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const [suggestionsOpen, setSuggestionsOpen] = useState(true);
+  const [applyConfirmId, setApplyConfirmId] = useState<string | null>(null);
 
   // --- Auto-save draft ---
   // Compose a snapshot of the user-editable form fields to track changes.
@@ -374,6 +422,40 @@ function NewLabDayPageContent() {
     // We intentionally only trigger on station type / drill_ids changes; full deps would cause excessive re-fetches
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stations.map(s => `${s.id}:${s.station_type}:${(s.drill_ids || []).join(',')}`).join('|')]);
+
+  // Fetch previous-lab suggestions whenever date or cohort changes
+  useEffect(() => {
+    if (!labDate) {
+      setSuggestions([]);
+      return;
+    }
+
+    let cancelled = false;
+    const fetchSuggestions = async () => {
+      setSuggestionsLoading(true);
+      try {
+        const params = new URLSearchParams({ date: labDate });
+        if (selectedCohort) params.set('cohort_id', selectedCohort);
+        const res = await fetch(`/api/lab-management/schedule/suggestions?${params.toString()}`);
+        const data = await res.json();
+        if (!cancelled && data.success) {
+          setSuggestions(data.suggestions || []);
+          if ((data.suggestions || []).length > 0) {
+            setSuggestionsOpen(true);
+          }
+        }
+      } catch {
+        // Non-critical; silently ignore
+      } finally {
+        if (!cancelled) setSuggestionsLoading(false);
+      }
+    };
+
+    fetchSuggestions();
+    return () => { cancelled = true; };
+  // Only re-run when date or cohort changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [labDate, selectedCohort]);
 
   const fetchData = async () => {
     try {
@@ -624,6 +706,38 @@ function NewLabDayPageContent() {
       setSelectedTemplateId(templateId);
       applyTemplate(templateId);
     }
+  };
+
+  const applySuggestion = (suggestion: Suggestion) => {
+    // Apply lab-day level rotation settings
+    if (suggestion.num_rotations) {
+      setNumRotationsLabDay(suggestion.num_rotations);
+    }
+    if (suggestion.rotation_duration) {
+      setRotationDurationLabDay(suggestion.rotation_duration);
+      setDurationInputValueLabDay(suggestion.rotation_duration.toString());
+    }
+
+    // Map suggestion stations into the Station format the form uses
+    const newStations: Station[] = suggestion.stations.map((s, i) => ({
+      ...createEmptyStation(i + 1),
+      station_type: s.station_type,
+      scenario_id: s.scenario_id || '',
+      selected_skills: s.selected_skills || [],
+      custom_skills: s.custom_skill_names || [],
+      drill_ids: s.drill_ids || [],
+      room: s.room || '',
+      notes: s.notes || '',
+      rotation_minutes: s.rotation_minutes ?? 30,
+      num_rotations: s.num_rotations ?? 4,
+      skill_sheet_url: s.skill_sheet_url || '',
+      instructions_url: s.instructions_url || '',
+      station_notes: s.station_notes || '',
+    }));
+
+    setStations(newStations);
+    setApplyConfirmId(null);
+    showToast('Configuration copied from previous lab');
   };
 
   const handleSaveTemplate = async () => {
@@ -1265,6 +1379,193 @@ function NewLabDayPageContent() {
             </div>
           </div>
         </div>
+
+        {/* Previous Labs Suggestions Panel */}
+        {labDate && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+            {/* Collapsible header */}
+            <button
+              type="button"
+              onClick={() => setSuggestionsOpen(o => !o)}
+              className="w-full flex items-center justify-between px-4 py-3 text-left"
+            >
+              <div className="flex items-center gap-2">
+                <History className="w-5 h-5 text-violet-600 dark:text-violet-400" />
+                <span className="font-semibold text-gray-900 dark:text-white">
+                  Previous Labs
+                </span>
+                {suggestionsLoading ? (
+                  <span className="text-xs text-gray-400 dark:text-gray-500">Loading...</span>
+                ) : suggestions.length > 0 ? (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-300">
+                    {suggestions.length} found
+                  </span>
+                ) : (
+                  <span className="text-xs text-gray-400 dark:text-gray-500">No matches found</span>
+                )}
+              </div>
+              {suggestionsOpen ? (
+                <ChevronUp className="w-4 h-4 text-gray-400" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-gray-400" />
+              )}
+            </button>
+
+            {suggestionsOpen && (
+              <div className="border-t dark:border-gray-700 px-4 pb-4 pt-3">
+                {suggestionsLoading ? (
+                  <div className="flex items-center justify-center py-6">
+                    <svg className="animate-spin h-5 w-5 text-violet-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  </div>
+                ) : suggestions.length === 0 ? (
+                  <p className="text-sm text-gray-500 dark:text-gray-400 py-3">
+                    {selectedCohort
+                      ? 'No previous labs found at the same relative week in other cohorts.'
+                      : 'Select a cohort above to see labs from previous cohorts at the same program week.'}
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Labs from previous cohorts at the same point in the program. Click "Use This Configuration" to pre-fill your stations.
+                    </p>
+                    {suggestions.map((suggestion) => {
+                      const cohortLabel = suggestion.cohort
+                        ? `${suggestion.cohort.program.abbreviation} Group ${suggestion.cohort.cohort_number}`
+                        : 'Unknown Cohort';
+                      const dateFormatted = new Date(suggestion.date + 'T12:00:00').toLocaleDateString('en-US', {
+                        weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
+                      });
+                      const stationTypeSummary = suggestion.stations.length > 0
+                        ? suggestion.stations.map(s => {
+                            if (s.station_type === 'scenario') return 'Scenario';
+                            if (s.station_type === 'skills') return 'Skills';
+                            if (s.station_type === 'skill_drill') return 'Skill Drill';
+                            return 'Documentation';
+                          }).join(', ')
+                        : 'No stations';
+
+                      return (
+                        <div
+                          key={suggestion.lab_day_id}
+                          className="border dark:border-gray-700 rounded-lg p-3 space-y-2"
+                        >
+                          {/* Cohort + date header */}
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-medium text-gray-900 dark:text-white text-sm">
+                                  {cohortLabel}
+                                </span>
+                                {suggestion.week_offset !== null && (
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
+                                    Week +{suggestion.week_offset}
+                                  </span>
+                                )}
+                                {suggestion.week_number && (
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400">
+                                    Wk {suggestion.week_number}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                {dateFormatted}
+                                {suggestion.title && ` — ${suggestion.title}`}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Station list */}
+                          {suggestion.stations.length > 0 && (
+                            <div className="space-y-1">
+                              <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                                {suggestion.stations.length} station{suggestion.stations.length !== 1 ? 's' : ''}: {stationTypeSummary}
+                              </div>
+                              {suggestion.stations.map((st, stIdx) => {
+                                let contentLabel = '';
+                                if (st.station_type === 'scenario' && st.scenario) {
+                                  contentLabel = st.scenario.title;
+                                } else if (st.station_type === 'skills') {
+                                  const names = [
+                                    ...st.library_skills.map(sk => sk.name),
+                                    ...st.custom_skills.map(cs => cs.name),
+                                  ];
+                                  contentLabel = names.length > 0
+                                    ? names.slice(0, 3).join(', ') + (names.length > 3 ? '...' : '')
+                                    : 'Skills station';
+                                } else if (st.station_type === 'skill_drill') {
+                                  contentLabel = st.drills.length > 0
+                                    ? st.drills.slice(0, 2).map(d => d.name).join(', ') + (st.drills.length > 2 ? '...' : '')
+                                    : 'Skill Drill';
+                                } else {
+                                  contentLabel = 'Documentation';
+                                }
+
+                                const typeColors: Record<string, string> = {
+                                  scenario: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
+                                  skills: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+                                  skill_drill: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
+                                  documentation: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+                                };
+
+                                return (
+                                  <div key={stIdx} className="flex items-center gap-1.5 text-xs">
+                                    <span className={`px-1.5 py-0.5 rounded text-xs font-medium flex-shrink-0 ${typeColors[st.station_type] || ''}`}>
+                                      {st.station_type === 'skill_drill' ? 'Drill' : st.station_type.charAt(0).toUpperCase() + st.station_type.slice(1)}
+                                    </span>
+                                    <span className="text-gray-700 dark:text-gray-300 truncate">{contentLabel}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+
+                          {/* Action button */}
+                          {applyConfirmId === suggestion.lab_day_id ? (
+                            <div className="flex items-center gap-2 pt-1">
+                              <span className="text-xs text-gray-600 dark:text-gray-400">Replace current stations?</span>
+                              <button
+                                type="button"
+                                onClick={() => applySuggestion(suggestion)}
+                                className="px-2 py-1 text-xs bg-violet-600 text-white rounded hover:bg-violet-700 transition-colors"
+                              >
+                                Yes, replace
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setApplyConfirmId(null)}
+                                className="px-2 py-1 text-xs bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (hasFormData()) {
+                                  setApplyConfirmId(suggestion.lab_day_id);
+                                } else {
+                                  applySuggestion(suggestion);
+                                }
+                              }}
+                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-violet-50 text-violet-700 dark:bg-violet-900/20 dark:text-violet-300 border border-violet-200 dark:border-violet-800 rounded-lg hover:bg-violet-100 dark:hover:bg-violet-900/40 transition-colors"
+                            >
+                              <Copy className="w-3 h-3" />
+                              Use This Configuration
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Request Coverage */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">

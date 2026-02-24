@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { canAccessClinical, canEditClinical, type Role } from '@/lib/permissions';
 import SummativeEvaluationsSection from '@/components/clinical/SummativeEvaluationsSection';
+import PreceptorsSection from '@/components/clinical/PreceptorsSection';
 
 interface Internship {
   id: string;
@@ -1122,6 +1123,9 @@ export default function InternshipDetailPage() {
 
           {/* Right Column */}
           <div className="space-y-6">
+            {/* Preceptors */}
+            <PreceptorsSection internshipId={internshipId} canEdit={canEdit} />
+
             {/* Phase 2 */}
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
               <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-purple-50 dark:bg-purple-900/20">
