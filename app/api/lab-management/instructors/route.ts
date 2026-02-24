@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
     const { data, error } = await supabase
       .from('lab_users')
       .select('id, name, email, role, is_active')
-      .in('role', ['instructor', 'lead_instructor', 'admin', 'superadmin'])
+      .in('role', ['instructor', 'lead_instructor', 'admin', 'superadmin', 'volunteer_instructor'])
       .order('name');
 
     if (error) throw error;

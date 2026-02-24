@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
       supabase
         .from('lab_users')
         .select('id, name, email, role')
-        .in('role', ['instructor', 'lead_instructor', 'admin', 'superadmin'])
+        .in('role', ['instructor', 'lead_instructor', 'admin', 'superadmin', 'volunteer_instructor'])
         .or(`name.ilike.%${safe}%,email.ilike.%${safe}%`)
         .limit(limitParam),
     ]);
