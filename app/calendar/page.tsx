@@ -437,7 +437,7 @@ export default function CalendarPage() {
                     {showOpenShifts && openShifts.map(shift => (
                       <Link
                         key={shift.id}
-                        href="/scheduling/shifts"
+                        href={`/scheduling/shifts?shiftId=${shift.id}`}
                         className="block px-1.5 py-1 text-xs rounded bg-orange-100 dark:bg-orange-900/50 text-orange-800 dark:text-orange-300 hover:bg-orange-200 dark:hover:bg-orange-900/70"
                         title={shift.title}
                       >
@@ -454,7 +454,7 @@ export default function CalendarPage() {
                     {showMyShifts && myShifts.length > 0 && myShifts.map(shift => (
                       <Link
                         key={shift.id}
-                        href="/scheduling/shifts"
+                        href={`/scheduling/shifts?shiftId=${shift.id}`}
                         className="block px-1.5 py-1 text-xs rounded bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/70"
                         title={shift.title}
                       >
@@ -469,7 +469,7 @@ export default function CalendarPage() {
                     {isDirector && filledShifts.filter(s => !myShifts.find(ms => ms.id === s.id)).map(shift => (
                       <Link
                         key={shift.id}
-                        href="/scheduling/shifts"
+                        href={`/scheduling/shifts?shiftId=${shift.id}`}
                         className="block px-1.5 py-1 text-xs rounded bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/70"
                         title={shift.title}
                       >
@@ -539,7 +539,7 @@ export default function CalendarPage() {
                 return (
                   <Link
                     key={`${item._type}-${item.id}`}
-                    href={isLab ? `/lab-management/schedule/${item.id}` : '/scheduling/shifts'}
+                    href={isLab ? `/lab-management/schedule/${item.id}` : `/scheduling/shifts?shiftId=${item.id}`}
                     className="p-4 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700"
                   >
                     <div className={`text-center p-2 rounded-lg min-w-[50px] ${

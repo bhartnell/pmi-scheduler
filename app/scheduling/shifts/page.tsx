@@ -101,6 +101,18 @@ function ShiftsPageContent() {
     }
   }, [currentUser, filterMine, filterDepartment, includeFilled]);
 
+  // Auto-open shift detail modal when shiftId query param is present
+  useEffect(() => {
+    const shiftId = searchParams.get('shiftId');
+    if (shiftId && shifts.length > 0) {
+      const shift = shifts.find(s => s.id === shiftId);
+      if (shift) {
+        setDetailShift(shift);
+        setShowDetailModal(true);
+      }
+    }
+  }, [shifts, searchParams]);
+
   const fetchCurrentUser = async () => {
     try {
       const res = await fetch('/api/instructor/me');
