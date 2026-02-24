@@ -17,7 +17,8 @@ import {
   LayoutDashboard,
   GraduationCap,
   Hospital,
-  Ambulance
+  Ambulance,
+  CalendarDays
 } from 'lucide-react';
 import { canAccessClinical, type Role } from '@/lib/permissions';
 
@@ -474,6 +475,28 @@ export default function ClinicalDashboardPage() {
                 </p>
                 <div className="flex items-center text-cyan-600 dark:text-cyan-400 text-sm font-medium">
                   Log visit
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </div>
+              </div>
+            </div>
+          </Link>
+
+          {/* Planning Calendar */}
+          <Link
+            href="/clinical/planning-calendar"
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
+          >
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl group-hover:bg-indigo-200 dark:group-hover:bg-indigo-900/50 transition-colors">
+                <CalendarDays className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Planning Calendar</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                  Track which days PMI has access to sites vs other schools
+                </p>
+                <div className="flex items-center text-indigo-600 dark:text-indigo-400 text-sm font-medium">
+                  View calendar
                   <ChevronRight className="w-4 h-4 ml-1" />
                 </div>
               </div>
