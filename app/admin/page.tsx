@@ -17,7 +17,8 @@ import {
   Database,
   AlertCircle,
   FileText,
-  Mail
+  Mail,
+  Download,
 } from 'lucide-react';
 import {
   canAccessAdmin,
@@ -105,6 +106,13 @@ export default function AdminPage() {
       title: 'Email Templates',
       description: 'Customize notification email templates sent by the system',
       color: 'bg-blue-500'
+    },
+    {
+      href: '/admin/scheduled-exports',
+      icon: Download,
+      title: 'Scheduled Exports',
+      description: 'Configure automatic weekly or monthly report exports by email',
+      color: 'bg-emerald-500'
     }
   ];
 
