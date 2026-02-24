@@ -1074,43 +1074,43 @@ function ScenarioEditorContent() {
         <Section title="Dispatch & Scene" icon={Clock}>
           <div className="grid grid-cols-2 gap-4 pt-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Time</label>
               <input
                 type="text"
                 value={scenario.dispatch_time}
                 onChange={(e) => setScenario({ ...scenario, dispatch_time: e.target.value })}
                 placeholder="0845"
-                className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Location</label>
               <input
                 type="text"
                 value={scenario.dispatch_location}
                 onChange={(e) => setScenario({ ...scenario, dispatch_location: e.target.value })}
                 placeholder="Private residence"
-                className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
               />
             </div>
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Chief Complaint</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Chief Complaint</label>
               <input
                 type="text"
                 value={scenario.chief_complaint}
                 onChange={(e) => setScenario({ ...scenario, chief_complaint: e.target.value })}
                 placeholder="Difficulty breathing"
-                className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
               />
             </div>
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Dispatch Notes</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Dispatch Notes</label>
               <textarea
                 value={scenario.dispatch_notes}
                 onChange={(e) => setScenario({ ...scenario, dispatch_notes: e.target.value })}
                 rows={2}
                 placeholder="Additional dispatch information..."
-                className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
               />
             </div>
           </div>
@@ -1121,31 +1121,31 @@ function ScenarioEditorContent() {
           <div className="space-y-4 pt-3">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name</label>
                 <input
                   type="text"
                   value={scenario.patient_name}
                   onChange={(e) => setScenario({ ...scenario, patient_name: e.target.value })}
                   placeholder="John Doe"
-                  className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Age</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Age</label>
                 <input
                   type="text"
                   value={scenario.patient_age}
                   onChange={(e) => setScenario({ ...scenario, patient_age: e.target.value })}
                   placeholder="65"
-                  className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Sex</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Sex</label>
                 <select
                   value={scenario.patient_sex}
                   onChange={(e) => setScenario({ ...scenario, patient_sex: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                 >
                   <option value="">Select...</option>
                   <option value="Male">Male</option>
@@ -1153,22 +1153,22 @@ function ScenarioEditorContent() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Weight (kg)</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Weight (kg)</label>
                 <input
                   type="text"
                   value={scenario.patient_weight}
                   onChange={(e) => setScenario({ ...scenario, patient_weight: e.target.value })}
                   placeholder="80"
-                  className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Medical History</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Medical History</label>
               <div className="flex flex-wrap gap-2 mb-2">
                 {scenario.medical_history.map((item, index) => (
-                  <span key={index} className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 rounded text-sm">
+                  <span key={index} className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded text-sm">
                     {item}
                     <button type="button" onClick={() => removeFromArray('medical_history', index)} className="text-gray-500 hover:text-red-500">
                       <X className="w-3 h-3" />
@@ -1182,20 +1182,20 @@ function ScenarioEditorContent() {
                   value={newHistory}
                   onChange={(e) => setNewHistory(e.target.value)}
                   placeholder="Add condition..."
-                  className="flex-1 px-3 py-2 border rounded-lg text-sm text-gray-900 bg-white"
+                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                   onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('medical_history', newHistory, setNewHistory))}
                 />
-                <button type="button" onClick={() => addToArray('medical_history', newHistory, setNewHistory)} className="px-3 py-2 bg-gray-100 rounded-lg hover:bg-gray-200">
+                <button type="button" onClick={() => addToArray('medical_history', newHistory, setNewHistory)} className="px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-gray-700 dark:text-gray-300">
                   <Plus className="w-4 h-4" />
                 </button>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Medications</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Medications</label>
               <div className="flex flex-wrap gap-2 mb-2">
                 {scenario.medications.map((item, index) => (
-                  <span key={index} className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 rounded text-sm">
+                  <span key={index} className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded text-sm">
                     {item}
                     <button type="button" onClick={() => removeFromArray('medications', index)} className="text-blue-500 hover:text-red-500">
                       <X className="w-3 h-3" />
@@ -1209,55 +1209,55 @@ function ScenarioEditorContent() {
                   value={newMedication}
                   onChange={(e) => setNewMedication(e.target.value)}
                   placeholder="Add medication..."
-                  className="flex-1 px-3 py-2 border rounded-lg text-sm text-gray-900 bg-white"
+                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                   onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('medications', newMedication, setNewMedication))}
                 />
-                <button type="button" onClick={() => addToArray('medications', newMedication, setNewMedication)} className="px-3 py-2 bg-gray-100 rounded-lg hover:bg-gray-200">
+                <button type="button" onClick={() => addToArray('medications', newMedication, setNewMedication)} className="px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-gray-700 dark:text-gray-300">
                   <Plus className="w-4 h-4" />
                 </button>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Allergies</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Allergies</label>
               <input
                 type="text"
                 value={scenario.allergies}
                 onChange={(e) => setScenario({ ...scenario, allergies: e.target.value })}
                 placeholder="NKDA or list allergies"
-                className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
               />
             </div>
           </div>
         </Section>
 
         {/* Scenario Phases */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="px-4 py-3 flex items-center justify-between border-b">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+          <div className="px-4 py-3 flex items-center justify-between border-b dark:border-gray-700">
             <div className="flex items-center gap-2">
               <Activity className="w-5 h-5 text-blue-600" />
-              <span className="font-semibold text-gray-900">Scenario Phases</span>
-              <span className="text-sm text-gray-500">({scenario.phases.length})</span>
+              <span className="font-semibold text-gray-900 dark:text-white">Scenario Phases</span>
+              <span className="text-sm text-gray-500 dark:text-gray-400">({scenario.phases.length})</span>
             </div>
             <button
               type="button"
               onClick={addPhase}
-              className="flex items-center gap-1 px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200"
+              className="flex items-center gap-1 px-3 py-1 text-sm bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/50"
             >
               <Plus className="w-4 h-4" /> Add Phase
             </button>
           </div>
           <div className="p-4 space-y-4">
             {scenario.phases.map((phase, index) => (
-              <div key={phase.id} className="border rounded-lg">
-                <div className="px-4 py-3 bg-gray-50 flex items-center justify-between rounded-t-lg">
+              <div key={phase.id} className="border border-gray-200 dark:border-gray-600 rounded-lg">
+                <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700/50 flex items-center justify-between rounded-t-lg">
                   <div className="flex items-center gap-2 flex-1">
                     <GripVertical className="w-4 h-4 text-gray-400" />
                     <input
                       type="text"
                       value={phase.name}
                       onChange={(e) => updatePhase(index, { name: e.target.value })}
-                      className="font-medium text-gray-900 bg-transparent border-none focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1 flex-1"
+                      className="font-medium text-gray-900 dark:text-white bg-transparent border-none focus:outline-none focus:ring-2 focus:ring-blue-500 rounded px-2 py-1 flex-1"
                     />
                   </div>
                   {scenario.phases.length > 1 && (
@@ -1272,40 +1272,40 @@ function ScenarioEditorContent() {
                 </div>
                 <div className="p-4 space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Trigger</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Trigger</label>
                     <input
                       type="text"
                       value={phase.trigger}
                       onChange={(e) => updatePhase(index, { trigger: e.target.value })}
                       placeholder="e.g., On arrival, After 5 minutes, After treatment..."
-                      className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                     />
                   </div>
-                  
+
                   <VitalsEditor
                     vitals={phase.vitals}
                     onChange={(vitals) => updatePhase(index, { vitals })}
                   />
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Presentation Notes</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Presentation Notes</label>
                     <textarea
                       value={phase.presentation_notes}
                       onChange={(e) => updatePhase(index, { presentation_notes: e.target.value })}
                       rows={2}
                       placeholder="Patient appearance, behavior, environment..."
-                      className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Expected Actions</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Expected Actions</label>
                     <textarea
                       value={phase.expected_actions}
                       onChange={(e) => updatePhase(index, { expected_actions: e.target.value })}
                       rows={2}
                       placeholder="What should the student do at this point?"
-                      className="w-full px-3 py-2 border rounded-lg text-gray-900 bg-white"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                     />
                   </div>
                 </div>
@@ -1319,14 +1319,14 @@ function ScenarioEditorContent() {
           <div className="space-y-6 pt-3">
             {/* Critical Actions */}
             <div>
-              <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 text-red-500" />
                 Critical Actions (Auto-fail if missed)
               </h4>
               <div className="space-y-2">
                 {scenario.critical_actions.map((action, index) => (
                   <div key={action.id} className="flex items-center gap-2">
-                    <span className="text-sm text-gray-700 flex-1">• {action.description}</span>
+                    <span className="text-sm text-gray-700 dark:text-gray-300 flex-1">• {action.description}</span>
                     <button
                       type="button"
                       onClick={() => setScenario({
@@ -1345,7 +1345,7 @@ function ScenarioEditorContent() {
                     value={newCriticalAction}
                     onChange={(e) => setNewCriticalAction(e.target.value)}
                     placeholder="Add critical action..."
-                    className="flex-1 px-3 py-2 border rounded-lg text-sm text-gray-900 bg-white"
+                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
@@ -1370,7 +1370,7 @@ function ScenarioEditorContent() {
                         setNewCriticalAction('');
                       }
                     }}
-                    className="px-3 py-2 bg-gray-100 rounded-lg hover:bg-gray-200"
+                    className="px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-gray-700 dark:text-gray-300"
                   >
                     <Plus className="w-4 h-4" />
                   </button>
@@ -1380,37 +1380,37 @@ function ScenarioEditorContent() {
 
             {/* Evaluation Criteria - 8 Standard */}
             <div>
-              <h4 className="text-sm font-medium text-gray-700 mb-2">
+              <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Evaluation Criteria (8 Standard - S/NI/U)
               </h4>
-              <div className="bg-gray-50 rounded-lg p-3 space-y-2">
+              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 space-y-2">
                 {scenario.evaluation_criteria.map((criteria, index) => (
                   <div key={criteria.id} className="flex items-start gap-2">
-                    <span className="w-6 h-6 flex items-center justify-center bg-blue-100 text-blue-700 rounded text-sm font-medium">
+                    <span className="w-6 h-6 flex items-center justify-center bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded text-sm font-medium">
                       {index + 1}
                     </span>
                     <div>
-                      <div className="font-medium text-sm text-gray-900">{criteria.name}</div>
-                      <div className="text-xs text-gray-500">{criteria.description}</div>
+                      <div className="font-medium text-sm text-gray-900 dark:text-white">{criteria.name}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">{criteria.description}</div>
                     </div>
                   </div>
                 ))}
               </div>
-              <p className="text-xs text-gray-500 mt-2">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                 Pass criteria: Phase 1 = 6/8, Phase 2 = 7/8 satisfactory ratings
               </p>
             </div>
 
             {/* Debrief Points */}
             <div>
-              <h4 className="text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+              <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
                 <MessageSquare className="w-4 h-4" />
                 Debrief Points
               </h4>
               <div className="space-y-2">
                 {scenario.debrief_points.map((point, index) => (
                   <div key={index} className="flex items-center gap-2">
-                    <span className="text-sm text-gray-700 flex-1">• {point}</span>
+                    <span className="text-sm text-gray-700 dark:text-gray-300 flex-1">• {point}</span>
                     <button
                       type="button"
                       onClick={() => removeFromArray('debrief_points', index)}
@@ -1426,13 +1426,13 @@ function ScenarioEditorContent() {
                     value={newDebriefPoint}
                     onChange={(e) => setNewDebriefPoint(e.target.value)}
                     placeholder="Add debrief discussion point..."
-                    className="flex-1 px-3 py-2 border rounded-lg text-sm text-gray-900 bg-white"
+                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                     onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('debrief_points', newDebriefPoint, setNewDebriefPoint))}
                   />
                   <button
                     type="button"
                     onClick={() => addToArray('debrief_points', newDebriefPoint, setNewDebriefPoint)}
-                    className="px-3 py-2 bg-gray-100 rounded-lg hover:bg-gray-200"
+                    className="px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-gray-700 dark:text-gray-300"
                   >
                     <Plus className="w-4 h-4" />
                   </button>
@@ -1446,7 +1446,7 @@ function ScenarioEditorContent() {
         <div className="flex justify-end gap-3 pt-4">
           <Link
             href="/lab-management/scenarios"
-            className="px-6 py-2 border text-gray-700 rounded-lg hover:bg-gray-50"
+            className="px-6 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             Cancel
           </Link>
@@ -1454,7 +1454,7 @@ function ScenarioEditorContent() {
             <button
               onClick={() => handleSave('addAnother')}
               disabled={saving}
-              className="flex items-center gap-2 px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 disabled:bg-gray-300 disabled:text-gray-500"
+              className="flex items-center gap-2 px-6 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 disabled:bg-gray-300 disabled:text-gray-500"
             >
               {saving ? (
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-500"></div>

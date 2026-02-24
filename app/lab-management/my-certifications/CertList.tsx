@@ -47,13 +47,13 @@ function getStatusColor(expirationDate: string): { bg: string; border: string; t
   const daysUntil = Math.ceil((expDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
   if (daysUntil < 0) {
-    return { bg: 'bg-red-50', border: 'border-red-400', text: 'text-red-600', label: 'Expired' };
+    return { bg: 'bg-red-50 dark:bg-red-900/20', border: 'border-red-400', text: 'text-red-600 dark:text-red-400', label: 'Expired' };
   } else if (daysUntil <= 30) {
-    return { bg: 'bg-orange-50', border: 'border-orange-400', text: 'text-orange-600', label: `${daysUntil} days` };
+    return { bg: 'bg-orange-50 dark:bg-orange-900/20', border: 'border-orange-400', text: 'text-orange-600 dark:text-orange-400', label: `${daysUntil} days` };
   } else if (daysUntil <= 90) {
-    return { bg: 'bg-yellow-50', border: 'border-yellow-400', text: 'text-yellow-600', label: `${daysUntil} days` };
+    return { bg: 'bg-yellow-50 dark:bg-yellow-900/20', border: 'border-yellow-400', text: 'text-yellow-600 dark:text-yellow-400', label: `${daysUntil} days` };
   } else {
-    return { bg: 'bg-green-50', border: 'border-green-400', text: 'text-green-600', label: 'Valid' };
+    return { bg: 'bg-green-50 dark:bg-green-900/20', border: 'border-green-400', text: 'text-green-600 dark:text-green-400', label: 'Valid' };
   }
 }
 
@@ -318,18 +318,18 @@ export default function CertList({ initialCerts, instructorId }: Props) {
 
       {/* Add/Edit Form */}
       {showForm && (
-        <div className="bg-white rounded-lg p-6 mb-6 shadow-sm border">
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 mb-6 shadow-sm border border-gray-200 dark:border-gray-700">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold text-gray-900">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
               {editingCert ? 'Edit Certification' : 'Add Certification'}
             </h2>
-            <button onClick={resetForm} className="text-gray-400 hover:text-gray-600">
+            <button onClick={resetForm} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
               <X className="w-6 h-6" />
             </button>
           </div>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-gray-700 text-sm font-medium mb-1">
+              <label className="block text-gray-700 dark:text-gray-300 text-sm font-medium mb-1">
                 Certification Name *
               </label>
               <input
@@ -338,13 +338,13 @@ export default function CertList({ initialCerts, instructorId }: Props) {
                 onChange={(e) => setCertName(e.target.value)}
                 required
                 placeholder="e.g., Paramedic, ACLS, PALS"
-                className="w-full px-4 py-3 rounded-lg bg-gray-50 text-gray-900 placeholder-gray-400 border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                className="w-full px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 border border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
               />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-gray-700 text-sm font-medium mb-1">
+                <label className="block text-gray-700 dark:text-gray-300 text-sm font-medium mb-1">
                   Certification Number
                 </label>
                 <input
@@ -352,12 +352,12 @@ export default function CertList({ initialCerts, instructorId }: Props) {
                   value={certNumber}
                   onChange={(e) => setCertNumber(e.target.value)}
                   placeholder="Optional"
-                  className="w-full px-4 py-3 rounded-lg bg-gray-50 text-gray-900 placeholder-gray-400 border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                  className="w-full px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 border border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-gray-700 text-sm font-medium mb-1">
+                <label className="block text-gray-700 dark:text-gray-300 text-sm font-medium mb-1">
                   Issuing Body
                 </label>
                 <input
@@ -365,26 +365,26 @@ export default function CertList({ initialCerts, instructorId }: Props) {
                   value={issuingBody}
                   onChange={(e) => setIssuingBody(e.target.value)}
                   placeholder="e.g., NREMT, AHA, Arizona DHS"
-                  className="w-full px-4 py-3 rounded-lg bg-gray-50 text-gray-900 placeholder-gray-400 border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                  className="w-full px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 border border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-gray-700 text-sm font-medium mb-1">
+                <label className="block text-gray-700 dark:text-gray-300 text-sm font-medium mb-1">
                   Issue Date
                 </label>
                 <input
                   type="date"
                   value={issueDate}
                   onChange={(e) => setIssueDate(e.target.value)}
-                  className="w-full px-4 py-3 rounded-lg bg-gray-50 text-gray-900 border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                  className="w-full px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-gray-700 text-sm font-medium mb-1">
+                <label className="block text-gray-700 dark:text-gray-300 text-sm font-medium mb-1">
                   Expiration Date *
                 </label>
                 <input
@@ -392,14 +392,14 @@ export default function CertList({ initialCerts, instructorId }: Props) {
                   value={expirationDate}
                   onChange={(e) => setExpirationDate(e.target.value)}
                   required
-                  className="w-full px-4 py-3 rounded-lg bg-gray-50 text-gray-900 border border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                  className="w-full px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
                 />
               </div>
             </div>
 
             {/* Card Image Upload */}
             <div>
-              <label className="block text-gray-700 text-sm font-medium mb-1">
+              <label className="block text-gray-700 dark:text-gray-300 text-sm font-medium mb-1">
                 Card Image (JPG, PNG, or PDF)
               </label>
               {existingImageUrl && !cardImage && (
@@ -426,10 +426,10 @@ export default function CertList({ initialCerts, instructorId }: Props) {
                 type="file"
                 accept="image/jpeg,image/png,image/jpg,application/pdf"
                 onChange={handleFileChange}
-                className="w-full px-4 py-3 rounded-lg bg-gray-50 text-gray-900 border border-gray-300 focus:border-blue-500 focus:outline-none file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-600 file:text-white file:font-semibold hover:file:bg-blue-700 file:cursor-pointer"
+                className="w-full px-4 py-3 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:outline-none file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-600 file:text-white file:font-semibold hover:file:bg-blue-700 file:cursor-pointer"
               />
               {cardImage && (
-                <p className="mt-1 text-sm text-gray-600">Selected: {cardImage.name}</p>
+                <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">Selected: {cardImage.name}</p>
               )}
               {uploadProgress && (
                 <p className="mt-1 text-sm text-blue-600">{uploadProgress}</p>
@@ -447,7 +447,7 @@ export default function CertList({ initialCerts, instructorId }: Props) {
               <button
                 type="button"
                 onClick={resetForm}
-                className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-3 px-6 rounded-lg transition"
+                className="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-semibold py-3 px-6 rounded-lg transition"
               >
                 Cancel
               </button>
@@ -458,10 +458,10 @@ export default function CertList({ initialCerts, instructorId }: Props) {
 
       {/* Cert List */}
       {certs.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-lg border">
-          <Award className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <p className="text-gray-600 text-lg">No certifications yet.</p>
-          <p className="text-gray-500">Add your first certification to start tracking.</p>
+        <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+          <Award className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+          <p className="text-gray-600 dark:text-gray-400 text-lg">No certifications yet.</p>
+          <p className="text-gray-500 dark:text-gray-500">Add your first certification to start tracking.</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -470,19 +470,19 @@ export default function CertList({ initialCerts, instructorId }: Props) {
             return (
               <div
                 key={cert.id}
-                className={`${status.bg} border-l-4 ${status.border} rounded-lg p-4 bg-white shadow-sm`}
+                className={`${status.bg} border-l-4 ${status.border} rounded-lg p-4 shadow-sm`}
               >
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-lg font-bold text-gray-900">
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-white">
                         {cert.cert_name}
                       </h3>
                       <span className={`text-sm font-semibold px-2 py-0.5 rounded ${status.text} ${status.bg}`}>
                         {status.label}
                       </span>
                     </div>
-                    <div className="text-gray-600 text-sm space-y-1">
+                    <div className="text-gray-600 dark:text-gray-400 text-sm space-y-1">
                       {cert.issuing_body && (
                         <p className="flex items-center gap-2">
                           <Building className="w-4 h-4" />

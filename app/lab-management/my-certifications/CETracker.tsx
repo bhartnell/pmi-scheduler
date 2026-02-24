@@ -204,8 +204,8 @@ export default function CETracker({
   if (loading) {
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-8">
-          <p className="text-gray-900">Loading...</p>
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-8">
+          <p className="text-gray-900 dark:text-white">Loading...</p>
         </div>
       </div>
     );
@@ -213,16 +213,16 @@ export default function CETracker({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl">
+      <div className="bg-white dark:bg-gray-800 rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-xl">
         {/* Header */}
-        <div className="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
+        <div className="sticky top-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <BookOpen className="w-6 h-6 text-purple-600" />
-            <h2 className="text-xl font-bold text-gray-900">CE Tracker: {certName}</h2>
+            <BookOpen className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">CE Tracker: {certName}</h2>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
           >
             <X className="w-6 h-6" />
           </button>
@@ -232,8 +232,8 @@ export default function CETracker({
           {/* Requirement Selection */}
           {!selectedRequirement ? (
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Select CE Requirement Type</h3>
-              <p className="text-gray-600 text-sm mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Select CE Requirement Type</h3>
+              <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
                 Link this certification to track CE hours toward renewal.
               </p>
               <div className="grid gap-2">
@@ -241,10 +241,10 @@ export default function CETracker({
                   <button
                     key={req.id}
                     onClick={() => linkRequirement(req)}
-                    className="text-left bg-gray-50 hover:bg-gray-100 p-3 rounded-lg border transition"
+                    className="text-left bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 p-3 rounded-lg border border-gray-200 dark:border-gray-600 transition"
                   >
-                    <div className="text-gray-900 font-medium">{req.display_name}</div>
-                    <div className="text-gray-500 text-sm">
+                    <div className="text-gray-900 dark:text-white font-medium">{req.display_name}</div>
+                    <div className="text-gray-500 dark:text-gray-400 text-sm">
                       {req.total_hours_required > 0
                         ? `${req.total_hours_required} hours / ${req.cycle_years} years`
                         : 'Renewal course only'
@@ -259,8 +259,8 @@ export default function CETracker({
               {/* Progress Section */}
               <div>
                 <div className="flex justify-between items-center mb-2">
-                  <h3 className="text-lg font-semibold text-gray-900">Progress</h3>
-                  <span className="text-gray-500 text-sm">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Progress</h3>
+                  <span className="text-gray-500 dark:text-gray-400 text-sm">
                     {selectedRequirement.display_name}
                   </span>
                 </div>
@@ -268,7 +268,7 @@ export default function CETracker({
                 {selectedRequirement.total_hours_required > 0 ? (
                   <>
                     {/* Progress Bar */}
-                    <div className="bg-gray-200 rounded-full h-6 overflow-hidden mb-2">
+                    <div className="bg-gray-200 dark:bg-gray-700 rounded-full h-6 overflow-hidden mb-2">
                       <div
                         className={`h-full transition-all ${
                           progressPercent >= 100 ? 'bg-green-500' :
@@ -280,10 +280,10 @@ export default function CETracker({
                       />
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-900 font-medium">
+                      <span className="text-gray-900 dark:text-white font-medium">
                         {hoursData.total.toFixed(1)} / {selectedRequirement.total_hours_required} hours
                       </span>
-                      <span className={progressPercent >= 100 ? 'text-green-600 font-semibold' : 'text-gray-500'}>
+                      <span className={progressPercent >= 100 ? 'text-green-600 dark:text-green-400 font-semibold' : 'text-gray-500 dark:text-gray-400'}>
                         {progressPercent >= 100 ? 'Complete!' : `${(selectedRequirement.total_hours_required - hoursData.total).toFixed(1)} hours remaining`}
                       </span>
                     </div>
@@ -291,20 +291,20 @@ export default function CETracker({
                     {/* Category Breakdown */}
                     {selectedRequirement.category_requirements && (
                       <div className="mt-4 space-y-2">
-                        <h4 className="text-sm font-medium text-gray-600">By Category:</h4>
+                        <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400">By Category:</h4>
                         {Object.entries(selectedRequirement.category_requirements).map(([cat, required]) => {
                           const completed = hoursData.byCategory[cat] || 0;
                           const catPercent = Math.min(100, (completed / Number(required)) * 100);
                           return (
                             <div key={cat} className="flex items-center gap-3">
-                              <span className="text-gray-700 text-sm capitalize w-32">{cat.replace('_', ' ')}</span>
-                              <div className="flex-1 bg-gray-200 rounded-full h-3 overflow-hidden">
+                              <span className="text-gray-700 dark:text-gray-300 text-sm capitalize w-32">{cat.replace('_', ' ')}</span>
+                              <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
                                 <div
                                   className={`h-full ${catPercent >= 100 ? 'bg-green-500' : 'bg-blue-500'}`}
                                   style={{ width: `${catPercent}%` }}
                                 />
                               </div>
-                              <span className="text-gray-500 text-sm w-20 text-right">
+                              <span className="text-gray-500 dark:text-gray-400 text-sm w-20 text-right">
                                 {completed.toFixed(1)}/{required}
                               </span>
                             </div>
@@ -314,15 +314,15 @@ export default function CETracker({
                     )}
                   </>
                 ) : (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                    <p className="text-blue-800 text-sm">
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                    <p className="text-blue-800 dark:text-blue-200 text-sm">
                       This certification requires a renewal course only - no CE hours needed.
                     </p>
                   </div>
                 )}
 
                 {selectedRequirement.notes && (
-                  <p className="mt-3 text-gray-500 text-sm italic">{selectedRequirement.notes}</p>
+                  <p className="mt-3 text-gray-500 dark:text-gray-400 text-sm italic">{selectedRequirement.notes}</p>
                 )}
               </div>
 
@@ -339,24 +339,24 @@ export default function CETracker({
 
               {/* Add CE Form */}
               {showAddForm && (
-                <div className="bg-gray-50 rounded-lg p-4 border">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Add CE Record</h3>
+                <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Add CE Record</h3>
                   <form onSubmit={handleAddRecord} className="space-y-4">
                     <div>
-                      <label className="block text-gray-700 text-sm font-medium mb-1">Course/Activity Title *</label>
+                      <label className="block text-gray-700 dark:text-gray-300 text-sm font-medium mb-1">Course/Activity Title *</label>
                       <input
                         type="text"
                         value={title}
                         onChange={e => setTitle(e.target.value)}
                         required
                         placeholder="e.g., ACLS Renewal, Trauma Conference"
-                        className="w-full px-4 py-3 rounded-lg bg-white text-gray-900 placeholder-gray-400 border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 focus:outline-none"
+                        className="w-full px-4 py-3 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 border border-gray-300 dark:border-gray-600 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 focus:outline-none"
                       />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-gray-700 text-sm font-medium mb-1">Hours *</label>
+                        <label className="block text-gray-700 dark:text-gray-300 text-sm font-medium mb-1">Hours *</label>
                         <input
                           type="number"
                           step="0.25"
@@ -365,28 +365,28 @@ export default function CETracker({
                           onChange={e => setHours(e.target.value)}
                           required
                           placeholder="e.g., 4"
-                          className="w-full px-4 py-3 rounded-lg bg-white text-gray-900 placeholder-gray-400 border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 focus:outline-none"
+                          className="w-full px-4 py-3 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 border border-gray-300 dark:border-gray-600 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 focus:outline-none"
                         />
                       </div>
                       <div>
-                        <label className="block text-gray-700 text-sm font-medium mb-1">Completion Date *</label>
+                        <label className="block text-gray-700 dark:text-gray-300 text-sm font-medium mb-1">Completion Date *</label>
                         <input
                           type="date"
                           value={completionDate}
                           onChange={e => setCompletionDate(e.target.value)}
                           required
-                          className="w-full px-4 py-3 rounded-lg bg-white text-gray-900 border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 focus:outline-none"
+                          className="w-full px-4 py-3 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 focus:outline-none"
                         />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-gray-700 text-sm font-medium mb-1">Category</label>
+                        <label className="block text-gray-700 dark:text-gray-300 text-sm font-medium mb-1">Category</label>
                         <select
                           value={category}
                           onChange={e => setCategory(e.target.value)}
-                          className="w-full px-4 py-3 rounded-lg bg-white text-gray-900 border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 focus:outline-none"
+                          className="w-full px-4 py-3 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-300 dark:border-gray-600 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 focus:outline-none"
                         >
                           <option value="">Select category</option>
                           {getCategoryOptions().map(cat => (
@@ -397,25 +397,25 @@ export default function CETracker({
                         </select>
                       </div>
                       <div>
-                        <label className="block text-gray-700 text-sm font-medium mb-1">Provider</label>
+                        <label className="block text-gray-700 dark:text-gray-300 text-sm font-medium mb-1">Provider</label>
                         <input
                           type="text"
                           value={provider}
                           onChange={e => setProvider(e.target.value)}
                           placeholder="e.g., AHA, PMI"
-                          className="w-full px-4 py-3 rounded-lg bg-white text-gray-900 placeholder-gray-400 border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 focus:outline-none"
+                          className="w-full px-4 py-3 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 border border-gray-300 dark:border-gray-600 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 focus:outline-none"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-gray-700 text-sm font-medium mb-1">Notes</label>
+                      <label className="block text-gray-700 dark:text-gray-300 text-sm font-medium mb-1">Notes</label>
                       <input
                         type="text"
                         value={notes}
                         onChange={e => setNotes(e.target.value)}
                         placeholder="Optional notes"
-                        className="w-full px-4 py-3 rounded-lg bg-white text-gray-900 placeholder-gray-400 border border-gray-300 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 focus:outline-none"
+                        className="w-full px-4 py-3 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 border border-gray-300 dark:border-gray-600 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 focus:outline-none"
                       />
                     </div>
 
@@ -430,7 +430,7 @@ export default function CETracker({
                       <button
                         type="button"
                         onClick={resetForm}
-                        className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-3 px-6 rounded-lg transition"
+                        className="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-semibold py-3 px-6 rounded-lg transition"
                       >
                         Cancel
                       </button>
@@ -442,9 +442,9 @@ export default function CETracker({
               {/* CE Records List */}
               {selectedRequirement.total_hours_required > 0 && (
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">CE Records</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">CE Records</h3>
                   {ceRecords.length === 0 ? (
-                    <p className="text-gray-500 text-center py-4 bg-gray-50 rounded-lg">
+                    <p className="text-gray-500 dark:text-gray-400 text-center py-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                       No CE records yet. Add your first one above.
                     </p>
                   ) : (
@@ -452,20 +452,20 @@ export default function CETracker({
                       {ceRecords.map(record => (
                         <div
                           key={record.id}
-                          className="bg-gray-50 rounded-lg p-3 flex justify-between items-start border"
+                          className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 flex justify-between items-start border border-gray-200 dark:border-gray-600"
                         >
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
-                              <span className="text-gray-900 font-medium">{record.title}</span>
-                              <span className="text-purple-600 text-sm font-semibold">{record.hours} hrs</span>
+                              <span className="text-gray-900 dark:text-white font-medium">{record.title}</span>
+                              <span className="text-purple-600 dark:text-purple-400 text-sm font-semibold">{record.hours} hrs</span>
                             </div>
-                            <div className="text-gray-500 text-sm">
+                            <div className="text-gray-500 dark:text-gray-400 text-sm">
                               {parseLocalDate(record.completion_date).toLocaleDateString()}
                               {record.provider && ` • ${record.provider}`}
                               {record.category && ` • ${record.category.replace('_', ' ')}`}
                             </div>
                             {record.notes && (
-                              <div className="text-gray-400 text-sm mt-1">{record.notes}</div>
+                              <div className="text-gray-400 dark:text-gray-500 text-sm mt-1">{record.notes}</div>
                             )}
                           </div>
                           <button
