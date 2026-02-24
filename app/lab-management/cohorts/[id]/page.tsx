@@ -14,10 +14,8 @@ import {
   Home,
   GraduationCap,
   Camera,
-  Brain,
   AlertCircle,
   CheckCircle,
-  Clock,
   BarChart3,
   Layout,
   UserPlus,
@@ -26,10 +24,14 @@ import {
   UserCheck,
   Eye,
   EyeOff,
-  Download
+  Download,
+  Mail,
+  Send,
+  X
 } from 'lucide-react';
 import ExportDropdown from '@/components/ExportDropdown';
 import FieldTripAttendance from '@/components/FieldTripAttendance';
+import BulkPhotoUpload from '@/components/BulkPhotoUpload';
 import { useToast } from '@/components/Toast';
 import type { ExportConfig } from '@/lib/export-utils';
 
@@ -121,7 +123,7 @@ function ToolCard({
   href,
   disabled
 }: {
-  icon: any;
+  icon: React.ComponentType<{ className?: string }>;
   title: string;
   status: string;
   warning?: string | null;
@@ -178,6 +180,16 @@ export default function CohortHubPage() {
   const [loading, setLoading] = useState(true);
   const toast = useToast();
 
+  // Email modal state
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailBody, setEmailBody] = useState('');
+  const [emailCcDirectors, setEmailCcDirectors] = useState(false);
+  const [emailSending, setEmailSending] = useState(false);
+
+  // Bulk photo upload modal state
+  const [showBulkPhotoUpload, setShowBulkPhotoUpload] = useState(false);
+
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/signin');
@@ -218,7 +230,7 @@ export default function CohortHubPage() {
       const lsRes = await fetch(`/api/seating/learning-styles?cohortId=${cohortId}`);
       const lsData = await lsRes.json();
       if (lsData.success) {
-        setLearningStyles(lsData.learningStyles?.map((ls: any) => ({
+        setLearningStyles(lsData.learningStyles?.map((ls: { student_id: string; primary_style: string; social_style: string }) => ({
           student_id: ls.student_id,
           primary_style: ls.primary_style,
           social_style: ls.social_style,
@@ -292,6 +304,56 @@ export default function CohortHubPage() {
       toast.error('An error occurred. Please try again.');
     }
     setProcessing(false);
+  };
+
+  const handleSendEmail = async () => {
+    if (!emailSubject.trim() || !emailBody.trim()) return;
+
+    setEmailSending(true);
+    try {
+      const res = await fetch(`/api/lab-management/cohorts/${cohortId}/email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subject: emailSubject.trim(),
+          body: emailBody.trim(),
+          cc_directors: emailCcDirectors,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.error || 'Failed to send emails');
+        setEmailSending(false);
+        return;
+      }
+
+      // Build success message
+      let message = `Email sent to ${data.sent} student${data.sent !== 1 ? 's' : ''}`;
+      if (data.skipped > 0) {
+        message += `. ${data.skipped} skipped (no email address)`;
+      }
+      if (data.failed > 0) {
+        message += `. ${data.failed} failed`;
+      }
+
+      toast.success(message);
+
+      if (data.skipped > 0) {
+        toast.warning(`${data.skipped} student${data.skipped !== 1 ? 's have' : ' has'} no email address on file`);
+      }
+
+      // Close modal and reset
+      setShowEmailModal(false);
+      setEmailSubject('');
+      setEmailBody('');
+      setEmailCcDirectors(false);
+    } catch (error) {
+      console.error('Error sending cohort email:', error);
+      toast.error('An error occurred while sending emails');
+    }
+    setEmailSending(false);
   };
 
   const handleExportCSV = () => {
@@ -372,6 +434,8 @@ export default function CohortHubPage() {
     data: students
   };
 
+  const studentsWithEmail = students.filter(s => s.email);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
@@ -433,6 +497,15 @@ export default function CohortHubPage() {
                 <Edit2 className="w-4 h-4" />
                 Edit
               </Link>
+              <button
+                onClick={() => setShowEmailModal(true)}
+                disabled={students.length === 0}
+                className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Send email to all students in cohort"
+              >
+                <Mail className="w-4 h-4" />
+                Email Cohort
+              </button>
               <button
                 onClick={handleExportCSV}
                 disabled={students.length === 0}
@@ -570,7 +643,7 @@ export default function CohortHubPage() {
 
         {/* Student List */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-          <div className="p-4 border-b dark:border-gray-700 flex items-center justify-between">
+          <div className="p-4 border-b dark:border-gray-700 flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-4">
               <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                 <Users className="w-5 h-5 text-gray-600 dark:text-gray-400" />
@@ -586,12 +659,24 @@ export default function CohortHubPage() {
                 </button>
               )}
             </div>
-            <Link
-              href={`/lab-management/students?cohortId=${cohortId}`}
-              className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
-            >
-              View All &rarr;
-            </Link>
+            <div className="flex items-center gap-3">
+              {students.length > 0 && (
+                <button
+                  onClick={() => setShowBulkPhotoUpload(true)}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+                  title="Upload photos for multiple students at once"
+                >
+                  <Camera className="w-4 h-4" />
+                  Upload Photos
+                </button>
+              )}
+              <Link
+                href={`/lab-management/students?cohortId=${cohortId}`}
+                className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+              >
+                View All &rarr;
+              </Link>
+            </div>
           </div>
 
           {students.length === 0 ? (
@@ -778,6 +863,169 @@ export default function CohortHubPage() {
           )}
         </div>
       </main>
+
+      {/* Bulk Photo Upload Modal */}
+      {showBulkPhotoUpload && (
+        <BulkPhotoUpload
+          students={students}
+          onComplete={fetchData}
+          onClose={() => setShowBulkPhotoUpload(false)}
+        />
+      )}
+
+      {/* Email Cohort Modal */}
+      {showEmailModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full flex flex-col max-h-[90vh]">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b dark:border-gray-700">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+                  <Mail className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Email Cohort
+                  </h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {cohortLabel}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowEmailModal(false)}
+                disabled={emailSending}
+                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg disabled:opacity-50"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              {/* Subject */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Subject
+                </label>
+                <input
+                  type="text"
+                  value={emailSubject}
+                  onChange={(e) => setEmailSubject(e.target.value)}
+                  placeholder="Enter email subject..."
+                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={emailSending}
+                />
+              </div>
+
+              {/* Body */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Message
+                </label>
+                <textarea
+                  value={emailBody}
+                  onChange={(e) => setEmailBody(e.target.value)}
+                  placeholder="Write your message here..."
+                  rows={8}
+                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
+                  disabled={emailSending}
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Line breaks will be preserved in the email.
+                </p>
+              </div>
+
+              {/* CC Directors */}
+              <div className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <input
+                  type="checkbox"
+                  id="cc-directors"
+                  checked={emailCcDirectors}
+                  onChange={(e) => setEmailCcDirectors(e.target.checked)}
+                  disabled={emailSending}
+                  className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500"
+                />
+                <label htmlFor="cc-directors" className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                  CC directors and admins (lead instructors, admins, superadmins)
+                </label>
+              </div>
+
+              {/* Recipients Preview */}
+              <div>
+                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+                  <Users className="w-4 h-4" />
+                  Recipients ({studentsWithEmail.length} of {students.length} students have email)
+                </h4>
+                <div className="border dark:border-gray-600 rounded-lg max-h-48 overflow-y-auto">
+                  {students.length === 0 ? (
+                    <p className="p-3 text-sm text-gray-500 dark:text-gray-400 text-center">No students in cohort</p>
+                  ) : (
+                    <div className="divide-y dark:divide-gray-700">
+                      {students.map((student) => (
+                        <div key={student.id} className="flex items-center justify-between px-3 py-2">
+                          <span className="text-sm text-gray-800 dark:text-gray-200">
+                            {student.first_name} {student.last_name}
+                          </span>
+                          {student.email ? (
+                            <span className="text-xs text-gray-500 dark:text-gray-400 font-mono truncate max-w-[12rem]">
+                              {student.email}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-yellow-600 dark:text-yellow-400 flex items-center gap-1">
+                              <AlertCircle className="w-3 h-3" />
+                              No email
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {students.some(s => !s.email) && (
+                  <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    Students without an email address will be skipped.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-between p-6 border-t dark:border-gray-700 gap-3">
+              <span className="text-sm text-gray-500 dark:text-gray-400">
+                Sending to {studentsWithEmail.length} student{studentsWithEmail.length !== 1 ? 's' : ''}
+              </span>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowEmailModal(false)}
+                  disabled={emailSending}
+                  className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSendEmail}
+                  disabled={emailSending || !emailSubject.trim() || !emailBody.trim() || studentsWithEmail.length === 0}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {emailSending ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4" />
+                      Send Email
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Confirmation Modal */}
       {removingStudent && (
