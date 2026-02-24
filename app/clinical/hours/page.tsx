@@ -789,8 +789,7 @@ export default function ClinicalHoursTrackerPage() {
 
   // Check if selected cohort is Paramedic program
   const selectedCohortData = cohorts.find(c => c.id === selectedCohort);
-  const isParamedicCohort = selectedCohortData?.program?.abbreviation === 'PMD' ||
-                            selectedCohortData?.program?.abbreviation === 'Paramedic';
+  const isParamedicCohort = isParamedicAbbrev(selectedCohortData?.program?.abbreviation);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50 to-cyan-100 dark:from-gray-900 dark:to-gray-800">
