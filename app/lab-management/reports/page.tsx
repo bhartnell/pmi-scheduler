@@ -14,7 +14,10 @@ import {
   Briefcase,
   Users,
   UserCheck,
-  FileText
+  FileText,
+  TrendingUp,
+  GitCompare,
+  Activity,
 } from 'lucide-react';
 import { canAccessClinical, type Role } from '@/lib/permissions';
 
@@ -110,6 +113,42 @@ export default function ReportsIndexPage() {
       href: '/lab-management/reports/onboarding-status',
       color: 'text-indigo-600 dark:text-indigo-400',
       bgColor: 'bg-indigo-100 dark:bg-indigo-900/30',
+    },
+    {
+      id: 'instructor-workload',
+      title: 'Instructor Workload',
+      description: 'Compare lab assignments, hours, and workload distribution across instructors.',
+      icon: TrendingUp,
+      href: '/reports/instructor-workload',
+      color: 'text-blue-600 dark:text-blue-400',
+      bgColor: 'bg-blue-100 dark:bg-blue-900/30',
+    },
+    {
+      id: 'availability-patterns',
+      title: 'Availability Patterns',
+      description: 'Day-of-week distribution, submission consistency, coverage gaps, and monthly trends.',
+      icon: Activity,
+      href: '/reports/availability-patterns',
+      color: 'text-violet-600 dark:text-violet-400',
+      bgColor: 'bg-violet-100 dark:bg-violet-900/30',
+    },
+    {
+      id: 'cohort-comparison',
+      title: 'Cohort Comparison',
+      description: 'Side-by-side skills, scenarios, clinical hours, and overall completion across cohorts.',
+      icon: GitCompare,
+      href: '/reports/cohort-comparison',
+      color: 'text-cyan-600 dark:text-cyan-400',
+      bgColor: 'bg-cyan-100 dark:bg-cyan-900/30',
+    },
+    {
+      id: 'scenario-analytics',
+      title: 'Scenario Analytics',
+      description: 'Pass rates, difficulty indicators, and performance data for each scenario.',
+      icon: BarChart3,
+      href: '/reports/scenario-analytics',
+      color: 'text-rose-600 dark:text-rose-400',
+      bgColor: 'bg-rose-100 dark:bg-rose-900/30',
     },
   ];
 
