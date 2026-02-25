@@ -21,10 +21,14 @@ import {
   Trash2,
   ArrowLeftRight,
   CheckCheck,
-  Ban
+  Ban,
+  CalendarPlus,
+  Download
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import NotificationBell from '@/components/NotificationBell';
+import { downloadICS, parseLocalDate } from '@/lib/ics-export';
+import { useToast } from '@/components/Toast';
 import {
   type OpenShift,
   type ShiftSignup,
@@ -82,6 +86,7 @@ function ShiftsPageContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const toast = useToast();
 
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [userIsDirector, setUserIsDirector] = useState(false);
@@ -439,6 +444,61 @@ function ShiftsPageContent() {
     setDeletingShift(false);
   };
 
+  const handleExportShift = (shift: OpenShift) => {
+    const startDate = parseLocalDate(shift.date, shift.start_time, 8);
+    const endDate = parseLocalDate(shift.date, shift.end_time, 17);
+    const descParts: string[] = [];
+    if (shift.department) descParts.push(`Department: ${shift.department}`);
+    if (shift.description) descParts.push(shift.description);
+    const confirmedCount = shift.confirmed_count ?? 0;
+    const maxCount = shift.max_instructors != null ? String(shift.max_instructors) : 'open';
+    descParts.push(`Spots: ${confirmedCount}/${maxCount} filled`);
+
+    downloadICS(
+      [
+        {
+          uid: `shift-${shift.id}@pmi-scheduler`,
+          title: `${shift.title}${shift.location ? ` - ${shift.location}` : ''}`,
+          description: descParts.join('\n'),
+          location: shift.location ?? undefined,
+          startDate,
+          endDate,
+        },
+      ],
+      `shift-${shift.date}.ics`
+    );
+  };
+
+  const handleExportMyShifts = () => {
+    const myConfirmedShifts = shifts.filter(
+      s => s.user_signup?.status === 'confirmed'
+    );
+    if (myConfirmedShifts.length === 0) {
+      toast.info('You have no confirmed shifts to export');
+      return;
+    }
+
+    const events = myConfirmedShifts.map(shift => {
+      const startDate = parseLocalDate(shift.date, shift.start_time, 8);
+      const endDate = parseLocalDate(shift.date, shift.end_time, 17);
+      const descParts: string[] = [];
+      if (shift.department) descParts.push(`Department: ${shift.department}`);
+      if (shift.description) descParts.push(shift.description ?? '');
+      return {
+        uid: `shift-${shift.id}@pmi-scheduler`,
+        title: `${shift.title}${shift.location ? ` - ${shift.location}` : ''}`,
+        description: descParts.filter(Boolean).join('\n'),
+        location: shift.location ?? undefined,
+        startDate,
+        endDate,
+      };
+    });
+
+    const today = new Date().toISOString().split('T')[0];
+    downloadICS(events, `my-shifts-${today}.ics`);
+    toast.success(`Exported ${events.length} shift${events.length === 1 ? '' : 's'} to calendar`);
+  };
+
   const getShiftStatusColor = (shift: OpenShift) => {
     if (shift.user_signup) {
       if (shift.user_signup.status === 'confirmed') return 'border-l-purple-500 bg-purple-50 dark:bg-purple-900/10';
@@ -558,7 +618,7 @@ function ShiftsPageContent() {
             </div>
 
             {activeTab === 'shifts' && (
-              <div className="flex items-center gap-2 ml-auto">
+              <div className="flex items-center gap-2 ml-auto flex-wrap">
                 <Filter className="w-4 h-4 text-gray-500" />
                 <select
                   value={filterDepartment}
@@ -581,6 +641,15 @@ function ShiftsPageContent() {
                   />
                   Show filled
                 </label>
+
+                <button
+                  onClick={handleExportMyShifts}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+                  title="Export my confirmed shifts to calendar (.ics)"
+                >
+                  <Download className="w-4 h-4" />
+                  Export My Shifts
+                </button>
               </div>
             )}
           </div>
@@ -677,6 +746,14 @@ function ShiftsPageContent() {
                                 </button>
                               </>
                             )}
+
+                            <button
+                              onClick={() => handleExportShift(shift)}
+                              className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg transition-colors"
+                              title="Export to Calendar (.ics)"
+                            >
+                              <CalendarPlus className="w-4 h-4" />
+                            </button>
 
                             <button
                               onClick={() => handleViewDetails(shift)}

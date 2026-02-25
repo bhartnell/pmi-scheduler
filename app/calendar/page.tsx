@@ -14,8 +14,11 @@ import {
   MapPin,
   AlertCircle,
   CheckCircle,
-  X as XIcon
+  X as XIcon,
+  Download
 } from 'lucide-react';
+import { downloadICS, parseLocalDate } from '@/lib/ics-export';
+import { useToast } from '@/components/Toast';
 
 interface Cohort {
   id: string;
@@ -79,6 +82,7 @@ interface CurrentUser {
 export default function CalendarPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const toast = useToast();
 
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [labDays, setLabDays] = useState<LabDay[]>([]);
@@ -230,6 +234,64 @@ export default function CalendarPage() {
     });
   };
 
+  const handleExportCalendar = () => {
+    const events: Parameters<typeof downloadICS>[0] = [];
+
+    if (showLabDays) {
+      for (const ld of labDays) {
+        const cohortName = ld.cohort
+          ? `${ld.cohort.program.abbreviation} Group ${ld.cohort.cohort_number}`
+          : '';
+        const titlePart = ld.title || cohortName || `Lab Day ${ld.date}`;
+        const descParts: string[] = [];
+        if (cohortName) descParts.push(`Cohort: ${cohortName}`);
+
+        events.push({
+          uid: `labday-${ld.id}@pmi-scheduler`,
+          title: `Lab Day - ${titlePart}`,
+          description: descParts.join('\n'),
+          location: 'PMI Campus',
+          startDate: parseLocalDate(ld.date, ld.start_time, 8),
+          endDate: parseLocalDate(ld.date, ld.end_time, 17),
+        });
+      }
+    }
+
+    if (showOpenShifts || showMyShifts) {
+      for (const shift of shifts) {
+        if (shift.is_cancelled) continue;
+
+        const userSignup = shift.signups?.find(s => s.instructor_id === currentUser?.id);
+        const isMyShift = userSignup?.status === 'confirmed';
+        const isOpen = !shift.is_filled;
+
+        if ((showOpenShifts && isOpen) || (showMyShifts && isMyShift)) {
+          const descParts: string[] = [];
+          if (shift.department) descParts.push(`Department: ${shift.department}`);
+
+          events.push({
+            uid: `shift-${shift.id}@pmi-scheduler`,
+            title: `${shift.title}${shift.location ? ` - ${shift.location}` : ''}`,
+            description: descParts.join('\n'),
+            location: shift.location ?? undefined,
+            startDate: parseLocalDate(shift.date, shift.start_time, 8),
+            endDate: parseLocalDate(shift.date, shift.end_time, 17),
+          });
+        }
+      }
+    }
+
+    if (events.length === 0) {
+      toast.info('No visible events to export');
+      return;
+    }
+
+    const year = currentMonth.getFullYear();
+    const month = String(currentMonth.getMonth() + 1).padStart(2, '0');
+    downloadICS(events, `pmi-calendar-${year}-${month}.ics`);
+    toast.success(`Exported ${events.length} event${events.length === 1 ? '' : 's'} to calendar`);
+  };
+
   const calendarDays = generateCalendarDays();
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -260,24 +322,34 @@ export default function CalendarPage() {
               </div>
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Calendar</h1>
             </div>
-            {isDirector && (
-              <div className="flex gap-2">
-                <Link
-                  href="/lab-management/schedule/new"
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
-                >
-                  <Plus className="w-5 h-5" />
-                  Lab Day
-                </Link>
-                <Link
-                  href="/scheduling/shifts/new"
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 font-medium"
-                >
-                  <Plus className="w-5 h-5" />
-                  Shift
-                </Link>
-              </div>
-            )}
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={handleExportCalendar}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+                title="Export visible events to calendar (.ics)"
+              >
+                <Download className="w-4 h-4" />
+                Export to Calendar
+              </button>
+              {isDirector && (
+                <>
+                  <Link
+                    href="/lab-management/schedule/new"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+                  >
+                    <Plus className="w-5 h-5" />
+                    Lab Day
+                  </Link>
+                  <Link
+                    href="/scheduling/shifts/new"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 font-medium"
+                  >
+                    <Plus className="w-5 h-5" />
+                    Shift
+                  </Link>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>

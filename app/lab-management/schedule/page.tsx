@@ -20,12 +20,14 @@ import {
   Printer,
   Keyboard,
   LayoutGrid,
-  CalendarDays
+  CalendarDays,
+  Download
 } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import { PageErrorBoundary } from '@/components/PageErrorBoundary';
 import { useKeyboardShortcuts, KeyboardShortcut } from '@/hooks/useKeyboardShortcuts';
 import KeyboardShortcutsHelp from '@/components/KeyboardShortcutsHelp';
+import { downloadICS, parseLocalDate } from '@/lib/ics-export';
 
 interface Cohort {
   id: string;
@@ -589,6 +591,41 @@ function SchedulePageContent() {
     });
   };
 
+  const handleExportCalendar = () => {
+    if (labDays.length === 0) {
+      toast.info('No lab days to export');
+      return;
+    }
+
+    const events = labDays.map(ld => {
+      const cohortName = ld.cohort
+        ? `${ld.cohort.program.abbreviation} Group ${ld.cohort.cohort_number}`
+        : '';
+      const titlePart = ld.title || cohortName || `Lab Day ${ld.date}`;
+      const descParts: string[] = [];
+      if (cohortName) descParts.push(`Cohort: ${cohortName}`);
+      if (ld.week_number && ld.day_number) {
+        descParts.push(`Week ${ld.week_number}, Day ${ld.day_number}`);
+      }
+
+      return {
+        uid: `labday-${ld.id}@pmi-scheduler`,
+        title: `Lab Day - ${titlePart}`,
+        description: descParts.join('\n'),
+        location: 'PMI Campus',
+        startDate: parseLocalDate(ld.date, null, 8),
+        endDate: parseLocalDate(ld.date, null, 17),
+      };
+    });
+
+    const dateLabel = viewMode === 'month'
+      ? `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, '0')}`
+      : weekStart.toISOString().split('T')[0];
+
+    downloadICS(events, `lab-schedule-${dateLabel}.ics`);
+    toast.success(`Exported ${events.length} lab day${events.length === 1 ? '' : 's'} to calendar`);
+  };
+
   const calendarDays = generateCalendarDays();
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const weekViewDays = generateWeekDays();
@@ -636,6 +673,14 @@ function SchedulePageContent() {
               >
                 <Printer className="w-4 h-4" />
                 Print
+              </button>
+              <button
+                onClick={handleExportCalendar}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+                title="Export to Calendar (.ics)"
+              >
+                <Download className="w-4 h-4" />
+                Export to Calendar
               </button>
               <Link
                 href="/lab-management/schedule/new"
