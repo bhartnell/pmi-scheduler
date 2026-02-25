@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Clock, Wifi, WifiOff, Volume2, VolumeX, AlertTriangle, CheckCircle, Circle } from 'lucide-react';
 import { useVisibilityPolling } from '@/hooks/useVisibilityPolling';
+import { useTimerAudio, loadTimerAudioSettings, TimerAudioSettings, TIMER_AUDIO_STORAGE_KEY } from '@/hooks/useTimerAudio';
 
 interface TimerBannerProps {
   labDayId: string;
@@ -45,79 +46,40 @@ export default function TimerBanner({
   const [settingReady, setSettingReady] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
 
-  const audioContextRef = useRef<AudioContext | null>(null);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Play a LOUD alert sound for rotation end
+  // Load audio settings from localStorage
+  const [audioSettings, setAudioSettings] = useState<Partial<TimerAudioSettings>>(() =>
+    loadTimerAudioSettings()
+  );
+
+  // Listen for settings changes from the settings page
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === TIMER_AUDIO_STORAGE_KEY) {
+        setAudioSettings(loadTimerAudioSettings());
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  const effectiveSettings: Partial<TimerAudioSettings> = {
+    ...audioSettings,
+    volume: soundEnabled ? audioSettings.volume : 0,
+  };
+
+  const { playBeeps, playFiveMinWarning, playOneMinWarning, playRotationAlert } = useTimerAudio(effectiveSettings);
+
+  // Rotation end alert — 3 soft beeps + optional voice
   const playLoudAlert = useCallback(() => {
-    if (!soundEnabled) return;
+    playRotationAlert();
+  }, [playRotationAlert]);
 
-    try {
-      if (!audioContextRef.current) {
-        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-      }
-
-      const ctx = audioContextRef.current;
-
-      // Play a series of loud beeps
-      const frequencies = [880, 1100, 880, 1100, 880];
-      frequencies.forEach((freq, i) => {
-        setTimeout(() => {
-          const oscillator = ctx.createOscillator();
-          const gainNode = ctx.createGain();
-
-          oscillator.connect(gainNode);
-          gainNode.connect(ctx.destination);
-
-          oscillator.frequency.value = freq;
-          oscillator.type = 'square'; // Harsher, louder sound
-
-          // LOUD - max volume
-          gainNode.gain.setValueAtTime(0.8, ctx.currentTime);
-          gainNode.gain.exponentialRampToValueAtTime(0.1, ctx.currentTime + 0.4);
-
-          oscillator.start(ctx.currentTime);
-          oscillator.stop(ctx.currentTime + 0.4);
-        }, i * 450);
-      });
-    } catch (e) {
-      console.warn('Audio not available:', e);
-    }
-  }, [soundEnabled]);
-
-  // Play a medium beep for warnings
+  // Warning beep for debrief/countdown milestones
   const playWarningBeep = useCallback((count: number = 1) => {
-    if (!soundEnabled) return;
-
-    try {
-      if (!audioContextRef.current) {
-        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-      }
-
-      const ctx = audioContextRef.current;
-
-      for (let i = 0; i < count; i++) {
-        setTimeout(() => {
-          const oscillator = ctx.createOscillator();
-          const gainNode = ctx.createGain();
-
-          oscillator.connect(gainNode);
-          gainNode.connect(ctx.destination);
-
-          oscillator.frequency.value = 600;
-          oscillator.type = 'sine';
-
-          gainNode.gain.setValueAtTime(0.5, ctx.currentTime);
-          gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
-
-          oscillator.start(ctx.currentTime);
-          oscillator.stop(ctx.currentTime + 0.3);
-        }, i * 400);
-      }
-    } catch (e) {
-      console.warn('Audio not available:', e);
-    }
-  }, [soundEnabled]);
+    playBeeps(count);
+  }, [playBeeps]);
 
   // Fetch timer state from server
   const fetchTimerState = useCallback(async () => {

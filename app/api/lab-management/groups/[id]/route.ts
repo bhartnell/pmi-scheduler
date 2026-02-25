@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
@@ -14,7 +13,7 @@ export async function GET(
 
     // Get group with members
     const { data: group, error: groupError } = await supabase
-      .from('student_groups')
+      .from('lab_groups')
       .select(`
         *,
         cohort:cohorts(
@@ -30,7 +29,7 @@ export async function GET(
 
     // Get group assignments with student details
     const { data: assignments, error: assignError } = await supabase
-      .from('student_group_assignments')
+      .from('lab_group_members')
       .select(`
         *,
         student:students(
@@ -41,7 +40,7 @@ export async function GET(
           photo_url
         )
       `)
-      .eq('group_id', id);
+      .eq('lab_group_id', id);
 
     if (assignError) throw assignError;
 
@@ -73,7 +72,7 @@ export async function PUT(
     const body = await request.json();
 
     const { data, error } = await supabase
-      .from('student_groups')
+      .from('lab_groups')
       .update({
         name: body.name,
         description: body.description,
@@ -107,13 +106,13 @@ export async function DELETE(
 
     // Delete assignments first
     await supabase
-      .from('student_group_assignments')
+      .from('lab_group_members')
       .delete()
-      .eq('group_id', id);
+      .eq('lab_group_id', id);
 
     // Delete group
     const { error } = await supabase
-      .from('student_groups')
+      .from('lab_groups')
       .delete()
       .eq('id', id);
 

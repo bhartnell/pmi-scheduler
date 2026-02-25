@@ -17,7 +17,7 @@ async function getAuthenticatedUser(email: string) {
 }
 
 // GET /api/lab-management/lab-days/[id]/debrief
-// Fetch all debriefs for a lab day, joined with submitter name
+// Fetch all debriefs for a lab day
 export async function GET(request: NextRequest, { params }: RouteContext) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
@@ -35,10 +35,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   try {
     const { data, error } = await supabase
       .from('lab_day_debriefs')
-      .select(`
-        *,
-        submitter:lab_users!submitted_by(id, name, email)
-      `)
+      .select('*')
       .eq('lab_day_id', labDayId)
       .order('created_at', { ascending: true });
 
@@ -69,7 +66,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
   try {
     const body = await request.json();
-    const { what_went_well, what_could_improve, student_concerns, equipment_issues, rating } = body;
+    const { went_well, to_improve, student_concerns, equipment_issues, rating } = body;
 
     if (!rating || typeof rating !== 'number' || rating < 1 || rating > 5) {
       return NextResponse.json({ error: 'rating is required and must be 1-5' }, { status: 400 });
@@ -80,7 +77,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       .from('lab_day_debriefs')
       .select('id')
       .eq('lab_day_id', labDayId)
-      .eq('submitted_by', user.id)
+      .eq('instructor_email', session.user.email)
       .maybeSingle();
 
     if (existing) {
@@ -88,18 +85,15 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       const { data, error } = await supabase
         .from('lab_day_debriefs')
         .update({
-          what_went_well: what_went_well?.trim() || null,
-          what_could_improve: what_could_improve?.trim() || null,
+          went_well: went_well?.trim() || null,
+          to_improve: to_improve?.trim() || null,
           student_concerns: student_concerns?.trim() || null,
           equipment_issues: equipment_issues?.trim() || null,
           rating,
           updated_at: new Date().toISOString(),
         })
         .eq('id', existing.id)
-        .select(`
-          *,
-          submitter:lab_users!submitted_by(id, name, email)
-        `)
+        .select('*')
         .single();
 
       if (error) throw error;
@@ -112,17 +106,14 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       .from('lab_day_debriefs')
       .insert({
         lab_day_id: labDayId,
-        submitted_by: user.id,
-        what_went_well: what_went_well?.trim() || null,
-        what_could_improve: what_could_improve?.trim() || null,
+        instructor_email: session.user.email,
+        went_well: went_well?.trim() || null,
+        to_improve: to_improve?.trim() || null,
         student_concerns: student_concerns?.trim() || null,
         equipment_issues: equipment_issues?.trim() || null,
         rating,
       })
-      .select(`
-        *,
-        submitter:lab_users!submitted_by(id, name, email)
-      `)
+      .select('*')
       .single();
 
     if (error) throw error;
@@ -152,7 +143,7 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
 
   try {
     const body = await request.json();
-    const { id, what_went_well, what_could_improve, student_concerns, equipment_issues, rating } = body;
+    const { id, went_well, to_improve, student_concerns, equipment_issues, rating } = body;
 
     if (!id) {
       return NextResponse.json({ error: 'id is required' }, { status: 400 });
@@ -165,7 +156,7 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
     // Verify ownership
     const { data: existing } = await supabase
       .from('lab_day_debriefs')
-      .select('id, submitted_by')
+      .select('id, instructor_email')
       .eq('id', id)
       .eq('lab_day_id', labDayId)
       .maybeSingle();
@@ -174,25 +165,22 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ error: 'Debrief not found' }, { status: 404 });
     }
 
-    if (existing.submitted_by !== user.id) {
+    if (existing.instructor_email !== session.user.email) {
       return NextResponse.json({ error: 'Forbidden: you can only edit your own debrief' }, { status: 403 });
     }
 
     const { data, error } = await supabase
       .from('lab_day_debriefs')
       .update({
-        what_went_well: what_went_well?.trim() || null,
-        what_could_improve: what_could_improve?.trim() || null,
+        went_well: went_well?.trim() || null,
+        to_improve: to_improve?.trim() || null,
         student_concerns: student_concerns?.trim() || null,
         equipment_issues: equipment_issues?.trim() || null,
         rating,
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)
-      .select(`
-        *,
-        submitter:lab_users!submitted_by(id, name, email)
-      `)
+      .select('*')
       .single();
 
     if (error) throw error;

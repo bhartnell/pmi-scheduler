@@ -303,8 +303,8 @@ export default function LabDayPage() {
   const [debriefHoverRating, setDebriefHoverRating] = useState(0);
   const [debriefForm, setDebriefForm] = useState({
     rating: 0,
-    what_went_well: '',
-    what_could_improve: '',
+    went_well: '',
+    to_improve: '',
     student_concerns: '',
     equipment_issues: '',
   });
@@ -585,14 +585,14 @@ export default function LabDayPage() {
         setDebriefs(data.debriefs || []);
         const userEmail = session?.user?.email?.toLowerCase();
         const own = (data.debriefs || []).find(
-          (d: any) => d.submitter?.email?.toLowerCase() === userEmail
+          (d: any) => d.instructor_email?.toLowerCase() === userEmail
         );
         setCurrentUserDebrief(own || null);
         if (own) {
           setDebriefForm({
             rating: own.rating || 0,
-            what_went_well: own.what_went_well || '',
-            what_could_improve: own.what_could_improve || '',
+            went_well: own.went_well || '',
+            to_improve: own.to_improve || '',
             student_concerns: own.student_concerns || '',
             equipment_issues: own.equipment_issues || '',
           });
@@ -635,8 +635,8 @@ export default function LabDayPage() {
     setEditingDebriefId(debrief.id);
     setDebriefForm({
       rating: debrief.rating || 0,
-      what_went_well: debrief.what_went_well || '',
-      what_could_improve: debrief.what_could_improve || '',
+      went_well: debrief.went_well || '',
+      to_improve: debrief.to_improve || '',
       student_concerns: debrief.student_concerns || '',
       equipment_issues: debrief.equipment_issues || '',
     });
@@ -647,8 +647,8 @@ export default function LabDayPage() {
     if (currentUserDebrief) {
       setDebriefForm({
         rating: currentUserDebrief.rating || 0,
-        what_went_well: currentUserDebrief.what_went_well || '',
-        what_could_improve: currentUserDebrief.what_could_improve || '',
+        went_well: currentUserDebrief.went_well || '',
+        to_improve: currentUserDebrief.to_improve || '',
         student_concerns: currentUserDebrief.student_concerns || '',
         equipment_issues: currentUserDebrief.equipment_issues || '',
       });
@@ -2395,8 +2395,8 @@ export default function LabDayPage() {
                               What went well?
                             </label>
                             <textarea
-                              value={debriefForm.what_went_well}
-                              onChange={e => setDebriefForm(prev => ({ ...prev, what_went_well: e.target.value }))}
+                              value={debriefForm.went_well}
+                              onChange={e => setDebriefForm(prev => ({ ...prev, went_well: e.target.value }))}
                               rows={3}
                               placeholder="Describe what worked well during the lab..."
                               className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
@@ -2409,8 +2409,8 @@ export default function LabDayPage() {
                               What could improve?
                             </label>
                             <textarea
-                              value={debriefForm.what_could_improve}
-                              onChange={e => setDebriefForm(prev => ({ ...prev, what_could_improve: e.target.value }))}
+                              value={debriefForm.to_improve}
+                              onChange={e => setDebriefForm(prev => ({ ...prev, to_improve: e.target.value }))}
                               rows={3}
                               placeholder="Describe areas for improvement..."
                               className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
@@ -2480,12 +2480,11 @@ export default function LabDayPage() {
                             Submitted Responses
                           </h4>
                           {debriefs.map(debrief => {
-                            const isOwn = debrief.submitter?.email?.toLowerCase() === session?.user?.email?.toLowerCase();
+                            const isOwn = debrief.instructor_email?.toLowerCase() === session?.user?.email?.toLowerCase();
                             const isBeingEdited = editingDebriefId === debrief.id;
                             if (isBeingEdited) return null;
-                            const initials = debrief.submitter?.name
-                              ? debrief.submitter.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
-                              : '?';
+                            const emailName = debrief.instructor_email?.split('@')[0] || '';
+                            const initials = emailName.slice(0, 2).toUpperCase() || '?';
                             return (
                               <div
                                 key={debrief.id}
@@ -2505,7 +2504,7 @@ export default function LabDayPage() {
                                     </div>
                                     <div>
                                       <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                        {debrief.submitter?.name || 'Unknown'}
+                                        {debrief.instructor_email?.split('@')[0] || debrief.instructor_email || 'Unknown'}
                                         {isOwn && (
                                           <span className="ml-2 text-xs text-indigo-600 dark:text-indigo-400 font-normal">(you)</span>
                                         )}
@@ -2547,20 +2546,20 @@ export default function LabDayPage() {
 
                                 {/* Card body */}
                                 <div className="space-y-3 text-sm">
-                                  {debrief.what_went_well && (
+                                  {debrief.went_well && (
                                     <div>
                                       <p className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase tracking-wider mb-0.5">
                                         What went well
                                       </p>
-                                      <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{debrief.what_went_well}</p>
+                                      <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{debrief.went_well}</p>
                                     </div>
                                   )}
-                                  {debrief.what_could_improve && (
+                                  {debrief.to_improve && (
                                     <div>
                                       <p className="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase tracking-wider mb-0.5">
                                         What could improve
                                       </p>
-                                      <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{debrief.what_could_improve}</p>
+                                      <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{debrief.to_improve}</p>
                                     </div>
                                   )}
                                   {debrief.student_concerns && (
@@ -2581,7 +2580,7 @@ export default function LabDayPage() {
                                       <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{debrief.equipment_issues}</p>
                                     </div>
                                   )}
-                                  {!debrief.what_went_well && !debrief.what_could_improve && !debrief.student_concerns && !debrief.equipment_issues && (
+                                  {!debrief.went_well && !debrief.to_improve && !debrief.student_concerns && !debrief.equipment_issues && (
                                     <p className="text-gray-400 dark:text-gray-500 italic">No written notes provided.</p>
                                   )}
                                 </div>

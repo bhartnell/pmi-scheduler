@@ -20,11 +20,11 @@ async function getCurrentUser(email: string) {
 // GET /api/admin/program-requirements
 //
 // Query params:
-//   ?program=Paramedic          - filter by program (optional)
+//   ?program=paramedic          - filter by program (optional, lowercase)
 //   ?includeHistory=true        - include all historical rows (default: false)
 //
 // Without includeHistory, returns only the most-recent effective row for each
-// (program, requirement_type, department) combination.
+// (program, requirement_type, category) combination.
 // ---------------------------------------------------------------------------
 export async function GET(request: NextRequest) {
   try {
@@ -43,17 +43,16 @@ export async function GET(request: NextRequest) {
     const program = searchParams.get('program');
     const includeHistory = searchParams.get('includeHistory') === 'true';
 
-    // Always fetch all rows sorted by program / type / department / date desc
+    // Always fetch all rows sorted by program / type / category / date desc
     let query = supabase
       .from('program_requirements')
       .select(
-        `id, program, requirement_type, department, required_value,
-         effective_date, notes, created_at,
-         created_by, lab_users!program_requirements_created_by_fkey(id, name, email)`
+        `id, program, requirement_type, category, required_value,
+         version, effective_date, created_at, created_by`
       )
       .order('program', { ascending: true })
       .order('requirement_type', { ascending: true })
-      .order('department', { ascending: true, nullsFirst: true })
+      .order('category', { ascending: true, nullsFirst: true })
       .order('effective_date', { ascending: false });
 
     if (program) {
@@ -71,7 +70,7 @@ export async function GET(request: NextRequest) {
     const seen = new Set<string>();
     const current: typeof data = [];
     for (const row of data ?? []) {
-      const key = `${row.program}|${row.requirement_type}|${row.department ?? ''}`;
+      const key = `${row.program}|${row.requirement_type}|${row.category ?? ''}`;
       if (!seen.has(key)) {
         seen.add(key);
         current.push(row);
@@ -89,7 +88,7 @@ export async function GET(request: NextRequest) {
 // POST /api/admin/program-requirements
 //
 // Creates a NEW row (version-history approach – never updates existing rows).
-// Body: { program, requirement_type, department?, required_value, effective_date?, notes? }
+// Body: { program, requirement_type, category?, required_value, effective_date? }
 // ---------------------------------------------------------------------------
 export async function POST(request: NextRequest) {
   try {
@@ -106,13 +105,12 @@ export async function POST(request: NextRequest) {
     const body = await request.json() as {
       program: string;
       requirement_type: string;
-      department?: string | null;
+      category?: string | null;
       required_value: number;
       effective_date?: string;
-      notes?: string;
     };
 
-    const { program, requirement_type, department, required_value, effective_date, notes } = body;
+    const { program, requirement_type, category, required_value, effective_date } = body;
 
     if (!program || !requirement_type || required_value === undefined || required_value === null) {
       return NextResponse.json(
@@ -121,12 +119,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const validPrograms = ['Paramedic', 'AEMT', 'EMT'];
+    const validPrograms = ['paramedic', 'aemt', 'emt'];
     if (!validPrograms.includes(program)) {
       return NextResponse.json({ error: `program must be one of: ${validPrograms.join(', ')}` }, { status: 400 });
     }
 
-    const validTypes = ['clinical_hours', 'skills_count', 'scenarios_count'];
+    const validTypes = ['clinical_hours', 'skills', 'scenarios'];
     if (!validTypes.includes(requirement_type)) {
       return NextResponse.json(
         { error: `requirement_type must be one of: ${validTypes.join(', ')}` },
@@ -140,16 +138,14 @@ export async function POST(request: NextRequest) {
       .insert({
         program,
         requirement_type,
-        department: department ?? null,
+        category: category ?? null,
         required_value,
         effective_date: effective_date ?? new Date().toISOString().split('T')[0],
-        created_by: currentUser.id,
-        notes: notes ?? null,
+        created_by: currentUser.email,
       })
       .select(
-        `id, program, requirement_type, department, required_value,
-         effective_date, notes, created_at,
-         created_by, lab_users!program_requirements_created_by_fkey(id, name, email)`
+        `id, program, requirement_type, category, required_value,
+         version, effective_date, created_at, created_by`
       )
       .single();
 

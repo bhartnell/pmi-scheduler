@@ -4,6 +4,7 @@ import { useParams } from 'next/navigation';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Maximize2, Minimize2, Volume2, VolumeX } from 'lucide-react';
 import { useVisibilityPolling } from '@/hooks/useVisibilityPolling';
+import { useTimerAudio, loadTimerAudioSettings, TimerAudioSettings, TIMER_AUDIO_STORAGE_KEY } from '@/hooks/useTimerAudio';
 
 interface TimerState {
   id: string;
@@ -45,36 +46,35 @@ export default function TimerDisplayPage() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const lastFetchRef = useRef<number>(0);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const hasPlayedChimeRef = useRef<number | null>(null); // track which rotation we played for
 
-  // Play 3 short chime beeps when timer hits zero
-  const playChime = useCallback(() => {
-    if (!soundEnabled) return;
-    try {
-      if (!audioContextRef.current) {
-        audioContextRef.current = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+  // Track which rotation's warnings have fired (once per rotation cycle)
+  const hasPlayedRotationAlertRef = useRef<number | null>(null);
+  const hasPlayedFiveMinRef = useRef<number | null>(null);
+  const hasPlayedOneMinRef = useRef<number | null>(null);
+
+  // Load audio settings from localStorage (updated via storage event)
+  const [audioSettings, setAudioSettings] = useState<Partial<TimerAudioSettings>>(() =>
+    loadTimerAudioSettings()
+  );
+
+  // Listen for settings changes from the settings page (same tab or other tabs)
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === TIMER_AUDIO_STORAGE_KEY) {
+        setAudioSettings(loadTimerAudioSettings());
       }
-      const ctx = audioContextRef.current;
-      const beepCount = 3;
-      for (let i = 0; i < beepCount; i++) {
-        setTimeout(() => {
-          const oscillator = ctx.createOscillator();
-          const gainNode = ctx.createGain();
-          oscillator.connect(gainNode);
-          gainNode.connect(ctx.destination);
-          oscillator.frequency.value = 880;
-          oscillator.type = 'sine';
-          gainNode.gain.setValueAtTime(0.6, ctx.currentTime);
-          gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
-          oscillator.start(ctx.currentTime);
-          oscillator.stop(ctx.currentTime + 0.4);
-        }, i * 500);
-      }
-    } catch (e) {
-      console.warn('Audio not available:', e);
-    }
-  }, [soundEnabled]);
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  // Merge soundEnabled mute with audio settings volume
+  const effectiveSettings: Partial<TimerAudioSettings> = {
+    ...audioSettings,
+    volume: soundEnabled ? audioSettings.volume : 0,
+  };
+
+  const { playFiveMinWarning, playOneMinWarning, playRotationAlert } = useTimerAudio(effectiveSettings);
 
   // Fullscreen toggle
   const toggleFullscreen = useCallback(async () => {
@@ -172,14 +172,36 @@ export default function TimerDisplayPage() {
       let interval: NodeJS.Timeout | null = setInterval(() => {
         const t = calculateTime();
         setCurrentTime(t);
-        // Play chime when countdown hits zero (once per rotation)
-        if (
-          timer.mode === 'countdown' &&
-          t <= 0 &&
-          hasPlayedChimeRef.current !== timer.rotation_number
-        ) {
-          hasPlayedChimeRef.current = timer.rotation_number;
-          playChime();
+
+        if (timer.mode === 'countdown') {
+          // Rotation alert — fires once per rotation when countdown hits zero
+          if (
+            t <= 0 &&
+            hasPlayedRotationAlertRef.current !== timer.rotation_number
+          ) {
+            hasPlayedRotationAlertRef.current = timer.rotation_number;
+            playRotationAlert();
+          }
+
+          // 5-minute warning — fires once per rotation when 300s remain
+          if (
+            t > 0 &&
+            t <= 300 &&
+            hasPlayedFiveMinRef.current !== timer.rotation_number
+          ) {
+            hasPlayedFiveMinRef.current = timer.rotation_number;
+            playFiveMinWarning();
+          }
+
+          // 1-minute warning — fires once per rotation when 60s remain
+          if (
+            t > 0 &&
+            t <= 60 &&
+            hasPlayedOneMinRef.current !== timer.rotation_number
+          ) {
+            hasPlayedOneMinRef.current = timer.rotation_number;
+            playOneMinWarning();
+          }
         }
       }, 1000);
 
@@ -204,14 +226,30 @@ export default function TimerDisplayPage() {
         document.removeEventListener('visibilitychange', handleVisibility);
       };
     }
-  }, [timer, serverTimeOffset, playChime]);
+  }, [timer, serverTimeOffset, playRotationAlert, playFiveMinWarning, playOneMinWarning]);
 
-  // Reset chime tracker when rotation changes
+  // Reset warning trackers when a new rotation starts
   useEffect(() => {
     if (timer?.rotation_number !== undefined) {
-      // Only reset if we're moving to a new rotation (not null → number)
-      if (hasPlayedChimeRef.current !== null && hasPlayedChimeRef.current !== timer.rotation_number) {
-        hasPlayedChimeRef.current = null;
+      const rot = timer.rotation_number;
+      // Only reset flags from previous rotation (not on first mount)
+      if (
+        hasPlayedRotationAlertRef.current !== null &&
+        hasPlayedRotationAlertRef.current !== rot
+      ) {
+        hasPlayedRotationAlertRef.current = null;
+      }
+      if (
+        hasPlayedFiveMinRef.current !== null &&
+        hasPlayedFiveMinRef.current !== rot
+      ) {
+        hasPlayedFiveMinRef.current = null;
+      }
+      if (
+        hasPlayedOneMinRef.current !== null &&
+        hasPlayedOneMinRef.current !== rot
+      ) {
+        hasPlayedOneMinRef.current = null;
       }
     }
   }, [timer?.rotation_number]);

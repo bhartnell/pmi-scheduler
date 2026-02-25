@@ -26,23 +26,16 @@ import { useToast } from '@/components/Toast';
 // Types
 // ---------------------------------------------------------------------------
 
-interface LabUserRef {
-  id: string;
-  name: string;
-  email: string;
-}
-
 interface ProgramRequirement {
   id: string;
   program: string;
   requirement_type: string;
-  department: string | null;
+  category: string | null;
   required_value: number;
+  version: number | null;
   effective_date: string;
-  notes: string | null;
   created_at: string;
   created_by: string | null;
-  lab_users?: LabUserRef | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -52,7 +45,14 @@ interface ProgramRequirement {
 const PROGRAMS = ['Paramedic', 'AEMT', 'EMT'] as const;
 type Program = (typeof PROGRAMS)[number];
 
-const DEPARTMENTS: { key: string; label: string }[] = [
+// Map display names to lowercase DB values
+const PROGRAM_TO_DB: Record<Program, string> = {
+  Paramedic: 'paramedic',
+  AEMT: 'aemt',
+  EMT: 'emt',
+};
+
+const CATEGORIES: { key: string; label: string }[] = [
   { key: 'psych',        label: 'Psych' },
   { key: 'ed',           label: 'Emergency Dept' },
   { key: 'icu',          label: 'ICU' },
@@ -81,13 +81,13 @@ function findRequirement(
   reqs: ProgramRequirement[],
   program: string,
   type: string,
-  department: string | null
+  category: string | null
 ): ProgramRequirement | undefined {
   return reqs.find(
     (r) =>
       r.program === program &&
       r.requirement_type === type &&
-      (r.department ?? null) === department
+      (r.category ?? null) === category
   );
 }
 
@@ -99,22 +99,20 @@ interface EditCellProps {
   req: ProgramRequirement | undefined;
   program: string;
   requirementType: string;
-  department: string | null;
+  category: string | null;
   label: string;
   unit: string;
   onSave: (params: {
     program: string;
     requirement_type: string;
-    department: string | null;
+    category: string | null;
     required_value: number;
-    notes: string;
   }) => Promise<void>;
 }
 
-function EditCell({ req, program, requirementType, department, label, unit, onSave }: EditCellProps) {
+function EditCell({ req, program, requirementType, category, label, unit, onSave }: EditCellProps) {
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(req?.required_value?.toString() ?? '0');
-  const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
 
   // Sync value when req changes from outside
@@ -126,24 +124,21 @@ function EditCell({ req, program, requirementType, department, label, unit, onSa
 
   const handleEdit = () => {
     setValue(req?.required_value?.toString() ?? '0');
-    setNotes('');
     setEditing(true);
   };
 
   const handleCancel = () => {
     setEditing(false);
     setValue(req?.required_value?.toString() ?? '0');
-    setNotes('');
   };
 
   const handleSave = async () => {
-    const parsed = parseFloat(value);
+    const parsed = parseInt(value, 10);
     if (isNaN(parsed) || parsed < 0) return;
     setSaving(true);
-    await onSave({ program, requirement_type: requirementType, department, required_value: parsed, notes });
+    await onSave({ program, requirement_type: requirementType, category, required_value: parsed });
     setSaving(false);
     setEditing(false);
-    setNotes('');
   };
 
   if (!editing) {
@@ -188,25 +183,11 @@ function EditCell({ req, program, requirementType, department, label, unit, onSa
         <input
           type="number"
           min={0}
-          step={requirementType === 'clinical_hours' ? 1 : 1}
+          step={1}
           value={value}
           onChange={(e) => setValue(e.target.value)}
           className="w-full border border-blue-300 dark:border-blue-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           autoFocus
-        />
-      </div>
-
-      {/* Notes input */}
-      <div>
-        <label className="text-xs text-blue-700 dark:text-blue-300 mb-1 block">
-          Reason for change (optional)
-        </label>
-        <input
-          type="text"
-          placeholder="e.g. Updated per accreditation requirements"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          className="w-full border border-blue-300 dark:border-blue-700 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
       </div>
 
@@ -246,16 +227,16 @@ function VersionHistory({ history, program }: { history: HistoryEntry[]; program
     .filter((h) => h.program === program)
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-  const getDeptLabel = (dept: string | null): string => {
-    if (!dept) return '—';
-    return DEPARTMENTS.find((d) => d.key === dept)?.label ?? dept;
+  const getCategoryLabel = (cat: string | null): string => {
+    if (!cat) return '—';
+    return CATEGORIES.find((c) => c.key === cat)?.label ?? cat;
   };
 
   const getTypeLabel = (type: string): string => {
     switch (type) {
       case 'clinical_hours': return 'Clinical Hours';
-      case 'skills_count': return 'Skills Count';
-      case 'scenarios_count': return 'Scenarios Count';
+      case 'skills': return 'Skills Count';
+      case 'scenarios': return 'Scenarios Count';
       default: return type;
     }
   };
@@ -300,16 +281,13 @@ function VersionHistory({ history, program }: { history: HistoryEntry[]; program
                       Type
                     </th>
                     <th className="text-left px-4 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden sm:table-cell">
-                      Department
+                      Category
                     </th>
                     <th className="text-right px-4 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Value
                     </th>
                     <th className="text-left px-4 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden md:table-cell">
                       By
-                    </th>
-                    <th className="text-left px-4 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider hidden lg:table-cell">
-                      Notes
                     </th>
                   </tr>
                 </thead>
@@ -323,16 +301,13 @@ function VersionHistory({ history, program }: { history: HistoryEntry[]; program
                         {getTypeLabel(entry.requirement_type)}
                       </td>
                       <td className="px-4 py-2 text-gray-600 dark:text-gray-400 hidden sm:table-cell">
-                        {getDeptLabel(entry.department)}
+                        {getCategoryLabel(entry.category)}
                       </td>
                       <td className="px-4 py-2 text-right font-medium text-gray-900 dark:text-white">
                         {entry.required_value}
                       </td>
                       <td className="px-4 py-2 text-gray-600 dark:text-gray-400 hidden md:table-cell text-xs">
-                        {(entry.lab_users as LabUserRef | null | undefined)?.name ?? '—'}
-                      </td>
-                      <td className="px-4 py-2 text-gray-500 dark:text-gray-400 hidden lg:table-cell text-xs max-w-xs truncate">
-                        {entry.notes ?? '—'}
+                        {entry.created_by ?? '—'}
                       </td>
                     </tr>
                   ))}
@@ -426,9 +401,8 @@ export default function ProgramRequirementsPage() {
     async (params: {
       program: string;
       requirement_type: string;
-      department: string | null;
+      category: string | null;
       required_value: number;
-      notes: string;
     }) => {
       try {
         const res = await fetch('/api/admin/program-requirements', {
@@ -437,9 +411,8 @@ export default function ProgramRequirementsPage() {
           body: JSON.stringify({
             program: params.program,
             requirement_type: params.requirement_type,
-            department: params.department,
+            category: params.category,
             required_value: params.required_value,
-            notes: params.notes || null,
           }),
         });
         const data = await res.json();
@@ -459,14 +432,15 @@ export default function ProgramRequirementsPage() {
     [fetchRequirements, fetchHistory, toast]
   );
 
-  // Derive per-program current requirements
-  const programCurrentReqs = currentReqs.filter((r) => r.program === activeProgram);
+  // Derive per-program current requirements using lowercase DB value
+  const activeProgramDb = PROGRAM_TO_DB[activeProgram];
+  const programCurrentReqs = currentReqs.filter((r) => r.program === activeProgramDb);
 
-  const getReq = (type: string, department: string | null) =>
-    findRequirement(programCurrentReqs, activeProgram, type, department);
+  const getReq = (type: string, category: string | null) =>
+    findRequirement(programCurrentReqs, activeProgramDb, type, category);
 
-  const skillsReq = getReq('skills_count', null);
-  const scenariosReq = getReq('scenarios_count', null);
+  const skillsReq = getReq('skills', null);
+  const scenariosReq = getReq('scenarios', null);
 
   if (status === 'loading' || loading) return <PageLoader />;
   if (!session || !currentUser) return null;
@@ -548,13 +522,13 @@ export default function ProgramRequirementsPage() {
             </h2>
           </div>
           <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {DEPARTMENTS.map(({ key, label }) => (
+            {CATEGORIES.map(({ key, label }) => (
               <EditCell
                 key={`${activeProgram}-${key}`}
                 req={getReq('clinical_hours', key)}
-                program={activeProgram}
+                program={activeProgramDb}
                 requirementType="clinical_hours"
-                department={key}
+                category={key}
                 label={label}
                 unit="hours"
                 onSave={handleSave}
@@ -577,9 +551,9 @@ export default function ProgramRequirementsPage() {
             <EditCell
               key={`${activeProgram}-skills`}
               req={skillsReq}
-              program={activeProgram}
-              requirementType="skills_count"
-              department={null}
+              program={activeProgramDb}
+              requirementType="skills"
+              category={null}
               label="Required Skills"
               unit="skills"
               onSave={handleSave}
@@ -587,9 +561,9 @@ export default function ProgramRequirementsPage() {
             <EditCell
               key={`${activeProgram}-scenarios`}
               req={scenariosReq}
-              program={activeProgram}
-              requirementType="scenarios_count"
-              department={null}
+              program={activeProgramDb}
+              requirementType="scenarios"
+              category={null}
               label="Required Scenarios"
               unit="scenarios"
               onSave={handleSave}
@@ -608,7 +582,7 @@ export default function ProgramRequirementsPage() {
         ) : (
           <VersionHistory
             history={historyReqs}
-            program={activeProgram}
+            program={activeProgramDb}
           />
         )}
       </main>

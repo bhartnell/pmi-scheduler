@@ -18,14 +18,25 @@ import {
   Clock,
   Loader2,
   Volume2,
+  VolumeX,
   Play,
   Eye,
   X,
+  Mic,
+  BellOff,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import NotificationBell from '@/components/NotificationBell';
 import EmailSettingsPanel from '@/components/EmailSettingsPanel';
 import { useToast } from '@/components/Toast';
+import {
+  TimerAudioSettings,
+  DEFAULT_TIMER_AUDIO_SETTINGS,
+  loadTimerAudioSettings,
+  saveTimerAudioSettings,
+  TIMER_AUDIO_STORAGE_KEY,
+  useTimerAudio,
+} from '@/hooks/useTimerAudio';
 
 // ---- Types ----
 
@@ -633,13 +644,199 @@ function NotificationPreferencesPanel() {
   );
 }
 
+// ---- Timer Audio Settings Panel ----
+
+const ALERT_TYPE_OPTIONS: { value: TimerAudioSettings['alertType']; label: string; description: string }[] = [
+  { value: 'beeps',       label: 'Beeps Only',     description: 'Soft chime beeps at warnings and rotation end' },
+  { value: 'voice',       label: 'Voice Only',     description: 'Voice announcements (no beeps)' },
+  { value: 'voice_beeps', label: 'Voice + Beeps',  description: 'Both beeps and voice announcements' },
+  { value: 'silent',      label: 'Silent',         description: 'No audio — visual alerts only' },
+];
+
+function TimerAudioPanel() {
+  const toast = useToast();
+  const [settings, setSettings] = useState<TimerAudioSettings>(() => loadTimerAudioSettings());
+
+  const audio = useTimerAudio(settings);
+
+  const update = (patch: Partial<TimerAudioSettings>) => {
+    const next = { ...settings, ...patch };
+    setSettings(next);
+    saveTimerAudioSettings(next);
+    // Dispatch a storage event so other open tabs/windows pick up the change immediately
+    try {
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: TIMER_AUDIO_STORAGE_KEY,
+        newValue: JSON.stringify(next),
+      }));
+    } catch {
+      // ignore
+    }
+    toast.success('Timer audio settings saved');
+  };
+
+  const volumePct = Math.round(settings.volume * 100);
+
+  return (
+    <div className="space-y-6">
+
+      {/* Alert Type */}
+      <div className="border dark:border-gray-700 rounded-xl p-4 space-y-3">
+        <div className="flex items-center gap-2 mb-1">
+          <Volume2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+          <span className="font-medium text-gray-900 dark:text-white text-sm">Alert Type</span>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {ALERT_TYPE_OPTIONS.map(opt => (
+            <label
+              key={opt.value}
+              className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                settings.alertType === opt.value
+                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                  : 'border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+              }`}
+            >
+              <input
+                type="radio"
+                name="alert-type"
+                value={opt.value}
+                checked={settings.alertType === opt.value}
+                onChange={() => update({ alertType: opt.value })}
+                className="mt-0.5 w-4 h-4 text-blue-600"
+              />
+              <div>
+                <div className="font-medium text-gray-900 dark:text-white text-sm">{opt.label}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">{opt.description}</div>
+              </div>
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Volume */}
+      {settings.alertType !== 'silent' && (
+        <div className="border dark:border-gray-700 rounded-xl p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Volume2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              <span className="font-medium text-gray-900 dark:text-white text-sm">Volume</span>
+            </div>
+            <span className="text-sm font-mono text-gray-700 dark:text-gray-300 w-12 text-right">
+              {volumePct}%
+            </span>
+          </div>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            step={5}
+            value={volumePct}
+            onChange={e => update({ volume: Number(e.target.value) / 100 })}
+            className="w-full accent-blue-600"
+          />
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Default is 30% — keeps sounds pleasant and non-startling
+          </p>
+        </div>
+      )}
+
+      {/* Which alerts are enabled */}
+      <div className="border dark:border-gray-700 rounded-xl p-4 space-y-3">
+        <div className="flex items-center gap-2 mb-1">
+          <Bell className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+          <span className="font-medium text-gray-900 dark:text-white text-sm">Alert Triggers</span>
+        </div>
+        <div className="space-y-2">
+          {[
+            { key: 'enableFiveMinWarning' as const, label: '5-minute warning', description: '1 beep / "5 minutes remaining"' },
+            { key: 'enableOneMinWarning'  as const, label: '1-minute warning', description: '2 beeps / "1 minute remaining"' },
+            { key: 'enableRotationAlert'  as const, label: 'Rotation / Time\'s up', description: '3 beeps / "Time to rotate"' },
+          ].map(item => (
+            <label
+              key={item.key}
+              className="flex items-center justify-between p-3 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center flex-shrink-0">
+                  <Clock className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  <div className="font-medium text-gray-900 dark:text-white text-sm">{item.label}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">{item.description}</div>
+                </div>
+              </div>
+              <input
+                type="checkbox"
+                checked={settings[item.key]}
+                onChange={e => update({ [item.key]: e.target.checked })}
+                className="w-4 h-4 text-blue-600 rounded"
+              />
+            </label>
+          ))}
+        </div>
+      </div>
+
+      {/* Test buttons */}
+      {settings.alertType !== 'silent' && (
+        <div className="border dark:border-gray-700 rounded-xl p-4 space-y-3">
+          <div className="flex items-center gap-2 mb-1">
+            <Play className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            <span className="font-medium text-gray-900 dark:text-white text-sm">Test Sounds</span>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            {(settings.alertType === 'beeps' || settings.alertType === 'voice_beeps') && (
+              <button
+                onClick={() => audio.testSound('beep')}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium transition-colors"
+              >
+                <Volume2 className="w-4 h-4" />
+                Test Beep Sound
+              </button>
+            )}
+            {(settings.alertType === 'voice' || settings.alertType === 'voice_beeps') && (
+              <button
+                onClick={() => audio.testSound('voice')}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium transition-colors"
+              >
+                <Mic className="w-4 h-4" />
+                Test Voice
+              </button>
+            )}
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Click to preview how alerts will sound. Browser must allow audio playback.
+          </p>
+        </div>
+      )}
+
+      {/* Reset to defaults */}
+      <div className="flex justify-end">
+        <button
+          onClick={() => {
+            setSettings(DEFAULT_TIMER_AUDIO_SETTINGS);
+            saveTimerAudioSettings(DEFAULT_TIMER_AUDIO_SETTINGS);
+            toast.success('Reset to defaults');
+          }}
+          className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors underline"
+        >
+          Reset to defaults
+        </button>
+      </div>
+
+      <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+        Settings are saved locally in this browser. Changes apply immediately to any open timer displays.
+      </p>
+    </div>
+  );
+}
+
 // ---- Page shell ----
 
 function SettingsPageContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState<'notifications' | 'email'>('notifications');
+  const [activeTab, setActiveTab] = useState<'notifications' | 'email' | 'timer'>('notifications');
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -649,8 +846,8 @@ function SettingsPageContent() {
 
   useEffect(() => {
     const tab = searchParams.get('tab');
-    if (tab === 'email' || tab === 'notifications') {
-      setActiveTab(tab);
+    if (tab === 'email' || tab === 'notifications' || tab === 'timer') {
+      setActiveTab(tab as typeof activeTab);
     }
   }, [searchParams]);
 
@@ -667,6 +864,7 @@ function SettingsPageContent() {
   const tabs = [
     { id: 'notifications', label: 'Notification Preferences', icon: Bell },
     { id: 'email', label: 'Email Settings', icon: Mail },
+    { id: 'timer', label: 'Timer Audio', icon: Volume2 },
   ];
 
   return (
