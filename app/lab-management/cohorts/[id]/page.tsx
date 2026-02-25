@@ -580,10 +580,10 @@ export default function CohortHubPage() {
             />
             <ToolCard
               icon={BarChart3}
-              title="Progress Tracking"
-              status="Coming soon"
-              actionLabel="View Progress"
-              disabled={true}
+              title="Completion Report"
+              status={stats?.totalStudents ? `${stats.totalStudents} students tracked` : 'View program completion'}
+              actionLabel="View Report"
+              href={`/lab-management/cohorts/${cohortId}/completion`}
             />
           </div>
         </div>

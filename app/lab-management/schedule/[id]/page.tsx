@@ -27,7 +27,15 @@ import {
   Repeat,
   Upload,
   ExternalLink,
-  Copy
+  Copy,
+  ListChecks,
+  RefreshCw,
+  Square,
+  CheckSquare,
+  Package,
+  RotateCcw,
+  AlertTriangle,
+  HelpCircle
 } from 'lucide-react';
 import LabTimer from '@/components/LabTimer';
 import InlineTimerWidget from '@/components/InlineTimerWidget';
@@ -154,6 +162,40 @@ interface ScenarioParticipation {
   };
 }
 
+interface ChecklistItem {
+  id: string;
+  lab_day_id: string;
+  title: string;
+  is_completed: boolean;
+  completed_by: string | null;
+  completed_at: string | null;
+  is_auto_generated: boolean;
+  sort_order: number;
+  created_at: string;
+}
+
+interface EquipmentItem {
+  id: string;
+  lab_day_id: string;
+  name: string;
+  quantity: number;
+  status: 'checked_out' | 'returned' | 'damaged' | 'missing';
+  station_id: string | null;
+  notes: string | null;
+  checked_out_by: string | null;
+  returned_by: string | null;
+  returned_at: string | null;
+  created_at: string;
+  updated_at: string;
+  station?: {
+    id: string;
+    station_number: number;
+    custom_title: string | null;
+    skill_name: string | null;
+    station_type: string;
+  } | null;
+}
+
 const STATION_TYPES = [
   { value: 'scenario', label: 'Scenario', description: 'Full scenario with grading' },
   { value: 'skills', label: 'Skills', description: 'Skills practice station' },
@@ -221,6 +263,23 @@ export default function LabDayPage() {
   const [showDuplicateDropdown, setShowDuplicateDropdown] = useState(false);
   const [copySuccessToast, setCopySuccessToast] = useState(false);
 
+  // Prep checklist state
+  const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([]);
+  const [checklistCollapsed, setChecklistCollapsed] = useState(false);
+  const [checklistLoading, setChecklistLoading] = useState(false);
+  const [checklistGenerating, setChecklistGenerating] = useState(false);
+  const [newChecklistItem, setNewChecklistItem] = useState('');
+  const [addingChecklistItem, setAddingChecklistItem] = useState(false);
+
+  // Equipment tracking state
+  const [equipmentItems, setEquipmentItems] = useState<EquipmentItem[]>([]);
+  const [equipmentCollapsed, setEquipmentCollapsed] = useState(false);
+  const [equipmentLoading, setEquipmentLoading] = useState(false);
+  const [newEquipmentName, setNewEquipmentName] = useState('');
+  const [newEquipmentQty, setNewEquipmentQty] = useState(1);
+  const [newEquipmentStation, setNewEquipmentStation] = useState('');
+  const [addingEquipment, setAddingEquipment] = useState(false);
+
   // Edit station modal state
   const [editingStation, setEditingStation] = useState<Station | null>(null);
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
@@ -260,6 +319,8 @@ export default function LabDayPage() {
     if (session && labDayId) {
       fetchLabDay();
       fetchScenarioParticipation();
+      fetchChecklistItems();
+      fetchEquipmentItems();
     }
   }, [session, labDayId]);
 
@@ -269,6 +330,206 @@ export default function LabDayPage() {
       fetchCohortStudents();
     }
   }, [labDay?.cohort?.id]);
+
+  const fetchChecklistItems = async () => {
+    setChecklistLoading(true);
+    try {
+      const res = await fetch(`/api/lab-management/lab-days/${labDayId}/checklist`);
+      const data = await res.json();
+      if (data.success) {
+        setChecklistItems(data.items || []);
+      }
+    } catch (error) {
+      console.error('Error fetching checklist items:', error);
+    }
+    setChecklistLoading(false);
+  };
+
+  const handleAutoGenerateChecklist = async () => {
+    setChecklistGenerating(true);
+    try {
+      const res = await fetch(`/api/lab-management/lab-days/${labDayId}/checklist`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'auto-generate' }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        await fetchChecklistItems();
+      } else {
+        alert('Failed to auto-generate checklist: ' + (data.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error auto-generating checklist:', error);
+      alert('Failed to auto-generate checklist');
+    }
+    setChecklistGenerating(false);
+  };
+
+  const handleAddChecklistItem = async () => {
+    if (!newChecklistItem.trim()) return;
+    setAddingChecklistItem(true);
+    try {
+      const res = await fetch(`/api/lab-management/lab-days/${labDayId}/checklist`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: newChecklistItem.trim() }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setChecklistItems(prev => [...prev, data.item]);
+        setNewChecklistItem('');
+      } else {
+        alert('Failed to add item: ' + (data.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error adding checklist item:', error);
+      alert('Failed to add checklist item');
+    }
+    setAddingChecklistItem(false);
+  };
+
+  const handleToggleChecklistItem = async (item: ChecklistItem) => {
+    const newCompleted = !item.is_completed;
+    // Optimistic update
+    setChecklistItems(prev =>
+      prev.map(i => i.id === item.id ? { ...i, is_completed: newCompleted } : i)
+    );
+    try {
+      const res = await fetch(`/api/lab-management/lab-days/${labDayId}/checklist`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item_id: item.id, is_completed: newCompleted }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setChecklistItems(prev =>
+          prev.map(i => i.id === item.id ? data.item : i)
+        );
+      } else {
+        // Revert on failure
+        setChecklistItems(prev =>
+          prev.map(i => i.id === item.id ? { ...i, is_completed: item.is_completed } : i)
+        );
+      }
+    } catch (error) {
+      console.error('Error toggling checklist item:', error);
+      // Revert on failure
+      setChecklistItems(prev =>
+        prev.map(i => i.id === item.id ? { ...i, is_completed: item.is_completed } : i)
+      );
+    }
+  };
+
+  const handleDeleteChecklistItem = async (itemId: string) => {
+    // Optimistic update
+    setChecklistItems(prev => prev.filter(i => i.id !== itemId));
+    try {
+      const res = await fetch(
+        `/api/lab-management/lab-days/${labDayId}/checklist?itemId=${itemId}`,
+        { method: 'DELETE' }
+      );
+      const data = await res.json();
+      if (!data.success) {
+        // Revert by refetching
+        await fetchChecklistItems();
+      }
+    } catch (error) {
+      console.error('Error deleting checklist item:', error);
+      await fetchChecklistItems();
+    }
+  };
+
+  const fetchEquipmentItems = async () => {
+    setEquipmentLoading(true);
+    try {
+      const res = await fetch(`/api/lab-management/lab-days/${labDayId}/equipment`);
+      const data = await res.json();
+      if (data.success) {
+        setEquipmentItems(data.items || []);
+      }
+    } catch (error) {
+      console.error('Error fetching equipment items:', error);
+    }
+    setEquipmentLoading(false);
+  };
+
+  const handleAddEquipmentItem = async () => {
+    if (!newEquipmentName.trim()) return;
+    setAddingEquipment(true);
+    try {
+      const res = await fetch(`/api/lab-management/lab-days/${labDayId}/equipment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newEquipmentName.trim(),
+          quantity: newEquipmentQty,
+          station_id: newEquipmentStation || null,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setEquipmentItems(prev => [...prev, data.item]);
+        setNewEquipmentName('');
+        setNewEquipmentQty(1);
+        setNewEquipmentStation('');
+      } else {
+        alert('Failed to add item: ' + (data.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error adding equipment item:', error);
+      alert('Failed to add equipment item');
+    }
+    setAddingEquipment(false);
+  };
+
+  const handleUpdateEquipmentStatus = async (item: EquipmentItem, newStatus: EquipmentItem['status']) => {
+    // Optimistic update
+    setEquipmentItems(prev =>
+      prev.map(i => i.id === item.id ? { ...i, status: newStatus } : i)
+    );
+    try {
+      const res = await fetch(`/api/lab-management/lab-days/${labDayId}/equipment`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item_id: item.id, status: newStatus }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setEquipmentItems(prev =>
+          prev.map(i => i.id === item.id ? data.item : i)
+        );
+      } else {
+        // Revert
+        setEquipmentItems(prev =>
+          prev.map(i => i.id === item.id ? { ...i, status: item.status } : i)
+        );
+      }
+    } catch (error) {
+      console.error('Error updating equipment status:', error);
+      setEquipmentItems(prev =>
+        prev.map(i => i.id === item.id ? { ...i, status: item.status } : i)
+      );
+    }
+  };
+
+  const handleDeleteEquipmentItem = async (itemId: string) => {
+    // Optimistic update
+    setEquipmentItems(prev => prev.filter(i => i.id !== itemId));
+    try {
+      const res = await fetch(
+        `/api/lab-management/lab-days/${labDayId}/equipment?itemId=${itemId}`,
+        { method: 'DELETE' }
+      );
+      const data = await res.json();
+      if (!data.success) {
+        await fetchEquipmentItems();
+      }
+    } catch (error) {
+      console.error('Error deleting equipment item:', error);
+      await fetchEquipmentItems();
+    }
+  };
 
   const fetchCohortStudents = async () => {
     if (!labDay?.cohort?.id) return;
@@ -1398,6 +1659,335 @@ export default function LabDayPage() {
             ))}
           </div>
         )}
+
+        {/* Prep Checklist */}
+        <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow print:shadow-none print:border print:border-gray-300">
+          {/* Checklist Header */}
+          <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
+            <button
+              onClick={() => setChecklistCollapsed(prev => !prev)}
+              className="flex items-center gap-2 text-left flex-1 min-w-0"
+            >
+              <ListChecks className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <h3 className="font-semibold text-gray-900 dark:text-white">Prep Checklist</h3>
+              {checklistItems.length > 0 && (
+                <span className="ml-2 text-sm text-gray-500 dark:text-gray-400 shrink-0">
+                  {checklistItems.filter(i => i.is_completed).length}/{checklistItems.length} completed
+                </span>
+              )}
+              {checklistItems.length > 0 && (
+                <div className="ml-2 flex-1 max-w-xs bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden">
+                  <div
+                    className="bg-emerald-500 h-1.5 rounded-full transition-all duration-300"
+                    style={{ width: `${Math.round((checklistItems.filter(i => i.is_completed).length / checklistItems.length) * 100)}%` }}
+                  />
+                </div>
+              )}
+              <ChevronDown className={`w-4 h-4 text-gray-400 shrink-0 transition-transform duration-200 ${checklistCollapsed ? '-rotate-90' : ''}`} />
+            </button>
+            <div className="flex items-center gap-2 ml-3 print:hidden">
+              <button
+                onClick={handleAutoGenerateChecklist}
+                disabled={checklistGenerating}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Generate checklist items from stations"
+              >
+                {checklistGenerating ? (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-3.5 h-3.5" />
+                )}
+                Auto-Generate
+              </button>
+            </div>
+          </div>
+
+          {/* Checklist Body */}
+          {!checklistCollapsed && (
+            <div className="p-4">
+              {checklistLoading ? (
+                <div className="flex items-center justify-center py-6">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-500"></div>
+                </div>
+              ) : (
+                <>
+                  {/* Items list */}
+                  {checklistItems.length === 0 ? (
+                    <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+                      No checklist items yet. Click &quot;Auto-Generate&quot; to create items from stations, or add items manually below.
+                    </p>
+                  ) : (
+                    <ul className="space-y-1 mb-4">
+                      {checklistItems.map(item => (
+                        <li
+                          key={item.id}
+                          className="flex items-center gap-3 group py-1.5 px-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                        >
+                          <button
+                            onClick={() => handleToggleChecklistItem(item)}
+                            className="shrink-0 text-gray-400 dark:text-gray-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors print:hidden"
+                            aria-label={item.is_completed ? 'Mark incomplete' : 'Mark complete'}
+                          >
+                            {item.is_completed ? (
+                              <CheckSquare className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
+                            ) : (
+                              <Square className="w-5 h-5" />
+                            )}
+                          </button>
+                          {/* Print-only checkbox */}
+                          <span className="hidden print:inline-block w-4 h-4 border border-gray-500 rounded-sm shrink-0" />
+                          <span className={`flex-1 text-sm ${item.is_completed ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-800 dark:text-gray-200'}`}>
+                            {item.title}
+                          </span>
+                          {item.is_auto_generated && (
+                            <span className="text-xs text-gray-400 dark:text-gray-500 print:hidden shrink-0">auto</span>
+                          )}
+                          <button
+                            onClick={() => handleDeleteChecklistItem(item.id)}
+                            className="shrink-0 p-1 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all rounded print:hidden"
+                            aria-label="Delete item"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {/* Add item input */}
+                  <div className="flex gap-2 print:hidden">
+                    <input
+                      type="text"
+                      value={newChecklistItem}
+                      onChange={e => setNewChecklistItem(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') handleAddChecklistItem(); }}
+                      placeholder="Add a checklist item..."
+                      className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400"
+                    />
+                    <button
+                      onClick={handleAddChecklistItem}
+                      disabled={addingChecklistItem || !newChecklistItem.trim()}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Equipment & Supplies */}
+        <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow print:shadow-none print:border print:border-gray-300">
+          {/* Equipment Header */}
+          <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
+            <button
+              onClick={() => setEquipmentCollapsed(prev => !prev)}
+              className="flex items-center gap-2 text-left flex-1 min-w-0"
+            >
+              <Package className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
+              <h3 className="font-semibold text-gray-900 dark:text-white">Equipment &amp; Supplies</h3>
+              {equipmentItems.length > 0 && (
+                <span className="ml-2 text-sm text-gray-500 dark:text-gray-400 shrink-0">
+                  {equipmentItems.filter(i => i.status === 'checked_out').length} out,{' '}
+                  {equipmentItems.filter(i => i.status === 'returned').length} returned
+                  {equipmentItems.filter(i => i.status === 'damaged' || i.status === 'missing').length > 0 && (
+                    <span className="text-red-600 dark:text-red-400">
+                      , {equipmentItems.filter(i => i.status === 'damaged' || i.status === 'missing').length} issues
+                    </span>
+                  )}
+                </span>
+              )}
+              <ChevronDown className={`w-4 h-4 text-gray-400 shrink-0 transition-transform duration-200 ${equipmentCollapsed ? '-rotate-90' : ''}`} />
+            </button>
+          </div>
+
+          {/* Equipment Body */}
+          {!equipmentCollapsed && (
+            <div className="p-4">
+              {equipmentLoading ? (
+                <div className="flex items-center justify-center py-6">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-amber-500"></div>
+                </div>
+              ) : (
+                <>
+                  {/* Summary badges */}
+                  {equipmentItems.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-4 print:hidden">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
+                        {equipmentItems.filter(i => i.status === 'checked_out').length} Checked Out
+                      </span>
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                        {equipmentItems.filter(i => i.status === 'returned').length} Returned
+                      </span>
+                      {equipmentItems.filter(i => i.status === 'damaged').length > 0 && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300">
+                          {equipmentItems.filter(i => i.status === 'damaged').length} Damaged
+                        </span>
+                      )}
+                      {equipmentItems.filter(i => i.status === 'missing').length > 0 && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300">
+                          {equipmentItems.filter(i => i.status === 'missing').length} Missing
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Items list */}
+                  {equipmentItems.length === 0 ? (
+                    <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
+                      No equipment tracked yet. Add items below to track checked-out supplies.
+                    </p>
+                  ) : (
+                    <div className="mb-4 overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b dark:border-gray-700">
+                            <th className="pb-2 pr-4">Item</th>
+                            <th className="pb-2 pr-4">Qty</th>
+                            <th className="pb-2 pr-4">Station</th>
+                            <th className="pb-2 pr-4">Status</th>
+                            <th className="pb-2 print:hidden">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                          {equipmentItems.map(item => (
+                            <tr key={item.id} className="group">
+                              <td className="py-2 pr-4">
+                                <div className="font-medium text-gray-900 dark:text-white">{item.name}</div>
+                                {item.notes && (
+                                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{item.notes}</div>
+                                )}
+                              </td>
+                              <td className="py-2 pr-4 text-gray-700 dark:text-gray-300">{item.quantity}</td>
+                              <td className="py-2 pr-4 text-gray-500 dark:text-gray-400">
+                                {item.station
+                                  ? `Stn ${item.station.station_number}${item.station.custom_title ? ': ' + item.station.custom_title : ''}`
+                                  : <span className="text-gray-300 dark:text-gray-600">—</span>
+                                }
+                              </td>
+                              <td className="py-2 pr-4">
+                                {item.status === 'checked_out' && (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
+                                    Checked Out
+                                  </span>
+                                )}
+                                {item.status === 'returned' && (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                                    Returned
+                                  </span>
+                                )}
+                                {item.status === 'damaged' && (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300">
+                                    Damaged
+                                  </span>
+                                )}
+                                {item.status === 'missing' && (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300">
+                                    Missing
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-2 print:hidden">
+                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  {item.status !== 'returned' && (
+                                    <button
+                                      onClick={() => handleUpdateEquipmentStatus(item, 'returned')}
+                                      title="Mark Returned"
+                                      className="p-1 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded"
+                                    >
+                                      <RotateCcw className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
+                                  {item.status !== 'damaged' && (
+                                    <button
+                                      onClick={() => handleUpdateEquipmentStatus(item, 'damaged')}
+                                      title="Mark Damaged"
+                                      className="p-1 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded"
+                                    >
+                                      <AlertTriangle className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
+                                  {item.status !== 'missing' && (
+                                    <button
+                                      onClick={() => handleUpdateEquipmentStatus(item, 'missing')}
+                                      title="Mark Missing"
+                                      className="p-1 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+                                    >
+                                      <HelpCircle className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
+                                  {item.status !== 'checked_out' && (
+                                    <button
+                                      onClick={() => handleUpdateEquipmentStatus(item, 'checked_out')}
+                                      title="Mark Checked Out"
+                                      className="p-1 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 rounded"
+                                    >
+                                      <Package className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
+                                  <button
+                                    onClick={() => handleDeleteEquipmentItem(item.id)}
+                                    title="Remove item"
+                                    className="p-1 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 rounded ml-1"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+
+                  {/* Add item form */}
+                  <div className="flex flex-wrap gap-2 print:hidden">
+                    <input
+                      type="text"
+                      value={newEquipmentName}
+                      onChange={e => setNewEquipmentName(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') handleAddEquipmentItem(); }}
+                      placeholder="Item name (e.g. BVM, AED trainer)"
+                      className="flex-1 min-w-[180px] px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400"
+                    />
+                    <input
+                      type="number"
+                      min={1}
+                      value={newEquipmentQty}
+                      onChange={e => setNewEquipmentQty(Math.max(1, parseInt(e.target.value) || 1))}
+                      className="w-16 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400"
+                      title="Quantity"
+                    />
+                    <select
+                      value={newEquipmentStation}
+                      onChange={e => setNewEquipmentStation(e.target.value)}
+                      className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400"
+                    >
+                      <option value="">No station</option>
+                      {labDay.stations?.map(station => (
+                        <option key={station.id} value={station.id}>
+                          Stn {station.station_number}{station.custom_title ? ': ' + station.custom_title : station.scenario ? ': ' + station.scenario.title : ''}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={handleAddEquipmentItem}
+                      disabled={addingEquipment || !newEquipmentName.trim()}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 text-sm bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Student Attendance */}
         {labDay.cohort?.id && (
