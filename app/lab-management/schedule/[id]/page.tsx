@@ -35,7 +35,12 @@ import {
   Package,
   RotateCcw,
   AlertTriangle,
-  HelpCircle
+  HelpCircle,
+  Link2,
+  ToggleLeft,
+  ToggleRight,
+  Loader2,
+  UserCheck
 } from 'lucide-react';
 import LabTimer from '@/components/LabTimer';
 import InlineTimerWidget from '@/components/InlineTimerWidget';
@@ -53,6 +58,8 @@ interface LabDay {
   num_rotations: number;
   rotation_duration: number;
   notes: string | null;
+  checkin_token: string | null;
+  checkin_enabled: boolean;
   cohort: {
     id: string;
     cohort_number: number;
@@ -279,6 +286,10 @@ export default function LabDayPage() {
   const [newEquipmentQty, setNewEquipmentQty] = useState(1);
   const [newEquipmentStation, setNewEquipmentStation] = useState('');
   const [addingEquipment, setAddingEquipment] = useState(false);
+
+  // Check-in toggle state
+  const [checkInLoading, setCheckInLoading] = useState(false);
+  const [copyLinkSuccess, setCopyLinkSuccess] = useState(false);
 
   // Edit station modal state
   const [editingStation, setEditingStation] = useState<Station | null>(null);
@@ -767,6 +778,61 @@ export default function LabDayPage() {
       alert('An error occurred while copying the lab day.');
     }
     setCopyingNextWeek(false);
+  };
+
+  const handleEnableCheckIn = async () => {
+    setCheckInLoading(true);
+    try {
+      const res = await fetch(`/api/lab-management/lab-days/${labDayId}/checkin-token`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (data.success) {
+        setLabDay(prev => prev ? {
+          ...prev,
+          checkin_token: data.checkin_token,
+          checkin_enabled: true,
+        } : prev);
+      } else {
+        alert('Failed to enable check-in: ' + (data.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error enabling check-in:', error);
+      alert('An error occurred while enabling check-in.');
+    }
+    setCheckInLoading(false);
+  };
+
+  const handleDisableCheckIn = async () => {
+    setCheckInLoading(true);
+    try {
+      const res = await fetch(`/api/lab-management/lab-days/${labDayId}/checkin-token`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (data.success) {
+        setLabDay(prev => prev ? { ...prev, checkin_enabled: false } : prev);
+      } else {
+        alert('Failed to disable check-in: ' + (data.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error disabling check-in:', error);
+      alert('An error occurred while disabling check-in.');
+    }
+    setCheckInLoading(false);
+  };
+
+  const handleCopyCheckInLink = async () => {
+    if (!labDay?.checkin_token) return;
+    const url = `${window.location.origin}/checkin/${labDay.checkin_token}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopyLinkSuccess(true);
+      setTimeout(() => setCopyLinkSuccess(false), 2500);
+    } catch {
+      // Fallback: show the URL in an alert
+      alert('Check-in URL: ' + url);
+    }
   };
 
   const fetchScenariosAndSkills = async () => {
@@ -1988,6 +2054,88 @@ export default function LabDayPage() {
             </div>
           )}
         </div>
+
+        {/* Student Self Check-In */}
+        {labDay.cohort?.id && (
+          <div className="mt-6 print:hidden">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg ${labDay.checkin_enabled ? 'bg-green-100 dark:bg-green-900/30' : 'bg-gray-100 dark:bg-gray-700'}`}>
+                    <UserCheck className={`w-5 h-5 ${labDay.checkin_enabled ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'}`} />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 dark:text-white text-sm">Student Self Check-In</h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      {labDay.checkin_enabled
+                        ? 'Check-in is active — students can tap their name to mark themselves present.'
+                        : 'Enable to give students a link to check themselves in.'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={labDay.checkin_enabled ? handleDisableCheckIn : handleEnableCheckIn}
+                  disabled={checkInLoading}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium flex-shrink-0 transition-colors disabled:opacity-50 ${
+                    labDay.checkin_enabled
+                      ? 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/40 dark:text-green-300 dark:hover:bg-green-900/60'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                  }`}
+                  title={labDay.checkin_enabled ? 'Disable check-in' : 'Enable check-in'}
+                >
+                  {checkInLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : labDay.checkin_enabled ? (
+                    <ToggleRight className="w-5 h-5" />
+                  ) : (
+                    <ToggleLeft className="w-5 h-5" />
+                  )}
+                  {labDay.checkin_enabled ? 'Enabled' : 'Disabled'}
+                </button>
+              </div>
+
+              {/* Check-in URL section — shown when enabled and token exists */}
+              {labDay.checkin_enabled && labDay.checkin_token && (
+                <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                    Check-In Link
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 flex items-center gap-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-2 min-w-0">
+                      <Link2 className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                      <span className="text-xs text-gray-600 dark:text-gray-300 font-mono truncate">
+                        {typeof window !== 'undefined' ? `${window.location.origin}/checkin/${labDay.checkin_token}` : `/checkin/${labDay.checkin_token}`}
+                      </span>
+                    </div>
+                    <button
+                      onClick={handleCopyCheckInLink}
+                      className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium flex-shrink-0 transition-colors ${
+                        copyLinkSuccess
+                          ? 'bg-green-500 text-white'
+                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                      }`}
+                    >
+                      {copyLinkSuccess ? (
+                        <>
+                          <Check className="w-4 h-4" />
+                          Copied!
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-4 h-4" />
+                          Copy Link
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
+                    Share this link with students or display it on screen. They can tap their name to mark themselves present.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Student Attendance */}
         {labDay.cohort?.id && (
