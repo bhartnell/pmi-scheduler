@@ -5,6 +5,7 @@ import { Providers } from './providers';
 import FeedbackButton from '@/components/FeedbackButton';
 import GlobalTimerBanner from '@/components/GlobalTimerBanner';
 import CommandPalette from '@/components/CommandPalette';
+import QuickActionsMenu from '@/components/QuickActionsMenu';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -28,6 +29,7 @@ export default function RootLayout({
           <GlobalTimerBanner />
           {children}
           <FeedbackButton />
+          <QuickActionsMenu />
           <CommandPalette />
         </Providers>
       </body>
