@@ -2,13 +2,14 @@
 
 import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import {
   ChevronRight,
   Save,
   Trash2,
   AlertCircle,
+  AlertTriangle,
   Calendar,
   Monitor,
   Smartphone,
@@ -74,6 +75,17 @@ export default function EditLabDayPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  // Conflict detection state
+  interface SchedulingConflict {
+    type: 'instructor' | 'room' | 'cohort';
+    message: string;
+    severity: 'warning';
+  }
+  const [conflicts, setConflicts] = useState<SchedulingConflict[]>([]);
+  const [conflictsLoading, setConflictsLoading] = useState(false);
+  const [showConflictModal, setShowConflictModal] = useState(false);
+  const conflictDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Timer display state
   const [timerTokens, setTimerTokens] = useState<TimerToken[]>([]);
@@ -203,6 +215,72 @@ export default function EditLabDayPage() {
       setFixedTimer(fixed || null);
     }
   }, [labDay?.room, timerTokens]);
+
+  // Conflict checking
+  const checkConflicts = useCallback(async (
+    date: string,
+    cohortId: string,
+    instructorIds: string[]
+  ) => {
+    if (!date || !labDayId) return;
+    setConflictsLoading(true);
+    try {
+      const body: Record<string, unknown> = {
+        date,
+        exclude_lab_day_id: labDayId,
+      };
+      if (cohortId) body.cohort_id = cohortId;
+      if (instructorIds.length > 0) body.instructor_ids = instructorIds;
+
+      const res = await fetch('/api/lab-management/schedule/conflicts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setConflicts(data.conflicts || []);
+      }
+    } catch {
+      // Non-critical; silently ignore
+    } finally {
+      setConflictsLoading(false);
+    }
+  }, [labDayId]);
+
+  // Debounced conflict check triggered when date or instructors change
+  useEffect(() => {
+    if (conflictDebounceRef.current) {
+      clearTimeout(conflictDebounceRef.current);
+    }
+    if (!labDate || !labDay) {
+      setConflicts([]);
+      return;
+    }
+    const cohortId = labDay.cohort.id;
+    const allInstructorIds = [...labLeads, ...roamers, ...observers];
+    conflictDebounceRef.current = setTimeout(() => {
+      checkConflicts(labDate, cohortId, allInstructorIds);
+    }, 600);
+    return () => {
+      if (conflictDebounceRef.current) {
+        clearTimeout(conflictDebounceRef.current);
+      }
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [labDate, labDay?.cohort?.id, labLeads.join(','), roamers.join(','), observers.join(',')]);
+
+  const handleSaveWithConflictCheck = async () => {
+    if (!labDate) {
+      alert('Please select a date');
+      return;
+    }
+    if (conflicts.length > 0) {
+      setShowConflictModal(true);
+      return;
+    }
+    await handleSave();
+  };
 
   const handleSave = async () => {
     if (!labDate) {
@@ -776,6 +854,37 @@ export default function EditLabDayPage() {
             </div>
           </div>
 
+          {/* Scheduling Conflict Warnings */}
+          {(conflicts.length > 0 || conflictsLoading) && labDate && (
+            <div className="mt-6 space-y-2">
+              {conflictsLoading && conflicts.length === 0 && (
+                <div className="flex items-center gap-2 px-4 py-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg text-sm text-yellow-700 dark:text-yellow-400">
+                  <svg className="animate-spin h-4 w-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Checking for conflicts...
+                </div>
+              )}
+              {conflicts.map((conflict, index) => (
+                <div
+                  key={index}
+                  className="flex items-start gap-3 px-4 py-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg"
+                >
+                  <AlertTriangle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-yellow-800 dark:text-yellow-300">
+                      Scheduling Conflict
+                    </p>
+                    <p className="text-sm text-yellow-700 dark:text-yellow-400 mt-0.5">
+                      {conflict.message}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex flex-col sm:flex-row justify-between gap-4 mt-8 pt-6 border-t dark:border-gray-700">
             <button
@@ -799,7 +908,7 @@ export default function EditLabDayPage() {
                 Cancel
               </Link>
               <button
-                onClick={handleSave}
+                onClick={handleSaveWithConflictCheck}
                 disabled={saving || !labDate}
                 className="inline-flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
               >
@@ -814,6 +923,54 @@ export default function EditLabDayPage() {
           </div>
         </div>
       </main>
+
+      {/* Conflict Confirmation Modal */}
+      {showConflictModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg flex-shrink-0">
+                <AlertTriangle className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Scheduling Conflicts Detected
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  There {conflicts.length === 1 ? 'is' : 'are'} {conflicts.length} scheduling conflict{conflicts.length === 1 ? '' : 's'}. Do you want to proceed anyway?
+                </p>
+              </div>
+            </div>
+            <ul className="mb-6 space-y-2">
+              {conflicts.map((conflict, index) => (
+                <li key={index} className="flex items-start gap-2 text-sm text-yellow-800 dark:text-yellow-300">
+                  <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5 text-yellow-600 dark:text-yellow-400" />
+                  {conflict.message}
+                </li>
+              ))}
+            </ul>
+            <div className="flex gap-3 justify-end">
+              <button
+                type="button"
+                onClick={() => setShowConflictModal(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              >
+                Go Back
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  setShowConflictModal(false);
+                  await handleSave();
+                }}
+                className="px-4 py-2 text-sm font-medium text-white bg-yellow-600 rounded-lg hover:bg-yellow-700 transition-colors"
+              >
+                Save Anyway
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

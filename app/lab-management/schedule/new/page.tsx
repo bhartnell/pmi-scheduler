@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState, Suspense, useMemo } from 'react';
+import { useEffect, useState, Suspense, useMemo, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useAutoSave } from '@/hooks/useAutoSave';
 import AutoSaveIndicator from '@/components/AutoSaveIndicator';
@@ -31,7 +31,8 @@ import {
   History,
   ChevronDown,
   ChevronUp,
-  Copy
+  Copy,
+  AlertTriangle
 } from 'lucide-react';
 
 interface LabDayTemplate {
@@ -196,6 +197,17 @@ function NewLabDayPageContent() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+  // Conflict detection state
+  interface SchedulingConflict {
+    type: 'instructor' | 'room' | 'cohort';
+    message: string;
+    severity: 'warning';
+  }
+  const [conflicts, setConflicts] = useState<SchedulingConflict[]>([]);
+  const [conflictsLoading, setConflictsLoading] = useState(false);
+  const [showConflictModal, setShowConflictModal] = useState(false);
+  const conflictDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Lab Day Roles state
   const [labLeads, setLabLeads] = useState<string[]>([]);
@@ -520,6 +532,59 @@ function NewLabDayPageContent() {
     setLoading(false);
   };
 
+  // Conflict checking: called with debounce when date, cohort, or instructors change
+  const checkConflicts = useCallback(async (
+    date: string,
+    cohortId: string,
+    instructorIds: string[]
+  ) => {
+    if (!date) {
+      setConflicts([]);
+      return;
+    }
+    setConflictsLoading(true);
+    try {
+      const body: Record<string, unknown> = { date };
+      if (cohortId) body.cohort_id = cohortId;
+      if (instructorIds.length > 0) body.instructor_ids = instructorIds;
+
+      const res = await fetch('/api/lab-management/schedule/conflicts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setConflicts(data.conflicts || []);
+      }
+    } catch {
+      // Non-critical; silently ignore conflict check errors
+    } finally {
+      setConflictsLoading(false);
+    }
+  }, []);
+
+  // Debounced conflict check triggered by date, cohort, or instructor changes
+  useEffect(() => {
+    if (conflictDebounceRef.current) {
+      clearTimeout(conflictDebounceRef.current);
+    }
+    if (!labDate) {
+      setConflicts([]);
+      return;
+    }
+    const allInstructorIds = [...labLeads, ...roamers, ...observers];
+    conflictDebounceRef.current = setTimeout(() => {
+      checkConflicts(labDate, selectedCohort, allInstructorIds);
+    }, 600);
+    return () => {
+      if (conflictDebounceRef.current) {
+        clearTimeout(conflictDebounceRef.current);
+      }
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [labDate, selectedCohort, labLeads.join(','), roamers.join(','), observers.join(',')]);
+
   const handleInstructorChange = (index: number, value: string) => {
     if (value === 'custom') {
       // Clear the fields for custom entry
@@ -814,7 +879,7 @@ function NewLabDayPageContent() {
     }
   };
 
-  const handleSave = async () => {
+  const handleSaveWithConflictCheck = async () => {
     // Inline validation
     const newErrors: Record<string, string> = {};
     if (!selectedCohort) {
@@ -825,12 +890,21 @@ function NewLabDayPageContent() {
     }
     if (Object.keys(newErrors).length > 0) {
       setFormErrors(newErrors);
-      // Scroll to top to show errors
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
     setFormErrors({});
 
+    // If there are conflicts, show the confirmation modal
+    if (conflicts.length > 0) {
+      setShowConflictModal(true);
+      return;
+    }
+
+    await handleSave();
+  };
+
+  const handleSave = async () => {
     setSaving(true);
     try {
       // Create lab day
@@ -1049,7 +1123,7 @@ function NewLabDayPageContent() {
           <div className="flex items-center justify-between">
             <h1 className="text-xl font-bold text-gray-900 dark:text-white">Schedule New Lab Day</h1>
             <button
-              onClick={handleSave}
+              onClick={handleSaveWithConflictCheck}
               disabled={saving}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
@@ -1379,6 +1453,85 @@ function NewLabDayPageContent() {
             </div>
           </div>
         </div>
+
+        {/* Scheduling Conflict Warnings */}
+        {(conflicts.length > 0 || conflictsLoading) && labDate && (
+          <div className="space-y-2">
+            {conflictsLoading && conflicts.length === 0 && (
+              <div className="flex items-center gap-2 px-4 py-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg text-sm text-yellow-700 dark:text-yellow-400">
+                <svg className="animate-spin h-4 w-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Checking for conflicts...
+              </div>
+            )}
+            {conflicts.map((conflict, index) => (
+              <div
+                key={index}
+                className="flex items-start gap-3 px-4 py-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg"
+              >
+                <AlertTriangle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-yellow-800 dark:text-yellow-300">
+                    Scheduling Conflict
+                  </p>
+                  <p className="text-sm text-yellow-700 dark:text-yellow-400 mt-0.5">
+                    {conflict.message}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Conflict Confirmation Modal */}
+        {showConflictModal && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
+              <div className="flex items-start gap-3 mb-4">
+                <div className="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg flex-shrink-0">
+                  <AlertTriangle className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Scheduling Conflicts Detected
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    There {conflicts.length === 1 ? 'is' : 'are'} {conflicts.length} scheduling conflict{conflicts.length === 1 ? '' : 's'}. Do you want to proceed anyway?
+                  </p>
+                </div>
+              </div>
+              <ul className="mb-6 space-y-2">
+                {conflicts.map((conflict, index) => (
+                  <li key={index} className="flex items-start gap-2 text-sm text-yellow-800 dark:text-yellow-300">
+                    <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5 text-yellow-600 dark:text-yellow-400" />
+                    {conflict.message}
+                  </li>
+                ))}
+              </ul>
+              <div className="flex gap-3 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowConflictModal(false)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                >
+                  Go Back
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setShowConflictModal(false);
+                    await handleSave();
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-white bg-yellow-600 rounded-lg hover:bg-yellow-700 transition-colors"
+                >
+                  Save Anyway
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Previous Labs Suggestions Panel */}
         {labDate && (
