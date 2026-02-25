@@ -19,6 +19,7 @@ import {
   FileText,
   Mail,
   Download,
+  ClipboardList,
 } from 'lucide-react';
 import {
   canAccessAdmin,
@@ -113,10 +114,24 @@ export default function AdminPage() {
       title: 'Scheduled Exports',
       description: 'Configure automatic weekly or monthly report exports by email',
       color: 'bg-emerald-500'
+    },
+    {
+      href: '/admin/program-requirements',
+      icon: ClipboardList,
+      title: 'Program Requirements',
+      description: 'Configure required clinical hours, skills, and scenarios per program',
+      color: 'bg-orange-500'
     }
   ];
 
   const superadminLinks = [
+    {
+      href: '/admin/system-health',
+      icon: Database,
+      title: 'System Health',
+      description: 'Database metrics, row counts, activity and scheduled job status',
+      color: 'bg-blue-600'
+    },
     {
       href: '/admin/audit-log',
       icon: FileText,
