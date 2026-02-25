@@ -42,6 +42,7 @@ import {
   RecentActivityWidget,
   QuickStatsWidget,
   MyTasksWidget,
+  CertExpiryWidget,
   ROLE_DEFAULTS,
 } from '@/components/dashboard/widgets';
 import type { CurrentUserMinimal } from '@/types';
@@ -146,6 +147,8 @@ export default function HomePage() {
         return <QuickStatsWidget key={widgetId} />;
       case 'my_tasks':
         return <MyTasksWidget key={widgetId} />;
+      case 'cert_expiry':
+        return <CertExpiryWidget key={widgetId} />;
       default:
         return null;
     }

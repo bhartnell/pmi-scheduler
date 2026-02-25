@@ -82,6 +82,7 @@ export async function GET(
     const [
       { data: allStations },
       { data: completions },
+      { data: cohortStudents },
     ] = await Promise.all([
       supabase
         .from('station_pool')
@@ -100,10 +101,19 @@ export async function GET(
         `)
         .eq('student_id', studentId)
         .order('completed_at', { ascending: false }),
+      // Fetch all students in the same cohort for cohort average
+      student.cohort_id
+        ? supabase
+            .from('students')
+            .select('id')
+            .eq('cohort_id', student.cohort_id)
+            .eq('status', 'active')
+        : Promise.resolve({ data: [] as Array<{ id: string }> | null }),
     ]);
 
     const stations = allStations || [];
     const stationCompletions = completions || [];
+    const cohortStudentIds = (cohortStudents || []).map((s: { id: string }) => s.id);
 
     // Build a map of station_id -> latest completion
     const latestByStation: Record<string, { result: string; completed_at: string }> = {};
@@ -146,6 +156,153 @@ export async function GET(
         result: latestByStation[s.id]?.result || 'not_started',
         completed_at: latestByStation[s.id]?.completed_at || null,
       })),
+    };
+
+    // -----------------------------------------------
+    // 2b. Skill progression timeline
+    // -----------------------------------------------
+    // Helper: get ISO week label "YYYY-Www" from a date string
+    function getWeekLabel(dateStr: string): string {
+      const d = new Date(dateStr);
+      const thursday = new Date(d);
+      thursday.setDate(d.getDate() - ((d.getDay() + 6) % 7) + 3);
+      const year = thursday.getFullYear();
+      const jan4 = new Date(year, 0, 4);
+      const week = Math.round(((thursday.getTime() - jan4.getTime()) / 86400000 + ((jan4.getDay() + 6) % 7) + 1) / 7);
+      return `${year}-W${String(week).padStart(2, '0')}`;
+    }
+
+    // Build student's weekly cumulative pass counts
+    // Only count passes (using earliest pass per station to avoid re-count)
+    const studentPassDates: string[] = [];
+    const studentPassedStationIds = new Set<string>();
+    const sortedStudentCompletions = [...stationCompletions]
+      .filter(c => c.result === 'pass')
+      .sort((a, b) => new Date(a.completed_at).getTime() - new Date(b.completed_at).getTime());
+
+    for (const c of sortedStudentCompletions) {
+      if (!studentPassedStationIds.has(c.station_id)) {
+        studentPassedStationIds.add(c.station_id);
+        studentPassDates.push(c.completed_at);
+      }
+    }
+
+    // Group student passes by week
+    const studentByWeek: Record<string, number> = {};
+    for (const date of studentPassDates) {
+      const wk = getWeekLabel(date);
+      studentByWeek[wk] = (studentByWeek[wk] || 0) + 1;
+    }
+
+    // Fetch cohort completions if student is in a cohort with multiple students
+    let cohortTimeline: Array<{ date: string; studentCount: number; cohortAvg: number }> = [];
+    const otherCohortStudentIds = cohortStudentIds.filter((id: string) => id !== studentId);
+
+    let cohortByWeek: Record<string, number[]> = {};
+
+    if (otherCohortStudentIds.length > 0) {
+      const { data: cohortCompletions } = await supabase
+        .from('station_completions')
+        .select('student_id, station_id, result, completed_at')
+        .in('student_id', cohortStudentIds) // include self for true avg
+        .eq('result', 'pass')
+        .order('completed_at', { ascending: true });
+
+      // For each cohort student, track first pass per station
+      const cohortPassedByStudent: Record<string, Set<string>> = {};
+      const cohortPassDatesByStudent: Record<string, string[]> = {};
+
+      for (const c of cohortCompletions || []) {
+        if (!cohortPassedByStudent[c.student_id]) {
+          cohortPassedByStudent[c.student_id] = new Set();
+          cohortPassDatesByStudent[c.student_id] = [];
+        }
+        if (!cohortPassedByStudent[c.student_id].has(c.station_id)) {
+          cohortPassedByStudent[c.student_id].add(c.station_id);
+          cohortPassDatesByStudent[c.student_id].push(c.completed_at);
+        }
+      }
+
+      // Build a week -> [per-student cumulative count at that week] mapping
+      // Collect all weeks that appear
+      const allWeeks = new Set<string>();
+      for (const studentDates of Object.values(cohortPassDatesByStudent)) {
+        for (const d of studentDates) {
+          allWeeks.add(getWeekLabel(d));
+        }
+      }
+      // Also include student's own weeks
+      for (const wk of Object.keys(studentByWeek)) {
+        allWeeks.add(wk);
+      }
+
+      const sortedWeeks = Array.from(allWeeks).sort();
+
+      // For cohort average: for each week, compute cumulative count per student then average
+      const cohortStudentCount = cohortStudentIds.length || 1;
+
+      cohortTimeline = sortedWeeks.map(wk => {
+        // Student cumulative up to this week
+        let studentCumulative = 0;
+        for (const [w, cnt] of Object.entries(studentByWeek)) {
+          if (w <= wk) studentCumulative += cnt;
+        }
+
+        // Cohort total passes up to this week (sum across all students)
+        let cohortTotal = 0;
+        for (const [sid, dates] of Object.entries(cohortPassDatesByStudent)) {
+          void sid;
+          for (const d of dates) {
+            if (getWeekLabel(d) <= wk) cohortTotal++;
+          }
+        }
+        const cohortAvg = Math.round((cohortTotal / cohortStudentCount) * 10) / 10;
+
+        // Format week label for display: "Jan 5"
+        const [year, weekNum] = wk.split('-W').map(Number);
+        const jan1 = new Date(year, 0, 1);
+        const weekStart = new Date(jan1.getTime() + (weekNum - 1) * 7 * 86400000);
+        const label = weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+        return {
+          date: label,
+          studentCount: studentCumulative,
+          cohortAvg,
+        };
+      });
+    } else {
+      // No cohort data - just build student timeline
+      const sortedWeeks = Array.from(new Set(studentPassDates.map(d => getWeekLabel(d)))).sort();
+      let cumulative = 0;
+      cohortTimeline = sortedWeeks.map(wk => {
+        cumulative += studentByWeek[wk] || 0;
+        const [year, weekNum] = wk.split('-W').map(Number);
+        const jan1 = new Date(year, 0, 1);
+        const weekStart = new Date(jan1.getTime() + (weekNum - 1) * 7 * 86400000);
+        const label = weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        return { date: label, studentCount: cumulative, cohortAvg: cumulative };
+      });
+    }
+
+    // Projected completion date based on current rate
+    let projectedCompletion: string | null = null;
+    if (passedStations > 0 && passedStations < totalStations && studentPassDates.length >= 2) {
+      const firstPassDate = new Date(studentPassDates[0]);
+      const lastPassDate = new Date(studentPassDates[studentPassDates.length - 1]);
+      const elapsedDays = Math.max(1, (lastPassDate.getTime() - firstPassDate.getTime()) / 86400000);
+      const ratePerDay = passedStations / elapsedDays;
+      const remaining = totalStations - passedStations;
+      const daysToComplete = remaining / ratePerDay;
+      const projectedDate = new Date(lastPassDate.getTime() + daysToComplete * 86400000);
+      projectedCompletion = projectedDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    } else if (passedStations >= totalStations && totalStations > 0) {
+      projectedCompletion = 'Completed';
+    }
+
+    const timeline = {
+      data: cohortTimeline,
+      projectedCompletion,
+      totalStations,
     };
 
     // -----------------------------------------------
@@ -435,6 +592,7 @@ export async function GET(
       attendance,
       milestones,
       recentActivity: topActivity,
+      timeline,
     });
   } catch (error) {
     console.error('Error fetching student progress:', error);

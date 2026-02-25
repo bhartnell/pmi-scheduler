@@ -18,7 +18,9 @@ import {
   Trash2,
   Lock,
   Printer,
-  Keyboard
+  Keyboard,
+  LayoutGrid,
+  CalendarDays
 } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import { PageErrorBoundary } from '@/components/PageErrorBoundary';
@@ -99,6 +101,17 @@ function SchedulePageContent() {
   // Calendar state
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
+  // Week view state
+  const [viewMode, setViewMode] = useState<'month' | 'week'>('month');
+  // weekStart is always a Sunday
+  const [weekStart, setWeekStart] = useState<Date>(() => {
+    const today = new Date();
+    const d = new Date(today);
+    d.setDate(d.getDate() - d.getDay()); // go back to Sunday
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
+
   // Keyboard shortcuts state
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
 
@@ -130,7 +143,7 @@ function SchedulePageContent() {
       fetchLabDays();
       fetchDailyNotes();
     }
-  }, [session, currentMonth, selectedCohort, showAllNotes]);
+  }, [session, currentMonth, selectedCohort, showAllNotes, viewMode, weekStart]);
 
   // Focus textarea when modal opens
   useEffect(() => {
@@ -164,12 +177,22 @@ function SchedulePageContent() {
   const fetchLabDays = async () => {
     setLoading(true);
     try {
-      // Get first and last day of current month view (including overflow days)
-      const startDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
-      startDate.setDate(startDate.getDate() - startDate.getDay()); // Go back to Sunday
+      let startDate: Date;
+      let endDate: Date;
 
-      const endDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
-      endDate.setDate(endDate.getDate() + (6 - endDate.getDay())); // Go forward to Saturday
+      if (viewMode === 'week') {
+        // Week view: Sunday through Saturday of weekStart
+        startDate = new Date(weekStart);
+        endDate = new Date(weekStart);
+        endDate.setDate(endDate.getDate() + 6);
+      } else {
+        // Month view: full calendar grid (Sun of first week through Sat of last week)
+        startDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+        startDate.setDate(startDate.getDate() - startDate.getDay()); // Go back to Sunday
+
+        endDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
+        endDate.setDate(endDate.getDate() + (6 - endDate.getDay())); // Go forward to Saturday
+      }
 
       const params = new URLSearchParams({
         startDate: startDate.toISOString().split('T')[0],
@@ -194,11 +217,20 @@ function SchedulePageContent() {
 
   const fetchDailyNotes = async () => {
     try {
-      const startDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
-      startDate.setDate(startDate.getDate() - startDate.getDay());
+      let startDate: Date;
+      let endDate: Date;
 
-      const endDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
-      endDate.setDate(endDate.getDate() + (6 - endDate.getDay()));
+      if (viewMode === 'week') {
+        startDate = new Date(weekStart);
+        endDate = new Date(weekStart);
+        endDate.setDate(endDate.getDate() + 6);
+      } else {
+        startDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+        startDate.setDate(startDate.getDate() - startDate.getDay());
+
+        endDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
+        endDate.setDate(endDate.getDate() + (6 - endDate.getDay()));
+      }
 
       const params = new URLSearchParams({
         startDate: startDate.toISOString().split('T')[0],
@@ -395,6 +427,53 @@ function SchedulePageContent() {
 
   const goToToday = () => {
     setCurrentMonth(new Date());
+    const today = new Date();
+    const d = new Date(today);
+    d.setDate(d.getDate() - d.getDay());
+    d.setHours(0, 0, 0, 0);
+    setWeekStart(d);
+  };
+
+  const goToPreviousWeek = () => {
+    setWeekStart(prev => {
+      const d = new Date(prev);
+      d.setDate(d.getDate() - 7);
+      return d;
+    });
+  };
+
+  const goToNextWeek = () => {
+    setWeekStart(prev => {
+      const d = new Date(prev);
+      d.setDate(d.getDate() + 7);
+      return d;
+    });
+  };
+
+  // Format week range for header, e.g. "Feb 24 - Mar 2, 2026"
+  const formatWeekRange = (start: Date): string => {
+    const end = new Date(start);
+    end.setDate(end.getDate() + 6);
+    const sameYear = start.getFullYear() === end.getFullYear();
+    const sameMonth = start.getMonth() === end.getMonth();
+    if (sameMonth) {
+      return `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} \u2013 ${end.toLocaleDateString('en-US', { day: 'numeric', year: 'numeric' })}`;
+    }
+    if (sameYear) {
+      return `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} \u2013 ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+    }
+    return `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} \u2013 ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+  };
+
+  // Generate the 7 days of the current week (Sun-Sat)
+  const generateWeekDays = (): Date[] => {
+    const days: Date[] = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(weekStart);
+      d.setDate(d.getDate() + i);
+      days.push(d);
+    }
+    return days;
   };
 
   // Keyboard shortcuts
@@ -408,20 +487,32 @@ function SchedulePageContent() {
     },
     {
       key: 'arrowleft',
-      handler: () => goToPreviousMonth(),
-      description: 'Go to previous month',
+      handler: () => viewMode === 'week' ? goToPreviousWeek() : goToPreviousMonth(),
+      description: 'Go to previous month/week',
       category: 'Navigation',
     },
     {
       key: 'arrowright',
-      handler: () => goToNextMonth(),
-      description: 'Go to next month',
+      handler: () => viewMode === 'week' ? goToNextWeek() : goToNextMonth(),
+      description: 'Go to next month/week',
       category: 'Navigation',
     },
     {
       key: 't',
       handler: () => goToToday(),
-      description: 'Jump to today\'s month',
+      description: 'Jump to today',
+      category: 'Navigation',
+    },
+    {
+      key: 'm',
+      handler: () => setViewMode('month'),
+      description: 'Switch to month view',
+      category: 'Navigation',
+    },
+    {
+      key: 'w',
+      handler: () => setViewMode('week'),
+      description: 'Switch to week view',
       category: 'Navigation',
     },
     {
@@ -500,6 +591,7 @@ function SchedulePageContent() {
 
   const calendarDays = generateCalendarDays();
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const weekViewDays = generateWeekDays();
 
   if (status === 'loading') {
     return (
@@ -562,21 +654,53 @@ function SchedulePageContent() {
         {/* Calendar Controls */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6 print:hidden">
           <div className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-            {/* Month Navigation */}
-            <div className="flex items-center gap-4">
+            {/* Navigation: month or week depending on view mode */}
+            <div className="flex items-center gap-3">
+              {/* View toggle: Month / Week */}
+              <div className="flex items-center rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden text-sm">
+                <button
+                  onClick={() => setViewMode('month')}
+                  title="Month view (M)"
+                  className={`flex items-center gap-1.5 px-3 py-1.5 transition-colors ${
+                    viewMode === 'month'
+                      ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 font-medium'
+                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  <LayoutGrid className="w-3.5 h-3.5" />
+                  Month
+                </button>
+                <div className="w-px h-5 bg-gray-300 dark:bg-gray-600" />
+                <button
+                  onClick={() => setViewMode('week')}
+                  title="Week view (W)"
+                  className={`flex items-center gap-1.5 px-3 py-1.5 transition-colors ${
+                    viewMode === 'week'
+                      ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 font-medium'
+                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  <CalendarDays className="w-3.5 h-3.5" />
+                  Week
+                </button>
+              </div>
+
+              {/* Prev / label / Next */}
               <button
-                onClick={goToPreviousMonth}
-                aria-label="Go to previous month"
+                onClick={viewMode === 'week' ? goToPreviousWeek : goToPreviousMonth}
+                aria-label={viewMode === 'week' ? 'Go to previous week' : 'Go to previous month'}
                 className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
               >
                 <ChevronLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" aria-hidden="true" />
               </button>
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white min-w-[200px] text-center">
-                {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white min-w-[220px] text-center">
+                {viewMode === 'week'
+                  ? formatWeekRange(weekStart)
+                  : currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
               </h2>
               <button
-                onClick={goToNextMonth}
-                aria-label="Go to next month"
+                onClick={viewMode === 'week' ? goToNextWeek : goToNextMonth}
+                aria-label={viewMode === 'week' ? 'Go to next week' : 'Go to next month'}
                 className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
               >
                 <ChevronRight className="w-5 h-5 text-gray-600 dark:text-gray-400" aria-hidden="true" />
@@ -734,8 +858,204 @@ function SchedulePageContent() {
           </div>
         )}
 
+        {/* Week View Grid */}
+        {viewMode === 'week' && !showTodayOnly && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden mb-6">
+            {/* Day headers */}
+            <div className="grid grid-cols-7 bg-gray-50 dark:bg-gray-700 border-b dark:border-gray-600">
+              {weekViewDays.map((date, i) => {
+                const today = isToday(date);
+                return (
+                  <div
+                    key={i}
+                    className={`py-3 px-2 text-center border-r last:border-r-0 dark:border-gray-600 ${
+                      today ? 'bg-blue-50 dark:bg-blue-900/30' : ''
+                    }`}
+                  >
+                    <div className={`text-xs font-medium uppercase tracking-wide ${
+                      today ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'
+                    }`}>
+                      {weekDays[date.getDay()]}
+                    </div>
+                    <div className={`text-2xl font-bold mt-0.5 ${
+                      today
+                        ? 'text-blue-600 dark:text-blue-400'
+                        : 'text-gray-900 dark:text-white'
+                    }`}>
+                      {date.getDate()}
+                    </div>
+                    <div className={`text-xs ${
+                      today ? 'text-blue-500 dark:text-blue-400' : 'text-gray-400 dark:text-gray-500'
+                    }`}>
+                      {date.toLocaleDateString('en-US', { month: 'short' })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Day content columns */}
+            <div className="grid grid-cols-7 divide-x dark:divide-gray-600">
+              {weekViewDays.map((date, i) => {
+                const dayLabDays = getLabDaysForDate(date);
+                const today = isToday(date);
+                const notesForDate = getNotesForDate(date);
+                const myNote = getMyNoteForDate(date);
+                const hasNote = notesForDate.length > 0;
+                const isEmpty = dayLabDays.length === 0;
+
+                return (
+                  <div
+                    key={i}
+                    onClick={(e) => {
+                      if (isEmpty) openNoteModal(date, e);
+                    }}
+                    className={`min-h-[300px] p-2 relative group flex flex-col gap-1.5 ${
+                      today ? 'bg-blue-50/60 dark:bg-blue-900/20' : ''
+                    } ${
+                      isEmpty
+                        ? 'cursor-pointer hover:bg-yellow-50/60 dark:hover:bg-yellow-900/10 transition-colors'
+                        : ''
+                    }`}
+                    title={isEmpty ? 'Click to add a note for this day' : undefined}
+                  >
+                    {/* Note + add lab action row */}
+                    <div className="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Link
+                        href={`/lab-management/schedule/new?date=${date.toISOString().split('T')[0]}`}
+                        className="p-0.5 rounded text-gray-400 dark:text-gray-500 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
+                        title="Create lab day"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                      </Link>
+                      <button
+                        onClick={(e) => openNoteModal(date, e)}
+                        className={`p-0.5 rounded transition-colors ${
+                          myNote
+                            ? 'text-yellow-500 dark:text-yellow-400'
+                            : showAllNotes && hasNote
+                              ? 'text-blue-400 dark:text-blue-500'
+                              : 'text-gray-400 dark:text-gray-500 hover:text-yellow-400 dark:hover:text-yellow-500'
+                        }`}
+                        title={myNote ? 'Edit your note' : 'Add a note for this day'}
+                      >
+                        <StickyNote className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    {/* Always-visible note indicator when a note exists */}
+                    {hasNote && (
+                      <div className="flex items-center gap-0.5 mb-0.5">
+                        <StickyNote className={`w-3 h-3 flex-shrink-0 ${
+                          myNote ? 'text-yellow-500' : 'text-blue-400'
+                        }`} />
+                      </div>
+                    )}
+
+                    {/* Note previews */}
+                    {notesForDate.map((note) => {
+                      const isMyNote = note.instructor_email === session?.user?.email;
+                      const initials = showAllNotes ? getInitials(note.instructor_name || note.instructor_email) : null;
+                      const hue = showAllNotes ? emailToHue(note.instructor_email) : null;
+                      return (
+                        <button
+                          key={note.id}
+                          onClick={(e) => isMyNote ? openNoteModal(date, e) : e.stopPropagation()}
+                          className={`w-full text-left px-2 py-1.5 text-xs rounded border transition-colors ${
+                            isMyNote
+                              ? 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800 hover:bg-yellow-100 dark:hover:bg-yellow-900/30 cursor-pointer'
+                              : 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800 cursor-default'
+                          }`}
+                          title={showAllNotes ? `${note.instructor_name || note.instructor_email}: ${note.content}` : note.content}
+                        >
+                          <div className="flex items-center gap-1 min-w-0">
+                            {showAllNotes && initials && hue !== null && (
+                              <span
+                                className="flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold text-white leading-none"
+                                style={{ backgroundColor: `hsl(${hue}, 55%, 45%)` }}
+                              >
+                                {initials}
+                              </span>
+                            )}
+                            <span className="truncate leading-snug">
+                              {note.content.length > 60 ? note.content.substring(0, 60) + '...' : note.content}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+
+                    {/* Lab day cards */}
+                    {dayLabDays.map(labDay => {
+                      const stationCount = labDay.stations.length;
+                      // Coverage: a station is "covered" if it has an instructor assigned
+                      const coveredCount = labDay.stations.filter((s: any) => s.instructor_name || s.instructor_id).length;
+                      const needsCoverage = stationCount > 0 && coveredCount < stationCount;
+                      const fullyStaffed = stationCount > 0 && coveredCount === stationCount;
+
+                      return (
+                        <Link
+                          key={labDay.id}
+                          href={`/lab-management/schedule/${labDay.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="block rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors p-2 text-left"
+                        >
+                          {/* Cohort badge */}
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200 mb-1">
+                            {labDay.cohort.program.abbreviation} G{labDay.cohort.cohort_number}
+                          </span>
+
+                          {/* Title / week-day info */}
+                          {labDay.title && (
+                            <p className="text-xs font-medium text-blue-900 dark:text-blue-100 truncate leading-tight">
+                              {labDay.title}
+                            </p>
+                          )}
+                          {labDay.week_number && labDay.day_number && (
+                            <p className="text-[10px] text-blue-700 dark:text-blue-300 leading-tight">
+                              W{labDay.week_number}D{labDay.day_number}
+                            </p>
+                          )}
+
+                          {/* Station count */}
+                          {stationCount > 0 && (
+                            <div className="flex items-center justify-between mt-1.5 gap-1">
+                              <span className="text-[10px] text-blue-600 dark:text-blue-400">
+                                {stationCount} station{stationCount !== 1 ? 's' : ''}
+                              </span>
+                              {/* Coverage pill */}
+                              {fullyStaffed && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-medium bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800">
+                                  Covered
+                                </span>
+                              )}
+                              {needsCoverage && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-medium bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                                  {coveredCount}/{stationCount}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </Link>
+                      );
+                    })}
+
+                    {/* Empty day hint */}
+                    {isEmpty && !hasNote && (
+                      <p className="text-[10px] text-gray-300 dark:text-gray-600 text-center mt-auto pt-4 select-none">
+                        No labs
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Calendar Grid */}
-        <div className={`bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden ${showTodayOnly ? 'hidden' : 'hidden md:block'}`}>
+        <div className={`bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden ${showTodayOnly || viewMode === 'week' ? 'hidden' : 'hidden md:block'}`}>
           {/* Week day headers */}
           <div className="grid grid-cols-7 bg-gray-50 dark:bg-gray-700 border-b dark:border-gray-600">
             {weekDays.map(day => (
@@ -897,8 +1217,8 @@ function SchedulePageContent() {
           </div>
         </div>
 
-        {/* Upcoming Labs List (Mobile-friendly alternative) */}
-        <div className={`mt-6 bg-white dark:bg-gray-800 rounded-lg shadow ${showTodayOnly ? 'hidden' : ''}`}>
+        {/* Upcoming Labs List (Mobile-friendly alternative, hidden in week view) */}
+        <div className={`mt-6 bg-white dark:bg-gray-800 rounded-lg shadow ${showTodayOnly || viewMode === 'week' ? 'hidden' : ''}`}>
           <div className="p-4 border-b dark:border-gray-600">
             <h3 className="font-semibold text-gray-900 dark:text-white">Upcoming Labs</h3>
           </div>

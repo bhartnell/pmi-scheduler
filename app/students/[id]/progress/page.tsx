@@ -16,15 +16,23 @@ import {
   BookOpen,
   ClipboardCheck,
   TrendingUp,
+  TrendingDown,
   Award,
   RefreshCw,
   ChevronDown,
   ChevronRight,
+  LineChart,
 } from 'lucide-react';
 
 // -----------------------------------------------
 // Types
 // -----------------------------------------------
+interface TimelinePoint {
+  date: string;
+  studentCount: number;
+  cohortAvg: number;
+}
+
 interface ProgressData {
   student: {
     id: string;
@@ -85,6 +93,11 @@ interface ProgressData {
     date: string;
     icon?: string;
   }>;
+  timeline?: {
+    data: TimelinePoint[];
+    projectedCompletion: string | null;
+    totalStations: number;
+  };
 }
 
 // -----------------------------------------------
@@ -383,6 +396,215 @@ function ActivityItem({ activity }: { activity: ProgressData['recentActivity'][0
 }
 
 // -----------------------------------------------
+// Skill Progression SVG Chart
+// -----------------------------------------------
+function SkillProgressionChart({
+  timeline,
+}: {
+  timeline: { data: TimelinePoint[]; projectedCompletion: string | null; totalStations: number };
+}) {
+  const { data, projectedCompletion, totalStations } = timeline;
+
+  if (data.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-gray-400 dark:text-gray-500">
+        <LineChart className="w-10 h-10 mb-2 opacity-30" />
+        <p className="text-sm">No skill completions recorded yet</p>
+      </div>
+    );
+  }
+
+  const CHART_W = 560;
+  const CHART_H = 220;
+  const PAD_LEFT = 44;
+  const PAD_RIGHT = 16;
+  const PAD_TOP = 16;
+  const PAD_BOTTOM = 36;
+
+  const plotW = CHART_W - PAD_LEFT - PAD_RIGHT;
+  const plotH = CHART_H - PAD_TOP - PAD_BOTTOM;
+
+  const maxY = Math.max(
+    totalStations,
+    ...data.map(d => Math.max(d.studentCount, d.cohortAvg)),
+    1
+  );
+
+  const xScale = (i: number) => PAD_LEFT + (i / Math.max(data.length - 1, 1)) * plotW;
+  const yScale = (v: number) => PAD_TOP + plotH - (v / maxY) * plotH;
+
+  const studentPath = data
+    .map((d, i) => `${i === 0 ? 'M' : 'L'}${xScale(i).toFixed(1)},${yScale(d.studentCount).toFixed(1)}`)
+    .join(' ');
+
+  const cohortPath = data
+    .map((d, i) => `${i === 0 ? 'M' : 'L'}${xScale(i).toFixed(1)},${yScale(d.cohortAvg).toFixed(1)}`)
+    .join(' ');
+
+  // Y-axis ticks: 0, 25%, 50%, 75%, 100% of totalStations
+  const yTicks = [0, 0.25, 0.5, 0.75, 1.0].map(f => Math.round(f * totalStations));
+
+  // X-axis ticks: show up to 6 evenly spaced labels
+  const xTickCount = Math.min(data.length, 6);
+  const xTickIndices = Array.from({ length: xTickCount }, (_, i) =>
+    Math.round((i / Math.max(xTickCount - 1, 1)) * (data.length - 1))
+  );
+
+  // Determine if student is ahead or behind
+  const lastPoint = data[data.length - 1];
+  const isAhead = lastPoint.studentCount >= lastPoint.cohortAvg;
+  const diff = Math.abs(lastPoint.studentCount - lastPoint.cohortAvg);
+
+  return (
+    <div className="space-y-3">
+      {/* Pace indicator */}
+      <div className="flex flex-wrap items-center gap-4">
+        <div className={`flex items-center gap-1.5 text-sm font-medium ${
+          isAhead ? 'text-green-600 dark:text-green-400' : 'text-amber-600 dark:text-amber-400'
+        }`}>
+          {isAhead ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+          {isAhead
+            ? `${diff.toFixed(1)} skills ahead of cohort average`
+            : `${diff.toFixed(1)} skills behind cohort average`}
+        </div>
+        {projectedCompletion && projectedCompletion !== 'Completed' && (
+          <div className="text-sm text-gray-500 dark:text-gray-400">
+            Projected completion: <span className="font-medium text-gray-700 dark:text-gray-300">{projectedCompletion}</span>
+          </div>
+        )}
+        {projectedCompletion === 'Completed' && (
+          <div className="flex items-center gap-1 text-sm text-green-600 dark:text-green-400 font-medium">
+            <CheckCircle className="w-4 h-4" /> All stations complete
+          </div>
+        )}
+      </div>
+
+      {/* Legend */}
+      <div className="flex items-center gap-5 text-xs text-gray-500 dark:text-gray-400">
+        <div className="flex items-center gap-1.5">
+          <div className="w-6 h-0.5 bg-blue-500 rounded"></div>
+          <span>This student</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <svg width="24" height="4" className="overflow-visible">
+            <line x1="0" y1="2" x2="24" y2="2" stroke="#9ca3af" strokeWidth="2" strokeDasharray="4,3" />
+          </svg>
+          <span>Cohort average</span>
+        </div>
+      </div>
+
+      {/* SVG Chart */}
+      <div className="overflow-x-auto">
+        <svg
+          viewBox={`0 0 ${CHART_W} ${CHART_H}`}
+          className="w-full max-w-full"
+          style={{ minWidth: '280px', height: 'auto' }}
+          aria-label="Skill progression chart"
+        >
+          {/* Y-axis gridlines and labels */}
+          {yTicks.map(tick => {
+            const y = yScale(tick);
+            return (
+              <g key={tick}>
+                <line
+                  x1={PAD_LEFT}
+                  y1={y}
+                  x2={CHART_W - PAD_RIGHT}
+                  y2={y}
+                  stroke="currentColor"
+                  strokeWidth="0.5"
+                  className="text-gray-200 dark:text-gray-700"
+                />
+                <text
+                  x={PAD_LEFT - 6}
+                  y={y}
+                  textAnchor="end"
+                  dominantBaseline="middle"
+                  fontSize="10"
+                  className="fill-gray-400 dark:fill-gray-500"
+                  fill="currentColor"
+                >
+                  {tick}
+                </text>
+              </g>
+            );
+          })}
+
+          {/* X-axis labels */}
+          {xTickIndices.map(i => (
+            <text
+              key={i}
+              x={xScale(i)}
+              y={CHART_H - PAD_BOTTOM + 14}
+              textAnchor="middle"
+              fontSize="10"
+              className="fill-gray-400 dark:fill-gray-500"
+              fill="currentColor"
+            >
+              {data[i].date}
+            </text>
+          ))}
+
+          {/* Axes */}
+          <line
+            x1={PAD_LEFT}
+            y1={PAD_TOP}
+            x2={PAD_LEFT}
+            y2={PAD_TOP + plotH}
+            stroke="currentColor"
+            strokeWidth="1"
+            className="text-gray-300 dark:text-gray-600"
+          />
+          <line
+            x1={PAD_LEFT}
+            y1={PAD_TOP + plotH}
+            x2={CHART_W - PAD_RIGHT}
+            y2={PAD_TOP + plotH}
+            stroke="currentColor"
+            strokeWidth="1"
+            className="text-gray-300 dark:text-gray-600"
+          />
+
+          {/* Cohort average line (dashed gray) */}
+          <path
+            d={cohortPath}
+            fill="none"
+            stroke="#9ca3af"
+            strokeWidth="2"
+            strokeDasharray="5,4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+
+          {/* Student line (blue) */}
+          <path
+            d={studentPath}
+            fill="none"
+            stroke="#3b82f6"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+
+          {/* Student data point dots */}
+          {data.map((d, i) => (
+            <circle
+              key={i}
+              cx={xScale(i)}
+              cy={yScale(d.studentCount)}
+              r="3"
+              fill="#3b82f6"
+              stroke="white"
+              strokeWidth="1.5"
+            />
+          ))}
+        </svg>
+      </div>
+    </div>
+  );
+}
+
+// -----------------------------------------------
 // Main page
 // -----------------------------------------------
 export default function StudentProgressPage() {
@@ -476,7 +698,7 @@ export default function StudentProgressPage() {
 
   if (!data) return null;
 
-  const { student, skills, scenarios, clinicalHours, milestones, recentActivity } = data;
+  const { student, skills, scenarios, clinicalHours, milestones, recentActivity, timeline } = data;
   const sortedScenarios = [...scenarios.grades].sort((a, b) => {
     if (sortScenarios === 'grade') {
       const gradeOrder = { A: 0, B: 1, C: 2, D: 3, F: 4, 'N/A': 5 };
@@ -613,6 +835,24 @@ export default function StudentProgressPage() {
           {/* Overall status */}
           <OverallStatus skills={skills} clinicalHours={clinicalHours} />
         </div>
+
+        {/* ---- SKILL PROGRESSION CHART ---- */}
+        {timeline && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow print:break-inside-avoid">
+            <div className="p-4 border-b dark:border-gray-700">
+              <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <LineChart className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                Skill Progression
+              </h2>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                Cumulative skills passed over time
+              </p>
+            </div>
+            <div className="p-4">
+              <SkillProgressionChart timeline={timeline} />
+            </div>
+          </div>
+        )}
 
         {/* ---- TWO-COLUMN LAYOUT ---- */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

@@ -16,7 +16,8 @@ import {
   Home,
   ArrowLeft,
   Upload,
-  X
+  X,
+  AlertTriangle
 } from 'lucide-react';
 
 import type { CurrentUser } from '@/types';
@@ -293,6 +294,25 @@ export default function InstructorCertificationsPage() {
       </div>
 
       <main className="max-w-4xl mx-auto px-4 py-6">
+        {/* Expiring-soon alert banner */}
+        {(() => {
+          const expiringSoon = certifications.filter((c) => {
+            const days = getDaysUntil(c.expiration_date);
+            return days <= 30;
+          });
+          if (expiringSoon.length === 0) return null;
+          return (
+            <div className="mb-4 flex items-center gap-3 px-4 py-3 bg-orange-50 dark:bg-orange-900/20 border border-orange-300 dark:border-orange-700 rounded-lg">
+              <AlertTriangle className="w-5 h-5 flex-shrink-0 text-orange-600 dark:text-orange-400" />
+              <p className="text-sm font-medium text-orange-700 dark:text-orange-300">
+                {expiringSoon.length === 1
+                  ? '1 certification expiring within 30 days'
+                  : `${expiringSoon.length} certifications expiring within 30 days`}
+              </p>
+            </div>
+          );
+        })()}
+
         {/* Add/Edit Form */}
         {showForm && (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">

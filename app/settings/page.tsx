@@ -19,6 +19,8 @@ import {
   Loader2,
   Volume2,
   Play,
+  Eye,
+  X,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import NotificationBell from '@/components/NotificationBell';
@@ -135,6 +137,32 @@ function NotificationPreferencesPanel() {
   const [savingFrequency, setSavingFrequency] = useState(false);
   const [notificationSound, setNotificationSound] = useState(false);
   const [savingSound, setSavingSound] = useState(false);
+
+  // Digest preview state
+  const [digestPreviewOpen, setDigestPreviewOpen] = useState(false);
+  const [digestPreviewLoading, setDigestPreviewLoading] = useState(false);
+  const [digestPreviewHtml, setDigestPreviewHtml] = useState<string | null>(null);
+  const [digestPreviewSubject, setDigestPreviewSubject] = useState('');
+  const [digestPreviewCount, setDigestPreviewCount] = useState(0);
+
+  const handlePreviewDigest = async () => {
+    setDigestPreviewLoading(true);
+    setDigestPreviewOpen(true);
+    setDigestPreviewHtml(null);
+    try {
+      const res = await fetch('/api/notifications/digest-preview');
+      if (!res.ok) throw new Error('Failed to load preview');
+      const data = await res.json();
+      setDigestPreviewSubject(data.subject ?? '');
+      setDigestPreviewCount(data.notificationCount ?? 0);
+      setDigestPreviewHtml(data.html ?? null);
+    } catch {
+      setDigestPreviewHtml(null);
+      setDigestPreviewSubject('');
+      setDigestPreviewCount(0);
+    }
+    setDigestPreviewLoading(false);
+  };
 
   useEffect(() => {
     fetchAllPrefs();
@@ -452,15 +480,24 @@ function NotificationPreferencesPanel() {
                 </div>
               </div>
               {emailPrefs.mode === 'daily_digest' && (
-                <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                  <Clock className="w-3.5 h-3.5 text-gray-400" />
-                  <input
-                    type="time"
-                    value={emailPrefs.digest_time}
-                    onChange={(e) => handleFrequencyChange({ digest_time: e.target.value })}
-                    disabled={savingFrequency}
-                    className="px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50"
-                  />
+                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-gray-400" />
+                    <input
+                      type="time"
+                      value={emailPrefs.digest_time}
+                      onChange={(e) => handleFrequencyChange({ digest_time: e.target.value })}
+                      disabled={savingFrequency}
+                      className="px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50"
+                    />
+                  </div>
+                  <button
+                    onClick={handlePreviewDigest}
+                    className="flex items-center gap-1 px-2 py-1 text-xs text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors whitespace-nowrap"
+                  >
+                    <Eye className="w-3 h-3" />
+                    Preview
+                  </button>
                 </div>
               )}
             </label>
@@ -493,6 +530,105 @@ function NotificationPreferencesPanel() {
       <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
         Changes are saved automatically
       </p>
+
+      {/* ---- Digest preview modal ---- */}
+      {digestPreviewOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={(e) => { if (e.target === e.currentTarget) setDigestPreviewOpen(false); }}
+        >
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+            {/* Modal header */}
+            <div className="flex items-start justify-between px-5 py-4 border-b dark:border-gray-700 flex-shrink-0">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Mail className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white text-sm">
+                    Digest Email Preview
+                  </h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    This is what your daily digest will look like
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setDigestPreviewOpen(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                aria-label="Close preview"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Subject line */}
+            {!digestPreviewLoading && digestPreviewSubject && (
+              <div className="px-5 py-3 bg-gray-50 dark:bg-gray-700/50 border-b dark:border-gray-700 flex-shrink-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide w-14 flex-shrink-0">
+                    Subject
+                  </span>
+                  <span className="text-sm text-gray-900 dark:text-white font-medium">
+                    {digestPreviewSubject}
+                  </span>
+                </div>
+                {digestPreviewCount > 0 && (
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide w-14 flex-shrink-0">
+                      Items
+                    </span>
+                    <span className="text-xs text-gray-600 dark:text-gray-300">
+                      {digestPreviewCount} unread notification{digestPreviewCount !== 1 ? 's' : ''} would be included
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Modal body */}
+            <div className="flex-1 overflow-auto">
+              {digestPreviewLoading ? (
+                <div className="flex flex-col items-center justify-center py-16 gap-3">
+                  <Loader2 className="w-7 h-7 animate-spin text-blue-600" />
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Loading preview...</p>
+                </div>
+              ) : digestPreviewHtml ? (
+                <iframe
+                  srcDoc={digestPreviewHtml}
+                  title="Digest email preview"
+                  className="w-full border-0"
+                  style={{ height: '500px' }}
+                  sandbox="allow-same-origin"
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center py-16 gap-3 text-center px-8">
+                  <div className="w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                    <Mail className="w-6 h-6 text-gray-400" />
+                  </div>
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    No unread notifications to preview
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm">
+                    No unread notifications to include in a digest preview. Once you receive new
+                    notifications, you can preview what your daily digest email will look like here.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Modal footer */}
+            <div className="px-5 py-3 border-t dark:border-gray-700 flex-shrink-0 flex justify-end">
+              <button
+                onClick={() => setDigestPreviewOpen(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
