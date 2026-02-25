@@ -27,7 +27,8 @@ import {
   Pill,
   Stethoscope,
   Users,
-  BarChart3
+  BarChart3,
+  Star
 } from 'lucide-react';
 import { hasMinRole } from '@/lib/permissions';
 
@@ -100,6 +101,11 @@ export default function StationPoolPage() {
   const [showInactive, setShowInactive] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
 
+  // Favorites state
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [favoritesLoading, setFavoritesLoading] = useState(false);
+
   // Modal state
   const [showModal, setShowModal] = useState(false);
   const [editingStation, setEditingStation] = useState<Station | null>(null);
@@ -125,6 +131,7 @@ export default function StationPoolPage() {
     if (session?.user?.email) {
       fetchUser();
       fetchCohorts();
+      fetchFavorites();
     }
   }, [session]);
 
@@ -175,6 +182,52 @@ export default function StationPoolPage() {
       console.error('Error fetching stations:', error);
     }
     setLoading(false);
+  };
+
+  const fetchFavorites = async () => {
+    try {
+      const res = await fetch('/api/stations/pool/favorites');
+      const data = await res.json();
+      if (data.success) {
+        setFavorites(new Set(data.favorites || []));
+      }
+    } catch (error) {
+      console.error('Error fetching favorites:', error);
+    }
+  };
+
+  const toggleFavorite = async (stationId: string) => {
+    const isFavorited = favorites.has(stationId);
+
+    // Optimistic update
+    const newFavorites = new Set(favorites);
+    if (isFavorited) {
+      newFavorites.delete(stationId);
+    } else {
+      newFavorites.add(stationId);
+    }
+    setFavorites(newFavorites);
+
+    try {
+      setFavoritesLoading(true);
+      if (isFavorited) {
+        await fetch(`/api/stations/pool/favorites?station_id=${stationId}`, {
+          method: 'DELETE',
+        });
+      } else {
+        await fetch('/api/stations/pool/favorites', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ station_id: stationId }),
+        });
+      }
+    } catch (error) {
+      // Revert on error
+      console.error('Error toggling favorite:', error);
+      setFavorites(favorites);
+    } finally {
+      setFavoritesLoading(false);
+    }
   };
 
   const openCreateModal = () => {
@@ -259,20 +312,32 @@ export default function StationPoolPage() {
     }
   };
 
-  const filteredStations = stations.filter(s =>
-    search === '' ||
-    s.station_name.toLowerCase().includes(search.toLowerCase()) ||
-    s.station_code.toLowerCase().includes(search.toLowerCase()) ||
-    s.description?.toLowerCase().includes(search.toLowerCase())
-  );
+  // Sort: favorites first, then by display_order/name
+  const sortedStations = [...stations].sort((a, b) => {
+    const aFav = favorites.has(a.id) ? 0 : 1;
+    const bFav = favorites.has(b.id) ? 0 : 1;
+    if (aFav !== bFav) return aFav - bFav;
+    return 0; // preserve original API ordering within each group
+  });
+
+  const filteredStations = sortedStations.filter(s => {
+    if (showFavoritesOnly && !favorites.has(s.id)) return false;
+    return (
+      search === '' ||
+      s.station_name.toLowerCase().includes(search.toLowerCase()) ||
+      s.station_code.toLowerCase().includes(search.toLowerCase()) ||
+      s.description?.toLowerCase().includes(search.toLowerCase())
+    );
+  });
 
   const clearFilters = () => {
     setCategoryFilter('');
     setShowInactive(false);
     setSearch('');
+    setShowFavoritesOnly(false);
   };
 
-  const hasActiveFilters = categoryFilter || showInactive || search;
+  const hasActiveFilters = categoryFilter || showInactive || search || showFavoritesOnly;
 
   const canEdit = user && hasMinRole(user.role, 'instructor');
   const canArchive = user && hasMinRole(user.role, 'admin');
@@ -333,10 +398,23 @@ export default function StationPoolPage() {
                   className="w-full pl-10 pr-4 py-2 border rounded-lg text-gray-900 bg-white dark:bg-gray-700 dark:text-white dark:border-gray-600"
                 />
               </div>
+              {/* Favorites toggle button */}
+              <button
+                onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+                title={showFavoritesOnly ? 'Show all stations' : 'Show favorites only'}
+                className={`inline-flex items-center gap-2 px-4 py-2 border rounded-lg font-medium transition-colors ${
+                  showFavoritesOnly
+                    ? 'border-yellow-400 bg-yellow-50 text-yellow-700 dark:border-yellow-500 dark:bg-yellow-900/30 dark:text-yellow-300'
+                    : 'text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700'
+                }`}
+              >
+                <Star className={`w-5 h-5 ${showFavoritesOnly ? 'fill-yellow-400 text-yellow-400' : ''}`} />
+                My Favorites
+              </button>
               <button
                 onClick={() => setShowFilters(!showFilters)}
                 className={`inline-flex items-center gap-2 px-4 py-2 border rounded-lg ${
-                  hasActiveFilters
+                  categoryFilter || showInactive
                     ? 'border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-400 dark:bg-blue-900/30 dark:text-blue-300'
                     : 'text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700'
                 }`}
@@ -390,8 +468,17 @@ export default function StationPoolPage() {
         </div>
 
         {/* Results count */}
-        <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
-          {filteredStations.length} station{filteredStations.length !== 1 ? 's' : ''} found
+        <div className="mb-4 flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
+          <span>
+            {filteredStations.length} station{filteredStations.length !== 1 ? 's' : ''} found
+            {showFavoritesOnly && ` (${favorites.size} favorited total)`}
+          </span>
+          {favorites.size > 0 && !showFavoritesOnly && (
+            <span className="flex items-center gap-1 text-yellow-600 dark:text-yellow-400">
+              <Star className="w-4 h-4 fill-yellow-400" />
+              {favorites.size} favorited
+            </span>
+          )}
         </div>
 
         {/* Stations Grid */}
@@ -405,11 +492,21 @@ export default function StationPoolPage() {
             <CheckSquare className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No stations found</h3>
             <p className="text-gray-600 dark:text-gray-400 mb-4">
-              {hasActiveFilters
+              {showFavoritesOnly
+                ? 'You have no favorited stations yet. Click the star on any station to add it to your favorites.'
+                : hasActiveFilters
                 ? 'Try adjusting your filters or search term'
                 : 'Get started by adding your first station'}
             </p>
-            {canEdit && !hasActiveFilters && (
+            {showFavoritesOnly && (
+              <button
+                onClick={() => setShowFavoritesOnly(false)}
+                className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
+              >
+                Show all stations
+              </button>
+            )}
+            {canEdit && !hasActiveFilters && !showFavoritesOnly && (
               <button
                 onClick={openCreateModal}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
@@ -424,6 +521,7 @@ export default function StationPoolPage() {
             {filteredStations.map((station) => {
               const CategoryIcon = CATEGORIES.find(c => c.value === station.category)?.icon || CheckSquare;
               const stats = station.completion_stats;
+              const isFavorited = favorites.has(station.id);
 
               return (
                 <div
@@ -441,6 +539,9 @@ export default function StationPoolPage() {
                         <h3 className="font-semibold text-gray-900 dark:text-white">
                           {station.station_name}
                         </h3>
+                        {isFavorited && (
+                          <Star className="w-4 h-4 fill-yellow-400 text-yellow-400 shrink-0" />
+                        )}
                         <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">
                           {station.station_code}
                         </span>
@@ -486,7 +587,20 @@ export default function StationPoolPage() {
                     </div>
 
                     {/* Actions */}
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-1 shrink-0">
+                      {/* Favorite toggle */}
+                      <button
+                        onClick={() => toggleFavorite(station.id)}
+                        disabled={favoritesLoading}
+                        title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+                        className={`p-2 rounded-lg transition-colors ${
+                          isFavorited
+                            ? 'text-yellow-500 hover:text-yellow-600 hover:bg-yellow-50 dark:text-yellow-400 dark:hover:bg-yellow-900/30'
+                            : 'text-gray-400 hover:text-yellow-500 hover:bg-yellow-50 dark:text-gray-500 dark:hover:text-yellow-400 dark:hover:bg-yellow-900/30'
+                        }`}
+                      >
+                        <Star className={`w-5 h-5 ${isFavorited ? 'fill-yellow-400' : ''}`} />
+                      </button>
                       {canEdit && (
                         <button
                           onClick={() => openEditModal(station)}

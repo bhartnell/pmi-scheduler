@@ -1,10 +1,13 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Bell, Check, CheckCheck, ExternalLink, ArrowLeft, Trash2, Settings, Keyboard } from 'lucide-react';
+import {
+  Bell, Check, CheckCheck, ExternalLink, ArrowLeft, Trash2, Settings,
+  Keyboard, Archive, ArchiveRestore, Search, X,
+} from 'lucide-react';
 import LabHeader from '@/components/LabHeader';
 import { useToast } from '@/components/Toast';
 import { useKeyboardShortcuts, KeyboardShortcut } from '@/hooks/useKeyboardShortcuts';
@@ -15,8 +18,10 @@ interface Notification {
   title: string;
   message: string;
   type: string;
+  category: string;
   link_url: string | null;
   is_read: boolean;
+  is_archived: boolean;
   created_at: string;
 }
 
@@ -37,6 +42,24 @@ const TYPE_LABELS: Record<string, string> = {
   task_assigned: 'Task Assigned',
   general: 'General',
 };
+
+const CATEGORY_LABELS: Record<string, string> = {
+  tasks: 'Tasks',
+  labs: 'Labs',
+  scheduling: 'Shifts',
+  feedback: 'Feedback',
+  clinical: 'Clinical',
+  system: 'System',
+};
+
+const CATEGORY_PILLS = [
+  { value: '', label: 'All' },
+  { value: 'tasks', label: 'Tasks' },
+  { value: 'labs', label: 'Labs' },
+  { value: 'scheduling', label: 'Shifts' },
+  { value: 'clinical', label: 'Clinical' },
+  { value: 'system', label: 'System' },
+];
 
 function formatDate(dateString: string): string {
   const date = new Date(dateString);
@@ -68,7 +91,19 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const toast = useToast();
-  const [filter, setFilter] = useState<'all' | 'unread'>('all');
+
+  // Tab: active vs archived
+  const [activeTab, setActiveTab] = useState<'active' | 'archived'>('active');
+
+  // Filters
+  const [readFilter, setReadFilter] = useState<'all' | 'unread'>('all');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [searchText, setSearchText] = useState('');
+
+  // Bulk selection
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Settings
   const [showSettings, setShowSettings] = useState(false);
   const [settings, setSettings] = useState<NotificationSettings>({
     email_lab_assignments: true,
@@ -79,6 +114,7 @@ export default function NotificationsPage() {
   const [savingSettings, setSavingSettings] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [clearing, setClearing] = useState(false);
+  const [archiving, setArchiving] = useState(false);
 
   // Keyboard shortcuts state
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
@@ -96,7 +132,8 @@ export default function NotificationsPage() {
       fetchNotifications();
       fetchSettings();
     }
-  }, [session?.user?.email]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user?.email, activeTab]);
 
   const fetchSettings = async () => {
     try {
@@ -136,8 +173,13 @@ export default function NotificationsPage() {
   };
 
   const fetchNotifications = async () => {
+    setLoading(true);
     try {
-      const res = await fetch('/api/notifications?limit=100');
+      const params = new URLSearchParams({ limit: '100', applyPrefs: 'false' });
+      if (activeTab === 'archived') {
+        params.set('archived', 'true');
+      }
+      const res = await fetch(`/api/notifications?${params.toString()}`);
       if (res.ok) {
         const data = await res.json();
         setNotifications(data.notifications || []);
@@ -187,6 +229,7 @@ export default function NotificationsPage() {
       if (data.success) {
         setNotifications([]);
         setShowClearConfirm(false);
+        setSelectedIds(new Set());
         toast.success(`${data.deleted} notification(s) cleared`);
       } else {
         toast.error('Failed to clear notifications');
@@ -199,11 +242,75 @@ export default function NotificationsPage() {
     }
   };
 
-  const filteredNotifications = filter === 'unread'
-    ? notifications.filter(n => !n.is_read)
-    : notifications;
+  const archiveNotifications = useCallback(async (ids: string[], unarchive = false) => {
+    if (ids.length === 0) return;
+    setArchiving(true);
+    try {
+      const res = await fetch('/api/notifications/archive', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          notification_ids: ids,
+          action: unarchive ? 'unarchive' : 'archive',
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        // Remove the archived/unarchived notifications from the current list
+        setNotifications(prev => prev.filter(n => !ids.includes(n.id)));
+        setSelectedIds(new Set());
+        toast.success(
+          unarchive
+            ? `${data.updated} notification(s) restored`
+            : `${data.updated} notification(s) archived`
+        );
+      } else {
+        toast.error(unarchive ? 'Failed to restore notifications' : 'Failed to archive notifications');
+      }
+    } catch (error) {
+      console.error('Failed to archive notifications:', error);
+      toast.error('An error occurred');
+    } finally {
+      setArchiving(false);
+    }
+  }, [toast]);
+
+  // Client-side filtering (on top of server fetch)
+  const filteredNotifications = notifications.filter(n => {
+    if (readFilter === 'unread' && n.is_read) return false;
+    if (categoryFilter && n.category !== categoryFilter) return false;
+    if (searchText) {
+      const q = searchText.toLowerCase();
+      if (!n.title.toLowerCase().includes(q) && !n.message.toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
 
   const unreadCount = notifications.filter(n => !n.is_read).length;
+
+  // Bulk selection helpers
+  const allSelected = filteredNotifications.length > 0 && filteredNotifications.every(n => selectedIds.has(n.id));
+  const someSelected = selectedIds.size > 0;
+
+  const toggleSelectAll = () => {
+    if (allSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredNotifications.map(n => n.id)));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
 
   // Keep ref in sync so shortcut handlers always see latest index
   useEffect(() => {
@@ -213,7 +320,8 @@ export default function NotificationsPage() {
   // Reset selection when list changes
   useEffect(() => {
     setSelectedIndex(-1);
-  }, [filter]);
+    setSelectedIds(new Set());
+  }, [activeTab, readFilter, categoryFilter]);
 
   // Keyboard shortcuts
   const shortcuts: KeyboardShortcut[] = [
@@ -310,7 +418,7 @@ export default function NotificationsPage() {
 
       <main className="max-w-3xl mx-auto px-4 py-6">
         {/* Header Actions */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-4">
             <Link
               href="/lab-management"
@@ -320,7 +428,7 @@ export default function NotificationsPage() {
               Back to Dashboard
             </Link>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             {/* Keyboard shortcuts */}
             <button
               onClick={() => setShowShortcutsHelp(true)}
@@ -331,32 +439,8 @@ export default function NotificationsPage() {
               <Keyboard className="w-4 h-4" />
             </button>
 
-            {/* Filter */}
-            <div className="flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden">
-              <button
-                onClick={() => setFilter('all')}
-                className={`px-3 py-1.5 text-sm ${
-                  filter === 'all'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-                }`}
-              >
-                All
-              </button>
-              <button
-                onClick={() => setFilter('unread')}
-                className={`px-3 py-1.5 text-sm ${
-                  filter === 'unread'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-                }`}
-              >
-                Unread ({unreadCount})
-              </button>
-            </div>
-
-            {/* Mark All as Read */}
-            {unreadCount > 0 && (
+            {/* Mark All as Read (active tab only) */}
+            {activeTab === 'active' && unreadCount > 0 && (
               <button
                 onClick={markAllAsRead}
                 className="flex items-center gap-2 px-3 py-1.5 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
@@ -366,8 +450,8 @@ export default function NotificationsPage() {
               </button>
             )}
 
-            {/* Clear All */}
-            {notifications.length > 0 && (
+            {/* Clear All (active tab only) */}
+            {activeTab === 'active' && notifications.length > 0 && (
               <button
                 onClick={() => setShowClearConfirm(true)}
                 className="flex items-center gap-2 px-3 py-1.5 text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
@@ -394,7 +478,7 @@ export default function NotificationsPage() {
 
         {/* Notification Settings Panel */}
         {showSettings && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6 overflow-hidden">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-4 overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
               <Settings className="w-5 h-5 text-gray-500 dark:text-gray-400" />
               <h2 className="font-semibold text-gray-900 dark:text-white">Notification Preferences</h2>
@@ -412,7 +496,7 @@ export default function NotificationsPage() {
                 <label className="flex items-center justify-between p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer">
                   <div>
                     <span className="font-medium text-gray-900 dark:text-white">Lab Assignment Emails</span>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Get emailed when you're assigned to a lab station</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Get emailed when you&apos;re assigned to a lab station</p>
                   </div>
                   <div className="relative">
                     <input
@@ -478,8 +562,8 @@ export default function NotificationsPage() {
                       disabled
                       className="sr-only"
                     />
-                    <div className={`w-11 h-6 rounded-full transition-colors bg-gray-300 dark:bg-gray-600`}>
-                      <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow`} />
+                    <div className="w-11 h-6 rounded-full transition-colors bg-gray-300 dark:bg-gray-600">
+                      <div className="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow" />
                     </div>
                   </div>
                 </label>
@@ -488,84 +572,276 @@ export default function NotificationsPage() {
           </div>
         )}
 
+        {/* Active / Archived Tabs */}
+        <div className="flex gap-1 mb-4">
+          <button
+            onClick={() => setActiveTab('active')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeTab === 'active'
+                ? 'bg-blue-600 text-white'
+                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-300 dark:border-gray-600'
+            }`}
+          >
+            Active
+            {unreadCount > 0 && activeTab === 'active' && (
+              <span className="ml-1.5 px-1.5 py-0.5 text-xs rounded-full bg-blue-500 text-white">
+                {unreadCount}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('archived')}
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeTab === 'archived'
+                ? 'bg-blue-600 text-white'
+                : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-300 dark:border-gray-600'
+            }`}
+          >
+            <Archive className="w-3.5 h-3.5" />
+            Archived
+          </button>
+        </div>
+
+        {/* Search + Category Filters */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-4 p-3 space-y-3">
+          {/* Search bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search notifications..."
+              value={searchText}
+              onChange={e => setSearchText(e.target.value)}
+              className="w-full pl-9 pr-8 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            {searchText && (
+              <button
+                onClick={() => setSearchText('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Category pills + Read filter */}
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {CATEGORY_PILLS.map(pill => (
+                <button
+                  key={pill.value}
+                  onClick={() => setCategoryFilter(pill.value)}
+                  className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
+                    categoryFilter === pill.value
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  {pill.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Read/Unread toggle (only on active tab) */}
+            {activeTab === 'active' && (
+              <div className="flex rounded-lg border border-gray-200 dark:border-gray-600 overflow-hidden flex-shrink-0">
+                <button
+                  onClick={() => setReadFilter('all')}
+                  className={`px-3 py-1 text-xs ${
+                    readFilter === 'all'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  All
+                </button>
+                <button
+                  onClick={() => setReadFilter('unread')}
+                  className={`px-3 py-1 text-xs ${
+                    readFilter === 'unread'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  Unread ({unreadCount})
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Bulk Action Bar */}
+        {someSelected && (
+          <div className="flex items-center justify-between bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-lg px-4 py-2 mb-4">
+            <span className="text-sm text-blue-700 dark:text-blue-300 font-medium">
+              {selectedIds.size} selected
+            </span>
+            <div className="flex items-center gap-2">
+              {activeTab === 'active' ? (
+                <button
+                  onClick={() => archiveNotifications(Array.from(selectedIds))}
+                  disabled={archiving}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                >
+                  <Archive className="w-3.5 h-3.5" />
+                  Archive Selected
+                </button>
+              ) : (
+                <button
+                  onClick={() => archiveNotifications(Array.from(selectedIds), true)}
+                  disabled={archiving}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
+                >
+                  <ArchiveRestore className="w-3.5 h-3.5" />
+                  Restore Selected
+                </button>
+              )}
+              <button
+                onClick={() => setSelectedIds(new Set())}
+                className="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Notifications List */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
           {filteredNotifications.length === 0 ? (
             <div className="p-12 text-center">
-              <Bell className="w-12 h-12 mx-auto mb-4 text-gray-300 dark:text-gray-600" />
+              {activeTab === 'archived' ? (
+                <Archive className="w-12 h-12 mx-auto mb-4 text-gray-300 dark:text-gray-600" />
+              ) : (
+                <Bell className="w-12 h-12 mx-auto mb-4 text-gray-300 dark:text-gray-600" />
+              )}
               <p className="text-gray-500 dark:text-gray-400">
-                {filter === 'unread' ? 'No unread notifications' : 'No notifications yet'}
+                {searchText
+                  ? 'No notifications match your search'
+                  : activeTab === 'archived'
+                  ? 'No archived notifications'
+                  : readFilter === 'unread'
+                  ? 'No unread notifications'
+                  : 'No notifications yet'}
               </p>
             </div>
           ) : (
             <div className="divide-y divide-gray-200 dark:divide-gray-700">
+              {/* Select All Header */}
+              <div className="px-4 py-2 flex items-center gap-3 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  onChange={toggleSelectAll}
+                  className="w-4 h-4 rounded border-gray-300 dark:border-gray-500 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                  title="Select all"
+                />
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  {filteredNotifications.length} notification{filteredNotifications.length !== 1 ? 's' : ''}
+                  {someSelected ? ` (${selectedIds.size} selected)` : ''}
+                </span>
+              </div>
+
               {filteredNotifications.map((notification, index) => {
-                const isSelected = index === selectedIndex;
+                const isKeyboardSelected = index === selectedIndex;
+                const isChecked = selectedIds.has(notification.id);
                 return (
-                <div
-                  key={notification.id}
-                  className={`p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors ${
-                    !notification.is_read ? 'bg-blue-50 dark:bg-blue-900/20' : ''
-                  } ${isSelected ? 'ring-2 ring-inset ring-blue-500 dark:ring-blue-400' : ''}`}
-                >
-                  <div className="flex items-start gap-4">
-                    {/* Read indicator */}
-                    <div className="flex-shrink-0 pt-1">
-                      {notification.is_read ? (
-                        <span className="block w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600" />
-                      ) : (
-                        <span className="block w-2 h-2 rounded-full bg-blue-500" />
-                      )}
-                    </div>
+                  <div
+                    key={notification.id}
+                    className={`p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group ${
+                      !notification.is_read && activeTab === 'active' ? 'bg-blue-50 dark:bg-blue-900/20' : ''
+                    } ${isKeyboardSelected ? 'ring-2 ring-inset ring-blue-500 dark:ring-blue-400' : ''}`}
+                  >
+                    <div className="flex items-start gap-3">
+                      {/* Checkbox */}
+                      <div className="flex-shrink-0 pt-1">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => toggleSelect(notification.id)}
+                          className="w-4 h-4 rounded border-gray-300 dark:border-gray-500 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                        />
+                      </div>
 
-                    {/* Icon */}
-                    <div className="flex-shrink-0 text-2xl">
-                      {TYPE_ICONS[notification.type] || TYPE_ICONS.general}
-                    </div>
+                      {/* Read indicator */}
+                      <div className="flex-shrink-0 pt-2.5">
+                        {notification.is_read || activeTab === 'archived' ? (
+                          <span className="block w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600" />
+                        ) : (
+                          <span className="block w-2 h-2 rounded-full bg-blue-500" />
+                        )}
+                      </div>
 
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <p className={`font-medium ${!notification.is_read ? 'text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}>
-                            {notification.title}
-                          </p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                            {notification.message}
-                          </p>
-                          <div className="flex items-center gap-3 mt-2 text-xs text-gray-500 dark:text-gray-400">
-                            <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">
-                              {TYPE_LABELS[notification.type] || 'General'}
-                            </span>
-                            <span>{formatDate(notification.created_at)}</span>
+                      {/* Icon */}
+                      <div className="flex-shrink-0 text-2xl">
+                        {TYPE_ICONS[notification.type] || TYPE_ICONS.general}
+                      </div>
+
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1 min-w-0">
+                            <p className={`font-medium ${!notification.is_read && activeTab === 'active' ? 'text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}>
+                              {notification.title}
+                            </p>
+                            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                              {notification.message}
+                            </p>
+                            <div className="flex items-center gap-3 mt-2 text-xs text-gray-500 dark:text-gray-400">
+                              <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">
+                                {notification.category
+                                  ? CATEGORY_LABELS[notification.category] || notification.category
+                                  : TYPE_LABELS[notification.type] || 'General'}
+                              </span>
+                              <span>{formatDate(notification.created_at)}</span>
+                            </div>
                           </div>
-                        </div>
 
-                        {/* Actions */}
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          {notification.link_url && (
-                            <Link
-                              href={notification.link_url}
-                              onClick={() => !notification.is_read && markAsRead(notification.id)}
-                              className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                            >
-                              <ExternalLink className="w-4 h-4" />
-                            </Link>
-                          )}
-                          {!notification.is_read && (
-                            <button
-                              onClick={() => markAsRead(notification.id)}
-                              className="p-2 text-gray-400 hover:text-green-600 dark:hover:text-green-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                              title="Mark as read"
-                            >
-                              <Check className="w-4 h-4" />
-                            </button>
-                          )}
+                          {/* Actions */}
+                          <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                            {notification.link_url && (
+                              <Link
+                                href={notification.link_url}
+                                onClick={() => !notification.is_read && markAsRead(notification.id)}
+                                className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                                title="Open link"
+                              >
+                                <ExternalLink className="w-4 h-4" />
+                              </Link>
+                            )}
+                            {!notification.is_read && activeTab === 'active' && (
+                              <button
+                                onClick={() => markAsRead(notification.id)}
+                                className="p-2 text-gray-400 hover:text-green-600 dark:hover:text-green-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                                title="Mark as read"
+                              >
+                                <Check className="w-4 h-4" />
+                              </button>
+                            )}
+                            {activeTab === 'active' ? (
+                              <button
+                                onClick={() => archiveNotifications([notification.id])}
+                                disabled={archiving}
+                                className="p-2 text-gray-400 hover:text-orange-600 dark:hover:text-orange-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded disabled:opacity-50"
+                                title="Archive notification"
+                              >
+                                <Archive className="w-4 h-4" />
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => archiveNotifications([notification.id], true)}
+                                disabled={archiving}
+                                className="p-2 text-gray-400 hover:text-green-600 dark:hover:text-green-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded disabled:opacity-50"
+                                title="Restore notification"
+                              >
+                                <ArchiveRestore className="w-4 h-4" />
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
                 );
               })}
             </div>

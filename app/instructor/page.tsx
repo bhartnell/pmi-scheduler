@@ -15,7 +15,8 @@ import {
   Plus,
   FileText,
   Users,
-  Home
+  Home,
+  History
 } from 'lucide-react';
 import { canAccessAdmin, canManageContent } from '@/lib/permissions';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -396,7 +397,7 @@ export default function InstructorDashboard() {
         {/* Quick Actions */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Quick Actions</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <Link
               href="/instructor/certifications/new"
               className="flex flex-col items-center gap-2 p-4 rounded-lg bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition"
@@ -417,6 +418,13 @@ export default function InstructorDashboard() {
             >
               <FileText className="w-8 h-8 text-amber-600 dark:text-amber-400" />
               <span className="text-sm font-medium text-gray-900 dark:text-white">Teaching Log</span>
+            </Link>
+            <Link
+              href="/instructor/history"
+              className="flex flex-col items-center gap-2 p-4 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition"
+            >
+              <History className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
+              <span className="text-sm font-medium text-gray-900 dark:text-white">Teaching History</span>
             </Link>
             <Link
               href="/lab-management/scenarios"

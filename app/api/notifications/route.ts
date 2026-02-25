@@ -28,6 +28,8 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get('offset') || '0');
     const categoryFilter = searchParams.get('category'); // Optional category filter
     const applyPrefs = searchParams.get('applyPrefs') !== 'false'; // Default true
+    const archivedOnly = searchParams.get('archived') === 'true'; // Fetch archived notifications
+    const searchText = searchParams.get('search') || ''; // Text search on title/message
 
     // Get user role and preferences
     const { data: user } = await supabase
@@ -58,20 +60,32 @@ export async function GET(request: NextRequest) {
     // Build query
     let query = supabase
       .from('user_notifications')
-      .select('id, type, title, message, link_url, is_read, created_at, reference_type, reference_id, category', { count: 'exact' })
+      .select('id, type, title, message, link_url, is_read, is_archived, created_at, reference_type, reference_id, category', { count: 'exact' })
       .eq('user_email', session.user.email)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
+
+    // Filter by archived status - default excludes archived
+    if (archivedOnly) {
+      query = query.eq('is_archived', true);
+    } else {
+      query = query.eq('is_archived', false);
+    }
 
     if (unreadOnly) {
       query = query.eq('is_read', false);
     }
 
+    // Apply text search if provided
+    if (searchText) {
+      query = query.or(`title.ilike.%${searchText}%,message.ilike.%${searchText}%`);
+    }
+
     // Apply category filter if specified
     if (categoryFilter) {
       query = query.eq('category', categoryFilter);
-    } else if (applyPrefs && enabledCategories.length > 0 && enabledCategories.length < 6) {
-      // Only filter if user has disabled some categories
+    } else if (!archivedOnly && applyPrefs && enabledCategories.length > 0 && enabledCategories.length < 6) {
+      // Only filter if user has disabled some categories (not for archived view)
       query = query.in('category', enabledCategories);
     }
 
@@ -79,12 +93,13 @@ export async function GET(request: NextRequest) {
 
     if (error) throw error;
 
-    // Get unread count (also respecting category filters)
+    // Get unread count (excludes archived, respects category filters)
     let countQuery = supabase
       .from('user_notifications')
       .select('*', { count: 'exact', head: true })
       .eq('user_email', session.user.email)
-      .eq('is_read', false);
+      .eq('is_read', false)
+      .eq('is_archived', false);
 
     if (applyPrefs && enabledCategories.length > 0 && enabledCategories.length < 6) {
       countQuery = countQuery.in('category', enabledCategories);

@@ -26,7 +26,8 @@ import {
   Search,
   Users,
   Loader2,
-  RotateCcw
+  RotateCcw,
+  Star
 } from 'lucide-react';
 
 interface Station {
@@ -105,6 +106,9 @@ function StationLogContent() {
   const [search, setSearch] = useState('');
   const [recentlyLogged, setRecentlyLogged] = useState<Record<string, string>>({}); // studentId -> result
 
+  // Favorites
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
+
   // Initialize from URL params
   useEffect(() => {
     const stationId = searchParams.get('station');
@@ -124,6 +128,7 @@ function StationLogContent() {
       fetchUser();
       fetchStations();
       fetchCohorts();
+      fetchFavorites();
     }
   }, [session]);
 
@@ -180,6 +185,18 @@ function StationLogContent() {
       }
     } catch (error) {
       console.error('Error fetching cohorts:', error);
+    }
+  };
+
+  const fetchFavorites = async () => {
+    try {
+      const res = await fetch('/api/stations/pool/favorites');
+      const data = await res.json();
+      if (data.success) {
+        setFavorites(new Set(data.favorites || []));
+      }
+    } catch (error) {
+      console.error('Error fetching favorites:', error);
     }
   };
 
@@ -286,6 +303,13 @@ function StationLogContent() {
     router.push(`/lab-management/stations/log?${newParams}`);
   };
 
+  // Sort stations: favorites first, then by original order
+  const sortedStations = [...stations].sort((a, b) => {
+    const aFav = favorites.has(a.id) ? 0 : 1;
+    const bFav = favorites.has(b.id) ? 0 : 1;
+    return aFav - bFav;
+  });
+
   // Filter students by search
   const filteredStudents = students.filter(s =>
     search === '' ||
@@ -386,30 +410,51 @@ function StationLogContent() {
                 </Link>
               </div>
             ) : (
-              stations.map(station => (
-                <button
-                  key={station.id}
-                  onClick={() => selectStation(station)}
-                  className="w-full bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow text-left dark:bg-gray-800 dark:hover:bg-gray-750"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-100 rounded-lg dark:bg-blue-900/30">
-                      <CheckSquare className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-gray-900 dark:text-white truncate">
-                        {station.station_name}
-                      </h3>
-                      {station.completion_stats && (
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          {station.completion_stats.pass} passed • {station.completion_stats.total} logged
-                        </p>
-                      )}
-                    </div>
-                    <ChevronRight className="w-5 h-5 text-gray-400" />
+              <>
+                {favorites.size > 0 && sortedStations.some(s => favorites.has(s.id)) && (
+                  <div className="flex items-center gap-1.5 text-xs font-medium text-yellow-600 dark:text-yellow-400 px-1 mb-1">
+                    <Star className="w-3.5 h-3.5 fill-yellow-400" />
+                    Favorites first
                   </div>
-                </button>
-              ))
+                )}
+                {sortedStations.map((station, idx) => {
+                  const isFavorited = favorites.has(station.id);
+                  const prevFavorited = idx > 0 && favorites.has(sortedStations[idx - 1].id);
+                  const showDivider = !isFavorited && idx > 0 && prevFavorited;
+                  return (
+                    <div key={station.id}>
+                      {showDivider && (
+                        <div className="border-t dark:border-gray-700 my-2" />
+                      )}
+                      <button
+                        onClick={() => selectStation(station)}
+                        className="w-full bg-white rounded-lg shadow p-4 hover:shadow-md transition-shadow text-left dark:bg-gray-800"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-lg ${isFavorited ? 'bg-yellow-50 dark:bg-yellow-900/20' : 'bg-blue-100 dark:bg-blue-900/30'}`}>
+                            {isFavorited ? (
+                              <Star className="w-5 h-5 text-yellow-500 fill-yellow-400" />
+                            ) : (
+                              <CheckSquare className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-medium text-gray-900 dark:text-white truncate">
+                              {station.station_name}
+                            </h3>
+                            {station.completion_stats && (
+                              <p className="text-sm text-gray-500 dark:text-gray-400">
+                                {station.completion_stats.pass} passed &bull; {station.completion_stats.total} logged
+                              </p>
+                            )}
+                          </div>
+                          <ChevronRight className="w-5 h-5 text-gray-400" />
+                        </div>
+                      </button>
+                    </div>
+                  );
+                })}
+              </>
             )}
           </div>
         ) : (

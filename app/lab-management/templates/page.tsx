@@ -38,6 +38,8 @@ interface TemplateData {
   num_rotations?: number;
 }
 
+type TemplateCategory = 'skills_lab' | 'scenario_lab' | 'assessment' | 'mixed' | 'other';
+
 interface LabDayTemplate {
   id: string;
   name: string;
@@ -47,10 +49,28 @@ interface LabDayTemplate {
   created_by: string;
   created_at: string;
   updated_at: string;
+  category: TemplateCategory;
 }
+
+const CATEGORY_OPTIONS: { value: TemplateCategory; label: string }[] = [
+  { value: 'skills_lab', label: 'Skills Lab' },
+  { value: 'scenario_lab', label: 'Scenario Lab' },
+  { value: 'assessment', label: 'Assessment' },
+  { value: 'mixed', label: 'Mixed' },
+  { value: 'other', label: 'Other' },
+];
+
+const CATEGORY_COLORS: Record<TemplateCategory, string> = {
+  skills_lab: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300',
+  scenario_lab: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300',
+  assessment: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300',
+  mixed: 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300',
+  other: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400',
+};
 
 type FilterType = 'all' | 'mine' | 'shared';
 type SortType = 'updated_at' | 'created_at' | 'name';
+type CategoryFilter = 'all' | TemplateCategory;
 
 export default function LabDayTemplatesPage() {
   const { data: session, status } = useSession();
@@ -59,6 +79,7 @@ export default function LabDayTemplatesPage() {
   const [templates, setTemplates] = useState<LabDayTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterType>('all');
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
   const [sort, setSort] = useState<SortType>('updated_at');
   const [search, setSearch] = useState('');
   const [toast, setToast] = useState('');
@@ -73,6 +94,7 @@ export default function LabDayTemplatesPage() {
   const [editName, setEditName] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [editShared, setEditShared] = useState(false);
+  const [editCategory, setEditCategory] = useState<TemplateCategory>('other');
   const [editSaving, setEditSaving] = useState(false);
 
   useEffect(() => {
@@ -133,6 +155,7 @@ export default function LabDayTemplatesPage() {
     setEditName(template.name);
     setEditDescription(template.description || '');
     setEditShared(template.is_shared);
+    setEditCategory(template.category || 'other');
   };
 
   const handleEditSave = async () => {
@@ -146,6 +169,7 @@ export default function LabDayTemplatesPage() {
           name: editName.trim(),
           description: editDescription.trim() || null,
           is_shared: editShared,
+          category: editCategory,
         }),
       });
       const data = await res.json();
@@ -177,6 +201,10 @@ export default function LabDayTemplatesPage() {
       if (filter === 'mine') return t.created_by === session?.user?.email;
       if (filter === 'shared') return t.is_shared;
       return true;
+    })
+    .filter(t => {
+      if (categoryFilter === 'all') return true;
+      return (t.category || 'other') === categoryFilter;
     })
     .filter(t => {
       if (!search) return true;
@@ -259,7 +287,7 @@ export default function LabDayTemplatesPage() {
         </div>
 
         {/* Filters and search */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 space-y-3">
           <div className="flex flex-col sm:flex-row gap-3">
             {/* Search */}
             <div className="relative flex-1">
@@ -313,6 +341,33 @@ export default function LabDayTemplatesPage() {
               <option value="name">Sort: Name</option>
             </select>
           </div>
+
+          {/* Category filter pills */}
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setCategoryFilter('all')}
+              className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                categoryFilter === 'all'
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
+            >
+              All Categories
+            </button>
+            {CATEGORY_OPTIONS.map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => setCategoryFilter(opt.value)}
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                  categoryFilter === opt.value
+                    ? 'bg-indigo-600 text-white'
+                    : `${CATEGORY_COLORS[opt.value]} hover:opacity-80`
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Templates grid */}
@@ -338,7 +393,7 @@ export default function LabDayTemplatesPage() {
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No templates match</h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400">Try changing your filter or search term.</p>
                 <button
-                  onClick={() => { setFilter('all'); setSearch(''); }}
+                  onClick={() => { setFilter('all'); setCategoryFilter('all'); setSearch(''); }}
                   className="mt-3 text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
                 >
                   Clear filters
@@ -363,6 +418,10 @@ export default function LabDayTemplatesPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
                           <h3 className="font-semibold text-gray-900 dark:text-white truncate">{template.name}</h3>
+                          {/* Category badge */}
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${CATEGORY_COLORS[template.category || 'other']}`}>
+                            {CATEGORY_OPTIONS.find(o => o.value === (template.category || 'other'))?.label ?? 'Other'}
+                          </span>
                           {template.is_shared ? (
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-xs flex-shrink-0">
                               <Share2 className="w-3 h-3" />
@@ -550,6 +609,20 @@ export default function LabDayTemplatesPage() {
                   maxLength={500}
                   className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Category
+                </label>
+                <select
+                  value={editCategory}
+                  onChange={(e) => setEditCategory(e.target.value as TemplateCategory)}
+                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                >
+                  {CATEGORY_OPTIONS.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
               </div>
               <label className="flex items-center gap-3 cursor-pointer">
                 <input

@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
+const VALID_CATEGORIES = ['skills_lab', 'scenario_lab', 'assessment', 'mixed', 'other'] as const;
+type TemplateCategory = typeof VALID_CATEGORIES[number];
+
 // GET /api/lab-management/templates/[id]
 export async function GET(
   request: NextRequest,
@@ -19,7 +22,7 @@ export async function GET(
 
     const { data, error } = await supabase
       .from('lab_day_templates')
-      .select('id, name, description, template_data, is_shared, created_by, created_at, updated_at')
+      .select('id, name, description, template_data, is_shared, created_by, created_at, updated_at, category')
       .eq('id', id)
       .or(`created_by.eq.${session.user.email},is_shared.eq.true`)
       .single();
@@ -95,6 +98,14 @@ export async function PUT(
 
     if (body.is_shared !== undefined) {
       updates.is_shared = Boolean(body.is_shared);
+    }
+
+    if (body.category !== undefined) {
+      if (VALID_CATEGORIES.includes(body.category as TemplateCategory)) {
+        updates.category = body.category;
+      } else {
+        updates.category = 'other';
+      }
     }
 
     const { data, error } = await supabase

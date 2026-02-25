@@ -3,8 +3,12 @@ import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { canCreateLabDays } from '@/lib/permissions';
 
+const VALID_CATEGORIES = ['skills_lab', 'scenario_lab', 'assessment', 'mixed', 'other'] as const;
+type TemplateCategory = typeof VALID_CATEGORIES[number];
+
 // GET /api/lab-management/templates
 // Returns all templates owned by the current user plus all shared templates
+// Optional ?category= filter
 export async function GET(request: NextRequest) {
   const session = await getServerSession();
   if (!session?.user?.email) {
@@ -13,12 +17,20 @@ export async function GET(request: NextRequest) {
 
   try {
     const supabase = getSupabaseAdmin();
+    const { searchParams } = new URL(request.url);
+    const categoryParam = searchParams.get('category');
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('lab_day_templates')
-      .select('id, name, description, template_data, is_shared, created_by, created_at, updated_at')
+      .select('id, name, description, template_data, is_shared, created_by, created_at, updated_at, category')
       .or(`created_by.eq.${session.user.email},is_shared.eq.true`)
       .order('updated_at', { ascending: false });
+
+    if (categoryParam && VALID_CATEGORIES.includes(categoryParam as TemplateCategory)) {
+      query = query.eq('category', categoryParam);
+    }
+
+    const { data, error } = await query;
 
     if (error) throw error;
 
@@ -52,7 +64,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, description, template_data, is_shared } = body;
+    const { name, description, template_data, is_shared, category } = body;
 
     if (!name || typeof name !== 'string' || !name.trim()) {
       return NextResponse.json({ error: 'Template name is required' }, { status: 400 });
@@ -62,6 +74,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Template data is required' }, { status: 400 });
     }
 
+    const resolvedCategory =
+      category && VALID_CATEGORIES.includes(category as TemplateCategory) ? category : 'other';
+
     const { data, error } = await supabase
       .from('lab_day_templates')
       .insert({
@@ -70,6 +85,7 @@ export async function POST(request: NextRequest) {
         template_data,
         is_shared: Boolean(is_shared),
         created_by: session.user.email,
+        category: resolvedCategory,
       })
       .select()
       .single();
