@@ -101,7 +101,6 @@ export default function SeatingChartBuilderPage() {
   const [showWarnings, setShowWarnings] = useState(false);
   const [generationStats, setGenerationStats] = useState<any>(null);
   const [isFlipped, setIsFlipped] = useState(false); // Flip orientation - false = instructor view (front at top), true = student view (front at bottom)
-  const [downloadingPDF, setDownloadingPDF] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -326,56 +325,8 @@ export default function SeatingChartBuilderPage() {
     window.print();
   };
 
-  const handleDownloadPDF = async () => {
-    if (downloadingPDF) return;
-
-    setDownloadingPDF(true);
-
-    try {
-      const html2pdf = (await import('html2pdf.js')).default;
-      const element = document.getElementById('seating-chart-printable');
-
-      if (!element) {
-        alert('Could not find printable content');
-        setDownloadingPDF(false);
-        return;
-      }
-
-      // Temporarily show print-only elements and hide screen-only elements
-      const printHiddenElements = element.querySelectorAll('.print\\:hidden');
-      const printBlockElements = element.querySelectorAll('.print\\:block');
-
-      printHiddenElements.forEach(el => (el as HTMLElement).style.display = 'none');
-      printBlockElements.forEach(el => (el as HTMLElement).style.display = 'block');
-
-      const cohortName = `${chart?.cohort.program.abbreviation}-G${chart?.cohort.cohort_number}`;
-      const date = new Date().toISOString().split('T')[0];
-
-      const options = {
-        margin: 0.5,
-        filename: `seating-chart-${cohortName}-${date}.pdf`,
-        image: { type: 'jpeg' as const, quality: 0.98 },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          allowTaint: true,
-          foreignObjectRendering: false,
-          logging: false
-        },
-        jsPDF: { unit: 'in' as const, format: 'letter', orientation: 'landscape' as const }
-      };
-
-      await html2pdf().set(options).from(element).save();
-
-      // Restore visibility after success
-      printHiddenElements.forEach(el => (el as HTMLElement).style.display = '');
-      printBlockElements.forEach(el => (el as HTMLElement).style.display = '');
-    } catch (error) {
-      console.error('PDF generation error:', error);
-      alert('Failed to generate PDF. Please try using the Print button instead.');
-    } finally {
-      setDownloadingPDF(false);
-    }
+  const handleDownloadPDF = () => {
+    window.print();
   };
 
   const handleGenerate = async () => {
@@ -574,20 +525,10 @@ export default function SeatingChartBuilderPage() {
               </button>
               <button
                 onClick={handleDownloadPDF}
-                disabled={downloadingPDF}
-                className="inline-flex items-center gap-1 px-3 py-2 text-sm border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center gap-1 px-3 py-2 text-sm border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-gray-300"
               >
-                {downloadingPDF ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <Download className="w-4 h-4" />
-                    PDF
-                  </>
-                )}
+                <Download className="w-4 h-4" />
+                PDF
               </button>
               <button
                 onClick={handleSave}

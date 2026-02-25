@@ -32,7 +32,6 @@ export async function GET(
     }
 
     const { id } = await params;
-    console.log('Fetching internship with ID:', id);
 
     const { data, error } = await supabase
       .from('student_internships')
@@ -87,7 +86,6 @@ export async function GET(
       }
       throw error;
     }
-    console.log('Fetched internship data:', data ? 'found' : 'not found');
 
     // Also fetch meetings for this internship
     const { data: meetings, error: meetingsError } = await supabase
@@ -97,7 +95,7 @@ export async function GET(
       .order('scheduled_date', { ascending: false });
 
     if (meetingsError) {
-      console.log('Error fetching meetings:', meetingsError.message);
+      console.error('Error fetching meetings:', meetingsError.message);
     }
 
     return NextResponse.json({

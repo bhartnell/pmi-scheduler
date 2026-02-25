@@ -417,10 +417,6 @@ export default function ClinicalHoursTrackerPage() {
       const categoryRow = jsonData[3] || [];
       const subHeaderRow = jsonData[4] || [];
 
-      // Debug: Log raw header rows
-      console.log('Raw category row (index 3):', categoryRow.slice(0, 30));
-      console.log('Raw sub-header row (index 4):', subHeaderRow.slice(0, 30));
-
       // PASS 1: Find all category start columns
       interface CategoryStart {
         name: string;
@@ -507,16 +503,6 @@ export default function ClinicalHoursTrackerPage() {
         });
       }
 
-      // Log detected structure for debugging
-      console.log('Detected Platinum categories:', detectedCategories.map((c, i) => ({
-        name: c.name,
-        mapped: c.mapping?.name || 'IGNORED',
-        startCol: categoryStarts[i]?.startCol,
-        endCol: categoryStarts[i]?.endCol,
-        hoursCol: c.hoursCol,
-        shiftsCol: c.shiftsCol,
-        pendingCol: c.pendingCol
-      })));
 
       // Data starts at row 6 (index 5)
       const dataRows = jsonData.slice(5);

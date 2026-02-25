@@ -97,7 +97,6 @@ export const authOptions: NextAuthOptions = {
             console.error('Error creating lab_user:', insertError);
             // Still allow sign in - we can try again later
           } else {
-            console.log(`Created new lab_user for ${user.email} with ${newRole} role`);
             // Only notify admins about new pending instructor users (not students)
             if (newUser && !isStudent) {
               notifyAdminsNewPendingUser({

@@ -330,7 +330,6 @@ export async function POST(request: NextRequest) {
     const notificationPromises = assignees
       .filter((assignee: { id: string }) => assignee.id !== currentUser.id)
       .map((assignee: { id: string; email: string }) => {
-        console.log('[TASK NOTIFY] Sending notification to:', assignee.email);
         return notifyTaskAssigned(assignee.email, {
           taskId: (task as TaskRecord).id,
           title,

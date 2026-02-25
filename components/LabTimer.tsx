@@ -206,14 +206,6 @@ export default function LabTimer({
       const res = await fetch(`/api/lab-management/timer/ready?labDayId=${labDayId}`);
       const data = await res.json();
 
-      console.log('Ready status API response:', {
-        success: data.success,
-        readyCount: data.readyStatuses?.length || 0,
-        stationCount: data.allStations?.length || 0,
-        readyStatuses: data.readyStatuses,
-        allStations: data.allStations
-      });
-
       if (data.success) {
         setReadyStatuses(data.readyStatuses || []);
         setAllStations(data.allStations || []);
@@ -356,7 +348,6 @@ export default function LabTimer({
 
     // Only sync if the duration has changed and timer is stopped
     if (timerState.duration_seconds !== totalSeconds && timerState.status === 'stopped') {
-      console.log('Syncing timer duration:', timerState.duration_seconds, '->', totalSeconds);
       sendAction('update', { duration_seconds: totalSeconds });
     }
   }, [timerState, totalSeconds, isController, sendAction]);

@@ -107,8 +107,6 @@ export async function POST(request: NextRequest) {
     const fullHtml = wrapInEmailTemplate(bodyHtml);
 
     if (!process.env.RESEND_API_KEY) {
-      // Dev mode – just pretend
-      console.log('[email-templates/test] Would send:', { to, subject });
       return NextResponse.json({ success: true, message: 'Test email simulated (no API key)' });
     }
 

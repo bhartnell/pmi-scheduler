@@ -404,18 +404,18 @@ export default function CertList({ initialCerts, instructorId }: Props) {
               </label>
               {existingImageUrl && !cardImage && (
                 <div className="mb-2 flex items-center gap-3">
-                  <span className="text-green-600 text-sm">Image attached</span>
+                  <span className="text-green-600 dark:text-green-400 text-sm">Image attached</span>
                   <button
                     type="button"
                     onClick={() => window.open(existingImageUrl, '_blank')}
-                    className="text-blue-600 hover:text-blue-500 text-sm"
+                    className="text-blue-600 dark:text-blue-400 hover:text-blue-500 text-sm"
                   >
                     View
                   </button>
                   <button
                     type="button"
                     onClick={handleRemoveImage}
-                    className="text-red-600 hover:text-red-500 text-sm"
+                    className="text-red-600 dark:text-red-400 hover:text-red-500 text-sm"
                   >
                     Remove
                   </button>
@@ -432,7 +432,7 @@ export default function CertList({ initialCerts, instructorId }: Props) {
                 <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">Selected: {cardImage.name}</p>
               )}
               {uploadProgress && (
-                <p className="mt-1 text-sm text-blue-600">{uploadProgress}</p>
+                <p className="mt-1 text-sm text-blue-600 dark:text-blue-400">{uploadProgress}</p>
               )}
             </div>
 
@@ -505,7 +505,7 @@ export default function CertList({ initialCerts, instructorId }: Props) {
                     {cert.card_image_url && (
                       <button
                         onClick={() => downloadImage(cert.card_image_url!, cert.cert_name)}
-                        className="inline-flex items-center gap-1 text-green-600 hover:text-green-500 text-sm font-medium"
+                        className="inline-flex items-center gap-1 text-green-600 dark:text-green-400 hover:text-green-500 text-sm font-medium"
                         title="Download card image"
                       >
                         <Download className="w-4 h-4" />
@@ -514,21 +514,21 @@ export default function CertList({ initialCerts, instructorId }: Props) {
                     )}
                     <button
                       onClick={() => setCETrackerCert(cert)}
-                      className="text-purple-600 hover:text-purple-500 text-sm font-medium"
+                      className="text-purple-600 dark:text-purple-400 hover:text-purple-500 text-sm font-medium"
                       title="Track CE hours"
                     >
                       CE Hours
                     </button>
                     <button
                       onClick={() => openEditForm(cert)}
-                      className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-500 text-sm font-medium"
+                      className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:text-blue-500 text-sm font-medium"
                     >
                       <Edit2 className="w-4 h-4" />
                       Edit
                     </button>
                     <button
                       onClick={() => handleDelete(cert.id)}
-                      className="inline-flex items-center gap-1 text-red-600 hover:text-red-500 text-sm font-medium"
+                      className="inline-flex items-center gap-1 text-red-600 dark:text-red-400 hover:text-red-500 text-sm font-medium"
                     >
                       <Trash2 className="w-4 h-4" />
                       Delete

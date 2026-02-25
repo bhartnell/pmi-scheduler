@@ -286,7 +286,6 @@ export async function sendEmail(emailData: EmailData): Promise<{ success: boolea
   const resend = getResend();
 
   if (!resend) {
-    console.log('Email would be sent:', emailData);
     return { success: true, id: 'mock-' + Date.now() };
   }
 

@@ -225,7 +225,6 @@ async function processUserDigest(
   );
 
   if (enabledCategories.length === 0) {
-    console.log(`[DIGEST] ${user_email}: no enabled categories, skipping`);
     return 'skipped';
   }
 
@@ -246,7 +245,6 @@ async function processUserDigest(
   }
 
   if (!notifications || notifications.length === 0) {
-    console.log(`[DIGEST] ${user_email}: no unread notifications in last 24h, skipping`);
     return 'skipped';
   }
 
@@ -259,7 +257,6 @@ async function processUserDigest(
 
   // After category filtering, there may be nothing left
   if (!digestContent) {
-    console.log(`[DIGEST] ${user_email}: all notifications filtered by category prefs, skipping`);
     return 'skipped';
   }
 
@@ -274,9 +271,7 @@ async function processUserDigest(
     process.env.EMAIL_FROM || 'PMI Paramedic Tools <notifications@pmiparamedic.tools>';
   const subject = `[PMI] Daily Digest - ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
 
-  if (!resend) {
-    console.log(`[DIGEST] RESEND_API_KEY not set — would send to ${user_email}`);
-  } else {
+  if (resend) {
     const { error: sendError } = await resend.emails.send({
       from: FROM_EMAIL,
       to: user_email,
@@ -312,9 +307,6 @@ async function processUserDigest(
     sent_at: now,
   });
 
-  console.log(
-    `[DIGEST] Sent digest to ${user_email} — ${notifications.length} notifications across ${enabledCategories.length} categories`
-  );
   return 'sent';
 }
 

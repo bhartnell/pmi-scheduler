@@ -369,11 +369,8 @@ async function processExport(
   exportConfig: ScheduledExport
 ): Promise<'sent' | 'skipped'> {
   if (!exportConfig.recipients || exportConfig.recipients.length === 0) {
-    console.log(`[SCHEDULED-EXPORTS] ${exportConfig.name}: no recipients, skipping`);
     return 'skipped';
   }
-
-  console.log(`[SCHEDULED-EXPORTS] Processing export: ${exportConfig.name} (${exportConfig.report_type})`);
 
   const generatedAt = new Date().toISOString();
   const reportData = await generateReport(exportConfig.report_type, supabase);
@@ -394,11 +391,7 @@ async function processExport(
   const { Resend } = await import('resend');
   const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
-  if (!resend) {
-    console.log(
-      `[SCHEDULED-EXPORTS] RESEND_API_KEY not set — would send "${subject}" to ${exportConfig.recipients.join(', ')}`
-    );
-  } else {
+  if (resend) {
     const { error: sendError } = await resend.emails.send({
       from: FROM_EMAIL,
       to: exportConfig.recipients,
@@ -440,7 +433,6 @@ async function processExport(
     // email_log table may not exist – ignore
   }
 
-  console.log(`[SCHEDULED-EXPORTS] Sent "${exportConfig.name}" to ${exportConfig.recipients.join(', ')}`);
   return 'sent';
 }
 

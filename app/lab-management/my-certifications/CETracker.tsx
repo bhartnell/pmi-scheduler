@@ -470,7 +470,7 @@ export default function CETracker({
                           </div>
                           <button
                             onClick={() => handleDeleteRecord(record.id)}
-                            className="text-red-500 hover:text-red-600 ml-2"
+                            className="text-red-500 hover:text-red-600 dark:hover:text-red-400 ml-2"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>

@@ -179,6 +179,34 @@ function NotificationPreferencesPanel() {
     setLoading(false);
   };
 
+  // ---- Notification sound toggle ----
+  const handleSoundToggle = async () => {
+    const newValue = !notificationSound;
+    setNotificationSound(newValue);
+    setSavingSound(true);
+
+    try {
+      // Fetch current notification_settings first so we don't overwrite other keys
+      const existingRes = await fetch('/api/user/preferences');
+      const existingData = existingRes.ok ? await existingRes.json() : {};
+      const currentSettings = existingData.preferences?.notification_settings ?? {};
+
+      const res = await fetch('/api/user/preferences', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          notification_settings: { ...currentSettings, notification_sound: newValue },
+        }),
+      });
+      if (!res.ok) throw new Error('Failed to save');
+      toast.success('Sound preference saved');
+    } catch {
+      setNotificationSound(!newValue);
+      toast.error('Failed to save sound preference');
+    }
+    setSavingSound(false);
+  };
+
   // ---- In-app toggle ----
   const handleInAppToggle = async (category: CategoryKey) => {
     const newPrefs = { ...inAppPrefs, [category]: !inAppPrefs[category] };
@@ -246,34 +274,6 @@ function NotificationPreferencesPanel() {
       toast.error('Failed to save preferences');
     }
     setSavingFrequency(false);
-  };
-
-  // ---- Notification sound toggle ----
-  const handleSoundToggle = async () => {
-    const newValue = !notificationSound;
-    setNotificationSound(newValue);
-    setSavingSound(true);
-
-    try {
-      // Fetch current notification_settings first so we don't overwrite other keys
-      const existingRes = await fetch('/api/user/preferences');
-      const existingData = existingRes.ok ? await existingRes.json() : {};
-      const currentSettings = existingData.preferences?.notification_settings ?? {};
-
-      const res = await fetch('/api/user/preferences', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          notification_settings: { ...currentSettings, notification_sound: newValue },
-        }),
-      });
-      if (!res.ok) throw new Error('Failed to save');
-      toast.success('Sound preference saved');
-    } catch {
-      setNotificationSound(!newValue);
-      toast.error('Failed to save sound preference');
-    }
-    setSavingSound(false);
   };
 
   if (loading) {
