@@ -16,8 +16,28 @@ import {
   Check,
   Users,
   X,
-  HelpCircle
+  HelpCircle,
+  Layers,
+  CheckSquare,
+  Square,
+  UserPlus
 } from 'lucide-react';
+
+interface Station {
+  id: string;
+  station_number: number;
+  station_type: string;
+  custom_title: string | null;
+  instructor_name: string | null;
+  instructor_email: string | null;
+  room: string | null;
+  scenario?: {
+    id: string;
+    title: string;
+    category: string;
+    difficulty: string;
+  } | null;
+}
 
 interface LabDay {
   id: string;
@@ -40,6 +60,7 @@ interface LabDay {
       abbreviation: string;
     };
   };
+  stations?: Station[];
 }
 
 interface TimerToken {
@@ -97,6 +118,16 @@ export default function EditLabDayPage() {
   const [labLeads, setLabLeads] = useState<string[]>([]);
   const [roamers, setRoamers] = useState<string[]>([]);
   const [observers, setObservers] = useState<string[]>([]);
+
+  // Stations state
+  const [stations, setStations] = useState<Station[]>([]);
+
+  // Bulk assign state
+  const [bulkAssignMode, setBulkAssignMode] = useState(false);
+  const [selectedStationIds, setSelectedStationIds] = useState<Set<string>>(new Set());
+  const [bulkInstructor, setBulkInstructor] = useState('');
+  const [bulkAssigning, setBulkAssigning] = useState(false);
+  const [bulkAssignSuccess, setBulkAssignSuccess] = useState(false);
 
   // Coverage Request state
   const [needsCoverage, setNeedsCoverage] = useState(false);
@@ -191,6 +222,11 @@ export default function EditLabDayPage() {
         setCoverageNeeded(cn);
         setCoverageNeededInput(cn.toString());
         setCoverageNote(data.labDay.coverage_note || '');
+
+        // Populate stations
+        if (data.labDay.stations) {
+          setStations(data.labDay.stations);
+        }
 
         // Check if room has a fixed timer
         if (data.labDay.room && timerTokens.length > 0) {
@@ -388,6 +424,83 @@ export default function EditLabDayPage() {
       alert('Failed to delete lab day');
     }
     setDeleting(false);
+  };
+
+  const handleBulkAssign = async () => {
+    if (!bulkInstructor || selectedStationIds.size === 0) return;
+
+    const selectedUser = users.find(u => u.id === bulkInstructor);
+    if (!selectedUser) return;
+
+    setBulkAssigning(true);
+    setBulkAssignSuccess(false);
+
+    try {
+      for (const stationId of Array.from(selectedStationIds)) {
+        // Update lab_stations primary instructor fields
+        await fetch(`/api/lab-management/stations/${stationId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            instructor_name: selectedUser.name,
+            instructor_email: selectedUser.email,
+          }),
+        });
+
+        // Upsert into station_instructors for multi-instructor support
+        await fetch('/api/lab-management/station-instructors', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            stationId,
+            userId: selectedUser.id,
+            userEmail: selectedUser.email,
+            userName: selectedUser.name,
+            isPrimary: true,
+          }),
+        });
+      }
+
+      // Refresh stations list
+      const res = await fetch(`/api/lab-management/lab-days/${labDayId}`);
+      const data = await res.json();
+      if (data.success && data.labDay.stations) {
+        setStations(data.labDay.stations);
+      }
+
+      setBulkAssignSuccess(true);
+      setSelectedStationIds(new Set());
+      setBulkInstructor('');
+      setTimeout(() => {
+        setBulkAssignSuccess(false);
+        setBulkAssignMode(false);
+      }, 2000);
+    } catch (error) {
+      console.error('Error during bulk assign:', error);
+      alert('Failed to assign instructor to some stations.');
+    }
+
+    setBulkAssigning(false);
+  };
+
+  const toggleStationSelection = (stationId: string) => {
+    setSelectedStationIds(prev => {
+      const next = new Set(prev);
+      if (next.has(stationId)) {
+        next.delete(stationId);
+      } else {
+        next.add(stationId);
+      }
+      return next;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedStationIds.size === stations.length) {
+      setSelectedStationIds(new Set());
+    } else {
+      setSelectedStationIds(new Set(stations.map(s => s.id)));
+    }
   };
 
   if (status === 'loading' || loading) {
@@ -922,6 +1035,176 @@ export default function EditLabDayPage() {
             </div>
           </div>
         </div>
+
+        {/* Stations Section — Bulk Assign */}
+        {stations.length > 0 && (
+          <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            {/* Section header */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Layers className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                  Stations ({stations.length})
+                </h3>
+              </div>
+              {!bulkAssignMode ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBulkAssignMode(true);
+                    setSelectedStationIds(new Set());
+                    setBulkInstructor('');
+                    setBulkAssignSuccess(false);
+                  }}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  Bulk Assign
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBulkAssignMode(false);
+                    setSelectedStationIds(new Set());
+                    setBulkInstructor('');
+                    setBulkAssignSuccess(false);
+                  }}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                  Cancel
+                </button>
+              )}
+            </div>
+
+            {/* Bulk assign controls */}
+            {bulkAssignMode && (
+              <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-end">
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-blue-800 dark:text-blue-300 mb-1">
+                      Assign instructor to selected stations
+                    </label>
+                    <select
+                      value={bulkInstructor}
+                      onChange={(e) => setBulkInstructor(e.target.value)}
+                      className="w-full px-3 py-2 border border-blue-300 dark:border-blue-700 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Select an instructor...</option>
+                      {users.map(u => (
+                        <option key={u.id} value={u.id}>{u.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex gap-2 flex-shrink-0">
+                    <button
+                      type="button"
+                      onClick={handleSelectAll}
+                      className="inline-flex items-center gap-1.5 px-3 py-2 text-sm border border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                    >
+                      {selectedStationIds.size === stations.length ? (
+                        <>
+                          <CheckSquare className="w-4 h-4" />
+                          Deselect All
+                        </>
+                      ) : (
+                        <>
+                          <Square className="w-4 h-4" />
+                          Select All
+                        </>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleBulkAssign}
+                      disabled={bulkAssigning || !bulkInstructor || selectedStationIds.size === 0}
+                      className="inline-flex items-center gap-2 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {bulkAssigning ? (
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                      ) : bulkAssignSuccess ? (
+                        <Check className="w-4 h-4" />
+                      ) : (
+                        <UserPlus className="w-4 h-4" />
+                      )}
+                      {bulkAssigning
+                        ? 'Assigning...'
+                        : bulkAssignSuccess
+                        ? 'Assigned!'
+                        : 'Assign to Selected'}
+                    </button>
+                  </div>
+                </div>
+                {selectedStationIds.size > 0 && (
+                  <p className="mt-2 text-sm text-blue-700 dark:text-blue-400">
+                    {selectedStationIds.size} station{selectedStationIds.size !== 1 ? 's' : ''} selected
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Station cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {stations.map((station) => {
+                const isSelected = selectedStationIds.has(station.id);
+                const stationLabel =
+                  station.custom_title ||
+                  station.scenario?.title ||
+                  `Station ${station.station_number}`;
+
+                return (
+                  <div
+                    key={station.id}
+                    onClick={() => bulkAssignMode && toggleStationSelection(station.id)}
+                    className={`relative p-4 rounded-lg border-2 transition-all ${
+                      bulkAssignMode
+                        ? isSelected
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 cursor-pointer'
+                          : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-750 cursor-pointer hover:border-blue-300 dark:hover:border-blue-600'
+                        : 'border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-750'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      {bulkAssignMode && (
+                        <div className="flex-shrink-0 mt-0.5">
+                          {isSelected ? (
+                            <CheckSquare className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                          ) : (
+                            <Square className="w-5 h-5 text-gray-400 dark:text-gray-500" />
+                          )}
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                            #{station.station_number}
+                          </span>
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 uppercase tracking-wide">
+                            {station.station_type}
+                          </span>
+                        </div>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                          {stationLabel}
+                        </p>
+                        {station.instructor_name ? (
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-1">
+                            <Users className="w-3 h-3" />
+                            {station.instructor_name}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                            No instructor assigned
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Conflict Confirmation Modal */}

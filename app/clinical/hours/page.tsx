@@ -39,6 +39,8 @@ interface CohortOption {
   id: string;
   cohort_number: number;
   program: { abbreviation: string };
+  start_date?: string | null;
+  expected_end_date?: string | null;
 }
 
 // Wide table structure - one row per student with all hours/shifts
@@ -87,6 +89,18 @@ const HOUR_REQUIREMENTS: Record<string, number> = {
 };
 
 const TOTAL_REQUIRED_HOURS = 290;
+
+// Department requirements used for progress visualization (required > 0 only)
+const DEPT_PROGRESS_ITEMS = [
+  { key: 'psych_hours', label: 'Psych', required: 12, color: 'bg-purple-500' },
+  { key: 'ed_hours', label: 'ED', required: 132, color: 'bg-blue-500' },
+  { key: 'icu_hours', label: 'ICU', required: 12, color: 'bg-cyan-500' },
+  { key: 'ob_hours', label: 'OB', required: 24, color: 'bg-pink-500' },
+  { key: 'or_hours', label: 'OR', required: 36, color: 'bg-indigo-500' },
+  { key: 'peds_ed_hours', label: 'Peds ED', required: 36, color: 'bg-orange-500' },
+  { key: 'peds_icu_hours', label: 'Peds ICU', required: 12, color: 'bg-teal-500' },
+  { key: 'ems_field_hours', label: 'Elective', required: 24, color: 'bg-green-500' },
+] as const;
 
 // Department columns configuration - maps to wide table columns
 // CCL in UI = cardiology in DB
@@ -293,6 +307,113 @@ export default function ClinicalHoursTrackerPage() {
       completedCount,
       averagePercentage: totalStudents > 0 ? Math.round(totalPercentage / totalStudents) : 0
     };
+  };
+
+  // Get per-department average hours across all students
+  const getDeptAvgHours = () => {
+    if (students.length === 0) return {} as Record<string, number>;
+    const totals: Record<string, number> = {};
+    DEPT_PROGRESS_ITEMS.forEach(dept => {
+      let sum = 0;
+      students.forEach(s => {
+        const h = getStudentHours(s.id);
+        sum += (h?.[dept.key as keyof StudentHours] as number) || 0;
+      });
+      totals[dept.key] = sum / students.length;
+    });
+    return totals;
+  };
+
+  // Calculate cohort-level pace info
+  const getPaceInfo = () => {
+    const cohortData = allCohorts.find(c => c.id === selectedCohort);
+    const startDate = cohortData?.start_date ? new Date(cohortData.start_date) : null;
+    const endDate = cohortData?.expected_end_date ? new Date(cohortData.expected_end_date) : null;
+    const now = new Date();
+
+    // Total hours earned across all students
+    let totalEarned = 0;
+    students.forEach(s => {
+      const h = getStudentHours(s.id);
+      totalEarned += h?.total_hours || 0;
+    });
+    const avgEarned = students.length > 0 ? totalEarned / students.length : 0;
+
+    // Weeks elapsed since start
+    let weeksElapsed = 0;
+    let totalWeeks = 0;
+    let proportionalHours = 0;
+
+    if (startDate) {
+      const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+      weeksElapsed = Math.max(0, (now.getTime() - startDate.getTime()) / msPerWeek);
+      if (endDate) {
+        totalWeeks = Math.max(1, (endDate.getTime() - startDate.getTime()) / msPerWeek);
+        const elapsed = Math.min(weeksElapsed, totalWeeks);
+        proportionalHours = (elapsed / totalWeeks) * TOTAL_REQUIRED_HOURS;
+      }
+    }
+
+    // Hours per week average pace
+    const hoursPerWeek = weeksElapsed > 0 ? avgEarned / weeksElapsed : 0;
+
+    // Projected completion date
+    let projectedDate: Date | null = null;
+    let weeksRemaining: number | null = null;
+    if (hoursPerWeek > 0 && avgEarned < TOTAL_REQUIRED_HOURS) {
+      const hoursLeft = TOTAL_REQUIRED_HOURS - avgEarned;
+      weeksRemaining = hoursLeft / hoursPerWeek;
+      projectedDate = new Date(now.getTime() + weeksRemaining * 7 * 24 * 60 * 60 * 1000);
+    } else if (avgEarned >= TOTAL_REQUIRED_HOURS) {
+      projectedDate = now;
+      weeksRemaining = 0;
+    }
+
+    // Weeks late vs expected end date
+    let weeksLate: number | null = null;
+    if (endDate && projectedDate && projectedDate > endDate) {
+      weeksLate = (projectedDate.getTime() - endDate.getTime()) / (7 * 24 * 60 * 60 * 1000);
+    }
+
+    return {
+      startDate,
+      endDate,
+      weeksElapsed,
+      totalWeeks,
+      proportionalHours,
+      avgEarned,
+      hoursPerWeek,
+      projectedDate,
+      weeksRemaining,
+      weeksLate,
+    };
+  };
+
+  // Determine pace status for an individual student
+  const getStudentPace = (studentId: string): 'ahead' | 'on-track' | 'behind' | 'unknown' => {
+    const cohortData = allCohorts.find(c => c.id === selectedCohort);
+    const startDate = cohortData?.start_date ? new Date(cohortData.start_date) : null;
+    const endDate = cohortData?.expected_end_date ? new Date(cohortData.expected_end_date) : null;
+
+    if (!startDate || !endDate) return 'unknown';
+
+    const now = new Date();
+    const msPerWeek = 7 * 24 * 60 * 60 * 1000;
+    const totalWeeks = Math.max(1, (endDate.getTime() - startDate.getTime()) / msPerWeek);
+    const weeksElapsed = Math.max(0, (now.getTime() - startDate.getTime()) / msPerWeek);
+    const elapsed = Math.min(weeksElapsed, totalWeeks);
+    const proportionalHours = (elapsed / totalWeeks) * TOTAL_REQUIRED_HOURS;
+
+    if (proportionalHours === 0) return 'unknown';
+
+    const studentHours = getStudentHours(studentId);
+    const earned = studentHours?.total_hours || 0;
+
+    if (earned >= TOTAL_REQUIRED_HOURS) return 'ahead';
+    const ratio = earned / proportionalHours;
+    if (ratio > 1.05) return 'ahead';
+    if (ratio < 0.80) return 'behind';
+    return 'on-track';
   };
 
   const startEditing = (studentId: string, col: typeof DEPT_COLUMNS[number]) => {
@@ -772,10 +893,18 @@ export default function ClinicalHoursTrackerPage() {
   const unmatchedCount = importPreview.filter(r => !r.matchedStudent).length;
   const matchedCount = importPreview.filter(r => r.matchedStudent).length;
   const cohortStats = getCohortStats();
+  const paceInfo = getPaceInfo();
+  const deptAvg = getDeptAvgHours();
 
   // Check if selected cohort is Paramedic program
   const selectedCohortData = cohorts.find(c => c.id === selectedCohort);
   const isParamedicCohort = isParamedicAbbrev(selectedCohortData?.program?.abbreviation);
+
+  // Format a projected date nicely
+  const formatProjectedDate = (date: Date | null): string => {
+    if (!date) return 'Unknown';
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50 to-cyan-100 dark:from-gray-900 dark:to-gray-800">
@@ -940,20 +1069,43 @@ export default function ClinicalHoursTrackerPage() {
         {/* Cohort Summary Stats */}
         {selectedCohort && isParamedicCohort && students.length > 0 && (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-6">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center gap-6 flex-wrap">
                 <div className="flex items-center gap-2">
                   <TrendingUp className="w-5 h-5 text-blue-500" />
                   <span className="text-sm text-gray-600 dark:text-gray-400">
                     <span className="font-semibold text-gray-900 dark:text-white">{cohortStats.completedCount}</span> of {cohortStats.totalStudents} students completed all hours
                   </span>
                 </div>
-                <div className="h-4 w-px bg-gray-300 dark:bg-gray-600" />
+                <div className="h-4 w-px bg-gray-300 dark:bg-gray-600 hidden sm:block" />
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-gray-600 dark:text-gray-400">
                     Cohort average: <span className="font-semibold text-gray-900 dark:text-white">{cohortStats.averagePercentage}%</span> complete
                   </span>
                 </div>
+                {/* Projected completion */}
+                {paceInfo.hoursPerWeek > 0 && (
+                  <>
+                    <div className="h-4 w-px bg-gray-300 dark:bg-gray-600 hidden sm:block" />
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-600 dark:text-gray-400">
+                        {paceInfo.weeksLate !== null && paceInfo.weeksLate > 0 ? (
+                          <span className="text-orange-600 dark:text-orange-400">
+                            At current pace: <span className="font-semibold">{formatProjectedDate(paceInfo.projectedDate)}</span>
+                            <span className="ml-1 text-xs">({Math.round(paceInfo.weeksLate)}w late)</span>
+                          </span>
+                        ) : paceInfo.avgEarned >= TOTAL_REQUIRED_HOURS ? (
+                          <span className="text-green-600 dark:text-green-400 font-semibold">Cohort has completed required hours</span>
+                        ) : (
+                          <span>
+                            On track to complete by{' '}
+                            <span className="font-semibold text-gray-900 dark:text-white">{formatProjectedDate(paceInfo.projectedDate)}</span>
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
               <div className="flex items-center gap-3 text-xs">
                 <span className="flex items-center gap-1">
@@ -965,6 +1117,77 @@ export default function ClinicalHoursTrackerPage() {
                 <span className="flex items-center gap-1">
                   <span className="w-3 h-3 rounded bg-red-500"></span> &lt;50%
                 </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Progress Visualization: Overall ring + department bars */}
+        {selectedCohort && isParamedicCohort && students.length > 0 && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-5">
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4 uppercase tracking-wide">Cohort Progress</h3>
+            <div className="flex flex-col lg:flex-row gap-6">
+              {/* Overall ring */}
+              <div className="flex flex-col items-center justify-center min-w-[140px]">
+                <div className="relative w-28 h-28">
+                  <svg viewBox="0 0 36 36" className="w-28 h-28 -rotate-90">
+                    <circle
+                      cx="18" cy="18" r="15.9"
+                      fill="none"
+                      stroke="currentColor"
+                      className="text-gray-200 dark:text-gray-700"
+                      strokeWidth="3"
+                    />
+                    <circle
+                      cx="18" cy="18" r="15.9"
+                      fill="none"
+                      stroke="currentColor"
+                      className={cohortStats.averagePercentage >= 100 ? 'text-green-500' : cohortStats.averagePercentage >= 50 ? 'text-yellow-500' : 'text-red-500'}
+                      strokeWidth="3"
+                      strokeDasharray={`${cohortStats.averagePercentage} ${100 - cohortStats.averagePercentage}`}
+                      strokeDashoffset="0"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className={`text-xl font-bold ${cohortStats.averagePercentage >= 100 ? 'text-green-600' : cohortStats.averagePercentage >= 50 ? 'text-yellow-600' : 'text-red-600'}`}>
+                      {cohortStats.averagePercentage}%
+                    </span>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
+                  Overall<br />
+                  <span className="font-medium text-gray-700 dark:text-gray-300">{Math.round(paceInfo.avgEarned)}/{TOTAL_REQUIRED_HOURS}h avg</span>
+                </p>
+              </div>
+
+              {/* Department progress bars */}
+              <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+                {DEPT_PROGRESS_ITEMS.map(dept => {
+                  const avg = deptAvg[dept.key] || 0;
+                  const pct = Math.min(Math.round((avg / dept.required) * 100), 100);
+                  return (
+                    <div key={dept.key} className="flex flex-col gap-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-medium text-gray-700 dark:text-gray-300">{dept.label}</span>
+                        <span className="text-gray-500 dark:text-gray-400">
+                          {avg.toFixed(1)}/{dept.required}h
+                        </span>
+                      </div>
+                      <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full ${dept.color} transition-all`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      <div className="text-xs text-right">
+                        <span className={`font-medium ${pct >= 100 ? 'text-green-600 dark:text-green-400' : pct >= 50 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'}`}>
+                          {pct}%
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -998,12 +1221,15 @@ export default function ClinicalHoursTrackerPage() {
                     <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-32">
                       Progress
                     </th>
+                    <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-24">
+                      Pace
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                   {filteredStudents.length === 0 ? (
                     <tr>
-                      <td colSpan={DEPT_COLUMNS.length + 3} className="px-4 py-12 text-center">
+                      <td colSpan={DEPT_COLUMNS.length + 4} className="px-4 py-12 text-center">
                         <div className="flex flex-col items-center gap-2 text-gray-500 dark:text-gray-400">
                           <Users className="w-12 h-12 text-gray-300 dark:text-gray-600" />
                           <p className="font-medium">No students found</p>
@@ -1016,6 +1242,7 @@ export default function ClinicalHoursTrackerPage() {
                       const studentHours = getStudentHours(student.id);
                       const totalHours = studentHours?.total_hours || 0;
                       const progressPercent = Math.min(Math.round((totalHours / TOTAL_REQUIRED_HOURS) * 100), 100);
+                      const pace = getStudentPace(student.id);
 
                       return (
                         <tr key={student.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
@@ -1056,6 +1283,23 @@ export default function ClinicalHoursTrackerPage() {
                                 {progressPercent}%
                               </span>
                             </div>
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            {pace === 'unknown' ? (
+                              <span className="text-xs text-gray-400 dark:text-gray-500">N/A</span>
+                            ) : pace === 'ahead' ? (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">
+                                Ahead
+                              </span>
+                            ) : pace === 'behind' ? (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300">
+                                Behind
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300">
+                                On Track
+                              </span>
+                            )}
                           </td>
                         </tr>
                       );
