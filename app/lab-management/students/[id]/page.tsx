@@ -27,9 +27,12 @@ import {
   Brain,
   Barcode as BarcodeIcon,
   TrendingUp,
+  Flag,
+  MessageSquare,
+  Plus,
 } from 'lucide-react';
 import Barcode from 'react-barcode';
-import { canManageStudentRoster, type Role } from '@/lib/permissions';
+import { canManageStudentRoster, hasMinRole, type Role } from '@/lib/permissions';
 
 interface Student {
   id: string;
@@ -114,6 +117,20 @@ interface LearningStyle {
   assessed_date: string | null;
 }
 
+interface StudentNote {
+  id: string;
+  student_id: string;
+  author_id: string;
+  author_email: string | null;
+  content: string;
+  category: 'academic' | 'behavioral' | 'medical' | 'other';
+  is_flagged: boolean;
+  flag_level: 'yellow' | 'red' | null;
+  created_at: string;
+  updated_at: string;
+  author: { id: string; name: string; email: string } | null;
+}
+
 const REQUIRED_DOCS = ['mmr', 'vzv', 'hepb', 'tdap', 'covid', 'tb', 'physical', 'insurance', 'bls', 'flu', 'hospital_orient', 'background', 'drug_test'];
 const MCE_MODULES = ['airway', 'respiratory', 'cardiovascular', 'trauma', 'medical', 'obstetrics', 'pediatrics', 'geriatrics', 'behavioral', 'toxicology', 'neurology', 'endocrine', 'immunology', 'infectious', 'operations'];
 
@@ -130,6 +147,13 @@ const SCORE_COLORS: Record<number, string> = {
   2: 'bg-yellow-500',
   3: 'bg-green-400',
   4: 'bg-green-600',
+};
+
+const CATEGORY_BADGES: Record<string, { bg: string; text: string; label: string }> = {
+  academic: { bg: 'bg-blue-100 dark:bg-blue-900/30', text: 'text-blue-700 dark:text-blue-300', label: 'Academic' },
+  behavioral: { bg: 'bg-orange-100 dark:bg-orange-900/30', text: 'text-orange-700 dark:text-orange-300', label: 'Behavioral' },
+  medical: { bg: 'bg-red-100 dark:bg-red-900/30', text: 'text-red-700 dark:text-red-300', label: 'Medical' },
+  other: { bg: 'bg-gray-100 dark:bg-gray-700', text: 'text-gray-700 dark:text-gray-300', label: 'Other' },
 };
 
 const STYLE_BADGES: Record<string, { bg: string; text: string; label: string }> = {
@@ -181,6 +205,23 @@ export default function StudentDetailPage() {
   const [lsSocialStyle, setLsSocialStyle] = useState('');
   const [lsNotes, setLsNotes] = useState('');
 
+  // Notes state
+  const [studentNotes, setStudentNotes] = useState<StudentNote[]>([]);
+  const [notesLoading, setNotesLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'overview' | 'notes'>('overview');
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  // New note form
+  const [newNoteContent, setNewNoteContent] = useState('');
+  const [newNoteCategory, setNewNoteCategory] = useState<'academic' | 'behavioral' | 'medical' | 'other'>('other');
+  const [newNoteFlagLevel, setNewNoteFlagLevel] = useState<'yellow' | 'red' | null>(null);
+  const [savingNote, setSavingNote] = useState(false);
+  // Edit note state
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [editNoteContent, setEditNoteContent] = useState('');
+  const [editNoteCategory, setEditNoteCategory] = useState<'academic' | 'behavioral' | 'medical' | 'other'>('other');
+  const [editNoteFlagLevel, setEditNoteFlagLevel] = useState<'yellow' | 'red' | null>(null);
+  const [savingEditNote, setSavingEditNote] = useState(false);
+
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/signin');
@@ -195,6 +236,7 @@ export default function StudentDetailPage() {
       fetchClinicalTasks();
       fetchCurrentUser();
       fetchLearningStyle();
+      fetchNotes();
     }
   }, [session, studentId]);
 
@@ -233,10 +275,25 @@ export default function StudentDetailPage() {
       const data = await res.json();
       if (data.success && data.user) {
         setUserRole(data.user.role);
+        setCurrentUserId(data.user.id);
       }
     } catch (error) {
       console.error('Error fetching user:', error);
     }
+  };
+
+  const fetchNotes = async () => {
+    setNotesLoading(true);
+    try {
+      const res = await fetch(`/api/lab-management/students/${studentId}/notes`);
+      const data = await res.json();
+      if (data.success) {
+        setStudentNotes(data.notes || []);
+      }
+    } catch (error) {
+      console.error('Error fetching notes:', error);
+    }
+    setNotesLoading(false);
   };
 
   const fetchStudent = async () => {
@@ -357,6 +414,115 @@ export default function StudentDetailPage() {
       alert('Error saving learning style');
     }
     setSavingLearningStyle(false);
+  };
+
+  const handleAddNote = async () => {
+    if (!newNoteContent.trim()) return;
+    setSavingNote(true);
+    try {
+      const res = await fetch(`/api/lab-management/students/${studentId}/notes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: newNoteContent,
+          category: newNoteCategory,
+          flag_level: newNoteFlagLevel,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setStudentNotes(prev => [data.note, ...prev]);
+        setNewNoteContent('');
+        setNewNoteCategory('other');
+        setNewNoteFlagLevel(null);
+      } else {
+        alert('Failed to save note: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Error saving note:', error);
+      alert('Failed to save note');
+    }
+    setSavingNote(false);
+  };
+
+  const handleStartEditNote = (note: StudentNote) => {
+    setEditingNoteId(note.id);
+    setEditNoteContent(note.content);
+    setEditNoteCategory(note.category);
+    setEditNoteFlagLevel(note.flag_level);
+  };
+
+  const handleSaveEditNote = async () => {
+    if (!editingNoteId || !editNoteContent.trim()) return;
+    setSavingEditNote(true);
+    try {
+      const res = await fetch(`/api/lab-management/students/${studentId}/notes`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          noteId: editingNoteId,
+          content: editNoteContent,
+          category: editNoteCategory,
+          flag_level: editNoteFlagLevel,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setStudentNotes(prev => prev.map(n => n.id === editingNoteId ? data.note : n));
+        setEditingNoteId(null);
+      } else {
+        alert('Failed to update note: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Error updating note:', error);
+      alert('Failed to update note');
+    }
+    setSavingEditNote(false);
+  };
+
+  const handleDeleteNote = async (noteId: string) => {
+    if (!confirm('Delete this note? This cannot be undone.')) return;
+    try {
+      const res = await fetch(
+        `/api/lab-management/students/${studentId}/notes?noteId=${noteId}`,
+        { method: 'DELETE' }
+      );
+      const data = await res.json();
+      if (data.success) {
+        setStudentNotes(prev => prev.filter(n => n.id !== noteId));
+      } else {
+        alert('Failed to delete note: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Error deleting note:', error);
+      alert('Failed to delete note');
+    }
+  };
+
+  // Compute highest active flag level for this student
+  const highestFlagLevel: 'yellow' | 'red' | null = studentNotes.reduce(
+    (highest, note) => {
+      if (!note.is_flagged) return highest;
+      if (note.flag_level === 'red') return 'red';
+      if (note.flag_level === 'yellow' && highest !== 'red') return 'yellow';
+      return highest;
+    },
+    null as 'yellow' | 'red' | null
+  );
+
+  const formatRelativeTime = (dateStr: string): string => {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffMins < 1) return 'just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
   const handlePhotoClick = () => {
@@ -738,7 +904,27 @@ export default function StudentDetailPage() {
                 <>
                   <div className="flex items-start justify-between mb-4">
                     <div>
-                      <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{student.first_name} {student.last_name}</h1>
+                      <div className="flex items-center gap-2">
+                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{student.first_name} {student.last_name}</h1>
+                        {highestFlagLevel === 'red' && (
+                          <span
+                            title="Red flag — see Notes tab"
+                            className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs font-medium rounded-full"
+                          >
+                            <Flag className="w-3 h-3" />
+                            Red Flag
+                          </span>
+                        )}
+                        {highestFlagLevel === 'yellow' && (
+                          <span
+                            title="Yellow flag — see Notes tab"
+                            className="inline-flex items-center gap-1 px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-xs font-medium rounded-full"
+                          >
+                            <Flag className="w-3 h-3" />
+                            Yellow Flag
+                          </span>
+                        )}
+                      </div>
                       {student.cohort && (
                         <p className="text-gray-600 dark:text-gray-400">{student.cohort.program.abbreviation} Group {student.cohort.cohort_number}</p>
                       )}
@@ -832,6 +1018,247 @@ export default function StudentDetailPage() {
             </div>
           </div>
         </div>
+
+        {/* Tab Navigation */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+          <div className="flex border-b dark:border-gray-700">
+            <button
+              onClick={() => setActiveTab('overview')}
+              className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'overview'
+                  ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400'
+                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              }`}
+            >
+              <User className="w-4 h-4" />
+              Overview
+            </button>
+            <button
+              onClick={() => setActiveTab('notes')}
+              className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'notes'
+                  ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400'
+                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              }`}
+            >
+              <MessageSquare className="w-4 h-4" />
+              Notes
+              {studentNotes.length > 0 && (
+                <span className="ml-1 px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs rounded-full">
+                  {studentNotes.length}
+                </span>
+              )}
+              {highestFlagLevel === 'red' && (
+                <span className="w-2 h-2 rounded-full bg-red-500 ml-0.5" />
+              )}
+              {highestFlagLevel === 'yellow' && (
+                <span className="w-2 h-2 rounded-full bg-yellow-400 ml-0.5" />
+              )}
+            </button>
+          </div>
+
+          {/* Overview Tab Content */}
+          {activeTab === 'overview' && (
+            <div className="p-0">
+              {/* placeholder - overview content is rendered below outside this card */}
+            </div>
+          )}
+
+          {/* Notes Tab Content */}
+          {activeTab === 'notes' && (
+            <div className="p-5 space-y-5">
+              {/* Instructor-only notice */}
+              <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2">
+                <Flag className="w-3.5 h-3.5 shrink-0" />
+                These notes are private and visible to instructors only. Students cannot see this information.
+              </div>
+
+              {/* Add Note Form */}
+              <div className="border dark:border-gray-700 rounded-lg p-4 space-y-3">
+                <h3 className="font-medium text-gray-900 dark:text-white text-sm">Add Note</h3>
+                <textarea
+                  value={newNoteContent}
+                  onChange={e => setNewNoteContent(e.target.value)}
+                  rows={3}
+                  placeholder="Write an observation, concern, or note about this student..."
+                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 resize-none"
+                />
+                <div className="flex flex-wrap gap-3 items-end">
+                  {/* Category */}
+                  <div>
+                    <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Category</label>
+                    <select
+                      value={newNoteCategory}
+                      onChange={e => setNewNoteCategory(e.target.value as 'academic' | 'behavioral' | 'medical' | 'other')}
+                      className="px-2 py-1.5 border dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                    >
+                      <option value="academic">Academic</option>
+                      <option value="behavioral">Behavioral</option>
+                      <option value="medical">Medical</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                  {/* Flag Level */}
+                  <div>
+                    <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Flag</label>
+                    <select
+                      value={newNoteFlagLevel ?? ''}
+                      onChange={e => setNewNoteFlagLevel(e.target.value === '' ? null : e.target.value as 'yellow' | 'red')}
+                      className="px-2 py-1.5 border dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                    >
+                      <option value="">No Flag</option>
+                      <option value="yellow">Yellow Flag</option>
+                      <option value="red">Red Flag</option>
+                    </select>
+                  </div>
+                  <button
+                    onClick={handleAddNote}
+                    disabled={savingNote || !newNoteContent.trim()}
+                    className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  >
+                    <Plus className="w-4 h-4" />
+                    {savingNote ? 'Saving...' : 'Add Note'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Notes List */}
+              {notesLoading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto" />
+                </div>
+              ) : studentNotes.length === 0 ? (
+                <div className="text-center py-10">
+                  <MessageSquare className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">No notes yet. Add the first one above.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {studentNotes.map(note => {
+                    const catBadge = CATEGORY_BADGES[note.category] || CATEGORY_BADGES.other;
+                    const isEditing = editingNoteId === note.id;
+                    const canEdit = note.author_id === currentUserId || (userRole && hasMinRole(userRole, 'lead_instructor'));
+
+                    return (
+                      <div
+                        key={note.id}
+                        className={`border rounded-lg p-4 ${
+                          note.flag_level === 'red'
+                            ? 'border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10'
+                            : note.flag_level === 'yellow'
+                            ? 'border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-900/10'
+                            : 'border-gray-200 dark:border-gray-700'
+                        }`}
+                      >
+                        {isEditing ? (
+                          <div className="space-y-3">
+                            <textarea
+                              value={editNoteContent}
+                              onChange={e => setEditNoteContent(e.target.value)}
+                              rows={3}
+                              className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 resize-none"
+                            />
+                            <div className="flex flex-wrap gap-3 items-center">
+                              <select
+                                value={editNoteCategory}
+                                onChange={e => setEditNoteCategory(e.target.value as 'academic' | 'behavioral' | 'medical' | 'other')}
+                                className="px-2 py-1.5 border dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                              >
+                                <option value="academic">Academic</option>
+                                <option value="behavioral">Behavioral</option>
+                                <option value="medical">Medical</option>
+                                <option value="other">Other</option>
+                              </select>
+                              <select
+                                value={editNoteFlagLevel ?? ''}
+                                onChange={e => setEditNoteFlagLevel(e.target.value === '' ? null : e.target.value as 'yellow' | 'red')}
+                                className="px-2 py-1.5 border dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                              >
+                                <option value="">No Flag</option>
+                                <option value="yellow">Yellow Flag</option>
+                                <option value="red">Red Flag</option>
+                              </select>
+                              <div className="flex gap-2 ml-auto">
+                                <button
+                                  onClick={() => setEditingNoteId(null)}
+                                  className="px-3 py-1.5 border dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  onClick={handleSaveEditNote}
+                                  disabled={savingEditNote || !editNoteContent.trim()}
+                                  className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+                                >
+                                  {savingEditNote ? 'Saving...' : 'Save'}
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="flex items-start justify-between gap-2 mb-2">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className={`px-2 py-0.5 rounded text-xs font-medium ${catBadge.bg} ${catBadge.text}`}>
+                                  {catBadge.label}
+                                </span>
+                                {note.flag_level === 'red' && (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">
+                                    <Flag className="w-3 h-3" /> Red Flag
+                                  </span>
+                                )}
+                                {note.flag_level === 'yellow' && (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400">
+                                    <Flag className="w-3 h-3" /> Yellow Flag
+                                  </span>
+                                )}
+                              </div>
+                              {canEdit && (
+                                <div className="flex gap-1 shrink-0">
+                                  <button
+                                    onClick={() => handleStartEditNote(note)}
+                                    className="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 rounded"
+                                    title="Edit note"
+                                  >
+                                    <Edit2 className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteNote(note.id)}
+                                    className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded"
+                                    title="Delete note"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                            <p className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">{note.content}</p>
+                            <div className="mt-2 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                              <span>{note.author?.name || note.author_email || 'Unknown'}</span>
+                              <span>·</span>
+                              <span title={new Date(note.created_at).toLocaleString()}>
+                                {formatRelativeTime(note.created_at)}
+                              </span>
+                              {note.updated_at !== note.created_at && (
+                                <>
+                                  <span>·</span>
+                                  <span className="italic">edited</span>
+                                </>
+                              )}
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Overview Tab Sections */}
+        {activeTab === 'overview' && <>
 
         {/* EMS Background Section */}
         {(student.prior_cert_level || student.years_ems_experience || student.prior_work_setting || student.prior_employer) && (
@@ -1296,6 +1723,8 @@ export default function StudentDetailPage() {
             </div>
           )}
         </div>
+        </>}
+
       </main>
     </div>
   );

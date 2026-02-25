@@ -56,6 +56,7 @@ export default function StudentsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCohort, setSelectedCohort] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('active');
+  const [studentFlags, setStudentFlags] = useState<Record<string, 'yellow' | 'red'>>({});
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -98,11 +99,31 @@ export default function StudentsPage() {
       const data = await res.json();
       if (data.success) {
         setStudents(data.students);
+        // Fetch flag summary for loaded students
+        if (data.students.length > 0) {
+          fetchStudentFlags(data.students.map((s: Student) => s.id));
+        } else {
+          setStudentFlags({});
+        }
       }
     } catch (error) {
       console.error('Error fetching students:', error);
     }
     setLoading(false);
+  };
+
+  const fetchStudentFlags = async (studentIds: string[]) => {
+    try {
+      const res = await fetch(
+        `/api/lab-management/students/notes-summary?studentIds=${studentIds.join(',')}`
+      );
+      const data = await res.json();
+      if (data.success) {
+        setStudentFlags(data.flags || {});
+      }
+    } catch (error) {
+      console.error('Error fetching student flags:', error);
+    }
   };
 
   const filteredStudents = students.filter(student => {
@@ -273,8 +294,16 @@ export default function StudentsPage() {
 
                     {/* Info */}
                     <div className="flex-1 min-w-0">
-                      <div className="font-medium text-gray-900 dark:text-white truncate">
-                        {student.first_name} {student.last_name}
+                      <div className="flex items-center gap-1.5">
+                        <div className="font-medium text-gray-900 dark:text-white truncate">
+                          {student.first_name} {student.last_name}
+                        </div>
+                        {studentFlags[student.id] === 'red' && (
+                          <span title="Red flag" className="shrink-0 w-2 h-2 rounded-full bg-red-500" />
+                        )}
+                        {studentFlags[student.id] === 'yellow' && (
+                          <span title="Yellow flag" className="shrink-0 w-2 h-2 rounded-full bg-yellow-400" />
+                        )}
                       </div>
                       {student.cohort && (
                         <div className="text-sm text-gray-600 dark:text-gray-400">
