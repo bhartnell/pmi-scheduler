@@ -35,9 +35,11 @@ import {
   AlertTriangle,
   XCircle,
   FileText,
+  Phone,
 } from 'lucide-react';
 import Barcode from 'react-barcode';
 import { canManageStudentRoster, hasMinRole, type Role } from '@/lib/permissions';
+import StudentCommunications from '@/components/StudentCommunications';
 
 interface Student {
   id: string;
@@ -244,7 +246,7 @@ export default function StudentDetailPage() {
   // Notes state
   const [studentNotes, setStudentNotes] = useState<StudentNote[]>([]);
   const [notesLoading, setNotesLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'notes' | 'compliance' | 'lab-ratings' | 'skills'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'notes' | 'compliance' | 'lab-ratings' | 'skills' | 'communications'>('overview');
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   // New note form
   const [newNoteContent, setNewNoteContent] = useState('');
@@ -1118,6 +1120,13 @@ export default function StudentDetailPage() {
                         <TrendingUp className="w-4 h-4" />
                         View Progress
                       </Link>
+                      <Link
+                        href={`/lab-management/students/${studentId}/portfolio`}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/40 rounded-lg font-medium"
+                      >
+                        <FileText className="w-4 h-4" />
+                        Portfolio
+                      </Link>
                       <button onClick={() => setEditing(true)} className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
                         <Edit2 className="w-5 h-5" />
                       </button>
@@ -1269,6 +1278,17 @@ export default function StudentDetailPage() {
                   {skillSignoffs.filter(s => !s.revoked).length}/{allSkills.length}
                 </span>
               )}
+            </button>
+            <button
+              onClick={() => setActiveTab('communications')}
+              className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'communications'
+                  ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400'
+                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              }`}
+            >
+              <Phone className="w-4 h-4" />
+              Communications
             </button>
           </div>
 
@@ -1795,6 +1815,16 @@ export default function StudentDetailPage() {
                   })}
                 </>
               )}
+            </div>
+          )}
+
+          {/* Communications Tab Content */}
+          {activeTab === 'communications' && (
+            <div className="p-5">
+              <StudentCommunications
+                studentId={studentId}
+                studentName={`${student.first_name} ${student.last_name}`}
+              />
             </div>
           )}
         </div>

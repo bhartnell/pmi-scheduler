@@ -23,6 +23,7 @@ import {
   Megaphone,
   UserCheck,
   Layout,
+  Package,
 } from 'lucide-react';
 import {
   canAccessAdmin,
@@ -110,8 +111,8 @@ export default function AdminPage() {
     {
       href: '/admin/certifications',
       icon: Award,
-      title: 'Certification Compliance',
-      description: 'Monitor instructor certifications and expiration dates',
+      title: 'Certifications Import',
+      description: 'Bulk import instructor certifications from CSV and monitor expiration dates',
       color: 'bg-purple-500'
     },
     {
@@ -156,7 +157,14 @@ export default function AdminPage() {
       title: 'Dashboard Defaults',
       description: 'Configure which widgets appear by default on the dashboard for each role',
       color: 'bg-indigo-500',
-    }
+    },
+    {
+      href: '/admin/equipment',
+      icon: Package,
+      title: 'Equipment Inventory',
+      description: 'Track lab equipment, availability, conditions, and check-out/check-in flow',
+      color: 'bg-cyan-600',
+    },
   ];
 
   const superadminLinks = [

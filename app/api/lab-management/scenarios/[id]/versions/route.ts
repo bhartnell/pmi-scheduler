@@ -36,7 +36,7 @@ export async function GET(
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
       .from('scenario_versions')
-      .select('id, version_number, title, description, content, changed_by, change_summary, created_at')
+      .select('id, version_number, data, created_by, change_summary, created_at')
       .eq('scenario_id', id)
       .order('version_number', { ascending: false });
 
@@ -69,10 +69,10 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { title, description, content, change_summary } = body;
+    const { data: versionData, change_summary } = body;
 
-    if (!title?.trim()) {
-      return NextResponse.json({ error: 'title is required' }, { status: 400 });
+    if (!versionData || typeof versionData !== 'object') {
+      return NextResponse.json({ error: 'data (JSONB snapshot) is required' }, { status: 400 });
     }
 
     const supabase = getSupabaseAdmin();
@@ -93,10 +93,8 @@ export async function POST(
       .insert({
         scenario_id: id,
         version_number: nextVersion,
-        title: title.trim(),
-        description: description || null,
-        content: content || null,
-        changed_by: session.user.email,
+        data: versionData,
+        created_by: session.user.email,
         change_summary: change_summary?.trim() || null,
       })
       .select()
@@ -178,15 +176,13 @@ export async function PUT(
     await supabase.from('scenario_versions').insert({
       scenario_id: id,
       version_number: nextVersion,
-      title: currentScenario.title || '',
-      description: currentScenario.chief_complaint || null,
-      content: currentScenario,
-      changed_by: session.user.email,
+      data: currentScenario,
+      created_by: session.user.email,
       change_summary: `Restored from version ${targetVersion.version_number} — current state auto-saved`,
     });
 
     // Apply restored content to the scenarios table
-    const restoredContent = targetVersion.content as Record<string, unknown> | null;
+    const restoredContent = targetVersion.data as Record<string, unknown> | null;
     if (restoredContent && typeof restoredContent === 'object') {
       // Build update from the stored content, excluding system fields
       const { id: _id, created_at: _ca, ...restoreFields } = restoredContent as any;
@@ -196,11 +192,8 @@ export async function PUT(
         .update({ ...restoreFields, updated_at: new Date().toISOString() })
         .eq('id', id);
     } else {
-      // Minimal restore — just update title from version record
-      await supabase
-        .from('scenarios')
-        .update({ title: targetVersion.title, updated_at: new Date().toISOString() })
-        .eq('id', id);
+      // Minimal restore — log error, the data snapshot was empty
+      console.warn('Version data was empty or not an object, no scenario fields restored');
     }
 
     return NextResponse.json({

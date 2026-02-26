@@ -30,8 +30,8 @@ export async function GET(request: NextRequest) {
 
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
-      .from('dashboard_default_layouts')
-      .select('id, role, layout, set_by, updated_at')
+      .from('dashboard_layout_defaults')
+      .select('id, role, layout, updated_by, updated_at')
       .order('role');
 
     if (error) throw error;
@@ -69,12 +69,12 @@ export async function PUT(request: NextRequest) {
 
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
-      .from('dashboard_default_layouts')
+      .from('dashboard_layout_defaults')
       .upsert(
         {
           role: body.role,
           layout: body.layout,
-          set_by: session.user.email,
+          updated_by: session.user.email,
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'role', ignoreDuplicates: false }

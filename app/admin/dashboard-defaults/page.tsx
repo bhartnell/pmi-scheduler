@@ -35,7 +35,7 @@ interface RoleDefaultLayout {
     dashboard_widgets: string[];
     quick_links: string[];
   };
-  set_by?: string | null;
+  updated_by?: string | null;
   updated_at?: string | null;
 }
 
@@ -222,7 +222,7 @@ export default function DashboardDefaultsPage() {
         [selectedRole]: {
           role: selectedRole,
           layout: { dashboard_widgets: widgets, quick_links: quickLinks },
-          set_by: session?.user?.email ?? undefined,
+          updated_by: session?.user?.email ?? undefined,
           updated_at: new Date().toISOString(),
         },
       }));
@@ -347,7 +347,7 @@ export default function DashboardDefaultsPage() {
         {savedEntry && (
           <p className="text-xs text-gray-500 dark:text-gray-400 px-1">
             Last saved
-            {savedEntry.set_by ? ` by ${savedEntry.set_by}` : ''}
+            {savedEntry.updated_by ? ` by ${savedEntry.updated_by}` : ''}
             {savedEntry.updated_at
               ? ` on ${new Date(savedEntry.updated_at).toLocaleDateString('en-US', {
                   month: 'short',

@@ -17,10 +17,8 @@ import { useToast } from '@/components/Toast';
 interface ScenarioVersion {
   id: string;
   version_number: number;
-  title: string;
-  description: string | null;
-  content: Record<string, unknown> | null;
-  changed_by: string;
+  data: Record<string, unknown>;
+  created_by: string | null;
   change_summary: string | null;
   created_at: string;
 }
@@ -101,7 +99,7 @@ function CompareModal({
   currentContent: Record<string, unknown>;
   onClose: () => void;
 }) {
-  const vContent = version.content ?? {};
+  const vContent = version.data ?? {};
 
   const changedFields = COMPARE_FIELDS.filter(({ key }) => {
     const old = stringify(vContent[key]);
@@ -125,7 +123,7 @@ function CompareModal({
               Compare v{version.version_number} &rarr; Current
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-              v{version.version_number} saved {formatDate(version.created_at)} by {shortEmail(version.changed_by)}
+              v{version.version_number} saved {formatDate(version.created_at)}{version.created_by ? ` by ${shortEmail(version.created_by)}` : ''}
             </p>
           </div>
           <button
@@ -426,15 +424,19 @@ export default function ScenarioVersionHistory({
                             <span className="text-xs text-gray-500 dark:text-gray-400">
                               {formatDate(ver.created_at)}
                             </span>
-                            <span className="text-xs text-gray-500 dark:text-gray-400">
-                              by {shortEmail(ver.changed_by)}
-                            </span>
+                            {ver.created_by && (
+                              <span className="text-xs text-gray-500 dark:text-gray-400">
+                                by {shortEmail(ver.created_by)}
+                              </span>
+                            )}
                           </div>
 
-                          {/* Title */}
-                          <p className="text-sm text-gray-800 dark:text-gray-200 mt-0.5 truncate">
-                            {ver.title}
-                          </p>
+                          {/* Title from data snapshot */}
+                          {'title' in (ver.data || {}) && ver.data?.title ? (
+                            <p className="text-sm text-gray-800 dark:text-gray-200 mt-0.5 truncate">
+                              {String(ver.data.title)}
+                            </p>
+                          ) : null}
 
                           {/* Change summary */}
                           {ver.change_summary && (

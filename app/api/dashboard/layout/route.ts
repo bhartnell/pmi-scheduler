@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
 
     if (user?.role) {
       const { data: roleDefault } = await supabase
-        .from('dashboard_default_layouts')
+        .from('dashboard_layout_defaults')
         .select('layout, updated_at')
         .eq('role', user.role)
         .single();
@@ -135,7 +135,7 @@ export async function DELETE(request: NextRequest) {
     let defaultLayout = null;
     if (user?.role) {
       const { data: roleDefault } = await supabase
-        .from('dashboard_default_layouts')
+        .from('dashboard_layout_defaults')
         .select('layout')
         .eq('role', user.role)
         .single();

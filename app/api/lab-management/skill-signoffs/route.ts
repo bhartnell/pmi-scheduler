@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     // Verify user role
     const supabase = getSupabaseAdmin();
     const { data: userRecord } = await supabase
-      .from('users')
+      .from('lab_users')
       .select('role')
       .eq('email', session.user.email)
       .single();
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
     const supabase = getSupabaseAdmin();
 
     const { data: userRecord } = await supabase
-      .from('users')
+      .from('lab_users')
       .select('role')
       .eq('email', session.user.email)
       .single();
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { skill_id, lab_day_id, notes } = body;
+    const { skill_id, lab_day_id } = body;
 
     if (!skill_id) {
       return NextResponse.json({ success: false, error: 'skill_id is required' }, { status: 400 });
@@ -97,11 +97,9 @@ export async function POST(request: NextRequest) {
       lab_day_id: lab_day_id || null,
       signed_off_by: session.user!.email!,
       signed_off_at: now,
-      revoked: false,
       revoked_by: null,
       revoked_at: null,
       revoke_reason: null,
-      notes: notes || null,
     }));
 
     // Upsert: if a record exists and was revoked, restore it. If already signed (not revoked), skip.
@@ -109,21 +107,21 @@ export async function POST(request: NextRequest) {
     const skipped: string[] = [];
 
     for (const row of rows) {
-      // Check for existing non-revoked signoff
+      // Check for existing signoff
       const { data: existing } = await supabase
         .from('skill_signoffs')
-        .select('id, revoked')
+        .select('id, revoked_at')
         .eq('student_id', row.student_id)
         .eq('skill_id', row.skill_id)
         .single();
 
-      if (existing && !existing.revoked) {
+      if (existing && !existing.revoked_at) {
         // Already signed off and not revoked — skip
         skipped.push(row.student_id);
         continue;
       }
 
-      if (existing && existing.revoked) {
+      if (existing && existing.revoked_at) {
         // Was revoked — update to restore
         const { data: updated, error: updateError } = await supabase
           .from('skill_signoffs')
@@ -131,8 +129,6 @@ export async function POST(request: NextRequest) {
             signed_off_by: row.signed_off_by,
             signed_off_at: row.signed_off_at,
             lab_day_id: row.lab_day_id,
-            notes: row.notes,
-            revoked: false,
             revoked_by: null,
             revoked_at: null,
             revoke_reason: null,
@@ -178,7 +174,7 @@ export async function PUT(request: NextRequest) {
     const supabase = getSupabaseAdmin();
 
     const { data: userRecord } = await supabase
-      .from('users')
+      .from('lab_users')
       .select('role')
       .eq('email', session.user.email)
       .single();
@@ -197,7 +193,6 @@ export async function PUT(request: NextRequest) {
     const { data, error } = await supabase
       .from('skill_signoffs')
       .update({
-        revoked: true,
         revoked_by: session.user.email,
         revoked_at: new Date().toISOString(),
         revoke_reason: revoke_reason || null,
