@@ -48,6 +48,11 @@ const nextConfig: NextConfig = {
         destination: '/scheduler',
         permanent: true,
       },
+      {
+        source: '/skill-sheets',
+        destination: '/lab-management/skill-sheets',
+        permanent: false,
+      },
     ];
   },
 };

@@ -157,17 +157,25 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, description, date, start_time, end_time, location, department, min_instructors, max_instructors, repeat, repeat_until } = body;
+    const { title, description, date, start_time, end_time, location, department, min_instructors, max_instructors, repeat, repeat_until, dates } = body;
 
-    if (!title || !date || !start_time || !end_time) {
+    if (!title || !start_time || !end_time) {
       return NextResponse.json(
-        { success: false, error: 'Title, date, start time, and end time are required' },
+        { success: false, error: 'Title, start time, and end time are required' },
         { status: 400 }
       );
     }
 
-    // Validate recurring shift parameters
-    if (repeat && !repeat_until) {
+    // If an explicit dates array is provided, use it directly
+    if (!date && (!dates || !Array.isArray(dates) || dates.length === 0)) {
+      return NextResponse.json(
+        { success: false, error: 'Either date or dates array is required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate recurring shift parameters (when using the legacy repeat approach)
+    if (!dates && repeat && !repeat_until) {
       return NextResponse.json(
         { success: false, error: 'repeat_until is required for recurring shifts' },
         { status: 400 }
@@ -176,10 +184,15 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabaseAdmin();
 
-    // Calculate all dates for recurring shifts
-    const shiftDates = repeat && repeat_until
-      ? calculateRecurringDates(date, repeat, repeat_until)
-      : [date];
+    // Determine all dates to create shifts for:
+    // 1. Explicit dates array (from client-side repeat preview with possible removals)
+    // 2. Legacy repeat/repeat_until approach
+    // 3. Single date
+    const shiftDates: string[] = dates && Array.isArray(dates) && dates.length > 0
+      ? dates
+      : repeat && repeat_until
+        ? calculateRecurringDates(date, repeat, repeat_until)
+        : [date];
 
     // Create shift records for all dates
     const shiftRecords = shiftDates.map(shiftDate => ({

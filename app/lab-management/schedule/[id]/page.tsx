@@ -2088,6 +2088,28 @@ export default function LabDayPage() {
             <p>{labDay.num_rotations} rotations × {labDay.rotation_duration} min</p>
           </div>
         </div>
+        {labDayRoles.length > 0 && (
+          <div className="mt-3 pt-2 border-t border-gray-400 flex flex-wrap gap-x-6 gap-y-1 text-sm">
+            {labDayRoles.filter(r => r.role === 'lab_lead').length > 0 && (
+              <span>
+                <strong>Lab Lead{labDayRoles.filter(r => r.role === 'lab_lead').length > 1 ? 's' : ''}:</strong>{' '}
+                {labDayRoles.filter(r => r.role === 'lab_lead').map(r => r.instructor?.name || 'Unknown').join(', ')}
+              </span>
+            )}
+            {labDayRoles.filter(r => r.role === 'roamer').length > 0 && (
+              <span>
+                <strong>Roamer{labDayRoles.filter(r => r.role === 'roamer').length > 1 ? 's' : ''}:</strong>{' '}
+                {labDayRoles.filter(r => r.role === 'roamer').map(r => r.instructor?.name || 'Unknown').join(', ')}
+              </span>
+            )}
+            {labDayRoles.filter(r => r.role === 'observer').length > 0 && (
+              <span>
+                <strong>Observer{labDayRoles.filter(r => r.role === 'observer').length > 1 ? 's' : ''}:</strong>{' '}
+                {labDayRoles.filter(r => r.role === 'observer').map(r => r.instructor?.name || 'Unknown').join(', ')}
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Roster Print View - Only visible when printing roster */}
@@ -2113,6 +2135,36 @@ export default function LabDayPage() {
               <p><strong>Rotations:</strong> {labDay.num_rotations} x {labDay.rotation_duration} min</p>
             </div>
           </div>
+          {labDayRoles.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-base font-bold border-b border-gray-400 pb-1 mb-3 uppercase tracking-wide">
+                Lab Day Roles
+              </h3>
+              <div className="flex flex-wrap gap-x-8 gap-y-2 text-sm">
+                {labDayRoles.filter(r => r.role === 'lab_lead').length > 0 && (
+                  <div>
+                    <span className="font-semibold text-gray-700">Lab Lead{labDayRoles.filter(r => r.role === 'lab_lead').length > 1 ? 's' : ''}:</span>{' '}
+                    <span>{labDayRoles.filter(r => r.role === 'lab_lead').map(r => r.instructor?.name || 'Unknown').join(', ')}</span>
+                    <span className="text-gray-500 ml-1 text-xs">(oversees lab day, runs timer)</span>
+                  </div>
+                )}
+                {labDayRoles.filter(r => r.role === 'roamer').length > 0 && (
+                  <div>
+                    <span className="font-semibold text-gray-700">Roamer{labDayRoles.filter(r => r.role === 'roamer').length > 1 ? 's' : ''}:</span>{' '}
+                    <span>{labDayRoles.filter(r => r.role === 'roamer').map(r => r.instructor?.name || 'Unknown').join(', ')}</span>
+                    <span className="text-gray-500 ml-1 text-xs">(floats between stations, grabs supplies)</span>
+                  </div>
+                )}
+                {labDayRoles.filter(r => r.role === 'observer').length > 0 && (
+                  <div>
+                    <span className="font-semibold text-gray-700">Observer{labDayRoles.filter(r => r.role === 'observer').length > 1 ? 's' : ''}:</span>{' '}
+                    <span>{labDayRoles.filter(r => r.role === 'observer').map(r => r.instructor?.name || 'Unknown').join(', ')}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {labDay.stations.length > 0 && (
             <div className="mb-6">
               <h3 className="text-base font-bold border-b border-gray-400 pb-1 mb-3 uppercase tracking-wide">
@@ -2400,23 +2452,47 @@ export default function LabDayPage() {
         )}
 
         {/* Lab Day Roles */}
-        {labDayRoles.length > 0 && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6 print:shadow-none print:border print:border-gray-300">
-            <h3 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6 print:shadow-none print:border print:border-gray-300">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
               <Users className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-              Lab Day Roles
+              Lab Leads &amp; Roamers
             </h3>
-            <div className="flex flex-wrap gap-4">
+            <Link
+              href={`/lab-management/schedule/${labDayId}/edit`}
+              className="text-xs text-blue-600 dark:text-blue-400 hover:underline print:hidden flex items-center gap-1"
+            >
+              <Edit2 className="w-3 h-3" />
+              Assign
+            </Link>
+          </div>
+          {labDayRoles.length === 0 ? (
+            <p className="text-sm text-gray-400 dark:text-gray-500 italic print:hidden">
+              No roles assigned.{' '}
+              <Link
+                href={`/lab-management/schedule/${labDayId}/edit`}
+                className="text-blue-600 dark:text-blue-400 hover:underline not-italic"
+              >
+                Assign Lab Leads &amp; Roamers
+              </Link>{' '}
+              for this lab day.
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-6">
               {/* Lab Leads */}
               {labDayRoles.filter(r => r.role === 'lab_lead').length > 0 && (
                 <div>
-                  <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Lab Lead</span>
-                  <div className="flex flex-wrap gap-2 mt-1">
+                  <div className="flex items-center gap-1 mb-1">
+                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Lab Lead</span>
+                    <span className="text-xs text-gray-400 dark:text-gray-500 normal-case tracking-normal print:hidden"> &mdash; oversees lab, runs timer</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
                     {labDayRoles.filter(r => r.role === 'lab_lead').map(role => (
                       <span
                         key={role.id}
                         className="inline-flex items-center gap-1 px-3 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 rounded-full text-sm font-medium"
                       >
+                        <Shield className="w-3 h-3" />
                         {role.instructor?.name || 'Unknown'}
                       </span>
                     ))}
@@ -2427,13 +2503,17 @@ export default function LabDayPage() {
               {/* Roamers */}
               {labDayRoles.filter(r => r.role === 'roamer').length > 0 && (
                 <div>
-                  <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Roamer</span>
-                  <div className="flex flex-wrap gap-2 mt-1">
+                  <div className="flex items-center gap-1 mb-1">
+                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Roamer</span>
+                    <span className="text-xs text-gray-400 dark:text-gray-500 normal-case tracking-normal print:hidden"> &mdash; floats between stations, grabs supplies</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
                     {labDayRoles.filter(r => r.role === 'roamer').map(role => (
                       <span
                         key={role.id}
                         className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-full text-sm font-medium"
                       >
+                        <RotateCcw className="w-3 h-3" />
                         {role.instructor?.name || 'Unknown'}
                       </span>
                     ))}
@@ -2444,8 +2524,11 @@ export default function LabDayPage() {
               {/* Observers */}
               {labDayRoles.filter(r => r.role === 'observer').length > 0 && (
                 <div>
-                  <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Observer</span>
-                  <div className="flex flex-wrap gap-2 mt-1">
+                  <div className="flex items-center gap-1 mb-1">
+                    <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Observer</span>
+                    <span className="text-xs text-gray-400 dark:text-gray-500 normal-case tracking-normal print:hidden"> &mdash; shadowing / training</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
                     {labDayRoles.filter(r => r.role === 'observer').map(role => (
                       <span
                         key={role.id}
@@ -2458,8 +2541,8 @@ export default function LabDayPage() {
                 </div>
               )}
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Stations Grid */}
         {labDay.stations.length === 0 ? (

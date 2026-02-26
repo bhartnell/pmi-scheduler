@@ -825,10 +825,10 @@ export default function EditLabDayPage() {
             <div className="md:col-span-2 pt-4 border-t dark:border-gray-700">
               <div className="flex items-center gap-2 mb-4">
                 <Users className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white">Lab Day Roles</h3>
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">Lab Leads &amp; Roamers</h3>
               </div>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                Assign instructors to roles for this lab day. These are day-wide assignments (not station rotations).
+                Assign instructors to day-wide roles. Lab Leads and Roamers float between stations and are not tied to a specific station rotation.
               </p>
 
               <div className="space-y-4">
@@ -836,7 +836,7 @@ export default function EditLabDayPage() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Lab Lead(s)
-                    <span className="ml-2 text-xs text-gray-500 font-normal">Oversees the lab day</span>
+                    <span className="ml-2 text-xs text-gray-500 font-normal">Oversees the lab day, runs the timer, coordinates rotations</span>
                   </label>
                   <div className="flex flex-wrap gap-2 mb-2">
                     {labLeads.map(id => {
@@ -880,7 +880,7 @@ export default function EditLabDayPage() {
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                     Roamer(s)
-                    <span className="ml-2 text-xs text-gray-500 font-normal">Floats between stations</span>
+                    <span className="ml-2 text-xs text-gray-500 font-normal">Floats between stations, grabs supplies, observes students</span>
                   </label>
                   <div className="flex flex-wrap gap-2 mb-2">
                     {roamers.map(id => {
