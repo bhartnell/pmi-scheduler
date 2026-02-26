@@ -15,7 +15,10 @@ import {
   Search,
   Filter,
   Save,
-  Table
+  Table,
+  BarChart3,
+  Users,
+  Lightbulb
 } from 'lucide-react';
 import { canManageContent, type Role } from '@/lib/permissions';
 
@@ -83,6 +86,13 @@ const STYLE_BADGES: Record<string, { bg: string; text: string }> = {
   flexible: { bg: 'bg-yellow-100', text: 'text-yellow-700' },
 };
 
+// Primary style chart config (used in chart / grouped views)
+const PRIMARY_STYLE_CHART: Record<string, { label: string; letter: string; bg: string; darkBg: string; text: string; darkText: string; bar: string; donutColor: string }> = {
+  audio:       { label: 'Auditory',    letter: 'A', bg: 'bg-blue-100',   darkBg: 'dark:bg-blue-900/30',   text: 'text-blue-700',   darkText: 'dark:text-blue-300',   bar: 'bg-blue-500',   donutColor: '#3b82f6' },
+  visual:      { label: 'Visual',      letter: 'V', bg: 'bg-purple-100', darkBg: 'dark:bg-purple-900/30', text: 'text-purple-700', darkText: 'dark:text-purple-300', bar: 'bg-purple-500', donutColor: '#a855f7' },
+  kinesthetic: { label: 'Kinesthetic', letter: 'K', bg: 'bg-orange-100', darkBg: 'dark:bg-orange-900/30', text: 'text-orange-700', darkText: 'dark:text-orange-300', bar: 'bg-orange-500', donutColor: '#f97316' },
+};
+
 function LearningStylesContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -113,6 +123,9 @@ function LearningStylesContent() {
   const [bulkEntries, setBulkEntries] = useState<Record<string, { primary: string; social: string }>>({});
   const [showOnlyUnassessed, setShowOnlyUnassessed] = useState(true);
   const [bulkSaving, setBulkSaving] = useState(false);
+
+  // View mode: 'list' | 'chart' | 'grouped'
+  const [viewMode, setViewMode] = useState<'list' | 'chart' | 'grouped'>('list');
 
   useEffect(() => {
     if (status === 'unauthenticated') {
