@@ -45,6 +45,7 @@ import {
   CertExpiryWidget,
   ROLE_DEFAULTS,
 } from '@/components/dashboard/widgets';
+import AnnouncementBanner from '@/components/dashboard/AnnouncementBanner';
 import type { CurrentUserMinimal } from '@/types';
 
 interface DashboardPreferences {
@@ -68,11 +69,30 @@ export default function HomePage() {
         fetch('/api/onboarding/dashboard').then(res => res.json()).catch(() => null)
       ]).then(([userData, prefsData, onboardingData]) => {
         if (userData.success && userData.user) {
-          setCurrentUser(userData.user);
+          const user = userData.user;
+
+          // Non-PMI users who have no approved lab_users entry yet should be
+          // redirected to the self-service request-access flow.
+          const isPmiEmail =
+            user.email?.endsWith('@pmi.edu') || user.email?.endsWith('@my.pmi.edu');
+          if (!isPmiEmail && (!user.role || user.role === 'pending')) {
+            window.location.href = '/request-access';
+            return;
+          }
+
+          setCurrentUser(user);
           // Show onboarding card for admins or users with active assignments
-          const isAdminRole = userData.user.role === 'admin' || userData.user.role === 'superadmin';
+          const isAdminRole = user.role === 'admin' || user.role === 'superadmin';
           const hasActiveOnboarding = onboardingData?.success && onboardingData?.hasActiveAssignment;
           setHasOnboarding(isAdminRole || !!hasActiveOnboarding);
+        } else if (userData.success === false) {
+          // Could not find or create a user - redirect non-PMI users to request access
+          const email = session?.user?.email || '';
+          const isPmiEmail = email.endsWith('@pmi.edu') || email.endsWith('@my.pmi.edu');
+          if (!isPmiEmail) {
+            window.location.href = '/request-access';
+            return;
+          }
         }
         if (prefsData.success && prefsData.preferences) {
           setPreferences(prefsData.preferences);
@@ -230,15 +250,27 @@ export default function HomePage() {
             Use your @pmi.edu account to sign in
           </p>
 
-          <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700 text-center">
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">Guest instructor?</p>
-            <Link
-              href="/guest"
-              className="inline-flex items-center gap-2 px-4 py-2 text-teal-600 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/30 rounded-lg transition-colors"
-            >
-              <UserPlus className="w-4 h-4" />
-              Guest Access
-            </Link>
+          <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700 text-center space-y-3">
+            <div>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Guest instructor?</p>
+              <Link
+                href="/guest"
+                className="inline-flex items-center gap-2 px-4 py-2 text-teal-600 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/30 rounded-lg transition-colors"
+              >
+                <UserPlus className="w-4 h-4" />
+                Guest Access
+              </Link>
+            </div>
+            <div>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Volunteer instructor with a non-PMI account?</p>
+              <button
+                onClick={() => signIn('google')}
+                className="inline-flex items-center gap-2 px-4 py-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors text-sm"
+              >
+                <UserPlus className="w-4 h-4" />
+                Request Access
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -282,6 +314,11 @@ export default function HomePage() {
           <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Welcome, {session.user?.name?.split(' ')[0] || 'User'}!</h2>
           <p className="text-gray-600 dark:text-gray-400 mt-2">What would you like to do today?</p>
         </div>
+
+        {/* System Announcements */}
+        <ErrorBoundary>
+          <AnnouncementBanner />
+        </ErrorBoundary>
 
         {/* Customizable Dashboard Widgets - First thing instructors see */}
         {preferences && preferences.dashboard_widgets.length > 0 && (

@@ -15,6 +15,12 @@ export async function GET(request: NextRequest) {
   const endDate = searchParams.get('endDate');
   const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
   const offset = parseInt(searchParams.get('offset') || '0');
+  const detail = searchParams.get('detail') === 'true';
+
+  // Station select: minimal (id only) for list view, full details for print/detail view
+  const stationSelect = detail
+    ? `id, station_number, station_type, skill_name, custom_title, instructor_name, instructor_email, room, notes, station_notes, rotation_minutes, num_rotations, scenario:scenarios(id, title, category, difficulty)`
+    : `id`;
 
   try {
     const supabase = getSupabaseAdmin();
@@ -27,7 +33,7 @@ export async function GET(request: NextRequest) {
           cohort_number,
           program:programs(name, abbreviation)
         ),
-        stations:lab_stations(id)
+        stations:lab_stations(${stationSelect})
       `, { count: 'exact' })
       .order('date', { ascending: true })
       .range(offset, offset + limit - 1);
@@ -47,6 +53,15 @@ export async function GET(request: NextRequest) {
     const { data, error, count } = await query;
 
     if (error) throw error;
+
+    // Sort stations by station_number when returning detail view
+    if (detail && data) {
+      data.forEach((ld: any) => {
+        if (ld.stations) {
+          ld.stations.sort((a: any, b: any) => (a.station_number || 0) - (b.station_number || 0));
+        }
+      });
+    }
 
     return NextResponse.json({ success: true, labDays: data, pagination: { limit, offset, total: count || 0 } });
   } catch (error) {

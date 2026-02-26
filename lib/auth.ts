@@ -68,9 +68,12 @@ export const authOptions: NextAuthOptions = {
           return true;
         }
 
-        // For new users, require a recognized email domain
+        // For new users with a recognized email domain, auto-create them.
+        // For non-PMI users with no existing account, allow sign-in so they can
+        // reach the /request-access page and submit a self-service signup request.
         if (!isInstructorEmail && !isStudentEmail) {
-          return false;
+          // Non-PMI user with no existing account - allow them in so they reach /request-access
+          return true;
         }
 
         // If user doesn't exist, create them

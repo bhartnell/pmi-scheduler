@@ -38,6 +38,50 @@ interface Cohort {
   };
 }
 
+interface PrintStation {
+  id: string;
+  station_number: number;
+  station_type: string;
+  skill_name: string | null;
+  custom_title: string | null;
+  instructor_name: string | null;
+  instructor_email: string | null;
+  room: string | null;
+  notes: string | null;
+  station_notes: string | null;
+  rotation_minutes: number | null;
+  num_rotations: number | null;
+  scenario?: {
+    id: string;
+    title: string;
+    category: string;
+    difficulty: string;
+  };
+}
+
+interface PrintLabDay {
+  id: string;
+  date: string;
+  title: string | null;
+  start_time: string | null;
+  end_time: string | null;
+  semester: number | null;
+  week_number: number | null;
+  day_number: number | null;
+  num_rotations: number;
+  rotation_duration: number;
+  notes: string | null;
+  cohort: {
+    id: string;
+    cohort_number: number;
+    program: {
+      name: string;
+      abbreviation: string;
+    };
+  };
+  stations: PrintStation[];
+}
+
 interface LabDay {
   id: string;
   date: string;
@@ -116,6 +160,10 @@ function SchedulePageContent() {
 
   // Keyboard shortcuts state
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
+
+  // Print state
+  const [printLabDays, setPrintLabDays] = useState<PrintLabDay[]>([]);
+  const [isPrinting, setIsPrinting] = useState(false);
 
   // Daily notes state
   // showAllNotes=false → only current user's notes (one per date)
@@ -626,6 +674,94 @@ function SchedulePageContent() {
     toast.success(`Exported ${events.length} lab day${events.length === 1 ? '' : 's'} to calendar`);
   };
 
+  const fetchPrintLabDays = async (): Promise<PrintLabDay[]> => {
+    let startDate: Date;
+    let endDate: Date;
+
+    if (viewMode === 'week') {
+      startDate = new Date(weekStart);
+      endDate = new Date(weekStart);
+      endDate.setDate(endDate.getDate() + 6);
+    } else {
+      startDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+      startDate.setDate(startDate.getDate() - startDate.getDay());
+      endDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
+      endDate.setDate(endDate.getDate() + (6 - endDate.getDay()));
+    }
+
+    const params = new URLSearchParams({
+      startDate: startDate.toISOString().split('T')[0],
+      endDate: endDate.toISOString().split('T')[0],
+      detail: 'true',
+      limit: '100',
+    });
+
+    if (selectedCohort) {
+      params.append('cohortId', selectedCohort);
+    }
+
+    const res = await fetch(`/api/lab-management/lab-days?${params}`);
+    const data = await res.json();
+
+    if (data.success) {
+      return data.labDays as PrintLabDay[];
+    }
+    return [];
+  };
+
+  const handlePrint = async () => {
+    setIsPrinting(true);
+    try {
+      const days = await fetchPrintLabDays();
+      setPrintLabDays(days);
+      // Allow React to render the print view before triggering print
+      await new Promise(resolve => setTimeout(resolve, 300));
+      window.print();
+    } catch (err) {
+      console.error('Print fetch error:', err);
+      window.print();
+    } finally {
+      setIsPrinting(false);
+    }
+  };
+
+  // Format a time string like "08:00:00" to "8:00 AM"
+  const formatTime = (timeStr: string | null): string => {
+    if (!timeStr) return '';
+    const [hourStr, minStr] = timeStr.split(':');
+    const hour = parseInt(hourStr, 10);
+    const min = minStr || '00';
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const h = hour % 12 || 12;
+    return `${h}:${min} ${ampm}`;
+  };
+
+  // Build a human-readable label for a station
+  const getStationLabel = (station: PrintStation): string => {
+    if (station.custom_title) return station.custom_title;
+    if (station.scenario?.title) return station.scenario.title;
+    if (station.skill_name) return station.skill_name;
+    return `Station ${station.station_number}`;
+  };
+
+  // Generate print-view date range based on current view mode
+  const getPrintTitle = (): string => {
+    if (viewMode === 'week') {
+      return `Lab Schedule - Week of ${formatWeekRange(weekStart)}`;
+    }
+    return `Lab Schedule - ${currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`;
+  };
+
+  // For week print view: get ordered days in the week (Mon-Fri focus, but show all 7)
+  const getPrintWeekDays = (): Date[] => {
+    return generateWeekDays();
+  };
+
+  // For month print view: get the calendar grid
+  const getPrintCalendarDays = (): Date[] => {
+    return generateCalendarDays();
+  };
+
   const calendarDays = generateCalendarDays();
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const weekViewDays = generateWeekDays();
@@ -644,7 +780,74 @@ function SchedulePageContent() {
   if (!session) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 print:bg-white print:min-h-0">
+      {/* Print CSS */}
+      <style>{`
+        @media print {
+          @page {
+            margin: 0.5in;
+            size: letter portrait;
+          }
+
+          /* Hide all navigation, sidebars, toasts */
+          nav, aside, header, footer,
+          [data-radix-popper-content-wrapper],
+          [role="dialog"],
+          .toast-container { display: none !important; }
+
+          /* Reset body/html for print */
+          html, body {
+            background: white !important;
+            color: black !important;
+            font-size: 11pt !important;
+          }
+
+          /* Show the print block */
+          .hidden.print\\:block, [class*="print:block"] {
+            display: block !important;
+          }
+
+          /* Hide the screen view */
+          .print-screen-only {
+            display: none !important;
+          }
+
+          /* Page break controls */
+          .page-break-inside-avoid {
+            page-break-inside: avoid;
+            break-inside: avoid;
+          }
+
+          .print-day-block {
+            page-break-inside: avoid;
+            break-inside: avoid;
+          }
+
+          /* Table borders in print */
+          table, th, td {
+            border-color: #d1d5db !important;
+          }
+
+          /* Remove shadows */
+          * {
+            box-shadow: none !important;
+            text-shadow: none !important;
+          }
+
+          /* Ensure links look normal in print */
+          a { color: inherit !important; text-decoration: none !important; }
+
+          /* Print header styling */
+          .print-header { margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid #374151; }
+
+          /* Force background colors to show in print (for badges) */
+          .bg-blue-100 { background-color: #dbeafe !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          .bg-gray-100 { background-color: #f3f4f6 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          .bg-blue-50 { background-color: #eff6ff !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          .bg-gray-50 { background-color: #f9fafb !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+      `}</style>
+
       {/* Header */}
       <div className="bg-white shadow-sm dark:bg-gray-800 print:hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -667,12 +870,13 @@ function SchedulePageContent() {
                 <Keyboard className="w-4 h-4" />
               </button>
               <button
-                onClick={() => window.print()}
-                className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
-                aria-label="Print this page"
+                onClick={handlePrint}
+                disabled={isPrinting}
+                className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg disabled:opacity-60"
+                aria-label="Print schedule"
               >
                 <Printer className="w-4 h-4" />
-                Print
+                {isPrinting ? 'Preparing...' : 'Print'}
               </button>
               <button
                 onClick={handleExportCalendar}
@@ -694,7 +898,7 @@ function SchedulePageContent() {
         </div>
       </div>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 print:hidden">
         <PageErrorBoundary>
         {/* Calendar Controls */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6 print:hidden">
@@ -1338,6 +1542,270 @@ function SchedulePageContent() {
         </div>
         </PageErrorBoundary>
       </main>
+
+      {/* ─── PRINT-ONLY VIEW ─────────────────────────────────────────────────── */}
+      <div className="hidden print:block" aria-hidden="true">
+        {/* Print header */}
+        <div className="print-header mb-6">
+          <div className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-1">
+            Pima Medical Institute — Paramedic Program
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900">{getPrintTitle()}</h1>
+          {selectedCohort && cohorts.find(c => c.id === selectedCohort) && (
+            <p className="text-sm text-gray-600 mt-0.5">
+              Cohort: {cohorts.find(c => c.id === selectedCohort)!.program.abbreviation} Group {cohorts.find(c => c.id === selectedCohort)!.cohort_number}
+            </p>
+          )}
+          <p className="text-xs text-gray-400 mt-1">
+            Printed {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+          </p>
+        </div>
+
+        {/* ── Week View: detailed list layout ── */}
+        {viewMode === 'week' && (
+          <div className="print-week-view">
+            {getPrintWeekDays().map((date, i) => {
+              const dateStr = date.toISOString().split('T')[0];
+              const dayLabDays = printLabDays.filter(ld => ld.date === dateStr);
+              const today = isToday(date);
+              return (
+                <div key={i} className="print-day-block mb-5">
+                  <div className={`print-day-header flex items-center gap-2 pb-1 mb-2 border-b-2 ${today ? 'border-blue-600' : 'border-gray-400'}`}>
+                    <span className={`text-base font-bold ${today ? 'text-blue-700' : 'text-gray-800'}`}>
+                      {date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                    </span>
+                    {today && <span className="text-xs font-semibold bg-blue-100 text-blue-700 px-2 py-0.5 rounded">TODAY</span>}
+                  </div>
+                  {dayLabDays.length === 0 ? (
+                    <p className="text-sm text-gray-400 italic pl-2">No labs scheduled</p>
+                  ) : (
+                    dayLabDays.map(labDay => (
+                      <div key={labDay.id} className="print-lab-card border border-gray-300 rounded p-3 mb-3 page-break-inside-avoid">
+                        {/* Lab day title row */}
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <div>
+                            <span className="inline-block text-xs font-bold bg-blue-100 text-blue-800 px-2 py-0.5 rounded mr-2">
+                              {labDay.cohort.program.abbreviation} G{labDay.cohort.cohort_number}
+                            </span>
+                            {labDay.title && (
+                              <span className="text-sm font-semibold text-gray-800">{labDay.title}</span>
+                            )}
+                            {labDay.week_number && labDay.day_number && (
+                              <span className="text-sm text-gray-600 ml-1">
+                                {!labDay.title && `Week ${labDay.week_number}, Day ${labDay.day_number}`}
+                                {labDay.title && ` — W${labDay.week_number}D${labDay.day_number}`}
+                              </span>
+                            )}
+                          </div>
+                          {(labDay.start_time || labDay.end_time) && (
+                            <span className="text-sm text-gray-600 whitespace-nowrap flex-shrink-0">
+                              {formatTime(labDay.start_time)}{labDay.start_time && labDay.end_time ? ' – ' : ''}{formatTime(labDay.end_time)}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Rotation info */}
+                        <p className="text-xs text-gray-500 mb-2">
+                          {labDay.num_rotations} rotation{labDay.num_rotations !== 1 ? 's' : ''}
+                          {labDay.rotation_duration ? ` × ${labDay.rotation_duration} min` : ''}
+                        </p>
+
+                        {/* Stations */}
+                        {labDay.stations && labDay.stations.length > 0 && (
+                          <table className="w-full text-sm border-collapse">
+                            <thead>
+                              <tr className="border-b border-gray-200">
+                                <th className="text-left py-1 pr-3 font-semibold text-gray-600 text-xs w-8">#</th>
+                                <th className="text-left py-1 pr-3 font-semibold text-gray-600 text-xs">Station / Scenario</th>
+                                <th className="text-left py-1 pr-3 font-semibold text-gray-600 text-xs">Instructor</th>
+                                <th className="text-left py-1 font-semibold text-gray-600 text-xs">Room</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {labDay.stations.map(station => (
+                                <tr key={station.id} className="border-b border-gray-100">
+                                  <td className="py-1 pr-3 text-gray-500 text-xs align-top">{station.station_number}</td>
+                                  <td className="py-1 pr-3 align-top">
+                                    <span className="text-gray-900">{getStationLabel(station)}</span>
+                                    {station.station_notes && (
+                                      <p className="text-xs text-gray-500 mt-0.5">{station.station_notes}</p>
+                                    )}
+                                  </td>
+                                  <td className="py-1 pr-3 text-gray-700 align-top text-xs">
+                                    {station.instructor_name || <span className="text-gray-300">—</span>}
+                                  </td>
+                                  <td className="py-1 text-gray-700 align-top text-xs">
+                                    {station.room || <span className="text-gray-300">—</span>}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        )}
+                        {labDay.stations && labDay.stations.length === 0 && (
+                          <p className="text-xs text-gray-400 italic">No stations configured</p>
+                        )}
+
+                        {/* Lab notes */}
+                        {labDay.notes && (
+                          <div className="mt-2 pt-2 border-t border-gray-200">
+                            <p className="text-xs text-gray-500"><span className="font-semibold">Notes:</span> {labDay.notes}</p>
+                          </div>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* ── Month View: compact calendar grid + detail section ── */}
+        {viewMode === 'month' && (
+          <div className="print-month-view">
+            {/* Compact calendar grid */}
+            <table className="w-full border-collapse mb-6 text-sm">
+              <thead>
+                <tr>
+                  {weekDays.map(d => (
+                    <th key={d} className="border border-gray-300 py-1 px-1 text-center text-xs font-semibold text-gray-600 bg-gray-100 w-[14.28%]">
+                      {d}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {(() => {
+                  const grid = getPrintCalendarDays();
+                  const rows: Date[][] = [];
+                  for (let i = 0; i < grid.length; i += 7) {
+                    rows.push(grid.slice(i, i + 7));
+                  }
+                  return rows.map((row, ri) => (
+                    <tr key={ri}>
+                      {row.map((date, ci) => {
+                        const dateStr = date.toISOString().split('T')[0];
+                        const dayLabDays = printLabDays.filter(ld => ld.date === dateStr);
+                        const inMonth = isCurrentMonth(date);
+                        const today = isToday(date);
+                        return (
+                          <td
+                            key={ci}
+                            className={`border border-gray-300 align-top p-1 h-16 ${!inMonth ? 'bg-gray-50' : ''} ${today ? 'bg-blue-50' : ''}`}
+                          >
+                            <div className={`text-xs font-medium mb-0.5 ${today ? 'text-blue-700' : !inMonth ? 'text-gray-400' : 'text-gray-700'}`}>
+                              {date.getDate()}
+                            </div>
+                            {dayLabDays.slice(0, 3).map(ld => (
+                              <div key={ld.id} className="text-[9px] leading-tight text-blue-800 bg-blue-100 rounded px-0.5 mb-0.5 truncate">
+                                {ld.cohort.program.abbreviation} G{ld.cohort.cohort_number}
+                                {ld.start_time && ` ${formatTime(ld.start_time)}`}
+                              </div>
+                            ))}
+                            {dayLabDays.length > 3 && (
+                              <div className="text-[9px] text-gray-400">+{dayLabDays.length - 3}</div>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ));
+                })()}
+              </tbody>
+            </table>
+
+            {/* Detail section: all lab days for the month, sorted by date */}
+            {printLabDays.length > 0 && (
+              <div>
+                <h2 className="text-base font-bold text-gray-800 mb-3 border-b border-gray-300 pb-1">Lab Day Details</h2>
+                {printLabDays.map(labDay => {
+                  const labDate = new Date(labDay.date + 'T12:00:00');
+                  const today = labDate.toDateString() === new Date().toDateString();
+                  return (
+                    <div key={labDay.id} className="print-lab-card border border-gray-300 rounded p-3 mb-3 page-break-inside-avoid">
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div>
+                          <span className="text-xs font-semibold text-gray-500 mr-2">
+                            {labDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                            {today && <span className="ml-1 text-blue-600">(Today)</span>}
+                          </span>
+                          <span className="inline-block text-xs font-bold bg-blue-100 text-blue-800 px-2 py-0.5 rounded mr-2">
+                            {labDay.cohort.program.abbreviation} G{labDay.cohort.cohort_number}
+                          </span>
+                          {labDay.title && (
+                            <span className="text-sm font-semibold text-gray-800">{labDay.title}</span>
+                          )}
+                          {labDay.week_number && labDay.day_number && (
+                            <span className="text-sm text-gray-600 ml-1">
+                              {!labDay.title ? `Week ${labDay.week_number}, Day ${labDay.day_number}` : ` — W${labDay.week_number}D${labDay.day_number}`}
+                            </span>
+                          )}
+                        </div>
+                        {(labDay.start_time || labDay.end_time) && (
+                          <span className="text-sm text-gray-600 whitespace-nowrap flex-shrink-0">
+                            {formatTime(labDay.start_time)}{labDay.start_time && labDay.end_time ? ' – ' : ''}{formatTime(labDay.end_time)}
+                          </span>
+                        )}
+                      </div>
+
+                      <p className="text-xs text-gray-500 mb-2">
+                        {labDay.num_rotations} rotation{labDay.num_rotations !== 1 ? 's' : ''}
+                        {labDay.rotation_duration ? ` × ${labDay.rotation_duration} min` : ''}
+                      </p>
+
+                      {labDay.stations && labDay.stations.length > 0 && (
+                        <table className="w-full text-sm border-collapse">
+                          <thead>
+                            <tr className="border-b border-gray-200">
+                              <th className="text-left py-1 pr-3 font-semibold text-gray-600 text-xs w-8">#</th>
+                              <th className="text-left py-1 pr-3 font-semibold text-gray-600 text-xs">Station / Scenario</th>
+                              <th className="text-left py-1 pr-3 font-semibold text-gray-600 text-xs">Instructor</th>
+                              <th className="text-left py-1 font-semibold text-gray-600 text-xs">Room</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {labDay.stations.map(station => (
+                              <tr key={station.id} className="border-b border-gray-100">
+                                <td className="py-1 pr-3 text-gray-500 text-xs align-top">{station.station_number}</td>
+                                <td className="py-1 pr-3 align-top">
+                                  <span className="text-gray-900">{getStationLabel(station)}</span>
+                                  {station.station_notes && (
+                                    <p className="text-xs text-gray-500 mt-0.5">{station.station_notes}</p>
+                                  )}
+                                </td>
+                                <td className="py-1 pr-3 text-gray-700 align-top text-xs">
+                                  {station.instructor_name || <span className="text-gray-300">—</span>}
+                                </td>
+                                <td className="py-1 text-gray-700 align-top text-xs">
+                                  {station.room || <span className="text-gray-300">—</span>}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+                      {labDay.stations && labDay.stations.length === 0 && (
+                        <p className="text-xs text-gray-400 italic">No stations configured</p>
+                      )}
+
+                      {labDay.notes && (
+                        <div className="mt-2 pt-2 border-t border-gray-200">
+                          <p className="text-xs text-gray-500"><span className="font-semibold">Notes:</span> {labDay.notes}</p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            {printLabDays.length === 0 && (
+              <p className="text-sm text-gray-400 italic">No lab days scheduled for this period.</p>
+            )}
+          </div>
+        )}
+      </div>
+      {/* ─── END PRINT-ONLY VIEW ──────────────────────────────────────────────── */}
 
       {/* Keyboard Shortcuts Help */}
       <KeyboardShortcutsHelp

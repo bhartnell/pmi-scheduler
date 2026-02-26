@@ -30,6 +30,11 @@ import {
   Flag,
   MessageSquare,
   Plus,
+  Shield,
+  CheckCircle,
+  AlertTriangle,
+  XCircle,
+  FileText,
 } from 'lucide-react';
 import Barcode from 'react-barcode';
 import { canManageStudentRoster, hasMinRole, type Role } from '@/lib/permissions';
@@ -131,6 +136,37 @@ interface StudentNote {
   author: { id: string; name: string; email: string } | null;
 }
 
+interface ComplianceDocType {
+  id: string;
+  name: string;
+  description: string | null;
+  is_required: boolean;
+  expiration_months: number | null;
+  sort_order: number;
+  is_active: boolean;
+}
+
+interface ComplianceRecord {
+  id: string;
+  student_id: string;
+  doc_type_id: string;
+  status: 'complete' | 'missing' | 'expiring' | 'expired';
+  expiration_date: string | null;
+  file_path: string | null;
+  file_name: string | null;
+  notes: string | null;
+  verified_by: string | null;
+  verified_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface ComplianceItem {
+  doc_type: ComplianceDocType;
+  record: ComplianceRecord | null;
+  effective_status: 'complete' | 'missing' | 'expiring' | 'expired';
+}
+
 const REQUIRED_DOCS = ['mmr', 'vzv', 'hepb', 'tdap', 'covid', 'tb', 'physical', 'insurance', 'bls', 'flu', 'hospital_orient', 'background', 'drug_test'];
 const MCE_MODULES = ['airway', 'respiratory', 'cardiovascular', 'trauma', 'medical', 'obstetrics', 'pediatrics', 'geriatrics', 'behavioral', 'toxicology', 'neurology', 'endocrine', 'immunology', 'infectious', 'operations'];
 
@@ -208,7 +244,7 @@ export default function StudentDetailPage() {
   // Notes state
   const [studentNotes, setStudentNotes] = useState<StudentNote[]>([]);
   const [notesLoading, setNotesLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'notes'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'notes' | 'compliance' | 'lab-ratings'>('overview');
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   // New note form
   const [newNoteContent, setNewNoteContent] = useState('');
@@ -221,6 +257,22 @@ export default function StudentDetailPage() {
   const [editNoteCategory, setEditNoteCategory] = useState<'academic' | 'behavioral' | 'medical' | 'other'>('other');
   const [editNoteFlagLevel, setEditNoteFlagLevel] = useState<'yellow' | 'red' | null>(null);
   const [savingEditNote, setSavingEditNote] = useState(false);
+
+  // Compliance state
+  const [complianceItems, setComplianceItems] = useState<ComplianceItem[]>([]);
+  const [complianceLoading, setComplianceLoading] = useState(false);
+  const [complianceSaving, setComplianceSaving] = useState<string | null>(null);
+  const [complianceEditId, setComplianceEditId] = useState<string | null>(null);
+  const [complianceEditExpDate, setComplianceEditExpDate] = useState('');
+  const [complianceEditNotes, setComplianceEditNotes] = useState('');
+  const [complianceEditStatus, setComplianceEditStatus] = useState<'complete' | 'missing' | 'expiring' | 'expired'>('complete');
+  const [complianceVerifying, setComplianceVerifying] = useState<string | null>(null);
+
+  // Lab ratings state
+  const [labRatings, setLabRatings] = useState<any[]>([]);
+  const [labRatingsAverage, setLabRatingsAverage] = useState<number | null>(null);
+  const [labRatingsTotal, setLabRatingsTotal] = useState(0);
+  const [labRatingsLoading, setLabRatingsLoading] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -237,6 +289,8 @@ export default function StudentDetailPage() {
       fetchCurrentUser();
       fetchLearningStyle();
       fetchNotes();
+      fetchCompliance();
+      fetchLabRatings();
     }
   }, [session, studentId]);
 
@@ -382,6 +436,92 @@ export default function StudentDetailPage() {
     } catch (error) {
       console.error('Error fetching learning style:', error);
     }
+  };
+
+  const fetchCompliance = async () => {
+    setComplianceLoading(true);
+    try {
+      const res = await fetch(`/api/compliance?student_id=${studentId}`);
+      const data = await res.json();
+      if (data.success) {
+        setComplianceItems(data.items || []);
+      }
+    } catch (error) {
+      console.error('Error fetching compliance:', error);
+    }
+    setComplianceLoading(false);
+  };
+
+  const fetchLabRatings = async () => {
+    setLabRatingsLoading(true);
+    try {
+      const res = await fetch(`/api/lab-management/students/${studentId}/ratings`);
+      const data = await res.json();
+      if (data.success) {
+        setLabRatings(data.ratings || []);
+        setLabRatingsAverage(data.averageRating);
+        setLabRatingsTotal(data.totalCount || 0);
+      }
+    } catch (error) {
+      console.error('Error fetching lab ratings:', error);
+    }
+    setLabRatingsLoading(false);
+  };
+
+  const handleSaveCompliance = async (docTypeId: string) => {
+    setComplianceSaving(docTypeId);
+    try {
+      const res = await fetch('/api/compliance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          student_id: studentId,
+          doc_type_id: docTypeId,
+          status: complianceEditStatus,
+          expiration_date: complianceEditExpDate || null,
+          notes: complianceEditNotes || null,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        await fetchCompliance();
+        setComplianceEditId(null);
+      } else {
+        alert('Failed to save: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Error saving compliance:', error);
+      alert('Failed to save compliance document');
+    }
+    setComplianceSaving(null);
+  };
+
+  const handleVerifyCompliance = async (recordId: string) => {
+    setComplianceVerifying(recordId);
+    try {
+      const res = await fetch('/api/compliance', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: recordId }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        await fetchCompliance();
+      } else {
+        alert('Failed to verify: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Error verifying compliance:', error);
+      alert('Failed to verify document');
+    }
+    setComplianceVerifying(null);
+  };
+
+  const openComplianceEdit = (item: ComplianceItem) => {
+    setComplianceEditId(item.doc_type.id);
+    setComplianceEditStatus(item.record?.status || 'complete');
+    setComplianceEditExpDate(item.record?.expiration_date || '');
+    setComplianceEditNotes(item.record?.notes || '');
   };
 
   const handleSaveLearningStyle = async () => {
@@ -1055,12 +1195,228 @@ export default function StudentDetailPage() {
                 <span className="w-2 h-2 rounded-full bg-yellow-400 ml-0.5" />
               )}
             </button>
+            <button
+              onClick={() => setActiveTab('compliance')}
+              className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'compliance'
+                  ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400'
+                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              }`}
+            >
+              <Shield className="w-4 h-4" />
+              Compliance
+              {complianceItems.length > 0 && (() => {
+                const missing = complianceItems.filter(i => i.effective_status === 'missing' || i.effective_status === 'expired').length;
+                const expiring = complianceItems.filter(i => i.effective_status === 'expiring').length;
+                if (missing > 0) return <span className="w-2 h-2 rounded-full bg-red-500 ml-0.5" />;
+                if (expiring > 0) return <span className="w-2 h-2 rounded-full bg-yellow-400 ml-0.5" />;
+                return null;
+              })()}
+            </button>
           </div>
 
           {/* Overview Tab Content */}
           {activeTab === 'overview' && (
             <div className="p-0">
               {/* placeholder - overview content is rendered below outside this card */}
+            </div>
+          )}
+
+          {/* Compliance Tab Content */}
+          {activeTab === 'compliance' && (
+            <div className="p-5 space-y-4">
+              {complianceLoading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto" />
+                </div>
+              ) : complianceItems.length === 0 ? (
+                <div className="text-center py-10">
+                  <Shield className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">No compliance document types configured.</p>
+                </div>
+              ) : (
+                <>
+                  {/* Overall progress bar */}
+                  {(() => {
+                    const complete = complianceItems.filter(i => i.effective_status === 'complete').length;
+                    const total = complianceItems.length;
+                    const pct = total > 0 ? Math.round((complete / total) * 100) : 0;
+                    return (
+                      <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+                        <div className="flex justify-between text-sm mb-2">
+                          <span className="font-medium text-gray-700 dark:text-gray-300">
+                            Overall Compliance
+                          </span>
+                          <span className="font-semibold text-gray-900 dark:text-white">
+                            {complete}/{total} documents — {pct}%
+                          </span>
+                        </div>
+                        <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full transition-all rounded-full ${
+                              pct === 100 ? 'bg-green-500' : pct >= 75 ? 'bg-yellow-500' : 'bg-red-500'
+                            }`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Document list */}
+                  <div className="divide-y dark:divide-gray-700 border dark:border-gray-700 rounded-lg overflow-hidden">
+                    {complianceItems.map((item) => {
+                      const isEditing = complianceEditId === item.doc_type.id;
+                      const isSaving = complianceSaving === item.doc_type.id;
+                      const isVerifying = complianceVerifying === item.record?.id;
+                      const status = item.effective_status;
+
+                      return (
+                        <div
+                          key={item.doc_type.id}
+                          className={`p-4 ${
+                            status === 'complete'
+                              ? 'bg-white dark:bg-gray-800'
+                              : status === 'expiring'
+                              ? 'bg-amber-50 dark:bg-amber-900/10'
+                              : 'bg-red-50 dark:bg-red-900/10'
+                          }`}
+                        >
+                          {isEditing ? (
+                            <div className="space-y-3">
+                              <div className="flex items-center gap-2 mb-1">
+                                <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                                <span className="font-medium text-gray-900 dark:text-white">{item.doc_type.name}</span>
+                              </div>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Status</label>
+                                  <select
+                                    value={complianceEditStatus}
+                                    onChange={e => setComplianceEditStatus(e.target.value as 'complete' | 'missing' | 'expiring' | 'expired')}
+                                    className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                                  >
+                                    <option value="complete">Complete</option>
+                                    <option value="missing">Missing</option>
+                                    <option value="expiring">Expiring Soon</option>
+                                    <option value="expired">Expired</option>
+                                  </select>
+                                </div>
+                                {item.doc_type.expiration_months && (
+                                  <div>
+                                    <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Expiration Date</label>
+                                    <input
+                                      type="date"
+                                      value={complianceEditExpDate}
+                                      onChange={e => setComplianceEditExpDate(e.target.value)}
+                                      className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                              <div>
+                                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Notes</label>
+                                <input
+                                  type="text"
+                                  value={complianceEditNotes}
+                                  onChange={e => setComplianceEditNotes(e.target.value)}
+                                  placeholder="Optional notes..."
+                                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                                />
+                              </div>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => setComplianceEditId(null)}
+                                  className="px-3 py-1.5 border dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  onClick={() => handleSaveCompliance(item.doc_type.id)}
+                                  disabled={isSaving}
+                                  className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+                                >
+                                  {isSaving ? 'Saving...' : 'Save'}
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="flex items-start gap-3 flex-1 min-w-0">
+                                {/* Status icon */}
+                                <div className="mt-0.5 shrink-0">
+                                  {status === 'complete' ? (
+                                    <CheckCircle className="w-5 h-5 text-green-500 dark:text-green-400" />
+                                  ) : status === 'expiring' ? (
+                                    <AlertTriangle className="w-5 h-5 text-amber-500 dark:text-amber-400" />
+                                  ) : (
+                                    <XCircle className="w-5 h-5 text-red-500 dark:text-red-400" />
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span className="font-medium text-gray-900 dark:text-white text-sm">
+                                      {item.doc_type.name}
+                                    </span>
+                                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                      status === 'complete'
+                                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                        : status === 'expiring'
+                                        ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                                        : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                    }`}>
+                                      {status === 'complete' ? 'Complete' : status === 'expiring' ? 'Expiring Soon' : status === 'expired' ? 'Expired' : 'Missing'}
+                                    </span>
+                                  </div>
+                                  {item.doc_type.description && (
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{item.doc_type.description}</p>
+                                  )}
+                                  {item.record?.expiration_date && (
+                                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                                      Expires: {new Date(item.record.expiration_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                    </p>
+                                  )}
+                                  {item.record?.notes && (
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 italic">{item.record.notes}</p>
+                                  )}
+                                  {item.record?.verified_by && (
+                                    <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                                      Verified by {item.record.verified_by}
+                                      {item.record.verified_at && ` on ${new Date(item.record.verified_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                              {/* Action buttons */}
+                              <div className="flex gap-1.5 shrink-0">
+                                {item.record && !item.record.verified_by && userRole && hasMinRole(userRole, 'admin') && (
+                                  <button
+                                    onClick={() => handleVerifyCompliance(item.record!.id)}
+                                    disabled={isVerifying}
+                                    className="flex items-center gap-1 px-2 py-1 text-xs bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40 rounded-lg border border-green-200 dark:border-green-800"
+                                    title="Mark as verified"
+                                  >
+                                    <Check className="w-3 h-3" />
+                                    {isVerifying ? '...' : 'Verify'}
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => openComplianceEdit(item)}
+                                  className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded-lg border border-blue-200 dark:border-blue-800"
+                                  title={item.record ? 'Update document' : 'Add document'}
+                                >
+                                  <Upload className="w-3 h-3" />
+                                  {item.record ? 'Update' : 'Add'}
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
             </div>
           )}
 

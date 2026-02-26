@@ -20,6 +20,8 @@ import {
   Mail,
   Download,
   ClipboardList,
+  Megaphone,
+  UserCheck,
 } from 'lucide-react';
 import {
   canAccessAdmin,
@@ -36,6 +38,7 @@ export default function AdminPage() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [pendingAccessRequests, setPendingAccessRequests] = useState(0);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -59,6 +62,15 @@ export default function AdminPage() {
           return;
         }
         setCurrentUser(data.user);
+        // Fetch pending access request count in the background
+        fetch('/api/access-requests?status=pending')
+          .then(r => r.json())
+          .then(d => {
+            if (d.success) {
+              setPendingAccessRequests(d.requests?.length || 0);
+            }
+          })
+          .catch(() => {});
       }
     } catch (error) {
       console.error('Error fetching user:', error);
@@ -121,6 +133,21 @@ export default function AdminPage() {
       title: 'Program Requirements',
       description: 'Configure required clinical hours, skills, and scenarios per program',
       color: 'bg-orange-500'
+    },
+    {
+      href: '/admin/announcements',
+      icon: Megaphone,
+      title: 'Announcements',
+      description: 'Post system-wide announcements for instructors and students',
+      color: 'bg-sky-500'
+    },
+    {
+      href: '/admin/access-requests',
+      icon: UserCheck,
+      title: 'Access Requests',
+      description: 'Review and approve volunteer instructor self-service signup requests',
+      color: 'bg-violet-500',
+      badge: pendingAccessRequests > 0 ? pendingAccessRequests : undefined,
     }
   ];
 
@@ -218,7 +245,14 @@ export default function AdminPage() {
                   <link.icon className="w-6 h-6 text-white" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900 dark:text-white mb-1">{link.title}</h3>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="font-semibold text-gray-900 dark:text-white">{link.title}</h3>
+                    {'badge' in link && link.badge !== undefined && (
+                      <span className="px-1.5 py-0.5 rounded-full text-xs font-bold bg-amber-500 text-white">
+                        {link.badge}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-sm text-gray-600 dark:text-gray-400">{link.description}</p>
                 </div>
                 <ChevronRight className="w-5 h-5 text-gray-400 dark:text-gray-500 mt-1" />
