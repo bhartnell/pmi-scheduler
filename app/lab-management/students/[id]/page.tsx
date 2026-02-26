@@ -40,6 +40,7 @@ import {
 import Barcode from 'react-barcode';
 import { canManageStudentRoster, hasMinRole, type Role } from '@/lib/permissions';
 import StudentCommunications from '@/components/StudentCommunications';
+import AttendanceAlertBanner from '@/components/AttendanceAlertBanner';
 
 interface Student {
   id: string;
@@ -875,6 +876,11 @@ export default function StudentDetailPage() {
       </div>
 
       <main className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+        {/* Attendance Alert Banner - shown when student has attendance issues */}
+        {hasMinRole(userRole || 'guest', 'instructor') && (
+          <AttendanceAlertBanner studentId={studentId} />
+        )}
+
         {/* Profile Card */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
           <div className="flex flex-col sm:flex-row gap-6">

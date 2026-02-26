@@ -46,16 +46,16 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
       .order('created_at', { ascending: false });
 
     if (typeFilter && ['phone', 'email', 'meeting', 'text', 'other'].includes(typeFilter)) {
-      query = query.eq('comm_type', typeFilter);
+      query = query.eq('type', typeFilter);
     }
 
     if (flaggedFilter === 'true') {
-      query = query.eq('is_flagged', true);
+      query = query.eq('flagged', true);
     }
 
     if (searchQuery && searchQuery.trim()) {
       const term = `%${searchQuery.trim()}%`;
-      query = query.or(`subject.ilike.${term},summary.ilike.${term}`);
+      query = query.or(`summary.ilike.${term},details.ilike.${term}`);
     }
 
     const { data, error } = await query;
@@ -90,11 +90,8 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     const body = await request.json();
 
     const validTypes = ['phone', 'email', 'meeting', 'text', 'other'];
-    if (!body.comm_type || !validTypes.includes(body.comm_type)) {
-      return NextResponse.json({ error: 'Invalid comm_type' }, { status: 400 });
-    }
-    if (!body.subject?.trim()) {
-      return NextResponse.json({ error: 'Subject is required' }, { status: 400 });
+    if (!body.type || !validTypes.includes(body.type)) {
+      return NextResponse.json({ error: 'Invalid type' }, { status: 400 });
     }
     if (!body.summary?.trim()) {
       return NextResponse.json({ error: 'Summary is required' }, { status: 400 });
@@ -107,14 +104,14 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       .from('student_communications')
       .insert({
         student_id: studentId,
-        comm_type: body.comm_type,
-        subject: body.subject.trim(),
+        type: body.type,
         summary: body.summary.trim(),
+        details: body.details?.trim() || null,
         follow_up_needed: followUpNeeded,
         follow_up_date: followUpDate,
         follow_up_completed: false,
-        is_flagged: body.is_flagged === true,
-        logged_by: user.email,
+        flagged: body.flagged === true,
+        created_by: user.email,
       })
       .select('*')
       .single();
@@ -164,15 +161,17 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ error: 'Communication not found' }, { status: 404 });
     }
 
-    const updatePayload: Record<string, unknown> = {
-      updated_at: new Date().toISOString(),
-    };
+    const updatePayload: Record<string, unknown> = {};
 
     if (typeof body.follow_up_completed === 'boolean') {
       updatePayload.follow_up_completed = body.follow_up_completed;
     }
-    if (typeof body.is_flagged === 'boolean') {
-      updatePayload.is_flagged = body.is_flagged;
+    if (typeof body.flagged === 'boolean') {
+      updatePayload.flagged = body.flagged;
+    }
+
+    if (Object.keys(updatePayload).length === 0) {
+      return NextResponse.json({ error: 'No fields to update' }, { status: 400 });
     }
 
     const { data, error } = await supabase

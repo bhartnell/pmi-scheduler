@@ -100,9 +100,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Equipment not found' }, { status: 404 });
     }
 
-    if (equipment.condition === 'retired') {
+    if (equipment.condition === 'out_of_service') {
       return NextResponse.json(
-        { error: 'Cannot check out retired equipment' },
+        { error: 'Cannot check out out-of-service equipment' },
         { status: 400 }
       );
     }
@@ -167,8 +167,8 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
-    const body = await request.json() as { checkout_id: string };
-    const { checkout_id } = body;
+    const body = await request.json() as { checkout_id: string; condition_on_return?: string | null };
+    const { checkout_id, condition_on_return } = body;
 
     if (!checkout_id) {
       return NextResponse.json({ error: 'checkout_id is required' }, { status: 400 });
@@ -202,6 +202,7 @@ export async function PUT(request: NextRequest) {
       .update({
         checked_in_at: now,
         checked_in_by: currentUser.email,
+        condition_on_return: condition_on_return ?? null,
       })
       .eq('id', checkout_id)
       .select()

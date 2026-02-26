@@ -26,16 +26,15 @@ type CommType = 'phone' | 'email' | 'meeting' | 'text' | 'other';
 interface Communication {
   id: string;
   student_id: string;
-  comm_type: CommType;
-  subject: string;
+  type: CommType;
   summary: string;
+  details: string | null;
   follow_up_needed: boolean;
   follow_up_date: string | null;
   follow_up_completed: boolean;
-  is_flagged: boolean;
-  logged_by: string;
+  flagged: boolean;
+  created_by: string;
   created_at: string;
-  updated_at: string;
 }
 
 interface StudentCommunicationsProps {
@@ -120,11 +119,11 @@ export default function StudentCommunications({ studentId, studentName }: Studen
   // Add modal state
   const [showAddModal, setShowAddModal] = useState(false);
   const [formType, setFormType] = useState<CommType>('phone');
-  const [formSubject, setFormSubject] = useState('');
   const [formSummary, setFormSummary] = useState('');
+  const [formDetails, setFormDetails] = useState('');
   const [formFollowUpNeeded, setFormFollowUpNeeded] = useState(false);
   const [formFollowUpDate, setFormFollowUpDate] = useState('');
-  const [formIsFlagged, setFormIsFlagged] = useState(false);
+  const [formFlagged, setFormFlagged] = useState(false);
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -161,11 +160,11 @@ export default function StudentCommunications({ studentId, studentName }: Studen
 
   const openAddModal = () => {
     setFormType('phone');
-    setFormSubject('');
     setFormSummary('');
+    setFormDetails('');
     setFormFollowUpNeeded(false);
     setFormFollowUpDate('');
-    setFormIsFlagged(false);
+    setFormFlagged(false);
     setFormError('');
     setShowAddModal(true);
   };
@@ -179,10 +178,6 @@ export default function StudentCommunications({ studentId, studentName }: Studen
     e.preventDefault();
     setFormError('');
 
-    if (!formSubject.trim()) {
-      setFormError('Subject is required.');
-      return;
-    }
     if (!formSummary.trim()) {
       setFormError('Summary is required.');
       return;
@@ -198,12 +193,12 @@ export default function StudentCommunications({ studentId, studentName }: Studen
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          comm_type: formType,
-          subject: formSubject.trim(),
+          type: formType,
           summary: formSummary.trim(),
+          details: formDetails.trim() || null,
           follow_up_needed: formFollowUpNeeded,
           follow_up_date: formFollowUpNeeded ? formFollowUpDate : null,
-          is_flagged: formIsFlagged,
+          flagged: formFlagged,
         }),
       });
       const data = await res.json();
@@ -226,22 +221,22 @@ export default function StudentCommunications({ studentId, studentName }: Studen
 
   const toggleFlag = async (comm: Communication) => {
     setTogglingId(comm.id);
-    const newValue = !comm.is_flagged;
+    const newValue = !comm.flagged;
     // Optimistic update
-    setCommunications(prev => prev.map(c => c.id === comm.id ? { ...c, is_flagged: newValue } : c));
+    setCommunications(prev => prev.map(c => c.id === comm.id ? { ...c, flagged: newValue } : c));
     try {
       const res = await fetch(`/api/lab-management/students/${studentId}/communications`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: comm.id, is_flagged: newValue }),
+        body: JSON.stringify({ id: comm.id, flagged: newValue }),
       });
       if (!res.ok) {
         // Revert on failure
-        setCommunications(prev => prev.map(c => c.id === comm.id ? { ...c, is_flagged: comm.is_flagged } : c));
+        setCommunications(prev => prev.map(c => c.id === comm.id ? { ...c, flagged: comm.flagged } : c));
       }
     } catch (err) {
       console.error('Error toggling flag:', err);
-      setCommunications(prev => prev.map(c => c.id === comm.id ? { ...c, is_flagged: comm.is_flagged } : c));
+      setCommunications(prev => prev.map(c => c.id === comm.id ? { ...c, flagged: comm.flagged } : c));
     } finally {
       setTogglingId(null);
     }
@@ -272,7 +267,7 @@ export default function StudentCommunications({ studentId, studentName }: Studen
   // ── Derived counts ─────────────────────────────────────────────────────────
 
   const pendingFollowUps = communications.filter(c => c.follow_up_needed && !c.follow_up_completed).length;
-  const flaggedCount = communications.filter(c => c.is_flagged).length;
+  const flaggedCount = communications.filter(c => c.flagged).length;
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -401,7 +396,7 @@ export default function StudentCommunications({ studentId, studentName }: Studen
       ) : (
         <div className="space-y-2">
           {communications.map(comm => {
-            const typeConf = TYPE_CONFIG[comm.comm_type];
+            const typeConf = TYPE_CONFIG[comm.type];
             const isExpanded = expandedId === comm.id;
             const isOverdue =
               comm.follow_up_needed &&
@@ -413,7 +408,7 @@ export default function StudentCommunications({ studentId, studentName }: Studen
               <div
                 key={comm.id}
                 className={`border rounded-lg overflow-hidden transition-colors ${
-                  comm.is_flagged
+                  comm.flagged
                     ? 'border-yellow-300 dark:border-yellow-700 bg-yellow-50/50 dark:bg-yellow-900/10'
                     : isOverdue
                     ? 'border-orange-200 dark:border-orange-800 bg-orange-50/30 dark:bg-orange-900/10'
@@ -431,13 +426,10 @@ export default function StudentCommunications({ studentId, studentName }: Studen
                       {typeConf.label}
                     </span>
 
-                    {/* Subject and meta */}
+                    {/* Summary and meta */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-medium text-gray-900 dark:text-white text-sm truncate">
-                          {comm.subject}
-                        </p>
-                        {comm.is_flagged && (
+                        {comm.flagged && (
                           <Star className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500 flex-shrink-0" />
                         )}
                         {comm.follow_up_needed && !comm.follow_up_completed && (
@@ -461,7 +453,7 @@ export default function StudentCommunications({ studentId, studentName }: Studen
                         )}
                       </div>
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                        {formatDate(comm.created_at)} &middot; {shortEmail(comm.logged_by)}
+                        {formatDate(comm.created_at)} &middot; {shortEmail(comm.created_by)}
                       </p>
 
                       {/* Summary preview when collapsed */}
@@ -478,14 +470,14 @@ export default function StudentCommunications({ studentId, studentName }: Studen
                       <button
                         onClick={() => toggleFlag(comm)}
                         disabled={togglingId === comm.id}
-                        title={comm.is_flagged ? 'Remove flag' : 'Flag as important'}
+                        title={comm.flagged ? 'Remove flag' : 'Flag as important'}
                         className={`p-1.5 rounded transition-colors disabled:opacity-50 ${
-                          comm.is_flagged
+                          comm.flagged
                             ? 'text-yellow-500 hover:text-yellow-600 hover:bg-yellow-100 dark:hover:bg-yellow-900/30'
                             : 'text-gray-400 hover:text-yellow-500 hover:bg-gray-100 dark:hover:bg-gray-700'
                         }`}
                       >
-                        <Star className={`w-4 h-4 ${comm.is_flagged ? 'fill-yellow-500' : ''}`} />
+                        <Star className={`w-4 h-4 ${comm.flagged ? 'fill-yellow-500' : ''}`} />
                       </button>
 
                       {/* Expand/collapse */}
@@ -505,6 +497,11 @@ export default function StudentCommunications({ studentId, studentName }: Studen
                       <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
                         {comm.summary}
                       </p>
+                      {comm.details && (
+                        <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap">
+                          {comm.details}
+                        </p>
+                      )}
 
                       {comm.follow_up_needed && (
                         <div className="flex items-center gap-3">
@@ -604,23 +601,6 @@ export default function StudentCommunications({ studentId, studentName }: Studen
                 </div>
               </div>
 
-              {/* Subject */}
-              <div>
-                <label htmlFor="comm-subject" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                  Subject <span className="text-red-500">*</span>
-                </label>
-                <input
-                  id="comm-subject"
-                  type="text"
-                  value={formSubject}
-                  onChange={e => setFormSubject(e.target.value)}
-                  placeholder="Brief subject line..."
-                  maxLength={200}
-                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  disabled={submitting}
-                />
-              </div>
-
               {/* Summary */}
               <div>
                 <label htmlFor="comm-summary" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
@@ -632,6 +612,22 @@ export default function StudentCommunications({ studentId, studentName }: Studen
                   onChange={e => setFormSummary(e.target.value)}
                   placeholder="Describe what was discussed, any action items, outcomes..."
                   rows={4}
+                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 resize-y focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={submitting}
+                />
+              </div>
+
+              {/* Details */}
+              <div>
+                <label htmlFor="comm-details" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                  Additional Details
+                </label>
+                <textarea
+                  id="comm-details"
+                  value={formDetails}
+                  onChange={e => setFormDetails(e.target.value)}
+                  placeholder="Optional additional details..."
+                  rows={3}
                   className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 resize-y focus:outline-none focus:ring-2 focus:ring-blue-500"
                   disabled={submitting}
                 />
@@ -674,13 +670,13 @@ export default function StudentCommunications({ studentId, studentName }: Studen
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={formIsFlagged}
-                  onChange={e => setFormIsFlagged(e.target.checked)}
+                  checked={formFlagged}
+                  onChange={e => setFormFlagged(e.target.checked)}
                   className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-yellow-500 focus:ring-yellow-400"
                   disabled={submitting}
                 />
                 <span className="text-sm text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-                  <Star className={`w-4 h-4 ${formIsFlagged ? 'text-yellow-500 fill-yellow-500' : 'text-gray-400'}`} />
+                  <Star className={`w-4 h-4 ${formFlagged ? 'text-yellow-500 fill-yellow-500' : 'text-gray-400'}`} />
                   Flag as important
                 </span>
               </label>

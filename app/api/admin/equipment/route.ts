@@ -102,44 +102,42 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json() as {
       name: string;
-      category: string;
-      quantity: number;
+      category?: string | null;
+      quantity?: number;
       available_quantity?: number;
       description?: string | null;
-      serial_number?: string | null;
       location?: string | null;
       condition?: string | null;
-      last_serviced?: string | null;
-      next_service_due?: string | null;
+      last_maintenance?: string | null;
+      next_maintenance?: string | null;
+      low_stock_threshold?: number;
     };
 
-    const { name, category, quantity } = body;
+    const { name } = body;
 
-    if (!name || !category || quantity === undefined) {
+    if (!name) {
       return NextResponse.json(
-        { error: 'name, category, and quantity are required' },
+        { error: 'name is required' },
         { status: 400 }
       );
     }
 
-    if (quantity < 1) {
-      return NextResponse.json({ error: 'quantity must be at least 1' }, { status: 400 });
-    }
+    const qty = body.quantity ?? 1;
 
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
       .from('equipment')
       .insert({
         name: name.trim(),
-        category: category.trim(),
-        quantity,
-        available_quantity: body.available_quantity ?? quantity,
+        category: body.category?.trim() ?? null,
+        quantity: qty,
+        available_quantity: body.available_quantity ?? qty,
         description: body.description ?? null,
-        serial_number: body.serial_number ?? null,
         location: body.location ?? null,
-        condition: body.condition ?? null,
-        last_serviced: body.last_serviced ?? null,
-        next_service_due: body.next_service_due ?? null,
+        condition: body.condition ?? 'good',
+        last_maintenance: body.last_maintenance ?? null,
+        next_maintenance: body.next_maintenance ?? null,
+        low_stock_threshold: body.low_stock_threshold ?? 1,
       })
       .select()
       .single();
@@ -180,7 +178,7 @@ export async function PATCH(request: NextRequest) {
     // Only allow updating known columns
     const allowed = [
       'name', 'category', 'quantity', 'available_quantity', 'description',
-      'serial_number', 'location', 'condition', 'last_serviced', 'next_service_due',
+      'location', 'condition', 'last_maintenance', 'next_maintenance', 'low_stock_threshold',
     ];
     const safeUpdates: Record<string, unknown> = { updated_at: new Date().toISOString() };
     for (const key of allowed) {

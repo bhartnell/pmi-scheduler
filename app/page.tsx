@@ -44,6 +44,7 @@ import {
   QuickStatsWidget,
   MyTasksWidget,
   CertExpiryWidget,
+  AtRiskStudentsWidget,
   ROLE_DEFAULTS,
 } from '@/components/dashboard/widgets';
 import AnnouncementBanner from '@/components/dashboard/AnnouncementBanner';
@@ -222,6 +223,8 @@ export default function HomePage() {
         return <MyTasksWidget key={widgetId} />;
       case 'cert_expiry':
         return <CertExpiryWidget key={widgetId} />;
+      case 'at_risk_students':
+        return <AtRiskStudentsWidget key={widgetId} />;
       default:
         return null;
     }

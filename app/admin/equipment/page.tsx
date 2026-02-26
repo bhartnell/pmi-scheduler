@@ -59,12 +59,12 @@ const CONDITION_CONFIG: Record<
     label: 'Fair',
     badge: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
   },
-  needs_repair: {
-    label: 'Needs Repair',
+  poor: {
+    label: 'Poor',
     badge: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
   },
-  retired: {
-    label: 'Retired',
+  out_of_service: {
+    label: 'Out of Service',
     badge: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400',
   },
 };
@@ -76,15 +76,15 @@ const CONDITION_CONFIG: Record<
 interface EquipmentItem {
   id: string;
   name: string;
-  category: string;
+  category: string | null;
   quantity: number;
   available_quantity: number;
   description: string | null;
-  serial_number: string | null;
   location: string | null;
   condition: string | null;
-  last_serviced: string | null;
-  next_service_due: string | null;
+  last_maintenance: string | null;
+  next_maintenance: string | null;
+  low_stock_threshold?: number;
   created_at: string;
   updated_at: string;
   checked_out_quantity: number;
@@ -108,11 +108,10 @@ interface EquipmentFormData {
   quantity: string;
   available_quantity: string;
   description: string;
-  serial_number: string;
   location: string;
   condition: string;
-  last_serviced: string;
-  next_service_due: string;
+  last_maintenance: string;
+  next_maintenance: string;
 }
 
 interface CheckoutFormData {
@@ -134,16 +133,16 @@ function formatDate(iso: string | null): string {
   });
 }
 
-function isMaintenanceDue(next_service_due: string | null): boolean {
-  if (!next_service_due) return false;
-  const due = new Date(next_service_due);
+function isMaintenanceDue(next_maintenance: string | null): boolean {
+  if (!next_maintenance) return false;
+  const due = new Date(next_maintenance);
   const thirtyDaysFromNow = new Date();
   thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
   return due <= thirtyDaysFromNow;
 }
 
 function isLowStock(item: EquipmentItem): boolean {
-  return item.available_quantity < 2;
+  return item.available_quantity < (item.low_stock_threshold ?? 1);
 }
 
 const EMPTY_EQUIPMENT_FORM: EquipmentFormData = {
@@ -152,11 +151,10 @@ const EMPTY_EQUIPMENT_FORM: EquipmentFormData = {
   quantity: '1',
   available_quantity: '1',
   description: '',
-  serial_number: '',
   location: '',
   condition: 'good',
-  last_serviced: '',
-  next_service_due: '',
+  last_maintenance: '',
+  next_maintenance: '',
 };
 
 const EMPTY_CHECKOUT_FORM: CheckoutFormData = {
@@ -188,15 +186,14 @@ function EquipmentModal({
     if (editItem) {
       setForm({
         name: editItem.name,
-        category: editItem.category,
+        category: editItem.category ?? '',
         quantity: String(editItem.quantity),
         available_quantity: String(editItem.available_quantity),
         description: editItem.description ?? '',
-        serial_number: editItem.serial_number ?? '',
         location: editItem.location ?? '',
         condition: editItem.condition ?? 'good',
-        last_serviced: editItem.last_serviced ?? '',
-        next_service_due: editItem.next_service_due ?? '',
+        last_maintenance: editItem.last_maintenance ?? '',
+        next_maintenance: editItem.next_maintenance ?? '',
       });
     } else {
       setForm(EMPTY_EQUIPMENT_FORM);
@@ -278,8 +275,8 @@ function EquipmentModal({
                 <option value="new">New</option>
                 <option value="good">Good</option>
                 <option value="fair">Fair</option>
-                <option value="needs_repair">Needs Repair</option>
-                <option value="retired">Retired</option>
+                <option value="poor">Poor</option>
+                <option value="out_of_service">Out of Service</option>
               </select>
             </div>
           </div>
@@ -313,52 +310,38 @@ function EquipmentModal({
             </div>
           </div>
 
-          {/* Location + Serial */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className={labelClass}>Location</label>
-              <input
-                type="text"
-                value={form.location}
-                onChange={(e) => setForm({ ...form, location: e.target.value })}
-                placeholder="e.g. Storage Room B"
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label className={labelClass}>Serial Number</label>
-              <input
-                type="text"
-                value={form.serial_number}
-                onChange={(e) =>
-                  setForm({ ...form, serial_number: e.target.value })
-                }
-                placeholder="Optional"
-                className={inputClass}
-              />
-            </div>
+          {/* Location */}
+          <div>
+            <label className={labelClass}>Location</label>
+            <input
+              type="text"
+              value={form.location}
+              onChange={(e) => setForm({ ...form, location: e.target.value })}
+              placeholder="e.g. Storage Room B"
+              className={inputClass}
+            />
           </div>
 
-          {/* Service dates */}
+          {/* Maintenance dates */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className={labelClass}>Last Serviced</label>
+              <label className={labelClass}>Last Maintenance</label>
               <input
                 type="date"
-                value={form.last_serviced}
+                value={form.last_maintenance}
                 onChange={(e) =>
-                  setForm({ ...form, last_serviced: e.target.value })
+                  setForm({ ...form, last_maintenance: e.target.value })
                 }
                 className={inputClass}
               />
             </div>
             <div>
-              <label className={labelClass}>Next Service Due</label>
+              <label className={labelClass}>Next Maintenance</label>
               <input
                 type="date"
-                value={form.next_service_due}
+                value={form.next_maintenance}
                 onChange={(e) =>
-                  setForm({ ...form, next_service_due: e.target.value })
+                  setForm({ ...form, next_maintenance: e.target.value })
                 }
                 className={inputClass}
               />
@@ -630,8 +613,8 @@ function EquipmentCard({
 }) {
   const conditionCfg = item.condition ? CONDITION_CONFIG[item.condition] : null;
   const lowStock = isLowStock(item);
-  const maintenanceDue = isMaintenanceDue(item.next_service_due);
-  const isRetired = item.condition === 'retired';
+  const maintenanceDue = isMaintenanceDue(item.next_maintenance);
+  const isRetired = item.condition === 'out_of_service';
 
   return (
     <div
@@ -702,12 +685,7 @@ function EquipmentCard({
               <span className="font-medium">Location:</span> {item.location}
             </p>
           )}
-          {item.serial_number && (
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              <span className="font-medium">S/N:</span> {item.serial_number}
-            </p>
-          )}
-          {item.next_service_due && (
+          {item.next_maintenance && (
             <p
               className={`text-xs font-medium ${
                 maintenanceDue
@@ -716,7 +694,7 @@ function EquipmentCard({
               }`}
             >
               <Wrench className="inline w-3 h-3 mr-1" />
-              Service due: {formatDate(item.next_service_due)}
+              Maintenance due: {formatDate(item.next_maintenance)}
             </p>
           )}
         </div>
@@ -875,8 +853,7 @@ export default function EquipmentInventoryPage() {
     const matchesSearch =
       search === '' ||
       item.name.toLowerCase().includes(search.toLowerCase()) ||
-      (item.location ?? '').toLowerCase().includes(search.toLowerCase()) ||
-      (item.serial_number ?? '').toLowerCase().includes(search.toLowerCase());
+      (item.location ?? '').toLowerCase().includes(search.toLowerCase());
     return matchesCategory && matchesSearch;
   });
 
@@ -887,10 +864,10 @@ export default function EquipmentInventoryPage() {
 
   // Alerts summary
   const lowStockCount = equipment.filter(
-    (e) => isLowStock(e) && e.condition !== 'retired'
+    (e) => isLowStock(e) && e.condition !== 'out_of_service'
   ).length;
   const maintenanceDueCount = equipment.filter(
-    (e) => isMaintenanceDue(e.next_service_due) && e.condition !== 'retired'
+    (e) => isMaintenanceDue(e.next_maintenance) && e.condition !== 'out_of_service'
   ).length;
 
   // Create / Update
@@ -899,15 +876,14 @@ export default function EquipmentInventoryPage() {
     try {
       const payload = {
         name: formData.name.trim(),
-        category: formData.category,
+        category: formData.category || null,
         quantity: parseInt(formData.quantity, 10),
         available_quantity: parseInt(formData.available_quantity, 10),
         description: formData.description || null,
-        serial_number: formData.serial_number || null,
         location: formData.location || null,
         condition: formData.condition || null,
-        last_serviced: formData.last_serviced || null,
-        next_service_due: formData.next_service_due || null,
+        last_maintenance: formData.last_maintenance || null,
+        next_maintenance: formData.next_maintenance || null,
       };
 
       const res = await fetch('/api/admin/equipment', {
@@ -1123,7 +1099,7 @@ export default function EquipmentInventoryPage() {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name, location, or serial number..."
+              placeholder="Search by name or location..."
               className="w-full pl-9 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
             />
           </div>
