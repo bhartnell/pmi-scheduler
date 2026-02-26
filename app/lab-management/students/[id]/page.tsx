@@ -244,7 +244,7 @@ export default function StudentDetailPage() {
   // Notes state
   const [studentNotes, setStudentNotes] = useState<StudentNote[]>([]);
   const [notesLoading, setNotesLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'notes' | 'compliance' | 'lab-ratings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'notes' | 'compliance' | 'lab-ratings' | 'skills'>('overview');
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   // New note form
   const [newNoteContent, setNewNoteContent] = useState('');
@@ -274,6 +274,19 @@ export default function StudentDetailPage() {
   const [labRatingsTotal, setLabRatingsTotal] = useState(0);
   const [labRatingsLoading, setLabRatingsLoading] = useState(false);
 
+  // Skill sign-offs state
+  const [skillSignoffs, setSkillSignoffs] = useState<Array<{
+    id: string;
+    skill_id: string;
+    signed_off_by: string;
+    signed_off_at: string;
+    revoked: boolean;
+    revoke_reason?: string | null;
+  }>>([]);
+  const [allSkills, setAllSkills] = useState<Array<{ id: string; name: string; category: string }>>([]);
+  const [skillSignoffsLoading, setSkillSignoffsLoading] = useState(false);
+  const [skillFilter, setSkillFilter] = useState<'all' | 'signed' | 'unsigned'>('all');
+
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/signin');
@@ -291,6 +304,8 @@ export default function StudentDetailPage() {
       fetchNotes();
       fetchCompliance();
       fetchLabRatings();
+      fetchSkillSignoffs();
+      fetchAllSkills();
     }
   }, [session, studentId]);
 
@@ -466,6 +481,32 @@ export default function StudentDetailPage() {
       console.error('Error fetching lab ratings:', error);
     }
     setLabRatingsLoading(false);
+  };
+
+  const fetchSkillSignoffs = async () => {
+    setSkillSignoffsLoading(true);
+    try {
+      const res = await fetch(`/api/lab-management/skill-signoffs?student_id=${studentId}`);
+      const data = await res.json();
+      if (data.success) {
+        setSkillSignoffs(data.signoffs || []);
+      }
+    } catch (error) {
+      console.error('Error fetching skill signoffs:', error);
+    }
+    setSkillSignoffsLoading(false);
+  };
+
+  const fetchAllSkills = async () => {
+    try {
+      const res = await fetch('/api/lab-management/skills');
+      const data = await res.json();
+      if (data.success) {
+        setAllSkills(data.skills || []);
+      }
+    } catch (error) {
+      console.error('Error fetching skills:', error);
+    }
   };
 
   const handleSaveCompliance = async (docTypeId: string) => {
@@ -1213,6 +1254,22 @@ export default function StudentDetailPage() {
                 return null;
               })()}
             </button>
+            <button
+              onClick={() => setActiveTab('skills')}
+              className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'skills'
+                  ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400 dark:border-emerald-400'
+                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+              }`}
+            >
+              <CheckCircle className="w-4 h-4" />
+              Skills
+              {allSkills.length > 0 && (
+                <span className="ml-1 px-1.5 py-0.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 text-xs rounded-full">
+                  {skillSignoffs.filter(s => !s.revoked).length}/{allSkills.length}
+                </span>
+              )}
+            </button>
           </div>
 
           {/* Overview Tab Content */}
@@ -1608,6 +1665,135 @@ export default function StudentDetailPage() {
                     );
                   })}
                 </div>
+              )}
+            </div>
+          )}
+
+          {/* Skills Tab Content */}
+          {activeTab === 'skills' && (
+            <div className="p-5 space-y-4">
+              {skillSignoffsLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600" />
+                </div>
+              ) : allSkills.length === 0 ? (
+                <div className="text-center py-12">
+                  <CheckCircle className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">No skills configured in the system yet.</p>
+                </div>
+              ) : (
+                <>
+                  {/* Progress bar */}
+                  {(() => {
+                    const signedCount = skillSignoffs.filter(s => !s.revoked).length;
+                    const total = allSkills.length;
+                    const pct = total > 0 ? Math.round((signedCount / total) * 100) : 0;
+                    return (
+                      <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/50 rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-emerald-800 dark:text-emerald-300">
+                            {signedCount} of {total} skills signed off
+                          </span>
+                          <span className="text-sm font-bold text-emerald-700 dark:text-emerald-400">{pct}%</span>
+                        </div>
+                        <div className="w-full bg-emerald-100 dark:bg-emerald-900/40 rounded-full h-2.5">
+                          <div
+                            className="bg-emerald-500 h-2.5 rounded-full transition-all"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Filter buttons */}
+                  <div className="flex gap-2">
+                    {(['all', 'signed', 'unsigned'] as const).map(f => (
+                      <button
+                        key={f}
+                        onClick={() => setSkillFilter(f)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                          skillFilter === f
+                            ? f === 'signed'
+                              ? 'bg-emerald-600 text-white'
+                              : f === 'unsigned'
+                                ? 'bg-gray-600 text-white'
+                                : 'bg-blue-600 text-white'
+                            : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                        }`}
+                      >
+                        {f.charAt(0).toUpperCase() + f.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Skill list grouped by category */}
+                  {Array.from(new Set(allSkills.map(s => s.category))).sort().map(category => {
+                    const categorySkills = allSkills.filter(s => s.category === category);
+                    const filtered = categorySkills.filter(skill => {
+                      const signoff = skillSignoffs.find(so => so.skill_id === skill.id);
+                      const isSigned = signoff && !signoff.revoked;
+                      if (skillFilter === 'signed') return isSigned;
+                      if (skillFilter === 'unsigned') return !isSigned;
+                      return true;
+                    });
+                    if (filtered.length === 0) return null;
+                    return (
+                      <div key={category}>
+                        <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2 px-1">
+                          {category}
+                        </h4>
+                        <div className="divide-y dark:divide-gray-700 border dark:border-gray-700 rounded-lg overflow-hidden">
+                          {filtered.map(skill => {
+                            const signoff = skillSignoffs.find(so => so.skill_id === skill.id);
+                            const isSigned = signoff && !signoff.revoked;
+                            return (
+                              <div
+                                key={skill.id}
+                                className={`flex items-center gap-3 px-4 py-3 ${
+                                  isSigned
+                                    ? 'bg-emerald-50 dark:bg-emerald-900/10'
+                                    : 'bg-white dark:bg-gray-800'
+                                }`}
+                              >
+                                <div className="shrink-0">
+                                  {isSigned ? (
+                                    <CheckCircle className="w-5 h-5 text-emerald-500" />
+                                  ) : signoff?.revoked ? (
+                                    <XCircle className="w-5 h-5 text-red-400" />
+                                  ) : (
+                                    <div className="w-5 h-5 rounded-full border-2 border-gray-300 dark:border-gray-600" />
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className={`text-sm font-medium truncate ${
+                                    isSigned ? 'text-emerald-800 dark:text-emerald-300' : 'text-gray-900 dark:text-white'
+                                  }`}>
+                                    {skill.name}
+                                  </p>
+                                  {isSigned && signoff && (
+                                    <p className="text-xs text-emerald-600 dark:text-emerald-400 truncate">
+                                      Signed by {signoff.signed_off_by.split('@')[0]} on{' '}
+                                      {new Date(signoff.signed_off_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                    </p>
+                                  )}
+                                  {signoff?.revoked && (
+                                    <p className="text-xs text-red-500 dark:text-red-400">
+                                      Revoked{signoff.revoke_reason ? `: ${signoff.revoke_reason}` : ''}
+                                    </p>
+                                  )}
+                                </div>
+                                {!isSigned && !signoff && (
+                                  <span className="shrink-0 text-xs text-gray-400 dark:text-gray-500">Not signed</span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </>
               )}
             </div>
           )}

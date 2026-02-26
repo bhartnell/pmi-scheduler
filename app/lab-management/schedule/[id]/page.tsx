@@ -45,7 +45,10 @@ import {
   MessageSquare,
   Star,
   ChevronUp,
-  Wrench
+  Wrench,
+  CheckCircle,
+  XCircle,
+  Shield
 } from 'lucide-react';
 import LabTimer from '@/components/LabTimer';
 import InlineTimerWidget from '@/components/InlineTimerWidget';
@@ -161,6 +164,9 @@ interface Student {
   last_name: string;
   email: string | null;
   cohort_id: string;
+  agency?: string | null;
+  photo_url?: string | null;
+  status?: string;
 }
 
 interface ScenarioParticipation {
@@ -348,6 +354,24 @@ export default function LabDayPage() {
   const [pendingNotes, setPendingNotes] = useState<Record<string, string>>({});
   const [userRole, setUserRole] = useState<string | null>(null);
 
+  // Skill sign-off state
+  const [signoffCollapsed, setSignoffCollapsed] = useState(false);
+  const [signoffSkillId, setSignoffSkillId] = useState('');
+  const [signoffs, setSignoffs] = useState<Record<string, { id: string; signed_off_by: string; signed_off_at: string; revoked: boolean }>>({});
+  const [signoffLoading, setSignoffLoading] = useState(false);
+  const [signoffSaving, setSignoffSaving] = useState<Record<string, boolean>>({});
+  const [signoffConfirm, setSignoffConfirm] = useState<Record<string, boolean>>({});
+  const [signoffBulkSelected, setSignoffBulkSelected] = useState<string[]>([]);
+  const [signoffBulkConfirm, setSignoffBulkConfirm] = useState(false);
+  const [signoffBulkSaving, setSignoffBulkSaving] = useState(false);
+  const [signoffRevokeId, setSignoffRevokeId] = useState<string | null>(null);
+  const [signoffRevokeReason, setSignoffRevokeReason] = useState('');
+  const [signoffRevoking, setSignoffRevoking] = useState(false);
+
+  // Roster export state
+  const [showRosterPrint, setShowRosterPrint] = useState(false);
+  const [rosterIncludePhotos, setRosterIncludePhotos] = useState(true);
+
   // Check-in toggle state
   const [checkInLoading, setCheckInLoading] = useState(false);
   const [copyLinkSuccess, setCopyLinkSuccess] = useState(false);
@@ -396,6 +420,8 @@ export default function LabDayPage() {
       fetchDebriefs();
       fetchStudentRatings();
       fetchCurrentUserRole();
+      fetchSignoffs();
+      fetchSkillsForSignoffs();
     }
   }, [session, labDayId]);
 
@@ -746,6 +772,165 @@ export default function LabDayPage() {
     }
   };
 
+  // ---- Skill Sign-off helpers ----
+
+  const fetchSkillsForSignoffs = async () => {
+    // Only load if skills haven't been fetched yet
+    if (skills.length > 0) return;
+    try {
+      const res = await fetch('/api/lab-management/skills');
+      const data = await res.json();
+      if (data.success) {
+        setSkills(data.skills || []);
+      }
+    } catch (error) {
+      console.error('Error fetching skills for signoffs:', error);
+    }
+  };
+
+  const fetchSignoffs = async () => {
+    if (!labDayId) return;
+    setSignoffLoading(true);
+    try {
+      const res = await fetch(`/api/lab-management/skill-signoffs?lab_day_id=${labDayId}`);
+      const data = await res.json();
+      if (data.success) {
+        const map: Record<string, { id: string; signed_off_by: string; signed_off_at: string; revoked: boolean }> = {};
+        for (const s of data.signoffs || []) {
+          // Key by "studentId:skillId"
+          map[`${s.student_id}:${s.skill_id}`] = {
+            id: s.id,
+            signed_off_by: s.signed_off_by,
+            signed_off_at: s.signed_off_at,
+            revoked: s.revoked,
+          };
+        }
+        setSignoffs(map);
+      }
+    } catch (error) {
+      console.error('Error fetching signoffs:', error);
+    }
+    setSignoffLoading(false);
+  };
+
+  const handleSignoff = async (studentId: string) => {
+    if (!signoffSkillId) return;
+    const key = `${studentId}:${signoffSkillId}`;
+
+    // Two-click confirmation
+    if (!signoffConfirm[key]) {
+      setSignoffConfirm(prev => ({ ...prev, [key]: true }));
+      // Auto-reset after 4 seconds
+      setTimeout(() => setSignoffConfirm(prev => ({ ...prev, [key]: false })), 4000);
+      return;
+    }
+
+    setSignoffSaving(prev => ({ ...prev, [studentId]: true }));
+    setSignoffConfirm(prev => ({ ...prev, [key]: false }));
+    try {
+      const res = await fetch('/api/lab-management/skill-signoffs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          student_id: studentId,
+          skill_id: signoffSkillId,
+          lab_day_id: labDayId,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.signoffs?.length > 0) {
+        const s = data.signoffs[0];
+        setSignoffs(prev => ({
+          ...prev,
+          [key]: { id: s.id, signed_off_by: s.signed_off_by, signed_off_at: s.signed_off_at, revoked: s.revoked },
+        }));
+        toast.success('Skill signed off');
+      } else if (data.skipped_count > 0) {
+        toast.info('Already signed off');
+      } else {
+        toast.error(data.error || 'Failed to sign off');
+      }
+    } catch (error) {
+      console.error('Error signing off:', error);
+      toast.error('Failed to sign off');
+    }
+    setSignoffSaving(prev => ({ ...prev, [studentId]: false }));
+  };
+
+  const handleBulkSignoff = async () => {
+    if (!signoffSkillId || signoffBulkSelected.length === 0) return;
+
+    if (!signoffBulkConfirm) {
+      setSignoffBulkConfirm(true);
+      setTimeout(() => setSignoffBulkConfirm(false), 4000);
+      return;
+    }
+
+    setSignoffBulkSaving(true);
+    setSignoffBulkConfirm(false);
+    try {
+      const res = await fetch('/api/lab-management/skill-signoffs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          student_ids: signoffBulkSelected,
+          skill_id: signoffSkillId,
+          lab_day_id: labDayId,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        const newSignoffs: Record<string, { id: string; signed_off_by: string; signed_off_at: string; revoked: boolean }> = {};
+        for (const s of data.signoffs || []) {
+          newSignoffs[`${s.student_id}:${s.skill_id}`] = {
+            id: s.id,
+            signed_off_by: s.signed_off_by,
+            signed_off_at: s.signed_off_at,
+            revoked: s.revoked,
+          };
+        }
+        setSignoffs(prev => ({ ...prev, ...newSignoffs }));
+        setSignoffBulkSelected([]);
+        toast.success(`Signed off ${data.signoffs?.length || 0} student${data.signoffs?.length !== 1 ? 's' : ''}`);
+      } else {
+        toast.error(data.error || 'Failed to bulk sign off');
+      }
+    } catch (error) {
+      console.error('Error bulk signing off:', error);
+      toast.error('Failed to bulk sign off');
+    }
+    setSignoffBulkSaving(false);
+  };
+
+  const handleRevokeSignoff = async () => {
+    if (!signoffRevokeId) return;
+    setSignoffRevoking(true);
+    try {
+      const res = await fetch('/api/lab-management/skill-signoffs', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: signoffRevokeId, revoke_reason: signoffRevokeReason || undefined }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        const s = data.signoff;
+        const key = Object.keys(signoffs).find(k => signoffs[k].id === signoffRevokeId);
+        if (key) {
+          setSignoffs(prev => ({ ...prev, [key]: { ...prev[key], revoked: true } }));
+        }
+        setSignoffRevokeId(null);
+        setSignoffRevokeReason('');
+        toast.success('Sign-off revoked');
+      } else {
+        toast.error(data.error || 'Failed to revoke');
+      }
+    } catch (error) {
+      console.error('Error revoking signoff:', error);
+      toast.error('Failed to revoke');
+    }
+    setSignoffRevoking(false);
+  };
+
   const handleSaveRating = async (studentId: string, rating: number) => {
     setSavingRating(prev => ({ ...prev, [studentId]: true }));
     // Optimistic update
@@ -1020,6 +1205,36 @@ export default function LabDayPage() {
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handlePrintRoster = () => {
+    setShowRosterPrint(true);
+    // Use a short timeout to let React render the print div before printing
+    setTimeout(() => {
+      window.print();
+    }, 150);
+  };
+
+  const handleCSVExport = async () => {
+    if (!labDay) return;
+    try {
+      const res = await fetch(`/api/lab-management/lab-days/${labDayId}/roster?format=csv`);
+      if (!res.ok) {
+        toast.error('Failed to export roster CSV');
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `labday-roster-${labDay.date}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+      toast.success('CSV downloaded');
+    } catch (error) {
+      console.error('Error exporting CSV:', error);
+      toast.error('Failed to export roster CSV');
+    }
   };
 
   const handleDownloadPDF = async () => {
@@ -1875,6 +2090,153 @@ export default function LabDayPage() {
         </div>
       </div>
 
+      {/* Roster Print View - Only visible when printing roster */}
+      {showRosterPrint && (
+        <div className="hidden print:block p-6 bg-white text-black">
+          <div className="text-center border-b-2 border-gray-800 pb-4 mb-6">
+            <h1 className="text-2xl font-bold">PMI Paramedic Program</h1>
+            <h2 className="text-xl font-semibold mt-1">Lab Day Roster</h2>
+          </div>
+          <div className="mb-6 grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <p><strong>Date:</strong> {formatDate(labDay.date)}</p>
+              <p><strong>Cohort:</strong> {labDay.cohort.program.abbreviation} Group {labDay.cohort.cohort_number}</p>
+              {labDay.title && <p><strong>Lab:</strong> {labDay.title}</p>}
+            </div>
+            <div>
+              {(labDay.start_time || labDay.end_time) && (
+                <p><strong>Time:</strong> {formatTime(labDay.start_time)}{labDay.end_time ? ` - ${formatTime(labDay.end_time)}` : ''}</p>
+              )}
+              {labDay.week_number && labDay.day_number && (
+                <p><strong>Week {labDay.week_number}, Day {labDay.day_number}</strong></p>
+              )}
+              <p><strong>Rotations:</strong> {labDay.num_rotations} x {labDay.rotation_duration} min</p>
+            </div>
+          </div>
+          {labDay.stations.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-base font-bold border-b border-gray-400 pb-1 mb-3 uppercase tracking-wide">
+                Stations &amp; Instructors
+              </h3>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-300">
+                    <th className="text-left py-1 pr-4 font-semibold w-12">Stn</th>
+                    <th className="text-left py-1 pr-4 font-semibold">Station</th>
+                    <th className="text-left py-1 font-semibold">Instructor</th>
+                    <th className="text-left py-1 pl-4 font-semibold">Room</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {labDay.stations.map((station) => (
+                    <tr key={station.id} className="border-b border-gray-100">
+                      <td className="py-1.5 pr-4 font-medium">{station.station_number}</td>
+                      <td className="py-1.5 pr-4">
+                        {station.custom_title || station.scenario?.title || station.skill_name || `Station ${station.station_number}`}
+                      </td>
+                      <td className="py-1.5">
+                        {station.instructor_name
+                          ? `${station.instructor_name}${station.instructor_email ? ` (${station.instructor_email})` : ''}`
+                          : <span className="text-gray-400 italic">TBD</span>
+                        }
+                      </td>
+                      <td className="py-1.5 pl-4">{station.room || ''}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <div>
+            <h3 className="text-base font-bold border-b border-gray-400 pb-1 mb-3 uppercase tracking-wide">
+              Enrolled Students ({cohortStudents.length})
+            </h3>
+            {cohortStudents.length === 0 ? (
+              <p className="text-gray-500 italic text-sm">No students found for this cohort.</p>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-300">
+                    <th className="text-left py-1 pr-4 font-semibold w-8">#</th>
+                    <th className="text-left py-1 pr-4 font-semibold">Name</th>
+                    <th className="text-left py-1 pr-4 font-semibold">Email</th>
+                    <th className="text-left py-1 pr-4 font-semibold">Agency</th>
+                    {rosterIncludePhotos && (
+                      <th className="text-left py-1 font-semibold">Photo</th>
+                    )}
+                  </tr>
+                </thead>
+                <tbody>
+                  {cohortStudents.map((student, index) => (
+                    <tr key={student.id} className="border-b border-gray-100">
+                      <td className="py-1.5 pr-4 text-gray-500">{index + 1}.</td>
+                      <td className="py-1.5 pr-4 font-medium">{student.last_name}, {student.first_name}</td>
+                      <td className="py-1.5 pr-4 text-gray-600">{student.email || ''}</td>
+                      <td className="py-1.5 pr-4">{student.agency || ''}</td>
+                      {rosterIncludePhotos && (
+                        <td className="py-1.5">
+                          {student.photo_url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={student.photo_url}
+                              alt={`${student.first_name} ${student.last_name}`}
+                              className="w-10 h-10 object-cover rounded"
+                            />
+                          ) : (
+                            <span className="text-gray-400 text-xs italic">No photo</span>
+                          )}
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+          <div className="mt-8 pt-4 border-t border-gray-300 text-xs text-gray-400 flex justify-between">
+            <span>PMI EMS Scheduler</span>
+            <span>Generated: {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Roster Print Controls - visible on screen when roster print mode is active */}
+      {showRosterPrint && (
+        <div className="print:hidden fixed bottom-4 right-4 z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl p-4 flex flex-col gap-3 w-72">
+          <div className="flex items-center justify-between">
+            <span className="font-semibold text-gray-900 dark:text-white text-sm">Roster Print Options</span>
+            <button
+              onClick={() => setShowRosterPrint(false)}
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={rosterIncludePhotos}
+              onChange={(e) => setRosterIncludePhotos(e.target.checked)}
+              className="w-4 h-4 rounded"
+            />
+            Include student photos
+          </label>
+          <button
+            onClick={() => window.print()}
+            className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+          >
+            <Printer className="w-4 h-4" />
+            Print Roster
+          </button>
+          <button
+            onClick={() => setShowRosterPrint(false)}
+            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-sm"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm print:hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -1943,6 +2305,22 @@ export default function LabDayPage() {
               >
                 <CalendarPlus className="w-4 h-4" />
                 Calendar
+              </button>
+              <button
+                onClick={handlePrintRoster}
+                className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+                title="Print student roster"
+              >
+                <Users className="w-4 h-4" />
+                Roster
+              </button>
+              <button
+                onClick={handleCSVExport}
+                className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+                title="Download roster as CSV"
+              >
+                <FileText className="w-4 h-4" />
+                CSV
               </button>
               {/* Duplicate split button */}
               <div className="relative inline-flex">
@@ -2853,6 +3231,296 @@ export default function LabDayPage() {
               labDayId={labDayId}
               cohortLinkId={labDay.cohort.id}
             />
+          </div>
+        )}
+
+        {/* Skill Sign-offs — visible to instructors+ with students present */}
+        {userRole && hasMinRole(userRole, 'instructor') && cohortStudents.length > 0 && skills.length > 0 && (
+          <div className="mt-6 print:hidden">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+              {/* Section header */}
+              <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
+                <button
+                  onClick={() => setSignoffCollapsed(prev => !prev)}
+                  className="flex items-center gap-2 text-left flex-1 min-w-0"
+                >
+                  <ClipboardCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <h3 className="font-semibold text-gray-900 dark:text-white">Skill Sign-offs</h3>
+                  {signoffSkillId && (
+                    <span className="ml-2 text-sm text-gray-500 dark:text-gray-400 shrink-0 truncate">
+                      {skills.find(s => s.id === signoffSkillId)?.name}
+                    </span>
+                  )}
+                  {signoffCollapsed ? (
+                    <ChevronDown className="w-4 h-4 text-gray-400 shrink-0 ml-1" />
+                  ) : (
+                    <ChevronUp className="w-4 h-4 text-gray-400 shrink-0 ml-1" />
+                  )}
+                </button>
+              </div>
+
+              {!signoffCollapsed && (
+                <div className="p-4 space-y-4">
+                  {/* Skill selector + bulk action bar */}
+                  <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex-1 min-w-[200px]">
+                      <select
+                        value={signoffSkillId}
+                        onChange={e => {
+                          setSignoffSkillId(e.target.value);
+                          setSignoffBulkSelected([]);
+                          setSignoffConfirm({});
+                          setSignoffBulkConfirm(false);
+                        }}
+                        className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      >
+                        <option value="">Select a skill...</option>
+                        {/* Group by category */}
+                        {Array.from(new Set(skills.map(s => s.category))).sort().map(category => (
+                          <optgroup key={category} label={category}>
+                            {skills.filter(s => s.category === category).map(skill => (
+                              <option key={skill.id} value={skill.id}>{skill.name}</option>
+                            ))}
+                          </optgroup>
+                        ))}
+                      </select>
+                    </div>
+
+                    {signoffSkillId && signoffBulkSelected.length > 0 && (
+                      <button
+                        onClick={handleBulkSignoff}
+                        disabled={signoffBulkSaving}
+                        className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          signoffBulkConfirm
+                            ? 'bg-amber-500 hover:bg-amber-600 text-white'
+                            : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                        } disabled:opacity-50`}
+                      >
+                        {signoffBulkSaving ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : signoffBulkConfirm ? (
+                          <AlertTriangle className="w-4 h-4" />
+                        ) : (
+                          <CheckCircle className="w-4 h-4" />
+                        )}
+                        {signoffBulkConfirm
+                          ? `Confirm sign-off ${signoffBulkSelected.length}?`
+                          : `Bulk Sign-off (${signoffBulkSelected.length})`}
+                      </button>
+                    )}
+
+                    {signoffSkillId && (
+                      <button
+                        onClick={() => {
+                          // Select all unsigned students
+                          const unsigned = cohortStudents
+                            .filter(s => {
+                              const entry = signoffs[`${s.id}:${signoffSkillId}`];
+                              return !entry || entry.revoked;
+                            })
+                            .map(s => s.id);
+                          setSignoffBulkSelected(unsigned);
+                        }}
+                        className="text-sm text-emerald-600 dark:text-emerald-400 hover:underline"
+                      >
+                        Select unsigned
+                      </button>
+                    )}
+
+                    {signoffBulkSelected.length > 0 && (
+                      <button
+                        onClick={() => setSignoffBulkSelected([])}
+                        className="text-sm text-gray-500 dark:text-gray-400 hover:underline"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Student list */}
+                  {signoffLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="w-6 h-6 animate-spin text-emerald-500" />
+                    </div>
+                  ) : !signoffSkillId ? (
+                    <div className="text-center py-8 text-gray-400 dark:text-gray-500 text-sm">
+                      Select a skill above to view and record sign-offs.
+                    </div>
+                  ) : (
+                    <div className="divide-y dark:divide-gray-700 border dark:border-gray-700 rounded-lg overflow-hidden">
+                      {cohortStudents.map(student => {
+                        const key = `${student.id}:${signoffSkillId}`;
+                        const signoff = signoffs[key];
+                        const isSigned = signoff && !signoff.revoked;
+                        const isSaving = signoffSaving[student.id];
+                        const isConfirming = signoffConfirm[key];
+                        const isSelected = signoffBulkSelected.includes(student.id);
+                        const initials = `${student.first_name[0]}${student.last_name[0]}`.toUpperCase();
+
+                        return (
+                          <div
+                            key={student.id}
+                            className={`flex items-center gap-3 px-4 py-3 transition-colors ${
+                              isSigned
+                                ? 'bg-emerald-50 dark:bg-emerald-900/10'
+                                : 'bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-750'
+                            }`}
+                          >
+                            {/* Checkbox for bulk */}
+                            {!isSigned && (
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={e => {
+                                  if (e.target.checked) {
+                                    setSignoffBulkSelected(prev => [...prev, student.id]);
+                                  } else {
+                                    setSignoffBulkSelected(prev => prev.filter(id => id !== student.id));
+                                  }
+                                }}
+                                className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-emerald-600 focus:ring-emerald-500 shrink-0"
+                              />
+                            )}
+                            {isSigned && <div className="w-4 shrink-0" />}
+
+                            {/* Avatar */}
+                            <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center shrink-0 overflow-hidden">
+                              {(student as any).photo_url ? (
+                                <img
+                                  src={(student as any).photo_url}
+                                  alt={`${student.first_name} ${student.last_name}`}
+                                  className="w-8 h-8 object-cover rounded-full"
+                                />
+                              ) : (
+                                <span className="text-xs font-bold text-blue-600 dark:text-blue-400">{initials}</span>
+                              )}
+                            </div>
+
+                            {/* Name */}
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                {student.first_name} {student.last_name}
+                              </p>
+                              {isSigned && (
+                                <p className="text-xs text-emerald-600 dark:text-emerald-400 truncate">
+                                  Signed by {signoff.signed_off_by.split('@')[0]} on{' '}
+                                  {new Date(signoff.signed_off_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                </p>
+                              )}
+                              {signoff?.revoked && (
+                                <p className="text-xs text-red-500 dark:text-red-400">Revoked</p>
+                              )}
+                            </div>
+
+                            {/* Status / action */}
+                            <div className="shrink-0 flex items-center gap-2">
+                              {isSigned ? (
+                                <>
+                                  <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 text-sm font-medium">
+                                    <CheckCircle className="w-4 h-4" />
+                                    Signed
+                                  </span>
+                                  {userRole && hasMinRole(userRole, 'lead_instructor') && (
+                                    <button
+                                      onClick={() => {
+                                        setSignoffRevokeId(signoff.id);
+                                        setSignoffRevokeReason('');
+                                      }}
+                                      className="text-xs text-red-500 dark:text-red-400 hover:underline ml-1"
+                                      title="Revoke sign-off"
+                                    >
+                                      Revoke
+                                    </button>
+                                  )}
+                                </>
+                              ) : isSaving ? (
+                                <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                              ) : (
+                                <button
+                                  onClick={() => handleSignoff(student.id)}
+                                  disabled={!signoffSkillId}
+                                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                                    isConfirming
+                                      ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-600'
+                                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 hover:text-emerald-700 dark:hover:text-emerald-300'
+                                  } disabled:opacity-50`}
+                                >
+                                  {isConfirming ? (
+                                    <>
+                                      <AlertTriangle className="w-3.5 h-3.5" />
+                                      Confirm?
+                                    </>
+                                  ) : (
+                                    <>
+                                      <CheckCircle className="w-3.5 h-3.5" />
+                                      Sign Off
+                                    </>
+                                  )}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Revoke Signoff Modal */}
+        {signoffRevokeId && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-sm">
+              <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
+                <h2 className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  <XCircle className="w-5 h-5 text-red-500" />
+                  Revoke Sign-off
+                </h2>
+                <button
+                  onClick={() => { setSignoffRevokeId(null); setSignoffRevokeReason(''); }}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="p-4 space-y-3">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  This will mark the sign-off as revoked. The record is preserved for audit purposes.
+                </p>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Reason (optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={signoffRevokeReason}
+                    onChange={e => setSignoffRevokeReason(e.target.value)}
+                    placeholder="e.g., Retraction due to error"
+                    className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+                  />
+                </div>
+              </div>
+              <div className="flex items-center justify-end gap-3 p-4 border-t dark:border-gray-700">
+                <button
+                  onClick={() => { setSignoffRevokeId(null); setSignoffRevokeReason(''); }}
+                  disabled={signoffRevoking}
+                  className="px-4 py-2 border dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleRevokeSignoff}
+                  disabled={signoffRevoking}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 text-sm font-medium"
+                >
+                  {signoffRevoking ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
+                  Revoke Sign-off
+                </button>
+              </div>
+            </div>
           </div>
         )}
 

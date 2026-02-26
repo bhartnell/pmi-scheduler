@@ -22,6 +22,7 @@ import {
   ClipboardList,
   Megaphone,
   UserCheck,
+  Layout,
 } from 'lucide-react';
 import {
   canAccessAdmin,
@@ -148,6 +149,13 @@ export default function AdminPage() {
       description: 'Review and approve volunteer instructor self-service signup requests',
       color: 'bg-violet-500',
       badge: pendingAccessRequests > 0 ? pendingAccessRequests : undefined,
+    },
+    {
+      href: '/admin/dashboard-defaults',
+      icon: Layout,
+      title: 'Dashboard Defaults',
+      description: 'Configure which widgets appear by default on the dashboard for each role',
+      color: 'bg-indigo-500',
     }
   ];
 

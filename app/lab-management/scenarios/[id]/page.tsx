@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useAutoSave } from '@/hooks/useAutoSave';
 import AutoSaveIndicator from '@/components/AutoSaveIndicator';
+import ScenarioVersionHistory from '@/components/ScenarioVersionHistory';
 import {
   ChevronRight,
   ChevronDown,
@@ -755,6 +756,10 @@ export default function ScenarioEditorPage() {
   const [duplicating, setDuplicating] = useState(false);
   const [studentPrintMode, setStudentPrintMode] = useState(false);
   const [instructorPrintMode, setInstructorPrintMode] = useState(false);
+  // Version history — bump this key to force the panel to reload after a save/restore
+  const [versionHistoryKey, setVersionHistoryKey] = useState(0);
+  // Optional change summary the user can enter when saving
+  const [changeSummary, setChangeSummary] = useState('');
   const [scenario, setScenario] = useState<Scenario>({
     title: '',
     applicable_programs: ['Paramedic'],
@@ -970,10 +975,35 @@ export default function ScenarioEditorPage() {
         debrief_points: scenario.debrief_points
       };
 
-      const url = isEditing 
+      // When updating an existing scenario, snapshot the CURRENT server state
+      // as a version before we overwrite it.
+      if (isEditing && scenarioId) {
+        try {
+          const snapRes = await fetch(`/api/lab-management/scenarios/${scenarioId}`);
+          const snapData = await snapRes.json();
+          if (snapData.success && snapData.scenario) {
+            const s = snapData.scenario;
+            await fetch(`/api/lab-management/scenarios/${scenarioId}/versions`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                title: s.title || scenario.title,
+                description: s.chief_complaint || null,
+                content: s,
+                change_summary: changeSummary.trim() || null,
+              }),
+            });
+          }
+        } catch {
+          // Version snapshot failing should not block the actual save
+          console.warn('Failed to snapshot version before save');
+        }
+      }
+
+      const url = isEditing
         ? `/api/lab-management/scenarios/${scenarioId}`
         : '/api/lab-management/scenarios';
-      
+
       const res = await fetch(url, {
         method: isEditing ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -984,6 +1014,10 @@ export default function ScenarioEditorPage() {
       if (data.success) {
         // Clear the local draft before navigating away
         autoSave.clearDraft();
+        // Reset change summary
+        setChangeSummary('');
+        // Bump version history so it reloads on next expand
+        setVersionHistoryKey(k => k + 1);
         // Redirect to scenarios list after successful save
         router.push('/lab-management/scenarios');
       } else {
@@ -2696,26 +2730,56 @@ export default function ScenarioEditorPage() {
           </div>
         </Section>
 
-        {/* Save Button (bottom) */}
-        <div className="flex justify-end gap-3 pt-4">
-          <Link
-            href="/lab-management/scenarios"
-            className="px-6 py-2 border dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
-          >
-            Cancel
-          </Link>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
-          >
-            {saving ? (
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-            ) : (
-              <Save className="w-5 h-5" />
-            )}
-            {saving ? 'Saving...' : 'Save Scenario'}
-          </button>
+        {/* Version History panel (only when editing an existing scenario) */}
+        {isEditing && scenarioId && (
+          <ScenarioVersionHistory
+            key={versionHistoryKey}
+            scenarioId={scenarioId}
+            currentTitle={scenario.title}
+            userRole={(session?.user as any)?.role ?? 'instructor'}
+            onRestored={() => {
+              setVersionHistoryKey(k => k + 1);
+              fetchScenario();
+            }}
+          />
+        )}
+
+        {/* Change summary + Save Button (bottom) */}
+        <div className="space-y-3 pt-4">
+          {isEditing && (
+            <div>
+              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                Change summary (optional — shown in version history)
+              </label>
+              <input
+                type="text"
+                value={changeSummary}
+                onChange={(e) => setChangeSummary(e.target.value)}
+                placeholder='e.g. "Updated patient vitals for realism"'
+                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+              />
+            </div>
+          )}
+          <div className="flex justify-end gap-3">
+            <Link
+              href="/lab-management/scenarios"
+              className="px-6 py-2 border dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+            >
+              Cancel
+            </Link>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+            >
+              {saving ? (
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+              ) : (
+                <Save className="w-5 h-5" />
+              )}
+              {saving ? 'Saving...' : 'Save Scenario'}
+            </button>
+          </div>
         </div>
       </main>
     </div>

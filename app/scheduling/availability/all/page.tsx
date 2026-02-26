@@ -21,9 +21,15 @@ import {
   AlertTriangle,
   CheckCircle2,
   Star,
+  Bell,
+  CheckCircle,
+  XCircle,
+  Send,
+  RefreshCw,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import NotificationBell from '@/components/NotificationBell';
+import { useToast } from '@/components/Toast';
 import { formatTime, type InstructorAvailability, type CurrentUser } from '@/types';
 
 // ----------------------------------------------------------------
@@ -174,6 +180,382 @@ function formatFullDate(dateStr: string): string {
     month: 'long',
     day: 'numeric',
   });
+}
+
+// ----------------------------------------------------------------
+// Types: Submission Status
+// ----------------------------------------------------------------
+
+interface InstructorStatus {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  has_submitted: boolean;
+  last_submitted: string | null;
+  last_reminder_sent: string | null;
+}
+
+interface StatusSummary {
+  total: number;
+  submitted: number;
+  not_submitted: number;
+  percent_submitted: number;
+}
+
+// ----------------------------------------------------------------
+// Helper: Monday of a week from a date string
+// ----------------------------------------------------------------
+
+function getMondayOfWeek(date: Date): Date {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  return d;
+}
+
+function toISODate(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function formatRelativeDate(isoString: string | null): string {
+  if (!isoString) return 'never';
+  const d = new Date(isoString);
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+// ----------------------------------------------------------------
+// Sub-component: Submission Status View
+// ----------------------------------------------------------------
+
+interface SubmissionStatusViewProps {
+  currentUser: CurrentUser;
+}
+
+function SubmissionStatusView({ currentUser }: SubmissionStatusViewProps) {
+  const toast = useToast();
+
+  // Week selector: defaults to the upcoming Monday
+  const [selectedWeek, setSelectedWeek] = useState<string>(() => {
+    const monday = getMondayOfWeek(new Date());
+    // If today is already past Monday, go to next week
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (monday.getTime() <= today.getTime()) {
+      const next = new Date(monday);
+      next.setDate(monday.getDate() + 7);
+      return toISODate(next);
+    }
+    return toISODate(monday);
+  });
+
+  const [statusData, setStatusData] = useState<{
+    instructors: InstructorStatus[];
+    summary: StatusSummary;
+    week: string;
+  } | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [sendingAll, setSendingAll] = useState(false);
+  const [sendingId, setSendingId] = useState<string | null>(null);
+
+  const fetchStatus = useCallback(async () => {
+    if (!selectedWeek) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/scheduling/availability-status?week=${selectedWeek}`);
+      const data = await res.json();
+      if (data.success) {
+        setStatusData(data);
+      } else {
+        toast.error(data.error || 'Failed to load status');
+      }
+    } catch {
+      toast.error('Failed to load submission status');
+    }
+    setLoading(false);
+  }, [selectedWeek, toast]);
+
+  useEffect(() => {
+    fetchStatus();
+  }, [fetchStatus]);
+
+  const handleSendAll = async () => {
+    setSendingAll(true);
+    try {
+      const res = await fetch('/api/scheduling/send-availability-reminders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ week: selectedWeek }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(data.message || `Sent ${data.sent} reminder(s)`);
+        await fetchStatus();
+      } else {
+        toast.error(data.error || 'Failed to send reminders');
+      }
+    } catch {
+      toast.error('Failed to send reminders');
+    }
+    setSendingAll(false);
+  };
+
+  const handleSendOne = async (instructor: InstructorStatus) => {
+    setSendingId(instructor.id);
+    try {
+      const res = await fetch('/api/scheduling/send-availability-reminders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ week: selectedWeek, instructor_emails: [instructor.email] }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`Reminder sent to ${instructor.name}`);
+        await fetchStatus();
+      } else {
+        toast.error(data.error || 'Failed to send reminder');
+      }
+    } catch {
+      toast.error('Failed to send reminder');
+    }
+    setSendingId(null);
+  };
+
+  // Week navigation helpers
+  const goPrevWeek = () => {
+    const d = new Date(selectedWeek + 'T00:00:00');
+    d.setDate(d.getDate() - 7);
+    setSelectedWeek(toISODate(d));
+  };
+  const goNextWeek = () => {
+    const d = new Date(selectedWeek + 'T00:00:00');
+    d.setDate(d.getDate() + 7);
+    setSelectedWeek(toISODate(d));
+  };
+
+  const weekLabel = selectedWeek
+    ? new Date(selectedWeek + 'T00:00:00').toLocaleDateString('en-US', {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+      })
+    : '';
+
+  const submitted = statusData?.instructors.filter((i) => i.has_submitted) ?? [];
+  const notSubmitted = statusData?.instructors.filter((i) => !i.has_submitted) ?? [];
+  const summary = statusData?.summary;
+
+  const canSendReminders =
+    currentUser.role === 'admin' ||
+    currentUser.role === 'superadmin' ||
+    currentUser.role === 'lead_instructor';
+
+  return (
+    <div className="space-y-4">
+      {/* Week selector bar */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={goPrevWeek}
+            className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            aria-label="Previous week"
+          >
+            <ChevronLeft className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+          </button>
+          <h3 className="text-base font-semibold text-gray-900 dark:text-white min-w-[220px] text-center">
+            Week of {weekLabel}
+          </h3>
+          <button
+            onClick={goNextWeek}
+            className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            aria-label="Next week"
+          >
+            <ChevronRight className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+          </button>
+        </div>
+
+        <div className="flex items-center gap-3 sm:ml-auto">
+          {/* Summary pill */}
+          {summary && (
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm">
+              <span className="text-green-600 dark:text-green-400 font-semibold">
+                {summary.submitted}
+              </span>
+              <span className="text-gray-400">/</span>
+              <span className="text-gray-700 dark:text-gray-200 font-medium">{summary.total}</span>
+              <span className="text-gray-500 dark:text-gray-400 text-xs">submitted</span>
+              <span className="text-xs font-medium px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400">
+                {summary.percent_submitted}%
+              </span>
+            </div>
+          )}
+
+          {/* Refresh */}
+          <button
+            onClick={fetchStatus}
+            disabled={loading}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors disabled:opacity-50"
+            aria-label="Refresh"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
+
+          {/* Send All Missing button */}
+          {canSendReminders && notSubmitted.length > 0 && (
+            <button
+              onClick={handleSendAll}
+              disabled={sendingAll || loading}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 font-medium"
+            >
+              {sendingAll ? (
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+              Send Reminders to All Missing
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Loading state */}
+      {loading && (
+        <div className="flex items-center justify-center py-8 text-sm text-gray-500 dark:text-gray-400 gap-2">
+          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600" />
+          Loading submission status...
+        </div>
+      )}
+
+      {!loading && statusData && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Submitted column */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-3 bg-green-50 dark:bg-green-900/20 border-b border-green-100 dark:border-green-900/40">
+              <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400" />
+              <h4 className="text-sm font-semibold text-green-700 dark:text-green-400">
+                Submitted ({submitted.length})
+              </h4>
+            </div>
+            <div className="divide-y dark:divide-gray-700">
+              {submitted.length === 0 ? (
+                <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-8">
+                  No submissions yet for this week.
+                </p>
+              ) : (
+                submitted.map((instructor) => (
+                  <div
+                    key={instructor.id}
+                    className="px-4 py-3 flex items-center justify-between gap-2"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <CheckCircle className="w-4 h-4 text-green-500 dark:text-green-400 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                          {instructor.name}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 capitalize">
+                          {instructor.role.replace(/_/g, ' ')}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 text-right flex-shrink-0">
+                      submitted{' '}
+                      <span className="font-medium text-gray-700 dark:text-gray-300">
+                        {formatRelativeDate(instructor.last_submitted)}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Not submitted column */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
+            <div className="flex items-center gap-2 px-4 py-3 bg-red-50 dark:bg-red-900/20 border-b border-red-100 dark:border-red-900/40">
+              <XCircle className="w-4 h-4 text-red-500 dark:text-red-400" />
+              <h4 className="text-sm font-semibold text-red-700 dark:text-red-400">
+                Not Submitted ({notSubmitted.length})
+              </h4>
+            </div>
+            <div className="divide-y dark:divide-gray-700">
+              {notSubmitted.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 gap-2">
+                  <CheckCircle2 className="w-8 h-8 text-green-500 dark:text-green-400" />
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    All instructors have submitted!
+                  </p>
+                </div>
+              ) : (
+                notSubmitted.map((instructor) => (
+                  <div
+                    key={instructor.id}
+                    className="px-4 py-3 flex items-center justify-between gap-2"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <XCircle className="w-4 h-4 text-red-400 dark:text-red-500 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                          {instructor.name}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          <span className="capitalize">{instructor.role.replace(/_/g, ' ')}</span>
+                          {instructor.last_reminder_sent && (
+                            <span className="ml-1.5">
+                              &bull; last reminder:{' '}
+                              <span className="text-amber-600 dark:text-amber-400">
+                                {formatRelativeDate(instructor.last_reminder_sent)}
+                              </span>
+                            </span>
+                          )}
+                          {!instructor.last_reminder_sent && (
+                            <span className="ml-1.5 text-gray-400 dark:text-gray-500">
+                              &bull; no reminder sent
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    {/* Per-instructor send button */}
+                    {canSendReminders && (
+                      <button
+                        onClick={() => handleSendOne(instructor)}
+                        disabled={sendingId === instructor.id || sendingAll}
+                        className="flex items-center gap-1 px-2.5 py-1.5 text-xs text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors disabled:opacity-50 font-medium flex-shrink-0"
+                        title={`Send reminder to ${instructor.name}`}
+                      >
+                        {sendingId === instructor.id ? (
+                          <div className="w-3 h-3 border-2 border-blue-400/30 border-t-blue-600 rounded-full animate-spin" />
+                        ) : (
+                          <Bell className="w-3 h-3" />
+                        )}
+                        Remind
+                      </button>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!loading && !statusData && (
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-8 text-center">
+          <p className="text-gray-500 dark:text-gray-400 text-sm">
+            Select a week above to view submission status.
+          </p>
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ----------------------------------------------------------------
@@ -986,7 +1368,7 @@ export default function AllAvailabilityPage() {
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'calendar' | 'list' | 'heatmap'>('calendar');
+  const [viewMode, setViewMode] = useState<'calendar' | 'list' | 'heatmap' | 'status'>('calendar');
 
   // Heatmap week start - defaults to current Monday
   const [heatmapWeekStart, setHeatmapWeekStart] = useState<Date>(getCurrentWeekMonday);
@@ -1008,9 +1390,9 @@ export default function AllAvailabilityPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session]);
 
-  // Fetch data when currentUser or date range changes
+  // Fetch data when currentUser or date range changes (skip for status mode)
   useEffect(() => {
-    if (currentUser) {
+    if (currentUser && viewMode !== 'status') {
       fetchData();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1247,7 +1629,7 @@ export default function AllAvailabilityPage() {
       <main className="max-w-7xl mx-auto px-4 py-6">
         {/* Controls row */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-          {/* Navigation - changes based on view mode */}
+          {/* Navigation - changes based on view mode (hidden for status mode) */}
           {viewMode === 'heatmap' ? (
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm px-3 py-2 flex items-center gap-2">
               <button
@@ -1267,6 +1649,11 @@ export default function AllAvailabilityPage() {
               >
                 <ChevronRight className="w-5 h-5 text-gray-600 dark:text-gray-300" />
               </button>
+            </div>
+          ) : viewMode === 'status' ? (
+            <div className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2">
+              <Bell className="w-4 h-4 text-amber-500" />
+              Track who has submitted availability and send reminders
             </div>
           ) : (
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm px-3 py-2 flex items-center gap-2">
@@ -1292,8 +1679,8 @@ export default function AllAvailabilityPage() {
 
           {/* View toggle + stats */}
           <div className="flex items-center gap-3">
-            {/* Quick stats - only in non-heatmap modes */}
-            {viewMode !== 'heatmap' && (
+            {/* Quick stats - only in calendar/list modes */}
+            {(viewMode === 'calendar' || viewMode === 'list') && (
               <div className="hidden sm:flex items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
                 <span className="flex items-center gap-1">
                   <Users className="w-3.5 h-3.5" />
@@ -1316,7 +1703,7 @@ export default function AllAvailabilityPage() {
               </div>
             )}
 
-            {/* Calendar / List / Heatmap toggle */}
+            {/* Calendar / List / Heatmap / Status toggle */}
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-1 flex items-center gap-1">
               <button
                 onClick={() => setViewMode('calendar')}
@@ -1354,12 +1741,24 @@ export default function AllAvailabilityPage() {
                 <BarChart2 className="w-4 h-4" />
                 <span className="hidden sm:inline">Heatmap</span>
               </button>
+              <button
+                onClick={() => setViewMode('status')}
+                className={[
+                  'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
+                  viewMode === 'status'
+                    ? 'bg-amber-600 text-white'
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700',
+                ].join(' ')}
+              >
+                <Bell className="w-4 h-4" />
+                <span className="hidden sm:inline">Status</span>
+              </button>
             </div>
           </div>
         </div>
 
-        {/* Loading overlay */}
-        {dataLoading && (
+        {/* Loading overlay - only for calendar/list/heatmap modes */}
+        {dataLoading && viewMode !== 'status' && (
           <div className="flex items-center justify-center py-4 text-sm text-gray-500 dark:text-gray-400 gap-2">
             <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600" />
             Loading availability...
@@ -1375,8 +1774,10 @@ export default function AllAvailabilityPage() {
           />
         )}
 
-        {/* Calendar, List, or Heatmap view */}
-        {viewMode === 'calendar' ? (
+        {/* Calendar, List, Heatmap, or Status view */}
+        {viewMode === 'status' ? (
+          <SubmissionStatusView currentUser={currentUser} />
+        ) : viewMode === 'calendar' ? (
           <CalendarView
             currentDate={currentDate}
             calendarDays={calendarDays}
@@ -1402,8 +1803,8 @@ export default function AllAvailabilityPage() {
           />
         )}
 
-        {/* Mobile stats bar - only for non-heatmap */}
-        {viewMode !== 'heatmap' && (
+        {/* Mobile stats bar - only for calendar/list modes */}
+        {(viewMode === 'calendar' || viewMode === 'list') && (
           <div className="sm:hidden mt-4 bg-white dark:bg-gray-800 rounded-xl shadow-sm px-4 py-3 flex items-center justify-between text-sm text-gray-600 dark:text-gray-400">
             <span>
               <span className="font-medium text-gray-900 dark:text-white">

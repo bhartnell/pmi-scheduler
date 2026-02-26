@@ -1,7 +1,7 @@
 'use client';
 
 import { useSession, signIn, signOut } from 'next-auth/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import {
   Calendar,
@@ -21,7 +21,8 @@ import {
   Plus,
   CheckSquare,
   Clock,
-  CalendarDays
+  CalendarDays,
+  RotateCcw,
 } from 'lucide-react';
 import { canAccessAdmin, canAccessClinical, getRoleLabel, getRoleBadgeClasses } from '@/lib/permissions';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -46,6 +47,7 @@ import {
   ROLE_DEFAULTS,
 } from '@/components/dashboard/widgets';
 import AnnouncementBanner from '@/components/dashboard/AnnouncementBanner';
+import { useToast } from '@/components/Toast';
 import type { CurrentUserMinimal } from '@/types';
 
 interface DashboardPreferences {
@@ -55,14 +57,30 @@ interface DashboardPreferences {
 
 export default function HomePage() {
   const { data: session, status } = useSession();
+  const toast = useToast();
   const [currentUser, setCurrentUser] = useState<CurrentUserMinimal | null>(null);
   const [preferences, setPreferences] = useState<DashboardPreferences | null>(null);
   const [showCustomize, setShowCustomize] = useState(false);
   const [hasOnboarding, setHasOnboarding] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [resetting, setResetting] = useState(false);
+
+  // Sync layout to DB (fire-and-forget, called whenever prefs change)
+  const syncLayoutToDB = useCallback(async (widgets: string[], quickLinks: string[]) => {
+    try {
+      await fetch('/api/dashboard/layout', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ layout: { dashboard_widgets: widgets, quick_links: quickLinks } }),
+      });
+    } catch {
+      // Silent — layout sync is best-effort
+    }
+  }, []);
 
   useEffect(() => {
     if (session?.user?.email) {
-      // Fetch user and preferences in parallel
+      // Fetch user, preferences, and onboarding status in parallel
       Promise.all([
         fetch('/api/instructor/me').then(res => res.json()),
         fetch('/api/user/preferences').then(res => res.json()),
@@ -96,6 +114,14 @@ export default function HomePage() {
         }
         if (prefsData.success && prefsData.preferences) {
           setPreferences(prefsData.preferences);
+          // On first load, if preferences came from DB, also sync them into dashboard_layouts
+          // so the new layout table is populated for cross-device use.
+          if (!prefsData.isDefault) {
+            syncLayoutToDB(
+              prefsData.preferences.dashboard_widgets,
+              prefsData.preferences.quick_links,
+            ).catch(() => {});
+          }
         } else if (userData.user) {
           // Use role defaults if no preferences
           const defaults = ROLE_DEFAULTS[userData.user.role] || ROLE_DEFAULTS.instructor;
@@ -106,7 +132,7 @@ export default function HomePage() {
         }
       }).catch(console.error);
     }
-  }, [session]);
+  }, [session, syncLayoutToDB]);
 
   const handleSavePreferences = async (widgets: string[], quickLinks: string[]) => {
     try {
@@ -120,6 +146,8 @@ export default function HomePage() {
       });
       if (res.ok) {
         setPreferences({ dashboard_widgets: widgets, quick_links: quickLinks });
+        // Mirror the change to dashboard_layouts for cross-device sync
+        syncLayoutToDB(widgets, quickLinks);
       }
     } catch (error) {
       console.error('Error saving preferences:', error);
@@ -129,6 +157,8 @@ export default function HomePage() {
   const handleResetPreferences = async () => {
     try {
       await fetch('/api/user/preferences', { method: 'DELETE' });
+      // Also clear the layout DB entry so DB fallback returns the role default
+      await fetch('/api/dashboard/layout', { method: 'DELETE' }).catch(() => {});
       const prefsRes = await fetch('/api/user/preferences');
       const prefsData = await prefsRes.json();
       if (prefsData.success) {
@@ -137,6 +167,29 @@ export default function HomePage() {
     } catch (error) {
       console.error('Error resetting preferences:', error);
     }
+  };
+
+  const handleResetToDefault = async () => {
+    setResetting(true);
+    try {
+      // Delete both preference records so the user gets their role default
+      await Promise.all([
+        fetch('/api/user/preferences', { method: 'DELETE' }),
+        fetch('/api/dashboard/layout', { method: 'DELETE' }),
+      ]);
+      // Re-fetch fresh preferences (will return role default)
+      const prefsRes = await fetch('/api/user/preferences');
+      const prefsData = await prefsRes.json();
+      if (prefsData.success && prefsData.preferences) {
+        setPreferences(prefsData.preferences);
+      }
+      toast.success('Dashboard reset to default layout');
+      setShowResetConfirm(false);
+    } catch (error) {
+      console.error('Error resetting to default:', error);
+      toast.error('Failed to reset dashboard layout');
+    }
+    setResetting(false);
   };
 
   // Render a widget by ID
@@ -326,13 +379,47 @@ export default function HomePage() {
           <div className="mb-10 max-w-5xl mx-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Your Dashboard</h3>
-              <button
-                onClick={() => setShowCustomize(true)}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors print:hidden"
-              >
-                <Settings className="w-4 h-4" />
-                Customize
-              </button>
+              <div className="flex items-center gap-2 print:hidden">
+                {/* Reset to Default */}
+                {showResetConfirm ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Reset to default?</span>
+                    <button
+                      onClick={handleResetToDefault}
+                      disabled={resetting}
+                      className="px-3 py-1.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+                    >
+                      {resetting ? 'Resetting...' : 'Yes, Reset'}
+                    </button>
+                    <button
+                      onClick={() => setShowResetConfirm(false)}
+                      disabled={resetting}
+                      className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setShowResetConfirm(true)}
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                    title="Reset dashboard to role default"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    Reset
+                  </button>
+                )}
+                {/* Customize */}
+                {!showResetConfirm && (
+                  <button
+                    onClick={() => setShowCustomize(true)}
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    <Settings className="w-4 h-4" />
+                    Customize
+                  </button>
+                )}
+              </div>
             </div>
             <div className="grid md:grid-cols-2 gap-6">
               {preferences.dashboard_widgets.map(widgetId => renderWidget(widgetId))}
