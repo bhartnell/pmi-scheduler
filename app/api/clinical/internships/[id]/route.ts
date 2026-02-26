@@ -166,8 +166,8 @@ export async function PUT(
     if (body.snhd_submitted !== undefined) updateData.snhd_submitted = body.snhd_submitted;
     if (body.snhd_submitted_date !== undefined) updateData.snhd_submitted_date = body.snhd_submitted_date || null;
     // Split SNHD date fields
-    if (body.snhd_field_doc_submitted_date !== undefined) updateData.snhd_field_doc_submitted_date = body.snhd_field_doc_submitted_date || null;
-    if (body.snhd_course_completion_submitted_date !== undefined) updateData.snhd_course_completion_submitted_date = body.snhd_course_completion_submitted_date || null;
+    if (body.snhd_field_docs_submitted_at !== undefined) updateData.snhd_field_docs_submitted_at = body.snhd_field_docs_submitted_at || null;
+    if (body.snhd_course_completion_submitted_at !== undefined) updateData.snhd_course_completion_submitted_at = body.snhd_course_completion_submitted_at || null;
     if (body.nremt_clearance_date !== undefined) updateData.nremt_clearance_date = body.nremt_clearance_date || null;
     if (body.closeout_meeting_date !== undefined) updateData.closeout_meeting_date = body.closeout_meeting_date || null;
     if (body.closeout_completed !== undefined) updateData.closeout_completed = body.closeout_completed;

@@ -190,7 +190,9 @@ function ShiftsPageContent() {
       if (data.success && data.user) {
         setCurrentUser(data.user);
         const isAdmin = data.user.role === 'admin' || data.user.role === 'superadmin';
-        setUserIsDirector(isAdmin);
+        const hasDirectorEndorsement = Array.isArray(data.user.endorsements) &&
+          data.user.endorsements.some((e: { endorsement_type: string }) => e.endorsement_type === 'director');
+        setUserIsDirector(isAdmin || hasDirectorEndorsement);
       }
     } catch (error) {
       console.error('Error fetching user:', error);

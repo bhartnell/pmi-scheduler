@@ -124,10 +124,11 @@ const PROGRAMS = ['EMT', 'AEMT', 'Paramedic'];
 
 const EKG_RHYTHMS = [
   'Normal Sinus Rhythm', 'Sinus Tachycardia', 'Sinus Bradycardia',
-  'Atrial Fibrillation', 'Atrial Flutter', 'SVT',
-  'Ventricular Tachycardia', 'Ventricular Fibrillation', 'Asystole', 'PEA',
-  '1st Degree AV Block', '2nd Degree Type I (Wenckebach)', '2nd Degree Type II', '3rd Degree (Complete) Block',
-  'Idioventricular', 'Agonal', 'Other'
+  'Atrial Fibrillation', 'Atrial Flutter', 'SVT (Supraventricular Tachycardia)',
+  'Ventricular Tachycardia', 'Ventricular Fibrillation', 'Asystole', 'PEA (Pulseless Electrical Activity)',
+  '1st Degree AV Block', '2nd Degree Type I (Wenckebach)', '2nd Degree Type II', '3rd Degree (Complete) Heart Block',
+  'PVC (Premature Ventricular Contractions)', 'PAC (Premature Atrial Contractions)',
+  'Torsades de Pointes', 'Idioventricular Rhythm', 'Junctional Rhythm', 'STEMI (ST Elevation MI)', 'Other'
 ];
 
 const PUPIL_OPTIONS = [

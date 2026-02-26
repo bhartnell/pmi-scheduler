@@ -169,6 +169,7 @@ interface Phase {
     gcs?: number | string;
     rhythm?: string;
     ekg?: string;
+    ekg_rhythm?: string;
   };
   presentation_notes?: string;
   expected_actions?: string[];
@@ -1119,10 +1120,10 @@ function GradingPageContent() {
                                                   <span className="font-medium text-gray-900 dark:text-white">{phase.vitals.etco2}</span>
                                                 </div>
                                               )}
-                                              {(phase.vitals.rhythm || phase.vitals.ekg) && (
+                                              {(phase.vitals.rhythm || phase.vitals.ekg || phase.vitals.ekg_rhythm) && (
                                                 <div className="bg-pink-50 dark:bg-pink-900/20 p-2 rounded col-span-2">
-                                                  <span className="text-gray-500 dark:text-gray-400">Rhythm:</span>{' '}
-                                                  <span className="font-medium text-gray-900 dark:text-white">{phase.vitals.rhythm || phase.vitals.ekg}</span>
+                                                  <span className="text-gray-500 dark:text-gray-400">EKG Rhythm:</span>{' '}
+                                                  <span className="font-medium text-gray-900 dark:text-white">{phase.vitals.ekg_rhythm || phase.vitals.rhythm || phase.vitals.ekg}</span>
                                                 </div>
                                               )}
                                             </div>

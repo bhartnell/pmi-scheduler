@@ -180,10 +180,11 @@ const PROGRAMS = ['EMT', 'AEMT', 'Paramedic'];
 
 const EKG_RHYTHMS = [
   'Normal Sinus Rhythm', 'Sinus Tachycardia', 'Sinus Bradycardia',
-  'Atrial Fibrillation', 'Atrial Flutter', 'SVT',
-  'Ventricular Tachycardia', 'Ventricular Fibrillation', 'Asystole', 'PEA',
-  '1st Degree AV Block', '2nd Degree Type I (Wenckebach)', '2nd Degree Type II', '3rd Degree (Complete) Block',
-  'Idioventricular', 'Agonal', 'Other'
+  'Atrial Fibrillation', 'Atrial Flutter', 'SVT (Supraventricular Tachycardia)',
+  'Ventricular Tachycardia', 'Ventricular Fibrillation', 'Asystole', 'PEA (Pulseless Electrical Activity)',
+  '1st Degree AV Block', '2nd Degree Type I (Wenckebach)', '2nd Degree Type II', '3rd Degree (Complete) Heart Block',
+  'PVC (Premature Ventricular Contractions)', 'PAC (Premature Atrial Contractions)',
+  'Torsades de Pointes', 'Idioventricular Rhythm', 'Junctional Rhythm', 'STEMI (ST Elevation MI)', 'Other'
 ];
 
 const PUPIL_OPTIONS = [
@@ -1445,6 +1446,12 @@ export default function ScenarioEditorPage() {
                       <td className="py-1 border border-gray-300 px-2">{scenario.phases[0].vitals.etco2}</td>
                     </tr>
                   )}
+                  {scenario.phases[0].vitals.ekg_rhythm && (
+                    <tr>
+                      <td className="font-semibold py-1 border border-gray-300 px-2 bg-gray-50">EKG Rhythm</td>
+                      <td className="py-1 border border-gray-300 px-2">{scenario.phases[0].vitals.ekg_rhythm}</td>
+                    </tr>
+                  )}
                   {scenario.phases[0].vitals.temp && (
                     <tr>
                       <td className="font-semibold py-1 border border-gray-300 px-2 bg-gray-50">Temperature</td>
@@ -1863,6 +1870,9 @@ export default function ScenarioEditorPage() {
                           </tr>
                         </tbody>
                       </table>
+                      {phase.vitals.ekg_rhythm && (
+                        <p className="text-xs mt-1"><strong>EKG Rhythm:</strong> {phase.vitals.ekg_rhythm}</p>
+                      )}
                     </div>
                   )}
                   {phase.presentation_notes && (

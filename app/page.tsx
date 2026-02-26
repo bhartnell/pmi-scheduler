@@ -90,12 +90,19 @@ export default function HomePage() {
         if (userData.success && userData.user) {
           const user = userData.user;
 
-          // Non-PMI users who have no approved lab_users entry yet should be
-          // redirected to the self-service request-access flow.
+          // Non-PMI users with no approved role should go through the
+          // self-service volunteer request-access flow.
           const isPmiEmail =
             user.email?.endsWith('@pmi.edu') || user.email?.endsWith('@my.pmi.edu');
           if (!isPmiEmail && (!user.role || user.role === 'pending')) {
             window.location.href = '/request-access';
+            return;
+          }
+
+          // PMI users with pending role: set user so we can render the
+          // "access pending" screen, but do not load preferences or widgets.
+          if (user.role === 'pending') {
+            setCurrentUser(user);
             return;
           }
 
@@ -327,6 +334,38 @@ export default function HomePage() {
                 Request Access
               </button>
             </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // PMI users with pending role - show access pending screen
+  if (currentUser?.role === 'pending') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl p-8 max-w-md w-full mx-4 text-center">
+          <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Clock className="w-8 h-8 text-amber-600 dark:text-amber-400" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">Access Pending Approval</h1>
+          <p className="text-gray-600 dark:text-gray-400 mb-2">
+            Your account has been created but requires administrator approval before you can access PMI Paramedic Tools.
+          </p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+            An administrator will review your account and assign you the appropriate role. You will receive a notification once approved.
+          </p>
+          <div className="flex flex-col gap-3">
+            <div className="px-3 py-2 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm text-gray-600 dark:text-gray-300">
+              Signed in as: <span className="font-medium">{session.user?.email}</span>
+            </div>
+            <button
+              onClick={() => signOut({ callbackUrl: '/' })}
+              className="flex items-center justify-center gap-2 px-5 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+              Sign Out
+            </button>
           </div>
         </div>
       </div>

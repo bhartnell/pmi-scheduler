@@ -93,7 +93,7 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
       { label: 'Temp', value: vitals.temp ? `${vitals.temp}°F` : null },
       { label: 'BGL', value: vitals.bgl || vitals.glucose },
       { label: 'GCS', value: vitals.gcs },
-      { label: 'Rhythm', value: vitals.rhythm || vitals.ekg }
+      { label: 'Rhythm', value: vitals.ekg_rhythm || vitals.rhythm || vitals.ekg }
     ].filter(v => v.value);
 
     if (vitalItems.length === 0) return '';

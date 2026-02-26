@@ -84,9 +84,11 @@ function CreateShiftPageInner() {
       const data = await res.json();
       if (data.success && data.user) {
         setCurrentUser(data.user);
-        // Check if user is director (admin/superadmin)
+        // Check if user is director (admin/superadmin or director endorsement)
         const isAdmin = data.user.role === 'admin' || data.user.role === 'superadmin';
-        if (!isAdmin) {
+        const hasDirectorEndorsement = Array.isArray(data.user.endorsements) &&
+          data.user.endorsements.some((e: { endorsement_type: string }) => e.endorsement_type === 'director');
+        if (!isAdmin && !hasDirectorEndorsement) {
           alert('Only directors can create shifts');
           router.push('/scheduling/shifts');
           return;

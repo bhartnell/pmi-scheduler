@@ -33,6 +33,7 @@ interface Student {
   first_name: string;
   last_name: string;
   email: string | null;
+  status?: string | null;
 }
 
 interface CohortOption {
@@ -123,6 +124,7 @@ interface ImportPreviewRow {
   similarNames: string[];  // Suggestions for unmatched names
   data: Partial<StudentHours>;
   manualMatch?: string;  // For manual matching by user
+  isInactive?: boolean;  // True when name had asterisk (*) prefix in Platinum export
 }
 
 type ViewMode = 'dashboard' | 'detailed';
@@ -147,6 +149,7 @@ export default function ClinicalHoursTrackerPage() {
   const [editingCell, setEditingCell] = useState<string | null>(null);
   const [editValue, setEditValue] = useState({ shifts: 0, hours: 0 });
   const [viewMode, setViewMode] = useState<ViewMode>('dashboard');
+  const [showInactive, setShowInactive] = useState(false);
 
   // Import modal state
   const [showImportModal, setShowImportModal] = useState(false);
@@ -170,7 +173,15 @@ export default function ClinicalHoursTrackerPage() {
     if (selectedCohort) {
       fetchCohortData();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCohort]);
+
+  useEffect(() => {
+    if (selectedCohort) {
+      fetchCohortData(showInactive);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showInactive]);
 
   // ESC key to close import modal
   useEffect(() => {
@@ -249,10 +260,11 @@ export default function ClinicalHoursTrackerPage() {
     setLoading(false);
   };
 
-  const fetchCohortData = async () => {
+  const fetchCohortData = async (fetchInactive?: boolean) => {
     try {
+      const includeInactive = fetchInactive !== undefined ? fetchInactive : showInactive;
       const [studentsRes, hoursRes] = await Promise.all([
-        fetch(`/api/students?cohortId=${selectedCohort}`),
+        fetch(`/api/students?cohortId=${selectedCohort}&activeOnly=${!includeInactive}`),
         fetch(`/api/clinical/hours?cohortId=${selectedCohort}`),
       ]);
 
@@ -468,6 +480,10 @@ export default function ClinicalHoursTrackerPage() {
 
   // Filter students
   const filteredStudents = students.filter(student => {
+    if (!showInactive) {
+      const s = student.status;
+      if (s && s !== 'active' && s !== 'enrolled') return false;
+    }
     if (searchQuery) {
       const search = searchQuery.toLowerCase();
       const name = `${student.first_name} ${student.last_name}`.toLowerCase();
@@ -645,7 +661,11 @@ export default function ClinicalHoursTrackerPage() {
 
       // Parse and match students using detected columns
       const preview: ImportPreviewRow[] = validRows.map((row: unknown[]) => {
-        const name = String(row[0] || '').trim();
+        const rawName = String(row[0] || '').trim();
+
+        // Detect inactive students: Platinum marks them with a leading asterisk (*)
+        const isInactive = rawName.startsWith('*');
+        const name = isInactive ? rawName.replace(/^\*+/, '').trim() : rawName;
 
         // Build row data dynamically from detected categories
         const rowData: Record<string, number> = {};
@@ -659,15 +679,17 @@ export default function ClinicalHoursTrackerPage() {
           }
         }
 
+        // Match using the stripped name (without asterisk)
         const matchedStudent = matchStudentByName(name);
         // Find similar names if no match
         const similarNames = matchedStudent ? [] : findSimilarNames(name);
 
         return {
-          name,
+          name: rawName,
           matchedStudent,
           similarNames,
           data: rowData as Partial<StudentHours>,
+          isInactive,
         };
       });
 
@@ -813,30 +835,45 @@ export default function ClinicalHoursTrackerPage() {
     setImportError(null);
 
     const matchedRows = importPreview.filter(row => row.matchedStudent);
-    const results = { success: 0, failed: 0, failedNames: [] as string[] };
+    const results = { success: 0, failed: 0, markedInactive: 0, failedNames: [] as string[] };
 
     for (const row of matchedRows) {
       if (!row.matchedStudent) continue;
 
       try {
-        // POST with the values - API will SET (not increment) these values
-        const updateData = {
-          student_id: row.matchedStudent.id,
-          cohort_id: selectedCohort,
-          ...row.data,
-        };
-
-        const res = await fetch('/api/clinical/hours', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(updateData),
-        });
-
-        if (res.ok) {
-          results.success++;
+        if (row.isInactive) {
+          // Mark the student as inactive - don't import their hours
+          const res = await fetch(`/api/lab-management/students/${row.matchedStudent.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 'inactive' }),
+          });
+          if (res.ok) {
+            results.markedInactive++;
+          } else {
+            results.failed++;
+            results.failedNames.push(row.name);
+          }
         } else {
-          results.failed++;
-          results.failedNames.push(row.name);
+          // POST with the values - API will SET (not increment) these values
+          const updateData = {
+            student_id: row.matchedStudent.id,
+            cohort_id: selectedCohort,
+            ...row.data,
+          };
+
+          const res = await fetch('/api/clinical/hours', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updateData),
+          });
+
+          if (res.ok) {
+            results.success++;
+          } else {
+            results.failed++;
+            results.failedNames.push(row.name);
+          }
         }
       } catch (error) {
         console.error(`Import error for ${row.name}:`, error);
@@ -853,8 +890,13 @@ export default function ClinicalHoursTrackerPage() {
     await fetchCohortData();
 
     // Show summary message
+    const activeImported = results.success;
+    const inactiveMarked = results.markedInactive;
     if (results.failed > 0 || unmatchedNames.length > 0) {
-      let message = `Imported ${results.success}/${matchedRows.length} students.`;
+      let message = `Imported ${activeImported} student${activeImported !== 1 ? 's' : ''}.`;
+      if (inactiveMarked > 0) {
+        message += ` ${inactiveMarked} marked inactive.`;
+      }
       if (results.failed > 0) {
         message += ` ${results.failed} failed: ${results.failedNames.join(', ')}.`;
       }
@@ -866,14 +908,20 @@ export default function ClinicalHoursTrackerPage() {
       if (results.failed === 0) {
         setShowImportModal(false);
         setImportPreview([]);
-        toast.success(`Imported ${results.success} student${results.success !== 1 ? 's' : ''} successfully`);
+        const parts = [];
+        if (activeImported > 0) parts.push(`${activeImported} student${activeImported !== 1 ? 's' : ''} imported`);
+        if (inactiveMarked > 0) parts.push(`${inactiveMarked} marked inactive`);
+        toast.success(parts.join(', '));
       } else {
         toast.error(`Import completed with errors: ${results.failed} failed`);
       }
     } else {
       setShowImportModal(false);
       setImportPreview([]);
-      toast.success(`Imported ${results.success} student${results.success !== 1 ? 's' : ''} successfully`);
+      const parts = [];
+      if (activeImported > 0) parts.push(`${activeImported} student${activeImported !== 1 ? 's' : ''} imported`);
+      if (inactiveMarked > 0) parts.push(`${inactiveMarked} marked inactive`);
+      toast.success(parts.join(', ') || 'Import complete');
     }
 
     setImporting(false);
@@ -1041,6 +1089,16 @@ export default function ClinicalHoursTrackerPage() {
                 className="w-full pl-10 pr-4 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
               />
             </div>
+
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={showInactive}
+                onChange={(e) => setShowInactive(e.target.checked)}
+                className="rounded border-gray-300 dark:border-gray-600 text-teal-600"
+              />
+              <span className="text-sm text-gray-600 dark:text-gray-400">Show inactive students</span>
+            </label>
 
             {viewMode === 'detailed' && (
               <div className="text-sm text-gray-500 dark:text-gray-400">
@@ -1495,6 +1553,14 @@ export default function ClinicalHoursTrackerPage() {
                   <CheckCircle2 className="w-4 h-4 text-green-600" />
                   <span className="text-gray-600 dark:text-gray-400">{matchedCount} matched</span>
                 </div>
+                {importPreview.filter(r => r.isInactive && r.matchedStudent).length > 0 && (
+                  <div className="flex items-center gap-2 text-sm bg-gray-50 dark:bg-gray-700/50 px-3 py-1 rounded-lg">
+                    <X className="w-4 h-4 text-gray-500" />
+                    <span className="text-gray-600 dark:text-gray-400 font-medium">
+                      {importPreview.filter(r => r.isInactive && r.matchedStudent).length} will be marked inactive
+                    </span>
+                  </div>
+                )}
                 {unmatchedCount > 0 && (
                   <div className="flex items-center gap-2 text-sm bg-yellow-50 dark:bg-yellow-900/20 px-3 py-1 rounded-lg">
                     <AlertTriangle className="w-4 h-4 text-yellow-600" />
@@ -1525,22 +1591,32 @@ export default function ClinicalHoursTrackerPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                    {/* Show unmatched rows first */}
+                    {/* Show unmatched rows first, then inactive, then matched */}
                     {importPreview
                       .map((row, idx) => ({ row, idx }))
                       .sort((a, b) => {
-                        // Unmatched first
-                        const aMatched = a.row.matchedStudent ? 1 : 0;
-                        const bMatched = b.row.matchedStudent ? 1 : 0;
-                        return aMatched - bMatched;
+                        // Unmatched first, then inactive, then matched active
+                        const aScore = !a.row.matchedStudent ? 0 : a.row.isInactive ? 1 : 2;
+                        const bScore = !b.row.matchedStudent ? 0 : b.row.isInactive ? 1 : 2;
+                        return aScore - bScore;
                       })
                       .map(({ row, idx }) => (
                       <tr
                         key={idx}
-                        className={row.matchedStudent ? '' : 'bg-yellow-50 dark:bg-yellow-900/10'}
+                        className={
+                          !row.matchedStudent
+                            ? 'bg-yellow-50 dark:bg-yellow-900/10'
+                            : row.isInactive
+                            ? 'bg-gray-50 dark:bg-gray-700/30 opacity-70'
+                            : ''
+                        }
                       >
                         <td className="px-3 py-2">
-                          {row.matchedStudent ? (
+                          {row.isInactive && row.matchedStudent ? (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300">
+                              Inactive
+                            </span>
+                          ) : row.matchedStudent ? (
                             <CheckCircle2 className="w-4 h-4 text-green-600" />
                           ) : (
                             <AlertTriangle className="w-4 h-4 text-yellow-600" />
@@ -1549,9 +1625,12 @@ export default function ClinicalHoursTrackerPage() {
                         <td className="px-3 py-2 text-gray-900 dark:text-white font-medium">{row.name}</td>
                         <td className="px-3 py-2 min-w-[200px]">
                           {row.matchedStudent ? (
-                            <span className="text-green-700 dark:text-green-400">
-                              {row.matchedStudent.first_name} {row.matchedStudent.last_name}
+                            <span className={row.isInactive ? 'text-gray-500 dark:text-gray-400' : 'text-green-700 dark:text-green-400'}>
+                              <span className={row.isInactive ? 'line-through' : ''}>
+                                {row.matchedStudent.first_name} {row.matchedStudent.last_name}
+                              </span>
                               {row.manualMatch && <span className="text-xs ml-1">(manual)</span>}
+                              {row.isInactive && <span className="text-xs ml-1 text-gray-500 dark:text-gray-400">(will be marked inactive)</span>}
                             </span>
                           ) : (
                             <div className="space-y-1">
@@ -1646,7 +1725,13 @@ export default function ClinicalHoursTrackerPage() {
                 ) : (
                   <>
                     <Upload className="w-4 h-4" />
-                    Import {matchedCount} Students
+                    {(() => {
+                      const activeCount = importPreview.filter(r => r.matchedStudent && !r.isInactive).length;
+                      const inactiveCount = importPreview.filter(r => r.matchedStudent && r.isInactive).length;
+                      if (activeCount > 0 && inactiveCount > 0) return `Import ${activeCount}, Mark ${inactiveCount} Inactive`;
+                      if (inactiveCount > 0) return `Mark ${inactiveCount} Inactive`;
+                      return `Import ${activeCount} Student${activeCount !== 1 ? 's' : ''}`;
+                    })()}
                   </>
                 )}
               </button>
