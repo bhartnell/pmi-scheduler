@@ -19,6 +19,7 @@ import {
   CheckSquare,
   Activity,
   BookOpen,
+  TrendingUp,
   Menu,
   X
 } from 'lucide-react';
@@ -86,6 +87,7 @@ export default function StudentLayout({
 
   const navLinks = [
     { href: '/student', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/student/my-progress', label: 'My Progress', icon: TrendingUp },
     { href: '/student/completions', label: 'Stations', icon: CheckSquare },
     { href: '/student/ekg', label: 'EKG Progress', icon: Activity },
     { href: '/student/scenarios', label: 'Scenarios', icon: BookOpen },

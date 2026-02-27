@@ -1,8 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { rateLimit } from '@/lib/rate-limit';
 
 export async function POST(request: NextRequest) {
+  // Rate limit: 10 guest login attempts per minute per IP
+  const ip = request.headers.get('x-forwarded-for') || 'unknown';
+  const { success: rateLimitOk } = rateLimit(`guest-login:${ip}`, 10, 60000);
+  if (!rateLimitOk) {
+    return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
+  }
+
   try {
     const supabase = getSupabaseAdmin();
 

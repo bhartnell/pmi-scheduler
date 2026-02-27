@@ -13,7 +13,7 @@ interface EmploymentVerification {
   id: string;
   internship_id: string;
   student_name: string | null;
-  last_four_ssn: string | null;
+  ssn_last4: string | null;
   program: string | null;
   phone: string | null;
   email: string | null;
@@ -24,11 +24,10 @@ interface EmploymentVerification {
   company_email: string | null;
   company_phone: string | null;
   company_fax: string | null;
-  employment_start_date: string | null;
-  starting_salary: string | null;
-  employment_type: 'full_time' | 'part_time' | null;
-  verifying_staff_name: string | null;
-  verifying_staff_title: string | null;
+  start_date: string | null;
+  salary: string | null;
+  employment_status: 'ft' | 'pt' | null;
+  verifying_staff: string | null;
   submitted_by: string | null;
   submitted_at: string | null;
 }
@@ -48,7 +47,7 @@ interface EmploymentVerificationModalProps {
 
 type FormData = {
   student_name: string;
-  last_four_ssn: string;
+  ssn_last4: string;
   program: string;
   phone: string;
   email: string;
@@ -59,16 +58,15 @@ type FormData = {
   company_email: string;
   company_phone: string;
   company_fax: string;
-  employment_start_date: string;
-  starting_salary: string;
-  employment_type: '' | 'full_time' | 'part_time';
-  verifying_staff_name: string;
-  verifying_staff_title: string;
+  start_date: string;
+  salary: string;
+  employment_status: '' | 'ft' | 'pt';
+  verifying_staff: string;
 };
 
 const EMPTY_FORM: FormData = {
   student_name: '',
-  last_four_ssn: '',
+  ssn_last4: '',
   program: '',
   phone: '',
   email: '',
@@ -79,11 +77,10 @@ const EMPTY_FORM: FormData = {
   company_email: '',
   company_phone: '',
   company_fax: '',
-  employment_start_date: '',
-  starting_salary: '',
-  employment_type: '',
-  verifying_staff_name: '',
-  verifying_staff_title: '',
+  start_date: '',
+  salary: '',
+  employment_status: '',
+  verifying_staff: '',
 };
 
 export default function EmploymentVerificationModal({
@@ -102,7 +99,7 @@ export default function EmploymentVerificationModal({
     if (existingVerification) {
       setFormData({
         student_name: existingVerification.student_name || '',
-        last_four_ssn: existingVerification.last_four_ssn || '',
+        ssn_last4: existingVerification.ssn_last4 || '',
         program: existingVerification.program || '',
         phone: existingVerification.phone || '',
         email: existingVerification.email || '',
@@ -113,11 +110,10 @@ export default function EmploymentVerificationModal({
         company_email: existingVerification.company_email || '',
         company_phone: existingVerification.company_phone || '',
         company_fax: existingVerification.company_fax || '',
-        employment_start_date: existingVerification.employment_start_date || '',
-        starting_salary: existingVerification.starting_salary || '',
-        employment_type: existingVerification.employment_type || '',
-        verifying_staff_name: existingVerification.verifying_staff_name || '',
-        verifying_staff_title: existingVerification.verifying_staff_title || '',
+        start_date: existingVerification.start_date || '',
+        salary: existingVerification.salary || '',
+        employment_status: existingVerification.employment_status || '',
+        verifying_staff: existingVerification.verifying_staff || '',
       });
     } else {
       setFormData({
@@ -156,11 +152,11 @@ export default function EmploymentVerificationModal({
     if (!formData.job_title.trim()) {
       newErrors.job_title = 'Job title is required';
     }
-    if (!formData.employment_start_date) {
-      newErrors.employment_start_date = 'Employment start date is required';
+    if (!formData.start_date) {
+      newErrors.start_date = 'Employment start date is required';
     }
-    if (!formData.employment_type) {
-      newErrors.employment_type = 'Employment type is required';
+    if (!formData.employment_status) {
+      newErrors.employment_status = 'Employment type is required';
     }
 
     setErrors(newErrors);
@@ -205,9 +201,9 @@ export default function EmploymentVerificationModal({
     if (!printWindow) return;
 
     const employmentTypeLabel =
-      formData.employment_type === 'full_time'
+      formData.employment_status === 'ft'
         ? 'Full-Time'
-        : formData.employment_type === 'part_time'
+        : formData.employment_status === 'pt'
         ? 'Part-Time'
         : '';
 
@@ -243,7 +239,7 @@ export default function EmploymentVerificationModal({
         <div class="two-col">
           <div class="field">
             <div class="label">Last 4 SSN:</div>
-            <div class="value">${formData.last_four_ssn ? 'XXX-XX-' + formData.last_four_ssn : ''}</div>
+            <div class="value">${formData.ssn_last4 ? 'XXX-XX-' + formData.ssn_last4 : ''}</div>
           </div>
           <div class="field">
             <div class="label">Program:</div>
@@ -297,13 +293,13 @@ export default function EmploymentVerificationModal({
           </div>
           <div class="field">
             <div class="label">Employment Start Date:</div>
-            <div class="value">${formData.employment_start_date ? new Date(formData.employment_start_date + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : ''}</div>
+            <div class="value">${formData.start_date ? new Date(formData.start_date + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : ''}</div>
           </div>
         </div>
         <div class="two-col">
           <div class="field">
             <div class="label">Starting Salary:</div>
-            <div class="value">${formData.starting_salary || ''}</div>
+            <div class="value">${formData.salary || ''}</div>
           </div>
           <div class="field">
             <div class="label">Employment Type:</div>
@@ -312,15 +308,9 @@ export default function EmploymentVerificationModal({
         </div>
 
         <div class="section-title">Verification</div>
-        <div class="two-col">
-          <div class="field">
-            <div class="label">Verifying Staff Member:</div>
-            <div class="value">${formData.verifying_staff_name || ''}</div>
-          </div>
-          <div class="field">
-            <div class="label">Title:</div>
-            <div class="value">${formData.verifying_staff_title || ''}</div>
-          </div>
+        <div class="field">
+          <div class="label">Verifying Staff Member:</div>
+          <div class="value">${formData.verifying_staff || ''}</div>
         </div>
 
         <div class="footer">
@@ -384,10 +374,10 @@ export default function EmploymentVerificationModal({
                   </label>
                   <input
                     type="password"
-                    value={formData.last_four_ssn}
+                    value={formData.ssn_last4}
                     onChange={e => {
                       const val = e.target.value.replace(/\D/g, '').slice(0, 4);
-                      handleChange('last_four_ssn', val);
+                      handleChange('ssn_last4', val);
                     }}
                     maxLength={4}
                     className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
@@ -556,16 +546,16 @@ export default function EmploymentVerificationModal({
                   </label>
                   <input
                     type="date"
-                    value={formData.employment_start_date}
-                    onChange={e => handleChange('employment_start_date', e.target.value)}
+                    value={formData.start_date}
+                    onChange={e => handleChange('start_date', e.target.value)}
                     className={`w-full px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
-                      errors.employment_start_date
+                      errors.start_date
                         ? 'border-red-500'
                         : 'border-gray-300 dark:border-gray-600'
                     }`}
                   />
-                  {errors.employment_start_date && (
-                    <p className="mt-1 text-xs text-red-500">{errors.employment_start_date}</p>
+                  {errors.start_date && (
+                    <p className="mt-1 text-xs text-red-500">{errors.start_date}</p>
                   )}
                 </div>
               </div>
@@ -577,8 +567,8 @@ export default function EmploymentVerificationModal({
                   </label>
                   <input
                     type="text"
-                    value={formData.starting_salary}
-                    onChange={e => handleChange('starting_salary', e.target.value)}
+                    value={formData.salary}
+                    onChange={e => handleChange('salary', e.target.value)}
                     className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                     placeholder="e.g., $55,000/yr or $28/hr"
                   />
@@ -591,10 +581,10 @@ export default function EmploymentVerificationModal({
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
                         type="radio"
-                        name="employment_type"
-                        value="full_time"
-                        checked={formData.employment_type === 'full_time'}
-                        onChange={() => handleChange('employment_type', 'full_time')}
+                        name="employment_status"
+                        value="ft"
+                        checked={formData.employment_status === 'ft'}
+                        onChange={() => handleChange('employment_status', 'ft')}
                         className="text-emerald-600"
                       />
                       <span className="text-sm text-gray-700 dark:text-gray-300">Full-Time</span>
@@ -602,46 +592,32 @@ export default function EmploymentVerificationModal({
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
                         type="radio"
-                        name="employment_type"
-                        value="part_time"
-                        checked={formData.employment_type === 'part_time'}
-                        onChange={() => handleChange('employment_type', 'part_time')}
+                        name="employment_status"
+                        value="pt"
+                        checked={formData.employment_status === 'pt'}
+                        onChange={() => handleChange('employment_status', 'pt')}
                         className="text-emerald-600"
                       />
                       <span className="text-sm text-gray-700 dark:text-gray-300">Part-Time</span>
                     </label>
                   </div>
-                  {errors.employment_type && (
-                    <p className="mt-1 text-xs text-red-500">{errors.employment_type}</p>
+                  {errors.employment_status && (
+                    <p className="mt-1 text-xs text-red-500">{errors.employment_status}</p>
                   )}
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Verifying Staff Member Name
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.verifying_staff_name}
-                    onChange={e => handleChange('verifying_staff_name', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    placeholder="Staff member name"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Verifying Staff Member Title
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.verifying_staff_title}
-                    onChange={e => handleChange('verifying_staff_title', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                    placeholder="e.g., Program Director"
-                  />
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Verifying Staff Member
+                </label>
+                <input
+                  type="text"
+                  value={formData.verifying_staff}
+                  onChange={e => handleChange('verifying_staff', e.target.value)}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  placeholder="Name and title"
+                />
               </div>
             </div>
           </div>

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { rateLimit } from '@/lib/rate-limit';
 
 // GET /api/checkin/[token]
 // PUBLIC — no auth required
@@ -115,6 +116,13 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
+  // Rate limit: 20 check-ins per minute per IP
+  const ip = request.headers.get('x-forwarded-for') || 'unknown';
+  const { success: rateLimitOk } = rateLimit(`checkin:${ip}`, 20, 60000);
+  if (!rateLimitOk) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+  }
+
   const { token } = await params;
 
   if (!token) {

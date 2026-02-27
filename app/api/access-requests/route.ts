@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { canAccessAdmin } from '@/lib/permissions';
+import { rateLimit } from '@/lib/rate-limit';
 
 // Helper to get current user with role
 async function getCurrentUser(email: string) {
@@ -54,6 +55,13 @@ export async function GET(request: NextRequest) {
 // POST /api/access-requests - Submit a new access request (any signed-in user)
 // Body: { email, name, reason? }
 export async function POST(request: NextRequest) {
+  // Rate limit: 5 requests per minute per IP
+  const ip = request.headers.get('x-forwarded-for') || 'unknown';
+  const { success: rateLimitOk } = rateLimit(`access-request:${ip}`, 5, 60000);
+  if (!rateLimitOk) {
+    return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
+  }
+
   try {
     const body = await request.json();
     const { email, name, reason } = body;

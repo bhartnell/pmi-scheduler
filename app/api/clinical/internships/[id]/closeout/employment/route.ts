@@ -74,7 +74,7 @@ export async function POST(
 
     const {
       student_name,
-      last_four_ssn,
+      ssn_last4,
       program,
       phone,
       email,
@@ -85,18 +85,17 @@ export async function POST(
       company_email,
       company_phone,
       company_fax,
-      employment_start_date,
-      starting_salary,
-      employment_type,
-      verifying_staff_name,
-      verifying_staff_title,
+      start_date,
+      salary,
+      employment_status,
+      verifying_staff,
       is_draft,
     } = body;
 
     const record: Record<string, unknown> = {
       internship_id: id,
       student_name: student_name || null,
-      last_four_ssn: last_four_ssn || null,
+      ssn_last4: ssn_last4 || null,
       program: program || null,
       phone: phone || null,
       email: email || null,
@@ -107,11 +106,10 @@ export async function POST(
       company_email: company_email || null,
       company_phone: company_phone || null,
       company_fax: company_fax || null,
-      employment_start_date: employment_start_date || null,
-      starting_salary: starting_salary || null,
-      employment_type: employment_type || null,
-      verifying_staff_name: verifying_staff_name || null,
-      verifying_staff_title: verifying_staff_title || null,
+      start_date: start_date || null,
+      salary: salary || null,
+      employment_status: employment_status || null,
+      verifying_staff: verifying_staff || null,
       submitted_by: session.user.email,
     };
 
@@ -164,7 +162,7 @@ export async function PUT(
     const {
       verification_id,
       student_name,
-      last_four_ssn,
+      ssn_last4,
       program,
       phone,
       email,
@@ -175,11 +173,10 @@ export async function PUT(
       company_email,
       company_phone,
       company_fax,
-      employment_start_date,
-      starting_salary,
-      employment_type,
-      verifying_staff_name,
-      verifying_staff_title,
+      start_date,
+      salary,
+      employment_status,
+      verifying_staff,
       is_draft,
     } = body;
 
@@ -189,7 +186,7 @@ export async function PUT(
 
     const updates: Record<string, unknown> = {
       student_name: student_name || null,
-      last_four_ssn: last_four_ssn || null,
+      ssn_last4: ssn_last4 || null,
       program: program || null,
       phone: phone || null,
       email: email || null,
@@ -200,11 +197,10 @@ export async function PUT(
       company_email: company_email || null,
       company_phone: company_phone || null,
       company_fax: company_fax || null,
-      employment_start_date: employment_start_date || null,
-      starting_salary: starting_salary || null,
-      employment_type: employment_type || null,
-      verifying_staff_name: verifying_staff_name || null,
-      verifying_staff_title: verifying_staff_title || null,
+      start_date: start_date || null,
+      salary: salary || null,
+      employment_status: employment_status || null,
+      verifying_staff: verifying_staff || null,
       submitted_by: session.user.email,
     };
 

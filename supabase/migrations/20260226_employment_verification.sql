@@ -1,8 +1,9 @@
+-- 2. Employment Verification
 CREATE TABLE IF NOT EXISTS employment_verifications (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   internship_id UUID REFERENCES student_internships(id) ON DELETE CASCADE,
   student_name TEXT,
-  last_four_ssn TEXT,
+  ssn_last4 TEXT,
   program TEXT,
   phone TEXT,
   email TEXT,
@@ -13,15 +14,15 @@ CREATE TABLE IF NOT EXISTS employment_verifications (
   company_email TEXT,
   company_phone TEXT,
   company_fax TEXT,
-  employment_start_date DATE,
-  starting_salary TEXT,
-  employment_type TEXT CHECK (employment_type IN ('full_time', 'part_time')),
-  verifying_staff_name TEXT,
-  verifying_staff_title TEXT,
-  submitted_by TEXT,
-  submitted_at TIMESTAMPTZ DEFAULT now()
+  start_date DATE,
+  salary TEXT,
+  employment_status TEXT CHECK (employment_status IN ('pt', 'ft')),
+  verifying_staff TEXT,
+  is_draft BOOLEAN DEFAULT true,
+  submitted_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
 );
-
 CREATE INDEX IF NOT EXISTS idx_employment_verifications_internship ON employment_verifications(internship_id);
 
 ALTER TABLE employment_verifications ENABLE ROW LEVEL SECURITY;

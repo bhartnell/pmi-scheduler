@@ -1,3 +1,4 @@
+-- 1. Closeout Surveys
 CREATE TABLE IF NOT EXISTS closeout_surveys (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   internship_id UUID REFERENCES student_internships(id) ON DELETE CASCADE,
@@ -8,8 +9,8 @@ CREATE TABLE IF NOT EXISTS closeout_surveys (
   submitted_by TEXT,
   submitted_at TIMESTAMPTZ DEFAULT now()
 );
-
 CREATE INDEX IF NOT EXISTS idx_closeout_surveys_internship ON closeout_surveys(internship_id);
+CREATE INDEX IF NOT EXISTS idx_closeout_surveys_type ON closeout_surveys(survey_type);
 
 ALTER TABLE closeout_surveys ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "surveys_select" ON closeout_surveys FOR SELECT USING (true);

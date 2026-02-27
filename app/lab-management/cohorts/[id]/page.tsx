@@ -27,7 +27,10 @@ import {
   Download,
   Mail,
   Send,
-  X
+  X,
+  Archive,
+  ArchiveRestore,
+  FileText
 } from 'lucide-react';
 import ExportDropdown from '@/components/ExportDropdown';
 import FieldTripAttendance from '@/components/FieldTripAttendance';
@@ -35,12 +38,38 @@ import BulkPhotoUpload from '@/components/BulkPhotoUpload';
 import { useToast } from '@/components/Toast';
 import type { ExportConfig } from '@/lib/export-utils';
 
+interface ArchiveSummary {
+  cohort_name: string;
+  program: { id: string; name: string; abbreviation: string } | null;
+  start_date: string | null;
+  expected_end_date: string | null;
+  completion_date: string;
+  total_students: number;
+  total_lab_days: number;
+  total_scenarios_assessed: number;
+  total_skills_completed: number;
+  attendance_rate: number;
+  students: Array<{
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string | null;
+    agency: string | null;
+    status: string;
+    skills_completed: number;
+    scenarios_completed: number;
+  }>;
+}
+
 interface Cohort {
   id: string;
   cohort_number: number;
   start_date: string | null;
   expected_end_date: string | null;
   is_active: boolean;
+  archived_at: string | null;
+  archived_by: string | null;
+  archive_summary: ArchiveSummary | null;
   program: {
     id: string;
     name: string;
@@ -189,6 +218,10 @@ export default function CohortHubPage() {
 
   // Bulk photo upload modal state
   const [showBulkPhotoUpload, setShowBulkPhotoUpload] = useState(false);
+
+  // Archive modal state
+  const [showArchiveDialog, setShowArchiveDialog] = useState(false);
+  const [archiving, setArchiving] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -356,6 +389,45 @@ export default function CohortHubPage() {
     setEmailSending(false);
   };
 
+  const handleArchive = async () => {
+    setArchiving(true);
+    try {
+      const res = await fetch(`/api/lab-management/cohorts/${cohortId}/archive`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCohort(data.cohort);
+        setShowArchiveDialog(false);
+        toast.success(`${cohortLabel} has been archived`);
+      } else {
+        toast.error('Failed to archive: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Error archiving cohort:', error);
+      toast.error('An error occurred while archiving');
+    }
+    setArchiving(false);
+  };
+
+  const handleUnarchive = async () => {
+    try {
+      const res = await fetch(`/api/lab-management/cohorts/${cohortId}/archive`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCohort(data.cohort);
+        toast.success(`${cohortLabel} has been unarchived`);
+      } else {
+        toast.error('Failed to unarchive: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Error unarchiving cohort:', error);
+      toast.error('An error occurred while unarchiving');
+    }
+  };
+
   const handleExportCSV = () => {
     if (students.length === 0) return;
 
@@ -476,32 +548,36 @@ export default function CohortHubPage() {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <Link
-                href={`/lab-management/students/new?cohortId=${cohortId}&returnTo=${encodeURIComponent(`/lab-management/cohorts/${cohortId}`)}`}
-                className="inline-flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-700 border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 text-sm text-gray-700 dark:text-gray-200"
-              >
-                <UserPlus className="w-4 h-4" />
-                Add Student
-              </Link>
-              <Link
-                href={`/lab-management/students/import?cohortId=${cohortId}&returnTo=${encodeURIComponent(`/lab-management/cohorts/${cohortId}`)}`}
-                className="inline-flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-700 border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 text-sm text-gray-700 dark:text-gray-200"
-              >
-                <Upload className="w-4 h-4" />
-                Import
-              </Link>
-              <Link
-                href={`/lab-management/admin/cohorts`}
-                className="inline-flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-700 border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 text-sm text-gray-700 dark:text-gray-200"
-              >
-                <Edit2 className="w-4 h-4" />
-                Edit
-              </Link>
+              {!cohort.archived_at && (
+                <>
+                  <Link
+                    href={`/lab-management/students/new?cohortId=${cohortId}&returnTo=${encodeURIComponent(`/lab-management/cohorts/${cohortId}`)}`}
+                    className="inline-flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-700 border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 text-sm text-gray-700 dark:text-gray-200"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    Add Student
+                  </Link>
+                  <Link
+                    href={`/lab-management/students/import?cohortId=${cohortId}&returnTo=${encodeURIComponent(`/lab-management/cohorts/${cohortId}`)}`}
+                    className="inline-flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-700 border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 text-sm text-gray-700 dark:text-gray-200"
+                  >
+                    <Upload className="w-4 h-4" />
+                    Import
+                  </Link>
+                  <Link
+                    href={`/lab-management/admin/cohorts`}
+                    className="inline-flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-700 border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 text-sm text-gray-700 dark:text-gray-200"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                    Edit
+                  </Link>
+                </>
+              )}
               <button
                 onClick={() => setShowEmailModal(true)}
-                disabled={students.length === 0}
+                disabled={students.length === 0 || !!cohort.archived_at}
                 className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Send email to all students in cohort"
+                title={cohort.archived_at ? 'Cannot email archived cohort' : 'Send email to all students in cohort'}
               >
                 <Mail className="w-4 h-4" />
                 Email Cohort
@@ -516,12 +592,113 @@ export default function CohortHubPage() {
                 CSV
               </button>
               <ExportDropdown config={exportConfig} disabled={students.length === 0} />
+              {cohort.archived_at ? (
+                <button
+                  onClick={handleUnarchive}
+                  className="inline-flex items-center gap-2 px-3 py-2 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-700 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-900/50 text-sm"
+                  title="Unarchive this cohort"
+                >
+                  <ArchiveRestore className="w-4 h-4" />
+                  Unarchive
+                </button>
+              ) : (
+                <button
+                  onClick={() => setShowArchiveDialog(true)}
+                  className="inline-flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-700 border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-sm"
+                  title="Archive this cohort"
+                >
+                  <Archive className="w-4 h-4" />
+                  Archive
+                </button>
+              )}
             </div>
           </div>
         </div>
       </div>
 
       <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
+        {/* Archived Banner */}
+        {cohort.archived_at && (
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <Archive className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <h3 className="font-semibold text-amber-800 dark:text-amber-300">This cohort is archived</h3>
+                <p className="text-sm text-amber-700 dark:text-amber-400 mt-1">
+                  Archived on {new Date(cohort.archived_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                  {cohort.archived_by && ` by ${cohort.archived_by}`}.
+                  Editing is disabled. Use the Unarchive button to restore this cohort.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Archive Summary (shown when archived) */}
+        {cohort.archived_at && cohort.archive_summary && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <FileText className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+              Archive Summary
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+              <div className="text-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">{cohort.archive_summary.total_students}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Total Students</div>
+              </div>
+              <div className="text-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">{cohort.archive_summary.total_lab_days}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Lab Days</div>
+              </div>
+              <div className="text-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">{cohort.archive_summary.total_scenarios_assessed}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Scenarios Run</div>
+              </div>
+              <div className="text-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">{cohort.archive_summary.total_skills_completed}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Skills Passed</div>
+              </div>
+              <div className="text-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                <div className="text-2xl font-bold text-gray-900 dark:text-white">{cohort.archive_summary.attendance_rate}%</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">Attendance Rate</div>
+              </div>
+            </div>
+            {cohort.archive_summary.students.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Student Summary</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b dark:border-gray-700">
+                        <th className="text-left py-2 pr-4 text-gray-600 dark:text-gray-400 font-medium">Student</th>
+                        <th className="text-left py-2 pr-4 text-gray-600 dark:text-gray-400 font-medium">Agency</th>
+                        <th className="text-left py-2 pr-4 text-gray-600 dark:text-gray-400 font-medium">Status</th>
+                        <th className="text-right py-2 pr-4 text-gray-600 dark:text-gray-400 font-medium">Skills</th>
+                        <th className="text-right py-2 text-gray-600 dark:text-gray-400 font-medium">Scenarios</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y dark:divide-gray-700">
+                      {cohort.archive_summary.students.map(s => (
+                        <tr key={s.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                          <td className="py-2 pr-4 text-gray-900 dark:text-white">{s.first_name} {s.last_name}</td>
+                          <td className="py-2 pr-4 text-gray-500 dark:text-gray-400">{s.agency || '-'}</td>
+                          <td className="py-2 pr-4">
+                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${s.status === 'active' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'}`}>
+                              {s.status}
+                            </span>
+                          </td>
+                          <td className="py-2 pr-4 text-right text-gray-700 dark:text-gray-300">{s.skills_completed}</td>
+                          <td className="py-2 text-right text-gray-700 dark:text-gray-300">{s.scenarios_completed}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Data Completion Section */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
@@ -1027,7 +1204,7 @@ export default function CohortHubPage() {
         </div>
       )}
 
-      {/* Confirmation Modal */}
+      {/* Remove Student Confirmation Modal */}
       {removingStudent && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6">
@@ -1059,6 +1236,92 @@ export default function CohortHubPage() {
                   <>
                     <UserMinus className="w-4 h-4" />
                     Remove
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Archive Confirmation Dialog */}
+      {showArchiveDialog && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-lg w-full">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b dark:border-gray-700">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+                  <Archive className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Archive {cohortLabel}?
+                  </h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{cohort.program.name}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowArchiveDialog(false)}
+                disabled={archiving}
+                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg disabled:opacity-50"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-4">
+              <p className="text-gray-700 dark:text-gray-300">
+                This will hide the cohort from default views and prevent editing. A summary report will be generated and stored.
+              </p>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">
+                You can unarchive it later from the archived cohorts view.
+              </p>
+
+              {/* Current stats preview */}
+              <div className="grid grid-cols-2 gap-3 mt-4">
+                <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg text-center">
+                  <div className="text-lg font-semibold text-gray-900 dark:text-white">{students.length}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">Active Students</div>
+                </div>
+                <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg text-center">
+                  <div className="text-lg font-semibold text-gray-900 dark:text-white">{withdrawnStudents.length}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">Withdrawn Students</div>
+                </div>
+              </div>
+
+              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-3">
+                <p className="text-sm text-amber-800 dark:text-amber-300 flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  The cohort will be marked inactive and hidden from all default cohort lists.
+                </p>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex gap-3 justify-end p-6 border-t dark:border-gray-700">
+              <button
+                onClick={() => setShowArchiveDialog(false)}
+                disabled={archiving}
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleArchive}
+                disabled={archiving}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded-lg disabled:opacity-50"
+              >
+                {archiving ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Archiving...
+                  </>
+                ) : (
+                  <>
+                    <Archive className="w-4 h-4" />
+                    Archive Cohort
                   </>
                 )}
               </button>

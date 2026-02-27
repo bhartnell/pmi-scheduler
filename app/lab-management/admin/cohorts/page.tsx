@@ -13,7 +13,9 @@ import {
   Calendar,
   Check,
   X,
-  AlertCircle
+  AlertCircle,
+  Archive,
+  ArchiveRestore
 } from 'lucide-react';
 import { canManageCohorts, type Role } from '@/lib/permissions';
 
@@ -32,6 +34,8 @@ interface Cohort {
   student_count: number;
   program: Program;
   current_semester: number | null;
+  archived_at: string | null;
+  archived_by: string | null;
 }
 
 // Semester options for PM cohorts (integer values 1-4)
@@ -50,6 +54,7 @@ export default function CohortManagementPage() {
   const [cohorts, setCohorts] = useState<Cohort[]>([]);
   const [loading, setLoading] = useState(true);
   const [showInactive, setShowInactive] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
 
   // Create form state
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -85,7 +90,7 @@ export default function CohortManagementPage() {
       fetchData();
       fetchCurrentUser();
     }
-  }, [session, showInactive]);
+  }, [session, showInactive, showArchived]);
 
   const fetchCurrentUser = async () => {
     try {
@@ -112,8 +117,10 @@ export default function CohortManagementPage() {
         }
       }
 
-      // Fetch cohorts
-      const cohortsRes = await fetch(`/api/lab-management/cohorts?activeOnly=${!showInactive}`);
+      // Fetch cohorts - include archived if toggled (archived cohorts are always inactive)
+      const cohortsRes = await fetch(
+        `/api/lab-management/cohorts?activeOnly=${!showInactive && !showArchived}&include_archived=${showArchived}`
+      );
       const cohortsData = await cohortsRes.json();
       if (cohortsData.success) {
         setCohorts(cohortsData.cohorts);
@@ -260,6 +267,54 @@ export default function CohortManagementPage() {
     }
   };
 
+  const handleArchive = async (cohort: Cohort) => {
+    const label = `${cohort.program.abbreviation} Group ${cohort.cohort_number}`;
+    if (!confirm(`Archive ${label}?\n\nThis will hide the cohort from default views and prevent editing. You can unarchive it later.`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/lab-management/cohorts/${cohort.id}/archive`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (data.success) {
+        if (!showArchived) {
+          setCohorts(cohorts.filter(c => c.id !== cohort.id));
+        } else {
+          setCohorts(cohorts.map(c => c.id === cohort.id ? { ...c, ...data.cohort } : c));
+        }
+      } else {
+        alert('Failed to archive: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Error archiving cohort:', error);
+      alert('Failed to archive cohort');
+    }
+  };
+
+  const handleUnarchive = async (cohort: Cohort) => {
+    const label = `${cohort.program.abbreviation} Group ${cohort.cohort_number}`;
+    if (!confirm(`Unarchive ${label}? It will become visible in normal cohort views again.`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/lab-management/cohorts/${cohort.id}/archive`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCohorts(cohorts.map(c => c.id === cohort.id ? { ...c, archived_at: null, archived_by: null } : c));
+      } else {
+        alert('Failed to unarchive: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Error unarchiving cohort:', error);
+      alert('Failed to unarchive cohort');
+    }
+  };
+
   // Group cohorts by program
   const cohortsByProgram = programs.map(program => ({
     program,
@@ -394,7 +449,7 @@ export default function CohortManagementPage() {
         )}
 
         {/* Filter */}
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-4">
           <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
             <input
               type="checkbox"
@@ -403,6 +458,15 @@ export default function CohortManagementPage() {
               className="rounded border-gray-300 dark:border-gray-600"
             />
             Show inactive cohorts
+          </label>
+          <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+            <input
+              type="checkbox"
+              checked={showArchived}
+              onChange={(e) => setShowArchived(e.target.checked)}
+              className="rounded border-gray-300 dark:border-gray-600"
+            />
+            Show archived cohorts
           </label>
         </div>
 
@@ -420,7 +484,7 @@ export default function CohortManagementPage() {
             ) : (
               <div className="divide-y dark:divide-gray-700">
                 {programCohorts.map(cohort => (
-                  <div key={cohort.id} className={`p-4 ${!cohort.is_active ? 'bg-gray-50 dark:bg-gray-700/50 opacity-75' : ''}`}>
+                  <div key={cohort.id} className={`p-4 ${cohort.archived_at ? 'bg-amber-50/50 dark:bg-amber-900/10 opacity-75' : !cohort.is_active ? 'bg-gray-50 dark:bg-gray-700/50 opacity-75' : ''}`}>
                     {editingId === cohort.id ? (
                       // Edit mode
                       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
@@ -493,13 +557,19 @@ export default function CohortManagementPage() {
                                   N/A
                                 </span>
                               )}
-                              {!cohort.is_active && (
+                              {!cohort.is_active && !cohort.archived_at && (
                                 <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 text-xs rounded">
                                   Inactive
                                 </span>
                               )}
+                              {cohort.archived_at && (
+                                <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs rounded flex items-center gap-1">
+                                  <Archive className="w-3 h-3" />
+                                  Archived
+                                </span>
+                              )}
                             </div>
-                            <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-3">
+                            <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-3 flex-wrap">
                               <span className="flex items-center gap-1">
                                 <Users className="w-4 h-4" />
                                 {cohort.student_count} students
@@ -512,6 +582,12 @@ export default function CohortManagementPage() {
                                   {cohort.expected_end_date ? new Date(cohort.expected_end_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '?'}
                                 </span>
                               )}
+                              {cohort.archived_at && (
+                                <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                                  <Archive className="w-3 h-3" />
+                                  Archived {new Date(cohort.archived_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -522,28 +598,53 @@ export default function CohortManagementPage() {
                           >
                             Open Hub
                           </Link>
-                          <button
-                            onClick={() => startEdit(cohort)}
-                            className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                            title="Edit dates"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleToggleActive(cohort)}
-                            className={`p-2 rounded ${cohort.is_active ? 'text-yellow-600 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/30' : 'text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30'}`}
-                            title={cohort.is_active ? 'Deactivate' : 'Activate'}
-                          >
-                            {cohort.is_active ? <X className="w-4 h-4" /> : <Check className="w-4 h-4" />}
-                          </button>
+                          {!cohort.archived_at && (
+                            <>
+                              <button
+                                onClick={() => startEdit(cohort)}
+                                className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                                title="Edit dates"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleToggleActive(cohort)}
+                                className={`p-2 rounded ${cohort.is_active ? 'text-yellow-600 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/30' : 'text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30'}`}
+                                title={cohort.is_active ? 'Deactivate' : 'Activate'}
+                              >
+                                {cohort.is_active ? <X className="w-4 h-4" /> : <Check className="w-4 h-4" />}
+                              </button>
+                            </>
+                          )}
                           {userRole && canManageCohorts(userRole) && (
-                            <button
-                              onClick={() => handleDelete(cohort)}
-                              className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded"
-                              title="Delete"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            <>
+                              {cohort.archived_at ? (
+                                <button
+                                  onClick={() => handleUnarchive(cohort)}
+                                  className="p-2 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded"
+                                  title="Unarchive cohort"
+                                >
+                                  <ArchiveRestore className="w-4 h-4" />
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handleArchive(cohort)}
+                                  className="p-2 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded"
+                                  title="Archive cohort"
+                                >
+                                  <Archive className="w-4 h-4" />
+                                </button>
+                              )}
+                              {!cohort.archived_at && (
+                                <button
+                                  onClick={() => handleDelete(cohort)}
+                                  className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded"
+                                  title="Delete"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
+                            </>
                           )}
                         </div>
                       </div>

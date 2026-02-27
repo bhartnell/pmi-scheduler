@@ -15,7 +15,12 @@ import {
   Download,
   ChevronDown,
   ChevronUp,
+  History,
+  Clock,
+  User,
 } from 'lucide-react';
+
+// ── Types ─────────────────────────────────────────────────────────────────────
 
 interface Cohort {
   id: string;
@@ -29,7 +34,6 @@ interface RowValidation {
   status: RowStatus;
   errors: string[];
   warnings: string[];
-  /** Cell-level issues: field name -> message */
   cellErrors: Record<string, string>;
   cellWarnings: Record<string, string>;
 }
@@ -41,10 +45,13 @@ interface ParsedStudent {
   email: string;
   phone: string;
   agency: string;
+  emergency_contact_name: string;
+  emergency_contact_phone: string;
+  learning_style: string;
+  notes: string;
   selected: boolean;
   validation: RowValidation;
-  /** Existing student info if a DB duplicate was found */
-  duplicateInfo?: { existing_name: string; student_id: string };
+  duplicateInfo?: { existing_name: string; student_id: string; match_type?: 'email' | 'name' };
 }
 
 interface ImportResultRow {
@@ -66,17 +73,33 @@ interface ImportResult {
   summary: ImportSummary;
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+interface ImportHistoryEntry {
+  id: string;
+  imported_by: string;
+  imported_by_name: string | null;
+  cohort_label: string | null;
+  duplicate_mode: string;
+  row_count: number;
+  inserted: number;
+  updated: number;
+  skipped: number;
+  failed: number;
+  created_at: string;
+}
+
+const VALID_LEARNING_STYLES = new Set(['visual', 'auditory', 'kinesthetic', 'reading']);
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 function downloadTemplate() {
-  const header = 'first_name,last_name,email,phone,agency';
+  const header = 'first_name,last_name,email,phone,agency,emergency_contact_name,emergency_contact_phone,learning_style,notes';
   const rows = [
-    'John,Doe,john.doe@example.com,555-1234,AMR',
-    'Jane,Smith,jane.smith@example.com,555-5678,Fire Dept',
+    'John,Doe,john.doe@example.com,555-1234,AMR,Jane Doe,555-5678,visual,Good student',
+    'Jane,Smith,jane.smith@example.com,555-9012,Fire Dept,Bob Smith,555-3456,auditory,',
   ];
   const csv = [header, ...rows].join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });
@@ -91,7 +114,7 @@ function downloadTemplate() {
 function buildValidation(
   student: Omit<ParsedStudent, 'validation' | 'selected'>,
   csvDuplicateEmails: Set<string>,
-  dbDuplicates: Map<string, { existing_name: string; student_id: string }>
+  dbDuplicates: Map<string, { existing_name: string; student_id: string; match_type?: 'email' | 'name' }>
 ): RowValidation {
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -110,14 +133,31 @@ function buildValidation(
     errors.push('Invalid email format');
     cellErrors.email = 'Invalid format';
   }
+  if (student.learning_style && !VALID_LEARNING_STYLES.has(student.learning_style.toLowerCase())) {
+    errors.push(`Invalid learning style: "${student.learning_style}"`);
+    cellErrors.learning_style = 'Must be: visual, auditory, kinesthetic, reading';
+  }
   if (student.email && csvDuplicateEmails.has(student.email.toLowerCase())) {
     warnings.push('Email appears more than once in this CSV');
     cellWarnings.email = 'Duplicate within CSV';
   }
-  if (student.email && dbDuplicates.has(student.email.toLowerCase())) {
-    const info = dbDuplicates.get(student.email.toLowerCase())!;
+
+  // Check DB duplicates by email
+  const emailKey = student.email?.toLowerCase() || '';
+  if (emailKey && dbDuplicates.has(emailKey)) {
+    const info = dbDuplicates.get(emailKey)!;
     warnings.push(`Email already exists (${info.existing_name})`);
     cellWarnings.email = `Exists: ${info.existing_name}`;
+  }
+
+  // Check DB duplicates by name (when no email match found)
+  if (!emailKey || !dbDuplicates.has(emailKey)) {
+    const nameKey = `__name__${student.first_name.toLowerCase().trim()}_${student.last_name.toLowerCase().trim()}`;
+    if (dbDuplicates.has(nameKey)) {
+      const info = dbDuplicates.get(nameKey)!;
+      warnings.push(`Name matches existing student (${info.existing_name})`);
+      cellWarnings.first_name = `Name match: ${info.existing_name}`;
+    }
   }
 
   const status: RowStatus =
@@ -131,7 +171,7 @@ function buildValidation(
 function parseCSV(
   text: string,
   csvDuplicateEmails: Set<string>,
-  dbDuplicates: Map<string, { existing_name: string; student_id: string }>
+  dbDuplicates: Map<string, { existing_name: string; student_id: string; match_type?: 'email' | 'name' }>
 ): ParsedStudent[] {
   const lines = text.trim().split('\n').filter(l => l.trim());
   if (lines.length === 0) return [];
@@ -144,18 +184,29 @@ function parseCSV(
     firstLineLower.includes('name') ||
     firstLineLower.includes('email') ||
     firstLineLower.includes('phone') ||
-    firstLineLower.includes('agency');
+    firstLineLower.includes('agency') ||
+    firstLineLower.includes('emergency') ||
+    firstLineLower.includes('learning') ||
+    firstLineLower.includes('notes');
 
-  // Detect column order from header
+  // Detect column positions from header
   let colFirst = 0, colLast = 1, colEmail = 2, colPhone = 3, colAgency = 4;
+  let colEcName = -1, colEcPhone = -1, colLearning = -1, colNotes = -1;
+
   if (hasHeader) {
-    const headerParts = lines[0].split(delimiter).map(p => p.trim().toLowerCase().replace(/^["']|["']$/g, ''));
+    const headerParts = lines[0]
+      .split(delimiter)
+      .map(p => p.trim().toLowerCase().replace(/^["']|["']$/g, ''));
     headerParts.forEach((h, i) => {
       if (h.includes('first')) colFirst = i;
       else if (h.includes('last')) colLast = i;
       else if (h.includes('email')) colEmail = i;
-      else if (h.includes('phone')) colPhone = i;
+      else if (h === 'phone' || (h.includes('phone') && !h.includes('emergency') && !h.includes('contact'))) colPhone = i;
       else if (h.includes('agency')) colAgency = i;
+      else if (h.includes('emergency') && h.includes('name')) colEcName = i;
+      else if (h.includes('emergency') && (h.includes('phone') || h.includes('contact'))) colEcPhone = i;
+      else if (h.includes('learning')) colLearning = i;
+      else if (h.includes('note')) colNotes = i;
     });
   }
 
@@ -170,19 +221,24 @@ function parseCSV(
       let email = '';
       let phone = '';
       let agency = '';
+      let emergency_contact_name = '';
+      let emergency_contact_phone = '';
+      let learning_style = '';
+      let notes = '';
 
       if (hasHeader) {
-        // Use detected column positions
         first_name = parts[colFirst] || '';
         last_name = parts[colLast] || '';
         email = parts[colEmail] || '';
         phone = parts[colPhone] || '';
         agency = parts[colAgency] || '';
+        emergency_contact_name = colEcName >= 0 ? (parts[colEcName] || '') : '';
+        emergency_contact_phone = colEcPhone >= 0 ? (parts[colEcPhone] || '') : '';
+        learning_style = colLearning >= 0 ? (parts[colLearning] || '') : '';
+        notes = colNotes >= 0 ? (parts[colNotes] || '') : '';
       } else if (parts.length >= 2) {
-        // Positional parsing for headerless data
         first_name = parts[0] || '';
         last_name = parts[1] || '';
-        // Heuristic: check if part 2 looks like email
         if (parts.length >= 3 && parts[2].includes('@')) {
           email = parts[2];
           if (parts.length >= 4) phone = parts[3];
@@ -204,15 +260,24 @@ function parseCSV(
         email,
         phone,
         agency,
+        emergency_contact_name,
+        emergency_contact_phone,
+        learning_style,
+        notes,
       };
 
       const validation = buildValidation(base, csvDuplicateEmails, dbDuplicates);
+      const emailKey = email?.toLowerCase() || '';
+      const nameKey = `__name__${first_name.toLowerCase().trim()}_${last_name.toLowerCase().trim()}`;
 
       return {
         ...base,
         selected: validation.status !== 'error',
         validation,
-        duplicateInfo: email ? dbDuplicates.get(email.toLowerCase()) : undefined,
+        duplicateInfo:
+          (emailKey && dbDuplicates.get(emailKey)) ||
+          dbDuplicates.get(nameKey) ||
+          undefined,
       };
     })
     .filter(s => s.first_name || s.last_name);
@@ -233,7 +298,7 @@ function Tooltip({ text, children }: { text: string; children: React.ReactNode }
   );
 }
 
-// ── Cell component ────────────────────────────────────────────────────────────
+// ── DataCell ──────────────────────────────────────────────────────────────────
 
 function DataCell({
   value,
@@ -256,7 +321,7 @@ function DataCell({
   const tooltipText = errorMsg || warningMsg || '';
 
   return (
-    <td className="px-3 py-2 text-sm">
+    <td className="px-2 py-2 text-sm max-w-[140px] truncate">
       {tooltipText ? (
         <Tooltip text={tooltipText}>
           <span className={cellClass}>{value || '—'}</span>
@@ -265,6 +330,110 @@ function DataCell({
         <span className={cellClass}>{value || '—'}</span>
       )}
     </td>
+  );
+}
+
+// ── Import History Section ────────────────────────────────────────────────────
+
+function ImportHistorySection() {
+  const [history, setHistory] = useState<ImportHistoryEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/lab-management/students/import?limit=10')
+      .then(r => r.json())
+      .then(d => {
+        if (d.success) setHistory(d.history);
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+        Loading import history...
+      </div>
+    );
+  }
+
+  if (history.length === 0) {
+    return null;
+  }
+
+  const modeLabel = (mode: string) => {
+    if (mode === 'skip') return 'Skip dupes';
+    if (mode === 'update') return 'Update dupes';
+    return 'Allow dupes';
+  };
+
+  const formatDate = (iso: string) => {
+    const d = new Date(iso);
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) +
+      ' ' + d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  };
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+      <button
+        onClick={() => setExpanded(v => !v)}
+        className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors rounded-lg"
+      >
+        <div className="flex items-center gap-2">
+          <History className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+          <span className="font-semibold text-gray-900 dark:text-white">Import History</span>
+          <span className="text-xs text-gray-500 dark:text-gray-400">({history.length} recent)</span>
+        </div>
+        {expanded ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+      </button>
+
+      {expanded && (
+        <div className="border-t dark:border-gray-700 overflow-x-auto">
+          <table className="w-full text-sm min-w-[600px]">
+            <thead className="bg-gray-50 dark:bg-gray-700">
+              <tr>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Imported By</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cohort</th>
+                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Mode</th>
+                <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Rows</th>
+                <th className="px-4 py-2 text-right text-xs font-medium text-green-600 dark:text-green-400 uppercase tracking-wider">New</th>
+                <th className="px-4 py-2 text-right text-xs font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wider">Updated</th>
+                <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Skipped</th>
+                <th className="px-4 py-2 text-right text-xs font-medium text-red-600 dark:text-red-400 uppercase tracking-wider">Failed</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+              {history.map(entry => (
+                <tr key={entry.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                  <td className="px-4 py-2 text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                    <div className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {formatDate(entry.created_at)}
+                    </div>
+                  </td>
+                  <td className="px-4 py-2 text-gray-900 dark:text-white whitespace-nowrap">
+                    <div className="flex items-center gap-1">
+                      <User className="w-3 h-3 text-gray-400" />
+                      {entry.imported_by_name || entry.imported_by}
+                    </div>
+                  </td>
+                  <td className="px-4 py-2 text-gray-600 dark:text-gray-400">{entry.cohort_label || '—'}</td>
+                  <td className="px-4 py-2 text-gray-500 dark:text-gray-400 text-xs">{modeLabel(entry.duplicate_mode)}</td>
+                  <td className="px-4 py-2 text-right text-gray-700 dark:text-gray-300 font-medium">{entry.row_count}</td>
+                  <td className="px-4 py-2 text-right text-green-600 dark:text-green-400 font-medium">{entry.inserted}</td>
+                  <td className="px-4 py-2 text-right text-blue-600 dark:text-blue-400 font-medium">{entry.updated}</td>
+                  <td className="px-4 py-2 text-right text-gray-500 dark:text-gray-400">{entry.skipped}</td>
+                  <td className="px-4 py-2 text-right text-red-600 dark:text-red-400">{entry.failed}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -289,10 +458,13 @@ function ImportStudentsContent() {
   const [parsedStudents, setParsedStudents] = useState<ParsedStudent[]>([]);
 
   const [duplicateMode, setDuplicateMode] = useState<'skip' | 'update' | 'import_new'>('skip');
-  const [dbDuplicates, setDbDuplicates] = useState<Map<string, { existing_name: string; student_id: string }>>(new Map());
+  const [dbDuplicates, setDbDuplicates] = useState<Map<string, { existing_name: string; student_id: string; match_type?: 'email' | 'name' }>>(new Map());
 
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [failedExpanded, setFailedExpanded] = useState(false);
+
+  // Drag-and-drop state
+  const [draggingOver, setDraggingOver] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/auth/signin');
@@ -321,7 +493,6 @@ function ImportStudentsContent() {
     setLoading(false);
   };
 
-  // Build the set of CSV-internal duplicate emails
   const buildCsvDuplicateSet = (lines: { email: string }[]): Set<string> => {
     const seen = new Set<string>();
     const dupes = new Set<string>();
@@ -334,29 +505,32 @@ function ImportStudentsContent() {
     return dupes;
   };
 
-  const checkDbDuplicates = useCallback(async (emails: string[]) => {
-    const validEmails = emails.filter(e => e && isValidEmail(e));
-    if (validEmails.length === 0) {
-      setDbDuplicates(new Map());
-      return new Map<string, { existing_name: string; student_id: string }>();
-    }
+  const checkDbDuplicates = useCallback(async (
+    emails: string[],
+    names: { first_name: string; last_name: string; email?: string }[]
+  ) => {
     setCheckingDuplicates(true);
     try {
+      const validEmails = emails.filter(e => e && isValidEmail(e));
       const res = await fetch('/api/lab-management/students/check-duplicates', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ emails: validEmails }),
+        body: JSON.stringify({ emails: validEmails, names }),
       });
       const data = await res.json();
-      const map = new Map<string, { existing_name: string; student_id: string }>();
+      const map = new Map<string, { existing_name: string; student_id: string; match_type?: 'email' | 'name' }>();
       for (const d of data.duplicates || []) {
-        map.set(d.email.toLowerCase(), { existing_name: d.existing_name, student_id: d.student_id });
+        map.set(d.email.toLowerCase(), {
+          existing_name: d.existing_name,
+          student_id: d.student_id,
+          match_type: d.match_type,
+        });
       }
       setDbDuplicates(map);
       return map;
     } catch (err) {
       console.error('Error checking duplicates:', err);
-      return new Map<string, { existing_name: string; student_id: string }>();
+      return new Map<string, { existing_name: string; student_id: string; match_type?: 'email' | 'name' }>();
     } finally {
       setCheckingDuplicates(false);
     }
@@ -369,15 +543,19 @@ function ImportStudentsContent() {
       return;
     }
 
-    // First pass: rough parse to extract emails for DB check
+    // First pass: rough parse to extract emails/names for DB check
     const roughParsed = parseCSV(text, new Set(), new Map());
     const emails = roughParsed.map(s => s.email).filter(Boolean);
+    const names = roughParsed.map(s => ({
+      first_name: s.first_name,
+      last_name: s.last_name,
+      email: s.email,
+    }));
     const csvDupes = buildCsvDuplicateSet(roughParsed);
 
-    // Check DB duplicates
-    const dbDupeMap = await checkDbDuplicates(emails);
+    const dbDupeMap = await checkDbDuplicates(emails, names);
 
-    // Second pass: full parse with all duplicate info
+    // Second pass: full parse with duplicate info
     const students = parseCSV(text, csvDupes, dbDupeMap);
     setParsedStudents(students);
     setImportResult(null);
@@ -388,15 +566,26 @@ function ImportStudentsContent() {
     processInput(value);
   };
 
+  const handleFileLoad = (text: string) => {
+    setPasteData(text);
+    processInput(text);
+  };
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (event) => {
-      const text = event.target?.result as string;
-      setPasteData(text);
-      processInput(text);
-    };
+    reader.onload = (event) => handleFileLoad(event.target?.result as string);
+    reader.readAsText(file);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDraggingOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => handleFileLoad(event.target?.result as string);
     reader.readAsText(file);
   };
 
@@ -447,6 +636,10 @@ function ImportStudentsContent() {
             email: s.email || undefined,
             phone: s.phone || undefined,
             agency: s.agency || undefined,
+            emergency_contact_name: s.emergency_contact_name || undefined,
+            emergency_contact_phone: s.emergency_contact_phone || undefined,
+            learning_style: s.learning_style || undefined,
+            notes: s.notes || undefined,
           })),
         }),
       });
@@ -482,7 +675,7 @@ function ImportStudentsContent() {
     URL.revokeObjectURL(url);
   };
 
-  // Computed counts
+  // Counts
   const errorCount = parsedStudents.filter(s => s.validation.status === 'error').length;
   const warningCount = parsedStudents.filter(s => s.validation.status === 'warning').length;
   const validCount = parsedStudents.filter(s => s.validation.status === 'valid').length;
@@ -503,7 +696,7 @@ function ImportStudentsContent() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
-        <div className="max-w-5xl mx-auto px-4 py-6">
+        <div className="max-w-6xl mx-auto px-4 py-6">
           <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1">
             <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
             <ChevronRight className="w-4 h-4" />
@@ -524,7 +717,7 @@ function ImportStudentsContent() {
         </div>
       </div>
 
-      <main className="max-w-5xl mx-auto px-4 py-6 space-y-6">
+      <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
 
         {/* Import Result */}
         {importResult && (
@@ -599,7 +792,7 @@ function ImportStudentsContent() {
           </div>
         )}
 
-        {/* Cohort Selection */}
+        {/* Step 1: Cohort Selection */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Step 1 — Select Cohort</h2>
           <select
@@ -616,9 +809,61 @@ function ImportStudentsContent() {
           </select>
         </div>
 
-        {/* Input Method */}
+        {/* Step 2: Duplicate Mode */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Step 2 — Add Student Data</h2>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Step 2 — Duplicate Handling</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+            Duplicates are detected by exact email match OR by case-insensitive first + last name match.
+          </p>
+          <div className="space-y-3">
+            <label className="flex items-start gap-3 cursor-pointer group">
+              <input
+                type="radio"
+                name="duplicateMode"
+                value="skip"
+                checked={duplicateMode === 'skip'}
+                onChange={() => setDuplicateMode('skip')}
+                className="mt-0.5 text-blue-600"
+              />
+              <div>
+                <span className="font-medium text-gray-800 dark:text-gray-200">Skip existing students</span>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Don&apos;t modify existing records. Duplicate rows will be skipped.</p>
+              </div>
+            </label>
+            <label className="flex items-start gap-3 cursor-pointer group">
+              <input
+                type="radio"
+                name="duplicateMode"
+                value="update"
+                checked={duplicateMode === 'update'}
+                onChange={() => setDuplicateMode('update')}
+                className="mt-0.5 text-blue-600"
+              />
+              <div>
+                <span className="font-medium text-gray-800 dark:text-gray-200">Update existing students</span>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Overwrite fields for existing students with data from the CSV.</p>
+              </div>
+            </label>
+            <label className="flex items-start gap-3 cursor-pointer group">
+              <input
+                type="radio"
+                name="duplicateMode"
+                value="import_new"
+                checked={duplicateMode === 'import_new'}
+                onChange={() => setDuplicateMode('import_new')}
+                className="mt-0.5 text-blue-600"
+              />
+              <div>
+                <span className="font-medium text-gray-800 dark:text-gray-200">Import as new (allow duplicates)</span>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Always create new records, even if a matching student exists.</p>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        {/* Step 3: Input Method */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Step 3 — Add Student Data</h2>
 
           <div className="flex gap-2 mb-4">
             <button
@@ -646,12 +891,12 @@ function ImportStudentsContent() {
           {inputMethod === 'paste' ? (
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                Paste data from Excel or a spreadsheet. Columns: first_name, last_name, email, phone, agency
+                Paste data from Excel or a spreadsheet. Supported columns: first_name, last_name, email, phone, agency, emergency_contact_name, emergency_contact_phone, learning_style, notes
               </p>
               <textarea
                 value={pasteData}
                 onChange={(e) => handlePasteChange(e.target.value)}
-                placeholder={`first_name,last_name,email,phone,agency\nJohn,Doe,john@example.com,555-1234,AMR\nJane,Smith`}
+                placeholder={`first_name,last_name,email,phone,agency,emergency_contact_name,emergency_contact_phone,learning_style,notes\nJohn,Doe,john@example.com,555-1234,AMR,Jane Doe,555-5678,visual,Good student`}
                 rows={8}
                 className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
@@ -659,12 +904,24 @@ function ImportStudentsContent() {
           ) : (
             <div>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                Upload a CSV or TXT file with student data.
+                Upload a CSV or TXT file with student data. Drag and drop or click to select.
               </p>
-              <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+              <label
+                className={`flex flex-col items-center justify-center w-full h-36 border-2 border-dashed rounded-lg cursor-pointer transition-colors ${
+                  draggingOver
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                    : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+                }`}
+                onDragOver={(e) => { e.preventDefault(); setDraggingOver(true); }}
+                onDragLeave={() => setDraggingOver(false)}
+                onDrop={handleDrop}
+              >
                 <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                  <FileSpreadsheet className="w-10 h-10 text-gray-400 dark:text-gray-500 mb-2" />
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Click to upload CSV or TXT file</p>
+                  <FileSpreadsheet className={`w-10 h-10 mb-2 ${draggingOver ? 'text-blue-500' : 'text-gray-400 dark:text-gray-500'}`} />
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {draggingOver ? 'Drop file here' : 'Click to upload or drag and drop'}
+                  </p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">CSV, TXT, or TSV</p>
                 </div>
                 <input
                   type="file"
@@ -673,50 +930,39 @@ function ImportStudentsContent() {
                   className="hidden"
                 />
               </label>
+              {pasteData && (
+                <p className="mt-2 text-sm text-green-600 dark:text-green-400">
+                  File loaded — {parsedStudents.length} student{parsedStudents.length !== 1 ? 's' : ''} parsed
+                </p>
+              )}
             </div>
           )}
         </div>
 
-        {/* Duplicate Handling + Preview */}
+        {/* Step 4: Preview Table */}
         {parsedStudents.length > 0 && (
           <>
-            {/* Duplicate Config */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-              <div className="flex flex-wrap items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                    When duplicates found:
-                  </label>
-                  <select
-                    value={duplicateMode}
-                    onChange={(e) => setDuplicateMode(e.target.value as 'skip' | 'update' | 'import_new')}
-                    className="px-3 py-1.5 border dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
-                  >
-                    <option value="skip">Skip (don&apos;t import duplicate)</option>
-                    <option value="update">Update existing student record</option>
-                    <option value="import_new">Import as new (allow duplicates)</option>
-                  </select>
-                </div>
-                {checkingDuplicates && (
-                  <span className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
-                    <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
-                    Checking for duplicates...
-                  </span>
-                )}
+            {/* Checking indicator */}
+            {checkingDuplicates && (
+              <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 px-1">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                Checking for duplicates in database...
               </div>
-            </div>
+            )}
 
-            {/* Preview Table */}
+            {/* Summary + actions */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
               <div className="p-4 border-b dark:border-gray-700 flex flex-wrap items-center gap-3 justify-between">
                 <div>
                   <h2 className="font-semibold text-gray-900 dark:text-white">
-                    Step 3 — Review &amp; Select Rows
+                    Step 4 — Review &amp; Select Rows
                   </h2>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                    <span className="text-green-600 dark:text-green-400 font-medium">{validCount} valid</span>
+                    {validCount > 0 && (
+                      <span className="text-green-600 dark:text-green-400 font-medium">{validCount} new</span>
+                    )}
                     {warningCount > 0 && (
-                      <>, <span className="text-amber-600 dark:text-amber-400 font-medium">{warningCount} warning{warningCount !== 1 ? 's' : ''}</span></>
+                      <>{validCount > 0 ? ', ' : ''}<span className="text-amber-600 dark:text-amber-400 font-medium">{warningCount} duplicate{warningCount !== 1 ? 's' : ''}</span></>
                     )}
                     {errorCount > 0 && (
                       <>, <span className="text-red-600 dark:text-red-400 font-medium">{errorCount} error{errorCount !== 1 ? 's' : ''}</span></>
@@ -724,7 +970,7 @@ function ImportStudentsContent() {
                     <span className="text-gray-400 dark:text-gray-500"> &bull; {selectedCount} selected for import</span>
                   </p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   <button
                     onClick={selectAllValid}
                     className="text-xs px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
@@ -747,18 +993,22 @@ function ImportStudentsContent() {
               </div>
 
               <div className="overflow-auto max-h-[500px]">
-                <table className="w-full text-sm min-w-[640px]">
+                <table className="w-full text-sm min-w-[900px]">
                   <thead className="bg-gray-50 dark:bg-gray-700 sticky top-0 z-10">
                     <tr>
-                      <th className="px-3 py-2 w-8"></th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-10">#</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-8">Status</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">First Name</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Last Name</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Email</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Phone</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Agency</th>
-                      <th className="px-3 py-2 w-8"></th>
+                      <th className="px-2 py-2 w-8"></th>
+                      <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-10">#</th>
+                      <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-8">St.</th>
+                      <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">First</th>
+                      <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Last</th>
+                      <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Email</th>
+                      <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Phone</th>
+                      <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Agency</th>
+                      <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">EC Name</th>
+                      <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">EC Phone</th>
+                      <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Style</th>
+                      <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Notes</th>
+                      <th className="px-2 py-2 w-8"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -779,8 +1029,7 @@ function ImportStudentsContent() {
 
                       return (
                         <tr key={index} className={`${rowBg} transition-colors`}>
-                          {/* Checkbox */}
-                          <td className="px-3 py-2 text-center">
+                          <td className="px-2 py-2 text-center">
                             <input
                               type="checkbox"
                               checked={student.selected && !isError}
@@ -789,10 +1038,8 @@ function ImportStudentsContent() {
                               className="rounded border-gray-300 dark:border-gray-600 text-blue-600 disabled:opacity-40"
                             />
                           </td>
-                          {/* Row number */}
-                          <td className="px-3 py-2 text-gray-400 dark:text-gray-500 text-xs">{student.row}</td>
-                          {/* Status icon */}
-                          <td className="px-3 py-2">
+                          <td className="px-2 py-2 text-gray-400 dark:text-gray-500 text-xs">{student.row}</td>
+                          <td className="px-2 py-2">
                             {isError ? (
                               <Tooltip text={tooltip}>
                                 <AlertCircle className="w-4 h-4 text-red-500" />
@@ -805,14 +1052,16 @@ function ImportStudentsContent() {
                               <CheckCircle className="w-4 h-4 text-green-500" />
                             )}
                           </td>
-                          {/* Data cells */}
                           <DataCell value={student.first_name} errorMsg={cellErrors.first_name} warningMsg={cellWarnings.first_name} />
                           <DataCell value={student.last_name} errorMsg={cellErrors.last_name} warningMsg={cellWarnings.last_name} />
                           <DataCell value={student.email} errorMsg={cellErrors.email} warningMsg={cellWarnings.email} />
                           <DataCell value={student.phone} errorMsg={cellErrors.phone} warningMsg={cellWarnings.phone} />
                           <DataCell value={student.agency} errorMsg={cellErrors.agency} warningMsg={cellWarnings.agency} />
-                          {/* Remove button */}
-                          <td className="px-2 py-2">
+                          <DataCell value={student.emergency_contact_name} errorMsg={cellErrors.emergency_contact_name} warningMsg={cellWarnings.emergency_contact_name} />
+                          <DataCell value={student.emergency_contact_phone} errorMsg={cellErrors.emergency_contact_phone} warningMsg={cellWarnings.emergency_contact_phone} />
+                          <DataCell value={student.learning_style} errorMsg={cellErrors.learning_style} warningMsg={cellWarnings.learning_style} />
+                          <DataCell value={student.notes} errorMsg={cellErrors.notes} warningMsg={cellWarnings.notes} />
+                          <td className="px-1 py-2">
                             <button
                               onClick={() => removeRow(index)}
                               className="p-1 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 transition-colors"
@@ -829,7 +1078,7 @@ function ImportStudentsContent() {
               </div>
             </div>
 
-            {/* Import Controls */}
+            {/* Import Button */}
             <div className="flex flex-wrap gap-3 items-center">
               <Link
                 href={returnTo || '/lab-management/students'}
@@ -862,17 +1111,20 @@ function ImportStudentsContent() {
           </>
         )}
 
+        {/* Import History */}
+        <ImportHistorySection />
+
         {/* Help Text */}
         <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
           <h3 className="font-medium text-blue-800 dark:text-blue-300 mb-2">Tips for importing</h3>
           <ul className="text-sm text-blue-700 dark:text-blue-400 space-y-1">
-            <li>• Download the CSV template above for the correct column order</li>
-            <li>• Copy and paste directly from Excel, Google Sheets, or any spreadsheet</li>
-            <li>• Headers are auto-detected — include a header row for best results</li>
-            <li>• Minimum required: First Name and Last Name (email, phone, agency are optional)</li>
-            <li>• Supports comma-separated, tab-separated, or &quot;First Last&quot; formats</li>
-            <li>• Rows with errors are deselected by default — fix them in the source or remove them</li>
-            <li>• Duplicate emails show as warnings — configure handling in the dropdown above the table</li>
+            <li>Download the CSV template for the correct column order and example data</li>
+            <li>Copy and paste directly from Excel, Google Sheets, or any spreadsheet</li>
+            <li>Headers are auto-detected — include a header row for best results</li>
+            <li>Required: first_name, last_name. Optional: email, phone, agency, emergency_contact_name, emergency_contact_phone, learning_style, notes</li>
+            <li>Valid values for learning_style: visual, auditory, kinesthetic, reading</li>
+            <li>Duplicates are detected by email (exact) or name (case-insensitive)</li>
+            <li>Rows with errors are deselected by default — fix them in the source or remove them</li>
           </ul>
         </div>
       </main>

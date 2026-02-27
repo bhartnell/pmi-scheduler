@@ -16,9 +16,11 @@ import {
   ClipboardList,
   Pencil,
   Briefcase,
+  Send,
 } from 'lucide-react';
 import CloseoutSurveyModal from './CloseoutSurveyModal';
 import EmploymentVerificationModal from './EmploymentVerificationModal';
+import PreceptorEvalModal from './PreceptorEvalModal';
 
 interface ChecklistItem {
   key: string;
@@ -52,7 +54,7 @@ interface EmploymentVerification {
   id: string;
   internship_id: string;
   student_name: string | null;
-  last_four_ssn: string | null;
+  ssn_last4: string | null;
   program: string | null;
   phone: string | null;
   email: string | null;
@@ -63,11 +65,10 @@ interface EmploymentVerification {
   company_email: string | null;
   company_phone: string | null;
   company_fax: string | null;
-  employment_start_date: string | null;
-  starting_salary: string | null;
-  employment_type: 'full_time' | 'part_time' | null;
-  verifying_staff_name: string | null;
-  verifying_staff_title: string | null;
+  start_date: string | null;
+  salary: string | null;
+  employment_status: 'ft' | 'pt' | null;
+  verifying_staff: string | null;
   submitted_by: string | null;
   submitted_at: string | null;
 }
@@ -158,6 +159,9 @@ export default function CloseoutSection({
   const [employmentLoading, setEmploymentLoading] = useState(true);
   const [showEmploymentModal, setShowEmploymentModal] = useState(false);
   const [employmentAutoGeneratePdf, setEmploymentAutoGeneratePdf] = useState(false);
+
+  // Preceptor eval link state
+  const [showPreceptorEvalModal, setShowPreceptorEvalModal] = useState(false);
 
   useEffect(() => {
     fetchCloseoutData();
@@ -730,6 +734,15 @@ export default function CloseoutSection({
         />
       )}
 
+      {/* Preceptor Eval Modal */}
+      {showPreceptorEvalModal && (
+        <PreceptorEvalModal
+          internshipId={internshipId}
+          studentName={studentName}
+          onClose={() => setShowPreceptorEvalModal(false)}
+        />
+      )}
+
       {/* Section Header */}
       <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-emerald-50 dark:bg-emerald-900/20">
         <div className="flex items-center justify-between">
@@ -1008,6 +1021,34 @@ export default function CloseoutSection({
             </div>
           )}
         </div>
+
+        {/* Preceptor Evaluation Request */}
+        {canEdit && (
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <Send className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Preceptor Evaluation Request</h4>
+            </div>
+            <div className="p-4 rounded-lg border bg-gray-50 dark:bg-gray-700/30 border-gray-200 dark:border-gray-700">
+              <div className="flex items-start justify-between gap-2 mb-3">
+                <div>
+                  <div className="text-sm font-medium text-gray-900 dark:text-white">Request External Evaluation</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    Send a secure, one-time evaluation link directly to the preceptor. No account required.
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPreceptorEvalModal(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+              >
+                <Send className="w-3.5 h-3.5" />
+                Send Evaluation Request
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Downloadable Paper Forms */}
         <div>

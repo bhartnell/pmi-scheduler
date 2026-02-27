@@ -11,6 +11,7 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const programId = searchParams.get('programId');
   const activeOnly = searchParams.get('activeOnly') !== 'false';
+  const includeArchived = searchParams.get('include_archived') === 'true';
 
   try {
     const supabase = getSupabaseAdmin();
@@ -29,6 +30,11 @@ export async function GET(request: NextRequest) {
 
     if (activeOnly) {
       query = query.eq('is_active', true);
+    }
+
+    // By default, exclude archived cohorts unless explicitly requested
+    if (!includeArchived) {
+      query = query.is('archived_at', null);
     }
 
     const { data, error } = await query;

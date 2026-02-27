@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
 import { notifyAdminsNewFeedback, notifyFeedbackResolved } from '@/lib/notifications';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { rateLimit } from '@/lib/rate-limit';
 
 // Create Supabase client inside handlers to ensure env vars are available
 // GET - List all feedback reports (for admin view)
@@ -127,6 +128,13 @@ export async function GET(request: NextRequest) {
 // POST - Submit new feedback
 // Accepts both application/json (backward compat) and multipart/form-data (for screenshot uploads)
 export async function POST(request: NextRequest) {
+  // Rate limit: 5 submissions per minute per IP
+  const ip = request.headers.get('x-forwarded-for') || 'unknown';
+  const { success: rateLimitOk } = rateLimit(`feedback:${ip}`, 5, 60000);
+  if (!rateLimitOk) {
+    return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+  }
+
   try {
     const supabase = getSupabaseAdmin();
     const session = await getServerSession();
