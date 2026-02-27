@@ -107,6 +107,7 @@ export default function PlanningCalendarPage() {
   const [sites, setSites] = useState<ClinicalSite[]>([]);
   const [schedules, setSchedules] = useState<SiteSchedule[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   // Filters
@@ -184,6 +185,7 @@ export default function PlanningCalendarPage() {
 
   const fetchSchedules = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       // Fetch for the visible calendar range (month +/- overflow)
       const firstDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
@@ -204,11 +206,14 @@ export default function PlanningCalendarPage() {
 
       const res = await fetch(url);
       const data = await res.json();
-      if (data.success) {
+      if (!res.ok || !data.success) {
+        setError(data.error || 'Failed to load schedules');
+      } else {
         setSchedules(data.schedules || []);
       }
     } catch (err) {
       console.error('Error fetching schedules:', err);
+      setError('Failed to load schedules. Please try again.');
     }
     setLoading(false);
   }, [currentMonth, filterSiteId, filterInstitution, userRole]);
@@ -401,7 +406,16 @@ export default function PlanningCalendarPage() {
                   <Calendar className="w-6 h-6 text-teal-600 dark:text-teal-400" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Clinical Planning Calendar</h1>
+                  <div className="flex items-center gap-1">
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Clinical Planning Calendar</h1>
+                    <div className="group relative inline-flex items-center">
+                      <Info className="h-4 w-4 text-gray-400 hover:text-blue-500 cursor-help ml-2" />
+                      <div className="invisible group-hover:visible absolute left-6 top-0 z-50 w-72 p-3 bg-gray-900 dark:bg-gray-700 text-white text-sm rounded-lg shadow-lg">
+                        <div className="absolute -left-1 top-2 w-2 h-2 bg-gray-900 dark:bg-gray-700 rotate-45" />
+                        Plan clinical rotations by viewing all sites, their capacity, and scheduling students across available dates. Coordinate with other institutions sharing the same sites.
+                      </div>
+                    </div>
+                  </div>
                   <p className="text-gray-600 dark:text-gray-400 text-sm">Track site availability by school across the year</p>
                 </div>
               </div>
@@ -421,6 +435,16 @@ export default function PlanningCalendarPage() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
 
+        {/* Error state */}
+        {error && (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+            <p className="text-red-700 dark:text-red-300">{error}</p>
+            <button onClick={fetchSchedules} className="mt-2 text-sm text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-200">
+              Try again
+            </button>
+          </div>
+        )}
+
         {/* Controls: month nav + filters */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-4">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
@@ -429,24 +453,24 @@ export default function PlanningCalendarPage() {
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                 aria-label="Previous month"
               >
                 <ChevronLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
               </button>
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white min-w-[200px] text-center">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white min-w-[160px] sm:min-w-[200px] text-center">
                 {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
               </h2>
               <button
                 onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
                 aria-label="Next month"
               >
                 <ChevronRight className="w-5 h-5 text-gray-600 dark:text-gray-400" />
               </button>
               <button
                 onClick={() => setCurrentMonth(new Date())}
-                className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+                className="px-3 py-2 min-h-[44px] text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
               >
                 Today
               </button>
@@ -582,10 +606,10 @@ export default function PlanningCalendarPage() {
                     </div>
                     {canEdit && (
                       <div className="flex gap-1 flex-shrink-0">
-                        <button onClick={() => openEditModal(s)} className="p-1 text-gray-400 hover:text-teal-600 dark:hover:text-teal-400">
+                        <button onClick={() => openEditModal(s)} className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-400 hover:text-teal-600 dark:hover:text-teal-400 rounded">
                           <Edit2 className="w-4 h-4" />
                         </button>
-                        <button onClick={() => setDeletingId(s.id)} className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400">
+                        <button onClick={() => setDeletingId(s.id)} className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
@@ -606,7 +630,7 @@ export default function PlanningCalendarPage() {
               </h3>
               <button
                 onClick={() => setSelectedDate(null)}
-                className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded"
+                className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded"
               >
                 <X className="w-5 h-5" />
               </button>

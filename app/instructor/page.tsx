@@ -16,7 +16,8 @@ import {
   FileText,
   Users,
   Home,
-  History
+  History,
+  BarChart3,
 } from 'lucide-react';
 import { canAccessAdmin, canManageContent } from '@/lib/permissions';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -432,6 +433,13 @@ export default function InstructorDashboard() {
             >
               <Users className="w-8 h-8 text-green-600 dark:text-green-400" />
               <span className="text-sm font-medium text-gray-900 dark:text-white">View Scenarios</span>
+            </Link>
+            <Link
+              href="/instructor/my-stats"
+              className="flex flex-col items-center gap-2 p-4 rounded-lg bg-teal-50 dark:bg-teal-900/30 hover:bg-teal-100 dark:hover:bg-teal-900/50 transition"
+            >
+              <BarChart3 className="w-8 h-8 text-teal-600 dark:text-teal-400" />
+              <span className="text-sm font-medium text-gray-900 dark:text-white">My Stats</span>
             </Link>
           </div>
         </div>

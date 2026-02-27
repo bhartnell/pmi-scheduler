@@ -36,6 +36,7 @@ import {
   RotateCcw,
   AlertTriangle,
   HelpCircle,
+  Info,
   Link2,
   ToggleLeft,
   ToggleRight,
@@ -3141,6 +3142,13 @@ export default function LabDayPage() {
                     <ChevronUp className="w-4 h-4 text-gray-400 shrink-0 ml-1" />
                   )}
                 </button>
+                <div className="group relative inline-flex items-center shrink-0 ml-2">
+                  <Info className="h-4 w-4 text-gray-400 hover:text-blue-500 cursor-help" />
+                  <div className="invisible group-hover:visible absolute right-6 top-0 z-50 w-72 p-3 bg-gray-900 dark:bg-gray-700 text-white text-sm rounded-lg shadow-lg">
+                    <div className="absolute -right-1 top-2 w-2 h-2 bg-gray-900 dark:bg-gray-700 rotate-45" />
+                    Rate student performance during lab sessions. Ratings help track progress and identify students needing additional support.
+                  </div>
+                </div>
               </div>
 
               {!ratingsCollapsed && (
@@ -3340,6 +3348,13 @@ export default function LabDayPage() {
                     <ChevronUp className="w-4 h-4 text-gray-400 shrink-0 ml-1" />
                   )}
                 </button>
+                <div className="group relative inline-flex items-center shrink-0 ml-2">
+                  <Info className="h-4 w-4 text-gray-400 hover:text-blue-500 cursor-help" />
+                  <div className="invisible group-hover:visible absolute right-6 top-0 z-50 w-72 p-3 bg-gray-900 dark:bg-gray-700 text-white text-sm rounded-lg shadow-lg">
+                    <div className="absolute -right-1 top-2 w-2 h-2 bg-gray-900 dark:bg-gray-700 rotate-45" />
+                    Confirm a student has demonstrated competency in this skill. Sign-offs are recorded with your name and timestamp and cannot be revoked.
+                  </div>
+                </div>
               </div>
 
               {!signoffCollapsed && (

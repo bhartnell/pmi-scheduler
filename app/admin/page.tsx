@@ -24,6 +24,7 @@ import {
   UserCheck,
   Layout,
   Package,
+  BadgeCheck,
 } from 'lucide-react';
 import {
   canAccessAdmin,
@@ -164,6 +165,13 @@ export default function AdminPage() {
       title: 'Equipment Inventory',
       description: 'Track lab equipment, availability, conditions, and check-out/check-in flow',
       color: 'bg-cyan-600',
+    },
+    {
+      href: '/admin/certifications/compliance',
+      icon: BadgeCheck,
+      title: 'Certification Compliance',
+      description: 'View compliance status for all instructor certifications and identify gaps',
+      color: 'bg-green-600',
     },
   ];
 

@@ -20,6 +20,8 @@ import {
   Ambulance,
   CalendarDays,
   BarChart3,
+  Shield,
+  BookOpen,
 } from 'lucide-react';
 import { canAccessClinical, type Role } from '@/lib/permissions';
 
@@ -520,6 +522,50 @@ export default function ClinicalDashboardPage() {
                 </p>
                 <div className="flex items-center text-teal-600 dark:text-teal-400 text-sm font-medium">
                   View capacity
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </div>
+              </div>
+            </div>
+          </Link>
+
+          {/* Compliance Tracker */}
+          <Link
+            href="/clinical/compliance-tracker"
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
+          >
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-violet-100 dark:bg-violet-900/30 rounded-xl group-hover:bg-violet-200 dark:group-hover:bg-violet-900/50 transition-colors">
+                <Shield className="w-6 h-6 text-violet-600 dark:text-violet-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Compliance Tracker</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                  Track student compliance status across all clinical requirements
+                </p>
+                <div className="flex items-center text-violet-600 dark:text-violet-400 text-sm font-medium">
+                  View tracker
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </div>
+              </div>
+            </div>
+          </Link>
+
+          {/* MCE Tracker */}
+          <Link
+            href="/clinical/mce"
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
+          >
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-rose-100 dark:bg-rose-900/30 rounded-xl group-hover:bg-rose-200 dark:group-hover:bg-rose-900/50 transition-colors">
+                <BookOpen className="w-6 h-6 text-rose-600 dark:text-rose-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">MCE Tracker</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                  Track mandatory continuing education hours for students
+                </p>
+                <div className="flex items-center text-rose-600 dark:text-rose-400 text-sm font-medium">
+                  View tracker
                   <ChevronRight className="w-4 h-4 ml-1" />
                 </div>
               </div>

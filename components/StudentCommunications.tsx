@@ -111,6 +111,7 @@ export default function StudentCommunications({ studentId, studentName }: Studen
   // List state
   const [communications, setCommunications] = useState<Communication[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [typeFilter, setTypeFilter] = useState<CommType | 'all'>('all');
   const [showFlaggedOnly, setShowFlaggedOnly] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -134,6 +135,7 @@ export default function StudentCommunications({ studentId, studentName }: Studen
 
   const fetchCommunications = useCallback(async () => {
     setLoading(true);
+    setFetchError(null);
     try {
       const url = new URL(`/api/lab-management/students/${studentId}/communications`, window.location.origin);
       if (typeFilter !== 'all') url.searchParams.set('type', typeFilter);
@@ -142,11 +144,14 @@ export default function StudentCommunications({ studentId, studentName }: Studen
 
       const res = await fetch(url.toString());
       const data = await res.json();
-      if (res.ok && data.success) {
+      if (!res.ok || !data.success) {
+        setFetchError(data.error || 'Failed to load communications');
+      } else {
         setCommunications(data.communications || []);
       }
     } catch (err) {
       console.error('Error fetching communications:', err);
+      setFetchError('Failed to load communications. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -374,6 +379,13 @@ export default function StudentCommunications({ studentId, studentName }: Studen
               <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-3/4" />
             </div>
           ))}
+        </div>
+      ) : fetchError ? (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+          <p className="text-red-700 dark:text-red-300 text-sm">{fetchError}</p>
+          <button onClick={fetchCommunications} className="mt-2 text-sm text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-200">
+            Try again
+          </button>
         </div>
       ) : communications.length === 0 ? (
         <div className="text-center py-12">

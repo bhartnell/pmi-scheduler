@@ -77,7 +77,7 @@ export default function MyLabsWidget() {
 
     const fetchAssignments = async () => {
       try {
-        const res = await fetch(`/api/lab-management/stations?instructor=${session.user?.email}&upcoming=true`);
+        const res = await fetch(`/api/lab-management/stations?instructor=${session.user?.email}&upcoming=true&limit=5`);
         if (res.ok) {
           const data = await res.json();
           setAssignments((data.stations || []).slice(0, 5));

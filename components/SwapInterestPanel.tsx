@@ -126,12 +126,15 @@ export default function SwapInterestPanel({
     try {
       const res = await fetch(`/api/scheduling/swaps/${swapRequestId}/interest`);
       const data = await res.json();
-      if (data.success) {
+      if (!res.ok || !data.success) {
+        setError(data.error || 'Failed to load volunteers');
+      } else {
         setInterests(data.interests || []);
         setMyInterest(data.my_interest || null);
       }
     } catch (err) {
       console.error('Error fetching swap interests:', err);
+      setError('Failed to load volunteers. Please try again.');
     } finally {
       setLoading(false);
     }

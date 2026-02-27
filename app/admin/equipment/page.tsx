@@ -19,6 +19,7 @@ import {
   LogIn,
   Wrench,
   Filter,
+  Info,
 } from 'lucide-react';
 import { canAccessAdmin } from '@/lib/permissions';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -529,6 +530,13 @@ function ActiveCheckoutsPanel({
         <h2 className="font-semibold text-gray-900 dark:text-white text-sm">
           Active Checkouts
         </h2>
+        <div className="group relative inline-flex items-center">
+          <Info className="h-4 w-4 text-gray-400 hover:text-blue-500 cursor-help" />
+          <div className="invisible group-hover:visible absolute left-6 top-0 z-50 w-72 p-3 bg-gray-900 dark:bg-gray-700 text-white text-sm rounded-lg shadow-lg">
+            <div className="absolute -left-1 top-2 w-2 h-2 bg-gray-900 dark:bg-gray-700 rotate-45" />
+            Check out equipment to instructors for lab use. Items must be returned and condition noted.
+          </div>
+        </div>
         <span className="ml-auto px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
           {activeCheckouts.length}
         </span>
@@ -783,6 +791,7 @@ export default function EquipmentInventoryPage() {
   const [equipment, setEquipment] = useState<EquipmentItem[]>([]);
   const [checkouts, setCheckouts] = useState<CheckoutRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<Category>('All');
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -803,11 +812,14 @@ export default function EquipmentInventoryPage() {
     try {
       const res = await fetch('/api/admin/equipment');
       const data = await res.json();
-      if (data.success) {
+      if (!res.ok || !data.success) {
+        setFetchError(data.error || 'Failed to load equipment');
+      } else {
         setEquipment(data.equipment ?? []);
       }
     } catch (error) {
       console.error('Error fetching equipment:', error);
+      setFetchError('Failed to load equipment. Please try again.');
     }
   }, []);
 
@@ -1004,13 +1016,30 @@ export default function EquipmentInventoryPage() {
   if (status === 'loading' || loading) return <PageLoader />;
   if (!session || !currentUser) return null;
 
+  if (fetchError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center max-w-md">
+          <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+          <p className="text-gray-700 dark:text-gray-300 mb-4">{fetchError}</p>
+          <button
+            onClick={() => { setFetchError(null); fetchEquipment(); }}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+          >
+            Try again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-4">
           {/* Breadcrumbs */}
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2 overflow-x-auto whitespace-nowrap">
             <Link
               href="/"
               className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1"
@@ -1018,30 +1047,39 @@ export default function EquipmentInventoryPage() {
               <Home className="w-3 h-3" />
               Home
             </Link>
-            <ChevronRight className="w-4 h-4" />
+            <ChevronRight className="w-4 h-4 flex-shrink-0" />
             <Link href="/admin" className="hover:text-blue-600 dark:hover:text-blue-400">
               Admin
             </Link>
-            <ChevronRight className="w-4 h-4" />
+            <ChevronRight className="w-4 h-4 flex-shrink-0" />
             <span className="text-gray-900 dark:text-white">Equipment Inventory</span>
           </div>
 
           {/* Title row */}
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex-shrink-0">
                 <Package className="w-6 h-6 text-blue-600 dark:text-blue-400" />
               </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  Equipment Inventory
-                </h1>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1">
+                  <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                    Equipment Inventory
+                  </h1>
+                  <div className="group relative inline-flex items-center">
+                    <Info className="h-4 w-4 text-gray-400 hover:text-blue-500 cursor-help ml-2" />
+                    <div className="invisible group-hover:visible absolute left-6 top-0 z-50 w-72 p-3 bg-gray-900 dark:bg-gray-700 text-white text-sm rounded-lg shadow-lg">
+                      <div className="absolute -left-1 top-2 w-2 h-2 bg-gray-900 dark:bg-gray-700 rotate-45" />
+                      Track lab equipment inventory, condition, and checkout status. Set low stock thresholds for automatic alerts.
+                    </div>
+                  </div>
+                </div>
                 <p className="text-gray-600 dark:text-gray-400 text-sm">
                   Track and manage lab equipment, availability, and checkouts
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-shrink-0">
               <ThemeToggle />
               <button
                 onClick={openCreate}

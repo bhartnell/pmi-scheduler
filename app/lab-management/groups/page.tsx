@@ -776,14 +776,14 @@ function GroupManagementPageInner() {
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm no-print">
         <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2 overflow-x-auto whitespace-nowrap">
             <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1">
               <Home className="w-3 h-3" />
               Home
             </Link>
-            <ChevronRight className="w-4 h-4" />
+            <ChevronRight className="w-4 h-4 flex-shrink-0" />
             <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
-            <ChevronRight className="w-4 h-4" />
+            <ChevronRight className="w-4 h-4 flex-shrink-0" />
             <span>Group Management</span>
           </div>
 
@@ -894,7 +894,7 @@ function GroupManagementPageInner() {
           </div>
         ) : (
           <>
-            <div className="flex gap-6">
+            <div className="flex flex-col lg:flex-row gap-6">
               {/* Groups area */}
               <div className="flex-1 min-w-0">
                 {groups.length === 0 ? (
@@ -972,7 +972,7 @@ function GroupManagementPageInner() {
                                         ? `Locked by ${group.locked_by_name || 'unknown'} at ${group.locked_at ? new Date(group.locked_at).toLocaleString() : ''}`
                                         : 'Lock group'
                                     }
-                                    className={`p-1 rounded transition-colors ${
+                                    className={`p-1.5 min-h-[36px] min-w-[36px] flex items-center justify-center rounded transition-colors ${
                                       group.is_locked
                                         ? 'text-orange-500 hover:text-orange-700 hover:bg-orange-50 dark:hover:bg-orange-900/30'
                                         : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
@@ -986,7 +986,7 @@ function GroupManagementPageInner() {
                                 {!group.is_locked && (
                                   <button
                                     onClick={() => { setEditingGroupId(group.id); setEditingName(group.name); }}
-                                    className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                                    className="p-1.5 min-h-[36px] min-w-[36px] flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
                                   >
                                     <Edit2 className="w-4 h-4" />
                                   </button>
@@ -996,7 +996,7 @@ function GroupManagementPageInner() {
                                 {canManage && !group.is_locked && (
                                   <button
                                     onClick={() => handleDeleteGroup(group.id)}
-                                    className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded"
+                                    className="p-1.5 min-h-[36px] min-w-[36px] flex items-center justify-center text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded"
                                   >
                                     <Trash2 className="w-4 h-4" />
                                   </button>
@@ -1021,7 +1021,7 @@ function GroupManagementPageInner() {
                                     }
                                   }}
                                   title="Print this group's roster"
-                                  className="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded"
+                                  className="p-1.5 min-h-[36px] min-w-[36px] flex items-center justify-center text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded"
                                 >
                                   <Printer className="w-4 h-4" />
                                 </button>
@@ -1093,12 +1093,12 @@ function GroupManagementPageInner() {
 
               {/* Unassigned sidebar */}
               {unassignedStudents.length > 0 && (
-                <div className="w-60 flex-shrink-0 no-print">
+                <div className="w-full lg:w-60 lg:flex-shrink-0 no-print">
                   <div
                     onDragOver={e => handleDragOver(e, 'unassigned')}
                     onDragLeave={handleDragLeave}
                     onDrop={handleDropToUnassigned}
-                    className={`bg-white dark:bg-gray-800 rounded-lg shadow p-4 sticky top-4 transition-all ${
+                    className={`bg-white dark:bg-gray-800 rounded-lg shadow p-4 lg:sticky lg:top-4 transition-all ${
                       dropTarget === 'unassigned' ? 'ring-2 ring-gray-400 dark:ring-gray-500' : ''
                     }`}
                   >

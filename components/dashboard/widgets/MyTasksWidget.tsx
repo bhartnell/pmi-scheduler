@@ -100,7 +100,7 @@ export default function MyTasksWidget() {
 
   const fetchTasks = useCallback(async () => {
     try {
-      const res = await fetch('/api/tasks?filter=assigned_to_me&sortBy=due_date&sortOrder=asc&limit=50');
+      const res = await fetch('/api/tasks?filter=assigned_to_me&sortBy=due_date&sortOrder=asc&limit=10');
       if (res.ok) {
         const data = await res.json();
         const active = (data.tasks || []).filter((task: MyTask) =>

@@ -282,7 +282,7 @@ export default function CohortComparisonPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           {/* Breadcrumb */}
           <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2 overflow-x-auto whitespace-nowrap">
             <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1">
@@ -295,14 +295,14 @@ export default function CohortComparisonPage() {
             <span className="text-gray-900 dark:text-white">Cohort Comparison</span>
           </div>
 
-          <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex-shrink-0">
                 <GitCompare className="w-6 h-6 text-blue-600 dark:text-blue-400" />
               </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Cohort Comparison</h1>
-                <p className="text-gray-600 dark:text-gray-400">
+              <div className="min-w-0">
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Cohort Comparison</h1>
+                <p className="text-gray-600 dark:text-gray-400 text-sm">
                   Compare skills, scenarios, clinical hours, and overall completion across 2-4 cohorts
                 </p>
               </div>
@@ -310,7 +310,7 @@ export default function CohortComparisonPage() {
             {comparisons && (
               <button
                 onClick={handleExportCSV}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium flex-shrink-0"
               >
                 <Download className="w-4 h-4" />
                 Export CSV
@@ -320,7 +320,7 @@ export default function CohortComparisonPage() {
         </div>
       </div>
 
-      <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         {/* Cohort Selector */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5">
           <div className="flex items-center gap-2 mb-4">

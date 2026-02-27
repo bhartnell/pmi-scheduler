@@ -14,6 +14,7 @@ import {
   Users,
   Search,
   Upload,
+  Info,
 } from 'lucide-react';
 import { canAccessAdmin } from '@/lib/permissions';
 import type { CurrentUserMinimal } from '@/types';
@@ -37,6 +38,7 @@ export default function CertificationCompliancePage() {
   const [currentUser, setCurrentUser] = useState<CurrentUserMinimal | null>(null);
   const [certStatuses, setCertStatuses] = useState<CertificationStatus[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'issues' | 'expiring'>('all');
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -71,14 +73,18 @@ export default function CertificationCompliancePage() {
   };
 
   const fetchCertificationStatuses = async () => {
+    setError(null);
     try {
       const res = await fetch('/api/admin/certification-compliance');
       const data = await res.json();
-      if (data.success) {
+      if (!res.ok || !data.success) {
+        setError(data.error || 'Failed to load certification data');
+      } else {
         setCertStatuses(data.statuses || []);
       }
-    } catch (error) {
-      console.error('Error fetching certification statuses:', error);
+    } catch (err) {
+      console.error('Error fetching certification statuses:', err);
+      setError('Failed to load certification data. Please try again.');
     }
     setLoading(false);
   };
@@ -158,7 +164,16 @@ export default function CertificationCompliancePage() {
                 <Award className="w-6 h-6 text-purple-600 dark:text-purple-400" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Certification Compliance</h1>
+                <div className="flex items-center gap-1">
+                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Certification Compliance</h1>
+                  <div className="group relative inline-flex items-center">
+                    <Info className="h-4 w-4 text-gray-400 hover:text-blue-500 cursor-help ml-2" />
+                    <div className="invisible group-hover:visible absolute left-6 top-0 z-50 w-72 p-3 bg-gray-900 dark:bg-gray-700 text-white text-sm rounded-lg shadow-lg">
+                      <div className="absolute -left-1 top-2 w-2 h-2 bg-gray-900 dark:bg-gray-700 rotate-45" />
+                      Track instructor certification compliance. Red items are expired or missing. Yellow items expire within 30 days. Instructors must maintain current certifications to be scheduled.
+                    </div>
+                  </div>
+                </div>
                 <p className="text-gray-600 dark:text-gray-400">Monitor instructor certification status</p>
               </div>
             </div>
@@ -174,6 +189,16 @@ export default function CertificationCompliancePage() {
       </div>
 
       <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
+        {/* Error state */}
+        {error && (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+            <p className="text-red-700 dark:text-red-300">{error}</p>
+            <button onClick={fetchCertificationStatuses} className="mt-2 text-sm text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-200">
+              Try again
+            </button>
+          </div>
+        )}
+
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">

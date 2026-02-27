@@ -14,6 +14,8 @@ export async function GET(request: NextRequest) {
   const open = searchParams.get('open') === 'true';
   const upcoming = searchParams.get('upcoming') === 'true';
   const stationType = searchParams.get('stationType');
+  const limitParam = searchParams.get('limit');
+  const resultLimit = limitParam ? Math.min(parseInt(limitParam, 10), 100) : null;
 
   try {
     const supabase = getSupabaseAdmin();
@@ -160,9 +162,13 @@ export async function GET(request: NextRequest) {
     }
 
     if (open) {
-      filteredData = filteredData.filter((station: any) => 
+      filteredData = filteredData.filter((station: any) =>
         !station.instructor_email || station.instructor_email.trim() === ''
       );
+    }
+
+    if (resultLimit !== null) {
+      filteredData = filteredData.slice(0, resultLimit);
     }
 
     return NextResponse.json({ success: true, stations: filteredData });

@@ -85,10 +85,15 @@ interface NotificationSettings {
   show_desktop_notifications: boolean;
 }
 
+const PAGE_SIZE = 25;
+
 export default function NotificationsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [total, setTotal] = useState(0);
+  const [totalUnread, setTotalUnread] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const toast = useToast();
 
@@ -133,7 +138,7 @@ export default function NotificationsPage() {
       fetchSettings();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.user?.email, activeTab]);
+  }, [session?.user?.email, activeTab, page]);
 
   const fetchSettings = async () => {
     try {
@@ -175,7 +180,12 @@ export default function NotificationsPage() {
   const fetchNotifications = async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({ limit: '100', applyPrefs: 'false' });
+      const offset = (page - 1) * PAGE_SIZE;
+      const params = new URLSearchParams({
+        limit: String(PAGE_SIZE),
+        offset: String(offset),
+        applyPrefs: 'false',
+      });
       if (activeTab === 'archived') {
         params.set('archived', 'true');
       }
@@ -183,6 +193,8 @@ export default function NotificationsPage() {
       if (res.ok) {
         const data = await res.json();
         setNotifications(data.notifications || []);
+        setTotal(data.pagination?.total ?? 0);
+        setTotalUnread(data.unreadCount ?? 0);
       }
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
@@ -199,6 +211,7 @@ export default function NotificationsPage() {
         body: JSON.stringify({ id }),
       });
       setNotifications(prev => prev.map(n => (n.id === id ? { ...n, is_read: true } : n)));
+      setTotalUnread(prev => Math.max(0, prev - 1));
     } catch (error) {
       console.error('Failed to mark as read:', error);
     }
@@ -212,6 +225,7 @@ export default function NotificationsPage() {
         body: JSON.stringify({ all: true }),
       });
       setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+      setTotalUnread(0);
     } catch (error) {
       console.error('Failed to mark all as read:', error);
     }
@@ -228,6 +242,8 @@ export default function NotificationsPage() {
       const data = await res.json();
       if (data.success) {
         setNotifications([]);
+        setTotal(0);
+        setTotalUnread(0);
         setShowClearConfirm(false);
         setSelectedIds(new Set());
         toast.success(`${data.deleted} notification(s) cleared`);
@@ -286,7 +302,7 @@ export default function NotificationsPage() {
     return true;
   });
 
-  const unreadCount = notifications.filter(n => !n.is_read).length;
+  const unreadCount = activeTab === 'active' ? totalUnread : 0;
 
   // Bulk selection helpers
   const allSelected = filteredNotifications.length > 0 && filteredNotifications.every(n => selectedIds.has(n.id));
@@ -317,10 +333,11 @@ export default function NotificationsPage() {
     selectedIndexRef.current = selectedIndex;
   }, [selectedIndex]);
 
-  // Reset selection when list changes
+  // Reset selection and page when tab or filters change
   useEffect(() => {
     setSelectedIndex(-1);
     setSelectedIds(new Set());
+    setPage(1);
   }, [activeTab, readFilter, categoryFilter]);
 
   // Keyboard shortcuts
@@ -451,7 +468,7 @@ export default function NotificationsPage() {
             )}
 
             {/* Clear All (active tab only) */}
-            {activeTab === 'active' && notifications.length > 0 && (
+            {activeTab === 'active' && total > 0 && (
               <button
                 onClick={() => setShowClearConfirm(true)}
                 className="flex items-center gap-2 px-3 py-1.5 text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
@@ -847,6 +864,31 @@ export default function NotificationsPage() {
             </div>
           )}
         </div>
+
+        {/* Pagination */}
+        {total > PAGE_SIZE && (
+          <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 rounded-lg shadow">
+            <p className="text-sm text-gray-700 dark:text-gray-300">
+              Showing {((page - 1) * PAGE_SIZE) + 1} to {Math.min(page * PAGE_SIZE, total)} of {total}
+            </p>
+            <div className="flex gap-2">
+              <button
+                disabled={page === 1}
+                onClick={() => setPage(p => p - 1)}
+                className="px-3 py-1 rounded border border-gray-300 dark:border-gray-600 text-sm disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                Previous
+              </button>
+              <button
+                disabled={page * PAGE_SIZE >= total}
+                onClick={() => setPage(p => p + 1)}
+                className="px-3 py-1 rounded border border-gray-300 dark:border-gray-600 text-sm disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Keyboard Shortcuts Help */}
@@ -869,7 +911,7 @@ export default function NotificationsPage() {
               Clear All Notifications?
             </h3>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              This will permanently delete all {notifications.length} notification{notifications.length !== 1 ? 's' : ''}. This action cannot be undone.
+              This will permanently delete all {total} notification{total !== 1 ? 's' : ''}. This action cannot be undone.
             </p>
             <div className="flex justify-end gap-3">
               <button

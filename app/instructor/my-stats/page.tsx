@@ -380,18 +380,18 @@ export default function MyStatsPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 py-4">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           {/* Breadcrumb */}
-          <div className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 mb-2">
+          <div className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 mb-2 overflow-x-auto whitespace-nowrap">
             <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1">
               <Home className="w-3.5 h-3.5" />
               Home
             </Link>
-            <ChevronRight className="w-3.5 h-3.5" />
+            <ChevronRight className="w-3.5 h-3.5 flex-shrink-0" />
             <Link href="/instructor" className="hover:text-blue-600 dark:hover:text-blue-400">
               Instructor Portal
             </Link>
-            <ChevronRight className="w-3.5 h-3.5" />
+            <ChevronRight className="w-3.5 h-3.5 flex-shrink-0" />
             <span className="text-gray-900 dark:text-white">My Stats</span>
           </div>
 
@@ -416,7 +416,7 @@ export default function MyStatsPage() {
                   <button
                     key={p}
                     onClick={() => handlePeriodChange(p)}
-                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
+                    className={`px-3 py-2 min-h-[36px] text-xs font-medium rounded-md transition-all ${
                       period === p
                         ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm'
                         : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
@@ -433,7 +433,7 @@ export default function MyStatsPage() {
         </div>
       </div>
 
-      <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         {/* Period label */}
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-gray-700 dark:text-gray-300">

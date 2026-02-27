@@ -1362,6 +1362,7 @@ export default function AllAvailabilityPage() {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [dataLoading, setDataLoading] = useState(false);
+  const [dataError, setDataError] = useState<string | null>(null);
 
   const [availability, setAvailability] = useState<AvailabilityEntry[]>([]);
   const [allInstructors, setAllInstructors] = useState<InstructorInfo[]>([]);
@@ -1419,6 +1420,7 @@ export default function AllAvailabilityPage() {
 
   const fetchData = useCallback(async () => {
     setDataLoading(true);
+    setDataError(null);
     try {
       let startDate: string;
       let endDate: string;
@@ -1438,9 +1440,12 @@ export default function AllAvailabilityPage() {
         setAllInstructors(data.instructors || []);
       } else if (res.status === 403) {
         router.push('/scheduling');
+      } else {
+        setDataError(data.error || 'Failed to load availability data');
       }
     } catch (error) {
       console.error('Error fetching availability:', error);
+      setDataError('Failed to load availability data. Please try again.');
     }
     setDataLoading(false);
   }, [currentDate, heatmapWeekStart, viewMode, router]);
@@ -1627,6 +1632,16 @@ export default function AllAvailabilityPage() {
 
       {/* ---- Main ---- */}
       <main className="max-w-7xl mx-auto px-4 py-6">
+        {/* Data error state */}
+        {dataError && (
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-4">
+            <p className="text-red-700 dark:text-red-300">{dataError}</p>
+            <button onClick={fetchData} className="mt-2 text-sm text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-200">
+              Try again
+            </button>
+          </div>
+        )}
+
         {/* Controls row */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
           {/* Navigation - changes based on view mode (hidden for status mode) */}

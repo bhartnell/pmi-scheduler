@@ -18,6 +18,8 @@ import {
   TrendingUp,
   GitCompare,
   Activity,
+  CalendarCheck,
+  BookOpen,
 } from 'lucide-react';
 import { canAccessClinical, type Role } from '@/lib/permissions';
 
@@ -149,6 +151,24 @@ export default function ReportsIndexPage() {
       href: '/reports/scenario-analytics',
       color: 'text-rose-600 dark:text-rose-400',
       bgColor: 'bg-rose-100 dark:bg-rose-900/30',
+    },
+    {
+      id: 'scenario-usage',
+      title: 'Scenario Usage',
+      description: 'Which scenarios are used most, frequency by cohort, and usage trends.',
+      icon: BookOpen,
+      href: '/reports/scenario-usage',
+      color: 'text-amber-600 dark:text-amber-400',
+      bgColor: 'bg-amber-100 dark:bg-amber-900/30',
+    },
+    {
+      id: 'attendance',
+      title: 'Attendance Report',
+      description: 'Lab attendance rates, absences, and tardiness trends across cohorts.',
+      icon: CalendarCheck,
+      href: '/reports/attendance',
+      color: 'text-emerald-600 dark:text-emerald-400',
+      bgColor: 'bg-emerald-100 dark:bg-emerald-900/30',
     },
   ];
 
