@@ -39,15 +39,12 @@ interface Cohort {
 
 interface ExportHistoryEntry {
   id: string;
-  exported_by_email: string;
-  exported_by_name: string | null;
+  exported_by: string;
   export_type: string;
   format: string;
-  cohort_id: string | null;
-  start_date: string | null;
-  end_date: string | null;
-  record_count: number;
-  file_size_bytes: number;
+  filters: { cohort_id?: string | null; start_date?: string | null; end_date?: string | null } | null;
+  row_count: number;
+  file_size: number;
   created_at: string;
 }
 
@@ -600,14 +597,13 @@ export default function DataExportPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
-                        {entry.record_count.toLocaleString()}
+                        {entry.row_count.toLocaleString()}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
-                        {formatBytes(entry.file_size_bytes)}
+                        {formatBytes(entry.file_size)}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
-                        <div>{entry.exported_by_name || '—'}</div>
-                        <div className="text-xs text-gray-400 dark:text-gray-500">{entry.exported_by_email}</div>
+                        {entry.exported_by}
                       </td>
                     </tr>
                   ))}

@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { canAccessClinical, hasMinRole, type Role } from '@/lib/permissions';
 import { useToast } from '@/components/Toast';
+import HelpTooltip from '@/components/HelpTooltip';
 
 interface CohortOption {
   id: string;
@@ -519,7 +520,10 @@ export default function ComplianceTrackerPage() {
                         </th>
                       ))}
                       <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider min-w-[100px]">
-                        Overall
+                        <span className="inline-flex items-center gap-1">
+                          Overall
+                          <HelpTooltip text="Green = current and valid. Yellow = expiring within 30 days. Red = expired or missing." />
+                        </span>
                       </th>
                     </tr>
                   </thead>

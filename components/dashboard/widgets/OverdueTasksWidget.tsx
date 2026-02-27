@@ -52,7 +52,7 @@ export default function OverdueTasksWidget() {
 
           const overdue = (data.tasks || []).filter((task: OverdueTask) => {
             if (!task.due_date) return false;
-            if (task.status === 'completed') return false;
+            if (task.status === 'completed' || task.status === 'done' || task.status === 'cancelled') return false;
             const due = new Date(task.due_date + 'T00:00:00');
             return due < today;
           });

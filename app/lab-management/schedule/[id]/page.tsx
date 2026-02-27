@@ -59,6 +59,7 @@ import LearningStyleDistribution from '@/components/LearningStyleDistribution';
 import { downloadICS, parseLocalDate } from '@/lib/ics-export';
 import { useToast } from '@/components/Toast';
 import { hasMinRole } from '@/lib/permissions';
+import HelpTooltip from '@/components/HelpTooltip';
 
 interface LabDay {
   id: string;
@@ -2071,8 +2072,8 @@ export default function LabDayPage() {
         </div>
       )}
 
-      {/* Print Header - Only visible when printing */}
-      <div className="hidden print:block mb-4 p-4 border-b-2 border-gray-800">
+      {/* Print Header - Only visible when printing non-roster view */}
+      <div className={`hidden mb-4 p-4 border-b-2 border-gray-800${showRosterPrint ? '' : ' print:block'}`}>
         <h1 className="text-2xl font-bold text-center">LAB DAY SCHEDULE</h1>
         <div className="mt-2 flex justify-between text-sm">
           <div>
@@ -2443,7 +2444,7 @@ export default function LabDayPage() {
         </div>
       </div>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6${showRosterPrint ? ' print:hidden' : ''}`}>
         {/* Notes */}
         {labDay.notes && (
           <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded-lg p-4 mb-6">
@@ -2491,7 +2492,7 @@ export default function LabDayPage() {
                     {labDayRoles.filter(r => r.role === 'lab_lead').map(role => (
                       <span
                         key={role.id}
-                        className="inline-flex items-center gap-1 px-3 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 rounded-full text-sm font-medium"
+                        className="inline-flex items-center gap-1 px-3 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 print:bg-amber-100 print:text-amber-800 rounded-full text-sm font-medium"
                       >
                         <Shield className="w-3 h-3" />
                         {role.instructor?.name || 'Unknown'}
@@ -2512,7 +2513,7 @@ export default function LabDayPage() {
                     {labDayRoles.filter(r => r.role === 'roamer').map(role => (
                       <span
                         key={role.id}
-                        className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-full text-sm font-medium"
+                        className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 print:bg-blue-100 print:text-blue-800 rounded-full text-sm font-medium"
                       >
                         <RotateCcw className="w-3 h-3" />
                         {role.instructor?.name || 'Unknown'}
@@ -2533,7 +2534,7 @@ export default function LabDayPage() {
                     {labDayRoles.filter(r => r.role === 'observer').map(role => (
                       <span
                         key={role.id}
-                        className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 rounded-full text-sm font-medium"
+                        className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 print:bg-purple-100 print:text-purple-800 rounded-full text-sm font-medium"
                       >
                         {role.instructor?.name || 'Unknown'}
                       </span>
@@ -2704,7 +2705,7 @@ export default function LabDayPage() {
           <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
             <button
               onClick={() => setChecklistCollapsed(prev => !prev)}
-              className="flex items-center gap-2 text-left flex-1 min-w-0"
+              className="print-include flex items-center gap-2 text-left flex-1 min-w-0"
             >
               <ListChecks className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
               <h3 className="font-semibold text-gray-900 dark:text-white">Prep Checklist</h3>
@@ -2823,7 +2824,7 @@ export default function LabDayPage() {
           <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
             <button
               onClick={() => setEquipmentCollapsed(prev => !prev)}
-              className="flex items-center gap-2 text-left flex-1 min-w-0"
+              className="print-include flex items-center gap-2 text-left flex-1 min-w-0"
             >
               <Package className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
               <h3 className="font-semibold text-gray-900 dark:text-white">Equipment &amp; Supplies</h3>
@@ -3246,6 +3247,7 @@ export default function LabDayPage() {
                                   {myRating.rating}/5
                                 </span>
                               )}
+                              <HelpTooltip text="Rate this lab experience 1-5. Ratings help improve future lab planning and track student progress over time." />
                             </div>
 
                             {/* Note section */}
@@ -3534,27 +3536,32 @@ export default function LabDayPage() {
                               ) : isSaving ? (
                                 <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
                               ) : (
-                                <button
-                                  onClick={() => handleSignoff(student.id)}
-                                  disabled={!signoffSkillId}
-                                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                                    isConfirming
-                                      ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-600'
-                                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 hover:text-emerald-700 dark:hover:text-emerald-300'
-                                  } disabled:opacity-50`}
-                                >
-                                  {isConfirming ? (
-                                    <>
-                                      <AlertTriangle className="w-3.5 h-3.5" />
-                                      Confirm?
-                                    </>
-                                  ) : (
-                                    <>
-                                      <CheckCircle className="w-3.5 h-3.5" />
-                                      Sign Off
-                                    </>
+                                <>
+                                  <button
+                                    onClick={() => handleSignoff(student.id)}
+                                    disabled={!signoffSkillId}
+                                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                                      isConfirming
+                                        ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-600'
+                                        : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 hover:text-emerald-700 dark:hover:text-emerald-300'
+                                    } disabled:opacity-50`}
+                                  >
+                                    {isConfirming ? (
+                                      <>
+                                        <AlertTriangle className="w-3.5 h-3.5" />
+                                        Confirm?
+                                      </>
+                                    ) : (
+                                      <>
+                                        <CheckCircle className="w-3.5 h-3.5" />
+                                        Sign Off
+                                      </>
+                                    )}
+                                  </button>
+                                  {!isConfirming && (
+                                    <HelpTooltip text="Once signed, this confirmation is permanent and cannot be reversed. It records your name and timestamp as the signing instructor." />
                                   )}
-                                </button>
+                                </>
                               )}
                             </div>
                           </div>

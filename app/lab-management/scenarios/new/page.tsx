@@ -27,6 +27,7 @@ import {
   ArrowRight
 } from 'lucide-react';
 import { canManageContent, type Role } from '@/lib/permissions';
+import HelpTooltip from '@/components/HelpTooltip';
 
 // Types
 interface VitalSigns {
@@ -970,7 +971,10 @@ function ScenarioEditorContent() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Difficulty</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-1">
+                  Difficulty
+                  <HelpTooltip text="Used for auto-adjustment recommendations based on assessment data. Higher difficulty scenarios are suggested for groups with strong performance trends." />
+                </label>
                 <select
                   value={scenario.difficulty}
                   onChange={(e) => setScenario({ ...scenario, difficulty: e.target.value })}

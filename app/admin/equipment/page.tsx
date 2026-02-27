@@ -24,7 +24,9 @@ import {
 import { canAccessAdmin } from '@/lib/permissions';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { PageLoader } from '@/components/ui';
+import EmptyState from '@/components/EmptyState';
 import { useToast } from '@/components/Toast';
+import HelpTooltip from '@/components/HelpTooltip';
 import type { CurrentUser } from '@/types';
 
 // ---------------------------------------------------------------------------
@@ -764,14 +766,17 @@ function EquipmentCard({
               </button>
             )}
           </div>
-          <button
-            onClick={() => onCheckout(item)}
-            disabled={item.available_quantity < 1 || isRetired}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >
-            <LogOut className="w-3 h-3" />
-            Check Out
-          </button>
+          <div className="inline-flex items-center gap-1.5">
+            <button
+              onClick={() => onCheckout(item)}
+              disabled={item.available_quantity < 1 || isRetired}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              <LogOut className="w-3 h-3" />
+              Check Out
+            </button>
+            <HelpTooltip text="Track which items are currently checked out to students or labs. Items must be checked back in before the quantity is restored." />
+          </div>
         </div>
       </div>
     </div>
@@ -1162,21 +1167,14 @@ export default function EquipmentInventoryPage() {
 
         {/* Equipment list */}
         {filteredEquipment.length === 0 ? (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 py-16 text-center">
-            <Package className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-            <p className="text-gray-500 dark:text-gray-400">
-              {equipment.length === 0
-                ? 'No equipment items yet. Add your first item to get started.'
-                : 'No equipment matches your current filters.'}
-            </p>
-            {equipment.length === 0 && (
-              <button
-                onClick={openCreate}
-                className="mt-3 text-sm text-blue-600 dark:text-blue-400 hover:underline"
-              >
-                Add equipment
-              </button>
-            )}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+            <EmptyState
+              icon={Package}
+              title={equipment.length === 0 ? 'No equipment tracked' : 'No equipment matches filters'}
+              message={equipment.length === 0 ? 'Add your first equipment item to start tracking inventory.' : 'Try adjusting your search or filter criteria.'}
+              actionLabel={equipment.length === 0 ? 'Add Item' : undefined}
+              onAction={equipment.length === 0 ? openCreate : undefined}
+            />
           </div>
         ) : (
           <div className="space-y-6">

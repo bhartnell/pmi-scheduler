@@ -28,6 +28,7 @@ import {
 import { ThemeToggle } from '@/components/ThemeToggle';
 import NotificationBell from '@/components/NotificationBell';
 import { downloadICS, parseLocalDate } from '@/lib/ics-export';
+import EmptyState from '@/components/EmptyState';
 import { useToast } from '@/components/Toast';
 import {
   type OpenShift,
@@ -661,11 +662,14 @@ function ShiftsPageContent() {
         {activeTab === 'shifts' ? (
           <>
             {shifts.length === 0 ? (
-              <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl shadow-sm">
-                <Clock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600 dark:text-gray-400">
-                  {filterMine ? 'You have no confirmed shifts' : 'No open shifts available'}
-                </p>
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm">
+                <EmptyState
+                  icon={Calendar}
+                  title={filterMine ? 'No confirmed shifts' : 'No shifts found'}
+                  message={filterMine ? 'You have no confirmed shifts at this time.' : 'No open shifts are available. Check back later or contact your administrator.'}
+                  actionLabel="Create Shift"
+                  actionHref="/scheduling/shifts/new"
+                />
               </div>
             ) : (
               <div className="space-y-4">

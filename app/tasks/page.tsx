@@ -28,6 +28,7 @@ import {
 import { ThemeToggle } from '@/components/ThemeToggle';
 import NotificationBell from '@/components/NotificationBell';
 import TaskKanban from '@/components/TaskKanban';
+import EmptyState from '@/components/EmptyState';
 import { useToast } from '@/components/Toast';
 import { PageErrorBoundary } from '@/components/PageErrorBoundary';
 import { useKeyboardShortcuts, KeyboardShortcut } from '@/hooks/useKeyboardShortcuts';
@@ -716,15 +717,14 @@ function TasksPageContent() {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           </div>
         ) : tasks.length === 0 ? (
-          <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl shadow-sm">
-            <CheckSquare className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-600 dark:text-gray-400">No tasks found</p>
-            <button
-              onClick={() => setShowNewTaskModal(true)}
-              className="mt-4 text-blue-600 hover:text-blue-700 font-medium"
-            >
-              Create your first task
-            </button>
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm">
+            <EmptyState
+              icon={CheckSquare}
+              title="No tasks found"
+              message="No tasks match your current filters. Try adjusting your filters or create a new task."
+              actionLabel="Create Task"
+              onAction={() => setShowNewTaskModal(true)}
+            />
           </div>
         ) : viewMode === 'kanban' ? (
           /* Kanban View */

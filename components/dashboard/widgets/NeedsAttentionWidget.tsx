@@ -44,7 +44,7 @@ export default function NeedsAttentionWidget() {
         const feedbackRes = await fetch('/api/feedback?status=new&limit=1');
         if (feedbackRes.ok) {
           const data = await feedbackRes.json();
-          const count = data.totalCount || data.reports?.length || 0;
+          const count = data.total ?? data.totalCount ?? data.reports?.length ?? 0;
           if (count > 0) {
             attentionItems.push({
               id: 'open_feedback',

@@ -31,12 +31,12 @@ import type { CurrentUserMinimal } from '@/types';
 
 interface SystemAlert {
   id: string;
-  alert_type: 'storage' | 'cron_failure' | 'error_rate' | 'login_anomaly' | 'performance';
+  alert_type: string;
   severity: 'info' | 'warning' | 'critical';
   title: string;
-  message: string;
+  message: string | null;
   metadata: Record<string, unknown> | null;
-  resolved: boolean;
+  is_resolved: boolean;
   resolved_at: string | null;
   resolved_by: string | null;
   created_at: string;
@@ -75,7 +75,7 @@ function relativeTime(iso: string | null): string {
   return `${days} days ago`;
 }
 
-function getAlertTypeIcon(alertType: SystemAlert['alert_type']) {
+function getAlertTypeIcon(alertType: string) {
   switch (alertType) {
     case 'storage': return HardDrive;
     case 'cron_failure': return Clock;
@@ -86,7 +86,7 @@ function getAlertTypeIcon(alertType: SystemAlert['alert_type']) {
   }
 }
 
-function getAlertTypeLabel(alertType: SystemAlert['alert_type']): string {
+function getAlertTypeLabel(alertType: string): string {
   switch (alertType) {
     case 'storage': return 'Storage';
     case 'cron_failure': return 'Cron Failure';
@@ -176,24 +176,24 @@ function AlertCard({
           </p>
         </div>
         <button
-          onClick={() => onResolve(alert.id, !alert.resolved)}
+          onClick={() => onResolve(alert.id, !alert.is_resolved)}
           disabled={isResolving}
           className={`flex-shrink-0 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 ${
-            alert.resolved
+            alert.is_resolved
               ? 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
               : 'bg-green-600 text-white hover:bg-green-700'
           }`}
         >
           {isResolving ? (
             <RefreshCw className="w-4 h-4 animate-spin" />
-          ) : alert.resolved ? (
+          ) : alert.is_resolved ? (
             'Unresolve'
           ) : (
             'Resolve'
           )}
         </button>
       </div>
-      {alert.resolved && (
+      {alert.is_resolved && (
         <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 border-t border-gray-200 dark:border-gray-700 pt-2">
           Resolved by {alert.resolved_by ?? 'unknown'} on {fmtDateTime(alert.resolved_at)}
         </div>
@@ -322,10 +322,10 @@ export default function SystemAlertsPage() {
 
   // Separate active vs resolved
   const activeAlerts = sortAlerts(
-    alerts.filter((a) => !a.resolved)
+    alerts.filter((a) => !a.is_resolved)
   );
   const resolvedAlerts = sortAlerts(
-    alerts.filter((a) => a.resolved)
+    alerts.filter((a) => a.is_resolved)
   );
 
   const criticalCount = activeAlerts.filter((a) => a.severity === 'critical').length;

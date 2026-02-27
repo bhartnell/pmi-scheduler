@@ -549,8 +549,9 @@ export default function CloseoutSection({
       letter-spacing: 0.3px;
     }
     .print-btn:hover { background: #1e40af; }
+    @page { margin: 0.5in 0.75in; }
     @media print {
-      body { padding: 20px; }
+      body { padding: 0; max-width: 100%; color: #111827; background: #fff; }
       .no-print { display: none !important; }
     }
   </style>

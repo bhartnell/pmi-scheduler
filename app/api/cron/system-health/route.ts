@@ -25,7 +25,7 @@ async function maybeCreateAlert(
     .from('system_alerts')
     .select('id')
     .eq('alert_type', alert.alert_type)
-    .eq('resolved', false)
+    .eq('is_resolved', false)
     .limit(1)
     .single();
 
@@ -39,7 +39,7 @@ async function maybeCreateAlert(
     title: alert.title,
     message: alert.message,
     metadata: alert.metadata ?? null,
-    resolved: false,
+    is_resolved: false,
   });
 
   return 'created';

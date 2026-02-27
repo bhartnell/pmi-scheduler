@@ -407,6 +407,7 @@ function flattenAssessments(data: { scenario_assessments: any[]; skill_signoffs:
 // ---------------------------------------------------------------------------
 
 export async function GET(request: NextRequest) {
+  const startTime = Date.now();
   try {
     const session = await getServerSession();
     if (!session?.user?.email) {
@@ -598,21 +599,19 @@ export async function GET(request: NextRequest) {
     }
 
     const fileSizeBytes = new TextEncoder().encode(fileContent).length;
+    console.log(`[DATA-EXPORT] type=${exportType} format=${format} records=${recordCount} completed in ${Date.now() - startTime}ms`);
 
     // ---------------------------------------------------------------------------
     // Log export to history
     // ---------------------------------------------------------------------------
     try {
       await supabase.from('data_export_history').insert({
-        exported_by_email: currentUser.email,
-        exported_by_name: currentUser.name,
+        exported_by: currentUser.email,
         export_type: exportType,
         format,
-        cohort_id: cohortId || null,
-        start_date: startDate || null,
-        end_date: endDate || null,
-        record_count: recordCount,
-        file_size_bytes: fileSizeBytes,
+        filters: { cohort_id: cohortId || null, start_date: startDate || null, end_date: endDate || null },
+        row_count: recordCount,
+        file_size: fileSizeBytes,
       });
     } catch (historyError) {
       // Don't fail the export if history logging fails

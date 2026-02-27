@@ -49,6 +49,7 @@ import {
 } from '@/components/dashboard/widgets';
 import AnnouncementBanner from '@/components/dashboard/AnnouncementBanner';
 import { useToast } from '@/components/Toast';
+import HelpTooltip from '@/components/HelpTooltip';
 import type { CurrentUserMinimal } from '@/types';
 
 interface DashboardPreferences {
@@ -420,7 +421,10 @@ export default function HomePage() {
           <ErrorBoundary>
           <div className="mb-10 max-w-5xl mx-auto">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Your Dashboard</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-1">
+                Your Dashboard
+                <HelpTooltip text="Quick Stats shows counts of active students, upcoming labs, and open tasks. Widgets can be customized using the Customize button." />
+              </h3>
               <div className="flex items-center gap-2 print:hidden">
                 {/* Reset to Default */}
                 {showResetConfirm ? (

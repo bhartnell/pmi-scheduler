@@ -29,6 +29,7 @@ export async function POST(
     return NextResponse.json({ error: 'Forbidden - admin role required' }, { status: 403 });
   }
 
+  const startTime = Date.now();
   try {
     // Fetch cohort details
     const { data: cohort, error: cohortError } = await supabase
@@ -88,15 +89,20 @@ export async function POST(
       totalScenariosAssessed = scenarioCount || 0;
     }
 
-    // 5. Total skills completed (station_completions with pass result)
+    // 5. Total skills completed + per-student breakdown (single query, reused below)
     let totalSkillsCompleted = 0;
+    const skillsByStudent: Record<string, number> = {};
     if (studentIds.length > 0) {
-      const { count: skillsCount } = await supabase
+      const { data: completionsData } = await supabase
         .from('station_completions')
-        .select('*', { count: 'exact', head: true })
+        .select('student_id')
         .in('student_id', studentIds)
         .eq('result', 'pass');
-      totalSkillsCompleted = skillsCount || 0;
+
+      (completionsData || []).forEach(c => {
+        skillsByStudent[c.student_id] = (skillsByStudent[c.student_id] || 0) + 1;
+      });
+      totalSkillsCompleted = completionsData?.length || 0;
     }
 
     // 6. Attendance rate: present records / total attendance records
@@ -126,19 +132,7 @@ export async function POST(
     }> = [];
 
     if (studentIds.length > 0) {
-      // Skills per student
-      const { data: completionsData } = await supabase
-        .from('station_completions')
-        .select('student_id')
-        .in('student_id', studentIds)
-        .eq('result', 'pass');
-
-      const skillsByStudent: Record<string, number> = {};
-      (completionsData || []).forEach(c => {
-        skillsByStudent[c.student_id] = (skillsByStudent[c.student_id] || 0) + 1;
-      });
-
-      // Scenarios per student
+      // Scenarios per student (skills already fetched above)
       const { data: scenariosData } = await supabase
         .from('scenario_assessments')
         .select('team_lead_id')
@@ -202,6 +196,7 @@ export async function POST(
 
     if (updateError) throw updateError;
 
+    console.log(`[COHORT-ARCHIVE] cohort=${cohortId} completed in ${Date.now() - startTime}ms`);
     return NextResponse.json({
       success: true,
       cohort: updatedCohort,

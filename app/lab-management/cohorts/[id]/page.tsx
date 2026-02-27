@@ -35,6 +35,7 @@ import {
 import ExportDropdown from '@/components/ExportDropdown';
 import FieldTripAttendance from '@/components/FieldTripAttendance';
 import BulkPhotoUpload from '@/components/BulkPhotoUpload';
+import EmptyState from '@/components/EmptyState';
 import { useToast } from '@/components/Toast';
 import type { ExportConfig } from '@/lib/export-utils';
 
@@ -858,17 +859,13 @@ export default function CohortHubPage() {
           </div>
 
           {students.length === 0 ? (
-            <div className="p-8 text-center">
-              <Users className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-              <p className="text-gray-500 dark:text-gray-400 mb-4">No students in this cohort yet</p>
-              <Link
-                href={`/lab-management/students/new?cohortId=${cohortId}&returnTo=${encodeURIComponent(`/lab-management/cohorts/${cohortId}`)}`}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                <Plus className="w-4 h-4" />
-                Add First Student
-              </Link>
-            </div>
+            <EmptyState
+              icon={Users}
+              title="No students in this cohort"
+              message="Add students manually or import them from a CSV file."
+              actionLabel="Import Students"
+              actionHref="/lab-management/students/import"
+            />
           ) : (
             <div className="divide-y dark:divide-gray-700 max-h-96 overflow-y-auto">
               {students.map((student) => {

@@ -6,6 +6,7 @@ import { useEffect, useState, Suspense, useMemo, useCallback, useRef } from 'rea
 import Link from 'next/link';
 import { useAutoSave } from '@/hooks/useAutoSave';
 import AutoSaveIndicator from '@/components/AutoSaveIndicator';
+import HelpTooltip from '@/components/HelpTooltip';
 import {
   ChevronRight,
   Plus,
@@ -1388,8 +1389,9 @@ function NewLabDayPageContent() {
 
             {/* Lab Day Rotation Settings */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-1">
                 Rotations
+                <HelpTooltip text="Number of times student groups rotate through each station during this lab day." />
               </label>
               <select
                 value={numRotationsLabDay}

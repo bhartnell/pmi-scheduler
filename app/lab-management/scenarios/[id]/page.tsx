@@ -1081,9 +1081,9 @@ export default function ScenarioEditorPage() {
   if (!session) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 print:bg-white">
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-10">
+      <div className="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-10 print:hidden">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
             <Link href="/" className="hover:text-blue-600">Home</Link>
@@ -1165,7 +1165,7 @@ export default function ScenarioEditorPage() {
 
       {/* Student Handout Print View - only visible when printing in student mode */}
       {studentPrintMode && (
-        <div className="hidden print:block max-w-4xl mx-auto px-4 py-6">
+        <div className="hidden print:block max-w-4xl print:max-w-none mx-auto print:mx-0 px-4 py-6 print:px-0 print:py-0">
           <div className="text-center mb-6 pb-4 border-b-2 border-gray-800">
             <h1 className="text-2xl font-bold mb-1">{scenario.title}</h1>
             <p className="text-lg font-semibold text-gray-700">PEER-TO-PEER SCENARIO</p>
@@ -1935,7 +1935,7 @@ export default function ScenarioEditorPage() {
         </div>
       )}
 
-      <main className={`max-w-4xl mx-auto px-4 py-6 space-y-4 ${(studentPrintMode || instructorPrintMode) ? 'print:hidden' : ''}`}>
+      <main className="max-w-4xl mx-auto px-4 py-6 space-y-4 print:hidden">
         {/* Auto-save indicator and restore prompt */}
         <AutoSaveIndicator
           saveStatus={autoSave.saveStatus}

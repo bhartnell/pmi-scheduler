@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { downloadICS, parseLocalDate } from '@/lib/ics-export';
 import { useToast } from '@/components/Toast';
+import HelpTooltip from '@/components/HelpTooltip';
 
 interface Cohort {
   id: string;
@@ -320,7 +321,10 @@ export default function CalendarPage() {
                 <ChevronRight className="w-4 h-4" />
                 <span>Calendar</span>
               </div>
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Calendar</h1>
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                Calendar
+                <HelpTooltip text="Coordinate clinical site scheduling across programs and cohorts. View lab days, open shifts, and coverage needs in one place." />
+              </h1>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               <button

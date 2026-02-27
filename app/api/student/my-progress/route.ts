@@ -18,6 +18,7 @@ import { getSupabaseAdmin } from '@/lib/supabase';
  * Access: student role only. Data is always scoped to the requesting student.
  */
 export async function GET(request: NextRequest) {
+  const startTime = Date.now();
   try {
     const session = await getServerSession(authOptions);
 
@@ -265,7 +266,8 @@ export async function GET(request: NextRequest) {
           lab_day:lab_days(id, date, title)
         `)
         .eq('student_id', studentId)
-        .order('marked_at', { ascending: false });
+        .order('marked_at', { ascending: false })
+        .limit(500);
 
       if (attendanceRecords && attendanceRecords.length > 0) {
         attendanceTotal = attendanceRecords.length;
@@ -384,6 +386,7 @@ export async function GET(request: NextRequest) {
     // -----------------------------------------------
     // Build final response
     // -----------------------------------------------
+    console.log(`[MY-PROGRESS] completed in ${Date.now() - startTime}ms`);
     return NextResponse.json({
       success: true,
       studentFound: true,

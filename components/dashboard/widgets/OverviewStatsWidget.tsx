@@ -47,10 +47,10 @@ export default function OverviewStatsWidget() {
         ]);
 
         setStats({
-          activeStudents: studentsData.students?.length || 0,
-          totalScenarios: scenariosData.scenarios?.length || 0,
-          labsThisWeek: labsData.labDays?.length || 0,
-          openFeedback: feedbackData.totalCount || feedbackData.reports?.length || 0,
+          activeStudents: studentsData.pagination?.total ?? studentsData.students?.length ?? 0,
+          totalScenarios: scenariosData.pagination?.total ?? scenariosData.scenarios?.length ?? 0,
+          labsThisWeek: labsData.pagination?.total ?? labsData.labDays?.length ?? 0,
+          openFeedback: feedbackData.total ?? feedbackData.totalCount ?? 0,
         });
       } catch (error) {
         console.error('Failed to fetch stats:', error);

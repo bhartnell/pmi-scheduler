@@ -4,6 +4,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, useRef, Suspense } from 'react';
 import Link from 'next/link';
+import EmptyState from '@/components/EmptyState';
 import {
   ChevronRight,
   ChevronLeft,
@@ -1043,11 +1044,11 @@ function SchedulePageContent() {
               {loading ? (
                 <div className="p-8 text-center text-gray-500 dark:text-gray-400">Loading...</div>
               ) : labDays.filter(ld => ld.date === new Date().toISOString().split('T')[0]).length === 0 ? (
-                <div className="p-8 text-center text-gray-500 dark:text-gray-400">
-                  <Calendar className="w-12 h-12 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
-                  <p className="font-medium mb-1">No labs scheduled for today</p>
-                  <p className="text-sm">Toggle off &quot;Today&apos;s Labs&quot; to see the full schedule</p>
-                </div>
+                <EmptyState
+                  icon={Calendar}
+                  title="No labs scheduled for today"
+                  message={"Toggle off \"Today's Labs\" to see the full schedule."}
+                />
               ) : (
                 labDays
                   .filter(ld => ld.date === new Date().toISOString().split('T')[0])
@@ -1475,10 +1476,13 @@ function SchedulePageContent() {
             {loading ? (
               <div className="p-8 text-center text-gray-500 dark:text-gray-400">Loading...</div>
             ) : labDays.length === 0 ? (
-              <div className="p-8 text-center text-gray-500 dark:text-gray-400">
-                <Calendar className="w-12 h-12 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
-                <p>No lab days scheduled for this period</p>
-              </div>
+              <EmptyState
+                icon={Calendar}
+                title="No labs scheduled"
+                message="No lab days have been scheduled for this period."
+                actionLabel="Create Lab Day"
+                actionHref="/lab-management/schedule/new"
+              />
             ) : (
               labDays
                 .filter(ld => new Date(ld.date + 'T12:00:00') >= new Date(new Date().toDateString()))

@@ -57,9 +57,9 @@ export async function GET(request: NextRequest) {
       query = query.eq('severity', severityFilter);
     }
     if (resolvedFilter === 'true') {
-      query = query.eq('resolved', true);
+      query = query.eq('is_resolved', true);
     } else if (resolvedFilter === 'false') {
-      query = query.eq('resolved', false);
+      query = query.eq('is_resolved', false);
     }
 
     const { data: alerts, error } = await query;
@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
     const { count: resolvedTodayCount } = await supabase
       .from('system_alerts')
       .select('id', { count: 'exact', head: true })
-      .eq('resolved', true)
+      .eq('is_resolved', true)
       .gte('resolved_at', startOfDay);
 
     const { data: lastHealthCheck } = await supabase
@@ -129,7 +129,7 @@ export async function PATCH(request: NextRequest) {
     const { data, error } = await supabase
       .from('system_alerts')
       .update({
-        resolved,
+        is_resolved: resolved,
         resolved_at: resolved ? new Date().toISOString() : null,
         resolved_by: resolved ? session.user.email : null,
       })

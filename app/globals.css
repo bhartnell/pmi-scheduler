@@ -47,13 +47,18 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* Default page margins for print */
+@page {
+  margin: 0.5in 0.75in;
+}
+
 /* Print styles for scenarios and other pages */
 @media print {
   /* Hide navigation, buttons, and interactive elements */
   nav,
   [class*="print:hidden"],
   button:not(.print-include),
-  .sticky {
+  .sticky:not(.print-include) {
     display: none !important;
   }
 
@@ -166,8 +171,7 @@ body {
   aside,
   .sidebar,
   [data-no-print],
-  .fixed,
-  .sticky:not(.print-include) {
+  .fixed {
     display: none !important;
   }
 
@@ -205,7 +209,16 @@ body {
   .dark body,
   .dark main,
   .dark .bg-gray-900,
-  .dark .bg-gray-800 {
+  .dark .bg-gray-800,
+  .dark .bg-gray-700,
+  .dark [class*="bg-gray-"],
+  .dark [class*="bg-blue-9"],
+  .dark [class*="bg-amber-9"],
+  .dark [class*="bg-purple-9"],
+  .dark [class*="bg-green-9"],
+  .dark [class*="bg-orange-9"],
+  .dark [class*="bg-red-9"],
+  .dark [class*="bg-yellow-9"] {
     background: white !important;
     color: black !important;
   }
@@ -213,7 +226,19 @@ body {
   .dark .text-white,
   .dark .text-gray-100,
   .dark .text-gray-200,
-  .dark .text-gray-300 {
+  .dark .text-gray-300,
+  .dark .text-gray-400,
+  .dark [class*="text-amber-3"],
+  .dark [class*="text-blue-3"],
+  .dark [class*="text-purple-3"],
+  .dark [class*="text-green-3"],
+  .dark [class*="text-orange-3"],
+  .dark [class*="text-red-3"],
+  .dark [class*="text-yellow-3"],
+  .dark [class*="text-teal-4"],
+  .dark [class*="text-blue-4"],
+  .dark [class*="text-purple-4"],
+  .dark [class*="text-green-4"] {
     color: black !important;
   }
 

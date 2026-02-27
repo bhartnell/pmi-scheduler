@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
 
     // Fetch all activity in the period for in-memory aggregation
     const { data: periodRows, error: periodError } = await supabase
-      .from('user_activity_log')
+      .from('user_activity')
       .select('user_email, page_path, created_at')
       .gte('created_at', periodStart.toISOString())
       .order('created_at', { ascending: false });
@@ -66,17 +66,17 @@ export async function GET(request: NextRequest) {
     const allRows = periodRows || [];
 
     const { data: dayRows } = await supabase
-      .from('user_activity_log')
+      .from('user_activity')
       .select('user_email')
       .gte('created_at', dayStart.toISOString());
 
     const { data: weekRows } = await supabase
-      .from('user_activity_log')
+      .from('user_activity')
       .select('user_email')
       .gte('created_at', weekStart.toISOString());
 
     const { data: monthRows } = await supabase
-      .from('user_activity_log')
+      .from('user_activity')
       .select('user_email')
       .gte('created_at', monthStart.toISOString());
 
@@ -123,7 +123,7 @@ export async function GET(request: NextRequest) {
 
     // Activity by day (last 30 days)
     const { data: last30Rows } = await supabase
-      .from('user_activity_log')
+      .from('user_activity')
       .select('user_email, created_at')
       .gte('created_at', thirtyDaysAgo.toISOString());
 

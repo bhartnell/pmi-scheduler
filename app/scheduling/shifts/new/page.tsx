@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import NotificationBell from '@/components/NotificationBell';
+import HelpTooltip from '@/components/HelpTooltip';
 import LabCalendarPanel from '@/components/LabCalendarPanel';
 import { DEPARTMENT_OPTIONS, type ShiftDepartment, type CurrentUser } from '@/types';
 
@@ -587,8 +588,9 @@ function CreateShiftPageInner() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Repeat className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                     Repeat Shift
+                    <HelpTooltip text="Creates multiple shifts on a recurring schedule until the end date. Choose weekly, bi-weekly, or monthly frequency." />
                   </span>
                 </div>
                 <button

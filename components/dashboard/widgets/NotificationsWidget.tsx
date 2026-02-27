@@ -51,12 +51,21 @@ export default function NotificationsWidget() {
 
     const fetchNotifications = async () => {
       try {
-        const res = await fetch('/api/notifications?limit=5');
-        if (res.ok) {
-          const data = await res.json();
-          // Show only unread, or recent if no unread
-          const unread = (data.notifications || []).filter((n: Notification) => !n.is_read);
-          setNotifications(unread.length > 0 ? unread.slice(0, 5) : (data.notifications || []).slice(0, 3));
+        // First fetch unread notifications (up to 5)
+        const unreadRes = await fetch('/api/notifications?limit=5&unread=true');
+        if (unreadRes.ok) {
+          const unreadData = await unreadRes.json();
+          const unread = unreadData.notifications || [];
+          if (unread.length > 0) {
+            setNotifications(unread);
+            return;
+          }
+        }
+        // No unread: fall back to 3 most recent notifications
+        const recentRes = await fetch('/api/notifications?limit=3');
+        if (recentRes.ok) {
+          const recentData = await recentRes.json();
+          setNotifications((recentData.notifications || []).slice(0, 3));
         }
       } catch (error) {
         console.error('Failed to fetch notifications:', error);

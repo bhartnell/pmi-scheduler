@@ -32,10 +32,9 @@ export async function GET(request: NextRequest) {
     const [studentsRes, labsRes, openTasksRes, completedTasksRes, allTasksThisMonthRes] = await Promise.all([
       // Active students count
       supabase
-        .from('lab_users')
+        .from('students')
         .select('id', { count: 'exact', head: true })
-        .eq('role', 'student')
-        .eq('is_active', true),
+        .eq('status', 'active'),
 
       // Lab days this month
       supabase

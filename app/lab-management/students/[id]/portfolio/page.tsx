@@ -167,7 +167,7 @@ function SectionHeader({
   return (
     <button
       onClick={onToggle}
-      className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors print:pointer-events-none print:bg-transparent"
+      className="print-include w-full flex items-center justify-between p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors print:pointer-events-none print:bg-transparent"
     >
       <div className="flex items-center gap-3">
         <Icon className="w-5 h-5 text-blue-600 dark:text-blue-400 print:text-blue-600" />
@@ -334,9 +334,10 @@ export default function StudentPortfolioPage() {
     <>
       {/* Print styles */}
       <style>{`
+        @page { margin: 0.5in 0.75in; }
         @media print {
           nav, header, .print-hide { display: none !important; }
-          body { background: white !important; }
+          body { background: white !important; color: black !important; }
           .print-full-width { width: 100% !important; max-width: 100% !important; }
           .print-no-shadow { box-shadow: none !important; }
           .print-section { page-break-inside: avoid; }

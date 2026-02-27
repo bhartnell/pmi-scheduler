@@ -16,6 +16,7 @@ import {
   TrendingUp,
   BarChart3,
 } from 'lucide-react';
+import HelpTooltip from '@/components/HelpTooltip';
 
 interface Cohort {
   id: string;
@@ -359,7 +360,10 @@ export default function AttendanceReportPage() {
               <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4">
                 <div className="flex items-center gap-2 text-red-600 dark:text-red-400 mb-2">
                   <AlertTriangle className="w-4 h-4" />
-                  <span className="text-sm font-medium">Below 80%</span>
+                  <span className="text-sm font-medium flex items-center gap-1">
+                    Below 80%
+                    <HelpTooltip text="Students with 2+ absences or below 80% attendance rate are considered at risk and may need additional support." />
+                  </span>
                 </div>
                 <p className={`text-3xl font-bold ${
                   report.summary.belowThresholdCount === 0
