@@ -46,14 +46,14 @@ export async function GET(request: NextRequest) {
 
     // Run all searches in parallel
     const [studentsRes, scenariosRes, tasksRes, labDaysRes, instructorsRes] = await Promise.all([
-      // Students - search first_name, last_name, email
+      // Students - search first_name, last_name, email; join cohort name
       supabase
         .from('students')
-        .select('id, first_name, last_name, email, cohort_id')
+        .select('id, first_name, last_name, email, cohort_id, cohort:cohorts(id, name)')
         .or(`first_name.ilike.%${safe}%,last_name.ilike.%${safe}%,email.ilike.%${safe}%`)
         .limit(limitParam),
 
-      // Scenarios - search title, chief_complaint, category
+      // Scenarios - search title, chief_complaint, category; include difficulty
       supabase
         .from('scenarios')
         .select('id, title, chief_complaint, category, difficulty')
@@ -68,10 +68,10 @@ export async function GET(request: NextRequest) {
         .or(`title.ilike.%${safe}%,description.ilike.%${safe}%`)
         .limit(limitParam),
 
-      // Lab Days - search title, notes
+      // Lab Days - search title, notes; join cohort name
       supabase
         .from('lab_days')
-        .select('id, date, title, cohort_id, status')
+        .select('id, date, title, cohort_id, status, cohort:cohorts(id, name)')
         .or(`title.ilike.%${safe}%,notes.ilike.%${safe}%`)
         .order('date', { ascending: false })
         .limit(limitParam),
@@ -87,17 +87,28 @@ export async function GET(request: NextRequest) {
     ]);
 
     // Shape results into consistent format
-    const students = (studentsRes.data || []).map((s) => ({
-      id: s.id,
-      name: `${s.first_name || ''} ${s.last_name || ''}`.trim(),
-      email: s.email,
-      type: 'student' as const,
-    }));
+    type CohortRow = { id: string; name: string } | null;
+
+    const students = (studentsRes.data || []).map((s) => {
+      const cohortRow = s.cohort as CohortRow | CohortRow[];
+      const cohortName = Array.isArray(cohortRow)
+        ? (cohortRow[0]?.name ?? null)
+        : (cohortRow?.name ?? null);
+      return {
+        id: s.id,
+        name: `${s.first_name || ''} ${s.last_name || ''}`.trim(),
+        email: s.email || '',
+        cohortName: cohortName || null,
+        type: 'student' as const,
+      };
+    });
 
     const scenarios = (scenariosRes.data || []).map((s) => ({
       id: s.id,
       title: s.title,
-      category: s.category,
+      category: s.category || null,
+      chiefComplaint: s.chief_complaint || null,
+      difficulty: s.difficulty || null,
       type: 'scenario' as const,
     }));
 
@@ -105,15 +116,24 @@ export async function GET(request: NextRequest) {
       id: t.id,
       title: t.title,
       status: t.status,
+      priority: t.priority || null,
       type: 'task' as const,
     }));
 
-    const labDays = (labDaysRes.data || []).map((l) => ({
-      id: l.id,
-      date: l.date,
-      title: l.title,
-      type: 'lab_day' as const,
-    }));
+    const labDays = (labDaysRes.data || []).map((l) => {
+      const cohortRow = l.cohort as CohortRow | CohortRow[];
+      const cohortName = Array.isArray(cohortRow)
+        ? (cohortRow[0]?.name ?? null)
+        : (cohortRow?.name ?? null);
+      return {
+        id: l.id,
+        date: l.date,
+        title: l.title || null,
+        status: l.status || null,
+        cohortName: cohortName || null,
+        type: 'lab_day' as const,
+      };
+    });
 
     const instructors = (instructorsRes.data || []).map((u) => ({
       id: u.id,
