@@ -125,18 +125,45 @@ export async function GET(request: NextRequest) {
 }
 
 // POST - Submit new feedback
+// Accepts both application/json (backward compat) and multipart/form-data (for screenshot uploads)
 export async function POST(request: NextRequest) {
   try {
     const supabase = getSupabaseAdmin();
     const session = await getServerSession();
-    const body = await request.json();
 
-    const { report_type, description, page_url, user_agent } = body;
+    let report_type: string;
+    let description: string;
+    let page_url: string | null;
+    let user_agent: string | null;
+    let screenshotFile: File | null = null;
+
+    const contentType = request.headers.get('content-type') || '';
+
+    if (contentType.includes('multipart/form-data')) {
+      // Parse FormData (new path - supports screenshot upload)
+      const formData = await request.formData();
+      description = (formData.get('description') as string) || '';
+      report_type = (formData.get('report_type') as string) || 'other';
+      page_url = (formData.get('page_url') as string) || null;
+      user_agent = (formData.get('user_agent') as string) || null;
+      const fileField = formData.get('screenshot');
+      if (fileField && typeof fileField !== 'string') {
+        screenshotFile = fileField as File;
+      }
+    } else {
+      // Parse JSON (legacy path - backward compatible)
+      const body = await request.json();
+      description = body.description || '';
+      report_type = body.report_type || 'other';
+      page_url = body.page_url || null;
+      user_agent = body.user_agent || null;
+    }
 
     if (!description?.trim()) {
       return NextResponse.json({ success: false, error: 'Description is required' }, { status: 400 });
     }
 
+    // Insert the feedback record first so we have the ID for the storage path
     const { data, error } = await supabase
       .from('feedback_reports')
       .insert({
@@ -151,6 +178,57 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) throw error;
+
+    // Upload screenshot if provided
+    if (screenshotFile && screenshotFile.size > 0) {
+      try {
+        const validTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+        if (!validTypes.includes(screenshotFile.type)) {
+          console.warn('Screenshot upload skipped: invalid file type', screenshotFile.type);
+        } else if (screenshotFile.size > 5 * 1024 * 1024) {
+          console.warn('Screenshot upload skipped: file too large', screenshotFile.size);
+        } else {
+          const bytes = await screenshotFile.arrayBuffer();
+          const buffer = Buffer.from(bytes);
+
+          // Use feedback ID as folder so files stay organized
+          const fileName = `${data.id}/${Date.now()}-${screenshotFile.name}`;
+
+          const { error: uploadError } = await supabase
+            .storage
+            .from('feedback-screenshots')
+            .upload(fileName, buffer, { contentType: screenshotFile.type });
+
+          if (uploadError) {
+            // Log but do not fail the request - screenshot is optional
+            console.error('Screenshot upload failed (non-fatal):', uploadError);
+          } else {
+            const { data: urlData } = supabase
+              .storage
+              .from('feedback-screenshots')
+              .getPublicUrl(fileName);
+
+            const screenshotUrl = urlData.publicUrl;
+
+            // Update the record with the screenshot URL
+            const { error: updateError } = await supabase
+              .from('feedback_reports')
+              .update({ screenshot_url: screenshotUrl })
+              .eq('id', data.id);
+
+            if (updateError) {
+              console.error('Failed to save screenshot URL (non-fatal):', updateError);
+            } else {
+              // Reflect the URL in the returned record
+              data.screenshot_url = screenshotUrl;
+            }
+          }
+        }
+      } catch (uploadErr) {
+        // Screenshot failures are non-fatal - the feedback was already saved
+        console.error('Screenshot processing error (non-fatal):', uploadErr);
+      }
+    }
 
     // Notify admins about new feedback
     try {

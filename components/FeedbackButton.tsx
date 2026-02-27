@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { usePathname } from 'next/navigation';
-import { MessageSquare, X, Send, Bug, Lightbulb, HelpCircle, Loader2, CheckCircle } from 'lucide-react';
+import { MessageSquare, X, Send, Bug, Lightbulb, HelpCircle, Loader2, CheckCircle, Camera } from 'lucide-react';
 
 type ReportType = 'bug' | 'feature' | 'other';
 
@@ -17,6 +17,9 @@ export default function FeedbackButton() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
+  const [screenshotPreviewUrl, setScreenshotPreviewUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Reset form when modal opens
   useEffect(() => {
@@ -25,8 +28,56 @@ export default function FeedbackButton() {
       setReportType('bug');
       setSubmitted(false);
       setError(null);
+      setScreenshotFile(null);
+      setScreenshotPreviewUrl(null);
     }
   }, [isOpen]);
+
+  // Revoke object URLs to avoid memory leaks
+  useEffect(() => {
+    return () => {
+      if (screenshotPreviewUrl) {
+        URL.revokeObjectURL(screenshotPreviewUrl);
+      }
+    };
+  }, [screenshotPreviewUrl]);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    if (!file) return;
+
+    const validTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+    if (!validTypes.includes(file.type)) {
+      setError('Screenshot must be a PNG or JPG image');
+      e.target.value = '';
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Screenshot must be under 5MB');
+      e.target.value = '';
+      return;
+    }
+
+    // Revoke previous preview URL before creating a new one
+    if (screenshotPreviewUrl) {
+      URL.revokeObjectURL(screenshotPreviewUrl);
+    }
+
+    setScreenshotFile(file);
+    setScreenshotPreviewUrl(URL.createObjectURL(file));
+    setError(null);
+  };
+
+  const removeScreenshot = () => {
+    if (screenshotPreviewUrl) {
+      URL.revokeObjectURL(screenshotPreviewUrl);
+    }
+    setScreenshotFile(null);
+    setScreenshotPreviewUrl(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
   const handleSubmit = async () => {
     if (!description.trim()) {
@@ -38,15 +89,19 @@ export default function FeedbackButton() {
     setError(null);
 
     try {
+      const formData = new FormData();
+      formData.append('description', description.trim());
+      formData.append('report_type', reportType);
+      formData.append('page_url', pathname);
+      formData.append('user_agent', typeof navigator !== 'undefined' ? navigator.userAgent : '');
+      if (screenshotFile) {
+        formData.append('screenshot', screenshotFile);
+      }
+
+      // Do NOT set Content-Type header - the browser sets it automatically with the multipart boundary
       const res = await fetch('/api/feedback', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          report_type: reportType,
-          description: description.trim(),
-          page_url: pathname,
-          user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null
-        })
+        body: formData,
       });
 
       const data = await res.json();
@@ -231,6 +286,52 @@ export default function FeedbackButton() {
                         {description.length}/1000
                       </span>
                     </div>
+                  </div>
+
+                  {/* Screenshot Upload */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Screenshot <span className="font-normal text-gray-500 dark:text-gray-400">(optional)</span>
+                    </label>
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        <Camera className="h-4 w-4" aria-hidden="true" />
+                        Attach Screenshot
+                      </button>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/png,image/jpeg"
+                        onChange={handleFileSelect}
+                        className="hidden"
+                        aria-label="Attach screenshot"
+                      />
+                      {screenshotFile && screenshotPreviewUrl && (
+                        <div className="flex items-center gap-2">
+                          <img
+                            src={screenshotPreviewUrl}
+                            alt="Screenshot preview"
+                            className="h-10 w-10 object-cover rounded border border-gray-300 dark:border-gray-600"
+                          />
+                          <span className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-[120px]">
+                            {screenshotFile.name}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={removeScreenshot}
+                            aria-label="Remove screenshot"
+                            className="text-red-500 hover:text-red-700 dark:hover:text-red-400 transition-colors"
+                          >
+                            <X className="h-4 w-4" aria-hidden="true" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">PNG or JPG, max 5MB</p>
                   </div>
 
                   {/* Error Message */}

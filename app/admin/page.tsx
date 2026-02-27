@@ -25,6 +25,7 @@ import {
   Layout,
   Package,
   BadgeCheck,
+  BookOpen,
 } from 'lucide-react';
 import {
   canAccessAdmin,
@@ -172,6 +173,13 @@ export default function AdminPage() {
       title: 'Certification Compliance',
       description: 'View compliance status for all instructor certifications and identify gaps',
       color: 'bg-green-600',
+    },
+    {
+      href: '/admin/lab-templates',
+      icon: BookOpen,
+      title: 'Lab Template Library',
+      description: 'Create and manage reusable lab day templates organized by program, semester, and week',
+      color: 'bg-blue-700',
     },
   ];
 

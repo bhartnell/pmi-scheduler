@@ -38,6 +38,7 @@ interface FeedbackReport {
   status: 'new' | 'read' | 'in_progress' | 'needs_investigation' | 'resolved' | 'archived';
   priority: 'critical' | 'high' | 'medium' | 'low' | null;
   resolution_notes: string | null;
+  screenshot_url: string | null;
   created_at: string;
   updated_at: string;
   resolved_at: string | null;
@@ -682,6 +683,25 @@ ${report.user_agent || 'Not available'}
                       <pre className="whitespace-pre-wrap font-sans text-gray-900 dark:text-white text-sm leading-relaxed">
                         {report.description}
                       </pre>
+
+                      {/* Screenshot preview */}
+                      {report.screenshot_url && (
+                        <div className="mt-3">
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Screenshot:</p>
+                          <a
+                            href={report.screenshot_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="Click to open full-size"
+                          >
+                            <img
+                              src={report.screenshot_url}
+                              alt="Feedback screenshot"
+                              className="max-w-xs rounded-lg border border-gray-200 dark:border-gray-700 hover:opacity-80 transition-opacity cursor-zoom-in"
+                            />
+                          </a>
+                        </div>
+                      )}
                     </div>
 
                     {/* Resolution Info */}

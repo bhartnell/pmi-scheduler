@@ -29,9 +29,10 @@ import {
   ExternalLink,
   X
 } from 'lucide-react';
-import { canAccessClinical, canEditClinical, type Role } from '@/lib/permissions';
+import { canAccessClinical, canEditClinical, hasMinRole, type Role } from '@/lib/permissions';
 import SummativeEvaluationsSection from '@/components/clinical/SummativeEvaluationsSection';
 import PreceptorsSection from '@/components/clinical/PreceptorsSection';
+import CloseoutSection from '@/components/clinical/CloseoutSection';
 
 interface Internship {
   id: string;
@@ -100,6 +101,8 @@ interface Internship {
   extension_eval_date: string | null;
   extension_eval_notes: string | null;
   notes: string | null;
+  completed_at: string | null;
+  completed_by: string | null;
   created_at: string;
   updated_at: string;
   students: {
@@ -556,6 +559,7 @@ export default function InternshipDetailPage() {
 
   const student = internship.students;
   const canEdit = userRole ? canEditClinical(userRole) : false;
+  const isAdmin = userRole ? hasMinRole(userRole, 'admin') : false;
 
   // Checklist item component
   const ChecklistRow = ({ item, section }: { item: ChecklistItem; section: string }) => {
@@ -1666,6 +1670,15 @@ export default function InternshipDetailPage() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Closeout Documents & Completion */}
+        <div className="mt-6">
+          <CloseoutSection
+            internshipId={internshipId}
+            canEdit={canEdit}
+            isAdmin={isAdmin}
+          />
         </div>
 
         {/* Notes Section */}
