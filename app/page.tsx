@@ -23,6 +23,8 @@ import {
   Clock,
   CalendarDays,
   RotateCcw,
+  HelpCircle,
+  Search,
 } from 'lucide-react';
 import { canAccessAdmin, canAccessClinical, getRoleLabel, getRoleBadgeClasses } from '@/lib/permissions';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -380,23 +382,48 @@ export default function HomePage() {
       <header className="bg-white dark:bg-gray-800 shadow-sm print:hidden">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+            <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center" aria-hidden="true">
               <Stethoscope className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="font-bold text-gray-900 dark:text-white">PMI Paramedic Tools</h1>
+              <p className="font-bold text-gray-900 dark:text-white">PMI Paramedic Tools</p>
               <p className="text-sm text-gray-600 dark:text-gray-400">Pima Paramedic Institute</p>
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600 dark:text-gray-400 hidden sm:block">{session.user?.email}</span>
+            <span className="text-sm text-gray-600 dark:text-gray-400 hidden sm:block" aria-label={`Signed in as ${session.user?.email}`}>{session.user?.email}</span>
+            {/* Search / command palette trigger */}
+            <button
+              onClick={() => {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                (window as any).__openCommandPalette?.();
+              }}
+              aria-label="Open search (Ctrl+K)"
+              title="Search (Ctrl+K / Cmd+K)"
+              className="hidden sm:flex items-center gap-2 px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors border border-gray-200 dark:border-gray-600"
+            >
+              <Search className="w-3.5 h-3.5" aria-hidden="true" />
+              <span className="text-gray-400 dark:text-gray-500">Search</span>
+              <kbd className="inline-flex items-center px-1 py-0.5 text-xs font-mono text-gray-400 dark:text-gray-500 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded">
+                ⌘K
+              </kbd>
+            </button>
             <NotificationBell />
+            <Link
+              href="/help"
+              aria-label="Help Center"
+              className="flex items-center gap-1.5 px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            >
+              <HelpCircle className="w-4 h-4" aria-hidden="true" />
+              <span className="hidden sm:inline text-sm">Help</span>
+            </Link>
             <ThemeToggle />
             <button
               onClick={() => signOut()}
+              aria-label="Sign out"
               className="flex items-center gap-2 px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-4 h-4" aria-hidden="true" />
               <span className="hidden sm:inline">Sign Out</span>
             </button>
           </div>
@@ -407,7 +434,7 @@ export default function HomePage() {
       <main id="main-content" className="max-w-6xl mx-auto px-4 py-12">
         <PageErrorBoundary>
         <div className="text-center mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Welcome, {session.user?.name?.split(' ')[0] || 'User'}!</h2>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Welcome, {session.user?.name?.split(' ')[0] || 'User'}!</h1>
           <p className="text-gray-600 dark:text-gray-400 mt-2">What would you like to do today?</p>
         </div>
 
@@ -502,6 +529,7 @@ export default function HomePage() {
 
         {/* Main Navigation Cards */}
         <ErrorBoundary>
+        <nav aria-label="Main navigation">
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 max-w-5xl mx-auto">
           {/* Lab Management Card - Not for volunteer instructors */}
           {currentUser && currentUser.role !== 'volunteer_instructor' && (
@@ -724,7 +752,29 @@ export default function HomePage() {
               </div>
             </Link>
           )}
+
+          {/* Help Card - Always visible */}
+          <Link
+            href="/help"
+            className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
+          >
+            <div className="flex flex-col items-center text-center">
+              <div className="w-16 h-16 bg-sky-100 dark:bg-sky-900/30 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-sky-200 dark:group-hover:bg-sky-900/50 transition-colors">
+                <HelpCircle className="w-8 h-8 text-sky-600 dark:text-sky-400" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Help Center</h3>
+              <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
+                Documentation, guides, FAQs, and keyboard shortcuts.
+              </p>
+              <div className="flex flex-wrap justify-center gap-2 text-xs">
+                <span className="px-2 py-1 bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400 rounded-full">Guides</span>
+                <span className="px-2 py-1 bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400 rounded-full">FAQ</span>
+                <span className="px-2 py-1 bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400 rounded-full">Shortcuts</span>
+              </div>
+            </div>
+          </Link>
         </div>
+        </nav>
         </ErrorBoundary>
         </PageErrorBoundary>
       </main>
