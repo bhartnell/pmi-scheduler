@@ -106,7 +106,6 @@ export async function POST(
       .insert({
         internship_id: id,
         doc_type: docType,
-        file_name: file.name,
         file_url: fileUrl,
         uploaded_by: session.user.email,
         uploaded_at: new Date().toISOString(),
@@ -161,7 +160,7 @@ export async function DELETE(
     // Fetch document to get storage path
     const { data: doc } = await supabase
       .from('closeout_documents')
-      .select('file_url, file_name')
+      .select('file_url')
       .eq('id', docId)
       .eq('internship_id', id)
       .single();

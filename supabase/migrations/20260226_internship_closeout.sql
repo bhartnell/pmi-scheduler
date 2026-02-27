@@ -1,18 +1,16 @@
--- Closeout documents table
+-- 1. Closeout Documents
 CREATE TABLE IF NOT EXISTS closeout_documents (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   internship_id UUID NOT NULL REFERENCES student_internships(id) ON DELETE CASCADE,
-  doc_type TEXT NOT NULL CHECK (doc_type IN ('completion_form', 'preceptor_eval', 'field_docs', 'exam_results', 'other')),
-  file_name TEXT NOT NULL,
-  file_url TEXT NOT NULL,
-  uploaded_by TEXT NOT NULL,
-  uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  doc_type TEXT NOT NULL,
+  file_url TEXT,
+  uploaded_by TEXT,
+  uploaded_at TIMESTAMPTZ DEFAULT now()
 );
+CREATE INDEX IF NOT EXISTS idx_closeout_documents_internship ON closeout_documents(internship_id);
 
-CREATE INDEX IF NOT EXISTS idx_closeout_docs_internship ON closeout_documents(internship_id);
-
--- Add completion columns to student_internships if not exists
-ALTER TABLE student_internships ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP WITH TIME ZONE;
+-- 2. Student Internships closeout columns
+ALTER TABLE student_internships ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
 ALTER TABLE student_internships ADD COLUMN IF NOT EXISTS completed_by TEXT;
 
 -- RLS

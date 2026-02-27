@@ -22,11 +22,10 @@ async function getCurrentUser(email: string) {
 // Applies all templates for a given program + semester to a cohort.
 // Creates lab_days and lab_stations based on template data.
 //
-// Body: { cohort_id, program_id, semester, start_date }
+// Body: { cohort_id, program, semester, start_date }
 //
 // Date calculation:
 //   lab_date = start_date + (week_number - 1) * 7 days
-//   If day_number > 1, add (day_number - 1) more days
 //
 // Requires admin+ role.
 // ---------------------------------------------------------------------------
@@ -44,16 +43,18 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json() as {
       cohort_id: string;
-      program_id: string;
+      program: string;
       semester: number;
       start_date: string;
     };
 
-    const { cohort_id, program_id, semester, start_date } = body;
+    // Accept both `program` and legacy `program_id` from callers
+    const program = body.program || (body as any).program_id;
+    const { cohort_id, semester, start_date } = body;
 
-    if (!cohort_id || !program_id || !semester || !start_date) {
+    if (!cohort_id || !program || !semester || !start_date) {
       return NextResponse.json(
-        { error: 'cohort_id, program_id, semester, and start_date are required' },
+        { error: 'cohort_id, program, semester, and start_date are required' },
         { status: 400 }
       );
     }
@@ -64,18 +65,15 @@ export async function POST(request: NextRequest) {
     const { data: templates, error: templatesError } = await supabase
       .from('lab_day_templates')
       .select(`
-        id, title, name, description, week_number, day_number,
-        num_rotations, rotation_duration,
+        id, name, description, week_number,
         stations:lab_template_stations(
-          id, station_number, station_type, scenario_id,
-          skill_name, custom_title, room, notes, rotation_minutes, num_rotations
+          id, sort_order, station_type, station_name, skills, scenario_id
         )
       `)
-      .eq('program_id', program_id)
+      .eq('program', program)
       .eq('semester', semester)
-      .not('program_id', 'is', null)
-      .order('week_number', { ascending: true })
-      .order('day_number', { ascending: true });
+      .not('program', 'is', null)
+      .order('week_number', { ascending: true });
 
     if (templatesError) throw templatesError;
 
@@ -94,12 +92,11 @@ export async function POST(request: NextRequest) {
 
     for (const template of templates) {
       const weekOffset = ((template.week_number || 1) - 1) * 7;
-      const dayOffset = ((template.day_number || 1) - 1);
       const labDate = new Date(baseDate);
-      labDate.setUTCDate(baseDate.getUTCDate() + weekOffset + dayOffset);
+      labDate.setUTCDate(baseDate.getUTCDate() + weekOffset);
       const labDateStr = labDate.toISOString().split('T')[0];
 
-      const displayTitle = template.title || template.name || `Week ${template.week_number} Day ${template.day_number}`;
+      const displayTitle = template.name || `Week ${template.week_number}`;
 
       // Create the lab day
       const { data: labDay, error: labDayError } = await supabase
@@ -110,12 +107,9 @@ export async function POST(request: NextRequest) {
           title: displayTitle,
           semester,
           week_number: template.week_number || 1,
-          day_number: template.day_number || 1,
-          num_rotations: template.num_rotations || 4,
-          rotation_duration: template.rotation_duration || 30,
           notes: template.description || null,
         })
-        .select('id, date, title, week_number, day_number')
+        .select('id, date, title, week_number')
         .single();
 
       if (labDayError) {
@@ -130,15 +124,10 @@ export async function POST(request: NextRequest) {
       if (templateStations.length > 0) {
         const stationsToInsert = templateStations.map((s: any) => ({
           lab_day_id: labDay.id,
-          station_number: s.station_number,
+          station_number: s.sort_order || 1,
           station_type: s.station_type || 'scenario',
           scenario_id: s.scenario_id || null,
-          skill_name: s.skill_name || null,
-          custom_title: s.custom_title || null,
-          room: s.room || null,
-          notes: s.notes || null,
-          rotation_minutes: s.rotation_minutes || null,
-          num_rotations: s.num_rotations || null,
+          custom_title: s.station_name || null,
           documentation_required: false,
           platinum_required: false,
         }));

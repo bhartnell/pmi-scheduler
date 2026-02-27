@@ -20,6 +20,7 @@ import {
   Activity,
   CalendarCheck,
   BookOpen,
+  ClipboardCheck,
 } from 'lucide-react';
 import { canAccessClinical, type Role } from '@/lib/permissions';
 
@@ -169,6 +170,16 @@ export default function ReportsIndexPage() {
       href: '/reports/attendance',
       color: 'text-emerald-600 dark:text-emerald-400',
       bgColor: 'bg-emerald-100 dark:bg-emerald-900/30',
+    },
+    {
+      id: 'closeout-surveys',
+      title: 'Closeout Surveys',
+      description: 'Analyze preceptor and site ratings from student closeout surveys.',
+      icon: ClipboardCheck,
+      href: '/reports/closeout-surveys',
+      color: 'text-teal-600 dark:text-teal-400',
+      bgColor: 'bg-teal-100 dark:bg-teal-900/30',
+      requiresClinical: true,
     },
   ];
 

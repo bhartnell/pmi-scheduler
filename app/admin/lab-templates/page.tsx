@@ -34,12 +34,6 @@ import type { CurrentUser } from '@/types';
 // Types
 // ---------------------------------------------------------------------------
 
-interface Program {
-  id: string;
-  name: string;
-  abbreviation: string;
-}
-
 interface Scenario {
   id: string;
   title: string;
@@ -53,33 +47,24 @@ interface Cohort {
 
 interface TemplateStation {
   id?: string;
-  station_number: number;
+  sort_order: number;
   station_type: 'scenario' | 'skill' | 'custom' | 'manikin' | 'lecture';
   scenario_id: string | null;
-  skill_name: string | null;
-  custom_title: string | null;
-  room: string | null;
-  notes: string | null;
-  rotation_minutes: number | null;
-  num_rotations: number | null;
+  station_name: string | null;
+  skills: string[] | null;
   scenario?: { id: string; title: string } | null;
 }
 
 interface LabTemplate {
   id: string;
   name: string;
-  title: string | null;
   description: string | null;
-  program_id: string | null;
+  program: string | null;
   semester: number;
   week_number: number;
-  day_number: number;
-  num_rotations: number;
-  rotation_duration: number;
   created_by: string;
   created_at: string;
   updated_at: string;
-  program?: { id: string; name: string; abbreviation: string } | null;
   stations: TemplateStation[];
 }
 
@@ -129,28 +114,24 @@ function getStationLabel(station: TemplateStation): string {
     case 'scenario':
       return station.scenario?.title || 'Unnamed Scenario';
     case 'skill':
-      return station.skill_name || 'Unnamed Skill';
+      return station.skills?.[0] || station.station_name || 'Unnamed Skill';
     case 'manikin':
-      return station.custom_title || 'Manikin Station';
+      return station.station_name || 'Manikin Station';
     case 'lecture':
-      return station.custom_title || 'Lecture';
+      return station.station_name || 'Lecture';
     case 'custom':
     default:
-      return station.custom_title || 'Custom Station';
+      return station.station_name || 'Custom Station';
   }
 }
 
-function newStation(stationNumber: number): TemplateStation {
+function newStation(sortOrder: number): TemplateStation {
   return {
-    station_number: stationNumber,
+    sort_order: sortOrder,
     station_type: 'scenario',
     scenario_id: null,
-    skill_name: null,
-    custom_title: null,
-    room: null,
-    notes: null,
-    rotation_minutes: null,
-    num_rotations: null,
+    station_name: null,
+    skills: null,
   };
 }
 
@@ -177,13 +158,13 @@ function StationRow({ station, index, total, scenarios, onChange, onDelete, onMo
       {/* Row header */}
       <div className="flex items-center gap-2">
         <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0">
-          {station.station_number}
+          {station.sort_order}
         </span>
 
         {/* Type selector */}
         <select
           value={station.station_type}
-          onChange={(e) => onChange(index, { ...station, station_type: e.target.value as StationType, scenario_id: null, skill_name: null, custom_title: null })}
+          onChange={(e) => onChange(index, { ...station, station_type: e.target.value as StationType, scenario_id: null, station_name: null, skills: null })}
           className="flex-1 text-xs border border-gray-300 dark:border-gray-600 rounded px-2 py-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
         >
           {STATION_TYPES.map((t) => (
@@ -223,9 +204,9 @@ function StationRow({ station, index, total, scenarios, onChange, onDelete, onMo
       </div>
 
       {/* Type-specific fields */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-8">
+      <div className="pl-8">
         {station.station_type === 'scenario' && (
-          <div className="sm:col-span-2">
+          <div>
             <label className="block text-xs text-gray-500 dark:text-gray-400 mb-0.5">Scenario</label>
             <select
               value={station.scenario_id || ''}
@@ -241,12 +222,12 @@ function StationRow({ station, index, total, scenarios, onChange, onDelete, onMo
         )}
 
         {station.station_type === 'skill' && (
-          <div className="sm:col-span-2">
+          <div>
             <label className="block text-xs text-gray-500 dark:text-gray-400 mb-0.5">Skill Name</label>
             <input
               type="text"
-              value={station.skill_name || ''}
-              onChange={(e) => onChange(index, { ...station, skill_name: e.target.value || null })}
+              value={station.station_name || ''}
+              onChange={(e) => onChange(index, { ...station, station_name: e.target.value || null })}
               placeholder="e.g., IV Access, Airway Management"
               className="w-full text-xs border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
             />
@@ -254,39 +235,17 @@ function StationRow({ station, index, total, scenarios, onChange, onDelete, onMo
         )}
 
         {(station.station_type === 'custom' || station.station_type === 'manikin' || station.station_type === 'lecture') && (
-          <div className="sm:col-span-2">
+          <div>
             <label className="block text-xs text-gray-500 dark:text-gray-400 mb-0.5">Title</label>
             <input
               type="text"
-              value={station.custom_title || ''}
-              onChange={(e) => onChange(index, { ...station, custom_title: e.target.value || null })}
+              value={station.station_name || ''}
+              onChange={(e) => onChange(index, { ...station, station_name: e.target.value || null })}
               placeholder="Station title"
               className="w-full text-xs border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
             />
           </div>
         )}
-
-        <div>
-          <label className="block text-xs text-gray-500 dark:text-gray-400 mb-0.5">Room</label>
-          <input
-            type="text"
-            value={station.room || ''}
-            onChange={(e) => onChange(index, { ...station, room: e.target.value || null })}
-            placeholder="e.g., Sim Lab A"
-            className="w-full text-xs border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
-          />
-        </div>
-
-        <div>
-          <label className="block text-xs text-gray-500 dark:text-gray-400 mb-0.5">Notes</label>
-          <input
-            type="text"
-            value={station.notes || ''}
-            onChange={(e) => onChange(index, { ...station, notes: e.target.value || null })}
-            placeholder="Optional notes"
-            className="w-full text-xs border border-gray-300 dark:border-gray-600 rounded px-2 py-1.5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
-          />
-        </div>
       </div>
     </div>
   );
@@ -298,34 +257,30 @@ function StationRow({ station, index, total, scenarios, onChange, onDelete, onMo
 
 interface TemplateFormModalProps {
   template: LabTemplate | null; // null = create mode
-  programs: Program[];
   scenarios: Scenario[];
   onClose: () => void;
   onSaved: (template: LabTemplate) => void;
 }
 
-function TemplateFormModal({ template, programs, scenarios, onClose, onSaved }: TemplateFormModalProps) {
+function TemplateFormModal({ template, scenarios, onClose, onSaved }: TemplateFormModalProps) {
   const toast = useToast();
   const isEdit = !!template;
 
-  const [programId, setProgramId] = useState(template?.program_id || (programs[0]?.id ?? ''));
+  const [program, setProgram] = useState(template?.program || '');
   const [semester, setSemester] = useState(template?.semester || 1);
   const [weekNumber, setWeekNumber] = useState(template?.week_number || 1);
-  const [dayNumber, setDayNumber] = useState(template?.day_number || 1);
-  const [title, setTitle] = useState(template?.title || template?.name || '');
+  const [name, setName] = useState(template?.name || '');
   const [description, setDescription] = useState(template?.description || '');
-  const [numRotations, setNumRotations] = useState(template?.num_rotations || 4);
-  const [rotationDuration, setRotationDuration] = useState(template?.rotation_duration || 30);
   const [stations, setStations] = useState<TemplateStation[]>(
     template?.stations || []
   );
   const [saving, setSaving] = useState(false);
 
   const addStation = () => {
-    const nextNumber = stations.length > 0
-      ? Math.max(...stations.map((s) => s.station_number)) + 1
+    const nextOrder = stations.length > 0
+      ? Math.max(...stations.map((s) => s.sort_order)) + 1
       : 1;
-    setStations([...stations, newStation(nextNumber)]);
+    setStations([...stations, newStation(nextOrder)]);
   };
 
   const updateStation = (index: number, updated: TemplateStation) => {
@@ -337,7 +292,7 @@ function TemplateFormModal({ template, programs, scenarios, onClose, onSaved }: 
   const deleteStation = (index: number) => {
     const next = stations.filter((_, i) => i !== index);
     // Renumber
-    setStations(next.map((s, i) => ({ ...s, station_number: i + 1 })));
+    setStations(next.map((s, i) => ({ ...s, sort_order: i + 1 })));
   };
 
   const moveStation = (index: number, direction: 'up' | 'down') => {
@@ -346,30 +301,27 @@ function TemplateFormModal({ template, programs, scenarios, onClose, onSaved }: 
     if (swapIndex < 0 || swapIndex >= next.length) return;
     [next[index], next[swapIndex]] = [next[swapIndex], next[index]];
     // Renumber
-    setStations(next.map((s, i) => ({ ...s, station_number: i + 1 })));
+    setStations(next.map((s, i) => ({ ...s, sort_order: i + 1 })));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!programId || !title.trim()) {
-      toast.error('Program and title are required');
+    if (!program.trim() || !name.trim()) {
+      toast.error('Program and name are required');
       return;
     }
 
     setSaving(true);
     try {
       const payload = {
-        program_id: programId,
+        program: program.trim(),
         semester,
         week_number: weekNumber,
-        day_number: dayNumber,
-        title: title.trim(),
+        name: name.trim(),
         description: description.trim() || null,
-        num_rotations: numRotations,
-        rotation_duration: rotationDuration,
         stations: stations.map((s, i) => ({
           ...s,
-          station_number: i + 1,
+          sort_order: i + 1,
         })),
       };
 
@@ -420,17 +372,14 @@ function TemplateFormModal({ template, programs, scenarios, onClose, onSaved }: 
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Program <span className="text-red-500">*</span>
               </label>
-              <select
-                value={programId}
-                onChange={(e) => setProgramId(e.target.value)}
+              <input
+                type="text"
+                value={program}
+                onChange={(e) => setProgram(e.target.value)}
+                placeholder="e.g., Paramedic, EMT"
                 required
-                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">-- Select program --</option>
-                {programs.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name} ({p.abbreviation})</option>
-                ))}
-              </select>
+                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400 dark:placeholder-gray-500"
+              />
             </div>
 
             <div>
@@ -449,7 +398,7 @@ function TemplateFormModal({ template, programs, scenarios, onClose, onSaved }: 
             </div>
           </div>
 
-          {/* Week + Day row */}
+          {/* Week Number */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -465,30 +414,17 @@ function TemplateFormModal({ template, programs, scenarios, onClose, onSaved }: 
                 className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Day Number
-              </label>
-              <input
-                type="number"
-                min={1}
-                max={7}
-                value={dayNumber}
-                onChange={(e) => setDayNumber(parseInt(e.target.value) || 1)}
-                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
           </div>
 
-          {/* Title */}
+          {/* Name */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Title <span className="text-red-500">*</span>
+              Name <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
               placeholder="e.g., Airway & Cardiac Week"
               required
               className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400 dark:placeholder-gray-500"
@@ -509,37 +445,6 @@ function TemplateFormModal({ template, programs, scenarios, onClose, onSaved }: 
             />
           </div>
 
-          {/* Rotation settings */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Rotations
-              </label>
-              <input
-                type="number"
-                min={1}
-                max={20}
-                value={numRotations}
-                onChange={(e) => setNumRotations(parseInt(e.target.value) || 4)}
-                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Duration (min)
-              </label>
-              <input
-                type="number"
-                min={5}
-                max={120}
-                step={5}
-                value={rotationDuration}
-                onChange={(e) => setRotationDuration(parseInt(e.target.value) || 30)}
-                className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-          </div>
-
           {/* Stations */}
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -558,7 +463,7 @@ function TemplateFormModal({ template, programs, scenarios, onClose, onSaved }: 
 
             {stations.length === 0 ? (
               <div className="text-center py-6 text-sm text-gray-400 dark:text-gray-500 border-2 border-dashed border-gray-200 dark:border-gray-600 rounded-lg">
-                No stations yet. Click "Add Station" to begin.
+                No stations yet. Click &quot;Add Station&quot; to begin.
               </div>
             ) : (
               <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
@@ -609,14 +514,13 @@ function TemplateFormModal({ template, programs, scenarios, onClose, onSaved }: 
 // ---------------------------------------------------------------------------
 
 interface ApplySectionProps {
-  programs: Program[];
   cohorts: Cohort[];
 }
 
-function ApplySection({ programs, cohorts }: ApplySectionProps) {
+function ApplySection({ cohorts }: ApplySectionProps) {
   const toast = useToast();
   const [cohortId, setCohortId] = useState('');
-  const [programId, setProgramId] = useState(programs[0]?.id || '');
+  const [program, setProgram] = useState('');
   const [semester, setSemester] = useState(1);
   const [startDate, setStartDate] = useState('');
   const [applying, setApplying] = useState(false);
@@ -624,7 +528,7 @@ function ApplySection({ programs, cohorts }: ApplySectionProps) {
   const [showConfirm, setShowConfirm] = useState(false);
 
   const handleApply = async () => {
-    if (!cohortId || !programId || !startDate) {
+    if (!cohortId || !program.trim() || !startDate) {
       toast.error('Please fill in all fields');
       return;
     }
@@ -634,7 +538,7 @@ function ApplySection({ programs, cohorts }: ApplySectionProps) {
       const res = await fetch('/api/admin/lab-templates/apply', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cohort_id: cohortId, program_id: programId, semester, start_date: startDate }),
+        body: JSON.stringify({ cohort_id: cohortId, program: program.trim(), semester, start_date: startDate }),
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.error || 'Apply failed');
@@ -648,7 +552,6 @@ function ApplySection({ programs, cohorts }: ApplySectionProps) {
     }
   };
 
-  const selectedProgram = programs.find((p) => p.id === programId);
   const selectedCohort = cohorts.find((c) => c.id === cohortId);
 
   return (
@@ -682,16 +585,13 @@ function ApplySection({ programs, cohorts }: ApplySectionProps) {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Program
             </label>
-            <select
-              value={programId}
-              onChange={(e) => setProgramId(e.target.value)}
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500"
-            >
-              <option value="">-- Select program --</option>
-              {programs.map((p) => (
-                <option key={p.id} value={p.id}>{p.name} ({p.abbreviation})</option>
-              ))}
-            </select>
+            <input
+              type="text"
+              value={program}
+              onChange={(e) => setProgram(e.target.value)}
+              placeholder="e.g., Paramedic, EMT"
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-gray-400 dark:placeholder-gray-500"
+            />
           </div>
 
           <div>
@@ -726,7 +626,7 @@ function ApplySection({ programs, cohorts }: ApplySectionProps) {
         {!showConfirm ? (
           <button
             onClick={() => setShowConfirm(true)}
-            disabled={!cohortId || !programId || !startDate || applying}
+            disabled={!cohortId || !program.trim() || !startDate || applying}
             className="flex items-center gap-2 px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
           >
             <CalendarCheck className="w-4 h-4" />
@@ -736,7 +636,7 @@ function ApplySection({ programs, cohorts }: ApplySectionProps) {
           <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-4 space-y-3">
             <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
               Confirm: Apply all Semester {semester} templates from the{' '}
-              <strong>{selectedProgram?.name}</strong> program to cohort{' '}
+              <strong>{program}</strong> program to cohort{' '}
               <strong>{selectedCohort?.cohort_number}</strong> starting{' '}
               <strong>{startDate}</strong>?
             </p>
@@ -776,7 +676,7 @@ function ApplySection({ programs, cohorts }: ApplySectionProps) {
               {result.lab_days.map((ld: any) => (
                 <div key={ld.id} className="flex items-center gap-2 text-xs text-green-700 dark:text-green-300">
                   <span className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0" />
-                  {ld.date} &mdash; Week {ld.week_number} Day {ld.day_number}: {ld.title}
+                  {ld.date} &mdash; Week {ld.week_number}: {ld.title}
                 </div>
               ))}
             </div>
@@ -799,15 +699,13 @@ interface TemplateCardProps {
 }
 
 function TemplateCard({ template, isAdmin, onEdit, onDelete }: TemplateCardProps) {
-  const displayTitle = template.title || template.name;
-
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
       {/* Card header */}
       <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700 flex items-start justify-between gap-2">
         <div className="min-w-0">
           <h3 className="font-semibold text-sm text-gray-900 dark:text-white leading-tight truncate">
-            Week {template.week_number} Day {template.day_number}: {displayTitle}
+            Week {template.week_number}: {template.name}
           </h3>
           {template.description && (
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-1">
@@ -815,9 +713,11 @@ function TemplateCard({ template, isAdmin, onEdit, onDelete }: TemplateCardProps
             </p>
           )}
           <div className="flex items-center gap-2 mt-1">
-            <span className="text-xs text-gray-400 dark:text-gray-500">
-              {template.num_rotations} rotations &times; {template.rotation_duration} min
-            </span>
+            {template.program && (
+              <span className="text-xs text-gray-400 dark:text-gray-500">
+                {template.program}
+              </span>
+            )}
             <span className="inline-flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
               <Layers className="w-3 h-3" />
               {template.stations.length} station{template.stations.length !== 1 ? 's' : ''}
@@ -851,17 +751,14 @@ function TemplateCard({ template, isAdmin, onEdit, onDelete }: TemplateCardProps
           {template.stations.map((station) => {
             const config = STATION_TYPE_CONFIG[station.station_type] || STATION_TYPE_CONFIG.custom;
             return (
-              <li key={station.id || station.station_number} className="flex items-center gap-2 px-4 py-2">
+              <li key={station.id || station.sort_order} className="flex items-center gap-2 px-4 py-2">
                 <span className={`flex items-center gap-1 text-xs font-medium px-1.5 py-0.5 rounded ${config.color}`}>
                   {config.icon}
                 </span>
                 <span className="text-xs text-gray-600 dark:text-gray-300 truncate">
-                  <span className="text-gray-400 dark:text-gray-500 mr-1">#{station.station_number}</span>
+                  <span className="text-gray-400 dark:text-gray-500 mr-1">#{station.sort_order}</span>
                   {getStationLabel(station)}
                 </span>
-                {station.room && (
-                  <span className="text-xs text-gray-400 dark:text-gray-500 ml-auto flex-shrink-0">{station.room}</span>
-                )}
               </li>
             );
           })}
@@ -887,14 +784,13 @@ export default function LabTemplatesPage() {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const [programs, setPrograms] = useState<Program[]>([]);
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [cohorts, setCohorts] = useState<Cohort[]>([]);
   const [templates, setTemplates] = useState<LabTemplate[]>([]);
   const [fetchingTemplates, setFetchingTemplates] = useState(false);
 
   // Filters
-  const [filterProgramId, setFilterProgramId] = useState('');
+  const [filterProgram, setFilterProgram] = useState('');
   const [filterSemester, setFilterSemester] = useState('');
 
   // Modal state
@@ -923,27 +819,12 @@ export default function LabTemplatesPage() {
           return;
         }
         setCurrentUser(data.user);
-        await Promise.all([fetchPrograms(), fetchScenarios(), fetchCohorts()]);
+        await Promise.all([fetchScenarios(), fetchCohorts()]);
       }
     } catch (err) {
       console.error('Error initializing page:', err);
     }
     setLoading(false);
-  };
-
-  const fetchPrograms = async () => {
-    try {
-      const res = await fetch('/api/lab-management/programs');
-      const data = await res.json();
-      if (data.success) {
-        setPrograms(data.programs || []);
-        if (data.programs?.length > 0) {
-          setFilterProgramId(data.programs[0].id);
-        }
-      }
-    } catch (err) {
-      console.error('Error fetching programs:', err);
-    }
   };
 
   const fetchScenarios = async () => {
@@ -970,7 +851,7 @@ export default function LabTemplatesPage() {
     setFetchingTemplates(true);
     try {
       const params = new URLSearchParams();
-      if (filterProgramId) params.set('program_id', filterProgramId);
+      if (filterProgram) params.set('program', filterProgram);
       if (filterSemester) params.set('semester', filterSemester);
       const res = await fetch(`/api/admin/lab-templates?${params}`);
       const data = await res.json();
@@ -980,7 +861,7 @@ export default function LabTemplatesPage() {
     } finally {
       setFetchingTemplates(false);
     }
-  }, [filterProgramId, filterSemester]);
+  }, [filterProgram, filterSemester]);
 
   useEffect(() => {
     if (currentUser) fetchTemplates();
@@ -1091,16 +972,13 @@ export default function LabTemplatesPage() {
           <div className="flex flex-wrap items-center gap-4">
             <div className="flex items-center gap-2">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Program:</label>
-              <select
-                value={filterProgramId}
-                onChange={(e) => setFilterProgramId(e.target.value)}
-                className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">All Programs</option>
-                {programs.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name} ({p.abbreviation})</option>
-                ))}
-              </select>
+              <input
+                type="text"
+                value={filterProgram}
+                onChange={(e) => setFilterProgram(e.target.value)}
+                placeholder="Filter by program"
+                className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400 dark:placeholder-gray-500"
+              />
             </div>
 
             <div className="flex items-center gap-2">
@@ -1134,7 +1012,7 @@ export default function LabTemplatesPage() {
               No templates found
             </h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-              {filterProgramId || filterSemester
+              {filterProgram || filterSemester
                 ? 'No templates match the current filters.'
                 : 'Get started by creating your first lab template.'}
             </p>
@@ -1179,14 +1057,13 @@ export default function LabTemplatesPage() {
         )}
 
         {/* Apply to Cohort Section */}
-        {isAdmin && <ApplySection programs={programs} cohorts={cohorts} />}
+        {isAdmin && <ApplySection cohorts={cohorts} />}
       </main>
 
       {/* Create/Edit Modal */}
       {showModal && (
         <TemplateFormModal
           template={editingTemplate}
-          programs={programs}
           scenarios={scenarios}
           onClose={() => setShowModal(false)}
           onSaved={handleModalSaved}
@@ -1200,7 +1077,7 @@ export default function LabTemplatesPage() {
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Delete Template</h3>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
               Are you sure you want to delete{' '}
-              <strong>Week {deletingTemplate.week_number} Day {deletingTemplate.day_number}: {deletingTemplate.title || deletingTemplate.name}</strong>?
+              <strong>Week {deletingTemplate.week_number}: {deletingTemplate.name}</strong>?
             </p>
             <p className="text-sm text-red-600 dark:text-red-400 mb-5">
               This will also delete all {deletingTemplate.stations.length} station{deletingTemplate.stations.length !== 1 ? 's' : ''} in this template. This action cannot be undone.

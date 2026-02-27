@@ -1678,6 +1678,9 @@ export default function InternshipDetailPage() {
             internshipId={internshipId}
             canEdit={canEdit}
             isAdmin={isAdmin}
+            studentName={student ? `${student.first_name} ${student.last_name}` : ''}
+            studentEmail={student?.email || ''}
+            program={internship.cohorts?.programs?.name || ''}
           />
         </div>
 

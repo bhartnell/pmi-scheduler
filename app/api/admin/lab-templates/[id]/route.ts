@@ -41,12 +41,10 @@ export async function GET(
     const { data: template, error } = await supabase
       .from('lab_day_templates')
       .select(`
-        id, name, title, description, program_id, semester, week_number, day_number,
-        num_rotations, rotation_duration, created_by, created_at, updated_at,
-        program:programs(id, name, abbreviation),
+        id, name, description, program, semester, week_number,
+        created_by, created_at, updated_at,
         stations:lab_template_stations(
-          id, station_number, station_type, scenario_id, skill_name, custom_title,
-          room, notes, rotation_minutes, num_rotations,
+          id, sort_order, station_type, station_name, skills, scenario_id,
           scenario:scenarios(id, title)
         )
       `)
@@ -60,11 +58,11 @@ export async function GET(
       throw error;
     }
 
-    // Sort stations by station_number
+    // Sort stations by sort_order
     const enriched = {
       ...template,
       stations: ((template as any).stations ?? []).sort(
-        (a: any, b: any) => (a.station_number || 0) - (b.station_number || 0)
+        (a: any, b: any) => (a.sort_order || 0) - (b.sort_order || 0)
       ),
     };
 
@@ -96,24 +94,17 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json() as {
-      program_id?: string;
+      program?: string;
       semester?: number;
       week_number?: number;
-      day_number?: number;
-      title?: string;
+      name?: string;
       description?: string;
-      num_rotations?: number;
-      rotation_duration?: number;
       stations?: Array<{
-        station_number: number;
+        sort_order: number;
         station_type: string;
+        station_name?: string | null;
+        skills?: unknown[] | null;
         scenario_id?: string | null;
-        skill_name?: string | null;
-        custom_title?: string | null;
-        room?: string | null;
-        notes?: string | null;
-        rotation_minutes?: number | null;
-        num_rotations?: number | null;
       }>;
     };
 
@@ -132,17 +123,11 @@ export async function PUT(
 
     // Build update object
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
-    if (body.program_id !== undefined) updates.program_id = body.program_id;
+    if (body.program !== undefined) updates.program = body.program;
     if (body.semester !== undefined) updates.semester = body.semester;
     if (body.week_number !== undefined) updates.week_number = body.week_number;
-    if (body.day_number !== undefined) updates.day_number = body.day_number;
-    if (body.title !== undefined) {
-      updates.title = body.title.trim();
-      updates.name = body.title.trim(); // keep 'name' in sync
-    }
+    if (body.name !== undefined) updates.name = body.name.trim();
     if (body.description !== undefined) updates.description = body.description;
-    if (body.num_rotations !== undefined) updates.num_rotations = body.num_rotations;
-    if (body.rotation_duration !== undefined) updates.rotation_duration = body.rotation_duration;
 
     const { error: updateError } = await supabase
       .from('lab_day_templates')
@@ -163,17 +148,13 @@ export async function PUT(
 
       // Insert new stations
       if (body.stations.length > 0) {
-        const stationsToInsert = body.stations.map((s) => ({
+        const stationsToInsert = body.stations.map((s, i) => ({
           template_id: id,
-          station_number: s.station_number,
+          sort_order: s.sort_order ?? i + 1,
           station_type: s.station_type || 'scenario',
+          station_name: s.station_name || null,
+          skills: s.skills || null,
           scenario_id: s.scenario_id || null,
-          skill_name: s.skill_name || null,
-          custom_title: s.custom_title || null,
-          room: s.room || null,
-          notes: s.notes || null,
-          rotation_minutes: s.rotation_minutes || null,
-          num_rotations: s.num_rotations || null,
         }));
 
         const { error: stationsError } = await supabase
@@ -188,12 +169,10 @@ export async function PUT(
     const { data: fullTemplate, error: refetchError } = await supabase
       .from('lab_day_templates')
       .select(`
-        id, name, title, description, program_id, semester, week_number, day_number,
-        num_rotations, rotation_duration, created_by, created_at, updated_at,
-        program:programs(id, name, abbreviation),
+        id, name, description, program, semester, week_number,
+        created_by, created_at, updated_at,
         stations:lab_template_stations(
-          id, station_number, station_type, scenario_id, skill_name, custom_title,
-          room, notes, rotation_minutes, num_rotations,
+          id, sort_order, station_type, station_name, skills, scenario_id,
           scenario:scenarios(id, title)
         )
       `)
