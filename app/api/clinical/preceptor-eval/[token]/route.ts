@@ -26,7 +26,7 @@ export async function GET(
       );
     }
 
-    if (tokenRecord.is_used) {
+    if (tokenRecord.status === 'submitted') {
       return NextResponse.json(
         { success: false, error: 'used', message: 'This evaluation has already been submitted.' },
         { status: 410 }
@@ -63,8 +63,6 @@ export async function GET(
       token: {
         id: tokenRecord.id,
         preceptor_email: tokenRecord.preceptor_email,
-        preceptor_name: tokenRecord.preceptor_name,
-        student_name: tokenRecord.student_name,
         expires_at: tokenRecord.expires_at,
       },
       internship,
@@ -101,7 +99,7 @@ export async function POST(
       );
     }
 
-    if (tokenRecord.is_used) {
+    if (tokenRecord.status === 'submitted') {
       return NextResponse.json(
         { success: false, error: 'used', message: 'This evaluation has already been submitted.' },
         { status: 410 }
@@ -170,7 +168,7 @@ export async function POST(
       .insert({
         student_id: internship.student_id,
         internship_id: tokenRecord.internship_id,
-        preceptor_name: tokenRecord.preceptor_name || preceptor_signature.trim(),
+        preceptor_name: preceptor_signature.trim(),
         preceptor_email: tokenRecord.preceptor_email,
         clinical_site: internship.agency_name || null,
         shift_date: shift_date || new Date().toISOString().split('T')[0],
@@ -189,10 +187,10 @@ export async function POST(
 
     if (feedbackError) throw feedbackError;
 
-    // Mark token as used
+    // Mark token as submitted
     await supabase
       .from('preceptor_eval_tokens')
-      .update({ is_used: true, used_at: new Date().toISOString() })
+      .update({ status: 'submitted', submitted_at: new Date().toISOString() })
       .eq('id', tokenRecord.id);
 
     return NextResponse.json({ success: true, feedback_id: feedback.id });

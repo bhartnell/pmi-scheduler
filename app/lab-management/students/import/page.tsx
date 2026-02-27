@@ -76,14 +76,11 @@ interface ImportResult {
 interface ImportHistoryEntry {
   id: string;
   imported_by: string;
-  imported_by_name: string | null;
-  cohort_label: string | null;
-  duplicate_mode: string;
-  row_count: number;
-  inserted: number;
-  updated: number;
-  skipped: number;
-  failed: number;
+  cohort_id: string | null;
+  import_mode: string;
+  imported_count: number;
+  updated_count: number;
+  skipped_count: number;
   created_at: string;
 }
 
@@ -363,10 +360,11 @@ function ImportHistorySection() {
     return null;
   }
 
-  const modeLabel = (mode: string) => {
+  const modeLabel = (mode: string | null) => {
     if (mode === 'skip') return 'Skip dupes';
     if (mode === 'update') return 'Update dupes';
-    return 'Allow dupes';
+    if (mode === 'import_new') return 'Allow dupes';
+    return '—';
   };
 
   const formatDate = (iso: string) => {
@@ -396,13 +394,10 @@ function ImportHistorySection() {
               <tr>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Imported By</th>
-                <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Cohort</th>
                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Mode</th>
-                <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Rows</th>
-                <th className="px-4 py-2 text-right text-xs font-medium text-green-600 dark:text-green-400 uppercase tracking-wider">New</th>
+                <th className="px-4 py-2 text-right text-xs font-medium text-green-600 dark:text-green-400 uppercase tracking-wider">Imported</th>
                 <th className="px-4 py-2 text-right text-xs font-medium text-blue-600 dark:text-blue-400 uppercase tracking-wider">Updated</th>
                 <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Skipped</th>
-                <th className="px-4 py-2 text-right text-xs font-medium text-red-600 dark:text-red-400 uppercase tracking-wider">Failed</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -417,16 +412,13 @@ function ImportHistorySection() {
                   <td className="px-4 py-2 text-gray-900 dark:text-white whitespace-nowrap">
                     <div className="flex items-center gap-1">
                       <User className="w-3 h-3 text-gray-400" />
-                      {entry.imported_by_name || entry.imported_by}
+                      {entry.imported_by}
                     </div>
                   </td>
-                  <td className="px-4 py-2 text-gray-600 dark:text-gray-400">{entry.cohort_label || '—'}</td>
-                  <td className="px-4 py-2 text-gray-500 dark:text-gray-400 text-xs">{modeLabel(entry.duplicate_mode)}</td>
-                  <td className="px-4 py-2 text-right text-gray-700 dark:text-gray-300 font-medium">{entry.row_count}</td>
-                  <td className="px-4 py-2 text-right text-green-600 dark:text-green-400 font-medium">{entry.inserted}</td>
-                  <td className="px-4 py-2 text-right text-blue-600 dark:text-blue-400 font-medium">{entry.updated}</td>
-                  <td className="px-4 py-2 text-right text-gray-500 dark:text-gray-400">{entry.skipped}</td>
-                  <td className="px-4 py-2 text-right text-red-600 dark:text-red-400">{entry.failed}</td>
+                  <td className="px-4 py-2 text-gray-500 dark:text-gray-400 text-xs">{modeLabel(entry.import_mode)}</td>
+                  <td className="px-4 py-2 text-right text-green-600 dark:text-green-400 font-medium">{entry.imported_count}</td>
+                  <td className="px-4 py-2 text-right text-blue-600 dark:text-blue-400 font-medium">{entry.updated_count}</td>
+                  <td className="px-4 py-2 text-right text-gray-500 dark:text-gray-400">{entry.skipped_count}</td>
                 </tr>
               ))}
             </tbody>

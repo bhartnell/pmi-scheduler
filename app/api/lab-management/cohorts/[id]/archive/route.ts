@@ -39,6 +39,7 @@ export async function POST(
         start_date,
         expected_end_date,
         is_active,
+        is_archived,
         archived_at,
         program:programs(id, name, abbreviation)
       `)
@@ -49,7 +50,7 @@ export async function POST(
       return NextResponse.json({ error: 'Cohort not found' }, { status: 404 });
     }
 
-    if (cohort.archived_at) {
+    if (cohort.is_archived) {
       return NextResponse.json({ error: 'Cohort is already archived' }, { status: 400 });
     }
 
@@ -186,6 +187,7 @@ export async function POST(
     const { data: updatedCohort, error: updateError } = await supabase
       .from('cohorts')
       .update({
+        is_archived: true,
         archived_at: new Date().toISOString(),
         archived_by: session.user.email,
         archive_summary: archiveSummary,
@@ -240,7 +242,7 @@ export async function DELETE(
   try {
     const { data: cohort, error: cohortError } = await supabase
       .from('cohorts')
-      .select('id, archived_at')
+      .select('id, is_archived, archived_at')
       .eq('id', cohortId)
       .single();
 
@@ -248,13 +250,14 @@ export async function DELETE(
       return NextResponse.json({ error: 'Cohort not found' }, { status: 404 });
     }
 
-    if (!cohort.archived_at) {
+    if (!cohort.is_archived) {
       return NextResponse.json({ error: 'Cohort is not archived' }, { status: 400 });
     }
 
     const { data: updatedCohort, error: updateError } = await supabase
       .from('cohorts')
       .update({
+        is_archived: false,
         archived_at: null,
         archived_by: null,
         archive_summary: null,

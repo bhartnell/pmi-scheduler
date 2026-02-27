@@ -7,13 +7,10 @@ interface EvalToken {
   id: string;
   token: string;
   preceptor_email: string;
-  preceptor_name: string | null;
-  student_name: string | null;
   created_at: string;
   expires_at: string;
-  is_used: boolean;
-  used_at: string | null;
-  created_by: string;
+  status: 'active' | 'submitted' | 'expired';
+  submitted_at: string | null;
 }
 
 interface PreceptorEvalModalProps {
@@ -28,7 +25,6 @@ export default function PreceptorEvalModal({
   onClose,
 }: PreceptorEvalModalProps) {
   const [preceptorEmail, setPreceptorEmail] = useState('');
-  const [preceptorName, setPreceptorName] = useState('');
   const [sending, setSending] = useState(false);
   const [sentLink, setSentLink] = useState<string | null>(null);
   const [sentExpiry, setSentExpiry] = useState<string | null>(null);
@@ -74,8 +70,6 @@ export default function PreceptorEvalModal({
         body: JSON.stringify({
           internship_id: internshipId,
           preceptor_email: preceptorEmail.trim(),
-          preceptor_name: preceptorName.trim() || null,
-          student_name: studentName || null,
         }),
       });
       const data = await res.json();
@@ -83,7 +77,6 @@ export default function PreceptorEvalModal({
         setSentLink(data.link);
         setSentExpiry(data.expires_at);
         setPreceptorEmail('');
-        setPreceptorName('');
         fetchTokens();
       } else {
         setError(data.error || 'Failed to generate link.');
@@ -208,20 +201,6 @@ export default function PreceptorEvalModal({
               />
             </div>
 
-            <div>
-              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                Preceptor Name <span className="text-gray-400 font-normal">(optional)</span>
-              </label>
-              <input
-                type="text"
-                value={preceptorName}
-                onChange={(e) => setPreceptorName(e.target.value)}
-                placeholder="John Smith"
-                disabled={sending}
-                className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-60"
-              />
-            </div>
-
             {error && (
               <div className="flex items-start gap-2 p-2.5 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-xs text-red-700 dark:text-red-400">
                 <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
@@ -270,7 +249,7 @@ export default function PreceptorEvalModal({
                     <div
                       key={t.id}
                       className={`p-3 rounded-lg border text-xs space-y-1.5 ${
-                        t.is_used
+                        t.status === 'submitted'
                           ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
                           : expired
                           ? 'bg-gray-50 dark:bg-gray-700/30 border-gray-200 dark:border-gray-700 opacity-70'
@@ -279,32 +258,29 @@ export default function PreceptorEvalModal({
                     >
                       <div className="flex items-center justify-between gap-2">
                         <span className="font-medium text-gray-900 dark:text-white truncate">
-                          {t.preceptor_name || t.preceptor_email}
+                          {t.preceptor_email}
                         </span>
                         <span
                           className={`flex-shrink-0 px-1.5 py-0.5 rounded-full font-medium ${
-                            t.is_used
+                            t.status === 'submitted'
                               ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400'
                               : expired
                               ? 'bg-gray-200 text-gray-500 dark:bg-gray-600 dark:text-gray-400'
                               : 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400'
                           }`}
                         >
-                          {t.is_used ? 'Submitted' : expired ? 'Expired' : 'Active'}
+                          {t.status === 'submitted' ? 'Submitted' : expired ? 'Expired' : 'Active'}
                         </span>
                       </div>
-                      {t.preceptor_name && (
-                        <div className="text-gray-500 dark:text-gray-400">{t.preceptor_email}</div>
-                      )}
                       <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
                         <Clock className="w-3 h-3" />
-                        {t.is_used && t.used_at
-                          ? `Submitted ${formatExpiry(t.used_at)}`
+                        {t.status === 'submitted' && t.submitted_at
+                          ? `Submitted ${formatExpiry(t.submitted_at)}`
                           : expired
                           ? `Expired ${formatExpiry(t.expires_at)}`
                           : `Expires ${formatExpiry(t.expires_at)}`}
                       </div>
-                      {!t.is_used && !expired && (
+                      {t.status === 'active' && !expired && (
                         <div className="flex items-center gap-1 pt-0.5">
                           <button
                             type="button"

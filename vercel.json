@@ -19,6 +19,30 @@
     {
       "path": "/api/cron/attendance-alerts",
       "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/cron/system-health",
+      "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/clinical-hours-reminder",
+      "schedule": "0 9 * * 1"
+    },
+    {
+      "path": "/api/cron/compliance-expiry",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/lab-reminder",
+      "schedule": "0 17 * * *"
+    },
+    {
+      "path": "/api/cron/internship-milestones",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/cert-expiry",
+      "schedule": "0 8 * * 1"
     }
   ]
 }

@@ -67,6 +67,7 @@ interface Cohort {
   start_date: string | null;
   expected_end_date: string | null;
   is_active: boolean;
+  is_archived: boolean;
   archived_at: string | null;
   archived_by: string | null;
   archive_summary: ArchiveSummary | null;
@@ -548,7 +549,7 @@ export default function CohortHubPage() {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              {!cohort.archived_at && (
+              {!cohort.is_archived && (
                 <>
                   <Link
                     href={`/lab-management/students/new?cohortId=${cohortId}&returnTo=${encodeURIComponent(`/lab-management/cohorts/${cohortId}`)}`}
@@ -575,9 +576,9 @@ export default function CohortHubPage() {
               )}
               <button
                 onClick={() => setShowEmailModal(true)}
-                disabled={students.length === 0 || !!cohort.archived_at}
+                disabled={students.length === 0 || cohort.is_archived}
                 className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                title={cohort.archived_at ? 'Cannot email archived cohort' : 'Send email to all students in cohort'}
+                title={cohort.is_archived ? 'Cannot email archived cohort' : 'Send email to all students in cohort'}
               >
                 <Mail className="w-4 h-4" />
                 Email Cohort
@@ -592,7 +593,7 @@ export default function CohortHubPage() {
                 CSV
               </button>
               <ExportDropdown config={exportConfig} disabled={students.length === 0} />
-              {cohort.archived_at ? (
+              {cohort.is_archived ? (
                 <button
                   onClick={handleUnarchive}
                   className="inline-flex items-center gap-2 px-3 py-2 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-700 rounded-lg hover:bg-amber-200 dark:hover:bg-amber-900/50 text-sm"
@@ -618,14 +619,14 @@ export default function CohortHubPage() {
 
       <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
         {/* Archived Banner */}
-        {cohort.archived_at && (
+        {cohort.is_archived && (
           <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-4">
             <div className="flex items-start gap-3">
               <Archive className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
                 <h3 className="font-semibold text-amber-800 dark:text-amber-300">This cohort is archived</h3>
                 <p className="text-sm text-amber-700 dark:text-amber-400 mt-1">
-                  Archived on {new Date(cohort.archived_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                  Archived on {new Date(cohort.archived_at!).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                   {cohort.archived_by && ` by ${cohort.archived_by}`}.
                   Editing is disabled. Use the Unarchive button to restore this cohort.
                 </p>
@@ -635,7 +636,7 @@ export default function CohortHubPage() {
         )}
 
         {/* Archive Summary (shown when archived) */}
-        {cohort.archived_at && cohort.archive_summary && (
+        {cohort.is_archived && cohort.archive_summary && (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
               <FileText className="w-5 h-5 text-amber-600 dark:text-amber-400" />

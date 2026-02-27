@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
 
     // By default, exclude archived cohorts unless explicitly requested
     if (!includeArchived) {
-      query = query.is('archived_at', null);
+      query = query.eq('is_archived', false);
     }
 
     const { data, error } = await query;

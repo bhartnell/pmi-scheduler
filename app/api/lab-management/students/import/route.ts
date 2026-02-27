@@ -97,24 +97,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'No students provided' }, { status: 400 });
     }
 
-    // Fetch cohort label for history record
-    let cohortLabel: string | null = null;
-    if (cohort_id) {
-      const { data: cohortData } = await supabase
-        .from('cohorts')
-        .select('cohort_number, program:programs(abbreviation)')
-        .eq('id', cohort_id)
-        .single();
-      if (cohortData) {
-        const abbrev = (cohortData.program as unknown as { abbreviation: string } | null)?.abbreviation || '';
-        cohortLabel = `${abbrev} Group ${cohortData.cohort_number}`.trim();
-      }
-    }
-
     const results: ImportResult[] = [];
-    let inserted = 0;
-    let updated = 0;
-    let skipped = 0;
+    let imported_count = 0;
+    let updated_count = 0;
+    let skipped_count = 0;
     let failed = 0;
 
     for (const student of students) {
@@ -184,7 +170,7 @@ export async function POST(request: NextRequest) {
               name: `${existingStudent.first_name} ${existingStudent.last_name}`.trim(),
             },
           });
-          skipped++;
+          skipped_count++;
           continue;
         }
 
@@ -221,7 +207,7 @@ export async function POST(request: NextRequest) {
               name: `${updatedData.first_name} ${updatedData.last_name}`.trim(),
             },
           });
-          updated++;
+          updated_count++;
           continue;
         }
 
@@ -255,7 +241,7 @@ export async function POST(request: NextRequest) {
             name: `${newStudent.first_name} ${newStudent.last_name}`.trim(),
           },
         });
-        inserted++;
+        imported_count++;
       } catch (rowError: unknown) {
         const errorMessage =
           rowError instanceof Error
@@ -276,24 +262,20 @@ export async function POST(request: NextRequest) {
     // ── Log import history ─────────────────────────────────────────────────
     await supabase.from('student_import_history').insert({
       imported_by: session.user.email,
-      imported_by_name: callerUser.name || session.user.name || null,
       cohort_id: cohort_id || null,
-      cohort_label: cohortLabel,
-      duplicate_mode,
-      row_count: students.length,
-      inserted,
-      updated,
-      skipped,
-      failed,
+      import_mode: duplicate_mode,
+      imported_count,
+      updated_count,
+      skipped_count,
     });
 
     return NextResponse.json({
       success: true,
       results,
-      summary: { imported: inserted, updated, skipped, failed },
+      summary: { imported: imported_count, updated: updated_count, skipped: skipped_count, failed },
       // Legacy fields for backward compatibility
-      imported: inserted,
-      skipped: skipped + failed,
+      imported: imported_count,
+      skipped: skipped_count + failed,
     });
   } catch (error) {
     console.error('Error importing students:', error);

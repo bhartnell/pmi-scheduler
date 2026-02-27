@@ -26,6 +26,8 @@ import {
   Package,
   BadgeCheck,
   BookOpen,
+  Activity,
+  Bell,
 } from 'lucide-react';
 import {
   canAccessAdmin,
@@ -180,6 +182,27 @@ export default function AdminPage() {
       title: 'Lab Template Library',
       description: 'Create and manage reusable lab day templates organized by program, semester, and week',
       color: 'bg-blue-700',
+    },
+    {
+      href: '/admin/user-activity',
+      icon: Activity,
+      title: 'User Activity',
+      description: 'View page views, active users, top pages, and usage patterns across the system',
+      color: 'bg-teal-600',
+    },
+    {
+      href: '/admin/system-alerts',
+      icon: Bell,
+      title: 'System Alerts',
+      description: 'Monitor system health alerts for storage, errors, cron jobs, and performance',
+      color: 'bg-rose-600',
+    },
+    {
+      href: '/admin/data-export',
+      icon: Download,
+      title: 'Data Export',
+      description: 'Export cohort, student, lab, clinical, and assessment data as CSV or JSON',
+      color: 'bg-emerald-600',
     },
   ];
 

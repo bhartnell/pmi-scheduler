@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { internship_id, preceptor_email, preceptor_name, student_name } = body;
+    const { internship_id, preceptor_email } = body;
 
     if (!internship_id || !preceptor_email) {
       return NextResponse.json(
@@ -32,10 +32,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate internship exists
+    // Validate internship exists and fetch student_id
     const { data: internship, error: internshipError } = await supabase
       .from('student_internships')
-      .select('id')
+      .select('id, student_id')
       .eq('id', internship_id)
       .single();
 
@@ -55,10 +55,8 @@ export async function POST(request: NextRequest) {
       .insert({
         token,
         internship_id,
+        student_id: internship.student_id,
         preceptor_email: preceptor_email.trim().toLowerCase(),
-        preceptor_name: preceptor_name?.trim() || null,
-        student_name: student_name?.trim() || null,
-        created_by: callerUser.name || session.user.email,
         expires_at: expiresAt.toISOString(),
       })
       .select()

@@ -31,6 +31,7 @@ interface Cohort {
   start_date: string | null;
   expected_end_date: string | null;
   is_active: boolean;
+  is_archived: boolean;
   student_count: number;
   program: Program;
   current_semester: number | null;
@@ -305,7 +306,7 @@ export default function CohortManagementPage() {
       });
       const data = await res.json();
       if (data.success) {
-        setCohorts(cohorts.map(c => c.id === cohort.id ? { ...c, archived_at: null, archived_by: null } : c));
+        setCohorts(cohorts.map(c => c.id === cohort.id ? { ...c, is_archived: false, archived_at: null, archived_by: null } : c));
       } else {
         alert('Failed to unarchive: ' + data.error);
       }
@@ -484,7 +485,7 @@ export default function CohortManagementPage() {
             ) : (
               <div className="divide-y dark:divide-gray-700">
                 {programCohorts.map(cohort => (
-                  <div key={cohort.id} className={`p-4 ${cohort.archived_at ? 'bg-amber-50/50 dark:bg-amber-900/10 opacity-75' : !cohort.is_active ? 'bg-gray-50 dark:bg-gray-700/50 opacity-75' : ''}`}>
+                  <div key={cohort.id} className={`p-4 ${cohort.is_archived ? 'bg-amber-50/50 dark:bg-amber-900/10 opacity-75' : !cohort.is_active ? 'bg-gray-50 dark:bg-gray-700/50 opacity-75' : ''}`}>
                     {editingId === cohort.id ? (
                       // Edit mode
                       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
@@ -557,12 +558,12 @@ export default function CohortManagementPage() {
                                   N/A
                                 </span>
                               )}
-                              {!cohort.is_active && !cohort.archived_at && (
+                              {!cohort.is_active && !cohort.is_archived && (
                                 <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 text-xs rounded">
                                   Inactive
                                 </span>
                               )}
-                              {cohort.archived_at && (
+                              {cohort.is_archived && (
                                 <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs rounded flex items-center gap-1">
                                   <Archive className="w-3 h-3" />
                                   Archived
@@ -598,7 +599,7 @@ export default function CohortManagementPage() {
                           >
                             Open Hub
                           </Link>
-                          {!cohort.archived_at && (
+                          {!cohort.is_archived && (
                             <>
                               <button
                                 onClick={() => startEdit(cohort)}
@@ -618,7 +619,7 @@ export default function CohortManagementPage() {
                           )}
                           {userRole && canManageCohorts(userRole) && (
                             <>
-                              {cohort.archived_at ? (
+                              {cohort.is_archived ? (
                                 <button
                                   onClick={() => handleUnarchive(cohort)}
                                   className="p-2 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded"
@@ -635,7 +636,7 @@ export default function CohortManagementPage() {
                                   <Archive className="w-4 h-4" />
                                 </button>
                               )}
-                              {!cohort.archived_at && (
+                              {!cohort.is_archived && (
                                 <button
                                   onClick={() => handleDelete(cohort)}
                                   className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded"
