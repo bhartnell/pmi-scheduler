@@ -200,7 +200,7 @@ export default function QuickActionsMenu() {
 
       {/* Keyboard shortcut hint - shown briefly on render, then fades */}
       {!isOpen && (
-        <span className="absolute -top-6 right-0 text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap select-none pointer-events-none">
+        <span aria-hidden="true" className="absolute -top-6 right-0 text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap select-none pointer-events-none">
           press <kbd className="px-1 py-0.5 bg-gray-200 dark:bg-gray-700 rounded text-xs font-mono">.</kbd>
         </span>
       )}

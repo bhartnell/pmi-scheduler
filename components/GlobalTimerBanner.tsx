@@ -178,6 +178,8 @@ export default function GlobalTimerBanner() {
 
   return (
     <div
+      role="status"
+      aria-label={`Lab timer: Rotation ${timer.rotation_number}, ${formatTime(displaySeconds)} ${timer.mode === 'countdown' ? 'remaining' : 'elapsed'}`}
       className={`fixed top-0 left-0 right-0 z-[100] ${getBannerColor()} text-white shadow-lg transition-colors duration-300 print:hidden`}
       style={{ height: `${BANNER_HEIGHT}px` }}
     >
@@ -185,18 +187,18 @@ export default function GlobalTimerBanner() {
         <div className="flex items-center justify-between h-full">
           {/* Left: Lab info */}
           <div className="flex items-center gap-2 min-w-0">
-            <Clock className="w-4 h-4 flex-shrink-0" />
+            <Clock className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
             <span className="font-medium truncate">
               {labDay.displayName}
             </span>
-            <span className="text-white/70 text-sm hidden sm:inline">
+            <span className="text-white/70 text-sm hidden sm:inline" aria-hidden="true">
               | Rotation {timer.rotation_number}
             </span>
           </div>
 
           {/* Center: Time display */}
-          <div className="flex items-center gap-2">
-            <Play className="w-4 h-4" />
+          <div className="flex items-center gap-2" aria-hidden="true">
+            <Play className="w-4 h-4" aria-hidden="true" />
             <span className="font-mono font-bold text-lg sm:text-xl">
               {formatTime(displaySeconds)}
             </span>
@@ -209,18 +211,18 @@ export default function GlobalTimerBanner() {
           <div className="flex items-center gap-2">
             <Link
               href={`/lab-management/schedule/${labDay.id}?timer=open`}
+              aria-label={`Open timer for ${labDay.displayName}`}
               className="flex items-center gap-1 px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors"
             >
               <span className="hidden sm:inline">Open Timer</span>
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRight className="w-4 h-4" aria-hidden="true" />
             </Link>
             <button
               onClick={() => setIsDismissed(true)}
+              aria-label="Dismiss timer banner"
               className="p-1 hover:bg-white/20 rounded transition-colors text-white/70 hover:text-white"
-              title="Dismiss banner (will reappear on next rotation)"
             >
-              <span className="sr-only">Dismiss</span>
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>

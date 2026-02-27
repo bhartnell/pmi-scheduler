@@ -52,15 +52,16 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: (id: string)
     <div
       className={`flex items-center gap-3 px-4 py-3 rounded-lg border shadow-lg ${style.bg} ${style.border} animate-in slide-in-from-right duration-300`}
       role="alert"
+      aria-atomic="true"
     >
-      <Icon className={`w-5 h-5 flex-shrink-0 ${style.text}`} />
+      <Icon className={`w-5 h-5 flex-shrink-0 ${style.text}`} aria-hidden="true" />
       <p className={`text-sm flex-1 ${style.text}`}>{toast.message}</p>
       <button
         onClick={() => onDismiss(toast.id)}
         className={`flex-shrink-0 ${style.text} hover:opacity-70`}
         aria-label="Dismiss notification"
       >
-        <X className="w-4 h-4" />
+        <X className="w-4 h-4" aria-hidden="true" />
       </button>
     </div>
   );
@@ -97,7 +98,12 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       {children}
       {/* Toast container - fixed position, top-right */}
       {toasts.length > 0 && (
-        <div className="fixed top-4 right-4 z-[100] flex flex-col gap-2 max-w-sm w-full pointer-events-none">
+        <div
+          className="fixed top-4 right-4 z-[100] flex flex-col gap-2 max-w-sm w-full pointer-events-none"
+          aria-live="polite"
+          aria-atomic="false"
+          aria-label="Notifications"
+        >
           {toasts.map(toast => (
             <div key={toast.id} className="pointer-events-auto">
               <ToastItem toast={toast} onDismiss={removeToast} />

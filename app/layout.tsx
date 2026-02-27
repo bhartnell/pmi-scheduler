@@ -7,6 +7,7 @@ import GlobalTimerBanner from '@/components/GlobalTimerBanner';
 import CommandPalette from '@/components/CommandPalette';
 import QuickActionsMenu from '@/components/QuickActionsMenu';
 import { ActivityTracker } from '@/components/ActivityTracker';
+import OnboardingTourWrapper from '@/components/OnboardingTourWrapper';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -30,6 +31,7 @@ export default function RootLayout({
           <GlobalTimerBanner />
           {children}
           <ActivityTracker />
+          <OnboardingTourWrapper />
           <FeedbackButton />
           <QuickActionsMenu />
           <CommandPalette />

@@ -302,7 +302,10 @@ export default function NotificationBell() {
       >
         <Bell className="w-5 h-5" />
         {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center bg-red-500 text-white text-xs font-bold rounded-full px-1">
+          <span
+            aria-hidden="true"
+            className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] flex items-center justify-center bg-red-500 text-white text-xs font-bold rounded-full px-1"
+          >
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
@@ -310,7 +313,12 @@ export default function NotificationBell() {
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 overflow-hidden">
+        <div
+          className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 overflow-hidden"
+          role="dialog"
+          aria-label="Notifications"
+          aria-live="polite"
+        >
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
             <h3 className="font-semibold text-gray-900 dark:text-white">Notifications</h3>
@@ -416,7 +424,7 @@ export default function NotificationBell() {
               </div>
             ) : filteredNotifications.length === 0 ? (
               <div className="p-8 text-center text-gray-500 dark:text-gray-400">
-                <Bell className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                <Bell className="w-8 h-8 mx-auto mb-2 opacity-50" aria-hidden="true" />
                 <p>{categoryFilter === 'all' ? 'No notifications yet' : `No ${CATEGORY_LABELS[categoryFilter]?.label || categoryFilter} notifications`}</p>
               </div>
             ) : (
@@ -478,7 +486,7 @@ function NotificationContent({ notification }: { notification: Notification }) {
   return (
     <div className="flex gap-3">
       {/* Read indicator */}
-      <div className="flex-shrink-0 pt-1">
+      <div className="flex-shrink-0 pt-1" aria-hidden="true">
         {notification.is_read ? (
           <span className="block w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600" />
         ) : (
@@ -506,7 +514,7 @@ function NotificationContent({ notification }: { notification: Notification }) {
 
       {/* Link indicator */}
       {notification.link_url && (
-        <ExternalLink className="w-4 h-4 text-gray-400 flex-shrink-0" />
+        <ExternalLink className="w-4 h-4 text-gray-400 flex-shrink-0" aria-hidden="true" />
       )}
     </div>
   );

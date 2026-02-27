@@ -21,18 +21,18 @@ export default function EmptyState({
 }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center py-12 px-4">
-      <Icon className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-4" />
+      <Icon className="h-12 w-12 text-gray-300 dark:text-gray-600 mb-4" aria-hidden="true" />
       <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">{title}</h3>
       {message && (
         <p className="text-sm text-gray-500 dark:text-gray-400 text-center max-w-md mb-4">{message}</p>
       )}
       {actionLabel && (actionHref || onAction) && (
         actionHref ? (
-          <a href={actionHref} className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm">
+          <a href={actionHref} className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600">
             {actionLabel}
           </a>
         ) : (
-          <button onClick={onAction} className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm">
+          <button onClick={onAction} className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-600">
             {actionLabel}
           </button>
         )

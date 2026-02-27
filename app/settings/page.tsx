@@ -18,17 +18,22 @@ import {
   Clock,
   Loader2,
   Volume2,
-  VolumeX,
   Play,
   Eye,
   X,
   Mic,
   BellOff,
+  Moon,
+  AlarmClockOff,
+  Newspaper,
+  Map,
+  RotateCcw,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import NotificationBell from '@/components/NotificationBell';
 import EmailSettingsPanel from '@/components/EmailSettingsPanel';
 import { useToast } from '@/components/Toast';
+import OnboardingTour from '@/components/OnboardingTour';
 import {
   TimerAudioSettings,
   DEFAULT_TIMER_AUDIO_SETTINGS,
@@ -493,20 +498,24 @@ function NotificationPreferencesPanel() {
               {emailPrefs.mode === 'daily_digest' && (
                 <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                   <div className="flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5 text-gray-400" />
+                    <Clock className="w-3.5 h-3.5 text-gray-400" aria-hidden="true" />
+                    <label htmlFor="digest-time" className="sr-only">Digest delivery time</label>
                     <input
+                      id="digest-time"
                       type="time"
                       value={emailPrefs.digest_time}
                       onChange={(e) => handleFrequencyChange({ digest_time: e.target.value })}
                       disabled={savingFrequency}
+                      aria-label="Daily digest delivery time"
                       className="px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50"
                     />
                   </div>
                   <button
                     onClick={handlePreviewDigest}
+                    aria-label="Preview daily digest email"
                     className="flex items-center gap-1 px-2 py-1 text-xs text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors whitespace-nowrap"
                   >
-                    <Eye className="w-3 h-3" />
+                    <Eye className="w-3 h-3" aria-hidden="true" />
                     Preview
                   </button>
                 </div>
@@ -640,6 +649,368 @@ function NotificationPreferencesPanel() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ---- Granular Notification Preferences ----
+
+interface GranularCategoryPrefs {
+  in_app: boolean;
+  email: boolean;
+}
+
+interface GranularNotificationSettings {
+  categories: {
+    labs:       GranularCategoryPrefs;
+    tasks:      GranularCategoryPrefs;
+    clinical:   GranularCategoryPrefs;
+    system:     GranularCategoryPrefs;
+    scheduling: GranularCategoryPrefs;
+    feedback:   GranularCategoryPrefs;
+  };
+  quiet_hours: {
+    enabled: boolean;
+    start: string;
+    end: string;
+  };
+  weekly_digest: boolean;
+  mute_all: boolean;
+}
+
+type GranularCategoryKey = keyof GranularNotificationSettings['categories'];
+
+const DEFAULT_GRANULAR: GranularNotificationSettings = {
+  categories: {
+    labs:       { in_app: true,  email: true  },
+    tasks:      { in_app: true,  email: false },
+    clinical:   { in_app: true,  email: true  },
+    system:     { in_app: true,  email: false },
+    scheduling: { in_app: true,  email: true  },
+    feedback:   { in_app: true,  email: false },
+  },
+  quiet_hours:   { enabled: false, start: '22:00', end: '07:00' },
+  weekly_digest: false,
+  mute_all:      false,
+};
+
+const GRANULAR_CATEGORY_INFO: Record<GranularCategoryKey, { icon: React.ElementType; label: string; description: string }> = {
+  labs:       { icon: FlaskConical,  label: 'Labs',       description: 'Lab assignments and reminders' },
+  tasks:      { icon: CheckSquare,   label: 'Tasks',      description: 'Task assignments, completions, and comments' },
+  clinical:   { icon: Stethoscope,   label: 'Clinical',   description: 'Clinical hours and compliance alerts' },
+  system:     { icon: Settings,      label: 'System',     description: 'Role changes and system notifications' },
+  scheduling: { icon: Calendar,      label: 'Scheduling', description: 'Shift availability and confirmations' },
+  feedback:   { icon: MessageSquare, label: 'Feedback',   description: 'New feedback and resolutions' },
+};
+
+const GRANULAR_CATEGORY_KEYS: GranularCategoryKey[] = ['labs', 'tasks', 'clinical', 'system', 'scheduling', 'feedback'];
+
+function GranularNotificationPanel() {
+  const toast = useToast();
+
+  const [prefs, setPrefs]   = useState<GranularNotificationSettings>(DEFAULT_GRANULAR);
+  const [loading, setLoading]   = useState(true);
+  const [saving, setSaving]     = useState(false);
+  // Track pending changes from the auto-save fields (quiet hours / toggles)
+  const [dirty, setDirty]       = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/settings/notifications');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.preferences) {
+            setPrefs(data.preferences);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load granular notification prefs:', err);
+      }
+      setLoading(false);
+    })();
+  }, []);
+
+  const save = async (next: GranularNotificationSettings) => {
+    setSaving(true);
+    try {
+      const res = await fetch('/api/settings/notifications', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(next),
+      });
+      if (!res.ok) throw new Error('Save failed');
+      toast.success('Notification preferences saved');
+      setDirty(false);
+    } catch {
+      toast.error('Failed to save preferences');
+    }
+    setSaving(false);
+  };
+
+  // Toggle helpers — each sets dirty=true and returns the updated prefs
+  const toggleMuteAll = () => {
+    const next = { ...prefs, mute_all: !prefs.mute_all };
+    setPrefs(next);
+    setDirty(true);
+    return next;
+  };
+
+  const toggleWeeklyDigest = () => {
+    const next = { ...prefs, weekly_digest: !prefs.weekly_digest };
+    setPrefs(next);
+    setDirty(true);
+    return next;
+  };
+
+  const toggleQuietHoursEnabled = () => {
+    const next = { ...prefs, quiet_hours: { ...prefs.quiet_hours, enabled: !prefs.quiet_hours.enabled } };
+    setPrefs(next);
+    setDirty(true);
+    return next;
+  };
+
+  const updateQuietTime = (field: 'start' | 'end', value: string) => {
+    const next = { ...prefs, quiet_hours: { ...prefs.quiet_hours, [field]: value } };
+    setPrefs(next);
+    setDirty(true);
+    return next;
+  };
+
+  const toggleCategoryInApp = (key: GranularCategoryKey) => {
+    const next: GranularNotificationSettings = {
+      ...prefs,
+      categories: {
+        ...prefs.categories,
+        [key]: { ...prefs.categories[key], in_app: !prefs.categories[key].in_app },
+      },
+    };
+    setPrefs(next);
+    setDirty(true);
+    return next;
+  };
+
+  const toggleCategoryEmail = (key: GranularCategoryKey) => {
+    const next: GranularNotificationSettings = {
+      ...prefs,
+      categories: {
+        ...prefs.categories,
+        [key]: { ...prefs.categories[key], email: !prefs.categories[key].email },
+      },
+    };
+    setPrefs(next);
+    setDirty(true);
+    return next;
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-8">
+        <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+      </div>
+    );
+  }
+
+  const muteAll = prefs.mute_all;
+
+  return (
+    <div className="space-y-5">
+
+      {/* ---- Mute All ---- */}
+      <div className={`border-2 rounded-xl p-4 transition-colors ${
+        muteAll
+          ? 'border-red-400 bg-red-50 dark:bg-red-900/20 dark:border-red-600'
+          : 'border-gray-200 dark:border-gray-700'
+      }`}>
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className={`w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 ${
+              muteAll ? 'bg-red-100 dark:bg-red-900/40' : 'bg-gray-100 dark:bg-gray-700'
+            }`}>
+              <BellOff className={`w-5 h-5 ${muteAll ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}`} />
+            </div>
+            <div className="min-w-0">
+              <div className={`font-semibold text-sm ${muteAll ? 'text-red-700 dark:text-red-400' : 'text-gray-900 dark:text-white'}`}>
+                Mute All Notifications
+              </div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">
+                {muteAll
+                  ? 'All notifications are silenced. Individual settings are preserved.'
+                  : 'Silence every notification channel instantly (overrides all other settings)'}
+              </div>
+            </div>
+          </div>
+          <ToggleSwitch
+            checked={muteAll}
+            onChange={() => save(toggleMuteAll())}
+            disabled={saving}
+            label="Mute all notifications"
+          />
+        </div>
+        {muteAll && (
+          <p className="mt-3 text-xs font-medium text-red-600 dark:text-red-400 border-t border-red-200 dark:border-red-700 pt-3">
+            Notifications are currently muted. Re-enable to resume receiving alerts.
+          </p>
+        )}
+      </div>
+
+      {/* ---- Per-category table ---- */}
+      <div className="border dark:border-gray-700 rounded-xl overflow-hidden">
+        {/* Header */}
+        <div className="grid grid-cols-[1fr_auto_auto] gap-3 px-4 py-2 bg-gray-50 dark:bg-gray-700/50 border-b dark:border-gray-700">
+          <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+            Category
+          </span>
+          <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 w-16 text-center">
+            In-App
+          </span>
+          <span className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 w-16 text-center">
+            Email
+          </span>
+        </div>
+
+        {/* Rows */}
+        <div className="divide-y dark:divide-gray-700">
+          {GRANULAR_CATEGORY_KEYS.map((key) => {
+            const { icon: Icon, label, description } = GRANULAR_CATEGORY_INFO[key];
+            const catPrefs = prefs.categories[key];
+            return (
+              <div
+                key={key}
+                className={`grid grid-cols-[1fr_auto_auto] gap-3 items-center px-4 py-3 transition-colors ${
+                  muteAll
+                    ? 'opacity-40 pointer-events-none'
+                    : 'hover:bg-gray-50 dark:hover:bg-gray-700/40'
+                }`}
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center flex-shrink-0">
+                    <Icon className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="font-medium text-gray-900 dark:text-white text-sm">{label}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{description}</div>
+                  </div>
+                </div>
+
+                {/* In-App toggle */}
+                <div className="w-16 flex justify-center">
+                  <ToggleSwitch
+                    checked={catPrefs.in_app}
+                    onChange={() => save(toggleCategoryInApp(key))}
+                    disabled={saving || muteAll}
+                    label={`Toggle in-app notifications for ${label}`}
+                  />
+                </div>
+
+                {/* Email toggle */}
+                <div className="w-16 flex justify-center">
+                  <ToggleSwitch
+                    checked={catPrefs.email}
+                    onChange={() => save(toggleCategoryEmail(key))}
+                    disabled={saving || muteAll}
+                    label={`Toggle email notifications for ${label}`}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ---- Quiet Hours ---- */}
+      <div className="border dark:border-gray-700 rounded-xl p-4 space-y-3">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center flex-shrink-0">
+              <Moon className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+            </div>
+            <div className="min-w-0">
+              <div className="font-medium text-gray-900 dark:text-white text-sm">Quiet Hours</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">
+                Suppress all notifications during the selected time window
+              </div>
+            </div>
+          </div>
+          <ToggleSwitch
+            checked={prefs.quiet_hours.enabled}
+            onChange={() => save(toggleQuietHoursEnabled())}
+            disabled={saving || muteAll}
+            label="Enable quiet hours"
+          />
+        </div>
+
+        {prefs.quiet_hours.enabled && (
+          <div className="mt-3 flex flex-wrap items-center gap-4 pl-11">
+            <div className="flex items-center gap-2">
+              <AlarmClockOff className="w-4 h-4 text-gray-400 flex-shrink-0" />
+              <span className="text-xs text-gray-600 dark:text-gray-400 w-10">Start</span>
+              <input
+                type="time"
+                value={prefs.quiet_hours.start}
+                onChange={(e) => {
+                  const next = updateQuietTime('start', e.target.value);
+                  // Don't auto-save on every keystroke; user clicks Save button
+                  void next;
+                }}
+                disabled={saving || muteAll}
+                className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-gray-400 flex-shrink-0" />
+              <span className="text-xs text-gray-600 dark:text-gray-400 w-10">End</span>
+              <input
+                type="time"
+                value={prefs.quiet_hours.end}
+                onChange={(e) => {
+                  const next = updateQuietTime('end', e.target.value);
+                  void next;
+                }}
+                disabled={saving || muteAll}
+                className="px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            {dirty && (
+              <button
+                onClick={() => save(prefs)}
+                disabled={saving}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 transition-colors"
+              >
+                {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                Save times
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ---- Weekly Digest ---- */}
+      <div className="border dark:border-gray-700 rounded-xl p-4">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center flex-shrink-0">
+              <Newspaper className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div className="min-w-0">
+              <div className="font-medium text-gray-900 dark:text-white text-sm">Weekly Digest Email</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">
+                Receive a weekly summary email every Monday morning with your activity highlights
+              </div>
+            </div>
+          </div>
+          <ToggleSwitch
+            checked={prefs.weekly_digest}
+            onChange={() => save(toggleWeeklyDigest())}
+            disabled={saving || muteAll}
+            label="Enable weekly digest email"
+          />
+        </div>
+      </div>
+
+      <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+        Changes are saved automatically when toggling. Use &quot;Save times&quot; after editing quiet-hours times.
+      </p>
     </div>
   );
 }
@@ -836,7 +1207,16 @@ function SettingsPageContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const toast = useToast();
   const [activeTab, setActiveTab] = useState<'notifications' | 'email' | 'timer'>('notifications');
+
+  // Tour replay state
+  const [tourCompleted, setTourCompleted] = useState(false);
+  const [tourCompletedAt, setTourCompletedAt] = useState<string | null>(null);
+  const [replayingTour, setReplayingTour] = useState(false);
+  const [showTour, setShowTour] = useState(false);
+  const [currentUserName, setCurrentUserName] = useState('');
+  const [currentUserRole, setCurrentUserRole] = useState('instructor');
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -850,6 +1230,51 @@ function SettingsPageContent() {
       setActiveTab(tab as typeof activeTab);
     }
   }, [searchParams]);
+
+  // Fetch tour status and current user role on mount
+  useEffect(() => {
+    if (!session?.user?.email) return;
+    Promise.all([
+      fetch('/api/user-preferences/tour').then(r => r.json()),
+      fetch('/api/instructor/me').then(r => r.json()),
+    ])
+      .then(([tourData, userData]) => {
+        if (tourData.success) {
+          setTourCompleted(tourData.tour_completed ?? false);
+          setTourCompletedAt(tourData.tour_completed_at ?? null);
+        }
+        if (userData.success && userData.user) {
+          setCurrentUserName(userData.user.name || session.user?.name || '');
+          setCurrentUserRole(userData.user.role || 'instructor');
+        }
+      })
+      .catch(() => {});
+  }, [session]);
+
+  const handleReplayTour = async () => {
+    setReplayingTour(true);
+    try {
+      // Reset tour_completed so the tour will show again
+      await fetch('/api/user-preferences/tour', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tour_completed: false, tour_step: 0 }),
+      });
+      setTourCompleted(false);
+      setTourCompletedAt(null);
+      setShowTour(true);
+      toast.success('Tour started');
+    } catch {
+      toast.error('Failed to start tour');
+    }
+    setReplayingTour(false);
+  };
+
+  const handleTourComplete = () => {
+    setShowTour(false);
+    setTourCompleted(true);
+    setTourCompletedAt(new Date().toISOString());
+  };
 
   if (status === 'loading') {
     return (
@@ -912,7 +1337,7 @@ function SettingsPageContent() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 py-6">
+      <main id="main-content" className="max-w-4xl mx-auto px-4 py-6">
         {/* Tab Navigation */}
         <div className="flex gap-2 mb-6 bg-white dark:bg-gray-800 rounded-lg p-1 shadow-sm">
           {tabs.map((tab) => (
@@ -934,18 +1359,37 @@ function SettingsPageContent() {
 
         {/* Tab Content */}
         {activeTab === 'notifications' && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm">
-            <div className="px-6 py-4 border-b dark:border-gray-700">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                <Bell className="w-5 h-5 text-blue-600" />
-                Notification Preferences
-              </h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                Control which notifications appear in your bell and which are sent to your email
-              </p>
+          <div className="space-y-5">
+            {/* Granular preferences card */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm">
+              <div className="px-6 py-4 border-b dark:border-gray-700">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  <Bell className="w-5 h-5 text-blue-600" />
+                  Notification Preferences
+                </h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  Per-channel controls, quiet hours, weekly digest, and emergency mute
+                </p>
+              </div>
+              <div className="p-6">
+                <GranularNotificationPanel />
+              </div>
             </div>
-            <div className="p-6">
-              <NotificationPreferencesPanel />
+
+            {/* Legacy sound + email frequency card */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm">
+              <div className="px-6 py-4 border-b dark:border-gray-700">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  <Volume2 className="w-5 h-5 text-blue-600" />
+                  Sound &amp; Email Frequency
+                </h2>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  Notification chime and email delivery cadence settings
+                </p>
+              </div>
+              <div className="p-6">
+                <NotificationPreferencesPanel />
+              </div>
             </div>
           </div>
         )}
@@ -966,7 +1410,64 @@ function SettingsPageContent() {
             </div>
           </div>
         )}
+
+        {/* Tour & Onboarding card — always visible regardless of active tab */}
+        <div className="mt-6 bg-white dark:bg-gray-800 rounded-xl shadow-sm">
+          <div className="px-6 py-4 border-b dark:border-gray-700">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <Map className="w-5 h-5 text-blue-600" />
+              Tour &amp; Onboarding
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Replay the guided tour to rediscover key features
+            </p>
+          </div>
+          <div className="p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Map className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900 dark:text-white text-sm">
+                    Guided Tour
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 max-w-sm">
+                    Step through the key features of PMI Paramedic Tools. The tour is role-specific and takes about 2 minutes.
+                  </p>
+                  {tourCompleted && tourCompletedAt && (
+                    <p className="text-xs text-green-600 dark:text-green-400 mt-1">
+                      Tour completed {new Date(tourCompletedAt).toLocaleDateString()}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={handleReplayTour}
+                disabled={replayingTour}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-lg transition-colors flex-shrink-0"
+              >
+                {replayingTour ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <RotateCcw className="w-4 h-4" />
+                )}
+                {tourCompleted ? 'Replay Tour' : 'Start Tour'}
+              </button>
+            </div>
+          </div>
+        </div>
       </main>
+
+      {/* Tour overlay - only shown when replay is triggered from this page */}
+      {showTour && (
+        <OnboardingTour
+          userName={currentUserName}
+          role={currentUserRole}
+          onComplete={handleTourComplete}
+          startImmediate
+        />
+      )}
     </div>
   );
 }

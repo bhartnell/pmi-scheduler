@@ -1,5 +1,16 @@
 @import "tailwindcss";
 
+/* ── Accessibility: global focus-visible ring ─────────────────────────────── */
+*:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Remove default outline only when focus-visible is supported (keyboard nav) */
+*:focus:not(:focus-visible) {
+  outline: none;
+}
+
 /* Toast animations */
 @keyframes slide-in-from-right {
   from { transform: translateX(100%); opacity: 0; }

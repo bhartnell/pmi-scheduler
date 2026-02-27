@@ -253,11 +253,13 @@ export default function FeedbackButton() {
 
                   {/* Description */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label htmlFor="feedback-description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                       {reportType === 'bug' ? 'What happened?' : reportType === 'feature' ? 'What would you like?' : 'Your feedback'}{' '}
-                      <span className="text-red-500">*</span>
+                      <span className="text-red-500" aria-hidden="true">*</span>
+                      <span className="sr-only">(required)</span>
                     </label>
                     <textarea
+                      id="feedback-description"
                       value={description}
                       onChange={(e) => {
                         if (e.target.value.length <= 1000) {
@@ -274,6 +276,8 @@ export default function FeedbackButton() {
                       }
                       rows={4}
                       maxLength={1000}
+                      aria-required="true"
+                      aria-invalid={!!(error && !description.trim())}
                       className={`w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                         error && !description.trim()
                           ? 'border-red-500 dark:border-red-500'
@@ -336,7 +340,10 @@ export default function FeedbackButton() {
 
                   {/* Error Message */}
                   {error && (
-                    <div className="p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300 text-sm">
+                    <div
+                      role="alert"
+                      className="p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg text-red-700 dark:text-red-300 text-sm"
+                    >
                       {error}
                     </div>
                   )}

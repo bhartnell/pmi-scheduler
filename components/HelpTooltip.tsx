@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { HelpCircle } from 'lucide-react';
 
 interface HelpTooltipProps {
@@ -11,6 +11,7 @@ interface HelpTooltipProps {
 
 export default function HelpTooltip({ text, className = '', size = 16 }: HelpTooltipProps) {
   const [show, setShow] = useState(false);
+  const tooltipId = useId();
 
   return (
     <span className={`relative inline-flex items-center ${className}`}>
@@ -22,13 +23,18 @@ export default function HelpTooltip({ text, className = '', size = 16 }: HelpToo
         onBlur={() => setShow(false)}
         className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
         aria-label="Help"
+        aria-describedby={show ? tooltipId : undefined}
       >
-        <HelpCircle className={`h-${size === 16 ? '4' : '5'} w-${size === 16 ? '4' : '5'}`} />
+        <HelpCircle className={`h-${size === 16 ? '4' : '5'} w-${size === 16 ? '4' : '5'}`} aria-hidden="true" />
       </button>
       {show && (
-        <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 text-xs text-white bg-gray-900 dark:bg-gray-700 rounded-lg shadow-lg max-w-xs whitespace-normal pointer-events-none">
+        <div
+          id={tooltipId}
+          role="tooltip"
+          className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 text-xs text-white bg-gray-900 dark:bg-gray-700 rounded-lg shadow-lg max-w-xs whitespace-normal pointer-events-none"
+        >
           {text}
-          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900 dark:border-t-gray-700" />
+          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900 dark:border-t-gray-700" aria-hidden="true" />
         </div>
       )}
     </span>

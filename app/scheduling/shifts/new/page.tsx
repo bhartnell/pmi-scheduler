@@ -381,7 +381,7 @@ function CreateShiftPageInner() {
       </header>
 
       {/* Main Content — two-column layout on lg+ */}
-      <main className="max-w-7xl mx-auto px-4 py-6">
+      <main id="main-content" className="max-w-7xl mx-auto px-4 py-6">
         {/* Back link */}
         <Link
           href="/scheduling/shifts"
@@ -398,25 +398,29 @@ function CreateShiftPageInner() {
           <div className="space-y-6">
             {/* Title */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Title <span className="text-red-500">*</span>
+              <label htmlFor="shift-title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Title <span className="text-red-500" aria-hidden="true">*</span>
+                <span className="sr-only">(required)</span>
               </label>
               <input
+                id="shift-title"
                 type="text"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                 placeholder="e.g., EMT Lab Coverage"
                 required
+                aria-required="true"
               />
             </div>
 
             {/* Description */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label htmlFor="shift-description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Description
               </label>
               <textarea
+                id="shift-description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 rows={3}
@@ -428,9 +432,10 @@ function CreateShiftPageInner() {
             {/* Date and Times */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  <Calendar className="w-4 h-4 inline mr-1" />
-                  Date <span className="text-red-500">*</span>
+                <label htmlFor="shift-date-input" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <Calendar className="w-4 h-4 inline mr-1" aria-hidden="true" />
+                  Date <span className="text-red-500" aria-hidden="true">*</span>
+                  <span className="sr-only">(required)</span>
                 </label>
                 <input
                   id="shift-date-input"
@@ -447,40 +452,47 @@ function CreateShiftPageInner() {
                       : 'border-gray-300 dark:border-gray-600'
                   }`}
                   required
+                  aria-required="true"
                 />
                 {calendarFilledFrom && (
                   <p className="text-xs text-green-600 dark:text-green-400 mt-1 flex items-center gap-1">
-                    <Calendar className="w-3 h-3" />
+                    <Calendar className="w-3 h-3" aria-hidden="true" />
                     Date and times filled from lab calendar
                   </p>
                 )}
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  <Clock className="w-4 h-4 inline mr-1" />
-                  Start Time <span className="text-red-500">*</span>
+                <label htmlFor="shift-start-time" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <Clock className="w-4 h-4 inline mr-1" aria-hidden="true" />
+                  Start Time <span className="text-red-500" aria-hidden="true">*</span>
+                  <span className="sr-only">(required)</span>
                 </label>
                 <input
+                  id="shift-start-time"
                   type="time"
                   value={formData.start_time}
                   onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   required
+                  aria-required="true"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  <Clock className="w-4 h-4 inline mr-1" />
-                  End Time <span className="text-red-500">*</span>
+                <label htmlFor="shift-end-time" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <Clock className="w-4 h-4 inline mr-1" aria-hidden="true" />
+                  End Time <span className="text-red-500" aria-hidden="true">*</span>
+                  <span className="sr-only">(required)</span>
                 </label>
                 <input
+                  id="shift-end-time"
                   type="time"
                   value={formData.end_time}
                   onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   required
+                  aria-required="true"
                 />
               </div>
             </div>
@@ -488,11 +500,12 @@ function CreateShiftPageInner() {
             {/* Location and Department */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  <MapPin className="w-4 h-4 inline mr-1" />
+                <label htmlFor="shift-location" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <MapPin className="w-4 h-4 inline mr-1" aria-hidden="true" />
                   Location
                 </label>
                 <input
+                  id="shift-location"
                   type="text"
                   value={formData.location}
                   onChange={(e) => setFormData({ ...formData, location: e.target.value })}
@@ -502,11 +515,12 @@ function CreateShiftPageInner() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  <FileText className="w-4 h-4 inline mr-1" />
+                <label htmlFor="shift-department" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <FileText className="w-4 h-4 inline mr-1" aria-hidden="true" />
                   Department
                 </label>
                 <select
+                  id="shift-department"
                   value={formData.department}
                   onChange={(e) => setFormData({ ...formData, department: e.target.value as ShiftDepartment | '' })}
                   className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
@@ -522,11 +536,12 @@ function CreateShiftPageInner() {
             {/* Instructor counts */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  <Users className="w-4 h-4 inline mr-1" />
+                <label htmlFor="shift-min-instructors" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <Users className="w-4 h-4 inline mr-1" aria-hidden="true" />
                   Minimum Instructors Needed
                 </label>
                 <input
+                  id="shift-min-instructors"
                   type="number"
                   min="1"
                   value={formData.min_instructors}
@@ -536,11 +551,12 @@ function CreateShiftPageInner() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  <Users className="w-4 h-4 inline mr-1" />
+                <label htmlFor="shift-max-instructors" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  <Users className="w-4 h-4 inline mr-1" aria-hidden="true" />
                   Maximum Instructors (optional)
                 </label>
                 <input
+                  id="shift-max-instructors"
                   type="number"
                   min="1"
                   value={formData.max_instructors}
@@ -553,10 +569,11 @@ function CreateShiftPageInner() {
 
             {/* Link to Lab Day */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label htmlFor="shift-lab-day" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Link to Lab Day (optional)
               </label>
               <select
+                id="shift-lab-day"
                 value={formData.lab_day_id}
                 onChange={(e) => {
                   setFormData({ ...formData, lab_day_id: e.target.value });
@@ -587,8 +604,8 @@ function CreateShiftPageInner() {
               {/* Toggle Row */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Repeat className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                  <Repeat className="w-4 h-4 text-gray-600 dark:text-gray-400" aria-hidden="true" />
+                  <span id="repeat-shift-label" className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                     Repeat Shift
                     <HelpTooltip text="Creates multiple shifts on a recurring schedule until the end date. Choose weekly, bi-weekly, or monthly frequency." />
                   </span>
@@ -597,6 +614,7 @@ function CreateShiftPageInner() {
                   type="button"
                   role="switch"
                   aria-checked={repeatEnabled}
+                  aria-labelledby="repeat-shift-label"
                   onClick={() => handleToggleRepeat(!repeatEnabled)}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 ${
                     repeatEnabled
@@ -605,6 +623,7 @@ function CreateShiftPageInner() {
                   }`}
                 >
                   <span
+                    aria-hidden="true"
                     className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
                       repeatEnabled ? 'translate-x-6' : 'translate-x-1'
                     }`}
@@ -619,11 +638,12 @@ function CreateShiftPageInner() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Frequency dropdown */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      <label htmlFor="repeat-frequency" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Frequency
                       </label>
                       <div className="relative">
                         <select
+                          id="repeat-frequency"
                           value={repeatFrequency}
                           onChange={(e) => setRepeatFrequency(e.target.value as 'weekly' | 'biweekly' | 'monthly')}
                           className="w-full appearance-none px-4 py-2 pr-10 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
@@ -632,21 +652,24 @@ function CreateShiftPageInner() {
                           <option value="biweekly">Bi-weekly (every 14 days)</option>
                           <option value="monthly">Monthly (same day each month)</option>
                         </select>
-                        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                        <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" aria-hidden="true" />
                       </div>
                     </div>
 
                     {/* Until date */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Until <span className="text-red-500">*</span>
+                      <label htmlFor="repeat-until" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Until <span className="text-red-500" aria-hidden="true">*</span>
+                        <span className="sr-only">(required when repeat is enabled)</span>
                       </label>
                       <input
+                        id="repeat-until"
                         type="date"
                         value={repeatUntil}
                         onChange={(e) => setRepeatUntil(e.target.value)}
                         min={formData.date || new Date().toISOString().split('T')[0]}
                         className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        aria-required={repeatEnabled}
                       />
                     </div>
                   </div>
