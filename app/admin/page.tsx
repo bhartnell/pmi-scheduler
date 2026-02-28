@@ -30,6 +30,8 @@ import {
   Bell,
   Wrench,
   ClipboardCheck,
+  CalendarDays,
+  Star,
 } from 'lucide-react';
 import {
   canAccessAdmin,
@@ -219,6 +221,20 @@ export default function AdminPage() {
       title: 'QA Checklist',
       description: 'Comprehensive quality assurance checklist for testing all major features across roles',
       color: 'bg-blue-600',
+    },
+    {
+      href: '/admin/attendance-appeals',
+      icon: CalendarDays,
+      title: 'Attendance Appeals',
+      description: 'Review and action student attendance absence appeal requests',
+      color: 'bg-amber-600',
+    },
+    {
+      href: '/admin/rubrics',
+      icon: Star,
+      title: 'Assessment Rubrics',
+      description: 'Build and manage scenario grading rubrics with criteria and rating scales',
+      color: 'bg-violet-600',
     },
   ];
 

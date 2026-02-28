@@ -4,7 +4,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Plus, Settings, BarChart3 } from 'lucide-react';
+import { Plus, Settings, BarChart3, Users } from 'lucide-react';
 import LabHeader from '@/components/LabHeader';
 import { canManageContent } from '@/lib/permissions';
 import CustomizeModal from '@/components/dashboard/CustomizeModal';
@@ -244,6 +244,19 @@ export default function LabManagementDashboard() {
                 <div className="flex-1">
                   <div className="font-medium text-gray-900 dark:text-white">Reports</div>
                   <div className="text-sm text-gray-600 dark:text-gray-400">Progress, analytics, and exports</div>
+                </div>
+              </Link>
+
+              <Link
+                href="/lab-management/peer-evals"
+                className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 hover:shadow-lg transition-shadow flex items-center gap-3"
+              >
+                <div className="p-2 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg">
+                  <Users className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
+                </div>
+                <div className="flex-1">
+                  <div className="font-medium text-gray-900 dark:text-white">Peer Evaluations</div>
+                  <div className="text-sm text-gray-600 dark:text-gray-400">View aggregated peer eval results</div>
                 </div>
               </Link>
             </div>

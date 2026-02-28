@@ -11,12 +11,14 @@ import {
   ClipboardCheck,
   BarChart3,
   Home,
-  ChevronRight
+  ChevronRight,
+  ClipboardList,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import NotificationBell from '@/components/NotificationBell';
 import { PageLoader } from '@/components/ui';
 import { isDirector } from '@/lib/endorsements';
+import { hasMinRole } from '@/lib/permissions';
 import type { CurrentUser } from '@/types';
 
 export default function SchedulingPage() {
@@ -26,6 +28,7 @@ export default function SchedulingPage() {
   const [userIsDirector, setUserIsDirector] = useState(false);
   const [loading, setLoading] = useState(true);
   const [pendingCount, setPendingCount] = useState(0);
+  const [pendingSubCount, setPendingSubCount] = useState(0);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -61,9 +64,18 @@ export default function SchedulingPage() {
             setUserIsDirector(hasDirector || false);
           }
         }
-        // Get pending signup count if director
-        if (isAdmin || userIsDirector) {
-          // This would fetch pending signups count
+        // Get pending substitute request count for reviewers
+        const userRole = data.user.role;
+        if (isAdmin || userIsDirector || hasMinRole(userRole, 'lead_instructor')) {
+          try {
+            const subRes = await fetch('/api/scheduling/substitute-requests?status=pending');
+            const subData = await subRes.json();
+            if (subData.success) {
+              setPendingSubCount(subData.requests?.length ?? 0);
+            }
+          } catch {
+            // Non-critical — ignore errors
+          }
         }
       }
     } catch (error) {
@@ -178,6 +190,32 @@ export default function SchedulingPage() {
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">My Shifts</h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
                   View your confirmed shift assignments
+                </p>
+              </div>
+              <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300" />
+            </div>
+          </Link>
+
+          {/* Substitute Requests — visible to all instructors */}
+          <Link
+            href="/scheduling/substitute-requests"
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-shadow p-6 group"
+          >
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 bg-orange-100 dark:bg-orange-900/30 rounded-xl flex items-center justify-center group-hover:bg-orange-200 dark:group-hover:bg-orange-900/50 transition-colors">
+                <ClipboardList className="w-6 h-6 text-orange-600 dark:text-orange-400" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 flex-wrap mb-1">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Substitute Requests</h3>
+                  {pendingSubCount > 0 && (
+                    <span className="text-xs px-2 py-0.5 bg-yellow-500 text-white rounded-full font-semibold">
+                      {pendingSubCount}
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Request or manage lab day coverage
                 </p>
               </div>
               <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300" />

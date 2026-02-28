@@ -32,10 +32,10 @@ export async function POST(request: NextRequest) {
       message,
       audience_type,
       audience_filter,
-      notification_type = 'in_app',
+      delivery_method = 'in_app',
       priority = 'normal',
       link_url,
-      scheduled_for,
+      scheduled_at,
     } = body;
 
     if (!title || !message || !audience_type) {
@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
     // -------------------------------------------------------------------------
     const recipientCount = recipientEmails.length;
 
-    if (notification_type === 'in_app' || notification_type === 'both') {
+    if (delivery_method === 'in_app' || delivery_method === 'both') {
       // Batch insert in chunks of 500 to avoid payload limits
       const CHUNK_SIZE = 500;
       for (let i = 0; i < recipientEmails.length; i += CHUNK_SIZE) {
@@ -175,12 +175,11 @@ export async function POST(request: NextRequest) {
         message,
         audience_type,
         audience_filter: audience_filter || null,
-        notification_type,
+        delivery_method,
         priority,
         recipient_count: recipientCount,
         sent_by: session.user.email,
-        link_url: link_url || null,
-        scheduled_for: scheduled_for || null,
+        scheduled_at: scheduled_at || null,
         sent_at: new Date().toISOString(),
       })
       .select()

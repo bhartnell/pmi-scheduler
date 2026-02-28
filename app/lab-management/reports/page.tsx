@@ -21,6 +21,7 @@ import {
   CalendarCheck,
   BookOpen,
   ClipboardCheck,
+  DollarSign,
 } from 'lucide-react';
 import { canAccessClinical, type Role } from '@/lib/permissions';
 
@@ -180,6 +181,15 @@ export default function ReportsIndexPage() {
       color: 'text-teal-600 dark:text-teal-400',
       bgColor: 'bg-teal-100 dark:bg-teal-900/30',
       requiresClinical: true,
+    },
+    {
+      id: 'lab-costs',
+      title: 'Lab Costs',
+      description: 'Itemized lab day expenses by category, cohort, and date range with monthly trend.',
+      icon: DollarSign,
+      href: '/reports/lab-costs',
+      color: 'text-emerald-600 dark:text-emerald-400',
+      bgColor: 'bg-emerald-100 dark:bg-emerald-900/30',
     },
   ];
 

@@ -59,12 +59,11 @@ interface BroadcastHistory {
   message: string;
   audience_type: AudienceType;
   audience_filter: Record<string, any> | null;
-  notification_type: NotificationType;
+  delivery_method: NotificationType;
   priority: Priority;
   recipient_count: number;
   sent_by: string;
-  link_url: string | null;
-  scheduled_for: string | null;
+  scheduled_at: string | null;
   sent_at: string;
   created_at: string;
 }
@@ -246,7 +245,7 @@ function BroadcastHistoryTable({ broadcasts }: { broadcasts: BroadcastHistory[] 
                   </span>
                 </td>
                 <td className="px-4 py-3 text-gray-600 dark:text-gray-300 capitalize">
-                  {NOTIFICATION_TYPE_CONFIG[b.notification_type]?.label || b.notification_type}
+                  {NOTIFICATION_TYPE_CONFIG[b.delivery_method]?.label || b.delivery_method}
                 </td>
                 <td className="px-4 py-3">
                   <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${priorityCfg.badge}`}>
@@ -472,10 +471,10 @@ export default function BroadcastPage() {
           message: message.trim(),
           audience_type: audienceType,
           audience_filter: audienceFilter,
-          notification_type: notificationType,
+          delivery_method: notificationType,
           priority,
           link_url: linkUrl.trim() || null,
-          scheduled_for:
+          scheduled_at:
             scheduleMode === 'scheduled' && scheduledFor
               ? new Date(scheduledFor).toISOString()
               : null,
