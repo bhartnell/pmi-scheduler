@@ -28,6 +28,7 @@ import {
   BookOpen,
   Activity,
   Bell,
+  Wrench,
 } from 'lucide-react';
 import {
   canAccessAdmin,
@@ -234,7 +235,14 @@ export default function AdminPage() {
       title: 'System Settings',
       description: 'Configure system-wide settings and preferences',
       color: 'bg-gray-700'
-    }
+    },
+    {
+      href: '/admin/database-tools',
+      icon: Wrench,
+      title: 'Database Cleanup Utilities',
+      description: 'Clear old audit logs, notifications, orphaned records, and view database statistics',
+      color: 'bg-rose-700'
+    },
   ];
 
   return (

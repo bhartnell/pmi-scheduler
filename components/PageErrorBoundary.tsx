@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Home, MessageSquare } from 'lucide-react';
 
 interface PageErrorBoundaryProps {
   children: React.ReactNode;
@@ -24,7 +24,25 @@ export class PageErrorBoundary extends React.Component<PageErrorBoundaryProps, P
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('[PageErrorBoundary] Caught error:', error, errorInfo);
+    if (process.env.NODE_ENV === 'development') {
+      console.error('[PageErrorBoundary] Caught error:', error, errorInfo);
+    }
+
+    // Log to server-side error log (fire-and-forget, never blocks render)
+    try {
+      fetch('/api/errors/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          error_message: error.message,
+          error_stack: error.stack,
+          component_name: 'PageErrorBoundary',
+          url: typeof window !== 'undefined' ? window.location.href : undefined,
+        }),
+      }).catch(() => {});
+    } catch {
+      // Silently ignore logging failures
+    }
   }
 
   handleReset = () => {
@@ -50,13 +68,23 @@ export class PageErrorBoundary extends React.Component<PageErrorBoundaryProps, P
                 {this.state.error.message}
               </pre>
             )}
-            <div className="flex gap-3 justify-center">
+            <div className="flex flex-wrap gap-3 justify-center">
               <button
                 onClick={this.handleReset}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
               >
                 <RefreshCw className="w-4 h-4" />
                 Try Again
+              </button>
+              <button
+                onClick={() => {
+                  const feedbackBtn = document.querySelector<HTMLButtonElement>('[aria-label="Submit Feedback"]');
+                  if (feedbackBtn) feedbackBtn.click();
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800 rounded-lg hover:bg-yellow-100 dark:hover:bg-yellow-900/40 transition-colors"
+              >
+                <MessageSquare className="w-4 h-4" />
+                Report this error
               </button>
               <Link
                 href="/"

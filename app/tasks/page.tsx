@@ -30,6 +30,7 @@ import NotificationBell from '@/components/NotificationBell';
 import TaskKanban from '@/components/TaskKanban';
 import EmptyState from '@/components/EmptyState';
 import { useToast } from '@/components/Toast';
+import { PageLoader, SkeletonCard } from '@/components/ui';
 import { PageErrorBoundary } from '@/components/PageErrorBoundary';
 import { useKeyboardShortcuts, KeyboardShortcut } from '@/hooks/useKeyboardShortcuts';
 import KeyboardShortcutsHelp from '@/components/KeyboardShortcutsHelp';
@@ -489,8 +490,13 @@ function TasksPageContent() {
 
   if (status === 'loading' || !currentUser) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="max-w-6xl mx-auto px-4 py-8">
+          <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-6" />
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <SkeletonCard rows={6} />
+          </div>
+        </div>
       </div>
     );
   }
@@ -713,9 +719,7 @@ function TasksPageContent() {
 
         {/* Task Display */}
         {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          </div>
+          <SkeletonCard rows={6} />
         ) : tasks.length === 0 ? (
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm">
             <EmptyState
@@ -1269,11 +1273,7 @@ function TasksPageContent() {
 
 export default function TasksPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    }>
+    <Suspense fallback={<PageLoader message="Loading tasks..." />}>
       <PageErrorBoundary>
         <TasksPageContent />
       </PageErrorBoundary>

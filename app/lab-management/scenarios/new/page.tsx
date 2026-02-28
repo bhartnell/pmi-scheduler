@@ -28,6 +28,10 @@ import {
 } from 'lucide-react';
 import { canManageContent, type Role } from '@/lib/permissions';
 import HelpTooltip from '@/components/HelpTooltip';
+import FormField from '@/components/FormField';
+import { validators } from '@/lib/validation';
+import { PageLoader } from '@/components/ui';
+import { Loader2 } from 'lucide-react';
 
 // Types
 interface VitalSigns {
@@ -634,6 +638,8 @@ function ScenarioEditorContent() {
     debrief_points: []
   });
 
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
   // Temp inputs for array fields
   const [newDecisionPoint, setNewDecisionPoint] = useState('');
   const [newHistory, setNewHistory] = useState('');
@@ -754,9 +760,51 @@ function ScenarioEditorContent() {
     setLoading(false);
   };
 
+  const validateScenarioForm = (): boolean => {
+    const errors: Record<string, string> = {};
+
+    const titleErr = validators.required(scenario.title, 'Scenario title');
+    if (titleErr) errors.title = titleErr;
+    else {
+      const minErr = validators.minLength(scenario.title.trim(), 3);
+      if (minErr) errors.title = minErr;
+    }
+
+    const complaintErr = validators.required(scenario.chief_complaint, 'Chief complaint');
+    if (complaintErr) errors.chief_complaint = complaintErr;
+
+    const difficultyErr = validators.required(scenario.difficulty, 'Difficulty');
+    if (difficultyErr) errors.difficulty = difficultyErr;
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleBlurScenario = (field: 'title' | 'chief_complaint' | 'difficulty') => {
+    let error: string | null = null;
+    const value = scenario[field] as string;
+
+    if (field === 'title') {
+      error = validators.required(value, 'Scenario title');
+      if (!error) error = validators.minLength(value.trim(), 3);
+    } else if (field === 'chief_complaint') {
+      error = validators.required(value, 'Chief complaint');
+    } else if (field === 'difficulty') {
+      error = validators.required(value, 'Difficulty');
+    }
+
+    setFormErrors(prev => {
+      if (error) return { ...prev, [field]: error };
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
+
   const handleSave = async (mode: 'exit' | 'addAnother' = 'exit') => {
-    if (!scenario.title.trim()) {
-      alert('Please enter a scenario title');
+    if (!validateScenarioForm()) {
+      // Scroll to top so user sees errors in Basic Information section
+      window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
 
@@ -859,11 +907,7 @@ function ScenarioEditorContent() {
   };
 
   if (status === 'loading' || loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
+    return <PageLoader message="Loading scenario editor..." />;
   }
 
   if (!session) return null;
@@ -904,7 +948,7 @@ function ScenarioEditorContent() {
                   className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:text-gray-500"
                 >
                   {saving ? (
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-500"></div>
+                    <Loader2 className="w-5 h-5 animate-spin" />
                   ) : (
                     <Plus className="w-5 h-5" />
                   )}
@@ -917,7 +961,7 @@ function ScenarioEditorContent() {
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
               >
                 {saving ? (
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  <Loader2 className="w-5 h-5 animate-spin" />
                 ) : (
                   <ArrowRight className="w-5 h-5" />
                 )}
@@ -933,18 +977,27 @@ function ScenarioEditorContent() {
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
           <h2 className="font-semibold text-gray-900 dark:text-white mb-4">Basic Information</h2>
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Scenario Title <span className="text-red-500">*</span>
-              </label>
+            <FormField
+              label="Scenario Title"
+              htmlFor="scenario-title"
+              required
+              error={formErrors.title}
+            >
               <input
+                id="scenario-title"
                 type="text"
                 value={scenario.title}
                 onChange={(e) => setScenario({ ...scenario, title: e.target.value })}
+                onBlur={() => handleBlurScenario('title')}
+                aria-invalid={!!formErrors.title}
                 placeholder="e.g., COPD Exacerbation with Respiratory Failure"
-                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                className={`w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 ${
+                  formErrors.title
+                    ? 'border-red-400 dark:border-red-500'
+                    : 'border-gray-300 dark:border-gray-600'
+                }`}
               />
-            </div>
+            </FormField>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div>
@@ -970,21 +1023,29 @@ function ScenarioEditorContent() {
                   className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-1">
-                  Difficulty
-                  <HelpTooltip text="Used for auto-adjustment recommendations based on assessment data. Higher difficulty scenarios are suggested for groups with strong performance trends." />
-                </label>
+              <FormField
+                label="Difficulty"
+                htmlFor="scenario-difficulty"
+                required
+                error={formErrors.difficulty}
+              >
                 <select
+                  id="scenario-difficulty"
                   value={scenario.difficulty}
                   onChange={(e) => setScenario({ ...scenario, difficulty: e.target.value })}
-                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  onBlur={() => handleBlurScenario('difficulty')}
+                  aria-invalid={!!formErrors.difficulty}
+                  className={`w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 ${
+                    formErrors.difficulty
+                      ? 'border-red-400 dark:border-red-500'
+                      : 'dark:border-gray-600'
+                  }`}
                 >
                   {DIFFICULTY_LEVELS.map(level => (
                     <option key={level} value={level}>{level}</option>
                   ))}
                 </select>
-              </div>
+              </FormField>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Duration (min)</label>
                 <input
@@ -1098,16 +1159,28 @@ function ScenarioEditorContent() {
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
               />
             </div>
-            <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Chief Complaint</label>
+            <FormField
+              label="Chief Complaint"
+              htmlFor="scenario-chief-complaint"
+              required
+              error={formErrors.chief_complaint}
+              className="col-span-2"
+            >
               <input
+                id="scenario-chief-complaint"
                 type="text"
                 value={scenario.chief_complaint}
                 onChange={(e) => setScenario({ ...scenario, chief_complaint: e.target.value })}
+                onBlur={() => handleBlurScenario('chief_complaint')}
+                aria-invalid={!!formErrors.chief_complaint}
                 placeholder="Difficulty breathing"
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                className={`w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 ${
+                  formErrors.chief_complaint
+                    ? 'border-red-400 dark:border-red-500'
+                    : 'border-gray-300 dark:border-gray-600'
+                }`}
               />
-            </div>
+            </FormField>
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Dispatch Notes</label>
               <textarea
@@ -1462,7 +1535,7 @@ function ScenarioEditorContent() {
               className="flex items-center gap-2 px-6 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 disabled:bg-gray-300 disabled:text-gray-500"
             >
               {saving ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-500"></div>
+                <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
                 <Plus className="w-5 h-5" />
               )}
@@ -1475,7 +1548,7 @@ function ScenarioEditorContent() {
             className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
           >
             {saving ? (
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+              <Loader2 className="w-5 h-5 animate-spin" />
             ) : (
               <ArrowRight className="w-5 h-5" />
             )}
@@ -1498,11 +1571,7 @@ function X({ className }: { className?: string }) {
 
 export default function ScenarioEditorPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    }>
+    <Suspense fallback={<PageLoader message="Loading scenario editor..." />}>
       <ScenarioEditorContent />
     </Suspense>
   );

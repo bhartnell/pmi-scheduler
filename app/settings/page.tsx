@@ -33,7 +33,11 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import NotificationBell from '@/components/NotificationBell';
 import EmailSettingsPanel from '@/components/EmailSettingsPanel';
 import { useToast } from '@/components/Toast';
+import { PageLoader, ContentLoader } from '@/components/ui';
 import OnboardingTour from '@/components/OnboardingTour';
+import FormField from '@/components/FormField';
+import { validators } from '@/lib/validation';
+import { User } from 'lucide-react';
 import {
   TimerAudioSettings,
   DEFAULT_TIMER_AUDIO_SETTINGS,
@@ -321,11 +325,7 @@ function NotificationPreferencesPanel() {
   };
 
   if (loading) {
-    return (
-      <div className="flex justify-center py-10">
-        <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
-      </div>
-    );
+    return <ContentLoader message="Loading notification preferences..." className="py-10" />;
   }
 
   // Email column is "active" only when globally enabled and mode is not off
@@ -804,11 +804,7 @@ function GranularNotificationPanel() {
   };
 
   if (loading) {
-    return (
-      <div className="flex justify-center py-8">
-        <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
-      </div>
-    );
+    return <ContentLoader message="Loading granular preferences..." className="py-8" />;
   }
 
   const muteAll = prefs.mute_all;
@@ -1201,6 +1197,173 @@ function TimerAudioPanel() {
   );
 }
 
+// ---- Profile Panel ----
+
+function ProfilePanel() {
+  const { data: session } = useSession();
+  const toast = useToast();
+
+  const [displayName, setDisplayName] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!session?.user?.email) return;
+    fetch('/api/instructor/me')
+      .then(r => r.json())
+      .then(data => {
+        if (data.success && data.user) {
+          setDisplayName(data.user.name || session.user?.name || '');
+          setEmail(data.user.email || session.user?.email || '');
+          setPhone(data.user.phone || '');
+        }
+        setLoaded(true);
+      })
+      .catch(() => setLoaded(true));
+  }, [session]);
+
+  const validateProfile = (): boolean => {
+    const errors: Record<string, string> = {};
+
+    if (email) {
+      const emailErr = validators.email(email);
+      if (emailErr) errors.email = emailErr;
+    }
+
+    if (phone) {
+      const phoneErr = validators.phone(phone);
+      if (phoneErr) errors.phone = phoneErr;
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleBlur = (field: 'email' | 'phone', value: string) => {
+    let error: string | null = null;
+    if (field === 'email') error = value ? validators.email(value) : null;
+    else if (field === 'phone') error = value ? validators.phone(value) : null;
+
+    setFormErrors(prev => {
+      if (error) return { ...prev, [field]: error };
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validateProfile()) return;
+
+    setSaving(true);
+    try {
+      const res = await fetch('/api/instructor/me', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: displayName,
+          phone: phone || null,
+        }),
+      });
+      if (res.ok) {
+        toast.success('Profile updated');
+      } else {
+        toast.error('Failed to update profile');
+      }
+    } catch {
+      toast.error('Failed to update profile');
+    }
+    setSaving(false);
+  };
+
+  if (!loaded) {
+    return (
+      <div className="flex justify-center py-6">
+        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSave} className="space-y-4">
+      <div>
+        <label htmlFor="profile-display-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          Display Name
+        </label>
+        <input
+          id="profile-display-name"
+          type="text"
+          value={displayName}
+          onChange={(e) => setDisplayName(e.target.value)}
+          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+          placeholder="Your name"
+        />
+      </div>
+
+      <FormField
+        label="Email"
+        htmlFor="profile-email"
+        error={formErrors.email}
+        helpText="Contact your administrator to change your login email."
+      >
+        <input
+          id="profile-email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          onBlur={(e) => handleBlur('email', e.target.value)}
+          aria-invalid={!!formErrors.email}
+          readOnly
+          className={`w-full px-4 py-2 border rounded-lg bg-gray-50 dark:bg-gray-700/50 text-gray-500 dark:text-gray-400 cursor-not-allowed ${
+            formErrors.email
+              ? 'border-red-400 dark:border-red-500'
+              : 'border-gray-300 dark:border-gray-600'
+          }`}
+        />
+      </FormField>
+
+      <FormField
+        label="Phone"
+        htmlFor="profile-phone"
+        error={formErrors.phone}
+        helpText="Optional. Used for emergency contact only."
+      >
+        <input
+          id="profile-phone"
+          type="tel"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          onBlur={(e) => handleBlur('phone', e.target.value)}
+          aria-invalid={!!formErrors.phone}
+          placeholder="(555) 123-4567"
+          className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
+            formErrors.phone
+              ? 'border-red-400 dark:border-red-500'
+              : 'border-gray-300 dark:border-gray-600'
+          }`}
+        />
+      </FormField>
+
+      <div className="flex justify-end pt-2">
+        <button
+          type="submit"
+          disabled={saving}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors text-sm font-medium"
+        >
+          {saving ? (
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+          ) : null}
+          Save Profile
+        </button>
+      </div>
+    </form>
+  );
+}
+
 // ---- Page shell ----
 
 function SettingsPageContent() {
@@ -1277,11 +1440,7 @@ function SettingsPageContent() {
   };
 
   if (status === 'loading') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
+    return <PageLoader message="Loading settings..." />;
   }
 
   if (!session) return null;
@@ -1411,6 +1570,22 @@ function SettingsPageContent() {
           </div>
         )}
 
+        {/* Profile card — always visible regardless of active tab */}
+        <div className="mt-6 bg-white dark:bg-gray-800 rounded-xl shadow-sm">
+          <div className="px-6 py-4 border-b dark:border-gray-700">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <User className="w-5 h-5 text-blue-600" />
+              Profile
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Update your display name and contact information
+            </p>
+          </div>
+          <div className="p-6">
+            <ProfilePanel />
+          </div>
+        </div>
+
         {/* Tour & Onboarding card — always visible regardless of active tab */}
         <div className="mt-6 bg-white dark:bg-gray-800 rounded-xl shadow-sm">
           <div className="px-6 py-4 border-b dark:border-gray-700">
@@ -1474,11 +1649,7 @@ function SettingsPageContent() {
 
 export default function SettingsPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    }>
+    <Suspense fallback={<PageLoader message="Loading settings..." />}>
       <SettingsPageContent />
     </Suspense>
   );

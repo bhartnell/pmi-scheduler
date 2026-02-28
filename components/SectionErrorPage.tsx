@@ -1,62 +1,79 @@
 'use client';
 
 /**
- * Root Error Page
+ * SectionErrorPage
  *
- * Next.js App Router error boundary for the root route segment.
- * Catches errors that bubble up from any page in the app.
+ * Shared UI for Next.js App Router error.tsx files in each section.
+ * Each section's error.tsx imports and renders this component, passing
+ * the section name for context.
  */
 
 import { useEffect } from 'react';
 import { AlertTriangle, RefreshCw, Home, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 
-interface ErrorPageProps {
+interface SectionErrorPageProps {
   error: Error & { digest?: string };
   reset: () => void;
+  /** Human-readable section name, e.g. "Lab Management" */
+  sectionName: string;
+  /** Dashboard path to link back to, defaults to "/" */
+  dashboardHref?: string;
 }
 
-export default function GlobalError({ error, reset }: ErrorPageProps) {
+export default function SectionErrorPage({
+  error,
+  reset,
+  sectionName,
+  dashboardHref = '/',
+}: SectionErrorPageProps) {
   useEffect(() => {
-    // Log in development
     if (process.env.NODE_ENV === 'development') {
-      console.error('Root error boundary caught:', error);
+      console.error(`[${sectionName}] Error boundary caught:`, error);
     }
 
-    // Log to server-side error log
+    // Log to server-side error log (fire-and-forget)
     fetch('/api/errors/log', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         error_message: error.message,
         error_stack: error.stack,
-        component_name: 'RootErrorBoundary',
+        component_name: `${sectionName}ErrorBoundary`,
         url: typeof window !== 'undefined' ? window.location.href : undefined,
       }),
     }).catch(() => {});
-  }, [error]);
+  }, [error, sectionName]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 max-w-md w-full text-center">
-        <div className="w-16 h-16 mx-auto mb-4 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
-          <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" />
+    <div className="min-h-[60vh] flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-8 max-w-md w-full text-center">
+        {/* Icon */}
+        <div className="w-16 h-16 mx-auto mb-5 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+          <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" aria-hidden="true" />
         </div>
 
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+        {/* Heading */}
+        <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
           Something went wrong
         </h1>
 
-        <p className="text-gray-600 dark:text-gray-400 mb-6">
-          We encountered an unexpected error. Please try again or return to the home page.
+        {/* Message */}
+        <p className="text-gray-600 dark:text-gray-400 mb-2">
+          The <span className="font-medium text-gray-700 dark:text-gray-300">{sectionName}</span> section
+          encountered an unexpected error.
+        </p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
+          Your data is safe. Try again or go back to the dashboard.
         </p>
 
+        {/* Dev error detail */}
         {process.env.NODE_ENV === 'development' && (
           <details className="mb-6 text-left">
             <summary className="cursor-pointer text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
               Error details (development only)
             </summary>
-            <pre className="mt-2 p-3 bg-gray-100 dark:bg-gray-900 rounded text-xs text-red-600 dark:text-red-400 overflow-auto max-h-40">
+            <pre className="mt-2 p-3 bg-gray-100 dark:bg-gray-900 rounded text-xs text-red-600 dark:text-red-400 overflow-auto max-h-40 whitespace-pre-wrap break-words">
               {error.message}
               {error.stack && `\n\n${error.stack}`}
             </pre>
@@ -68,10 +85,11 @@ export default function GlobalError({ error, reset }: ErrorPageProps) {
           </details>
         )}
 
+        {/* Actions */}
         <div className="flex flex-wrap gap-3 justify-center">
           <button
             onClick={reset}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
           >
             <RefreshCw className="w-4 h-4" />
             Try Again
@@ -87,7 +105,7 @@ export default function GlobalError({ error, reset }: ErrorPageProps) {
             Report this error
           </button>
           <Link
-            href="/"
+            href={dashboardHref}
             className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
           >
             <Home className="w-4 h-4" />

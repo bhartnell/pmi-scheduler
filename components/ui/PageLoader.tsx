@@ -32,12 +32,7 @@ export function PageLoader({
         className
       )}
     >
-      <LoadingSpinner size="lg" />
-      {message && (
-        <p className="mt-4 text-sm text-gray-600 dark:text-gray-400">
-          {message}
-        </p>
-      )}
+      <LoadingSpinner size="lg" label={message} />
     </div>
   );
 }

@@ -29,6 +29,7 @@ import { PageErrorBoundary } from '@/components/PageErrorBoundary';
 import { useKeyboardShortcuts, KeyboardShortcut } from '@/hooks/useKeyboardShortcuts';
 import KeyboardShortcutsHelp from '@/components/KeyboardShortcutsHelp';
 import { downloadICS, parseLocalDate } from '@/lib/ics-export';
+import { PageLoader, SkeletonTable, ContentLoader } from '@/components/ui';
 
 interface Cohort {
   id: string;
@@ -769,10 +770,10 @@ function SchedulePageContent() {
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-700 dark:text-gray-300">Loading...</p>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="max-w-6xl mx-auto px-4 py-8">
+          <div className="h-8 w-56 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-6" />
+          <SkeletonTable rows={7} columns={4} />
         </div>
       </div>
     );
@@ -1042,7 +1043,7 @@ function SchedulePageContent() {
             </div>
             <div className="divide-y dark:divide-gray-600">
               {loading ? (
-                <div className="p-8 text-center text-gray-500 dark:text-gray-400">Loading...</div>
+                <ContentLoader message="Loading today's labs..." />
               ) : labDays.filter(ld => ld.date === new Date().toISOString().split('T')[0]).length === 0 ? (
                 <EmptyState
                   icon={Calendar}
@@ -1474,7 +1475,7 @@ function SchedulePageContent() {
           </div>
           <div className="divide-y dark:divide-gray-600">
             {loading ? (
-              <div className="p-8 text-center text-gray-500 dark:text-gray-400">Loading...</div>
+              <ContentLoader message="Loading upcoming labs..." />
             ) : labDays.length === 0 ? (
               <EmptyState
                 icon={Calendar}
@@ -1976,14 +1977,7 @@ function SchedulePageContent() {
 
 export default function SchedulePage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-700 dark:text-gray-300">Loading...</p>
-        </div>
-      </div>
-    }>
+    <Suspense fallback={<PageLoader message="Loading schedule..." />}>
       <SchedulePageContent />
     </Suspense>
   );

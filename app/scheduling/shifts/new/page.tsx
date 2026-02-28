@@ -20,7 +20,11 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import NotificationBell from '@/components/NotificationBell';
 import HelpTooltip from '@/components/HelpTooltip';
 import LabCalendarPanel from '@/components/LabCalendarPanel';
+import FormField from '@/components/FormField';
+import FormError from '@/components/FormError';
+import { validators } from '@/lib/validation';
 import { DEPARTMENT_OPTIONS, type ShiftDepartment, type CurrentUser } from '@/types';
+import { PageLoader } from '@/components/ui';
 
 interface LabDay {
   id: string;
@@ -120,6 +124,7 @@ function CreateShiftPageInner() {
   const [existingShifts, setExistingShifts] = useState<ExistingShift[]>([]);
   // Tracks whether the date was filled by clicking the calendar (for visual feedback)
   const [calendarFilledFrom, setCalendarFilledFrom] = useState<string | null>(null);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -198,6 +203,66 @@ function CreateShiftPageInner() {
     }
   }, [repeatEnabled, formData.date, repeatFrequency, repeatUntil]);
 
+  const validateShiftForm = (): boolean => {
+    const errors: Record<string, string> = {};
+
+    const titleErr = validators.required(formData.title, 'Title');
+    if (titleErr) errors.title = titleErr;
+
+    const dateErr = validators.required(formData.date, 'Date');
+    if (dateErr) errors.date = dateErr;
+
+    const startErr = validators.required(formData.start_time, 'Start time');
+    if (startErr) errors.start_time = startErr;
+
+    const endErr = validators.required(formData.end_time, 'End time');
+    if (endErr) errors.end_time = endErr;
+
+    if (!errors.start_time && !errors.end_time) {
+      const timeRangeErr = validators.timeRange(formData.start_time, formData.end_time);
+      if (timeRangeErr) errors.end_time = timeRangeErr;
+    }
+
+    if (!errors.date && formData.date) {
+      const today = new Date().toISOString().split('T')[0];
+      if (formData.date < today) {
+        errors.date = 'Date must be today or in the future';
+      }
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleBlur = (field: keyof typeof formData) => {
+    const value = String(formData[field] ?? '');
+    let error: string | null = null;
+
+    if (field === 'title') {
+      error = validators.required(value, 'Title');
+    } else if (field === 'date') {
+      error = validators.required(value, 'Date');
+      if (!error && value) {
+        const today = new Date().toISOString().split('T')[0];
+        if (value < today) error = 'Date must be today or in the future';
+      }
+    } else if (field === 'start_time') {
+      error = validators.required(value, 'Start time');
+    } else if (field === 'end_time') {
+      error = validators.required(value, 'End time');
+      if (!error && formData.start_time) {
+        error = validators.timeRange(formData.start_time, value);
+      }
+    }
+
+    setFormErrors(prev => {
+      if (error) return { ...prev, [field]: error };
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
+
   const removePreviewDate = (dateToRemove: string) => {
     setPreviewDates(prev => prev.filter(d => d !== dateToRemove));
   };
@@ -236,18 +301,17 @@ function CreateShiftPageInner() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.title || !formData.date || !formData.start_time || !formData.end_time) {
-      alert('Please fill in all required fields');
+    if (!validateShiftForm()) {
       return;
     }
 
     if (repeatEnabled && !repeatUntil) {
-      alert('Please select an end date for recurring shifts');
+      setFormErrors(prev => ({ ...prev, repeat_until: 'Please select an end date for recurring shifts' }));
       return;
     }
 
     if (repeatEnabled && previewDates.length === 0) {
-      alert('No dates to create. Please check your repeat settings.');
+      setFormErrors(prev => ({ ...prev, repeat_until: 'No dates to create. Please check your repeat settings.' }));
       return;
     }
 
@@ -318,11 +382,7 @@ function CreateShiftPageInner() {
   };
 
   if (status === 'loading' || loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
+    return <PageLoader message="Loading shift form..." />;
   }
 
   if (!session || !currentUser) return null;
@@ -397,22 +457,30 @@ function CreateShiftPageInner() {
         <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
           <div className="space-y-6">
             {/* Title */}
-            <div>
-              <label htmlFor="shift-title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Title <span className="text-red-500" aria-hidden="true">*</span>
-                <span className="sr-only">(required)</span>
-              </label>
+            <FormField
+              label="Title"
+              htmlFor="shift-title"
+              required
+              error={formErrors.title}
+            >
               <input
                 id="shift-title"
                 type="text"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                onBlur={() => handleBlur('title')}
+                aria-invalid={!!formErrors.title}
+                aria-describedby={formErrors.title ? 'shift-title-error' : undefined}
+                className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
+                  formErrors.title
+                    ? 'border-red-400 dark:border-red-500'
+                    : 'border-gray-300 dark:border-gray-600'
+                }`}
                 placeholder="e.g., EMT Lab Coverage"
                 required
                 aria-required="true"
               />
-            </div>
+            </FormField>
 
             {/* Description */}
             <div>
@@ -431,70 +499,88 @@ function CreateShiftPageInner() {
 
             {/* Date and Times */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label htmlFor="shift-date-input" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  <Calendar className="w-4 h-4 inline mr-1" aria-hidden="true" />
-                  Date <span className="text-red-500" aria-hidden="true">*</span>
-                  <span className="sr-only">(required)</span>
-                </label>
-                <input
-                  id="shift-date-input"
-                  type="date"
-                  value={formData.date}
-                  onChange={(e) => {
-                    setFormData({ ...formData, date: e.target.value });
-                    setCalendarFilledFrom(null);
-                  }}
-                  min={new Date().toISOString().split('T')[0]}
-                  className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-colors ${
-                    calendarFilledFrom
-                      ? 'border-green-400 dark:border-green-500 ring-1 ring-green-300 dark:ring-green-700'
-                      : 'border-gray-300 dark:border-gray-600'
-                  }`}
-                  required
-                  aria-required="true"
-                />
-                {calendarFilledFrom && (
-                  <p className="text-xs text-green-600 dark:text-green-400 mt-1 flex items-center gap-1">
-                    <Calendar className="w-3 h-3" aria-hidden="true" />
-                    Date and times filled from lab calendar
-                  </p>
-                )}
-              </div>
+              <FormField
+                label="Date"
+                htmlFor="shift-date-input"
+                required
+                error={formErrors.date}
+              >
+                <>
+                  <input
+                    id="shift-date-input"
+                    type="date"
+                    value={formData.date}
+                    onChange={(e) => {
+                      setFormData({ ...formData, date: e.target.value });
+                      setCalendarFilledFrom(null);
+                    }}
+                    onBlur={() => handleBlur('date')}
+                    min={new Date().toISOString().split('T')[0]}
+                    aria-invalid={!!formErrors.date}
+                    className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white transition-colors ${
+                      formErrors.date
+                        ? 'border-red-400 dark:border-red-500'
+                        : calendarFilledFrom
+                        ? 'border-green-400 dark:border-green-500 ring-1 ring-green-300 dark:ring-green-700'
+                        : 'border-gray-300 dark:border-gray-600'
+                    }`}
+                    required
+                    aria-required="true"
+                  />
+                  {calendarFilledFrom && !formErrors.date && (
+                    <p className="text-xs text-green-600 dark:text-green-400 mt-1 flex items-center gap-1">
+                      <Calendar className="w-3 h-3" aria-hidden="true" />
+                      Date and times filled from lab calendar
+                    </p>
+                  )}
+                </>
+              </FormField>
 
-              <div>
-                <label htmlFor="shift-start-time" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  <Clock className="w-4 h-4 inline mr-1" aria-hidden="true" />
-                  Start Time <span className="text-red-500" aria-hidden="true">*</span>
-                  <span className="sr-only">(required)</span>
-                </label>
+              <FormField
+                label="Start Time"
+                htmlFor="shift-start-time"
+                required
+                error={formErrors.start_time}
+              >
                 <input
                   id="shift-start-time"
                   type="time"
                   value={formData.start_time}
                   onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  onBlur={() => handleBlur('start_time')}
+                  aria-invalid={!!formErrors.start_time}
+                  className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
+                    formErrors.start_time
+                      ? 'border-red-400 dark:border-red-500'
+                      : 'border-gray-300 dark:border-gray-600'
+                  }`}
                   required
                   aria-required="true"
                 />
-              </div>
+              </FormField>
 
-              <div>
-                <label htmlFor="shift-end-time" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  <Clock className="w-4 h-4 inline mr-1" aria-hidden="true" />
-                  End Time <span className="text-red-500" aria-hidden="true">*</span>
-                  <span className="sr-only">(required)</span>
-                </label>
+              <FormField
+                label="End Time"
+                htmlFor="shift-end-time"
+                required
+                error={formErrors.end_time}
+              >
                 <input
                   id="shift-end-time"
                   type="time"
                   value={formData.end_time}
                   onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  onBlur={() => handleBlur('end_time')}
+                  aria-invalid={!!formErrors.end_time}
+                  className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
+                    formErrors.end_time
+                      ? 'border-red-400 dark:border-red-500'
+                      : 'border-gray-300 dark:border-gray-600'
+                  }`}
                   required
                   aria-required="true"
                 />
-              </div>
+              </FormField>
             </div>
 
             {/* Location and Department */}
@@ -657,21 +743,34 @@ function CreateShiftPageInner() {
                     </div>
 
                     {/* Until date */}
-                    <div>
-                      <label htmlFor="repeat-until" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Until <span className="text-red-500" aria-hidden="true">*</span>
-                        <span className="sr-only">(required when repeat is enabled)</span>
-                      </label>
+                    <FormField
+                      label="Until"
+                      htmlFor="repeat-until"
+                      required
+                      error={formErrors.repeat_until}
+                    >
                       <input
                         id="repeat-until"
                         type="date"
                         value={repeatUntil}
-                        onChange={(e) => setRepeatUntil(e.target.value)}
+                        onChange={(e) => {
+                          setRepeatUntil(e.target.value);
+                          setFormErrors(prev => {
+                            const next = { ...prev };
+                            delete next.repeat_until;
+                            return next;
+                          });
+                        }}
                         min={formData.date || new Date().toISOString().split('T')[0]}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        aria-invalid={!!formErrors.repeat_until}
+                        className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
+                          formErrors.repeat_until
+                            ? 'border-red-400 dark:border-red-500'
+                            : 'border-gray-300 dark:border-gray-600'
+                        }`}
                         aria-required={repeatEnabled}
                       />
-                    </div>
+                    </FormField>
                   </div>
 
                   {/* Preview list */}
@@ -778,7 +877,7 @@ function CreateShiftPageInner() {
 
 export default function CreateShiftPage() {
   return (
-    <Suspense>
+    <Suspense fallback={<PageLoader message="Loading shift form..." />}>
       <CreateShiftPageInner />
     </Suspense>
   );

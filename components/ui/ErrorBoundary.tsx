@@ -8,7 +8,7 @@
  */
 
 import { Component, ErrorInfo, ReactNode } from 'react';
-import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Home, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 
 interface ErrorBoundaryProps {
@@ -38,8 +38,26 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('Error caught by ErrorBoundary:', error, errorInfo);
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Error caught by ErrorBoundary:', error, errorInfo);
+    }
     this.props.onError?.(error, errorInfo);
+
+    // Log to server-side error log (fire-and-forget)
+    try {
+      fetch('/api/errors/log', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          error_message: error.message,
+          error_stack: error.stack,
+          component_name: this.props.featureName,
+          url: typeof window !== 'undefined' ? window.location.href : undefined,
+        }),
+      }).catch(() => {});
+    } catch {
+      // Silently ignore logging failures
+    }
   }
 
   handleRetry = () => {
@@ -106,7 +124,7 @@ export function ErrorFallback({ error, featureName, onRetry }: ErrorFallbackProp
           </details>
         )}
 
-        <div className="flex gap-3 justify-center">
+        <div className="flex flex-wrap gap-3 justify-center">
           {onRetry && (
             <button
               onClick={onRetry}
@@ -116,6 +134,16 @@ export function ErrorFallback({ error, featureName, onRetry }: ErrorFallbackProp
               Try Again
             </button>
           )}
+          <button
+            onClick={() => {
+              const feedbackBtn = document.querySelector<HTMLButtonElement>('[aria-label="Submit Feedback"]');
+              if (feedbackBtn) feedbackBtn.click();
+            }}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800 rounded-lg hover:bg-yellow-100 dark:hover:bg-yellow-900/40 transition-colors"
+          >
+            <MessageSquare className="w-4 h-4" />
+            Report this error
+          </button>
           <Link
             href="/"
             className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"

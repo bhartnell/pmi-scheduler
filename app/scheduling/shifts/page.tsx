@@ -30,6 +30,7 @@ import NotificationBell from '@/components/NotificationBell';
 import { downloadICS, parseLocalDate } from '@/lib/ics-export';
 import EmptyState from '@/components/EmptyState';
 import { useToast } from '@/components/Toast';
+import { PageLoader, SkeletonTable, ContentLoader } from '@/components/ui';
 import {
   type OpenShift,
   type ShiftSignup,
@@ -513,8 +514,11 @@ function ShiftsPageContent() {
 
   if (status === 'loading' || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="max-w-6xl mx-auto px-4 py-8">
+          <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-6" />
+          <SkeletonTable rows={6} columns={5} />
+        </div>
       </div>
     );
   }
@@ -1335,11 +1339,7 @@ function TradesTab({
   onRefresh,
 }: TradesTabProps) {
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600"></div>
-      </div>
-    );
+    return <ContentLoader message="Loading trade requests..." className="py-12" />;
   }
 
   const myOutgoing = trades.filter(t => t.requester?.id === currentUserId);
@@ -1581,11 +1581,7 @@ function TradeCard({ trade, currentUserId, userIsDirector, tradingId, onAction, 
 
 export default function ShiftsPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    }>
+    <Suspense fallback={<PageLoader message="Loading shifts..." />}>
       <ShiftsPageContent />
     </Suspense>
   );

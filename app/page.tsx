@@ -52,6 +52,7 @@ import {
 import AnnouncementBanner from '@/components/dashboard/AnnouncementBanner';
 import { useToast } from '@/components/Toast';
 import HelpTooltip from '@/components/HelpTooltip';
+import { SkeletonStats, SkeletonCard } from '@/components/ui';
 import type { CurrentUserMinimal } from '@/types';
 
 interface DashboardPreferences {
@@ -248,15 +249,15 @@ export default function HomePage() {
         <header className="bg-white dark:bg-gray-800 shadow-sm">
           <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse"></div>
+              <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" />
               <div className="space-y-2">
-                <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-                <div className="h-3 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+                <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+                <div className="h-3 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
-              <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse"></div>
+              <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+              <div className="w-8 h-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
             </div>
           </div>
         </header>
@@ -264,27 +265,18 @@ export default function HomePage() {
         {/* Main Content Skeleton */}
         <main className="max-w-6xl mx-auto px-4 py-12">
           <div className="text-center mb-8">
-            <div className="h-8 w-64 bg-gray-200 dark:bg-gray-700 rounded mx-auto mb-2 animate-pulse"></div>
-            <div className="h-4 w-48 bg-gray-200 dark:bg-gray-700 rounded mx-auto animate-pulse"></div>
+            <div className="h-8 w-64 bg-gray-200 dark:bg-gray-700 rounded mx-auto mb-2 animate-pulse" />
+            <div className="h-4 w-48 bg-gray-200 dark:bg-gray-700 rounded mx-auto animate-pulse" />
           </div>
 
-          {/* Skeleton Cards */}
+          {/* Stats skeleton */}
+          <div className="mb-8 max-w-5xl mx-auto">
+            <SkeletonStats rows={4} />
+          </div>
+
+          {/* Card grid skeleton */}
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 max-w-5xl mx-auto">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div
-                key={i}
-                className="animate-pulse bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-200 dark:border-gray-700"
-              >
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
-                  <div className="h-5 w-32 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                </div>
-                <div className="space-y-2">
-                  <div className="h-4 w-full bg-gray-200 dark:bg-gray-700 rounded"></div>
-                  <div className="h-4 w-3/4 bg-gray-200 dark:bg-gray-700 rounded"></div>
-                </div>
-              </div>
-            ))}
+            <SkeletonCard rows={6} />
           </div>
         </main>
       </div>

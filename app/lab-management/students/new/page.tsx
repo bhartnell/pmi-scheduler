@@ -4,7 +4,10 @@ import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
-import { ChevronRight, Save, UserPlus } from 'lucide-react';
+import { ChevronRight, Save, UserPlus, Loader2 } from 'lucide-react';
+import FormField from '@/components/FormField';
+import { validators } from '@/lib/validation';
+import { PageLoader } from '@/components/ui';
 
 interface Cohort {
   id: string;
@@ -24,6 +27,7 @@ function NewStudentContent() {
   const [cohorts, setCohorts] = useState<Cohort[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   // Form state
   const [firstName, setFirstName] = useState('');
@@ -32,6 +36,7 @@ function NewStudentContent() {
   const [cohortId, setCohortId] = useState(preselectedCohortId || '');
   const [agency, setAgency] = useState('');
   const [notes, setNotes] = useState('');
+  const [phone, setPhone] = useState('');
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -65,11 +70,49 @@ function NewStudentContent() {
     setLoading(false);
   };
 
+  const validateStudentForm = (): boolean => {
+    const errors: Record<string, string> = {};
+
+    const firstErr = validators.required(firstName, 'First name');
+    if (firstErr) errors.first_name = firstErr;
+
+    const lastErr = validators.required(lastName, 'Last name');
+    if (lastErr) errors.last_name = lastErr;
+
+    if (email) {
+      const emailErr = validators.email(email);
+      if (emailErr) errors.email = emailErr;
+    }
+
+    if (phone) {
+      const phoneErr = validators.phone(phone);
+      if (phoneErr) errors.phone = phoneErr;
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleBlurField = (field: string, value: string) => {
+    let error: string | null = null;
+
+    if (field === 'first_name') error = validators.required(value, 'First name');
+    else if (field === 'last_name') error = validators.required(value, 'Last name');
+    else if (field === 'email') error = value ? validators.email(value) : null;
+    else if (field === 'phone') error = value ? validators.phone(value) : null;
+
+    setFormErrors(prev => {
+      if (error) return { ...prev, [field]: error };
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!firstName || !lastName) {
-      alert('First name and last name are required');
+
+    if (!validateStudentForm()) {
       return;
     }
 
@@ -103,11 +146,7 @@ function NewStudentContent() {
   };
 
   if (status === 'loading' || loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
+    return <PageLoader message="Loading student form..." />;
   }
 
   if (!session) return null;
@@ -141,52 +180,101 @@ function NewStudentContent() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                First Name <span className="text-red-500">*</span>
-              </label>
+            <FormField
+              label="First Name"
+              htmlFor="student-first-name"
+              required
+              error={formErrors.first_name}
+            >
               <input
+                id="student-first-name"
                 type="text"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
+                onBlur={(e) => handleBlurField('first_name', e.target.value)}
+                aria-invalid={!!formErrors.first_name}
                 required
                 placeholder="John"
-                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                className={`w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 ${
+                  formErrors.first_name
+                    ? 'border-red-400 dark:border-red-500'
+                    : 'border-gray-300 dark:border-gray-600'
+                }`}
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Last Name <span className="text-red-500">*</span>
-              </label>
+            </FormField>
+            <FormField
+              label="Last Name"
+              htmlFor="student-last-name"
+              required
+              error={formErrors.last_name}
+            >
               <input
+                id="student-last-name"
                 type="text"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
+                onBlur={(e) => handleBlurField('last_name', e.target.value)}
+                aria-invalid={!!formErrors.last_name}
                 required
                 placeholder="Doe"
-                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                className={`w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 ${
+                  formErrors.last_name
+                    ? 'border-red-400 dark:border-red-500'
+                    : 'border-gray-300 dark:border-gray-600'
+                }`}
               />
-            </div>
+            </FormField>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Email
-            </label>
+          <FormField
+            label="Email"
+            htmlFor="student-email"
+            error={formErrors.email}
+          >
             <input
+              id="student-email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              onBlur={(e) => handleBlurField('email', e.target.value)}
+              aria-invalid={!!formErrors.email}
               placeholder="john.doe@email.com"
-              className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+              className={`w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 ${
+                formErrors.email
+                  ? 'border-red-400 dark:border-red-500'
+                  : 'border-gray-300 dark:border-gray-600'
+              }`}
             />
-          </div>
+          </FormField>
+
+          <FormField
+            label="Phone"
+            htmlFor="student-phone"
+            error={formErrors.phone}
+            helpText="Optional. Include area code."
+          >
+            <input
+              id="student-phone"
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              onBlur={(e) => handleBlurField('phone', e.target.value)}
+              aria-invalid={!!formErrors.phone}
+              placeholder="(555) 123-4567"
+              className={`w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 ${
+                formErrors.phone
+                  ? 'border-red-400 dark:border-red-500'
+                  : 'border-gray-300 dark:border-gray-600'
+              }`}
+            />
+          </FormField>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label htmlFor="student-cohort" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Cohort
             </label>
             <select
+              id="student-cohort"
               value={cohortId}
               onChange={(e) => setCohortId(e.target.value)}
               className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
@@ -201,10 +289,11 @@ function NewStudentContent() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label htmlFor="student-agency" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Agency
             </label>
             <input
+              id="student-agency"
               type="text"
               value={agency}
               onChange={(e) => setAgency(e.target.value)}
@@ -214,10 +303,11 @@ function NewStudentContent() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label htmlFor="student-notes" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Notes
             </label>
             <textarea
+              id="student-notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
@@ -235,12 +325,12 @@ function NewStudentContent() {
             </Link>
             <button
               type="submit"
-              disabled={saving || !firstName || !lastName}
+              disabled={saving}
               className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
             >
               {saving ? (
                 <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  <Loader2 className="w-5 h-5 animate-spin" />
                   Saving...
                 </>
               ) : (
@@ -270,11 +360,7 @@ function NewStudentContent() {
 
 export default function NewStudentPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    }>
+    <Suspense fallback={<PageLoader message="Loading student form..." />}>
       <NewStudentContent />
     </Suspense>
   );
