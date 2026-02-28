@@ -10,6 +10,7 @@ import { ActivityTracker } from '@/components/ActivityTracker';
 import OnboardingTourWrapper from '@/components/OnboardingTourWrapper';
 import { OfflineProvider } from '@/components/OfflineProvider';
 import ServiceWorkerRegistration from '@/components/ServiceWorkerRegistration';
+import WhatsNewWrapper from '@/components/WhatsNewWrapper';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -42,6 +43,7 @@ export default function RootLayout({
             {children}
             <ActivityTracker />
             <OnboardingTourWrapper />
+            <WhatsNewWrapper />
             <FeedbackButton />
             <QuickActionsMenu />
             <CommandPalette />

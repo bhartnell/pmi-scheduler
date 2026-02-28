@@ -26,7 +26,15 @@ import {
   ArrowRight,
   Lightbulb,
   FileText,
+  ScrollText,
+  Sparkles,
+  Tag,
+  Plus,
+  RefreshCw,
+  Wrench,
+  Minus,
 } from 'lucide-react';
+import { APP_VERSION, VERSION_DATE } from '@/lib/version';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -73,6 +81,7 @@ const SECTIONS: Section[] = [
   { id: 'faq', title: 'FAQ', icon: HelpCircle, color: 'amber' },
   { id: 'shortcuts', title: 'Keyboard Shortcuts', icon: Keyboard, color: 'green' },
   { id: 'videos', title: 'Video Tutorials', icon: Video, color: 'rose' },
+  { id: 'changelog', title: 'Changelog', icon: ScrollText, color: 'indigo' },
   { id: 'report', title: 'Report an Issue', icon: MessageSquare, color: 'teal' },
 ];
 
@@ -334,7 +343,121 @@ const COLOR_MAP: Record<string, { bg: string; text: string; border: string; ligh
     border: 'border-teal-200 dark:border-teal-800',
     lightBg: 'bg-teal-50 dark:bg-teal-900/20',
   },
+  indigo: {
+    bg: 'bg-indigo-600',
+    text: 'text-indigo-600 dark:text-indigo-400',
+    border: 'border-indigo-200 dark:border-indigo-800',
+    lightBg: 'bg-indigo-50 dark:bg-indigo-900/20',
+  },
 };
+
+// ---------------------------------------------------------------------------
+// Changelog data (mirrors CHANGELOG.md — keep in sync)
+// ---------------------------------------------------------------------------
+
+interface ChangelogVersion {
+  version: string;
+  date: string;
+  added?: string[];
+  changed?: string[];
+  fixed?: string[];
+  removed?: string[];
+}
+
+const CHANGELOG_VERSIONS: ChangelogVersion[] = [
+  {
+    version: '1.4.0',
+    date: '2026-02-28',
+    added: [
+      'Error boundaries on every page — crashes are caught gracefully with a recovery UI',
+      'PWA offline support via service worker — the app works without an internet connection',
+      'Skeleton loading states throughout — blank screens replaced with animated placeholders',
+      'Database tools page for admins (/admin/db-tools) — health checks and query runner',
+      'Full help documentation at /help — Getting Started, FAQ, Keyboard Shortcuts, Role Guides',
+      'Changelog system — version history in Help and a "What\'s New" modal after updates',
+      'Granular notification preferences — per-category email and push settings',
+      'Onboarding tour system — role-specific guided tour, replayable from Settings',
+      'Improved form validation — inline error messages and input validation helpers',
+    ],
+    changed: [
+      'Global search API returns richer result previews with contextual snippets',
+      'Accessibility improvements: focus ring styles, ARIA labels, semantic HTML, form labels',
+    ],
+  },
+  {
+    version: '1.3.0',
+    date: '2026-02-21',
+    added: [
+      'Activity tracker — captures recent page visits, surfaced in the Command Palette',
+      'Quick Actions menu — floating button for one-tap access to frequent workflows',
+      'Command Palette (Ctrl+K / ⌘K) — keyboard-driven search and navigation',
+      'Global timer banner — countdown visible on every page when a lab timer is running',
+      'Offline provider and OfflineBanner — detects network state and warns users',
+    ],
+    changed: [
+      'Settings page restructured with tabbed sections: Notifications, Email, Timer Audio, Profile, Onboarding',
+    ],
+  },
+  {
+    version: '1.2.0',
+    date: '2026-02-14',
+    added: [
+      'Help page (/help) — initial version with Getting Started, FAQ, and keyboard shortcuts',
+      'Onboarding tour wrapper — shows welcome modal and guided tour to new users automatically',
+      'Global search API (/api/search) — searches students, scenarios, lab days, tasks, and more',
+      'Feedback button — persistent floating button for bug reports and feature requests',
+      'Notification bell — shows unread notification count in the header',
+    ],
+    changed: [
+      'Theme toggle moved to Settings; dark mode preference persisted in localStorage',
+      'Dashboard widgets are now reorderable via drag-and-drop',
+    ],
+  },
+  {
+    version: '1.1.0',
+    date: '2026-02-07',
+    added: [
+      'Student portal (/student) — view progress, clinical hours, skill sign-offs, portfolio',
+      'Preceptor evaluation forms — hospital preceptors can submit evaluations for clinical shifts',
+      'Cohort archive — completed cohorts archived and browsable separately from active ones',
+      'Endorsement system — instructors endorse students for specific skills with audit trail',
+      'BLS Platinum Checklist — tracks BLS skill completion against platinum standard requirements',
+      'Swap interest panel — students can indicate interest in swapping lab slots',
+      'Site visit alerts — automatic alerts when clinical site visit deadlines are approaching',
+      'Capacity warnings — visual indicators when lab sections are near or at capacity',
+    ],
+    changed: [
+      'Lab header redesigned with inline status indicators and quick-action buttons',
+      'Student picker updated with search, role filter, and multi-select support',
+    ],
+    fixed: [
+      'Scheduling poll results not refreshing after a new response was submitted',
+      'Clinical hours total miscalculating when shifts crossed midnight',
+    ],
+  },
+  {
+    version: '1.0.0',
+    date: '2026-01-31',
+    added: [
+      'Core scheduling system — polls, availability submission, result aggregation',
+      'Lab management (/lab-management) — lab days, sections, scenarios, student assignments',
+      'Clinical tracking (/clinical) — hospital shifts, agency internship hours, field contacts',
+      'Admin panel (/admin) — user management, role assignment, cohort creation, reports',
+      'Scenario library — create, version, and assign EMS scenarios to lab days',
+      'Task management — Kanban board with due dates and assignments',
+      'Lab Day Templates — reusable templates for common lab day structures',
+      'Reports page — exportable clinical hours, attendance, scenario completion, certifications',
+      'Excel and PDF export utilities',
+      'ICS calendar export for lab and clinical schedules',
+      'Barcode support for student ID scanning at lab check-in',
+      'Role-based access control — superadmin, admin, lead_instructor, instructor, volunteer_instructor, student, guest',
+      'Google OAuth restricted to @pmi.edu and @my.pmi.edu domains',
+      'Audit logging for all sensitive operations',
+      'Email notification system with per-event templates',
+      'Dark mode support',
+    ],
+  },
+];
 
 // ---------------------------------------------------------------------------
 // Sub-components
@@ -1029,6 +1152,138 @@ export default function HelpPage() {
               </div>
             </section>
 
+            {/* ── Changelog ── */}
+            <section
+              id="changelog"
+              ref={(el) => { sectionRefs.current['changelog'] = el; }}
+              className="scroll-mt-6"
+            >
+              <div className="flex items-center gap-3 mb-5">
+                <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
+                  <ScrollText className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white">Changelog</h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                    Current version: <span className="font-semibold text-indigo-600 dark:text-indigo-400">v{APP_VERSION}</span>
+                    {' '}&mdash; {new Date(VERSION_DATE + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                {CHANGELOG_VERSIONS.map((release) => (
+                  <div
+                    key={release.version}
+                    className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden"
+                  >
+                    {/* Version header */}
+                    <div className="px-5 py-3 bg-gray-50 dark:bg-gray-800/80 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Tag className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
+                        <span className="font-bold text-gray-900 dark:text-white text-sm">
+                          v{release.version}
+                        </span>
+                        {release.version === APP_VERSION && (
+                          <span className="px-2 py-0.5 text-xs font-medium bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 rounded-full">
+                            Latest
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {new Date(release.date + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                      </span>
+                    </div>
+
+                    <div className="px-5 py-4 space-y-4">
+                      {release.added && release.added.length > 0 && (
+                        <div>
+                          <div className="flex items-center gap-1.5 mb-2">
+                            <Plus className="w-3.5 h-3.5 text-green-500" />
+                            <span className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase tracking-wider">Added</span>
+                          </div>
+                          <ul className="space-y-1.5">
+                            {release.added.map((item, i) => (
+                              <li key={i} className="flex gap-2 text-sm text-gray-700 dark:text-gray-300">
+                                <span className="text-green-500 mt-0.5 flex-shrink-0">+</span>
+                                <span>{item}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {release.changed && release.changed.length > 0 && (
+                        <div>
+                          <div className="flex items-center gap-1.5 mb-2">
+                            <RefreshCw className="w-3.5 h-3.5 text-blue-500" />
+                            <span className="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase tracking-wider">Changed</span>
+                          </div>
+                          <ul className="space-y-1.5">
+                            {release.changed.map((item, i) => (
+                              <li key={i} className="flex gap-2 text-sm text-gray-700 dark:text-gray-300">
+                                <span className="text-blue-500 mt-0.5 flex-shrink-0">~</span>
+                                <span>{item}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {release.fixed && release.fixed.length > 0 && (
+                        <div>
+                          <div className="flex items-center gap-1.5 mb-2">
+                            <Wrench className="w-3.5 h-3.5 text-amber-500" />
+                            <span className="text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wider">Fixed</span>
+                          </div>
+                          <ul className="space-y-1.5">
+                            {release.fixed.map((item, i) => (
+                              <li key={i} className="flex gap-2 text-sm text-gray-700 dark:text-gray-300">
+                                <span className="text-amber-500 mt-0.5 flex-shrink-0">!</span>
+                                <span>{item}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {release.removed && release.removed.length > 0 && (
+                        <div>
+                          <div className="flex items-center gap-1.5 mb-2">
+                            <Minus className="w-3.5 h-3.5 text-red-500" />
+                            <span className="text-xs font-semibold text-red-700 dark:text-red-400 uppercase tracking-wider">Removed</span>
+                          </div>
+                          <ul className="space-y-1.5">
+                            {release.removed.map((item, i) => (
+                              <li key={i} className="flex gap-2 text-sm text-gray-700 dark:text-gray-300">
+                                <span className="text-red-500 mt-0.5 flex-shrink-0">-</span>
+                                <span>{item}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* What's New prompt */}
+              <div className="mt-4 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-xl p-4">
+                <div className="flex items-start gap-3">
+                  <Sparkles className="w-5 h-5 text-indigo-600 dark:text-indigo-400 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-indigo-700 dark:text-indigo-300">
+                    <span className="font-medium">Stay up to date:</span> A &ldquo;What&apos;s New&rdquo; summary is automatically shown
+                    after each app update. You can also view it any time from the{' '}
+                    <Link href="/settings" className="underline hover:no-underline font-medium">
+                      Settings page
+                    </Link>
+                    .
+                  </p>
+                </div>
+              </div>
+            </section>
+
             {/* ── Report an Issue ── */}
             <section
               id="report"
@@ -1056,18 +1311,27 @@ export default function HelpPage() {
                     feature, or share general feedback. You can attach a screenshot and the system automatically
                     captures your page URL and browser info.
                   </p>
-                  <button
-                    onClick={() => {
-                      const feedbackBtn = document.querySelector<HTMLButtonElement>(
-                        '[aria-label="Submit Feedback"]'
-                      );
-                      feedbackBtn?.click();
-                    }}
-                    className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 text-sm font-medium transition-colors"
-                  >
-                    <MessageSquare className="w-4 h-4" />
-                    Open Feedback Form
-                  </button>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <button
+                      onClick={() => {
+                        const feedbackBtn = document.querySelector<HTMLButtonElement>(
+                          '[aria-label="Submit Feedback"]'
+                        );
+                        feedbackBtn?.click();
+                      }}
+                      className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 text-sm font-medium transition-colors"
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                      Open Feedback Form
+                    </button>
+                    <Link
+                      href="/feedback/my-submissions"
+                      className="flex items-center gap-2 px-4 py-2 border border-teal-300 dark:border-teal-700 text-teal-700 dark:text-teal-300 rounded-lg hover:bg-teal-50 dark:hover:bg-teal-900/20 text-sm font-medium transition-colors"
+                    >
+                      <MessageSquare className="w-4 h-4" />
+                      View My Submissions
+                    </Link>
+                  </div>
                 </div>
 
                 {/* What to include */}
@@ -1118,6 +1382,7 @@ export default function HelpPage() {
       {/* Footer */}
       <footer className="mt-8 py-6 text-center text-sm text-gray-500 dark:text-gray-400 border-t border-gray-200 dark:border-gray-700">
         <p>PMI Paramedic Tools &copy; {new Date().getFullYear()} &mdash; Help Center</p>
+        <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">Version {APP_VERSION}</p>
       </footer>
     </div>
   );

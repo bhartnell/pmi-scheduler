@@ -28,6 +28,9 @@ import {
   Newspaper,
   Map,
   RotateCcw,
+  Sparkles,
+  ScrollText,
+  Info,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import NotificationBell from '@/components/NotificationBell';
@@ -46,6 +49,8 @@ import {
   TIMER_AUDIO_STORAGE_KEY,
   useTimerAudio,
 } from '@/hooks/useTimerAudio';
+import { APP_VERSION, VERSION_DATE } from '@/lib/version';
+import WhatsNewModal from '@/components/WhatsNewModal';
 
 // ---- Types ----
 
@@ -1381,6 +1386,9 @@ function SettingsPageContent() {
   const [currentUserName, setCurrentUserName] = useState('');
   const [currentUserRole, setCurrentUserRole] = useState('instructor');
 
+  // What's New modal state
+  const [showWhatsNew, setShowWhatsNew] = useState(false);
+
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/');
@@ -1632,7 +1640,95 @@ function SettingsPageContent() {
             </div>
           </div>
         </div>
+
+        {/* My Feedback card — always visible */}
+        <div className="mt-6 bg-white dark:bg-gray-800 rounded-xl shadow-sm">
+          <div className="px-6 py-4 border-b dark:border-gray-700">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <MessageSquare className="w-5 h-5 text-blue-600" />
+              My Feedback
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              View and track the status of your submitted bug reports and feature requests
+            </p>
+          </div>
+          <div className="p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <MessageSquare className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900 dark:text-white text-sm">
+                    My Submissions
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 max-w-sm">
+                    See all feedback you&apos;ve submitted and check whether it&apos;s been reviewed, is in progress, or has been resolved.
+                  </p>
+                </div>
+              </div>
+              <Link
+                href="/feedback/my-submissions"
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors flex-shrink-0"
+              >
+                <MessageSquare className="w-4 h-4" />
+                View My Feedback
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        {/* App Version card — always visible */}
+        <div className="mt-6 bg-white dark:bg-gray-800 rounded-xl shadow-sm">
+          <div className="px-6 py-4 border-b dark:border-gray-700">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <Info className="w-5 h-5 text-gray-500" />
+              About
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              App version and release notes
+            </p>
+          </div>
+          <div className="p-6">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Sparkles className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900 dark:text-white text-sm">
+                    PMI Paramedic Tools
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    Version {APP_VERSION} &mdash; Released {new Date(VERSION_DATE + 'T00:00:00').toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowWhatsNew(true)}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 rounded-lg transition-colors"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  What&apos;s New
+                </button>
+                <Link
+                  href="/help#changelog"
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
+                >
+                  <ScrollText className="w-4 h-4" />
+                  Changelog
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
       </main>
+
+      {/* What's New modal — triggered from the About card */}
+      {showWhatsNew && (
+        <WhatsNewModal forceShow onClose={() => setShowWhatsNew(false)} />
+      )}
 
       {/* Tour overlay - only shown when replay is triggered from this page */}
       {showTour && (

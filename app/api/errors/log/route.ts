@@ -53,29 +53,20 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabaseAdmin();
 
-    // Resolve user_id from session email if available
-    let userId: string | null = null;
-    if (session?.user?.email) {
-      const { data: userRow } = await supabase
-        .from('lab_users')
-        .select('id')
-        .eq('email', session.user.email)
-        .single();
-      userId = userRow?.id ?? null;
-    }
-
-    const userAgent =
-      request.headers.get('user-agent') || null;
+    const userId = session?.user?.email || null;
+    const userEmail = session?.user?.email || null;
+    const userAgent = request.headers.get('user-agent') || null;
 
     const { error: insertError } = await supabase
       .from('error_logs')
       .insert({
         user_id: userId,
+        user_email: userEmail,
         error_message: String(error_message).substring(0, 2000),
         error_stack: error_stack ? String(error_stack).substring(0, 10000) : null,
-        component_name: component_name ? String(component_name).substring(0, 255) : null,
         page_url: url ? String(url).substring(0, 2000) : null,
-        user_agent: userAgent ? userAgent.substring(0, 500) : null,
+        component_name: component_name ? String(component_name).substring(0, 255) : null,
+        metadata: { user_agent: userAgent },
       });
 
     if (insertError) {

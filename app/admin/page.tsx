@@ -29,6 +29,7 @@ import {
   Activity,
   Bell,
   Wrench,
+  ClipboardCheck,
 } from 'lucide-react';
 import {
   canAccessAdmin,
@@ -204,6 +205,13 @@ export default function AdminPage() {
       title: 'Data Export',
       description: 'Export cohort, student, lab, clinical, and assessment data as CSV or JSON',
       color: 'bg-emerald-600',
+    },
+    {
+      href: '/admin/qa-checklist',
+      icon: ClipboardCheck,
+      title: 'QA Checklist',
+      description: 'Comprehensive quality assurance checklist for testing all major features across roles',
+      color: 'bg-blue-600',
     },
   ];
 
