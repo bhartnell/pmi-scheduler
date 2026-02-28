@@ -150,6 +150,13 @@ export default function AdminPage() {
       color: 'bg-sky-500'
     },
     {
+      href: '/admin/broadcast',
+      icon: Megaphone,
+      title: 'Broadcast Notifications',
+      description: 'Send targeted in-app or email notifications to users, roles, cohorts, or individuals',
+      color: 'bg-indigo-600',
+    },
+    {
       href: '/admin/access-requests',
       icon: UserCheck,
       title: 'Access Requests',

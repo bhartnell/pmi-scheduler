@@ -50,6 +50,7 @@ import {
   ROLE_DEFAULTS,
 } from '@/components/dashboard/widgets';
 import AnnouncementBanner from '@/components/dashboard/AnnouncementBanner';
+import ResizableWidget, { useWidgetSizes } from '@/components/dashboard/ResizableWidget';
 import { useToast } from '@/components/Toast';
 import HelpTooltip from '@/components/HelpTooltip';
 import { SkeletonStats, SkeletonCard } from '@/components/ui';
@@ -63,6 +64,7 @@ interface DashboardPreferences {
 export default function HomePage() {
   const { data: session, status } = useSession();
   const toast = useToast();
+  const { resetAll: resetWidgetSizes } = useWidgetSizes();
   const [currentUser, setCurrentUser] = useState<CurrentUserMinimal | null>(null);
   const [preferences, setPreferences] = useState<DashboardPreferences | null>(null);
   const [showCustomize, setShowCustomize] = useState(false);
@@ -189,6 +191,8 @@ export default function HomePage() {
         fetch('/api/user/preferences', { method: 'DELETE' }),
         fetch('/api/dashboard/layout', { method: 'DELETE' }),
       ]);
+      // Also clear locally-persisted widget sizes
+      resetWidgetSizes();
       // Re-fetch fresh preferences (will return role default)
       const prefsRes = await fetch('/api/user/preferences');
       const prefsData = await prefsRes.json();
@@ -204,41 +208,61 @@ export default function HomePage() {
     setResetting(false);
   };
 
-  // Render a widget by ID
+  // Render a widget by ID, wrapped in ResizableWidget
   const renderWidget = (widgetId: string) => {
     const quickLinks = preferences?.quick_links || ['scenarios', 'students', 'schedule'];
+    let content: React.ReactNode = null;
     switch (widgetId) {
       case 'notifications':
-        return <NotificationsWidget key={widgetId} />;
+        content = <NotificationsWidget />;
+        break;
       case 'my_labs':
-        return <MyLabsWidget key={widgetId} />;
+        content = <MyLabsWidget />;
+        break;
       case 'quick_links':
-        return <QuickLinksWidget key={widgetId} links={quickLinks} />;
+        content = <QuickLinksWidget links={quickLinks} />;
+        break;
       case 'needs_attention':
-        return <NeedsAttentionWidget key={widgetId} />;
+        content = <NeedsAttentionWidget />;
+        break;
       case 'overview_stats':
-        return <OverviewStatsWidget key={widgetId} />;
+        content = <OverviewStatsWidget />;
+        break;
       case 'open_stations':
-        return <OpenStationsWidget key={widgetId} />;
+        content = <OpenStationsWidget />;
+        break;
       case 'recent_feedback':
-        return <RecentFeedbackWidget key={widgetId} />;
+        content = <RecentFeedbackWidget />;
+        break;
       case 'onboarding':
-        return <OnboardingWidget key={widgetId} />;
+        content = <OnboardingWidget />;
+        break;
       case 'overdue_tasks':
-        return <OverdueTasksWidget key={widgetId} />;
+        content = <OverdueTasksWidget />;
+        break;
       case 'recent_activity':
-        return <RecentActivityWidget key={widgetId} />;
+        content = <RecentActivityWidget />;
+        break;
       case 'quick_stats':
-        return <QuickStatsWidget key={widgetId} />;
+        content = <QuickStatsWidget />;
+        break;
       case 'my_tasks':
-        return <MyTasksWidget key={widgetId} />;
+        content = <MyTasksWidget />;
+        break;
       case 'cert_expiry':
-        return <CertExpiryWidget key={widgetId} />;
+        content = <CertExpiryWidget />;
+        break;
       case 'at_risk_students':
-        return <AtRiskStudentsWidget key={widgetId} />;
+        content = <AtRiskStudentsWidget />;
+        break;
       default:
         return null;
     }
+    return (
+      <ResizableWidget key={widgetId} widgetId={widgetId}>
+        {content}
+      </ResizableWidget>
+    );
   };
 
   // Loading state with skeleton UI
@@ -486,7 +510,7 @@ export default function HomePage() {
                 )}
               </div>
             </div>
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {preferences.dashboard_widgets.map(widgetId => renderWidget(widgetId))}
             </div>
           </div>

@@ -8,15 +8,205 @@ import {
   Calendar,
   ChevronLeft,
   ChevronRight,
-  Plus,
   X,
-  Clock,
   Trash2,
-  Home
+  Home,
+  Sparkles,
+  ChevronDown,
+  ChevronUp,
+  Check,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import NotificationBell from '@/components/NotificationBell';
 import { type InstructorAvailability, formatTime, type CurrentUser } from '@/types';
+
+// ─── Suggestion types ───────────────────────────────────────────────────────
+
+interface AvailabilitySuggestion {
+  day_of_week: number;
+  day_name: string;
+  suggested: 'available' | 'unavailable';
+  confidence: number;
+  pattern: string;
+}
+
+interface SuggestionsResponse {
+  success: boolean;
+  suggestions: AvailabilitySuggestion[];
+  weeks_analyzed: number;
+}
+
+// ─── Confidence helpers ──────────────────────────────────────────────────────
+
+function confidenceColor(confidence: number): string {
+  if (confidence >= 80) return 'bg-green-500';
+  if (confidence >= 60) return 'bg-amber-400';
+  return 'bg-gray-400';
+}
+
+function confidenceTextColor(confidence: number): string {
+  if (confidence >= 80) return 'text-green-700 dark:text-green-400';
+  if (confidence >= 60) return 'text-amber-700 dark:text-amber-400';
+  return 'text-gray-500 dark:text-gray-400';
+}
+
+function confidenceBadgeBg(confidence: number): string {
+  if (confidence >= 80) return 'bg-green-100 dark:bg-green-900/30';
+  if (confidence >= 60) return 'bg-amber-100 dark:bg-amber-900/30';
+  return 'bg-gray-100 dark:bg-gray-700';
+}
+
+// ─── Suggestions Panel ───────────────────────────────────────────────────────
+
+interface SuggestionsPanelProps {
+  suggestions: AvailabilitySuggestion[];
+  weeksAnalyzed: number;
+  onApplyAll: (suggestions: AvailabilitySuggestion[]) => void;
+  onApplyOne: (suggestion: AvailabilitySuggestion) => void;
+  onDismiss: () => void;
+}
+
+function SuggestionsPanel({
+  suggestions,
+  weeksAnalyzed,
+  onApplyAll,
+  onApplyOne,
+  onDismiss,
+}: SuggestionsPanelProps) {
+  const [expanded, setExpanded] = useState(true);
+  const [appliedDays, setAppliedDays] = useState<Set<number>>(new Set());
+
+  const handleApplyOne = (suggestion: AvailabilitySuggestion) => {
+    onApplyOne(suggestion);
+    setAppliedDays(prev => new Set(prev).add(suggestion.day_of_week));
+  };
+
+  const handleApplyAll = () => {
+    onApplyAll(suggestions);
+    setAppliedDays(new Set(suggestions.map(s => s.day_of_week)));
+  };
+
+  // Only show suggestions with meaningful confidence (>= 50%)
+  const actionable = suggestions.filter(s => s.confidence >= 50);
+
+  if (actionable.length === 0) return null;
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-blue-200 dark:border-blue-800 mb-4 overflow-hidden">
+      {/* Panel header */}
+      <div className="flex items-center justify-between px-4 py-3 bg-blue-50 dark:bg-blue-900/20 border-b border-blue-200 dark:border-blue-800">
+        <button
+          onClick={() => setExpanded(v => !v)}
+          className="flex items-center gap-2 text-blue-800 dark:text-blue-300 font-semibold text-sm hover:text-blue-600 dark:hover:text-blue-200 transition-colors"
+        >
+          <Sparkles className="w-4 h-4 text-blue-500 dark:text-blue-400" />
+          Smart Suggestions
+          {expanded ? (
+            <ChevronUp className="w-4 h-4" />
+          ) : (
+            <ChevronDown className="w-4 h-4" />
+          )}
+        </button>
+
+        <div className="flex items-center gap-2">
+          {expanded && (
+            <button
+              onClick={handleApplyAll}
+              className="px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Apply All
+            </button>
+          )}
+          <button
+            onClick={onDismiss}
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+            title="Dismiss suggestions"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Panel body */}
+      {expanded && (
+        <div className="p-4">
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            Based on your last {weeksAnalyzed} weeks of submissions
+          </p>
+
+          <div className="space-y-2">
+            {actionable.map(suggestion => {
+              const applied = appliedDays.has(suggestion.day_of_week);
+              return (
+                <div
+                  key={suggestion.day_of_week}
+                  className={`flex items-center gap-3 p-2 rounded-lg transition-colors ${
+                    applied
+                      ? 'bg-green-50 dark:bg-green-900/10'
+                      : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                  }`}
+                >
+                  {/* Day name */}
+                  <span className="w-24 text-sm font-medium text-gray-900 dark:text-white shrink-0">
+                    {suggestion.day_name}
+                  </span>
+
+                  {/* Suggested status badge */}
+                  <span
+                    className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${
+                      suggestion.suggested === 'available'
+                        ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                        : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'
+                    }`}
+                  >
+                    {suggestion.suggested === 'available' ? 'Available' : 'Unavailable'}
+                  </span>
+
+                  {/* Confidence bar + percentage */}
+                  <div className="flex-1 flex items-center gap-2 min-w-0">
+                    <div className="flex-1 h-1.5 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${confidenceColor(suggestion.confidence)}`}
+                        style={{ width: `${suggestion.confidence}%` }}
+                      />
+                    </div>
+                    <span
+                      className={`text-xs font-medium shrink-0 ${confidenceTextColor(suggestion.confidence)}`}
+                    >
+                      {suggestion.confidence}%
+                    </span>
+                  </div>
+
+                  {/* Pattern text */}
+                  <span className="hidden sm:block text-xs text-gray-400 dark:text-gray-500 shrink-0 w-36 text-right">
+                    {suggestion.pattern}
+                  </span>
+
+                  {/* Apply button */}
+                  {applied ? (
+                    <span className="shrink-0 flex items-center gap-1 text-xs text-green-600 dark:text-green-400 font-medium w-14 justify-end">
+                      <Check className="w-3 h-3" />
+                      Applied
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => handleApplyOne(suggestion)}
+                      className="shrink-0 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 font-medium w-14 text-right transition-colors"
+                    >
+                      Apply
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function MyAvailabilityPage() {
   const { data: session, status } = useSession();
@@ -43,6 +233,12 @@ export default function MyAvailabilityPage() {
   });
   const [saving, setSaving] = useState(false);
 
+  // Suggestions state
+  const [suggestions, setSuggestions] = useState<AvailabilitySuggestion[]>([]);
+  const [weeksAnalyzed, setWeeksAnalyzed] = useState(8);
+  const [suggestionsDismissed, setSuggestionsDismissed] = useState(false);
+  const [suggestionsLoaded, setSuggestionsLoaded] = useState(false);
+
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/');
@@ -58,6 +254,9 @@ export default function MyAvailabilityPage() {
   useEffect(() => {
     if (currentUser) {
       fetchAvailability();
+      if (!suggestionsLoaded) {
+        fetchSuggestions();
+      }
     }
   }, [currentUser, currentDate]);
 
@@ -100,6 +299,84 @@ export default function MyAvailabilityPage() {
       }
     } catch (error) {
       console.error('Error fetching availability:', error);
+    }
+  };
+
+  const fetchSuggestions = async () => {
+    try {
+      const res = await fetch('/api/scheduling/availability/suggestions');
+      const data: SuggestionsResponse = await res.json();
+      if (data.success && data.suggestions.length > 0) {
+        setSuggestions(data.suggestions);
+        setWeeksAnalyzed(data.weeks_analyzed);
+      }
+    } catch (error) {
+      console.error('Error fetching suggestions:', error);
+    } finally {
+      setSuggestionsLoaded(true);
+    }
+  };
+
+  // ── Suggestion application helpers ────────────────────────────────────────
+
+  /**
+   * Given a suggestion, find the next occurrence of that day of week starting
+   * from tomorrow and create an availability entry for it.
+   */
+  const applyOneSuggestion = async (suggestion: AvailabilitySuggestion) => {
+    if (suggestion.suggested !== 'available') return;
+
+    // Find the next date matching this day of week
+    const today = new Date();
+    const daysUntilTarget = (suggestion.day_of_week - today.getDay() + 7) % 7 || 7;
+    const targetDate = new Date(today);
+    targetDate.setDate(today.getDate() + daysUntilTarget);
+    const dateStr = targetDate.toISOString().split('T')[0];
+
+    try {
+      await fetch('/api/scheduling/availability', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          date: dateStr,
+          is_all_day: true,
+          notes: `Auto-suggested (${suggestion.pattern})`,
+        }),
+      });
+      fetchAvailability();
+    } catch (error) {
+      console.error('Error applying suggestion:', error);
+    }
+  };
+
+  /**
+   * Apply all "available" suggestions for the upcoming week.
+   */
+  const applyAllSuggestions = async (allSuggestions: AvailabilitySuggestion[]) => {
+    const availableSuggestions = allSuggestions.filter(s => s.suggested === 'available');
+    if (availableSuggestions.length === 0) return;
+
+    const today = new Date();
+    const entries = availableSuggestions.map(suggestion => {
+      const daysUntilTarget = (suggestion.day_of_week - today.getDay() + 7) % 7 || 7;
+      const targetDate = new Date(today);
+      targetDate.setDate(today.getDate() + daysUntilTarget);
+      return {
+        date: targetDate.toISOString().split('T')[0],
+        is_all_day: true,
+        notes: `Auto-suggested (${suggestion.pattern})`,
+      };
+    });
+
+    try {
+      await fetch('/api/scheduling/availability/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entries }),
+      });
+      fetchAvailability();
+    } catch (error) {
+      console.error('Error applying all suggestions:', error);
     }
   };
 
@@ -299,6 +576,11 @@ export default function MyAvailabilityPage() {
 
   if (!session || !currentUser) return null;
 
+  const showSuggestions =
+    !suggestionsDismissed &&
+    suggestionsLoaded &&
+    suggestions.filter(s => s.confidence >= 50).length > 0;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
@@ -342,6 +624,18 @@ export default function MyAvailabilityPage() {
 
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-4 py-6">
+
+        {/* Smart Suggestions Panel */}
+        {showSuggestions && (
+          <SuggestionsPanel
+            suggestions={suggestions}
+            weeksAnalyzed={weeksAnalyzed}
+            onApplyAll={applyAllSuggestions}
+            onApplyOne={applyOneSuggestion}
+            onDismiss={() => setSuggestionsDismissed(true)}
+          />
+        )}
+
         {/* Calendar Header */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 mb-4">
           <div className="flex items-center justify-between">

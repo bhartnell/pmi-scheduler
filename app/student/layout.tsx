@@ -21,7 +21,8 @@ import {
   BookOpen,
   TrendingUp,
   Menu,
-  X
+  X,
+  UserCircle
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { isStudent } from '@/lib/permissions';
@@ -91,6 +92,7 @@ export default function StudentLayout({
     { href: '/student/completions', label: 'Stations', icon: CheckSquare },
     { href: '/student/ekg', label: 'EKG Progress', icon: Activity },
     { href: '/student/scenarios', label: 'Scenarios', icon: BookOpen },
+    { href: '/student/profile', label: 'My Profile', icon: UserCircle },
   ];
 
   return (
