@@ -48,10 +48,10 @@ export async function GET(_request: NextRequest) {
     const enriched = await Promise.all(
       (webhooks ?? []).map(async (wh: any) => {
         const { data: logs } = await supabase
-          .from('webhook_logs')
-          .select('success, response_status, created_at')
+          .from('webhook_deliveries')
+          .select('success, response_status, delivered_at')
           .eq('webhook_id', wh.id)
-          .order('created_at', { ascending: false })
+          .order('delivered_at', { ascending: false })
           .limit(50);
 
         const recent = logs ?? [];
@@ -66,7 +66,7 @@ export async function GET(_request: NextRequest) {
             success_count: successCount,
             failure_count: totalDeliveries - successCount,
             success_rate: totalDeliveries > 0 ? Math.round((successCount / totalDeliveries) * 100) : null,
-            last_delivery_at: lastDelivery?.created_at ?? null,
+            last_delivery_at: lastDelivery?.delivered_at ?? null,
             last_delivery_success: lastDelivery?.success ?? null,
             last_delivery_status: lastDelivery?.response_status ?? null,
           },
@@ -104,10 +104,9 @@ export async function POST(request: NextRequest) {
       secret?: string | null;
       events: string[];
       is_active?: boolean;
-      headers?: Record<string, string>;
     };
 
-    const { name, url, secret, events, is_active = true, headers = {} } = body;
+    const { name, url, secret, events, is_active = true } = body;
 
     if (!name?.trim()) {
       return NextResponse.json({ error: 'Webhook name is required' }, { status: 400 });
@@ -137,9 +136,7 @@ export async function POST(request: NextRequest) {
         secret: resolvedSecret,
         events,
         is_active,
-        headers,
         created_by: currentUser.email,
-        updated_at: new Date().toISOString(),
       })
       .select()
       .single();

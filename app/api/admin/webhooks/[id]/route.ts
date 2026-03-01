@@ -53,10 +53,10 @@ export async function GET(
     }
 
     const { data: logs } = await supabase
-      .from('webhook_logs')
+      .from('webhook_deliveries')
       .select('*')
       .eq('webhook_id', id)
-      .order('created_at', { ascending: false })
+      .order('delivered_at', { ascending: false })
       .limit(20);
 
     return NextResponse.json({ success: true, webhook, logs: logs ?? [] });
@@ -93,7 +93,6 @@ export async function PUT(
       secret?: string | null;
       events?: string[];
       is_active?: boolean;
-      headers?: Record<string, string>;
     };
 
     const supabase = getSupabaseAdmin();
@@ -123,13 +122,12 @@ export async function PUT(
       return NextResponse.json({ error: 'At least one event must be selected' }, { status: 400 });
     }
 
-    const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    const updates: Record<string, unknown> = {};
     if (body.name !== undefined) updates.name = body.name.trim();
     if (body.url !== undefined) updates.url = body.url.trim();
     if (body.secret !== undefined) updates.secret = body.secret;
     if (body.events !== undefined) updates.events = body.events;
     if (body.is_active !== undefined) updates.is_active = body.is_active;
-    if (body.headers !== undefined) updates.headers = body.headers;
 
     const { data: webhook, error: updateError } = await supabase
       .from('webhooks')

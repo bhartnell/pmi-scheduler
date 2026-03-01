@@ -28,24 +28,24 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabaseAdmin();
 
-    // Fetch current 2FA record
+    // Fetch current 2FA record from lab_users
     const { data, error: fetchError } = await supabase
-      .from('user_2fa')
-      .select('totp_secret, is_enabled, backup_codes')
-      .eq('user_email', session.user.email)
+      .from('lab_users')
+      .select('totp_secret, totp_enabled, totp_backup_codes')
+      .eq('email', session.user.email)
       .single();
 
     if (fetchError || !data) {
       return NextResponse.json({ error: '2FA is not configured for your account.' }, { status: 400 });
     }
 
-    if (!data.is_enabled) {
+    if (!data.totp_enabled) {
       return NextResponse.json({ error: '2FA is not currently enabled.' }, { status: 400 });
     }
 
     // First, try to verify as a TOTP code (6 digits)
     let verified = false;
-    let remainingBackupCodes: string[] = Array.isArray(data.backup_codes) ? (data.backup_codes as string[]) : [];
+    let remainingBackupCodes: string[] = Array.isArray(data.totp_backup_codes) ? (data.totp_backup_codes as string[]) : [];
 
     if (/^\d{6}$/.test(code) && data.totp_secret) {
       verified = verifyTOTP(data.totp_secret, code);
@@ -69,15 +69,14 @@ export async function POST(request: NextRequest) {
 
     // Disable 2FA
     const { error: updateError } = await supabase
-      .from('user_2fa')
+      .from('lab_users')
       .update({
-        is_enabled: false,
+        totp_enabled: false,
         totp_secret: null,
-        backup_codes: [],
-        remembered_devices: [],
-        updated_at: new Date().toISOString(),
+        totp_backup_codes: [],
+        totp_verified_at: null,
       })
-      .eq('user_email', session.user.email);
+      .eq('email', session.user.email);
 
     if (updateError) {
       throw updateError;

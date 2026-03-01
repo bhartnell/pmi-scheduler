@@ -155,7 +155,7 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(parseInt(request.nextUrl.searchParams.get('limit') || '50'), 100);
 
     const { data, error } = await supabase
-      .from('bulk_operation_logs')
+      .from('bulk_operations_history')
       .select('*')
       .order('created_at', { ascending: false })
       .limit(limit);
@@ -242,7 +242,6 @@ export async function POST(request: NextRequest) {
     // Step 2: Execute the operation
     // -------------------------------------------------------------------------
 
-    let operationStatus: string = 'completed';
     let rollbackData: unknown = null;
     let operationId: string | null = null;
     let exportContent: string | null = null;
@@ -269,7 +268,6 @@ export async function POST(request: NextRequest) {
         .in('id', recordIds);
 
       if (updateError) {
-        operationStatus = 'failed';
         console.error('Bulk update_status error:', updateError);
         return NextResponse.json({ error: 'Failed to update records' }, { status: 500 });
       }
@@ -293,7 +291,6 @@ export async function POST(request: NextRequest) {
         .in('id', recordIds);
 
       if (updateError) {
-        operationStatus = 'failed';
         console.error('Bulk assign_cohort error:', updateError);
         return NextResponse.json({ error: 'Failed to assign cohort' }, { status: 500 });
       }
@@ -313,7 +310,6 @@ export async function POST(request: NextRequest) {
         .in('id', recordIds);
 
       if (deleteError) {
-        operationStatus = 'failed';
         console.error('Bulk delete error:', deleteError);
         return NextResponse.json({ error: 'Failed to delete records' }, { status: 500 });
       }
@@ -344,15 +340,16 @@ export async function POST(request: NextRequest) {
     // -------------------------------------------------------------------------
 
     const { data: logEntry, error: logError } = await supabase
-      .from('bulk_operation_logs')
+      .from('bulk_operations_history')
       .insert({
         operation_type: operation,
         target_table: table,
         affected_count: affectedCount,
-        parameters,
-        status: operationStatus,
+        filters,
+        changes: parameters,
+        is_dry_run: false,
         rollback_data: rollbackData,
-        performed_by: currentUser.email,
+        executed_by: currentUser.email,
       })
       .select('id')
       .single();
@@ -399,7 +396,6 @@ export async function POST(request: NextRequest) {
       success: true,
       operation_id: operationId,
       affected_count: affectedCount,
-      status: operationStatus,
       message: `Successfully ${operation === 'delete_records' ? 'deleted' : 'updated'} ${affectedCount} records`,
     });
 

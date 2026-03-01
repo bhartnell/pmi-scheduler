@@ -59,10 +59,10 @@ export async function GET(
     }
 
     const { data: logs, error, count } = await supabase
-      .from('webhook_logs')
+      .from('webhook_deliveries')
       .select('*', { count: 'exact' })
       .eq('webhook_id', id)
-      .order('created_at', { ascending: false })
+      .order('delivered_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
     if (error) throw error;

@@ -30,13 +30,12 @@ import { getDeviceIcon } from '@/lib/session-tracker';
 interface UserSession {
   id: string;
   user_email: string;
-  device_info: string | null;
+  device_info: { browser: string; os: string; device_type: string } | null;
   ip_address: string | null;
-  location: string | null;
-  user_agent: string | null;
   last_active: string;
   created_at: string;
-  is_current: boolean;
+  session_token: string;
+  is_revoked: boolean;
   expires_at: string | null;
 }
 
@@ -76,20 +75,26 @@ type TimeoutValue = (typeof TIMEOUT_OPTIONS)[number]['value'];
 
 function SessionCard({
   session,
+  isCurrent,
   onRevoke,
   revoking,
 }: {
   session: UserSession;
+  isCurrent: boolean;
   onRevoke: (id: string) => void;
   revoking: boolean;
 }) {
   const iconName = getDeviceIcon(session.device_info);
   const DeviceIcon = DEVICE_ICONS[iconName];
 
+  const deviceLabel = session.device_info
+    ? `${session.device_info.browser} on ${session.device_info.os}`
+    : 'Unknown device';
+
   return (
     <div
       className={`flex items-start gap-4 p-4 rounded-xl border transition-colors ${
-        session.is_current
+        isCurrent
           ? 'border-blue-300 bg-blue-50/60 dark:bg-blue-900/20 dark:border-blue-700'
           : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'
       }`}
@@ -97,14 +102,14 @@ function SessionCard({
       {/* Device icon */}
       <div
         className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-          session.is_current
+          isCurrent
             ? 'bg-blue-100 dark:bg-blue-800/40'
             : 'bg-gray-100 dark:bg-gray-700'
         }`}
       >
         <DeviceIcon
           className={`w-5 h-5 ${
-            session.is_current
+            isCurrent
               ? 'text-blue-600 dark:text-blue-400'
               : 'text-gray-500 dark:text-gray-400'
           }`}
@@ -115,9 +120,9 @@ function SessionCard({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-medium text-gray-900 dark:text-white text-sm truncate">
-            {session.device_info ?? 'Unknown device'}
+            {deviceLabel}
           </span>
-          {session.is_current && (
+          {isCurrent && (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs font-medium flex-shrink-0">
               <ShieldCheck className="w-3 h-3" />
               Current session
@@ -133,9 +138,6 @@ function SessionCard({
           {session.ip_address && (
             <div>IP: {session.ip_address}</div>
           )}
-          {session.location && (
-            <div>Location: {session.location}</div>
-          )}
           <div>
             Started {new Date(session.created_at).toLocaleDateString('en-US', {
               year: 'numeric',
@@ -147,7 +149,7 @@ function SessionCard({
       </div>
 
       {/* Revoke button — only on non-current sessions */}
-      {!session.is_current && (
+      {!isCurrent && (
         <button
           onClick={() => onRevoke(session.id)}
           disabled={revoking}
@@ -177,6 +179,7 @@ export default function SessionsPage() {
   const [loading, setLoading] = useState(true);
   const [revokingId, setRevokingId] = useState<string | null>(null);
   const [revokingAll, setRevokingAll] = useState(false);
+  const [currentSessionToken, setCurrentSessionToken] = useState<string | null>(null);
 
   // Session timeout preference (stored in localStorage)
   const [timeoutValue, setTimeoutValue] = useState<TimeoutValue>('24h');
@@ -185,6 +188,27 @@ export default function SessionsPage() {
   // New device login alert (stored via user preferences)
   const [newDeviceAlert, setNewDeviceAlert] = useState(false);
   const [savingAlert, setSavingAlert] = useState(false);
+
+  // Register / update the current session and get back the token
+  const registerCurrentSession = useCallback(async () => {
+    try {
+      const storedToken = sessionStorage.getItem('pmi_session_token');
+      const res = await fetch('/api/settings/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_token: storedToken ?? undefined }),
+      });
+      if (res.ok) {
+        const data = await res.json() as { success: boolean; session_token?: string };
+        if (data.session_token) {
+          sessionStorage.setItem('pmi_session_token', data.session_token);
+          setCurrentSessionToken(data.session_token);
+        }
+      }
+    } catch {
+      // best-effort
+    }
+  }, []);
 
   // Load sessions
   const loadSessions = useCallback(async () => {
@@ -229,10 +253,10 @@ export default function SessionsPage() {
 
   useEffect(() => {
     if (authSession?.user?.email) {
-      loadSessions();
+      registerCurrentSession().then(() => loadSessions());
       loadPreferences();
     }
-  }, [authSession, loadSessions, loadPreferences]);
+  }, [authSession, loadSessions, loadPreferences, registerCurrentSession]);
 
   // Revoke a single session
   const handleRevoke = async (id: string) => {
@@ -255,9 +279,13 @@ export default function SessionsPage() {
   const handleRevokeAll = async () => {
     setRevokingAll(true);
     try {
-      const res = await fetch('/api/settings/sessions/revoke-all', { method: 'POST' });
+      const res = await fetch('/api/settings/sessions/revoke-all', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_token: currentSessionToken }),
+      });
       if (!res.ok) throw new Error('Failed to revoke sessions');
-      setSessions((prev) => prev.filter((s) => s.is_current));
+      setSessions((prev) => prev.filter((s) => s.session_token === currentSessionToken));
       toast.success('All other sessions logged out');
     } catch {
       toast.error('Failed to log out other sessions');
@@ -317,7 +345,7 @@ export default function SessionsPage() {
 
   if (!authSession) return null;
 
-  const otherSessions = sessions.filter((s) => !s.is_current);
+  const otherSessions = sessions.filter((s) => s.session_token !== currentSessionToken);
   const totalCount = sessions.length;
 
   return (
@@ -451,6 +479,7 @@ export default function SessionsPage() {
                 <SessionCard
                   key={s.id}
                   session={s}
+                  isCurrent={s.session_token === currentSessionToken}
                   onRevoke={handleRevoke}
                   revoking={revokingId === s.id}
                 />

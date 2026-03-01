@@ -6,13 +6,12 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 export interface SessionRecord {
   id: string;
   user_email: string;
-  device_info: string | null;
+  device_info: { browser: string; os: string; device_type: string } | null;
   ip_address: string | null;
-  location: string | null;
-  user_agent: string | null;
   last_active: string;
   created_at: string;
-  is_current: boolean;
+  session_token: string;
+  is_revoked: boolean;
   expires_at: string | null;
 }
 
@@ -68,20 +67,36 @@ export function parseUserAgent(ua: string): { browser: string; os: string } {
   return { browser, os };
 }
 
+// ---- Device type detector ----
+
+function getDeviceType(ua: string): string {
+  if (ua.includes('iPhone') || (ua.includes('Android') && ua.includes('Mobile'))) {
+    return 'mobile';
+  }
+  if (ua.includes('iPad') || ua.includes('Tablet')) {
+    return 'tablet';
+  }
+  return 'desktop';
+}
+
 // ---- Device icon name resolver ----
 
 export function getDeviceIcon(
-  deviceInfo: string | null,
+  deviceInfo: { browser: string; os: string; device_type: string } | string | null,
 ): 'Laptop' | 'Smartphone' | 'Tablet' | 'Monitor' {
   if (!deviceInfo) return 'Monitor';
-  const lower = deviceInfo.toLowerCase();
-  if (lower.includes('iphone') || lower.includes('android') || lower.includes('mobile')) {
+
+  // Handle both JSONB object (new schema) and legacy string format
+  const deviceType = typeof deviceInfo === 'object' ? deviceInfo.device_type : null;
+  const text = typeof deviceInfo === 'string' ? deviceInfo.toLowerCase() : JSON.stringify(deviceInfo).toLowerCase();
+
+  if (deviceType === 'mobile' || text.includes('iphone') || text.includes('android') || text.includes('mobile')) {
     return 'Smartphone';
   }
-  if (lower.includes('ipad') || lower.includes('tablet')) {
+  if (deviceType === 'tablet' || text.includes('ipad') || text.includes('tablet')) {
     return 'Tablet';
   }
-  if (lower.includes('macos') || lower.includes('windows') || lower.includes('linux')) {
+  if (text.includes('macos') || text.includes('windows') || text.includes('linux')) {
     return 'Laptop';
   }
   return 'Monitor';
@@ -92,14 +107,15 @@ export function getDeviceIcon(
 export async function trackSession(
   email: string,
   request: NextRequest,
-  sessionId?: string,
-): Promise<void> {
+  sessionToken?: string,
+): Promise<string | null> {
   try {
     const supabase = getSupabaseAdmin();
 
     const ua = request.headers.get('user-agent') ?? '';
     const { browser, os } = parseUserAgent(ua);
-    const deviceInfo = `${browser} on ${os}`;
+    const deviceType = getDeviceType(ua);
+    const deviceInfo = { browser, os, device_type: deviceType };
 
     // Try to get real IP (handles proxies/Vercel)
     const forwardedFor = request.headers.get('x-forwarded-for');
@@ -111,13 +127,14 @@ export async function trackSession(
 
     const now = new Date().toISOString();
 
-    // If a sessionId is provided and it exists, update last_active and flip is_current
-    if (sessionId) {
+    // If a sessionToken is provided and it exists, update last_active
+    if (sessionToken) {
       const { data: existing } = await supabase
         .from('user_sessions')
         .select('id')
-        .eq('id', sessionId)
+        .eq('session_token', sessionToken)
         .eq('user_email', email)
+        .eq('is_revoked', false)
         .single();
 
       if (existing) {
@@ -126,47 +143,34 @@ export async function trackSession(
           .update({
             last_active: now,
             device_info: deviceInfo,
-            user_agent: ua,
-            is_current: true,
           })
-          .eq('id', sessionId);
+          .eq('session_token', sessionToken);
 
-        // Unset is_current on all other sessions for this user
-        await supabase
-          .from('user_sessions')
-          .update({ is_current: false })
-          .eq('user_email', email)
-          .neq('id', sessionId);
-
-        return;
+        return sessionToken;
       }
     }
 
-    // Insert new session record
+    // Insert new session record with a unique token
+    const newToken = crypto.randomUUID();
+
     const { data: inserted } = await supabase
       .from('user_sessions')
       .insert({
         user_email: email,
         device_info: deviceInfo,
         ip_address: ipAddress,
-        user_agent: ua,
         last_active: now,
         created_at: now,
-        is_current: true,
+        session_token: newToken,
+        is_revoked: false,
       })
-      .select('id')
+      .select('session_token')
       .single();
 
-    if (!inserted) return;
-
-    // Unset is_current on all other sessions for this user
-    await supabase
-      .from('user_sessions')
-      .update({ is_current: false })
-      .eq('user_email', email)
-      .neq('id', inserted.id);
+    return inserted?.session_token ?? null;
   } catch (err) {
     // Never throw — session tracking is best-effort
     console.error('trackSession error:', err);
+    return null;
   }
 }

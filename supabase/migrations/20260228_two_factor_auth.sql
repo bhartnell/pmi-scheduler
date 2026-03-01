@@ -1,13 +1,6 @@
-CREATE TABLE IF NOT EXISTS user_2fa (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_email TEXT NOT NULL UNIQUE,
-  totp_secret TEXT,
-  is_enabled BOOLEAN DEFAULT false,
-  backup_codes JSONB DEFAULT '[]',
-  remembered_devices JSONB DEFAULT '[]',
-  required BOOLEAN DEFAULT false,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
-);
-CREATE INDEX IF NOT EXISTS idx_user_2fa_email ON user_2fa(user_email);
+-- 2. Two Factor Auth
+ALTER TABLE lab_users ADD COLUMN IF NOT EXISTS totp_secret TEXT;
+ALTER TABLE lab_users ADD COLUMN IF NOT EXISTS totp_enabled BOOLEAN DEFAULT false;
+ALTER TABLE lab_users ADD COLUMN IF NOT EXISTS totp_backup_codes TEXT[];
+ALTER TABLE lab_users ADD COLUMN IF NOT EXISTS totp_verified_at TIMESTAMPTZ;
 NOTIFY pgrst, 'reload schema';

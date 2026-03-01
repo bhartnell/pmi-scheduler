@@ -33,7 +33,6 @@ type PanelStep = 'idle' | 'setup' | 'verify' | 'backup_codes' | 'disable';
 
 interface TwoFAStatus {
   is_enabled: boolean;
-  required: boolean;
   backup_codes_remaining: number;
 }
 
@@ -375,7 +374,6 @@ export default function TwoFactorPanel() {
   }
 
   const isEnabled = status?.is_enabled ?? false;
-  const isRequired = status?.required ?? false;
 
   return (
     <div className="space-y-5">
@@ -411,15 +409,8 @@ export default function TwoFactorPanel() {
                       ? `${status.backup_codes_remaining} backup code${status.backup_codes_remaining !== 1 ? 's' : ''} remaining.`
                       : 'No backup codes remaining — consider regenerating them.'
                   }`
-                : isRequired
-                ? 'Your role requires 2FA. Please set it up below.'
                 : 'Add an extra layer of security to your account.'}
             </p>
-            {isRequired && !isEnabled && (
-              <p className="text-xs text-amber-600 dark:text-amber-400 mt-1 font-medium">
-                Required for your role
-              </p>
-            )}
           </div>
         </div>
 

@@ -57,10 +57,8 @@ export interface WebhookRecord {
   secret: string | null;
   events: string[];
   is_active: boolean;
-  headers: Record<string, string>;
-  created_by: string;
+  created_by: string | null;
   created_at: string;
-  updated_at: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -101,7 +99,6 @@ export async function sendWebhookRequest(
     'Content-Type': 'application/json',
     'X-Webhook-Event': event,
     'User-Agent': 'PMI-EMS-Scheduler/1.0',
-    ...(webhook.headers || {}),
   };
 
   if (webhook.secret) {
@@ -135,14 +132,15 @@ export async function sendWebhookRequest(
 
   // Log the delivery attempt
   try {
-    await supabase.from('webhook_logs').insert({
+    await supabase.from('webhook_deliveries').insert({
       webhook_id: webhook.id,
-      event,
+      event_type: event,
       payload: { event, data: payload },
       response_status: responseStatus,
       response_body: responseBody.slice(0, 4000), // cap at 4KB
       success,
       retry_count: 0,
+      delivered_at: new Date().toISOString(),
     });
   } catch (logErr) {
     console.error('Failed to log webhook delivery:', logErr);

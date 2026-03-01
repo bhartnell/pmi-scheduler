@@ -17,17 +17,16 @@ export async function GET() {
     const supabase = getSupabaseAdmin();
 
     const { data } = await supabase
-      .from('user_2fa')
-      .select('is_enabled, required, backup_codes')
-      .eq('user_email', session.user.email)
+      .from('lab_users')
+      .select('totp_secret, totp_enabled, totp_backup_codes, totp_verified_at')
+      .eq('email', session.user.email)
       .single();
 
     return NextResponse.json({
       success: true,
-      is_enabled: data?.is_enabled ?? false,
-      required: data?.required ?? false,
-      backup_codes_remaining: Array.isArray(data?.backup_codes)
-        ? (data.backup_codes as string[]).length
+      is_enabled: data?.totp_enabled ?? false,
+      backup_codes_remaining: Array.isArray(data?.totp_backup_codes)
+        ? (data.totp_backup_codes as string[]).length
         : 0,
     });
   } catch (error: unknown) {

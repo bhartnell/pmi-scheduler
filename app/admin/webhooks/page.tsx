@@ -60,10 +60,8 @@ interface WebhookRecord {
   secret: string | null;
   events: string[];
   is_active: boolean;
-  headers: Record<string, string>;
-  created_by: string;
+  created_by: string | null;
   created_at: string;
-  updated_at: string;
   stats: {
     total_deliveries: number;
     success_count: number;
@@ -78,18 +76,13 @@ interface WebhookRecord {
 interface WebhookLog {
   id: string;
   webhook_id: string;
-  event: string;
+  event_type: string;
   payload: object | null;
   response_status: number | null;
   response_body: string | null;
   success: boolean;
   retry_count: number;
-  created_at: string;
-}
-
-interface HeaderEntry {
-  key: string;
-  value: string;
+  delivered_at: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -152,10 +145,6 @@ function WebhookModal({ initial, onClose, onSave }: WebhookModalProps) {
     new Set(initial?.events ?? [])
   );
   const [isActive, setIsActive] = useState(initial?.is_active ?? true);
-  const [headers, setHeaders] = useState<HeaderEntry[]>(() => {
-    const h = initial?.headers ?? {};
-    return Object.entries(h).map(([key, value]) => ({ key, value }));
-  });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -181,12 +170,6 @@ function WebhookModal({ initial, onClose, onSave }: WebhookModalProps) {
     });
   };
 
-  const addHeader = () => setHeaders((prev) => [...prev, { key: '', value: '' }]);
-  const removeHeader = (i: number) => setHeaders((prev) => prev.filter((_, idx) => idx !== i));
-  const updateHeader = (i: number, field: 'key' | 'value', val: string) => {
-    setHeaders((prev) => prev.map((h, idx) => (idx === i ? { ...h, [field]: val } : h)));
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -196,18 +179,11 @@ function WebhookModal({ initial, onClose, onSave }: WebhookModalProps) {
     try { new URL(url); } catch { setError('Invalid URL'); return; }
     if (selectedEvents.size === 0) { setError('Select at least one event'); return; }
 
-    // Build headers object, skip empty keys
-    const headersObj: Record<string, string> = {};
-    headers.forEach(({ key, value }) => {
-      if (key.trim()) headersObj[key.trim()] = value;
-    });
-
     const payload: Record<string, unknown> = {
       name: name.trim(),
       url: url.trim(),
       events: Array.from(selectedEvents),
       is_active: isActive,
-      headers: headersObj,
     };
 
     // Handle secret
@@ -373,56 +349,6 @@ function WebhookModal({ initial, onClose, onSave }: WebhookModalProps) {
                 );
               })}
             </div>
-          </div>
-
-          {/* Custom Headers */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Custom Headers
-              </label>
-              <button
-                type="button"
-                onClick={addHeader}
-                className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1"
-              >
-                <Plus className="w-3 h-3" />
-                Add Header
-              </button>
-            </div>
-            {headers.length === 0 ? (
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                No custom headers. Click "Add Header" to add Authorization or other headers.
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {headers.map((h, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={h.key}
-                      onChange={(e) => updateHeader(i, 'key', e.target.value)}
-                      placeholder="Header name"
-                      className="flex-1 border border-gray-300 dark:border-gray-600 rounded-lg px-2.5 py-1.5 text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    <input
-                      type="text"
-                      value={h.value}
-                      onChange={(e) => updateHeader(i, 'value', e.target.value)}
-                      placeholder="Value"
-                      className="flex-1 border border-gray-300 dark:border-gray-600 rounded-lg px-2.5 py-1.5 text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeHeader(i)}
-                      className="p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
 
           {/* Active toggle */}
@@ -735,13 +661,13 @@ app.post('/webhook', (req, res) => {
                       >
                         <td className="px-3 py-2">
                           <span className="text-xs font-mono text-gray-700 dark:text-gray-300">
-                            {log.event}
+                            {log.event_type}
                           </span>
                         </td>
                         <td className="px-3 py-2">
                           <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
                             <Clock className="w-3 h-3" />
-                            {timeAgo(log.created_at)}
+                            {timeAgo(log.delivered_at)}
                           </div>
                         </td>
                         <td className="px-3 py-2">
@@ -765,7 +691,7 @@ app.post('/webhook', (req, res) => {
                           <td colSpan={5} className="px-3 py-3 space-y-2">
                             <div>
                               <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
-                                Sent at: {formatDateTime(log.created_at)}
+                                Sent at: {formatDateTime(log.delivered_at)}
                               </p>
                             </div>
                             {log.payload && (

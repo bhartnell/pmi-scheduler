@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
     const isAdmin = hasMinRole(currentUser.role, 'admin');
 
     let query = supabase
-      .from('deep_link_configs')
+      .from('app_deep_links')
       .select('*')
       .order('created_at', { ascending: true });
 
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
     const supabase = getSupabaseAdmin();
 
     const { data, error } = await supabase
-      .from('deep_link_configs')
+      .from('app_deep_links')
       .insert({
         route_pattern: route_pattern.trim(),
         app_scheme: (app_scheme ?? 'pmi').trim(),
@@ -148,7 +148,7 @@ export async function PATCH(request: NextRequest) {
     const supabase = getSupabaseAdmin();
 
     const { data, error } = await supabase
-      .from('deep_link_configs')
+      .from('app_deep_links')
       .update(allowedFields)
       .eq('id', id)
       .select('*')
@@ -194,7 +194,7 @@ export async function DELETE(request: NextRequest) {
     const supabase = getSupabaseAdmin();
 
     const { error } = await supabase
-      .from('deep_link_configs')
+      .from('app_deep_links')
       .delete()
       .eq('id', id);
 

@@ -25,11 +25,11 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabaseAdmin();
 
-    // Fetch the stored (pending) secret for this user
+    // Fetch the stored (pending) secret for this user from lab_users
     const { data, error: fetchError } = await supabase
-      .from('user_2fa')
-      .select('totp_secret, is_enabled')
-      .eq('user_email', session.user.email)
+      .from('lab_users')
+      .select('totp_secret, totp_enabled')
+      .eq('email', session.user.email)
       .single();
 
     if (fetchError || !data?.totp_secret) {
@@ -49,13 +49,13 @@ export async function POST(request: NextRequest) {
     const backupCodes = generateBackupCodes();
 
     const { error: updateError } = await supabase
-      .from('user_2fa')
+      .from('lab_users')
       .update({
-        is_enabled: true,
-        backup_codes: backupCodes,
-        updated_at: new Date().toISOString(),
+        totp_enabled: true,
+        totp_backup_codes: backupCodes,
+        totp_verified_at: new Date().toISOString(),
       })
-      .eq('user_email', session.user.email);
+      .eq('email', session.user.email);
 
     if (updateError) {
       throw updateError;

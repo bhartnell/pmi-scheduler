@@ -50,7 +50,6 @@ import type { CurrentUserMinimal } from '@/types';
 
 type OperationType = 'update_status' | 'assign_cohort' | 'delete_records' | 'export_records';
 type FilterOperator = 'equals' | 'not_equals' | 'contains' | 'greater_than' | 'less_than' | 'in_list';
-type OperationStatus = 'pending' | 'running' | 'completed' | 'failed' | 'rolled_back';
 
 interface FilterCondition {
   id: string; // local UI id for keying
@@ -64,9 +63,10 @@ interface BulkOperationLog {
   operation_type: string;
   target_table: string;
   affected_count: number;
-  parameters: Record<string, unknown>;
-  status: OperationStatus;
-  performed_by: string;
+  filters: Record<string, unknown>;
+  changes: Record<string, unknown>;
+  is_dry_run: boolean;
+  executed_by: string | null;
   created_at: string;
 }
 
@@ -144,14 +144,6 @@ const OPERATIONS: { value: OperationType; label: string; icon: React.ElementType
   { value: 'delete_records', label: 'Delete Records', icon: Trash2, color: 'bg-red-500' },
   { value: 'export_records', label: 'Export Records', icon: Download, color: 'bg-purple-500' },
 ];
-
-const STATUS_CONFIG: Record<OperationStatus, { label: string; badge: string }> = {
-  pending: { label: 'Pending', badge: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400' },
-  running: { label: 'Running', badge: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400' },
-  completed: { label: 'Completed', badge: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' },
-  failed: { label: 'Failed', badge: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400' },
-  rolled_back: { label: 'Rolled Back', badge: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400' },
-};
 
 // Student status options (common statuses)
 const STUDENT_STATUSES = ['active', 'inactive', 'withdrawn', 'graduated', 'on_leave', 'remediation'];
@@ -496,7 +488,7 @@ export default function BulkOperationsPage() {
   // ---------------------------------------------------------------------------
 
   const isRollbackable = (op: BulkOperationLog) =>
-    ['update_status', 'assign_cohort'].includes(op.operation_type) && op.status === 'completed';
+    ['update_status', 'assign_cohort'].includes(op.operation_type) && !op.is_dry_run;
 
   const getStatusOptions = () => {
     if (targetTable === 'students') return STUDENT_STATUSES;
@@ -914,20 +906,23 @@ export default function BulkOperationsPage() {
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">Operation</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">Table</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">Affected</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">Status</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">Performed By</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">Executed By</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">Time</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wide">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                   {history.map((op) => {
-                    const statusCfg = STATUS_CONFIG[op.status] || STATUS_CONFIG.completed;
                     const canRollback = isRollbackable(op);
                     return (
                       <tr key={op.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
                         <td className="px-4 py-3 text-sm text-gray-900 dark:text-white font-medium">
                           {op.operation_type.replace(/_/g, ' ')}
+                          {op.is_dry_run && (
+                            <span className="ml-1 px-1.5 py-0.5 rounded text-xs bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-normal">
+                              dry run
+                            </span>
+                          )}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
                           {op.target_table}
@@ -935,13 +930,8 @@ export default function BulkOperationsPage() {
                         <td className="px-4 py-3 text-sm text-gray-900 dark:text-white">
                           {op.affected_count.toLocaleString()}
                         </td>
-                        <td className="px-4 py-3">
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusCfg.badge}`}>
-                            {statusCfg.label}
-                          </span>
-                        </td>
                         <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 max-w-40 truncate">
-                          {op.performed_by}
+                          {op.executed_by ?? '—'}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                           {fmtDate(op.created_at)}

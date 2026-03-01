@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { trackSession } from '@/lib/session-tracker';
 
-// GET — list all sessions for the current user
+// GET — list all active (non-revoked) sessions for the current user
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
@@ -18,6 +18,7 @@ export async function GET() {
       .from('user_sessions')
       .select('*')
       .eq('user_email', session.user.email)
+      .eq('is_revoked', false)
       .order('last_active', { ascending: false });
 
     if (error) throw error;
@@ -38,23 +39,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await request.json().catch(() => ({})) as { session_id?: string };
-    const sessionId = typeof body.session_id === 'string' ? body.session_id : undefined;
+    const body = await request.json().catch(() => ({})) as { session_token?: string };
+    const sessionToken = typeof body.session_token === 'string' ? body.session_token : undefined;
 
-    await trackSession(session.user.email, request, sessionId);
+    const newToken = await trackSession(session.user.email, request, sessionToken);
 
-    // Return the current session record so the client can persist the id
-    const supabase = getSupabaseAdmin();
-    const { data } = await supabase
-      .from('user_sessions')
-      .select('*')
-      .eq('user_email', session.user.email)
-      .eq('is_current', true)
-      .order('last_active', { ascending: false })
-      .limit(1)
-      .single();
+    // Return the current session record so the client can persist the token
+    if (newToken) {
+      const supabase = getSupabaseAdmin();
+      const { data } = await supabase
+        .from('user_sessions')
+        .select('*')
+        .eq('session_token', newToken)
+        .single();
 
-    return NextResponse.json({ success: true, session: data ?? null });
+      return NextResponse.json({ success: true, session: data ?? null, session_token: newToken });
+    }
+
+    return NextResponse.json({ success: true, session: null });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'Failed to track session';
     console.error('POST /api/settings/sessions error:', error);

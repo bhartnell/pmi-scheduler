@@ -20,18 +20,14 @@ export async function POST() {
     const secret = generateTOTPSecret();
     const uri = buildOTPAuthURI(session.user.email, secret);
 
-    // Upsert a record with the new secret (not yet enabled)
+    // Store the pending secret on the lab_users row (not yet enabled)
     const { error } = await supabase
-      .from('user_2fa')
-      .upsert(
-        {
-          user_email: session.user.email,
-          totp_secret: secret,
-          is_enabled: false,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_email' },
-      );
+      .from('lab_users')
+      .update({
+        totp_secret: secret,
+        totp_enabled: false,
+      })
+      .eq('email', session.user.email);
 
     if (error) {
       throw error;

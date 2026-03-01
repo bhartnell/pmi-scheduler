@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
-// DELETE — revoke (delete) a specific session
+// DELETE — revoke a specific session (sets is_revoked = true)
 export async function DELETE(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -18,32 +18,26 @@ export async function DELETE(
 
     const supabase = getSupabaseAdmin();
 
-    // Verify the session belongs to this user before deleting
+    // Verify the session belongs to this user before revoking
     const { data: target, error: fetchError } = await supabase
       .from('user_sessions')
-      .select('id, is_current')
+      .select('id, session_token')
       .eq('id', id)
       .eq('user_email', session.user.email)
+      .eq('is_revoked', false)
       .single();
 
     if (fetchError || !target) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 });
     }
 
-    if (target.is_current) {
-      return NextResponse.json(
-        { error: 'Cannot revoke your current session. Sign out instead.' },
-        { status: 400 },
-      );
-    }
-
-    const { error: deleteError } = await supabase
+    const { error: revokeError } = await supabase
       .from('user_sessions')
-      .delete()
+      .update({ is_revoked: true })
       .eq('id', id)
       .eq('user_email', session.user.email);
 
-    if (deleteError) throw deleteError;
+    if (revokeError) throw revokeError;
 
     return NextResponse.json({ success: true });
   } catch (error: unknown) {

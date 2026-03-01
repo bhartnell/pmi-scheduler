@@ -47,7 +47,7 @@ export async function POST(
 
     // Fetch the original operation log
     const { data: operationLog, error: fetchError } = await supabase
-      .from('bulk_operation_logs')
+      .from('bulk_operations_history')
       .select('*')
       .eq('id', id)
       .single();
@@ -62,11 +62,6 @@ export async function POST(
       return NextResponse.json({
         error: `Operation type "${operationLog.operation_type}" cannot be rolled back. Only update_status and assign_cohort operations are reversible.`,
       }, { status: 400 });
-    }
-
-    // Check that the operation hasn't already been rolled back
-    if (operationLog.status === 'rolled_back') {
-      return NextResponse.json({ error: 'This operation has already been rolled back' }, { status: 400 });
     }
 
     // Validate rollback data exists
@@ -109,30 +104,18 @@ export async function POST(
     }
 
     // -------------------------------------------------------------------------
-    // Mark original operation as rolled back
-    // -------------------------------------------------------------------------
-
-    const { error: updateStatusError } = await supabase
-      .from('bulk_operation_logs')
-      .update({ status: 'rolled_back' })
-      .eq('id', id);
-
-    if (updateStatusError) {
-      console.error('Failed to update operation status to rolled_back:', updateStatusError);
-    }
-
-    // -------------------------------------------------------------------------
     // Log the rollback as a new operation entry
     // -------------------------------------------------------------------------
 
-    await supabase.from('bulk_operation_logs').insert({
+    await supabase.from('bulk_operations_history').insert({
       operation_type: `rollback_${operationLog.operation_type}`,
       target_table: table,
       affected_count: successCount,
-      parameters: { original_operation_id: id, success_count: successCount, fail_count: failCount },
-      status: failCount === 0 ? 'completed' : 'failed',
+      filters: {},
+      changes: { original_operation_id: id, success_count: successCount, fail_count: failCount },
+      is_dry_run: false,
       rollback_data: null,
-      performed_by: currentUser.email,
+      executed_by: currentUser.email,
     });
 
     // Audit log

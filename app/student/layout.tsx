@@ -24,7 +24,9 @@ import {
   X,
   UserCircle,
   FileText,
-  Users
+  Users,
+  CalendarCheck,
+  FolderOpen,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { isStudent } from '@/lib/permissions';
@@ -94,6 +96,8 @@ export default function StudentLayout({
     { href: '/student/completions', label: 'Stations', icon: CheckSquare },
     { href: '/student/ekg', label: 'EKG Progress', icon: Activity },
     { href: '/student/scenarios', label: 'Scenarios', icon: BookOpen },
+    { href: '/student/available-labs', label: 'Lab Sign-Ups', icon: CalendarCheck },
+    { href: '/student/documents', label: 'Documents', icon: FolderOpen },
     { href: '/student/attendance-appeals', label: 'Attendance Appeals', icon: FileText },
     { href: '/student/peer-eval', label: 'Peer Evals', icon: Users },
     { href: '/student/profile', label: 'My Profile', icon: UserCircle },
