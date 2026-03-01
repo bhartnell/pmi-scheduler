@@ -22,7 +22,8 @@ async function getCurrentUser(email: string) {
 // ---------------------------------------------------------------------------
 // POST /api/admin/lab-templates/seed
 //
-// Seeds lab templates from embedded JSON files (data/paramedic_s1_labs.json, data/paramedic_s2_labs.json).
+// Seeds lab templates from embedded JSON files:
+//   data/paramedic_s1_labs.json, data/paramedic_s2_labs.json, data/emt_s1_labs.json
 // No request body needed — reads from project data files.
 // Requires admin+ role.
 // ---------------------------------------------------------------------------
@@ -40,7 +41,7 @@ export async function POST() {
 
     const supabase = getSupabaseAdmin();
     const dataDir = path.join(process.cwd(), 'data');
-    const files = ['paramedic_s1_labs.json', 'paramedic_s2_labs.json'];
+    const files = ['paramedic_s1_labs.json', 'paramedic_s2_labs.json', 'emt_s1_labs.json'];
     const results: Array<{ file: string; templates: number; stations: number; errors: string[] }> = [];
 
     for (const file of files) {

@@ -502,7 +502,7 @@ export default function CohortHubPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           cohort_id: cohortId,
-          program: cohort.program.abbreviation,
+          program: templateProgram,
           semester: genSemester,
           start_date: genStartDate,
           force: genForce,
@@ -535,7 +535,15 @@ export default function CohortHubPage() {
     setGenerating(false);
   };
 
-  const isPMProgram = cohort?.program?.abbreviation === 'PM' || cohort?.program?.abbreviation === 'PMD';
+  // Map program abbreviation to template program key
+  const getTemplateProgram = (): string | null => {
+    const abbr = cohort?.program?.abbreviation?.toUpperCase();
+    if (abbr === 'PM' || abbr === 'PMD') return 'paramedic';
+    if (abbr === 'EMT') return 'emt';
+    return null;
+  };
+  const templateProgram = getTemplateProgram();
+  const hasTemplates = templateProgram !== null;
 
   if (status === 'loading' || loading) {
     return (
@@ -836,7 +844,7 @@ export default function CohortHubPage() {
               actionLabel="View Report"
               href={`/lab-management/cohorts/${cohortId}/completion`}
             />
-            {isPMProgram && !cohort?.is_archived && (
+            {hasTemplates && !cohort?.is_archived && (
               <ToolCard
                 icon={Wand2}
                 title="Generate Lab Days"
@@ -1359,7 +1367,7 @@ export default function CohortHubPage() {
             {/* Body */}
             <div className="p-6 space-y-4">
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                This will create lab days and stations from the Paramedic program templates for the selected semester.
+                This will create lab days and stations from the {cohort?.program?.name || 'program'} templates for the selected semester.
               </p>
 
               {/* Semester */}

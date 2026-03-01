@@ -84,11 +84,16 @@ export default function CohortManagementPage() {
   const [saving, setSaving] = useState(false);
   const [userRole, setUserRole] = useState<Role | null>(null);
 
-  // Helper to check if program is PM
-  const isPMProgram = (programId: string) => {
+  // Helper to check if program has lab templates and get template program key
+  const getTemplateProgram = (programId: string): string | null => {
     const program = programs.find(p => p.id === programId);
-    return program?.abbreviation === 'PM' || program?.abbreviation === 'PMD';
+    if (!program) return null;
+    const abbr = program.abbreviation?.toUpperCase();
+    if (abbr === 'PM' || abbr === 'PMD') return 'paramedic';
+    if (abbr === 'EMT') return 'emt';
+    return null;
   };
+  const hasTemplates = (programId: string) => getTemplateProgram(programId) !== null;
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -159,7 +164,7 @@ export default function CohortManagementPage() {
           cohort_number: parseInt(createCohortNumber),
           start_date: createStartDate || null,
           expected_end_date: createEndDate || null,
-          current_semester: isPMProgram(createProgramId) && createSemester !== '' ? createSemester : null,
+          current_semester: hasTemplates(createProgramId) && createSemester !== '' ? createSemester : null,
         }),
       });
 
@@ -168,15 +173,15 @@ export default function CohortManagementPage() {
         setCohorts([data.cohort, ...cohorts]);
 
         // Auto-generate lab days if enabled
-        if (autoGenerate && isPMProgram(createProgramId) && createSemester !== '' && createStartDate) {
+        const templateProgram = getTemplateProgram(createProgramId);
+        if (autoGenerate && templateProgram && createSemester !== '' && createStartDate) {
           try {
-            const selectedProgram = programs.find(p => p.id === createProgramId);
             const applyRes = await fetch('/api/admin/lab-templates/apply', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 cohort_id: data.cohort.id,
-                program: selectedProgram?.name?.toLowerCase() || 'paramedic',
+                program: templateProgram,
                 semester: createSemester,
                 start_date: createStartDate,
                 skip_existing: true,
@@ -414,7 +419,7 @@ export default function CohortManagementPage() {
                     value={createProgramId}
                     onChange={(e) => {
                       setCreateProgramId(e.target.value);
-                      if (!isPMProgram(e.target.value)) setCreateSemester('');
+                      if (!hasTemplates(e.target.value)) setCreateSemester('');
                     }}
                     className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                   >
@@ -437,7 +442,7 @@ export default function CohortManagementPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Semester</label>
-                  {isPMProgram(createProgramId) ? (
+                  {hasTemplates(createProgramId) ? (
                     <select
                       value={createSemester}
                       onChange={(e) => setCreateSemester(e.target.value ? parseInt(e.target.value) : '')}
@@ -474,7 +479,7 @@ export default function CohortManagementPage() {
                 </div>
               </div>
               {/* Auto-generate lab days checkbox (PM programs with semester and start date) */}
-              {isPMProgram(createProgramId) && createSemester !== '' && createStartDate && (
+              {hasTemplates(createProgramId) && createSemester !== '' && createStartDate && (
                 <div className="flex items-start gap-3 p-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg">
                   <input
                     type="checkbox"

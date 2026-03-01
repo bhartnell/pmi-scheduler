@@ -1,0 +1,912 @@
+{
+  "program": "emt",
+  "semester": 1,
+  "_notes": [
+    "Built from Group 4 Platinum Skills by Week spreadsheet.",
+    "Scenario/activity content not yet populated — no EMT weekly spreadsheets parsed.",
+    "Run EMT weekly spreadsheets through the lab parser to populate station scenario content.",
+    "Key structural features from Platinum data:",
+    "  - batch_graded: skill signed off for whole group in that session",
+    "  - signoff_week: when final Platinum sign-off occurs (may be later than week taught)",
+    "  - signoff_note: 'student_dependent' = sign off when individual achieves competency; 'capstone_only' = no teaching week, first appears at capstone",
+    "  - requires_two_instructors: station requires 2 instructors present for valid sign-off",
+    "  - deferred: skill taught early but sign-off deliberately held to later week",
+    "NREMT practical exam runs in-house with SNHD authorization — no external observer.",
+    "Weeks 9-10 have no Platinum skills documented — scenario/activity content pending from weekly spreadsheets."
+  ],
+  "templates": [
+    {
+      "week_number": 1,
+      "day_number": 1,
+      "title": "EMT Program Orientation",
+      "category": "orientation",
+      "instructor_count": 2,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": false,
+      "review_notes": null,
+      "stations": [
+        {
+          "station_type": "skills",
+          "station_name": "Program Orientation",
+          "skills": [],
+          "format_notes": "Orientation to EMT program, lab facilities, equipment locations, Platinum portal introduction. No skill sign-offs Week 1."
+        }
+      ]
+    },
+    {
+      "week_number": 2,
+      "day_number": 1,
+      "title": "Vital Signs, Patient Lifting and Moving, PPE",
+      "category": "skills_lab",
+      "instructor_count": 2,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": false,
+      "review_notes": null,
+      "stations": [
+        {
+          "station_type": "skills",
+          "station_name": "Vital Signs — Blood Pressure and Pulses",
+          "skills": [
+            {
+              "name": "Blood Pressure by Palpation",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": false,
+              "signoff_week": null,
+              "signoff_note": "student_dependent — sign off when individual student achieves competency, no fixed week"
+            },
+            {
+              "name": "Blood Pressure by Auscultation",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": false,
+              "signoff_week": null,
+              "signoff_note": "student_dependent — sign off when individual student achieves competency, no fixed week"
+            },
+            {
+              "name": "Pulses",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": false,
+              "signoff_week": null,
+              "signoff_note": "student_dependent — sign off when individual student achieves competency, no fixed week"
+            }
+          ],
+          "format_notes": "BP and pulse skills are student-dependent sign-off — not batch graded. Instructor signs off each student individually when competency demonstrated. Continue practice across subsequent weeks as needed."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "Lifting, Moving, and PPE",
+          "skills": [
+            {
+              "name": "Provide proper patient lifting and moving techniques",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": true,
+              "signoff_week": 2,
+              "signoff_note": "Batch graded — signed off as group this session"
+            },
+            {
+              "name": "Select, don, doff and properly/safely discard PPE",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": true,
+              "signoff_week": 2,
+              "signoff_note": "Batch graded — signed off as group this session"
+            }
+          ],
+          "format_notes": "Both skills batch graded — signed off as a group in this session. Equipment: stretcher, PPE supplies (gloves, gown, mask, eye protection)."
+        }
+      ]
+    },
+    {
+      "week_number": 3,
+      "day_number": 1,
+      "title": "Medications, Monitoring, and Neurological Assessment",
+      "category": "skills_lab",
+      "instructor_count": 3,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": false,
+      "review_notes": null,
+      "stations": [
+        {
+          "station_type": "skills",
+          "station_name": "Medication Administration",
+          "skills": [
+            {
+              "name": "Metered Dose Inhaler (MDI) Medication Administration",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": true,
+              "signoff_week": 3,
+              "signoff_note": "Batch graded — signed off this session"
+            },
+            {
+              "name": "Nebulized Medication Administration",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": true,
+              "signoff_week": 3,
+              "signoff_note": "Batch graded — signed off this session"
+            },
+            {
+              "name": "Sublingual (SL) Medication Administration",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": true,
+              "signoff_week": 3,
+              "signoff_note": "Batch graded — signed off this session"
+            },
+            {
+              "name": "Naloxone Administration",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": true,
+              "signoff_week": 3,
+              "signoff_note": "Batch graded — signed off this session"
+            },
+            {
+              "name": "Oral medication administration (patient assisted)",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": true,
+              "signoff_week": 3,
+              "signoff_note": "Batch graded — signed off this session"
+            },
+            {
+              "name": "Use of Auto-Injector",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": true,
+              "signoff_week": 3,
+              "signoff_note": "Batch graded — signed off this session"
+            }
+          ],
+          "format_notes": "All medication administration skills batch graded this session. Equipment: MDI trainer, nebulizer, SL tablet trainer, naloxone trainer, auto-injector trainer."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "Monitoring and Neurological Assessment",
+          "skills": [
+            {
+              "name": "Perform blood glucose monitoring",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": true,
+              "signoff_week": 3,
+              "signoff_note": "Batch graded — signed off this session"
+            },
+            {
+              "name": "Pupillary Status",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": true,
+              "signoff_week": 4,
+              "signoff_note": "Batch graded — sign-off deferred to Week 4 (completed during 2nd patient assessment lecture day, 2/9)"
+            },
+            {
+              "name": "Determine a patient's level of consciousness",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": true,
+              "signoff_week": null,
+              "signoff_note": "batch this — no fixed sign-off week documented"
+            },
+            {
+              "name": "Use and interpret pulse oximetry",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": false,
+              "signoff_week": null,
+              "signoff_note": "No fixed sign-off week documented"
+            },
+            {
+              "name": "Skin Signs",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": true,
+              "signoff_week": null,
+              "signoff_note": "batch this — no fixed sign-off week documented"
+            }
+          ],
+          "format_notes": "Blood glucose batch graded this session. Pupillary status deferred to Week 4 (lecture day alignment). LOC and skin signs: batch when ready — no fixed week. Equipment: glucometer trainers, penlight, pulse oximeter."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "Oxygen Administration — Introduction",
+          "skills": [
+            {
+              "name": "Assemble and operate an oxygen tank",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": false,
+              "signoff_week": 13,
+              "signoff_note": "deferred — taught Week 3, sign-off not until Week 13. Skill practiced across semester."
+            },
+            {
+              "name": "Oxygen Administration by Non-Rebreather Mask (EMT)",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": false,
+              "signoff_week": 13,
+              "signoff_note": "deferred — taught Week 3, sign-off not until Week 13. Skill practiced across semester."
+            }
+          ],
+          "format_notes": "O2 tank assembly and NRB mask introduced this week. Final sign-off deferred to Week 13 — students practice throughout semester. Equipment: O2 tanks, regulators, NRB masks, nasal cannulas."
+        }
+      ]
+    },
+    {
+      "week_number": 4,
+      "day_number": 1,
+      "title": "Patient History, Resuscitation, BVM, CPR, FBAO, AED",
+      "category": "skills_lab",
+      "instructor_count": 4,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": false,
+      "review_notes": null,
+      "stations": [
+        {
+          "station_type": "skills",
+          "station_name": "Patient History",
+          "skills": [
+            {
+              "name": "Obtain a Patient History from an Alert and Oriented Patient",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": true,
+              "signoff_week": 4,
+              "signoff_note": "Batch graded — completed during 2nd patient assessment lecture day (2/9)"
+            },
+            {
+              "name": "Pupillary Status",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": true,
+              "signoff_week": 4,
+              "signoff_note": "Batch graded — deferred from Week 3, signed off this session (2nd patient assessment lecture day)"
+            }
+          ],
+          "format_notes": "Patient history and pupillary status both signed off this session in alignment with 2nd patient assessment lecture day."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "Resuscitation — CPR, BVM, AED, FBAO",
+          "skills": [
+            {
+              "name": "BVM Ventilation of an Apneic Adult Patient (EMT)",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": true,
+              "signoff_week": 4,
+              "signoff_note": "Batch graded — signed off this session"
+            },
+            {
+              "name": "Cardiac Arrest Management / AED (EMT)",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": true,
+              "signoff_week": 4,
+              "signoff_note": "Batch graded — signed off this session"
+            },
+            {
+              "name": "Automated or Semi-Automated Defibrillator",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": true,
+              "signoff_week": 4,
+              "signoff_note": "Batch graded — signed off this session"
+            },
+            {
+              "name": "CPR Adult and Child One Rescuer",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": true,
+              "signoff_week": 4,
+              "signoff_note": "Batch graded — signed off this session"
+            },
+            {
+              "name": "CPR Adult and Child Two Rescuers",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": true,
+              "signoff_week": 4,
+              "signoff_note": "Batch graded — signed off this session"
+            },
+            {
+              "name": "CPR Infant One Rescuer",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": true,
+              "signoff_week": 4,
+              "signoff_note": "Batch graded — signed off this session"
+            },
+            {
+              "name": "Manual Airway Maneuvers",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": true,
+              "signoff_week": 4,
+              "signoff_note": "Batch graded — signed off this session"
+            },
+            {
+              "name": "Foreign Body Obstruction Conscious Adult and Child",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": true,
+              "signoff_week": 4,
+              "signoff_note": "Batch graded — signed off this session"
+            },
+            {
+              "name": "Foreign Body Obstruction Conscious Infant",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": true,
+              "signoff_week": 4,
+              "signoff_note": "Batch graded — signed off this session"
+            },
+            {
+              "name": "Foreign Body Obstruction Unconscious Adult and Child",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": true,
+              "signoff_week": 4,
+              "signoff_note": "Batch graded — signed off this session"
+            },
+            {
+              "name": "Foreign Body Obstruction Unconscious Infant",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": true,
+              "signoff_week": 4,
+              "signoff_note": "Batch graded — signed off this session"
+            }
+          ],
+          "format_notes": "Heavy resuscitation session — all skills batch graded. Equipment: CPR manikins adult/child/infant, AED trainer, BVM adult and infant. High instructor demand — plan 4 instructors minimum."
+        }
+      ]
+    },
+    {
+      "week_number": 5,
+      "day_number": 1,
+      "title": "Advanced Airway — NPA, OPA, Lung Sounds, BiPAP/CPAP, Suctioning",
+      "category": "skills_lab",
+      "instructor_count": 3,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": false,
+      "review_notes": null,
+      "stations": [
+        {
+          "station_type": "skills",
+          "station_name": "Airway Adjuncts",
+          "skills": [
+            {
+              "name": "Nasopharyngeal Airway",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": false,
+              "signoff_week": 5,
+              "signoff_note": "Individual sign-off this session"
+            },
+            {
+              "name": "Oropharyngeal Airway",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": false,
+              "signoff_week": 5,
+              "signoff_note": "Individual sign-off this session"
+            }
+          ],
+          "format_notes": "NPA and OPA individually signed off this session. Equipment: airway manikins, NPA and OPA sets, lubricant."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "Lung Sounds and CPAP/BiPAP",
+          "skills": [
+            {
+              "name": "Lung Sounds",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": false,
+              "signoff_week": 5,
+              "signoff_note": "Individual sign-off this session"
+            },
+            {
+              "name": "BiPAP-CPAP",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": false,
+              "signoff_week": 5,
+              "signoff_note": "Individual sign-off this session"
+            }
+          ],
+          "format_notes": "Lung sound auscultation and CPAP/BiPAP application. Equipment: stethoscopes, CPAP equipment, lung sound simulator if available."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "Suctioning",
+          "skills": [
+            {
+              "name": "Suctioning with Rigid Catheter",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": false,
+              "signoff_week": 13,
+              "signoff_note": "deferred — taught Week 5, sign-off not until Week 13. Practiced across semester."
+            }
+          ],
+          "format_notes": "Rigid catheter suctioning introduced this week. Final sign-off deferred to Week 13 — students practice throughout semester. Equipment: suction units, rigid catheters, airway manikin."
+        }
+      ]
+    },
+    {
+      "week_number": 6,
+      "day_number": 1,
+      "title": "Hemorrhage Control, Trauma Fundamentals, C-Spine",
+      "category": "skills_lab",
+      "instructor_count": 3,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": false,
+      "review_notes": null,
+      "stations": [
+        {
+          "station_type": "skills",
+          "station_name": "Hemorrhage Control",
+          "skills": [
+            {
+              "name": "Perform hemorrhage control — wound packing",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": false,
+              "signoff_week": 6,
+              "signoff_note": "Signed off this session"
+            },
+            {
+              "name": "Pressure Dressing Application",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": false,
+              "signoff_week": 6,
+              "signoff_note": "Signed off this session"
+            },
+            {
+              "name": "Tourniquet Application",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": false,
+              "signoff_week": 6,
+              "signoff_note": "Signed off this session"
+            },
+            {
+              "name": "Bleeding Control/Shock Management (EMT)",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": false,
+              "signoff_week": 6,
+              "signoff_note": "Signed off this session"
+            }
+          ],
+          "format_notes": "All hemorrhage control skills signed off this session. Equipment: wound packing trainers, pressure dressings, tourniquets (CAT/SOFTT-W), moulage supplies."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "C-Spine and Spinal Immobilization",
+          "skills": [
+            {
+              "name": "Cervical Collar Application",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": false,
+              "signoff_week": 6,
+              "signoff_note": "Signed off this session"
+            },
+            {
+              "name": "Spinal Immobilization (Supine Patient)",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": false,
+              "signoff_week": 13,
+              "signoff_note": "deferred — taught Week 6, sign-off not until Week 13. Complex skill requiring continued practice."
+            }
+          ],
+          "format_notes": "C-collar signed off this session. Supine spinal immobilization introduced but sign-off deferred to Week 13 — deliberate pedagogical design, requires continued practice and assessment integration. Equipment: cervical collars (various sizes), backboard, straps, head blocks."
+        }
+      ]
+    },
+    {
+      "week_number": 7,
+      "day_number": 1,
+      "title": "Orthopedic Trauma — Splinting, Traction, Helmet Removal, Spinal Seated",
+      "category": "skills_lab",
+      "instructor_count": 3,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": false,
+      "review_notes": null,
+      "stations": [
+        {
+          "station_type": "skills",
+          "station_name": "Traction Splint and Helmet Removal",
+          "skills": [
+            {
+              "name": "Traction Splint",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": false,
+              "signoff_week": null,
+              "signoff_note": "No fixed sign-off week documented in Group 4 data — confirm"
+            },
+            {
+              "name": "Helmet Removal Procedure",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": false,
+              "signoff_week": null,
+              "signoff_note": "No fixed sign-off week documented in Group 4 data — confirm"
+            }
+          ],
+          "format_notes": "Traction splint and helmet removal. Equipment: Sager or Hare traction splint, helmets. Sign-off week not documented — confirm with program director."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "Long Bone and Joint Immobilization",
+          "requires_two_instructors": true,
+          "skills": [
+            {
+              "name": "Long Bone Immobilization (EMT)",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": false,
+              "signoff_week": null,
+              "signoff_note": "No fixed sign-off week documented — confirm. REQUIRES 2 INSTRUCTORS for valid sign-off."
+            },
+            {
+              "name": "Joint Immobilization (EMT)",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": false,
+              "signoff_week": null,
+              "signoff_note": "No fixed sign-off week documented — confirm. REQUIRES 2 INSTRUCTORS for valid sign-off."
+            }
+          ],
+          "format_notes": "⚑ REQUIRES 2 INSTRUCTORS — both must be present for sign-off to be valid. Equipment: SAM splints, cardboard splints, padding, bandages. Confirm sign-off week with program director."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "Spinal Immobilization — Seated Patient",
+          "skills": [
+            {
+              "name": "Spinal Immobilization (Seated Patient) (EMT)",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": false,
+              "signoff_week": null,
+              "signoff_note": "No fixed sign-off week documented in Group 4 data — confirm"
+            }
+          ],
+          "format_notes": "Seated spinal immobilization (KED or equivalent). Sign-off week not documented — confirm with program director. Equipment: KED/vest-style immobilizer, c-collars."
+        }
+      ]
+    },
+    {
+      "week_number": 8,
+      "day_number": 1,
+      "title": "12-Lead ECG and Automated Blood Pressure",
+      "category": "skills_lab",
+      "instructor_count": 2,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": false,
+      "review_notes": null,
+      "stations": [
+        {
+          "station_type": "skills",
+          "station_name": "12-Lead ECG and Automated BP",
+          "skills": [
+            {
+              "name": "Apply and obtain a 12 lead ECG",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": false,
+              "signoff_week": null,
+              "signoff_note": "No fixed sign-off week documented in Group 4 data — confirm"
+            },
+            {
+              "name": "Obtain an automated blood pressure",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": false,
+              "signoff_week": null,
+              "signoff_note": "No fixed sign-off week documented in Group 4 data — confirm"
+            }
+          ],
+          "format_notes": "12-lead application and automated BP. Equipment: cardiac monitor with 12-lead capability, automated BP cuff. Sign-off weeks not documented — confirm. Scenario content for this session pending from weekly spreadsheets."
+        }
+      ]
+    },
+    {
+      "week_number": 9,
+      "day_number": 1,
+      "title": "Week 9 — Content Pending from Weekly Spreadsheets",
+      "category": "skills_lab",
+      "instructor_count": 3,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": true,
+      "review_notes": "No Platinum skills documented for Week 9 in Group 4 data — this week likely contains scenario-based content. Upload EMT weekly spreadsheets to the parser to populate.",
+      "stations": []
+    },
+    {
+      "week_number": 10,
+      "day_number": 1,
+      "title": "Week 10 — Content Pending from Weekly Spreadsheets",
+      "category": "skills_lab",
+      "instructor_count": 3,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": true,
+      "review_notes": "No Platinum skills documented for Week 10 in Group 4 data — this week likely contains scenario-based content. Upload EMT weekly spreadsheets to the parser to populate.",
+      "stations": []
+    },
+    {
+      "week_number": 11,
+      "day_number": 1,
+      "title": "Physical Restraint",
+      "category": "skills_lab",
+      "instructor_count": 3,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": false,
+      "review_notes": null,
+      "stations": [
+        {
+          "station_type": "skills",
+          "station_name": "Physical Restraint",
+          "skills": [
+            {
+              "name": "Perform a physical restraint",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": false,
+              "signoff_week": 11,
+              "signoff_note": "Signed off this session"
+            }
+          ],
+          "format_notes": "Physical restraint technique. Equipment: soft restraints. Minimum 3 instructors recommended — safety-sensitive skill. Scenario content for this session pending from weekly spreadsheets."
+        }
+      ]
+    },
+    {
+      "week_number": 12,
+      "day_number": 1,
+      "title": "Childbirth — Normal Delivery",
+      "category": "skills_lab",
+      "instructor_count": 2,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": false,
+      "review_notes": null,
+      "stations": [
+        {
+          "station_type": "skills",
+          "station_name": "Normal Childbirth Delivery",
+          "skills": [
+            {
+              "name": "Childbirth — Normal",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": false,
+              "signoff_week": 12,
+              "signoff_note": "Signed off this session"
+            }
+          ],
+          "format_notes": "Normal uncomplicated delivery. Equipment: OB delivery kit, delivery manikin (SimMom or equivalent). Scenario content for this session pending from weekly spreadsheets."
+        }
+      ]
+    },
+    {
+      "week_number": 13,
+      "day_number": 1,
+      "title": "Capstone — Patient Assessment Medical and Trauma, Team Leader, Deferred Sign-offs",
+      "category": "capstone",
+      "instructor_count": 4,
+      "is_anchor": true,
+      "anchor_type": "CAPSTONE_ASSESSMENT",
+      "requires_review": false,
+      "review_notes": null,
+      "stations": [
+        {
+          "station_type": "scenario",
+          "station_name": "Patient Assessment — Medical",
+          "scenario_title": "Patient Assessment / Management — Medical (EMT)",
+          "difficulty": "intermediate",
+          "skills": [
+            {
+              "name": "Patient Assessment/Management - Medical (EMT)",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": false,
+              "signoff_week": 13,
+              "signoff_note": "capstone_only — no week taught, first sign-off at Week 13"
+            }
+          ],
+          "format_notes": "Capstone-only skill — no teaching week, students develop this through accumulated experience. NREMT-format assessment scenario."
+        },
+        {
+          "station_type": "scenario",
+          "station_name": "Patient Assessment — Trauma",
+          "scenario_title": "Patient Assessment / Management — Trauma (EMT)",
+          "difficulty": "intermediate",
+          "skills": [
+            {
+              "name": "Patient Assessment/Management - Trauma (EMT)",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": false,
+              "signoff_week": 13,
+              "signoff_note": "capstone_only — no week taught, first sign-off at Week 13"
+            }
+          ],
+          "format_notes": "Capstone-only skill — no teaching week, first formal assessment at Week 13. NREMT-format assessment scenario."
+        },
+        {
+          "station_type": "scenario",
+          "station_name": "Team Leader Evaluation",
+          "scenario_title": "Team Leader — EMT Capstone",
+          "difficulty": "intermediate",
+          "skills": [
+            {
+              "name": "Team Leader",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": false,
+              "signoff_week": 13,
+              "signoff_note": "capstone_only — no week taught, first sign-off at Week 13"
+            }
+          ],
+          "format_notes": "Capstone-only skill. Student leads crew through scenario — assesses delegation, communication, and clinical decision-making."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "Deferred Sign-off Station",
+          "skills": [
+            {
+              "name": "Assemble and operate an oxygen tank",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": false,
+              "signoff_week": 13,
+              "signoff_note": "deferred from Week 3 — final sign-off this session"
+            },
+            {
+              "name": "Oxygen Administration by Non-Rebreather Mask (EMT)",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": false,
+              "signoff_week": 13,
+              "signoff_note": "deferred from Week 3 — final sign-off this session"
+            },
+            {
+              "name": "Suctioning with Rigid Catheter",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": false,
+              "signoff_week": 13,
+              "signoff_note": "deferred from Week 5 — final sign-off this session"
+            },
+            {
+              "name": "Spinal Immobilization (Supine Patient)",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": false,
+              "signoff_week": 13,
+              "signoff_note": "deferred from Week 6 — final sign-off this session"
+            }
+          ],
+          "format_notes": "Four skills introduced early but sign-off deliberately held to Week 13: O2 tank assembly (Wk3), NRB mask (Wk3), rigid catheter suction (Wk5), supine spinal immobilization (Wk6). All close out this session."
+        }
+      ]
+    },
+    {
+      "week_number": 14,
+      "day_number": 1,
+      "title": "Communications — Radio, Facility Report, ALS Handoff",
+      "category": "skills_lab",
+      "instructor_count": 2,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": false,
+      "review_notes": null,
+      "stations": [
+        {
+          "station_type": "skills",
+          "station_name": "Radio and Verbal Communications",
+          "skills": [
+            {
+              "name": "Perform a simulated, organized, concise radio transmission (lab setting)",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": false,
+              "signoff_week": "14/15",
+              "signoff_note": "Sign-off in Week 14 or 15 — flexible window"
+            },
+            {
+              "name": "Perform patient report to receiving facility staff (lab setting)",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": false,
+              "signoff_week": "14/15",
+              "signoff_note": "Sign-off in Week 14 or 15 — flexible window"
+            },
+            {
+              "name": "Perform report to ALS provider (lab setting)",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": false,
+              "signoff_week": "14/15",
+              "signoff_note": "Sign-off in Week 14 or 15 — flexible window"
+            }
+          ],
+          "format_notes": "All three communications skills have a 14/15 sign-off window — can complete either week. Simulated radio, receiving facility handoff, and ALS provider report. Scenario content pending from weekly spreadsheets."
+        }
+      ]
+    },
+    {
+      "week_number": 15,
+      "day_number": 1,
+      "title": "NREMT Practical Preparation and Communications Catch-up",
+      "category": "assessment",
+      "instructor_count": 3,
+      "is_anchor": true,
+      "anchor_type": "NREMT_PRACTICAL",
+      "requires_review": false,
+      "review_notes": null,
+      "stations": [
+        {
+          "station_type": "skills",
+          "station_name": "Communications Sign-off Catch-up",
+          "skills": [
+            {
+              "name": "Perform a simulated, organized, concise radio transmission (lab setting)",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": false,
+              "signoff_week": "14/15",
+              "signoff_note": "If not completed Week 14 — final opportunity"
+            },
+            {
+              "name": "Perform patient report to receiving facility staff (lab setting)",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": false,
+              "signoff_week": "14/15",
+              "signoff_note": "If not completed Week 14 — final opportunity"
+            },
+            {
+              "name": "Perform report to ALS provider (lab setting)",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "batch_graded": false,
+              "signoff_week": "14/15",
+              "signoff_note": "If not completed Week 14 — final opportunity"
+            }
+          ],
+          "format_notes": "Final catch-up for any outstanding communications sign-offs from Week 14."
+        },
+        {
+          "station_type": "scenario",
+          "station_name": "NREMT Practical Preparation",
+          "scenario_title": "NREMT Practical — In-House with SNHD Authorization",
+          "difficulty": "intermediate",
+          "format_notes": "NREMT practical exam runs entirely in-house with SNHD authorization. No external observers. Program has SNHD trust relationship — replaced previous external observation model. Confirm SNHD authorization current before scheduling. Scenario content and station design pending from weekly spreadsheets and NREMT practical documentation."
+        }
+      ]
+    }
+  ]
+}

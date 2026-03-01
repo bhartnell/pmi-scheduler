@@ -27,6 +27,9 @@ interface SkillDef {
   name: string;
   platinum_skill?: boolean;
   min_attempts?: number;
+  batch_graded?: boolean;
+  signoff_week?: number | string | null;
+  signoff_note?: string;
 }
 
 interface StationDef {
@@ -236,10 +239,10 @@ export default function LabTemplateImportPage() {
           <Database className="h-6 w-6 text-indigo-500 mt-0.5" />
           <div className="flex-1">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Seed Paramedic Templates
+              Seed Program Templates
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              Import all Semester 1 &amp; 2 lab templates from the embedded JSON files.
+              Import all lab templates from embedded JSON files: Paramedic S1 &amp; S2, EMT S1.
               This will create or update templates and their stations.
             </p>
             <div className="mt-4 flex items-center gap-4">
@@ -278,15 +281,20 @@ export default function LabTemplateImportPage() {
             </div>
             {seedResult?.summary?.files && (
               <div className="mt-3 space-y-1">
-                {seedResult.summary.files.map((f, i) => (
-                  <div key={i} className="text-xs text-gray-500 dark:text-gray-400">
-                    <span className="font-mono">{f.file}</span>: {f.templates} templates,{' '}
-                    {f.stations} stations
-                    {f.errors.length > 0 && (
-                      <span className="text-red-500 ml-2">({f.errors.length} errors)</span>
-                    )}
-                  </div>
-                ))}
+                {seedResult.summary.files.map((f, i) => {
+                  const label = f.file.replace('paramedic_s1_labs.json', 'Paramedic S1')
+                    .replace('paramedic_s2_labs.json', 'Paramedic S2')
+                    .replace('emt_s1_labs.json', 'EMT S1');
+                  return (
+                    <div key={i} className="text-xs text-gray-500 dark:text-gray-400">
+                      <span className="font-medium text-gray-700 dark:text-gray-300">{label}</span>: {f.templates} templates,{' '}
+                      {f.stations} stations
+                      {f.errors.length > 0 && (
+                        <span className="text-red-500 ml-2">({f.errors.length} errors)</span>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -493,16 +501,27 @@ export default function LabTemplateImportPage() {
                                     {s.skills.map((sk, ski) => (
                                       <span
                                         key={ski}
-                                        className={`text-xs px-1.5 py-0.5 rounded ${
+                                        className={`text-xs px-1.5 py-0.5 rounded inline-flex items-center gap-1 ${
                                           sk.platinum_skill
                                             ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
                                             : 'bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
                                         }`}
+                                        title={sk.signoff_note || undefined}
                                       >
                                         {sk.name}
                                         {sk.min_attempts && sk.min_attempts > 1
                                           ? ` (×${sk.min_attempts})`
                                           : ''}
+                                        {sk.batch_graded && (
+                                          <span className="text-[10px] px-1 py-px rounded bg-blue-200 text-blue-800 dark:bg-blue-800 dark:text-blue-200 ml-0.5">
+                                            batch
+                                          </span>
+                                        )}
+                                        {sk.signoff_week != null && (
+                                          <span className="text-[10px] px-1 py-px rounded bg-green-200 text-green-800 dark:bg-green-800 dark:text-green-200 ml-0.5">
+                                            wk{sk.signoff_week}
+                                          </span>
+                                        )}
                                       </span>
                                     ))}
                                   </div>
