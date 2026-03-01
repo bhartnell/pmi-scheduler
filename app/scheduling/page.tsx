@@ -242,6 +242,25 @@ export default function SchedulingPage() {
             </div>
           </Link>
 
+          {/* Team Availability — visible to all instructors */}
+          <Link
+            href="/scheduling/team-availability"
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-shadow p-6 group"
+          >
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 bg-cyan-100 dark:bg-cyan-900/30 rounded-xl flex items-center justify-center group-hover:bg-cyan-200 dark:group-hover:bg-cyan-900/50 transition-colors">
+                <Users className="w-6 h-6 text-cyan-600 dark:text-cyan-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Team Availability</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Find when multiple instructors are all free
+                </p>
+              </div>
+              <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300" />
+            </div>
+          </Link>
+
           {/* Director-only sections */}
           {(userIsDirector || isAdmin) && (
             <>
