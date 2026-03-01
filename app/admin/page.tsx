@@ -300,6 +300,13 @@ export default function AdminPage() {
       color: 'bg-gray-700'
     },
     {
+      href: '/admin/config',
+      icon: Settings,
+      title: 'System Configuration',
+      description: 'Centralized config panel: email, notifications, security, features, branding, and legal',
+      color: 'bg-blue-800'
+    },
+    {
       href: '/admin/database-tools',
       icon: Wrench,
       title: 'Database Cleanup Utilities',
