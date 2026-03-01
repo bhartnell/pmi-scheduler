@@ -36,23 +36,28 @@ import { useToast } from '@/components/Toast';
 // Types
 // ---------------------------------------------------------------------------
 
+interface MedicationDosing {
+  adult_dose?: string | null;
+  pediatric_dose?: string | null;
+  onset?: string | null;
+  duration?: string | null;
+  concentration?: string | null;
+  dose_per_kg?: number | null;
+  max_dose?: string | null;
+  [key: string]: unknown;
+}
+
 interface Medication {
   id: string;
   name: string;
-  brand_names: string[] | null;
+  generic_name: string | null;
   drug_class: string;
-  indications: string[] | null;
-  contraindications: string[] | null;
-  side_effects: string[] | null;
+  indications: string | null;
+  contraindications: string | null;
+  side_effects: string | null;
   routes: string[] | null;
-  adult_dose: string | null;
-  pediatric_dose: string | null;
-  onset: string | null;
-  duration: string | null;
-  concentration: string | null;
-  dose_per_kg: number | null;
-  max_dose: string | null;
-  special_notes: string | null;
+  dosing: MedicationDosing | null;
+  notes: string | null;
   is_active: boolean;
   created_at: string;
 }
@@ -143,9 +148,9 @@ function MedicationCard({ med, canEdit, onEdit, onDelete, printMode = false }: M
               <h3 className="font-bold text-gray-900 dark:text-white text-base leading-snug">
                 {med.name}
               </h3>
-              {med.brand_names && med.brand_names.length > 0 && (
+              {med.generic_name && (
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                  {med.brand_names.join(', ')}
+                  {med.generic_name}
                 </p>
               )}
               <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -196,9 +201,9 @@ function MedicationCard({ med, canEdit, onEdit, onDelete, printMode = false }: M
         </div>
 
         {/* Quick summary - always visible */}
-        {!expanded && med.indications && med.indications.length > 0 && (
+        {!expanded && med.indications && (
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 line-clamp-1 pl-10">
-            {med.indications.slice(0, 2).join(' • ')}
+            {med.indications}
           </p>
         )}
       </div>
@@ -208,112 +213,91 @@ function MedicationCard({ med, canEdit, onEdit, onDelete, printMode = false }: M
         <div className="border-t border-gray-100 dark:border-gray-700 p-4 space-y-4">
           {/* Dosing Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {med.adult_dose && (
+            {med.dosing?.adult_dose && (
               <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3">
                 <div className="flex items-center gap-1.5 mb-1">
                   <Activity className="w-3.5 h-3.5 text-green-600 dark:text-green-400" />
                   <span className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase tracking-wide">Adult Dose</span>
                 </div>
-                <p className="text-sm text-gray-800 dark:text-gray-200 leading-snug">{med.adult_dose}</p>
+                <p className="text-sm text-gray-800 dark:text-gray-200 leading-snug">{med.dosing.adult_dose}</p>
               </div>
             )}
-            {med.pediatric_dose && (
+            {med.dosing?.pediatric_dose && (
               <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3">
                 <div className="flex items-center gap-1.5 mb-1">
                   <Activity className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                   <span className="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase tracking-wide">Pediatric Dose</span>
                 </div>
-                <p className="text-sm text-gray-800 dark:text-gray-200 leading-snug">{med.pediatric_dose}</p>
+                <p className="text-sm text-gray-800 dark:text-gray-200 leading-snug">{med.dosing.pediatric_dose}</p>
               </div>
             )}
           </div>
 
           {/* Pharmacokinetics Row */}
           <div className="flex flex-wrap gap-4">
-            {med.onset && (
+            {med.dosing?.onset && (
               <div className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400">
                 <Zap className="w-4 h-4 text-amber-500 flex-shrink-0" />
                 <span className="font-medium text-gray-700 dark:text-gray-300">Onset:</span>
-                <span>{med.onset}</span>
+                <span>{med.dosing.onset}</span>
               </div>
             )}
-            {med.duration && (
+            {med.dosing?.duration && (
               <div className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400">
                 <Clock className="w-4 h-4 text-indigo-500 flex-shrink-0" />
                 <span className="font-medium text-gray-700 dark:text-gray-300">Duration:</span>
-                <span>{med.duration}</span>
+                <span>{med.dosing.duration}</span>
               </div>
             )}
-            {med.concentration && (
+            {med.dosing?.concentration && (
               <div className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400">
                 <Pill className="w-4 h-4 text-teal-500 flex-shrink-0" />
                 <span className="font-medium text-gray-700 dark:text-gray-300">Concentration:</span>
-                <span>{med.concentration}</span>
+                <span>{med.dosing.concentration}</span>
               </div>
             )}
-            {med.max_dose && (
+            {med.dosing?.max_dose && (
               <div className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400">
                 <AlertTriangle className="w-4 h-4 text-orange-500 flex-shrink-0" />
                 <span className="font-medium text-gray-700 dark:text-gray-300">Max Dose:</span>
-                <span>{med.max_dose}</span>
+                <span>{med.dosing.max_dose}</span>
               </div>
             )}
           </div>
 
-          {/* Indications / Contraindications / Side Effects */}
+          {/* Indications / Contraindications / Side Effects (plain text) */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {med.indications && med.indications.length > 0 && (
+            {med.indications && (
               <div>
                 <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Indications</h4>
-                <ul className="space-y-1">
-                  {med.indications.map((item, i) => (
-                    <li key={i} className="flex items-start gap-1.5 text-sm text-gray-700 dark:text-gray-300">
-                      <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
+                <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{med.indications}</p>
               </div>
             )}
-            {med.contraindications && med.contraindications.length > 0 && (
+            {med.contraindications && (
               <div>
                 <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Contraindications</h4>
-                <ul className="space-y-1">
-                  {med.contraindications.map((item, i) => (
-                    <li key={i} className="flex items-start gap-1.5 text-sm text-gray-700 dark:text-gray-300">
-                      <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
+                <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{med.contraindications}</p>
               </div>
             )}
-            {med.side_effects && med.side_effects.length > 0 && (
+            {med.side_effects && (
               <div>
                 <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">Side Effects</h4>
-                <ul className="space-y-1">
-                  {med.side_effects.map((item, i) => (
-                    <li key={i} className="flex items-start gap-1.5 text-sm text-gray-700 dark:text-gray-300">
-                      <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
+                <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{med.side_effects}</p>
               </div>
             )}
           </div>
 
-          {/* Special Notes */}
-          {med.special_notes && (
+          {/* Notes */}
+          {med.notes && (
             <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/50 rounded-lg p-3">
               <div className="flex items-start gap-2">
                 <Info className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
                 <div>
                   <span className="text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wide block mb-1">
-                    Special Notes / Precautions
+                    Notes / Precautions
                   </span>
                   <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                    {med.special_notes}
+                    {med.notes}
                   </p>
                 </div>
               </div>
@@ -335,32 +319,33 @@ function DosingCalculator({ medications }: { medications: Medication[] }) {
   const [selectedMedId, setSelectedMedId] = useState('');
   const [isPediatric, setIsPediatric] = useState(false);
 
-  const medsWithDosing = medications.filter((m) => m.dose_per_kg != null);
+  const medsWithDosing = medications.filter((m) => m.dosing?.dose_per_kg != null);
   const selectedMed = medsWithDosing.find((m) => m.id === selectedMedId);
+  const dosePerKg = selectedMed?.dosing?.dose_per_kg ?? null;
 
   const weightInKg = weightUnit === 'lbs'
     ? parseFloat(weightKg) / 2.2046
     : parseFloat(weightKg);
 
-  const calculatedDose = selectedMed && selectedMed.dose_per_kg && !isNaN(weightInKg) && weightInKg > 0
-    ? weightInKg * selectedMed.dose_per_kg
+  const calculatedDose = dosePerKg && !isNaN(weightInKg) && weightInKg > 0
+    ? weightInKg * dosePerKg
     : null;
 
   // Parse max dose from text (very basic)
-  function parseMaxDoseMg(text: string | null): number | null {
+  function parseMaxDoseMg(text: string | null | undefined): number | null {
     if (!text) return null;
     const match = text.match(/([\d.]+)\s*mg/);
     return match ? parseFloat(match[1]) : null;
   }
 
-  const maxDoseMg = selectedMed ? parseMaxDoseMg(selectedMed.max_dose) : null;
+  const maxDoseMg = selectedMed ? parseMaxDoseMg(selectedMed.dosing?.max_dose) : null;
   const cappedDose = calculatedDose !== null && maxDoseMg !== null
     ? Math.min(calculatedDose, maxDoseMg)
     : calculatedDose;
   const isCapped = cappedDose !== null && calculatedDose !== null && cappedDose < calculatedDose;
 
   // Parse concentration to mL
-  function parseConcentration(text: string | null): number | null {
+  function parseConcentration(text: string | null | undefined): number | null {
     if (!text) return null;
     // Match patterns like "50 mcg/mL", "1 mg/mL", "0.4 mg/mL"
     const mgMatch = text.match(/([\d.]+)\s*mg\/mL/);
@@ -371,13 +356,13 @@ function DosingCalculator({ medications }: { medications: Medication[] }) {
     return null;
   }
 
-  const concMgPerMl = selectedMed ? parseConcentration(selectedMed.concentration) : null;
+  const concMgPerMl = selectedMed ? parseConcentration(selectedMed.dosing?.concentration) : null;
   const volumeMl = cappedDose !== null && concMgPerMl !== null && concMgPerMl > 0
     ? cappedDose / concMgPerMl
     : null;
 
   const ageGroup = isPediatric ? 'Pediatric' : 'Adult';
-  const doseToShow = isPediatric ? selectedMed?.pediatric_dose : selectedMed?.adult_dose;
+  const doseToShow = isPediatric ? selectedMed?.dosing?.pediatric_dose : selectedMed?.dosing?.adult_dose;
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-5">
@@ -434,7 +419,7 @@ function DosingCalculator({ medications }: { medications: Medication[] }) {
             <option value="">Select medication...</option>
             {medsWithDosing.map((m) => (
               <option key={m.id} value={m.id}>
-                {m.name} ({m.dose_per_kg} mg/kg)
+                {m.name} ({m.dosing?.dose_per_kg} mg/kg)
               </option>
             ))}
           </select>
@@ -498,7 +483,7 @@ function DosingCalculator({ medications }: { medications: Medication[] }) {
             <div className="bg-white dark:bg-gray-800 rounded-lg p-3 text-center">
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Dose (mg/kg)</p>
               <p className="text-lg font-bold text-gray-900 dark:text-white">
-                {selectedMed.dose_per_kg} mg/kg
+                {dosePerKg} mg/kg
               </p>
             </div>
             <div className={`rounded-lg p-3 text-center ${isCapped ? 'bg-orange-100 dark:bg-orange-900/30' : 'bg-white dark:bg-gray-800'}`}>
@@ -567,7 +552,7 @@ function DosingCalculator({ medications }: { medications: Medication[] }) {
 
 interface MedFormData {
   name: string;
-  brand_names: string;
+  generic_name: string;
   drug_class: string;
   indications: string;
   contraindications: string;
@@ -580,54 +565,55 @@ interface MedFormData {
   concentration: string;
   dose_per_kg: string;
   max_dose: string;
-  special_notes: string;
+  notes: string;
 }
 
 const EMPTY_FORM: MedFormData = {
-  name: '', brand_names: '', drug_class: '', indications: '', contraindications: '',
+  name: '', generic_name: '', drug_class: '', indications: '', contraindications: '',
   side_effects: '', routes: '', adult_dose: '', pediatric_dose: '', onset: '',
-  duration: '', concentration: '', dose_per_kg: '', max_dose: '', special_notes: '',
+  duration: '', concentration: '', dose_per_kg: '', max_dose: '', notes: '',
 };
 
 function medToForm(med: Medication): MedFormData {
   return {
     name: med.name,
-    brand_names: med.brand_names?.join(', ') || '',
+    generic_name: med.generic_name || '',
     drug_class: med.drug_class,
-    indications: med.indications?.join('\n') || '',
-    contraindications: med.contraindications?.join('\n') || '',
-    side_effects: med.side_effects?.join('\n') || '',
+    indications: med.indications || '',
+    contraindications: med.contraindications || '',
+    side_effects: med.side_effects || '',
     routes: med.routes?.join(', ') || '',
-    adult_dose: med.adult_dose || '',
-    pediatric_dose: med.pediatric_dose || '',
-    onset: med.onset || '',
-    duration: med.duration || '',
-    concentration: med.concentration || '',
-    dose_per_kg: med.dose_per_kg?.toString() || '',
-    max_dose: med.max_dose || '',
-    special_notes: med.special_notes || '',
+    adult_dose: med.dosing?.adult_dose || '',
+    pediatric_dose: med.dosing?.pediatric_dose || '',
+    onset: med.dosing?.onset || '',
+    duration: med.dosing?.duration || '',
+    concentration: med.dosing?.concentration || '',
+    dose_per_kg: med.dosing?.dose_per_kg?.toString() || '',
+    max_dose: med.dosing?.max_dose || '',
+    notes: med.notes || '',
   };
 }
 
 function formToPayload(form: MedFormData) {
-  const splitLines = (s: string) => s.split('\n').map((l) => l.trim()).filter(Boolean);
   const splitComma = (s: string) => s.split(',').map((l) => l.trim()).filter(Boolean);
+  const dosing: MedicationDosing = {};
+  if (form.adult_dose.trim()) dosing.adult_dose = form.adult_dose.trim();
+  if (form.pediatric_dose.trim()) dosing.pediatric_dose = form.pediatric_dose.trim();
+  if (form.onset.trim()) dosing.onset = form.onset.trim();
+  if (form.duration.trim()) dosing.duration = form.duration.trim();
+  if (form.concentration.trim()) dosing.concentration = form.concentration.trim();
+  if (form.dose_per_kg) dosing.dose_per_kg = parseFloat(form.dose_per_kg);
+  if (form.max_dose.trim()) dosing.max_dose = form.max_dose.trim();
   return {
     name: form.name.trim(),
-    brand_names: splitComma(form.brand_names),
+    generic_name: form.generic_name.trim() || null,
     drug_class: form.drug_class.trim(),
-    indications: splitLines(form.indications),
-    contraindications: splitLines(form.contraindications),
-    side_effects: splitLines(form.side_effects),
+    indications: form.indications.trim() || null,
+    contraindications: form.contraindications.trim() || null,
+    side_effects: form.side_effects.trim() || null,
     routes: splitComma(form.routes),
-    adult_dose: form.adult_dose.trim() || null,
-    pediatric_dose: form.pediatric_dose.trim() || null,
-    onset: form.onset.trim() || null,
-    duration: form.duration.trim() || null,
-    concentration: form.concentration.trim() || null,
-    dose_per_kg: form.dose_per_kg ? parseFloat(form.dose_per_kg) : null,
-    max_dose: form.max_dose.trim() || null,
-    special_notes: form.special_notes.trim() || null,
+    dosing: Object.keys(dosing).length > 0 ? dosing : null,
+    notes: form.notes.trim() || null,
   };
 }
 
@@ -681,8 +667,8 @@ function MedModal({ med, onClose, onSave }: MedModalProps) {
               <input required type="text" value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="e.g. Epinephrine" className={inputClass} />
             </div>
             <div>
-              <label className={labelClass}>Brand Names <span className="text-xs text-gray-400">(comma-separated)</span></label>
-              <input type="text" value={form.brand_names} onChange={(e) => set('brand_names', e.target.value)} placeholder="e.g. Adrenalin, EpiPen" className={inputClass} />
+              <label className={labelClass}>Generic Name</label>
+              <input type="text" value={form.generic_name} onChange={(e) => set('generic_name', e.target.value)} placeholder="e.g. epinephrine" className={inputClass} />
             </div>
             <div className="sm:col-span-2">
               <label className={labelClass}>Drug Class <span className="text-red-500">*</span></label>
@@ -721,20 +707,20 @@ function MedModal({ med, onClose, onSave }: MedModalProps) {
               <textarea rows={2} value={form.pediatric_dose} onChange={(e) => set('pediatric_dose', e.target.value)} placeholder="e.g. 0.01 mg/kg IV/IO (max 1 mg)" className={textareaClass} />
             </div>
             <div className="sm:col-span-2">
-              <label className={labelClass}>Indications <span className="text-xs text-gray-400">(one per line)</span></label>
-              <textarea rows={3} value={form.indications} onChange={(e) => set('indications', e.target.value)} placeholder="Cardiac arrest&#10;Anaphylaxis" className={textareaClass} />
+              <label className={labelClass}>Indications</label>
+              <textarea rows={3} value={form.indications} onChange={(e) => set('indications', e.target.value)} placeholder="Cardiac arrest, anaphylaxis, severe hypotension..." className={textareaClass} />
             </div>
             <div className="sm:col-span-2">
-              <label className={labelClass}>Contraindications <span className="text-xs text-gray-400">(one per line)</span></label>
-              <textarea rows={3} value={form.contraindications} onChange={(e) => set('contraindications', e.target.value)} placeholder="Known hypersensitivity&#10;Hypertension (relative)" className={textareaClass} />
+              <label className={labelClass}>Contraindications</label>
+              <textarea rows={3} value={form.contraindications} onChange={(e) => set('contraindications', e.target.value)} placeholder="Known hypersensitivity, hypertension (relative)..." className={textareaClass} />
             </div>
             <div className="sm:col-span-2">
-              <label className={labelClass}>Side Effects <span className="text-xs text-gray-400">(one per line)</span></label>
-              <textarea rows={3} value={form.side_effects} onChange={(e) => set('side_effects', e.target.value)} placeholder="Tachycardia&#10;Hypertension" className={textareaClass} />
+              <label className={labelClass}>Side Effects</label>
+              <textarea rows={3} value={form.side_effects} onChange={(e) => set('side_effects', e.target.value)} placeholder="Tachycardia, hypertension, anxiety..." className={textareaClass} />
             </div>
             <div className="sm:col-span-2">
-              <label className={labelClass}>Special Notes / Precautions</label>
-              <textarea rows={3} value={form.special_notes} onChange={(e) => set('special_notes', e.target.value)} placeholder="Important clinical pearls, warnings, tips..." className={textareaClass} />
+              <label className={labelClass}>Notes / Precautions</label>
+              <textarea rows={3} value={form.notes} onChange={(e) => set('notes', e.target.value)} placeholder="Important clinical pearls, warnings, tips..." className={textareaClass} />
             </div>
           </div>
         </form>

@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
 
     // Fetch all certifications joined with the owning user
     let query = supabase
-      .from('certifications')
+      .from('instructor_certifications')
       .select(`
         id,
         name,

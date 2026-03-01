@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
         preferred_contact_method,
         best_contact_times,
         language_preference,
-        contact_opt_out,
+        opt_out_non_essential,
         agency,
         status,
         cohort_id,

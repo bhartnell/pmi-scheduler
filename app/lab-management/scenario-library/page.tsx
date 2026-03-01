@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import {
   Search,
@@ -715,6 +715,14 @@ export default function ScenarioLibraryPage() {
   const [allTags, setAllTags] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem('scenario_favorites');
+      return stored ? new Set<string>(JSON.parse(stored)) : new Set<string>();
+    } catch {
+      return new Set<string>();
+    }
+  });
 
   // Filters
   const [search, setSearch] = useState('');
@@ -745,7 +753,7 @@ export default function ScenarioLibraryPage() {
       fetchScenarios();
       fetchAllTags();
     }
-  }, [session, categoryFilter, difficultyFilter, tagFilter, favoritesOnly, sortBy]);
+  }, [session, categoryFilter, difficultyFilter, tagFilter, sortBy]);
 
   const fetchScenarios = async () => {
     setLoading(true);
@@ -755,7 +763,6 @@ export default function ScenarioLibraryPage() {
       if (categoryFilter) params.set('category', categoryFilter);
       if (difficultyFilter) params.set('difficulty', difficultyFilter);
       if (tagFilter) params.set('tag', tagFilter);
-      if (favoritesOnly) params.set('favorites', 'true');
       if (sortBy) params.set('sort', sortBy);
       if (search) params.set('search', search);
 
@@ -783,8 +790,15 @@ export default function ScenarioLibraryPage() {
     }
   };
 
-  // Search is client-side on top of server-filtered results
-  const visibleScenarios = scenarios.filter((s) => {
+  // Merge localStorage favorites into scenario objects
+  const scenariosWithFavorites = useMemo(
+    () => scenarios.map((s) => ({ ...s, is_favorite: favoriteIds.has(s.id) })),
+    [scenarios, favoriteIds]
+  );
+
+  // Search and favorites filter are client-side on top of server-filtered results
+  const visibleScenarios = scenariosWithFavorites.filter((s) => {
+    if (favoritesOnly && !s.is_favorite) return false;
     if (!search.trim()) return true;
     const q = search.toLowerCase();
     return (
@@ -799,23 +813,22 @@ export default function ScenarioLibraryPage() {
   // Handlers
   // ---------------------------------------------------------------------------
 
-  const handleFavoriteToggle = useCallback(async (id: string) => {
-    const scenario = scenarios.find((s) => s.id === id);
-    if (!scenario) return;
-    const wasFav = scenario.is_favorite;
-    // Optimistic
-    setScenarios((prev) => prev.map((s) => s.id === id ? { ...s, is_favorite: !wasFav } : s));
-    try {
-      await fetch('/api/lab-management/scenario-library/favorites', {
-        method: wasFav ? 'DELETE' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scenario_id: id }),
-      });
-    } catch {
-      // Revert
-      setScenarios((prev) => prev.map((s) => s.id === id ? { ...s, is_favorite: wasFav } : s));
-    }
-  }, [scenarios]);
+  const handleFavoriteToggle = useCallback((id: string) => {
+    setFavoriteIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      try {
+        localStorage.setItem('scenario_favorites', JSON.stringify([...next]));
+      } catch {
+        // localStorage unavailable - favorites not persisted
+      }
+      return next;
+    });
+  }, []);
 
   const handleTagsChanged = useCallback((id: string, tags: string[]) => {
     setScenarios((prev) => prev.map((s) => s.id === id ? { ...s, tags } : s));

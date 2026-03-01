@@ -76,9 +76,9 @@ interface StudentRecord {
   learning_style: string | null;
   cohort: Cohort | null;
   preferred_contact_method: string | null;
-  best_contact_times: string | null;
+  best_contact_times: string[] | null;
   language_preference: string | null;
-  contact_opt_out: boolean | null;
+  opt_out_non_essential: boolean | null;
 }
 
 interface ProfileData {
@@ -107,7 +107,7 @@ interface CommPrefsForm {
   preferred_contact_method: string;
   best_contact_times: string;
   language_preference: string;
-  contact_opt_out: boolean;
+  opt_out_non_essential: boolean;
 }
 
 type ActiveSection = 'contact' | 'emergency' | 'preferences' | 'commprefs' | null;
@@ -252,7 +252,7 @@ export default function StudentProfilePage() {
     preferred_contact_method: 'email',
     best_contact_times: '',
     language_preference: 'en',
-    contact_opt_out: false,
+    opt_out_non_essential: false,
   });
 
   // ─── Toast helpers ─────────────────────────────────────────────────────────
@@ -288,9 +288,9 @@ export default function StudentProfilePage() {
           });
           setCommPrefsForm({
             preferred_contact_method: s.preferred_contact_method ?? 'email',
-            best_contact_times: s.best_contact_times ?? '',
+            best_contact_times: Array.isArray(s.best_contact_times) ? s.best_contact_times.join(', ') : (s.best_contact_times ?? ''),
             language_preference: s.language_preference ?? 'en',
-            contact_opt_out: s.contact_opt_out ?? false,
+            opt_out_non_essential: s.opt_out_non_essential ?? false,
           });
         }
       }
@@ -326,9 +326,9 @@ export default function StudentProfilePage() {
     } else if (section === 'commprefs') {
       setCommPrefsForm({
         preferred_contact_method: s.preferred_contact_method ?? 'email',
-        best_contact_times: s.best_contact_times ?? '',
+        best_contact_times: Array.isArray(s.best_contact_times) ? s.best_contact_times.join(', ') : (s.best_contact_times ?? ''),
         language_preference: s.language_preference ?? 'en',
-        contact_opt_out: s.contact_opt_out ?? false,
+        opt_out_non_essential: s.opt_out_non_essential ?? false,
       });
     }
     setActiveSection(section);
@@ -376,7 +376,7 @@ export default function StudentProfilePage() {
         preferred_contact_method: commPrefsForm.preferred_contact_method || 'email',
         best_contact_times: commPrefsForm.best_contact_times || null,
         language_preference: commPrefsForm.language_preference || 'en',
-        contact_opt_out: commPrefsForm.contact_opt_out,
+        opt_out_non_essential: commPrefsForm.opt_out_non_essential,
       };
       apiUrl = '/api/student/communication-preferences';
     }
@@ -894,13 +894,13 @@ export default function StudentProfilePage() {
                   <div className="flex items-start gap-3 sm:col-span-2">
                     <div className="flex items-center h-5 mt-0.5">
                       <input
-                        id="contact_opt_out"
+                        id="opt_out_non_essential"
                         type="checkbox"
-                        checked={commPrefsForm.contact_opt_out}
+                        checked={commPrefsForm.opt_out_non_essential}
                         onChange={(e) =>
                           setCommPrefsForm((prev) => ({
                             ...prev,
-                            contact_opt_out: e.target.checked,
+                            opt_out_non_essential: e.target.checked,
                           }))
                         }
                         className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-cyan-600 focus:ring-cyan-500 dark:focus:ring-cyan-400 bg-white dark:bg-gray-700"
@@ -908,7 +908,7 @@ export default function StudentProfilePage() {
                     </div>
                     <div>
                       <label
-                        htmlFor="contact_opt_out"
+                        htmlFor="opt_out_non_essential"
                         className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer"
                       >
                         Opt out of non-essential contact
@@ -938,7 +938,7 @@ export default function StudentProfilePage() {
                   <ReadOnlyField
                     icon={Clock}
                     label="Best Times to Contact"
-                    value={student.best_contact_times}
+                    value={Array.isArray(student.best_contact_times) ? student.best_contact_times.join(', ') : student.best_contact_times}
                   />
                   <ReadOnlyField
                     icon={Globe}
@@ -967,7 +967,7 @@ export default function StudentProfilePage() {
                         Non-Essential Contact
                       </p>
                       <p className="text-sm font-medium text-gray-900 dark:text-white">
-                        {student.contact_opt_out
+                        {student.opt_out_non_essential
                           ? 'Opted out'
                           : 'Receiving all communications'}
                       </p>

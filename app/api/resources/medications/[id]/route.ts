@@ -21,6 +21,8 @@ async function getCurrentUser(email: string) {
 // PUT /api/resources/medications/[id]
 //
 // Update medication. Requires admin+ role.
+// Uses corrected schema: generic_name (TEXT), indications/contraindications/
+// side_effects (TEXT), dosing (JSONB), notes (TEXT).
 // ---------------------------------------------------------------------------
 export async function PUT(
   request: NextRequest,
@@ -44,20 +46,14 @@ export async function PUT(
 
     const body = await request.json() as {
       name?: string;
-      brand_names?: string[];
+      generic_name?: string;
       drug_class?: string;
-      indications?: string[];
-      contraindications?: string[];
-      side_effects?: string[];
+      indications?: string;
+      contraindications?: string;
+      side_effects?: string;
+      dosing?: Record<string, unknown> | null;
       routes?: string[];
-      adult_dose?: string;
-      pediatric_dose?: string;
-      onset?: string;
-      duration?: string;
-      concentration?: string;
-      dose_per_kg?: number | null;
-      max_dose?: string;
-      special_notes?: string;
+      notes?: string;
       is_active?: boolean;
     };
 
@@ -76,20 +72,14 @@ export async function PUT(
 
     const updates: Record<string, unknown> = {};
     if (body.name !== undefined) updates.name = body.name;
-    if (body.brand_names !== undefined) updates.brand_names = body.brand_names;
+    if (body.generic_name !== undefined) updates.generic_name = body.generic_name;
     if (body.drug_class !== undefined) updates.drug_class = body.drug_class;
     if (body.indications !== undefined) updates.indications = body.indications;
     if (body.contraindications !== undefined) updates.contraindications = body.contraindications;
     if (body.side_effects !== undefined) updates.side_effects = body.side_effects;
+    if (body.dosing !== undefined) updates.dosing = body.dosing;
     if (body.routes !== undefined) updates.routes = body.routes;
-    if (body.adult_dose !== undefined) updates.adult_dose = body.adult_dose;
-    if (body.pediatric_dose !== undefined) updates.pediatric_dose = body.pediatric_dose;
-    if (body.onset !== undefined) updates.onset = body.onset;
-    if (body.duration !== undefined) updates.duration = body.duration;
-    if (body.concentration !== undefined) updates.concentration = body.concentration;
-    if (body.dose_per_kg !== undefined) updates.dose_per_kg = body.dose_per_kg;
-    if (body.max_dose !== undefined) updates.max_dose = body.max_dose;
-    if (body.special_notes !== undefined) updates.special_notes = body.special_notes;
+    if (body.notes !== undefined) updates.notes = body.notes;
     if (body.is_active !== undefined) updates.is_active = body.is_active;
 
     const { data, error } = await supabase

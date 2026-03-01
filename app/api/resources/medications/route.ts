@@ -21,7 +21,7 @@ async function getCurrentUser(email: string) {
 // GET /api/resources/medications
 //
 // Query params:
-//   ?search=epinephrine   - search name, brand_names, indications
+//   ?search=epinephrine   - search name, generic_name, indications
 //   ?class=Cardiac        - filter by drug_class
 //   ?id=<uuid>            - get single medication
 // ---------------------------------------------------------------------------
@@ -64,25 +64,24 @@ export async function GET(request: NextRequest) {
     }
 
     if (search) {
-      // Search across name, drug_class, and indications array
       query = query.or(
-        `name.ilike.%${search}%,drug_class.ilike.%${search}%`
+        `name.ilike.%${search}%,drug_class.ilike.%${search}%,generic_name.ilike.%${search}%`
       );
     }
 
     const { data, error } = await query;
     if (error) throw error;
 
-    // Client-side filter for indications array search (Supabase doesn't support ilike on arrays easily)
+    // Client-side filter for indications text search
     let medications = data ?? [];
     if (search) {
       const lowerSearch = search.toLowerCase();
       medications = medications.filter((med) => {
         if (med.name.toLowerCase().includes(lowerSearch)) return true;
-        if (med.drug_class.toLowerCase().includes(lowerSearch)) return true;
-        if (med.brand_names?.some((b: string) => b.toLowerCase().includes(lowerSearch))) return true;
-        if (med.indications?.some((i: string) => i.toLowerCase().includes(lowerSearch))) return true;
-        if (med.special_notes?.toLowerCase().includes(lowerSearch)) return true;
+        if (med.drug_class?.toLowerCase().includes(lowerSearch)) return true;
+        if (med.generic_name?.toLowerCase().includes(lowerSearch)) return true;
+        if (med.indications?.toLowerCase().includes(lowerSearch)) return true;
+        if (med.notes?.toLowerCase().includes(lowerSearch)) return true;
         return false;
       });
     }
@@ -111,6 +110,9 @@ export async function GET(request: NextRequest) {
 // POST /api/resources/medications
 //
 // Create a new medication. Requires admin+ role.
+// Body uses the corrected schema:
+//   name, generic_name, drug_class, indications (TEXT), contraindications (TEXT),
+//   side_effects (TEXT), dosing (JSONB), routes (TEXT[]), notes, is_active
 // ---------------------------------------------------------------------------
 export async function POST(request: NextRequest) {
   try {
@@ -126,20 +128,14 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json() as {
       name: string;
-      brand_names?: string[];
+      generic_name?: string;
       drug_class: string;
-      indications?: string[];
-      contraindications?: string[];
-      side_effects?: string[];
+      indications?: string;
+      contraindications?: string;
+      side_effects?: string;
+      dosing?: Record<string, unknown>;
       routes?: string[];
-      adult_dose?: string;
-      pediatric_dose?: string;
-      onset?: string;
-      duration?: string;
-      concentration?: string;
-      dose_per_kg?: number;
-      max_dose?: string;
-      special_notes?: string;
+      notes?: string;
     };
 
     if (!body.name || !body.drug_class) {
@@ -151,20 +147,14 @@ export async function POST(request: NextRequest) {
       .from('medications')
       .insert({
         name: body.name,
-        brand_names: body.brand_names || null,
+        generic_name: body.generic_name || null,
         drug_class: body.drug_class,
         indications: body.indications || null,
         contraindications: body.contraindications || null,
         side_effects: body.side_effects || null,
+        dosing: body.dosing || null,
         routes: body.routes || null,
-        adult_dose: body.adult_dose || null,
-        pediatric_dose: body.pediatric_dose || null,
-        onset: body.onset || null,
-        duration: body.duration || null,
-        concentration: body.concentration || null,
-        dose_per_kg: body.dose_per_kg || null,
-        max_dose: body.max_dose || null,
-        special_notes: body.special_notes || null,
+        notes: body.notes || null,
         is_active: true,
       })
       .select('*')

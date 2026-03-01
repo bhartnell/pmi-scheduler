@@ -18,7 +18,6 @@ import {
   Loader2,
   AlertTriangle,
   CheckCircle,
-  Clock,
   XCircle,
   Archive,
 } from 'lucide-react';
@@ -37,10 +36,9 @@ interface Goal {
 interface LearningPlan {
   id: string;
   student_id: string;
-  goals: Goal[];
+  goals: string | null;
   accommodations: string[];
-  custom_accommodations: string | null;
-  status: 'active' | 'on_hold' | 'completed' | 'archived';
+  is_active: boolean;
   review_date: string | null;
   created_by: string | null;
   created_at: string;
@@ -87,18 +85,8 @@ const STATUS_CONFIG: Record<string, { label: string; icon: React.ReactNode; clas
     icon: <CheckCircle className="w-4 h-4" />,
     classes: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
   },
-  on_hold: {
-    label: 'On Hold',
-    icon: <Clock className="w-4 h-4" />,
-    classes: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
-  },
-  completed: {
-    label: 'Completed',
-    icon: <CheckCircle className="w-4 h-4" />,
-    classes: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-  },
-  archived: {
-    label: 'Archived',
+  inactive: {
+    label: 'Inactive',
     icon: <Archive className="w-4 h-4" />,
     classes: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
   },
@@ -150,8 +138,7 @@ export default function LearningPlanPage() {
   // Edit form state
   const [goals, setGoals] = useState<Goal[]>([]);
   const [accommodations, setAccommodations] = useState<string[]>([]);
-  const [customAccommodations, setCustomAccommodations] = useState('');
-  const [planStatus, setPlanStatus] = useState<'active' | 'on_hold' | 'completed' | 'archived'>('active');
+  const [isActive, setIsActive] = useState(true);
   const [reviewDate, setReviewDate] = useState('');
 
   // Progress note form
@@ -207,10 +194,15 @@ export default function LearningPlanPage() {
       if (data.success) {
         if (data.plan) {
           setPlan(data.plan);
-          setGoals(Array.isArray(data.plan.goals) ? data.plan.goals : []);
+          // goals is stored as a JSON string in the TEXT column
+          try {
+            const parsed = data.plan.goals ? JSON.parse(data.plan.goals) : [];
+            setGoals(Array.isArray(parsed) ? parsed : []);
+          } catch {
+            setGoals([]);
+          }
           setAccommodations(Array.isArray(data.plan.accommodations) ? data.plan.accommodations : []);
-          setCustomAccommodations(data.plan.custom_accommodations || '');
-          setPlanStatus(data.plan.status);
+          setIsActive(data.plan.is_active !== false);
           setReviewDate(data.plan.review_date || '');
         }
         setNotes(data.notes || []);
@@ -232,10 +224,9 @@ export default function LearningPlanPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          goals,
+          goals: JSON.stringify(goals),
           accommodations,
-          custom_accommodations: customAccommodations,
-          status: planStatus,
+          is_active: isActive,
           review_date: reviewDate || null,
         }),
       });
@@ -335,7 +326,7 @@ export default function LearningPlanPage() {
     ? `${student.first_name} ${student.last_name}`
     : 'Student';
 
-  const statusConfig = STATUS_CONFIG[planStatus];
+  const statusConfig = STATUS_CONFIG[isActive ? 'active' : 'inactive'];
 
   // ============================================================
   // Render
@@ -400,14 +391,12 @@ export default function LearningPlanPage() {
             <div className="flex flex-col gap-1">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Plan Status</label>
               <select
-                value={planStatus}
-                onChange={(e) => setPlanStatus(e.target.value as typeof planStatus)}
+                value={isActive ? 'active' : 'inactive'}
+                onChange={(e) => setIsActive(e.target.value === 'active')}
                 className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 <option value="active">Active</option>
-                <option value="on_hold">On Hold</option>
-                <option value="completed">Completed</option>
-                <option value="archived">Archived</option>
+                <option value="inactive">Inactive</option>
               </select>
             </div>
 
@@ -541,18 +530,6 @@ export default function LearningPlanPage() {
             })}
           </div>
 
-          <div className="mt-4">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Additional / custom accommodations
-            </label>
-            <textarea
-              value={customAccommodations}
-              onChange={(e) => setCustomAccommodations(e.target.value)}
-              rows={3}
-              placeholder="Describe any additional accommodations or specific details..."
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
         </div>
 
         {/* Save Button */}

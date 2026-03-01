@@ -27,12 +27,11 @@ export async function POST(request: NextRequest) {
       .upsert(
         {
           scenario_id,
-          rated_by: session.user.email,
+          user_email: session.user.email,
           rating,
           comment: comment || null,
-          updated_at: new Date().toISOString(),
         },
-        { onConflict: 'scenario_id,rated_by' }
+        { onConflict: 'scenario_id,user_email' }
       )
       .select()
       .single();
@@ -79,7 +78,7 @@ export async function DELETE(request: NextRequest) {
       .from('scenario_ratings')
       .delete()
       .eq('scenario_id', scenario_id)
-      .eq('rated_by', session.user.email);
+      .eq('user_email', session.user.email);
 
     if (error) throw error;
 

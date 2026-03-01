@@ -53,7 +53,7 @@ export async function PUT(request: NextRequest) {
 
     // Confirm the certification exists
     const { data: existing, error: fetchError } = await supabase
-      .from('certifications')
+      .from('instructor_certifications')
       .select('id')
       .eq('id', certification_id)
       .single();
@@ -63,7 +63,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const { error: updateError } = await supabase
-      .from('certifications')
+      .from('instructor_certifications')
       .update({
         verification_status,
         verified_by: session.user.email,

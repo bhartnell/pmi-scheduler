@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { hasMinRole } from '@/lib/permissions';
 
 // GET /api/lab-management/scenario-library
 // Returns all scenarios enriched with tags, avg rating, and favorite flag
@@ -19,7 +18,6 @@ export async function GET(request: NextRequest) {
   const category = searchParams.get('category') || '';
   const difficulty = searchParams.get('difficulty') || '';
   const tagFilter = searchParams.get('tag') || '';
-  const favoritesOnly = searchParams.get('favorites') === 'true';
   const sortBy = searchParams.get('sort') || 'title'; // title | difficulty | rating | created_at
 
   try {
@@ -51,17 +49,10 @@ export async function GET(request: NextRequest) {
       .select('scenario_id, tag')
       .in('scenario_id', ids);
 
-    // 3. Fetch ratings for these scenarios
+    // 3. Fetch ratings for these scenarios (user_email replaces rated_by)
     const { data: ratings } = await supabase
       .from('scenario_ratings')
-      .select('scenario_id, rating, comment, rated_by')
-      .in('scenario_id', ids);
-
-    // 4. Fetch favorites for current user
-    const { data: favorites } = await supabase
-      .from('scenario_favorites')
-      .select('scenario_id')
-      .eq('user_email', email)
+      .select('scenario_id, rating, comment, user_email')
       .in('scenario_id', ids);
 
     // Build lookup maps
@@ -78,7 +69,7 @@ export async function GET(request: NextRequest) {
       }
       ratingMap[r.scenario_id].count += 1;
       ratingMap[r.scenario_id].avg += r.rating;
-      if (r.rated_by === email) {
+      if (r.user_email === email) {
         ratingMap[r.scenario_id].myRating = r.rating;
         ratingMap[r.scenario_id].myComment = r.comment || null;
       }
@@ -89,9 +80,7 @@ export async function GET(request: NextRequest) {
       entry.avg = entry.count > 0 ? Math.round((entry.avg / entry.count) * 10) / 10 : 0;
     }
 
-    const favoriteSet = new Set((favorites || []).map((f) => f.scenario_id));
-
-    // 5. Enrich scenarios
+    // 4. Enrich scenarios (is_favorite is always false from server; client manages via localStorage)
     let enriched = scenarios.map((s) => {
       const ratingInfo = ratingMap[s.id] || { avg: 0, count: 0, myRating: null, myComment: null };
       return {
@@ -101,19 +90,16 @@ export async function GET(request: NextRequest) {
         rating_count: ratingInfo.count,
         my_rating: ratingInfo.myRating,
         my_comment: ratingInfo.myComment,
-        is_favorite: favoriteSet.has(s.id),
+        is_favorite: false,
       };
     });
 
-    // 6. Apply tag filter (post-fetch since tags are in a separate table)
+    // 5. Apply tag filter (post-fetch since tags are in a separate table)
     if (tagFilter) {
       enriched = enriched.filter((s) => s.tags.includes(tagFilter));
     }
 
-    // 7. Apply favorites filter
-    if (favoritesOnly) {
-      enriched = enriched.filter((s) => s.is_favorite);
-    }
+    // favorites filter is now handled client-side via localStorage
 
     // 8. Sort
     const DIFFICULTY_ORDER: Record<string, number> = { beginner: 1, intermediate: 2, advanced: 3, expert: 4 };

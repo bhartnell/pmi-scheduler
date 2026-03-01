@@ -17,7 +17,7 @@ export default function LearningPlanBanner({ studentId }: Props) {
       const res = await fetch(`/api/lab-management/students/${studentId}/learning-plan`);
       if (!res.ok) return;
       const json = await res.json();
-      if (json.success && json.plan && json.plan.status === 'active') {
+      if (json.success && json.plan && json.plan.is_active === true) {
         setHasActivePlan(true);
       }
     } catch (err) {

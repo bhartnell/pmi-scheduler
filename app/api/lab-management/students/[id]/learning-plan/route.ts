@@ -32,11 +32,14 @@ export async function GET(
   try {
     const supabase = getSupabaseAdmin();
 
-    // Fetch the learning plan for this student
+    // Fetch the most recent active learning plan for this student
     const { data: plan, error: planError } = await supabase
       .from('learning_plans')
       .select('*')
       .eq('student_id', studentId)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     if (planError) throw planError;
@@ -81,33 +84,34 @@ export async function POST(
     const supabase = getSupabaseAdmin();
     const body = await request.json();
 
-    const validStatuses = ['active', 'on_hold', 'completed', 'archived'];
-    const status = validStatuses.includes(body.status) ? body.status : 'active';
+    const isActive = body.is_active !== undefined ? Boolean(body.is_active) : true;
 
     const planData = {
       student_id: studentId,
-      goals: Array.isArray(body.goals) ? body.goals : [],
+      goals: typeof body.goals === 'string' ? body.goals : (body.goals ?? null),
       accommodations: Array.isArray(body.accommodations) ? body.accommodations : [],
-      custom_accommodations: body.custom_accommodations?.trim() || null,
-      status,
+      is_active: isActive,
       review_date: body.review_date || null,
       updated_at: new Date().toISOString(),
     };
 
-    // Check if plan already exists (upsert by student_id unique constraint)
+    // Check if an active plan already exists to update, otherwise create new
     const { data: existing } = await supabase
       .from('learning_plans')
       .select('id')
       .eq('student_id', studentId)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     let plan;
     if (existing) {
-      // Update existing plan
+      // Update the most recent active plan
       const { data, error } = await supabase
         .from('learning_plans')
         .update(planData)
-        .eq('student_id', studentId)
+        .eq('id', existing.id)
         .select('*')
         .single();
       if (error) throw error;

@@ -37,11 +37,14 @@ export async function POST(
       return NextResponse.json({ error: 'Note content is required' }, { status: 400 });
     }
 
-    // Verify the learning plan exists for this student
+    // Verify an active learning plan exists for this student
     const { data: plan, error: planError } = await supabase
       .from('learning_plans')
       .select('id')
       .eq('student_id', studentId)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     if (planError) throw planError;

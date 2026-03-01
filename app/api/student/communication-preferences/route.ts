@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     const { data: student, error: studentError } = await supabase
       .from('students')
       .select(
-        'id, preferred_contact_method, best_contact_times, language_preference, contact_opt_out'
+        'id, preferred_contact_method, best_contact_times, language_preference, opt_out_non_essential'
       )
       .ilike('email', session.user.email)
       .single();
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
  * PUT /api/student/communication-preferences
  * Updates the current student's communication preferences.
  * Allowed fields: preferred_contact_method, best_contact_times,
- *                 language_preference, contact_opt_out
+ *                 language_preference, opt_out_non_essential
  */
 export async function PUT(request: NextRequest) {
   try {
@@ -116,19 +116,29 @@ export async function PUT(request: NextRequest) {
     }
 
     // Build update object with whitelisted fields only
-    const updates: Record<string, string | boolean | null> = {};
+    const updates: Record<string, string | string[] | boolean | null> = {};
 
     if ('preferred_contact_method' in body) {
-      updates.preferred_contact_method = body.preferred_contact_method || 'email';
+      updates.preferred_contact_method = body.preferred_contact_method || null;
     }
     if ('best_contact_times' in body) {
-      updates.best_contact_times = body.best_contact_times === '' ? null : body.best_contact_times;
+      // best_contact_times is TEXT[] in the database.
+      // Accept either an array or a comma-separated string from the client.
+      const val = body.best_contact_times;
+      if (val === '' || val === null || val === undefined) {
+        updates.best_contact_times = null;
+      } else if (Array.isArray(val)) {
+        updates.best_contact_times = val.length === 0 ? null : val;
+      } else {
+        const parts = String(val).split(',').map((s: string) => s.trim()).filter(Boolean);
+        updates.best_contact_times = parts.length === 0 ? null : parts;
+      }
     }
     if ('language_preference' in body) {
       updates.language_preference = body.language_preference || 'en';
     }
-    if ('contact_opt_out' in body) {
-      updates.contact_opt_out = Boolean(body.contact_opt_out);
+    if ('opt_out_non_essential' in body) {
+      updates.opt_out_non_essential = Boolean(body.opt_out_non_essential);
     }
 
     if (Object.keys(updates).length === 0) {
@@ -143,7 +153,7 @@ export async function PUT(request: NextRequest) {
       .update(updates)
       .eq('id', existing.id)
       .select(
-        'id, preferred_contact_method, best_contact_times, language_preference, contact_opt_out'
+        'id, preferred_contact_method, best_contact_times, language_preference, opt_out_non_essential'
       )
       .single();
 
