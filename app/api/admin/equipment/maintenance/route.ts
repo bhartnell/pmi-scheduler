@@ -20,7 +20,7 @@ async function getCurrentUser(email: string) {
 // GET /api/admin/equipment/maintenance
 //
 // Query params:
-//   ?equipment_id=  - filter by equipment (optional)
+//   ?equipment_item_id=  - filter by equipment (optional)
 //   ?status=        - filter by status: scheduled|completed|overdue|cancelled (optional)
 //   ?from=          - ISO date, filter scheduled_date >= from (optional)
 //   ?to=            - ISO date, filter scheduled_date <= to (optional)
@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
 
     const supabase = getSupabaseAdmin();
     const { searchParams } = new URL(request.url);
-    const equipmentId = searchParams.get('equipment_id');
+    const equipmentId = searchParams.get('equipment_item_id');
     const status = searchParams.get('status');
     const from = searchParams.get('from');
     const to = searchParams.get('to');
@@ -50,13 +50,13 @@ export async function GET(request: NextRequest) {
       .from('equipment_maintenance')
       .select(`
         *,
-        equipment:equipment_id (id, name, category, location, condition)
+        equipment:equipment_item_id (id, name, category, location, condition)
       `)
       .order('scheduled_date', { ascending: false })
       .order('created_at', { ascending: false });
 
     if (equipmentId) {
-      query = query.eq('equipment_id', equipmentId);
+      query = query.eq('equipment_item_id', equipmentId);
     }
 
     if (status) {
@@ -106,7 +106,7 @@ export async function GET(request: NextRequest) {
 // ---------------------------------------------------------------------------
 // POST /api/admin/equipment/maintenance
 //
-// Body: { equipment_id, maintenance_type, description?, scheduled_date?,
+// Body: { equipment_item_id, maintenance_type, description?, scheduled_date?,
 //         completed_date?, completed_by?, next_due_date?, cost?, status?,
 //         notes? }
 // ---------------------------------------------------------------------------
@@ -123,7 +123,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json() as {
-      equipment_id: string;
+      equipment_item_id: string;
       maintenance_type: string;
       description?: string | null;
       scheduled_date?: string | null;
@@ -135,11 +135,11 @@ export async function POST(request: NextRequest) {
       notes?: string | null;
     };
 
-    const { equipment_id, maintenance_type } = body;
+    const { equipment_item_id, maintenance_type } = body;
 
-    if (!equipment_id || !maintenance_type) {
+    if (!equipment_item_id || !maintenance_type) {
       return NextResponse.json(
-        { error: 'equipment_id and maintenance_type are required' },
+        { error: 'equipment_item_id and maintenance_type are required' },
         { status: 400 }
       );
     }
@@ -150,7 +150,7 @@ export async function POST(request: NextRequest) {
     const { data: equipment, error: equipError } = await supabase
       .from('equipment')
       .select('id, name')
-      .eq('id', equipment_id)
+      .eq('id', equipment_item_id)
       .single();
 
     if (equipError || !equipment) {
@@ -158,7 +158,7 @@ export async function POST(request: NextRequest) {
     }
 
     const record = {
-      equipment_id,
+      equipment_item_id,
       maintenance_type: maintenance_type.trim(),
       description: body.description ?? null,
       scheduled_date: body.scheduled_date ?? null,
@@ -187,7 +187,7 @@ export async function POST(request: NextRequest) {
           next_maintenance: body.next_due_date ?? null,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', equipment_id);
+        .eq('id', equipment_item_id);
     }
 
     return NextResponse.json({ success: true, record: data }, { status: 201 });

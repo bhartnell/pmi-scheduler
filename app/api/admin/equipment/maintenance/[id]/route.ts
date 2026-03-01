@@ -58,7 +58,7 @@ export async function PUT(
     // Verify the record exists
     const { data: existing, error: fetchError } = await supabase
       .from('equipment_maintenance')
-      .select('id, equipment_id, status')
+      .select('id, equipment_item_id, status')
       .eq('id', id)
       .single();
 
@@ -105,7 +105,7 @@ export async function PUT(
           next_maintenance: body.next_due_date ?? null,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', existing.equipment_id);
+        .eq('id', existing.equipment_item_id);
     }
 
     return NextResponse.json({ success: true, record: data });

@@ -3,7 +3,7 @@
 
 CREATE TABLE IF NOT EXISTS equipment_maintenance (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  equipment_id UUID NOT NULL REFERENCES equipment(id) ON DELETE CASCADE,
+  equipment_item_id UUID NOT NULL REFERENCES equipment(id) ON DELETE CASCADE,
   maintenance_type TEXT NOT NULL,
   description TEXT,
   scheduled_date DATE,
@@ -17,7 +17,7 @@ CREATE TABLE IF NOT EXISTS equipment_maintenance (
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_equipment_maintenance_equipment ON equipment_maintenance(equipment_id);
+CREATE INDEX IF NOT EXISTS idx_equipment_maintenance_equipment ON equipment_maintenance(equipment_item_id);
 CREATE INDEX IF NOT EXISTS idx_equipment_maintenance_status ON equipment_maintenance(status);
 CREATE INDEX IF NOT EXISTS idx_equipment_maintenance_due ON equipment_maintenance(next_due_date);
 CREATE INDEX IF NOT EXISTS idx_equipment_maintenance_scheduled ON equipment_maintenance(scheduled_date);

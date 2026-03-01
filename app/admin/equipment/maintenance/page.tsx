@@ -46,7 +46,7 @@ interface EquipmentRef {
 
 interface MaintenanceRecord {
   id: string;
-  equipment_id: string;
+  equipment_item_id: string;
   maintenance_type: string;
   description: string | null;
   scheduled_date: string | null;
@@ -70,7 +70,7 @@ interface EquipmentOption {
 }
 
 interface MaintenanceFormData {
-  equipment_id: string;
+  equipment_item_id: string;
   maintenance_type: string;
   description: string;
   scheduled_date: string;
@@ -122,7 +122,7 @@ const STATUS_CONFIG: Record<string, { label: string; badge: string; icon: React.
 };
 
 const EMPTY_FORM: MaintenanceFormData = {
-  equipment_id: '',
+  equipment_item_id: '',
   maintenance_type: MAINTENANCE_TYPES[0],
   description: '',
   scheduled_date: '',
@@ -190,7 +190,7 @@ function MaintenanceModal({
   useEffect(() => {
     if (editRecord) {
       setForm({
-        equipment_id: editRecord.equipment_id,
+        equipment_item_id: editRecord.equipment_item_id,
         maintenance_type: editRecord.maintenance_type,
         description: editRecord.description ?? '',
         scheduled_date: editRecord.scheduled_date ?? '',
@@ -253,8 +253,8 @@ function MaintenanceModal({
               Equipment <span className="text-red-500">*</span>
             </label>
             <select
-              value={form.equipment_id}
-              onChange={(e) => setForm({ ...form, equipment_id: e.target.value })}
+              value={form.equipment_item_id}
+              onChange={(e) => setForm({ ...form, equipment_item_id: e.target.value })}
               required
               className={inputClass}
             >
@@ -780,7 +780,7 @@ export default function MaintenanceLogPage() {
       equipName.includes(search.toLowerCase()) ||
       r.maintenance_type.toLowerCase().includes(search.toLowerCase());
     const matchesStatus = filterStatus === '' || r.status === filterStatus;
-    const matchesEquipment = filterEquipment === '' || r.equipment_id === filterEquipment;
+    const matchesEquipment = filterEquipment === '' || r.equipment_item_id === filterEquipment;
     return matchesSearch && matchesStatus && matchesEquipment;
   });
 
@@ -797,7 +797,7 @@ export default function MaintenanceLogPage() {
     setSaving(true);
     try {
       const payload = {
-        equipment_id: formData.equipment_id,
+        equipment_item_id: formData.equipment_item_id,
         maintenance_type: formData.maintenance_type,
         description: formData.description || null,
         scheduled_date: formData.scheduled_date || null,
