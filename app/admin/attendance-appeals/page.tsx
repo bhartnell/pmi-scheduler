@@ -41,11 +41,6 @@ interface Student {
   email: string | null;
 }
 
-interface Reviewer {
-  id: string;
-  name: string;
-}
-
 interface Appeal {
   id: string;
   absence_date: string;
@@ -53,9 +48,10 @@ interface Appeal {
   documentation_url: string | null;
   status: 'pending' | 'approved' | 'denied';
   review_notes: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
   created_at: string;
   student: Student | null;
-  reviewer: Reviewer | null;
 }
 
 type StatusFilter = 'all' | 'pending' | 'approved' | 'denied';
@@ -373,7 +369,7 @@ export default function AdminAttendanceAppealsPage() {
                         {/* Meta */}
                         <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
                           Submitted {new Date(appeal.created_at).toLocaleDateString()}
-                          {appeal.reviewer && ` · Reviewed by ${appeal.reviewer.name}`}
+                          {appeal.reviewed_by && ` · Reviewed by ${appeal.reviewed_by}`}
                         </p>
                       </div>
 

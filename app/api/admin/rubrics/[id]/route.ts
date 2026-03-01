@@ -42,7 +42,7 @@ export async function GET(
       .from('assessment_rubrics')
       .select(`
         id, name, description, rating_scale, created_by, created_at, updated_at,
-        criteria:rubric_criteria(id, name, description, max_points, sort_order),
+        criteria:rubric_criteria(id, name, description, points, sort_order),
         assignments:rubric_scenario_assignments(id, scenario_id, assigned_at)
       `)
       .eq('id', id)
@@ -98,7 +98,7 @@ export async function PUT(
       criteria?: Array<{
         name: string;
         description?: string;
-        max_points?: number;
+        points?: number;
         sort_order?: number;
       }>;
       scenario_ids?: string[];
@@ -144,7 +144,7 @@ export async function PUT(
           rubric_id: id,
           name: c.name.trim(),
           description: c.description ?? null,
-          max_points: c.max_points ?? 5,
+          points: c.points ?? 5,
           sort_order: c.sort_order ?? i,
         }));
 
@@ -187,7 +187,7 @@ export async function PUT(
       .from('assessment_rubrics')
       .select(`
         id, name, description, rating_scale, created_by, created_at, updated_at,
-        criteria:rubric_criteria(id, name, description, max_points, sort_order),
+        criteria:rubric_criteria(id, name, description, points, sort_order),
         assignments:rubric_scenario_assignments(id, scenario_id, assigned_at)
       `)
       .eq('id', id)

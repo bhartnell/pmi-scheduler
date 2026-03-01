@@ -49,12 +49,15 @@ export async function GET(request: NextRequest) {
       .select(`
         id,
         reason,
-        details,
+        reason_details,
         status,
         review_notes,
         created_at,
-        updated_at,
-        requesting_instructor:requesting_instructor_id(id, name, email),
+        reviewed_at,
+        covered_at,
+        requester_email,
+        reviewed_by,
+        covered_by,
         lab_day:lab_day_id(
           id,
           date,
@@ -62,15 +65,13 @@ export async function GET(request: NextRequest) {
           week_number,
           day_number,
           cohort:cohorts(id, cohort_number, program:programs(abbreviation))
-        ),
-        reviewer:reviewed_by(id, name),
-        covered_by_user:covered_by(id, name, email)
+        )
       `)
       .order('created_at', { ascending: false });
 
     // Non-admin/lead instructors only see their own requests
     if (!canReviewAll(currentUser.role)) {
-      query = query.eq('requesting_instructor_id', currentUser.id);
+      query = query.eq('requester_email', currentUser.email);
     }
 
     if (statusFilter) {
@@ -114,7 +115,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { lab_day_id, reason, details } = body;
+    const { lab_day_id, reason, reason_details } = body;
 
     if (!lab_day_id || !reason) {
       return NextResponse.json(
@@ -159,7 +160,7 @@ export async function POST(request: NextRequest) {
     const { data: existingRequest } = await supabase
       .from('substitute_requests')
       .select('id, status')
-      .eq('requesting_instructor_id', currentUser.id)
+      .eq('requester_email', currentUser.email)
       .eq('lab_day_id', lab_day_id)
       .eq('status', 'pending')
       .maybeSingle();
@@ -175,19 +176,19 @@ export async function POST(request: NextRequest) {
     const { data: newRequest, error } = await supabase
       .from('substitute_requests')
       .insert({
-        requesting_instructor_id: currentUser.id,
+        requester_email: currentUser.email,
         lab_day_id,
         reason,
-        details: details || null,
+        reason_details: reason_details || null,
         status: 'pending',
       })
       .select(`
         id,
         reason,
-        details,
+        reason_details,
         status,
         created_at,
-        requesting_instructor:requesting_instructor_id(id, name, email),
+        requester_email,
         lab_day:lab_day_id(
           id,
           date,

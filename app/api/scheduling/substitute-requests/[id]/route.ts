@@ -55,9 +55,8 @@ export async function PUT(
       .select(`
         id,
         status,
-        requesting_instructor_id,
+        requester_email,
         reason,
-        requesting_instructor:requesting_instructor_id(id, name, email),
         lab_day:lab_day_id(id, date, title)
       `)
       .eq('id', id)
@@ -73,7 +72,7 @@ export async function PUT(
     // Authorization checks
     if (action === 'cancel') {
       // Only the requesting instructor can cancel
-      if (existingRequest.requesting_instructor_id !== currentUser.id) {
+      if (existingRequest.requester_email !== currentUser.email) {
         return NextResponse.json(
           { success: false, error: 'Only the requesting instructor can cancel this request' },
           { status: 403 }
@@ -102,18 +101,19 @@ export async function PUT(
     }
 
     // Build the update payload
-    const newStatus = action === 'approve' ? 'approved' : action === 'deny' ? 'denied' : 'cancelled';
+    const newStatus = action === 'approve' ? 'approved' : action === 'deny' ? 'denied' : 'covered';
 
     const updatePayload: Record<string, unknown> = {
       status: newStatus,
-      updated_at: new Date().toISOString(),
     };
 
     if (action === 'approve' || action === 'deny') {
-      updatePayload.reviewed_by = currentUser.id;
+      updatePayload.reviewed_by = currentUser.email;
+      updatePayload.reviewed_at = new Date().toISOString();
       updatePayload.review_notes = review_notes || null;
       if (action === 'approve' && covered_by) {
         updatePayload.covered_by = covered_by;
+        updatePayload.covered_at = new Date().toISOString();
       }
     }
 
@@ -128,10 +128,7 @@ export async function PUT(
 
     // Send notifications
     try {
-      const requesterData = existingRequest.requesting_instructor as {
-        email?: string;
-        name?: string;
-      } | null;
+      const requesterEmail = existingRequest.requester_email as string | null;
       const labDayData = existingRequest.lab_day as { date?: string; title?: string } | null;
 
       const labLabel = labDayData?.date
@@ -142,9 +139,9 @@ export async function PUT(
           })
         : 'your lab day';
 
-      if (action === 'approve' && requesterData?.email) {
+      if (action === 'approve' && requesterEmail) {
         await createNotification({
-          userEmail: requesterData.email,
+          userEmail: requesterEmail,
           title: 'Substitute request approved',
           message: `Your substitute request for ${labLabel} was approved${review_notes ? `: ${review_notes}` : ''}`,
           type: 'shift_confirmed',
@@ -153,25 +150,17 @@ export async function PUT(
           referenceId: id,
         });
 
-        // If a specific substitute was assigned, notify them
+        // If a specific substitute was assigned (covered_by is now an email), notify them
         if (covered_by) {
-          const { data: coveringInstructor } = await supabase
-            .from('lab_users')
-            .select('email, name')
-            .eq('id', covered_by)
-            .single();
-
-          if (coveringInstructor?.email) {
-            await createNotification({
-              userEmail: coveringInstructor.email,
-              title: 'You have been assigned as substitute',
-              message: `${currentUser.name} assigned you to cover ${requesterData?.name || 'an instructor'}'s lab on ${labLabel}`,
-              type: 'lab_assignment',
-              linkUrl: '/scheduling/substitute-requests',
-              referenceType: 'substitute_request',
-              referenceId: id,
-            });
-          }
+          await createNotification({
+            userEmail: covered_by,
+            title: 'You have been assigned as substitute',
+            message: `${currentUser.name} assigned you to cover a lab on ${labLabel}`,
+            type: 'lab_assignment',
+            linkUrl: '/scheduling/substitute-requests',
+            referenceType: 'substitute_request',
+            referenceId: id,
+          });
         } else {
           // Notify all available instructors that coverage is needed
           const { data: instructors } = await supabase
@@ -179,7 +168,7 @@ export async function PUT(
             .select('email')
             .in('role', ['instructor', 'lead_instructor', 'volunteer_instructor'])
             .eq('is_active', true)
-            .neq('id', existingRequest.requesting_instructor_id);
+            .neq('email', existingRequest.requester_email);
 
           if (instructors && instructors.length > 0) {
             await Promise.all(
@@ -199,9 +188,9 @@ export async function PUT(
         }
       }
 
-      if (action === 'deny' && requesterData?.email) {
+      if (action === 'deny' && requesterEmail) {
         await createNotification({
-          userEmail: requesterData.email,
+          userEmail: requesterEmail,
           title: 'Substitute request denied',
           message: `Your substitute request for ${labLabel} was denied${review_notes ? `: ${review_notes}` : ''}`,
           type: 'shift_confirmed',
@@ -246,7 +235,7 @@ export async function DELETE(
     // Fetch the request to verify ownership
     const { data: existingRequest, error: fetchError } = await supabase
       .from('substitute_requests')
-      .select('id, status, requesting_instructor_id')
+      .select('id, status, requester_email')
       .eq('id', id)
       .single();
 
@@ -259,7 +248,7 @@ export async function DELETE(
 
     // Only the requester or an admin can delete
     const isAdmin = hasMinRole(currentUser.role, 'admin');
-    if (existingRequest.requesting_instructor_id !== currentUser.id && !isAdmin) {
+    if (existingRequest.requester_email !== currentUser.email && !isAdmin) {
       return NextResponse.json(
         { success: false, error: 'You can only delete your own requests' },
         { status: 403 }

@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { lab_day_id, category, description, unit_cost, quantity } = body;
+    const { lab_day_id, category, description, amount } = body;
 
     if (!lab_day_id) {
       return NextResponse.json({ error: 'lab_day_id is required' }, { status: 400 });
@@ -126,15 +126,13 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    const parsedCost = parseFloat(unit_cost);
-    if (isNaN(parsedCost) || parsedCost < 0) {
-      return NextResponse.json({ error: 'unit_cost must be a non-negative number' }, { status: 400 });
+    if (!description?.trim()) {
+      return NextResponse.json({ error: 'description is required' }, { status: 400 });
     }
 
-    const parsedQty = parseInt(quantity, 10);
-    if (isNaN(parsedQty) || parsedQty < 1) {
-      return NextResponse.json({ error: 'quantity must be a positive integer' }, { status: 400 });
+    const parsedAmount = parseFloat(amount);
+    if (isNaN(parsedAmount) || parsedAmount < 0) {
+      return NextResponse.json({ error: 'amount must be a non-negative number' }, { status: 400 });
     }
 
     const { data, error } = await supabase
@@ -142,10 +140,9 @@ export async function POST(request: NextRequest) {
       .insert({
         lab_day_id,
         category,
-        description: description?.trim() || null,
-        unit_cost: parsedCost,
-        quantity: parsedQty,
-        added_by: session.user.email,
+        description: description.trim(),
+        amount: parsedAmount,
+        created_by: session.user.email,
       })
       .select('*')
       .single();

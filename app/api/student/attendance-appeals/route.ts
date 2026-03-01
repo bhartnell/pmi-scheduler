@@ -58,9 +58,9 @@ export async function GET(request: NextRequest) {
         documentation_url,
         status,
         review_notes,
-        created_at,
-        updated_at,
-        reviewer:lab_users!attendance_appeals_reviewed_by_fkey(id, name)
+        reviewed_by,
+        reviewed_at,
+        created_at
       `)
       .eq('student_id', student.id)
       .order('created_at', { ascending: false });
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { absence_date, reason, documentation_url, lab_day_id } = body;
+    const { absence_date, reason, documentation_url } = body;
 
     if (!absence_date || !reason?.trim()) {
       return NextResponse.json(
@@ -127,7 +127,6 @@ export async function POST(request: NextRequest) {
         absence_date,
         reason: reason.trim(),
         documentation_url: documentation_url?.trim() || null,
-        lab_day_id: lab_day_id || null,
         status: 'pending',
       })
       .select()

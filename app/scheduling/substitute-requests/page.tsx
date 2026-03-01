@@ -44,15 +44,16 @@ interface LabDay {
 interface SubstituteRequest {
   id: string;
   reason: string;
-  details: string | null;
-  status: 'pending' | 'approved' | 'denied' | 'cancelled';
+  reason_details: string | null;
+  status: 'pending' | 'approved' | 'denied' | 'covered';
   review_notes: string | null;
   created_at: string;
-  updated_at: string;
-  requesting_instructor: { id: string; name: string; email: string } | null;
+  reviewed_at: string | null;
+  covered_at: string | null;
+  requester_email: string | null;
+  reviewed_by: string | null;
+  covered_by: string | null;
   lab_day: LabDay | null;
-  reviewer: { id: string; name: string } | null;
-  covered_by_user: { id: string; name: string; email: string } | null;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -87,11 +88,11 @@ const STATUS_CONFIG: Record<
     text: 'text-red-700 dark:text-red-400',
     icon: XCircle,
   },
-  cancelled: {
-    label: 'Cancelled',
-    bg: 'bg-gray-100 dark:bg-gray-700',
-    text: 'text-gray-500 dark:text-gray-400',
-    icon: X,
+  covered: {
+    label: 'Covered',
+    bg: 'bg-blue-100 dark:bg-blue-900/30',
+    text: 'text-blue-700 dark:text-blue-400',
+    icon: CheckCircle2,
   },
 };
 
@@ -258,7 +259,7 @@ export default function SubstituteRequestsPage() {
         body: JSON.stringify({
           lab_day_id: formLabDayId,
           reason: formReason,
-          details: formDetails || undefined,
+          reason_details: formDetails || undefined,
         }),
       });
       const data = await res.json();
@@ -557,7 +558,7 @@ export default function SubstituteRequestsPage() {
                   <option value="pending">Pending</option>
                   <option value="approved">Approved</option>
                   <option value="denied">Denied</option>
-                  <option value="cancelled">Cancelled</option>
+                  <option value="covered">Covered</option>
                 </select>
                 <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
               </div>
@@ -592,7 +593,7 @@ export default function SubstituteRequestsPage() {
               {requests.map(req => {
                 const statusCfg = STATUS_CONFIG[req.status];
                 const StatusIcon = statusCfg.icon;
-                const isOwn = req.requesting_instructor?.id === currentUser?.id;
+                const isOwn = req.requester_email === currentUser?.email;
                 const canCancel = isOwn && req.status === 'pending';
 
                 return (
@@ -600,7 +601,7 @@ export default function SubstituteRequestsPage() {
                     <div className="flex items-start justify-between gap-4 flex-wrap">
                       {/* Left side info */}
                       <div className="flex-1 min-w-0">
-                        {/* Status badge + instructor name (for admin view) */}
+                        {/* Status badge + instructor email (for admin view) */}
                         <div className="flex items-center gap-2 flex-wrap mb-2">
                           <span
                             className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${statusCfg.bg} ${statusCfg.text}`}
@@ -608,9 +609,9 @@ export default function SubstituteRequestsPage() {
                             <StatusIcon className="w-3 h-3" />
                             {statusCfg.label}
                           </span>
-                          {isReviewer && req.requesting_instructor && (
+                          {isReviewer && req.requester_email && (
                             <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                              {req.requesting_instructor.name}
+                              {req.requester_email}
                             </span>
                           )}
                           <span className="text-xs text-gray-400 dark:text-gray-500">
@@ -635,9 +636,9 @@ export default function SubstituteRequestsPage() {
                           <AlertCircle className="w-4 h-4 text-orange-400 flex-shrink-0" />
                           <span className="text-sm text-gray-700 dark:text-gray-300">
                             <span className="font-medium">Reason:</span> {req.reason}
-                            {req.details && (
+                            {req.reason_details && (
                               <span className="text-gray-500 dark:text-gray-400 ml-1">
-                                — {req.details}
+                                — {req.reason_details}
                               </span>
                             )}
                           </span>
@@ -652,13 +653,13 @@ export default function SubstituteRequestsPage() {
                         )}
 
                         {/* Coverage info */}
-                        {req.covered_by_user && req.status === 'approved' && (
+                        {req.covered_by && (req.status === 'approved' || req.status === 'covered') && (
                           <div className="mt-2 flex items-center gap-2 text-sm text-green-700 dark:text-green-400">
                             <Users className="w-4 h-4" />
-                            <span>Covered by {req.covered_by_user.name}</span>
+                            <span>Covered by {req.covered_by}</span>
                           </div>
                         )}
-                        {req.status === 'approved' && !req.covered_by_user && (
+                        {req.status === 'approved' && !req.covered_by && (
                           <div className="mt-2 flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
                             <Users className="w-4 h-4" />
                             <span>Coverage needed — instructors have been notified</span>
@@ -728,7 +729,7 @@ export default function SubstituteRequestsPage() {
               {/* Summary */}
               <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 text-sm">
                 <p className="font-medium text-gray-900 dark:text-white mb-1">
-                  {reviewingRequest.requesting_instructor?.name}
+                  {reviewingRequest.requester_email}
                 </p>
                 {reviewingRequest.lab_day && (
                   <p className="text-gray-600 dark:text-gray-400">
@@ -738,9 +739,9 @@ export default function SubstituteRequestsPage() {
                 <p className="text-gray-600 dark:text-gray-400">
                   Reason: {reviewingRequest.reason}
                 </p>
-                {reviewingRequest.details && (
+                {reviewingRequest.reason_details && (
                   <p className="text-gray-500 dark:text-gray-500 mt-1 italic">
-                    {reviewingRequest.details}
+                    {reviewingRequest.reason_details}
                   </p>
                 )}
               </div>

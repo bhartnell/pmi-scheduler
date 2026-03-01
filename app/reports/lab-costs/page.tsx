@@ -27,10 +27,9 @@ interface CostItem {
   id: string;
   lab_day_id: string;
   category: string;
-  description: string | null;
-  unit_cost: number;
-  quantity: number;
-  added_by: string | null;
+  description: string;
+  amount: number;
+  created_by: string | null;
   created_at: string;
   lab_day: {
     id: string;
@@ -164,7 +163,7 @@ export default function LabCostsReportPage() {
       for (const item of items) {
         if (!item.lab_day) continue;
         const labDayId = item.lab_day_id;
-        const itemTotal = item.unit_cost * item.quantity;
+        const itemTotal = item.amount;
 
         if (!labDayMap.has(labDayId)) {
           labDayMap.set(labDayId, {
@@ -194,8 +193,7 @@ export default function LabCostsReportPage() {
       const categoryBreakdown: Record<string, number> = {};
       for (const item of items) {
         if (!item.lab_day) continue;
-        const total = item.unit_cost * item.quantity;
-        categoryBreakdown[item.category] = (categoryBreakdown[item.category] || 0) + total;
+        categoryBreakdown[item.category] = (categoryBreakdown[item.category] || 0) + item.amount;
       }
 
       // Monthly totals
@@ -203,8 +201,7 @@ export default function LabCostsReportPage() {
       for (const item of items) {
         if (!item.lab_day) continue;
         const month = item.lab_day.date.substring(0, 7); // YYYY-MM
-        const total = item.unit_cost * item.quantity;
-        monthlyMap.set(month, (monthlyMap.get(month) || 0) + total);
+        monthlyMap.set(month, (monthlyMap.get(month) || 0) + item.amount);
       }
       const monthlyTotals = Array.from(monthlyMap.entries())
         .map(([month, total]) => ({ month, total }))

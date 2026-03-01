@@ -76,9 +76,9 @@ export async function PUT(
       .from('attendance_appeals')
       .update({
         status: newStatus,
-        reviewed_by: currentUser.id,
+        reviewed_by: currentUser.email,
+        reviewed_at: new Date().toISOString(),
         review_notes: review_notes?.trim() || null,
-        updated_at: new Date().toISOString(),
       })
       .eq('id', id);
 

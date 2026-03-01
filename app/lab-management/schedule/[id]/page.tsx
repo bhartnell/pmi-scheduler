@@ -236,10 +236,9 @@ interface CostItem {
   id: string;
   lab_day_id: string;
   category: string;
-  description: string | null;
-  unit_cost: number;
-  quantity: number;
-  added_by: string | null;
+  description: string;
+  amount: number;
+  created_by: string | null;
   created_at: string;
 }
 
@@ -360,14 +359,12 @@ export default function LabDayPage() {
   const [editingCostId, setEditingCostId] = useState<string | null>(null);
   const [newCostCategory, setNewCostCategory] = useState<string>('Consumables');
   const [newCostDescription, setNewCostDescription] = useState('');
-  const [newCostUnitCost, setNewCostUnitCost] = useState('');
-  const [newCostQty, setNewCostQty] = useState(1);
+  const [newCostAmount, setNewCostAmount] = useState('');
   const [editCostForm, setEditCostForm] = useState<{
     category: string;
     description: string;
-    unit_cost: string;
-    quantity: number;
-  }>({ category: '', description: '', unit_cost: '', quantity: 1 });
+    amount: string;
+  }>({ category: '', description: '', amount: '' });
 
   // Post-lab debrief state
   const [debriefs, setDebriefs] = useState<any[]>([]);
@@ -691,7 +688,7 @@ export default function LabDayPage() {
   };
 
   const handleAddCostItem = async () => {
-    if (!newCostDescription.trim() || !newCostUnitCost) return;
+    if (!newCostDescription.trim() || !newCostAmount) return;
     setAddingCost(true);
     try {
       const res = await fetch('/api/lab-management/costs', {
@@ -701,16 +698,14 @@ export default function LabDayPage() {
           lab_day_id: labDayId,
           category: newCostCategory,
           description: newCostDescription.trim(),
-          unit_cost: parseFloat(newCostUnitCost) || 0,
-          quantity: newCostQty,
+          amount: parseFloat(newCostAmount) || 0,
         }),
       });
       const data = await res.json();
       if (data.success) {
         setCostItems(prev => [...prev, data.item]);
         setNewCostDescription('');
-        setNewCostUnitCost('');
-        setNewCostQty(1);
+        setNewCostAmount('');
         setNewCostCategory('Consumables');
       } else {
         alert('Failed to add cost item: ' + (data.error || 'Unknown error'));
@@ -726,9 +721,8 @@ export default function LabDayPage() {
     setEditingCostId(item.id);
     setEditCostForm({
       category: item.category,
-      description: item.description || '',
-      unit_cost: item.unit_cost.toString(),
-      quantity: item.quantity,
+      description: item.description,
+      amount: item.amount.toString(),
     });
   };
 
@@ -740,8 +734,7 @@ export default function LabDayPage() {
         body: JSON.stringify({
           category: editCostForm.category,
           description: editCostForm.description,
-          unit_cost: parseFloat(editCostForm.unit_cost) || 0,
-          quantity: editCostForm.quantity,
+          amount: parseFloat(editCostForm.amount) || 0,
         }),
       });
       const data = await res.json();
@@ -3179,7 +3172,7 @@ export default function LabDayPage() {
                 <h3 className="font-semibold text-gray-900 dark:text-white">Lab Costs</h3>
                 {costItems.length > 0 && (
                   <span className="ml-2 text-sm text-gray-500 dark:text-gray-400 shrink-0">
-                    Total: ${costItems.reduce((sum, i) => sum + i.unit_cost * i.quantity, 0).toFixed(2)}
+                    Total: ${costItems.reduce((sum, i) => sum + i.amount, 0).toFixed(2)}
                   </span>
                 )}
                 {costsCollapsed ? (
@@ -3205,14 +3198,14 @@ export default function LabDayPage() {
                         <div className="text-sm text-gray-700 dark:text-gray-300">
                           <span className="font-medium">Total Cost: </span>
                           <span className="font-bold text-emerald-700 dark:text-emerald-400">
-                            ${costItems.reduce((sum, i) => sum + i.unit_cost * i.quantity, 0).toFixed(2)}
+                            ${costItems.reduce((sum, i) => sum + i.amount, 0).toFixed(2)}
                           </span>
                         </div>
                         {cohortStudents.length > 0 && (
                           <div className="text-sm text-gray-700 dark:text-gray-300">
                             <span className="font-medium">Per Student ({cohortStudents.length}): </span>
                             <span className="font-bold text-blue-700 dark:text-blue-400">
-                              ${(costItems.reduce((sum, i) => sum + i.unit_cost * i.quantity, 0) / cohortStudents.length).toFixed(2)}
+                              ${(costItems.reduce((sum, i) => sum + i.amount, 0) / cohortStudents.length).toFixed(2)}
                             </span>
                           </div>
                         )}
@@ -3229,7 +3222,7 @@ export default function LabDayPage() {
                         {COST_CATEGORIES.map(cat => {
                           const catItems = costItems.filter(i => i.category === cat);
                           if (catItems.length === 0) return null;
-                          const catTotal = catItems.reduce((sum, i) => sum + i.unit_cost * i.quantity, 0);
+                          const catTotal = catItems.reduce((sum, i) => sum + i.amount, 0);
                           return (
                             <span
                               key={cat}
@@ -3254,9 +3247,7 @@ export default function LabDayPage() {
                             <tr className="text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b dark:border-gray-700">
                               <th className="pb-2 pr-3">Category</th>
                               <th className="pb-2 pr-3">Description</th>
-                              <th className="pb-2 pr-3 text-right">Unit Cost</th>
-                              <th className="pb-2 pr-3 text-right">Qty</th>
-                              <th className="pb-2 pr-3 text-right">Subtotal</th>
+                              <th className="pb-2 pr-3 text-right">Amount</th>
                               <th className="pb-2"></th>
                             </tr>
                           </thead>
@@ -3290,22 +3281,10 @@ export default function LabDayPage() {
                                         type="number"
                                         min="0"
                                         step="0.01"
-                                        value={editCostForm.unit_cost}
-                                        onChange={e => setEditCostForm(prev => ({ ...prev, unit_cost: e.target.value }))}
-                                        className="w-20 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-right"
+                                        value={editCostForm.amount}
+                                        onChange={e => setEditCostForm(prev => ({ ...prev, amount: e.target.value }))}
+                                        className="w-24 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-right"
                                       />
-                                    </td>
-                                    <td className="py-2 pr-3">
-                                      <input
-                                        type="number"
-                                        min="1"
-                                        value={editCostForm.quantity}
-                                        onChange={e => setEditCostForm(prev => ({ ...prev, quantity: parseInt(e.target.value) || 1 }))}
-                                        className="w-14 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-right"
-                                      />
-                                    </td>
-                                    <td className="py-2 pr-3 text-right text-xs text-gray-500 dark:text-gray-400">
-                                      ${((parseFloat(editCostForm.unit_cost) || 0) * editCostForm.quantity).toFixed(2)}
                                     </td>
                                     <td className="py-2">
                                       <div className="flex items-center gap-1">
@@ -3334,16 +3313,10 @@ export default function LabDayPage() {
                                       </span>
                                     </td>
                                     <td className="py-2 pr-3 text-gray-800 dark:text-gray-200 max-w-[200px] truncate">
-                                      {item.description || <span className="text-gray-400 italic">—</span>}
-                                    </td>
-                                    <td className="py-2 pr-3 text-right text-gray-700 dark:text-gray-300 font-mono">
-                                      ${item.unit_cost.toFixed(2)}
-                                    </td>
-                                    <td className="py-2 pr-3 text-right text-gray-500 dark:text-gray-400">
-                                      {item.quantity}
+                                      {item.description}
                                     </td>
                                     <td className="py-2 pr-3 text-right font-medium text-gray-900 dark:text-white font-mono">
-                                      ${(item.unit_cost * item.quantity).toFixed(2)}
+                                      ${item.amount.toFixed(2)}
                                     </td>
                                     <td className="py-2">
                                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -3397,23 +3370,15 @@ export default function LabDayPage() {
                           type="number"
                           min="0"
                           step="0.01"
-                          value={newCostUnitCost}
-                          onChange={e => setNewCostUnitCost(e.target.value)}
-                          placeholder="Unit $"
+                          value={newCostAmount}
+                          onChange={e => setNewCostAmount(e.target.value)}
+                          placeholder="Amount"
                           className="w-24 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400"
                         />
                       </div>
-                      <input
-                        type="number"
-                        min={1}
-                        value={newCostQty}
-                        onChange={e => setNewCostQty(Math.max(1, parseInt(e.target.value) || 1))}
-                        className="w-16 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400"
-                        title="Quantity"
-                      />
                       <button
                         onClick={handleAddCostItem}
-                        disabled={addingCost || !newCostDescription.trim() || !newCostUnitCost}
+                        disabled={addingCost || !newCostDescription.trim() || !newCostAmount}
                         className="inline-flex items-center gap-1.5 px-3 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {addingCost ? (

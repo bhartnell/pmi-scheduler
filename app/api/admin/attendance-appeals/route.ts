@@ -44,17 +44,14 @@ export async function GET(request: NextRequest) {
         documentation_url,
         status,
         review_notes,
+        reviewed_by,
+        reviewed_at,
         created_at,
-        updated_at,
         student:students!attendance_appeals_student_id_fkey(
           id,
           first_name,
           last_name,
           email
-        ),
-        reviewer:lab_users!attendance_appeals_reviewed_by_fkey(
-          id,
-          name
         )
       `)
       .order('created_at', { ascending: false });

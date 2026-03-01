@@ -36,7 +36,7 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
 
   try {
     const body = await request.json();
-    const { category, description, unit_cost, quantity } = body;
+    const { category, description, amount } = body;
 
     const updates: Record<string, unknown> = {};
 
@@ -51,23 +51,18 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
     }
 
     if (description !== undefined) {
-      updates.description = description?.trim() || null;
+      if (!description?.trim()) {
+        return NextResponse.json({ error: 'description cannot be empty' }, { status: 400 });
+      }
+      updates.description = description.trim();
     }
 
-    if (unit_cost !== undefined) {
-      const parsedCost = parseFloat(unit_cost);
-      if (isNaN(parsedCost) || parsedCost < 0) {
-        return NextResponse.json({ error: 'unit_cost must be a non-negative number' }, { status: 400 });
+    if (amount !== undefined) {
+      const parsedAmount = parseFloat(amount);
+      if (isNaN(parsedAmount) || parsedAmount < 0) {
+        return NextResponse.json({ error: 'amount must be a non-negative number' }, { status: 400 });
       }
-      updates.unit_cost = parsedCost;
-    }
-
-    if (quantity !== undefined) {
-      const parsedQty = parseInt(quantity, 10);
-      if (isNaN(parsedQty) || parsedQty < 1) {
-        return NextResponse.json({ error: 'quantity must be a positive integer' }, { status: 400 });
-      }
-      updates.quantity = parsedQty;
+      updates.amount = parsedAmount;
     }
 
     if (Object.keys(updates).length === 0) {

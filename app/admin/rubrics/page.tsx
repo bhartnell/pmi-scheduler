@@ -39,7 +39,7 @@ interface RubricCriterion {
   id?: string;
   name: string;
   description: string;
-  max_points: number;
+  points: number;
   sort_order: number;
 }
 
@@ -93,7 +93,7 @@ const RATING_SCALES: Record<string, { label: string; description: string; levels
 // ---------------------------------------------------------------------------
 
 function blankCriterion(sortOrder: number): RubricCriterion {
-  return { name: '', description: '', max_points: 5, sort_order: sortOrder };
+  return { name: '', description: '', points: 5, sort_order: sortOrder };
 }
 
 // ---------------------------------------------------------------------------
@@ -108,7 +108,7 @@ function RubricPreview({
   onClose: () => void;
 }) {
   const scale = RATING_SCALES[rubric.rating_scale] ?? RATING_SCALES.numeric_5;
-  const totalPoints = rubric.criteria.reduce((sum, c) => sum + (c.max_points || 0), 0);
+  const totalPoints = rubric.criteria.reduce((sum, c) => sum + (c.points || 0), 0);
 
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
@@ -182,7 +182,7 @@ function RubricPreview({
                           </p>
                         )}
                         <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
-                          Max: {criterion.max_points} pts
+                          Max: {criterion.points} pts
                         </p>
                       </td>
                       {scale.levels.map((lvl) => (
@@ -444,7 +444,7 @@ function RubricEditor({
                   Criteria
                 </h3>
                 <span className="text-xs text-gray-500 dark:text-gray-400">
-                  Total: {criteria.reduce((s, c) => s + (c.max_points || 0), 0)} pts
+                  Total: {criteria.reduce((s, c) => s + (c.points || 0), 0)} pts
                 </span>
               </div>
 
@@ -505,11 +505,11 @@ function RubricEditor({
                                 type="number"
                                 min={1}
                                 max={100}
-                                value={criterion.max_points}
+                                value={criterion.points}
                                 onChange={(e) =>
                                   handleCriterionChange(
                                     idx,
-                                    'max_points',
+                                    'points',
                                     Math.max(1, parseInt(e.target.value) || 1)
                                   )
                                 }
@@ -802,7 +802,7 @@ export default function RubricsPage() {
       criteria: rubric.criteria.map((c) => ({
         name: c.name,
         description: c.description,
-        max_points: c.max_points,
+        points: c.points,
         sort_order: c.sort_order,
       })),
     };
@@ -835,7 +835,7 @@ export default function RubricsPage() {
           criteria: (parsed.criteria ?? []).map((c: any, i: number) => ({
             name: c.name ?? '',
             description: c.description ?? '',
-            max_points: c.max_points ?? 5,
+            points: c.points ?? 5,
             sort_order: c.sort_order ?? i,
           })),
           assignments: [],
@@ -959,7 +959,7 @@ export default function RubricsPage() {
           <div className="space-y-3">
             {rubrics.map((rubric) => {
               const scale = RATING_SCALES[rubric.rating_scale] ?? RATING_SCALES.numeric_5;
-              const totalPoints = rubric.criteria.reduce((s, c) => s + (c.max_points || 0), 0);
+              const totalPoints = rubric.criteria.reduce((s, c) => s + (c.points || 0), 0);
               const isDeleting = deletingId === rubric.id;
 
               return (
@@ -1081,7 +1081,7 @@ export default function RubricsPage() {
                                   className="px-2 py-0.5 rounded bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 text-xs"
                                   title={c.description || c.name}
                                 >
-                                  {c.name} ({c.max_points}pt)
+                                  {c.name} ({c.points}pt)
                                 </span>
                               ))}
                               {rubric.criteria.length > 6 && (

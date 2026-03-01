@@ -34,8 +34,9 @@ interface Appeal {
   documentation_url: string | null;
   status: 'pending' | 'approved' | 'denied';
   review_notes: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
   created_at: string;
-  reviewer: { id: string; name: string } | null;
 }
 
 // ─── Status helpers ───────────────────────────────────────────────────────────
@@ -443,7 +444,7 @@ function AppealCard({ appeal }: { appeal: Appeal }) {
           )}
           <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
             Submitted {new Date(appeal.created_at).toLocaleDateString()}
-            {appeal.reviewer && ` · Reviewed by ${appeal.reviewer.name}`}
+            {appeal.reviewed_by && ` · Reviewed by ${appeal.reviewed_by}`}
           </p>
         </div>
         <span
