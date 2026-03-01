@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { AlertTriangle, Users, MessageSquare, Calendar, ChevronRight } from 'lucide-react';
+import { AlertTriangle, Users, MessageSquare, Calendar, ChevronRight, Wrench } from 'lucide-react';
 import WidgetCard, { WidgetEmpty } from '../WidgetCard';
 
 interface AttentionItem {
   id: string;
-  type: 'unassigned_stations' | 'open_feedback' | 'missing_clearance';
+  type: 'unassigned_stations' | 'open_feedback' | 'missing_clearance' | 'overdue_maintenance';
   title: string;
   count: number;
   link: string;
@@ -57,6 +57,23 @@ export default function NeedsAttentionWidget() {
           }
         }
 
+        // Fetch overdue maintenance count
+        const maintenanceRes = await fetch('/api/admin/equipment/maintenance');
+        if (maintenanceRes.ok) {
+          const data = await maintenanceRes.json();
+          const count = data.overdueCount ?? 0;
+          if (count > 0) {
+            attentionItems.push({
+              id: 'overdue_maintenance',
+              type: 'overdue_maintenance',
+              title: `${count} equipment item${count > 1 ? 's' : ''} need${count === 1 ? 's' : ''} maintenance`,
+              count,
+              link: '/admin/equipment/maintenance',
+              severity: count >= 3 ? 'high' : 'medium',
+            });
+          }
+        }
+
         setItems(attentionItems);
       } catch (error) {
         console.error('Failed to fetch attention items:', error);
@@ -87,6 +104,8 @@ export default function NeedsAttentionWidget() {
         return <MessageSquare className="w-4 h-4" />;
       case 'missing_clearance':
         return <Users className="w-4 h-4" />;
+      case 'overdue_maintenance':
+        return <Wrench className="w-4 h-4" />;
       default:
         return <AlertTriangle className="w-4 h-4" />;
     }

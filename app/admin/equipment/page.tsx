@@ -611,6 +611,7 @@ function EquipmentCard({
   onEdit,
   onDelete,
   onCheckout,
+  onToggleOOS,
   deleteConfirmId,
   setDeleteConfirmId,
 }: {
@@ -618,6 +619,7 @@ function EquipmentCard({
   onEdit: (item: EquipmentItem) => void;
   onDelete: (id: string) => void;
   onCheckout: (item: EquipmentItem) => void;
+  onToggleOOS: (item: EquipmentItem) => void;
   deleteConfirmId: string | null;
   setDeleteConfirmId: (id: string | null) => void;
 }) {
@@ -740,6 +742,17 @@ function EquipmentCard({
               title="Edit"
             >
               <Pencil className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => onToggleOOS(item)}
+              className={`p-1.5 rounded-lg transition-colors ${
+                isRetired
+                  ? 'text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20'
+                  : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+              }`}
+              title={isRetired ? 'Return to service' : 'Mark out of service'}
+            >
+              <Wrench className="w-4 h-4" />
             </button>
             {deleteConfirmId === item.id ? (
               <div className="flex items-center gap-1">
@@ -1018,6 +1031,23 @@ export default function EquipmentInventoryPage() {
     setShowCheckoutModal(true);
   };
 
+  const handleToggleOOS = async (item: EquipmentItem) => {
+    const newCondition = item.condition === 'out_of_service' ? 'fair' : 'out_of_service';
+    try {
+      const res = await fetch('/api/admin/equipment', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: item.id, condition: newCondition }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Failed to update');
+      toast.success(newCondition === 'out_of_service' ? 'Marked out of service' : 'Returned to service');
+      await fetchEquipment();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update condition');
+    }
+  };
+
   if (status === 'loading' || loading) return <PageLoader />;
   if (!session || !currentUser) return null;
 
@@ -1086,6 +1116,13 @@ export default function EquipmentInventoryPage() {
             </div>
             <div className="flex items-center gap-3 flex-shrink-0">
               <ThemeToggle />
+              <Link
+                href="/admin/equipment/maintenance"
+                className="flex items-center gap-2 px-3 py-2 border border-orange-300 dark:border-orange-700 text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-900/20 rounded-lg hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-colors text-sm font-medium"
+              >
+                <Wrench className="w-4 h-4" />
+                Maintenance Log
+              </Link>
               <button
                 onClick={openCreate}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
@@ -1200,6 +1237,7 @@ export default function EquipmentInventoryPage() {
                         onEdit={openEdit}
                         onDelete={handleDelete}
                         onCheckout={openCheckout}
+                        onToggleOOS={handleToggleOOS}
                         deleteConfirmId={deleteConfirmId}
                         setDeleteConfirmId={setDeleteConfirmId}
                       />
