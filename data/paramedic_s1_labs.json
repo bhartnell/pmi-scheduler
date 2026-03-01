@@ -1,0 +1,597 @@
+{
+  "program": "paramedic",
+  "semester": 1,
+  "templates": [
+    {
+      "week_number": 1,
+      "day_number": 1,
+      "title": "Program Orientation",
+      "category": "orientation",
+      "instructor_count": 2,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": false,
+      "review_notes": null,
+      "stations": [
+        {
+          "station_type": "skills",
+          "station_name": "Ambulance Station Orientation",
+          "skills": [],
+          "format_notes": "Overview of Lab 2 and SimMan — Laerdal monitor, speaker locations. 15-min rotation."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "Hospital Station Orientation",
+          "skills": [],
+          "format_notes": "Overview of hospital station and SimMom. 15-min rotation."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "Jump Bag and Med Box Orientation",
+          "skills": [],
+          "format_notes": "Overview of jump bag layout and medication locations. 15-min rotation."
+        },
+        {
+          "station_type": "scenario",
+          "station_name": "Icebreaker",
+          "scenario_title": "Flash Debate Games",
+          "difficulty": "beginner",
+          "format_notes": "Introductory session — no clinical skill sign-offs. Introduce Platinum portal and documentation expectations."
+        }
+      ]
+    },
+    {
+      "week_number": 2,
+      "day_number": 1,
+      "title": "BLS Foundations and Airway",
+      "category": "skills_lab",
+      "instructor_count": 4,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": false,
+      "review_notes": null,
+      "stations": [
+        {
+          "station_type": "scenario",
+          "station_name": "BLS Cardiac Arrest",
+          "scenario_title": "Cardiac Arrest — AED",
+          "difficulty": "beginner",
+          "format_notes": "BLS cardiac arrest with AED. Rotate every 15 min."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "BVM Airway Station",
+          "skills": [
+            { "name": "Insert NPA — adult", "platinum_skill": true, "min_attempts": 1 },
+            { "name": "Insert OPA — adult", "platinum_skill": true, "min_attempts": 1 },
+            { "name": "Ventilate adult patient with BVM", "platinum_skill": true, "min_attempts": 2 }
+          ],
+          "format_notes": "NPA/OPA sizing and BVM ventilation. Alternate with BLS station."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "BLS Choking Station",
+          "skills": [
+            { "name": "FBAO removal — conscious adult", "platinum_skill": true, "min_attempts": 1 },
+            { "name": "FBAO removal — unconscious adult", "platinum_skill": true, "min_attempts": 1 },
+            { "name": "FBAO removal — infant", "platinum_skill": true, "min_attempts": 1 }
+          ],
+          "format_notes": "Conscious and unconscious adult and infant FBAO."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "Platinum Documentation Overview",
+          "skills": [],
+          "format_notes": "Classroom instruction — half class at a time. Platinum portal orientation and documentation workflow."
+        }
+      ]
+    },
+    {
+      "week_number": 3,
+      "day_number": 1,
+      "title": "Trauma Fundamentals — Assessment, Hemorrhage, Spine, Splinting",
+      "category": "skills_lab",
+      "instructor_count": 3,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": false,
+      "review_notes": null,
+      "stations": [
+        {
+          "station_type": "skills",
+          "station_name": "Comprehensive Physical Exam",
+          "skills": [
+            { "name": "Perform a Comprehensive Physical Assessment", "platinum_skill": true, "min_attempts": 1 }
+          ],
+          "format_notes": "Assessment overview and assessment blocks. 20-min rotation."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "Nexus Criteria and C-Spine Precautions",
+          "skills": [
+            { "name": "Perform spine motion restriction", "platinum_skill": true, "min_attempts": 1 },
+            { "name": "Apply a cervical collar", "platinum_skill": true, "min_attempts": 1 }
+          ],
+          "format_notes": "June 2024 C-spine protocols referenced. C-collars equipment required."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "Tourniquet, Soft Tissue, Bandaging",
+          "skills": [
+            { "name": "Apply a tourniquet / hemorrhage control", "platinum_skill": true, "min_attempts": 1 },
+            { "name": "Dress and bandage a soft tissue injury", "platinum_skill": true, "min_attempts": 1 },
+            { "name": "Apply an occlusive dressing to an open wound to the thorax", "platinum_skill": true, "min_attempts": 1 }
+          ],
+          "format_notes": "June 2024 hemorrhage control protocols. Tourniquets and bandages required."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "Splinting",
+          "skills": [
+            { "name": "Splint a suspected long bone injury", "platinum_skill": true, "min_attempts": 1 },
+            { "name": "Splint a suspected joint injury", "platinum_skill": true, "min_attempts": 1 },
+            { "name": "Stabilize an impaled object", "platinum_skill": true, "min_attempts": 1 }
+          ],
+          "format_notes": "Long bone, sling and swath, traction splint. Cardboard/traction/SAM splints required. June 2024 traction splint protocols."
+        }
+      ]
+    },
+    {
+      "week_number": 4,
+      "day_number": 1,
+      "title": "IV/IM Access and Med Math",
+      "category": "skills_lab",
+      "instructor_count": 4,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": true,
+      "review_notes": "Session was marked ADJUSTED** in Group 13 records — original plan included 12-lead placement and supraglottic airway. Confirm current plan vs original and document what changed. Instructors: R. Niedfeldt, B. Young, M. Gannon, J. Lomonaco.",
+      "stations": [
+        {
+          "station_type": "skills",
+          "station_name": "IV Access — Manikin Practice",
+          "skills": [
+            { "name": "Establish IV access", "platinum_skill": true, "min_attempts": 2 }
+          ],
+          "format_notes": "Two IV manikin arm stations possible. Manikin arms — not live stick at this stage."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "IM Injections",
+          "skills": [
+            { "name": "Administer IM injection", "platinum_skill": true, "min_attempts": 1 }
+          ],
+          "format_notes": "IM injection practice station."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "Assessment — BLS and Special Questions",
+          "skills": [],
+          "format_notes": "BLS assessment review with special and non-leading question technique focus."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "Med Draw with Basic Med Math",
+          "skills": [],
+          "format_notes": "Medication draw practice with basic medication math."
+        }
+      ]
+    },
+    {
+      "week_number": 5,
+      "day_number": 1,
+      "title": "IO Access, ABG, IM — IV Live Stick Deferred",
+      "category": "skills_lab",
+      "instructor_count": 3,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": true,
+      "review_notes": "IV live stick explicitly deferred to Week 6 in Group 13 records — manikin arms used this session. Confirm Week 6 captures the live stick carryover. Class split in half noted.",
+      "stations": [
+        {
+          "station_type": "skills",
+          "station_name": "IO Access",
+          "skills": [
+            { "name": "Establish IO access", "platinum_skill": true, "min_attempts": 2 }
+          ],
+          "format_notes": "IO skill drill PDF and checklist referenced. Platinum documentation required — minimum 2 attempts."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "ABG Practice",
+          "skills": [],
+          "format_notes": "ABG interpretation practice with answer key reference."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "IM Injections",
+          "skills": [
+            { "name": "Administer IM injection", "platinum_skill": true, "min_attempts": 1 }
+          ],
+          "format_notes": "Platinum documentation required."
+        }
+      ]
+    },
+    {
+      "week_number": 6,
+      "day_number": 1,
+      "title": "ILS Scenario, Live IV, BLS-to-SGA Airway Progression",
+      "category": "skills_lab",
+      "instructor_count": 3,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": false,
+      "review_notes": null,
+      "stations": [
+        {
+          "station_type": "scenario",
+          "station_name": "Formative ILS Scenario",
+          "scenario_title": "Anaphylaxis — AEMT Level",
+          "difficulty": "intermediate",
+          "format_notes": "Formative ILS-level anaphylaxis scenario."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "Live IV Sticks",
+          "skills": [
+            { "name": "Establish IV access — live stick", "platinum_skill": true, "min_attempts": 1 }
+          ],
+          "format_notes": "Two live IV stick stations. Carryover from Week 5 deferral."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "BLS to SGA Airway Progression",
+          "skills": [
+            { "name": "Perform PPV with BVM", "platinum_skill": true, "min_attempts": 2 },
+            { "name": "Insert supraglottic airway — LMA", "platinum_skill": true, "min_attempts": 2 },
+            { "name": "Insert supraglottic airway — King Airway", "platinum_skill": true, "min_attempts": 2 },
+            { "name": "Insert supraglottic airway — iGEL", "platinum_skill": true, "min_attempts": 2 },
+            { "name": "Establish IO access", "platinum_skill": true, "min_attempts": 2 }
+          ],
+          "format_notes": "BVM to SGA progression. All three SGA devices: LMA, King Airway, iGEL. Platinum minimums: SGA ≥2 attempts each device, BVM ≥2, IO ≥2."
+        }
+      ]
+    },
+    {
+      "week_number": 7,
+      "day_number": 1,
+      "title": "Med Math Infusions and Monitor Familiarization",
+      "category": "skills_lab",
+      "instructor_count": 2,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": true,
+      "review_notes": "Two files uploaded for Week 7 in Group 13 records — Group 12 version vs Group 13 version with nearly identical content. Confirm authoritative file before populating future cohort data.",
+      "stations": [
+        {
+          "station_type": "skills",
+          "station_name": "Med Math Infusion Station",
+          "skills": [],
+          "format_notes": "Drip rate practice with packet and board review. Equipment: 10, 12/15, and 60-drop tubing."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "Lifepak Monitor Familiarization",
+          "skills": [],
+          "format_notes": "Lifepak functionality review. Ambulance used for monitor familiarization."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "Setting Up a Drip",
+          "skills": [
+            { "name": "Administer IV infusion medication", "platinum_skill": true, "min_attempts": 1 }
+          ],
+          "format_notes": "Psychomotor IV drip setup practice. 125mL NS baseline exercise."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "Zoll Monitor Familiarization",
+          "skills": [],
+          "format_notes": "Zoll monitor overview and operation."
+        }
+      ]
+    },
+    {
+      "week_number": 8,
+      "day_number": 1,
+      "title": "Airway A&P, 12-Lead, Push Dose Pressors, Peds Scenario",
+      "category": "skills_lab",
+      "instructor_count": 3,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": true,
+      "review_notes": "Three files uploaded for Week 8 in Group 13 records — one mislabeled (Week 7 / Group 10.5 with divergent content: BLS/ILS code and IV drip rates). Authoritative Week 8 files: Group_13_week_8_Lab_1_.xlsx. Push dose pressor station note includes 'or med math?' — possible substitution, confirm current standard.",
+      "stations": [
+        {
+          "station_type": "skills",
+          "station_name": "Airway A&P — Laryngoscopic Views",
+          "skills": [],
+          "format_notes": "Airway anatomy review with laryngoscopic views. Equipment: SimMom, airway head, King Vision."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "Cardiac Lead Placement",
+          "skills": [
+            { "name": "Apply and obtain a 12-lead ECG", "platinum_skill": true, "min_attempts": 1 }
+          ],
+          "format_notes": "4-lead, 12-lead, defibrillation pad placement — adult and pediatric. 12-lead placement checklist referenced."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "Push Dose Pressor Mixing",
+          "skills": [],
+          "format_notes": "Epinephrine 1:10,000 and phenylephrine preparation. Push dose pressor mixing station."
+        },
+        {
+          "station_type": "scenario",
+          "station_name": "Pediatric ILS Scenario",
+          "scenario_title": "Pediatric Allergic Reaction — Anaphylaxis",
+          "difficulty": "intermediate",
+          "format_notes": "AEMT-level pediatric anaphylaxis. Ambulance used. Instructors: B. Hartnell, M. Schaffer."
+        }
+      ]
+    },
+    {
+      "week_number": 9,
+      "day_number": 1,
+      "title": "ETI Introduction and Airway Lab",
+      "category": "skills_lab",
+      "instructor_count": 3,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": true,
+      "review_notes": "Two files for Week 9 in Group 13 records — both internally labeled Group 11. Lab_1_ version adds OG/NG placement and ET suction station. Dates on files (07/16/2024) are likely template dates not updated. Confirm whether OG/NG station ran as standard or optional.",
+      "stations": [
+        {
+          "station_type": "skills",
+          "station_name": "ETI Introduction — Oral Intubation",
+          "skills": [
+            { "name": "Perform oral endotracheal intubation", "platinum_skill": true, "min_attempts": 2 }
+          ],
+          "format_notes": "Class split: half with airway instructor, half doing docs and cardiac rhythms. Equipment: 2 airway heads, 1 contaminated head, SimMom, Megacode Kelly, ALS airway torso. ETI Platinum check-off begins — portal tracking starts."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "OG/NG Placement and ET/Trach Suctioning",
+          "skills": [
+            { "name": "Perform endotracheal suctioning", "platinum_skill": true, "min_attempts": 1 }
+          ],
+          "format_notes": "OG/NG tube placement plus ET tube and trach suctioning. Instructors: J. Lomonaco, B. Young."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "Rhythm Packets and Platinum Documentation",
+          "skills": [],
+          "format_notes": "Cardiac rhythm review packets and Platinum documentation catch-up for half of class."
+        }
+      ]
+    },
+    {
+      "week_number": 10,
+      "day_number": 1,
+      "title": "ETI with Bougie, CPAP/BiPAP, Electrical Therapy",
+      "category": "skills_lab",
+      "instructor_count": 4,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": true,
+      "review_notes": "FBAO/Magill forceps listed in Platinum notes for Week 10 in Group 13 records but no corresponding station visible in spreadsheet — confirm whether FBAO was a separate station or covered incidentally. Defibrillation skill sheet appears on CPAP/BiPAP row — likely data entry error, verify placement. Internal metadata mismatch (S3/Wk9).",
+      "stations": [
+        {
+          "station_type": "skills",
+          "station_name": "ETI with Bougie",
+          "skills": [
+            { "name": "Perform oral endotracheal intubation with bougie", "platinum_skill": true, "min_attempts": 2 }
+          ],
+          "format_notes": "Bougie-assisted oral ETI. Builds on Week 9 ETI introduction."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "CPAP and BiPAP",
+          "skills": [
+            { "name": "CPAP / BiPAP application", "platinum_skill": false, "min_attempts": 1 }
+          ],
+          "format_notes": "CPAP/BiPAP skill station introduction."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "Transcutaneous Pacing",
+          "skills": [
+            { "name": "Perform transcutaneous pacing", "platinum_skill": true, "min_attempts": 2 }
+          ],
+          "format_notes": "Introduction to transcutaneous pacing with electrical therapy overview."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "Cardioversion and Defibrillation",
+          "skills": [
+            { "name": "Perform synchronized cardioversion", "platinum_skill": true, "min_attempts": 2 },
+            { "name": "Perform defibrillation", "platinum_skill": true, "min_attempts": 2 },
+            { "name": "Perform FBAO removal using Magill forceps", "platinum_skill": true, "min_attempts": 2 }
+          ],
+          "format_notes": "2 monitors, 2 rhythm generators. Platinum minimums: cardioversion ≥2, defibrillation ≥2, FBAO/Magill ≥2. Instructors: B. Hartnell, B. Young, R. Young, M. Schaffer."
+        }
+      ]
+    },
+    {
+      "week_number": 11,
+      "day_number": 1,
+      "title": "Needle Decompression, Atypical Intubations, FBAO ALS, Video ETI",
+      "category": "skills_lab",
+      "instructor_count": 4,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": false,
+      "review_notes": null,
+      "stations": [
+        {
+          "station_type": "skills",
+          "station_name": "Needle Decompression",
+          "skills": [
+            { "name": "Perform needle decompression of the chest", "platinum_skill": true, "min_attempts": 1 },
+            { "name": "Stabilize an impaled object", "platinum_skill": true, "min_attempts": 1 }
+          ],
+          "format_notes": "Needle decompression practice. Add impaled object stabilization if time permits. Instructors: S. Andreas / R. Niedfeldt."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "Atypical Intubations",
+          "skills": [
+            { "name": "Nasal intubation", "platinum_skill": false, "min_attempts": 1 },
+            { "name": "Digital intubation", "platinum_skill": false, "min_attempts": 1 },
+            { "name": "Ice pick intubation", "platinum_skill": false, "min_attempts": 1 }
+          ],
+          "format_notes": "2 manikins. Nasal, ice pick, and digital intubation techniques. Digital intubation reference document used. Instructors: R. Young / M. Schaffer."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "FBAO ALS — Magill Forceps",
+          "skills": [
+            { "name": "Perform FBAO removal using Magill forceps", "platinum_skill": true, "min_attempts": 2 }
+          ],
+          "format_notes": "Equipment: Megacode Kelly, styrofoam FBAO, Magill forceps, airway roll or intubation blade. Instructor: B. Young."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "Video-Assisted ETI",
+          "skills": [
+            { "name": "Video-assisted endotracheal intubation", "platinum_skill": false, "min_attempts": 1 }
+          ],
+          "format_notes": "Video laryngoscopy ETI technique. Instructor: B. Hartnell."
+        }
+      ]
+    },
+    {
+      "week_number": 12,
+      "day_number": 2,
+      "title": "RSI Airway Scenario, Dirty Airway, Electrical Therapy, ET/Trach Suction",
+      "category": "skills_lab",
+      "instructor_count": 4,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": true,
+      "review_notes": "RSI indicated in airway scenario — confirm whether student-performed or instructor demonstration at this stage. Dirty Airway station content not documented in Group 13 records — likely vomit/blood airway management, confirm and document. Internal metadata mismatch (S3/Wk4/Day2).",
+      "stations": [
+        {
+          "station_type": "scenario",
+          "station_name": "RSI Airway Scenario",
+          "scenario_title": "Basic Airway Scenario with RSI Indication",
+          "difficulty": "advanced",
+          "format_notes": "Airway scenario with RSI-indicated patient. Confirm RSI as student-performed vs demonstration. Reference: early-als-airway-scenario document. Instructor: B. Young."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "Dirty Airway Station",
+          "skills": [
+            { "name": "Perform oral suctioning", "platinum_skill": true, "min_attempts": 1 }
+          ],
+          "format_notes": "Station in Suite 1. Clinical content not fully documented — likely vomit/blood airway management. Confirm and expand. Instructor: B. Hartnell."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "Cardioversion and Defibrillation",
+          "skills": [
+            { "name": "Perform synchronized cardioversion", "platinum_skill": true, "min_attempts": 2 },
+            { "name": "Perform defibrillation", "platinum_skill": true, "min_attempts": 2 }
+          ],
+          "format_notes": "Hands-on skill station. Platinum documentation required. Instructor: M. Schaffer."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "ET and Trach Suctioning",
+          "skills": [
+            { "name": "Perform endotracheal suctioning", "platinum_skill": true, "min_attempts": 1 }
+          ],
+          "format_notes": "ET tube suction, trach tube suction, OG/NG placement. Platinum documentation required. Instructor: S. Andreas."
+        }
+      ]
+    },
+    {
+      "week_number": 13,
+      "day_number": 2,
+      "title": "Cricothyrotomy, Cardiac Scenario, Transcutaneous Pacing",
+      "category": "skills_lab",
+      "instructor_count": 4,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": true,
+      "review_notes": "Surgical cricothyrotomy listed with no Platinum documentation required in Group 13 records — verify this is intentional given the skill acuity level. File content identical to one Week 14 file in Group 13 uploads — confirm correct week mapping. Internal metadata mismatch (S2/Wk4/Day2).",
+      "stations": [
+        {
+          "station_type": "skills",
+          "station_name": "Needle Cricothyrotomy",
+          "skills": [
+            { "name": "Needle cricothyrotomy", "platinum_skill": true, "min_attempts": 1 }
+          ],
+          "format_notes": "Platinum documentation required. Instructor: B. Young."
+        },
+        {
+          "station_type": "scenario",
+          "station_name": "Cardiac Scenario",
+          "scenario_title": "Chest Pain — Anterior STEMI with Dysrhythmia",
+          "difficulty": "advanced",
+          "format_notes": "Chest pain / anterior STEMI with possible dysrhythmia requiring medication treatment. Instructor: S. Andreas."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "Transcutaneous Pacing",
+          "skills": [
+            { "name": "Perform transcutaneous pacing", "platinum_skill": true, "min_attempts": 2 }
+          ],
+          "format_notes": "Platinum documentation required. Instructor: M. Schaffer."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "Surgical Cricothyrotomy",
+          "skills": [
+            { "name": "Perform surgical cricothyrotomy", "platinum_skill": false, "min_attempts": 1 }
+          ],
+          "format_notes": "Platinum documentation status: verify intent — currently listed as no documentation required. Instructor: B. Hartnell."
+        }
+      ]
+    },
+    {
+      "week_number": 14,
+      "day_number": 1,
+      "title": "Equipment Organization Capstone",
+      "category": "capstone",
+      "instructor_count": 3,
+      "is_anchor": true,
+      "anchor_type": "EQUIPMENT_CAPSTONE",
+      "requires_review": false,
+      "review_notes": null,
+      "stations": [
+        {
+          "station_type": "skills",
+          "station_name": "Ambulance Organization",
+          "skills": [],
+          "format_notes": "Full ambulance organization and restocking — Lab Room 2. Groups identify needed equipment and create lists."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "Jump Bag and Med Bag Organization",
+          "skills": [],
+          "format_notes": "Jump bag and medication bag organization — Lab Room 1. Jump Bag Organization sheet referenced."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "Medication Organization",
+          "skills": [],
+          "format_notes": "Medication box layout and par levels — Classroom 1. Medication Box Layout and Pars sheet referenced."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "Airway Roll Organization",
+          "skills": [],
+          "format_notes": "Airway roll organization — Classroom 2. Airway Roll Organization sheet referenced."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "Equipment Runners",
+          "skills": [],
+          "format_notes": "Rotating group gathers needed equipment from supply room per station lists. Groups note and suggest better equipment locations on forms. Output feeds into revised equipment layout documentation."
+        }
+      ]
+    }
+  ]
+}

@@ -52,6 +52,13 @@ export async function GET(request: NextRequest) {
         program,
         semester,
         week_number,
+        day_number,
+        category,
+        instructor_count,
+        is_anchor,
+        anchor_type,
+        requires_review,
+        review_notes,
         created_by,
         created_at,
         updated_at,
@@ -62,6 +69,9 @@ export async function GET(request: NextRequest) {
           station_name,
           skills,
           scenario_id,
+          scenario_title,
+          difficulty,
+          notes,
           scenario:scenarios(id, title)
         )
       `)
@@ -118,14 +128,24 @@ export async function POST(request: NextRequest) {
       program: string;
       semester: number;
       week_number: number;
+      day_number?: number;
       name: string;
       description?: string;
+      category?: string;
+      instructor_count?: number;
+      is_anchor?: boolean;
+      anchor_type?: string | null;
+      requires_review?: boolean;
+      review_notes?: string | null;
       stations?: Array<{
         sort_order: number;
         station_type: string;
         station_name?: string | null;
         skills?: unknown[] | null;
         scenario_id?: string | null;
+        scenario_title?: string | null;
+        difficulty?: string | null;
+        notes?: string | null;
       }>;
     };
 
@@ -149,6 +169,13 @@ export async function POST(request: NextRequest) {
         program,
         semester,
         week_number,
+        day_number: body.day_number ?? 1,
+        category: body.category ?? 'other',
+        instructor_count: body.instructor_count ?? null,
+        is_anchor: body.is_anchor ?? false,
+        anchor_type: body.anchor_type ?? null,
+        requires_review: body.requires_review ?? false,
+        review_notes: body.review_notes ?? null,
         created_by: currentUser.email,
         template_data: {},
         is_shared: true,
@@ -171,6 +198,9 @@ export async function POST(request: NextRequest) {
         station_name: s.station_name || null,
         skills: s.skills || null,
         scenario_id: s.scenario_id || null,
+        scenario_title: s.scenario_title || null,
+        difficulty: s.difficulty || null,
+        notes: s.notes || null,
       }));
 
       const { error: stationsError } = await supabase
@@ -187,10 +217,13 @@ export async function POST(request: NextRequest) {
     const { data: fullTemplate, error: fetchError } = await supabase
       .from('lab_day_templates')
       .select(`
-        id, name, description, program, semester, week_number,
+        id, name, description, program, semester, week_number, day_number,
+        category, instructor_count, is_anchor, anchor_type,
+        requires_review, review_notes,
         created_by, created_at, updated_at,
         stations:lab_template_stations(
           id, sort_order, station_type, station_name, skills, scenario_id,
+          scenario_title, difficulty, notes,
           scenario:scenarios(id, title)
         )
       `)
