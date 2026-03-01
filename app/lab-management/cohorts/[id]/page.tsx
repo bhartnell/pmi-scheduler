@@ -30,7 +30,9 @@ import {
   X,
   Archive,
   ArchiveRestore,
-  FileText
+  FileText,
+  Wand2,
+  Loader2
 } from 'lucide-react';
 import ExportDropdown from '@/components/ExportDropdown';
 import FieldTripAttendance from '@/components/FieldTripAttendance';
@@ -152,6 +154,7 @@ function ToolCard({
   warning,
   actionLabel,
   href,
+  onClick,
   disabled
 }: {
   icon: React.ComponentType<{ className?: string }>;
@@ -160,10 +163,11 @@ function ToolCard({
   warning?: string | null;
   actionLabel: string;
   href?: string;
+  onClick?: () => void;
   disabled?: boolean;
 }) {
   const content = (
-    <div className={`bg-white dark:bg-gray-800 rounded-lg shadow p-4 border dark:border-gray-700 ${disabled ? 'opacity-50' : 'hover:shadow-md transition-shadow'}`}>
+    <div className={`bg-white dark:bg-gray-800 rounded-lg shadow p-4 border dark:border-gray-700 ${disabled ? 'opacity-50' : 'hover:shadow-md transition-shadow cursor-pointer'}`}>
       <div className="flex items-start gap-3">
         <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
           <Icon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
@@ -187,11 +191,19 @@ function ToolCard({
     </div>
   );
 
-  if (disabled || !href) {
+  if (disabled) {
     return content;
   }
 
-  return <Link href={href}>{content}</Link>;
+  if (onClick && !href) {
+    return <button onClick={onClick} className="text-left w-full">{content}</button>;
+  }
+
+  if (href) {
+    return <Link href={href}>{content}</Link>;
+  }
+
+  return content;
 }
 
 export default function CohortHubPage() {
@@ -224,6 +236,19 @@ export default function CohortHubPage() {
   // Archive modal state
   const [showArchiveDialog, setShowArchiveDialog] = useState(false);
   const [archiving, setArchiving] = useState(false);
+
+  // Generate lab days from templates state
+  const [showGenerateModal, setShowGenerateModal] = useState(false);
+  const [genSemester, setGenSemester] = useState<number>(1);
+  const [genStartDate, setGenStartDate] = useState('');
+  const [genForce, setGenForce] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [genResult, setGenResult] = useState<{
+    success: boolean;
+    created_count?: number;
+    skipped_count?: number;
+    error?: string;
+  } | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -464,6 +489,53 @@ export default function CohortHubPage() {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   };
+
+  const handleGenerateLabDays = async () => {
+    if (!genStartDate || !cohort) return;
+
+    setGenerating(true);
+    setGenResult(null);
+
+    try {
+      const res = await fetch('/api/admin/lab-templates/apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cohort_id: cohortId,
+          program: cohort.program.abbreviation,
+          semester: genSemester,
+          start_date: genStartDate,
+          force: genForce,
+          skip_existing: !genForce,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setGenResult({ success: false, error: data.error || 'Failed to generate lab days' });
+        toast.error(data.error || 'Failed to generate lab days');
+      } else {
+        setGenResult({
+          success: true,
+          created_count: data.created_count,
+          skipped_count: data.skipped_count,
+        });
+        toast.success(`Created ${data.created_count} lab day${data.created_count !== 1 ? 's' : ''}${data.skipped_count > 0 ? `, skipped ${data.skipped_count} existing` : ''}`);
+        // Refresh data to update upcoming labs count
+        fetchData();
+        // Close modal after short delay so user sees result
+        setTimeout(() => setShowGenerateModal(false), 1500);
+      }
+    } catch (error) {
+      console.error('Error generating lab days:', error);
+      setGenResult({ success: false, error: 'An error occurred' });
+      toast.error('An error occurred while generating lab days');
+    }
+    setGenerating(false);
+  };
+
+  const isPMProgram = cohort?.program?.abbreviation === 'PM' || cohort?.program?.abbreviation === 'PMD';
 
   if (status === 'loading' || loading) {
     return (
@@ -764,6 +836,20 @@ export default function CohortHubPage() {
               actionLabel="View Report"
               href={`/lab-management/cohorts/${cohortId}/completion`}
             />
+            {isPMProgram && !cohort?.is_archived && (
+              <ToolCard
+                icon={Wand2}
+                title="Generate Lab Days"
+                status="Auto-create from templates"
+                actionLabel="Generate"
+                onClick={() => {
+                  setGenResult(null);
+                  setGenForce(false);
+                  setGenStartDate(cohort?.start_date || '');
+                  setShowGenerateModal(true);
+                }}
+              />
+            )}
           </div>
         </div>
 
@@ -1234,6 +1320,152 @@ export default function CohortHubPage() {
                   <>
                     <UserMinus className="w-4 h-4" />
                     Remove
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Generate Lab Days Modal */}
+      {showGenerateModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-lg w-full">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b dark:border-gray-700">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
+                  <Wand2 className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Generate Lab Days from Templates
+                  </h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {cohortLabel}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowGenerateModal(false)}
+                disabled={generating}
+                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg disabled:opacity-50"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-4">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                This will create lab days and stations from the Paramedic program templates for the selected semester.
+              </p>
+
+              {/* Semester */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Semester
+                </label>
+                <select
+                  value={genSemester}
+                  onChange={(e) => setGenSemester(Number(e.target.value))}
+                  disabled={generating}
+                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value={1}>Semester 1</option>
+                  <option value={2}>Semester 2</option>
+                  <option value={3}>Semester 3</option>
+                  <option value={4}>Semester 4</option>
+                </select>
+              </div>
+
+              {/* Start Date */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Semester Start Date
+                </label>
+                <input
+                  type="date"
+                  value={genStartDate}
+                  onChange={(e) => setGenStartDate(e.target.value)}
+                  disabled={generating}
+                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Week 1 Day 1 starts on this date. Each subsequent week is 7 days later.
+                </p>
+              </div>
+
+              {/* Force regenerate */}
+              <div className="flex items-start gap-3 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg">
+                <input
+                  type="checkbox"
+                  id="gen-force"
+                  checked={genForce}
+                  onChange={(e) => setGenForce(e.target.checked)}
+                  disabled={generating}
+                  className="w-4 h-4 mt-0.5 rounded border-gray-300 dark:border-gray-600 text-amber-600 focus:ring-amber-500"
+                />
+                <label htmlFor="gen-force" className="cursor-pointer">
+                  <span className="text-sm font-medium text-amber-800 dark:text-amber-300">
+                    Regenerate (delete existing lab days first)
+                  </span>
+                  <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
+                    Warning: This will delete all existing lab days and stations for this semester and recreate them. Student assessment data linked to those lab days may be affected.
+                  </p>
+                </label>
+              </div>
+
+              {!genForce && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
+                  <CheckCircle className="w-3 h-3 text-green-500" />
+                  Lab days that already exist will be skipped (no duplicates).
+                </p>
+              )}
+
+              {/* Result */}
+              {genResult && (
+                <div className={`p-3 rounded-lg ${genResult.success ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700' : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700'}`}>
+                  {genResult.success ? (
+                    <p className="text-sm text-green-800 dark:text-green-300 flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4" />
+                      Created {genResult.created_count} lab day{genResult.created_count !== 1 ? 's' : ''}
+                      {(genResult.skipped_count ?? 0) > 0 && `, skipped ${genResult.skipped_count} existing`}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-red-800 dark:text-red-300 flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4" />
+                      {genResult.error}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex gap-3 justify-end p-6 border-t dark:border-gray-700">
+              <button
+                onClick={() => setShowGenerateModal(false)}
+                disabled={generating}
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleGenerateLabDays}
+                disabled={generating || !genStartDate}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {generating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Wand2 className="w-4 h-4" />
+                    {genForce ? 'Regenerate Lab Days' : 'Generate Lab Days'}
                   </>
                 )}
               </button>

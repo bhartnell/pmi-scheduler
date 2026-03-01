@@ -15,7 +15,10 @@ import {
   X,
   AlertCircle,
   Archive,
-  ArchiveRestore
+  ArchiveRestore,
+  Loader2,
+  Wand2,
+  CheckCircle2,
 } from 'lucide-react';
 import { canManageCohorts, type Role } from '@/lib/permissions';
 
@@ -65,6 +68,13 @@ export default function CohortManagementPage() {
   const [createEndDate, setCreateEndDate] = useState('');
   const [createSemester, setCreateSemester] = useState<number | ''>('');
   const [creating, setCreating] = useState(false);
+  const [autoGenerate, setAutoGenerate] = useState(false);
+  const [generateResult, setGenerateResult] = useState<{
+    success: boolean;
+    created_count?: number;
+    skipped_count?: number;
+    error?: string;
+  } | null>(null);
 
   // Edit state
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -156,11 +166,45 @@ export default function CohortManagementPage() {
       const data = await res.json();
       if (data.success) {
         setCohorts([data.cohort, ...cohorts]);
+
+        // Auto-generate lab days if enabled
+        if (autoGenerate && isPMProgram(createProgramId) && createSemester !== '' && createStartDate) {
+          try {
+            const selectedProgram = programs.find(p => p.id === createProgramId);
+            const applyRes = await fetch('/api/admin/lab-templates/apply', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                cohort_id: data.cohort.id,
+                program: selectedProgram?.name?.toLowerCase() || 'paramedic',
+                semester: createSemester,
+                start_date: createStartDate,
+                skip_existing: true,
+              }),
+            });
+
+            const applyData = await applyRes.json();
+            if (applyData.success) {
+              setGenerateResult({
+                success: true,
+                created_count: applyData.created_count,
+                skipped_count: applyData.skipped_count,
+              });
+            } else {
+              setGenerateResult({ success: false, error: applyData.error });
+            }
+          } catch (genErr) {
+            console.error('Error auto-generating lab days:', genErr);
+            setGenerateResult({ success: false, error: 'Failed to generate lab days' });
+          }
+        }
+
         setShowCreateForm(false);
         setCreateCohortNumber('');
         setCreateStartDate('');
         setCreateEndDate('');
         setCreateSemester('');
+        setAutoGenerate(false);
       } else {
         alert('Failed to create cohort: ' + data.error);
       }
@@ -429,10 +473,32 @@ export default function CohortManagementPage() {
                   />
                 </div>
               </div>
+              {/* Auto-generate lab days checkbox (PM programs with semester and start date) */}
+              {isPMProgram(createProgramId) && createSemester !== '' && createStartDate && (
+                <div className="flex items-start gap-3 p-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg">
+                  <input
+                    type="checkbox"
+                    id="autoGenerate"
+                    checked={autoGenerate}
+                    onChange={(e) => setAutoGenerate(e.target.checked)}
+                    className="mt-1 rounded border-gray-300 dark:border-gray-600 text-indigo-600"
+                  />
+                  <label htmlFor="autoGenerate" className="text-sm">
+                    <span className="font-medium text-gray-900 dark:text-white flex items-center gap-1.5">
+                      <Wand2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                      Auto-generate lab days from templates
+                    </span>
+                    <span className="text-gray-500 dark:text-gray-400 block mt-0.5">
+                      Create all lab days for Semester {createSemester} starting {new Date(createStartDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </span>
+                  </label>
+                </div>
+              )}
+
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => setShowCreateForm(false)}
+                  onClick={() => { setShowCreateForm(false); setGenerateResult(null); }}
                   className="px-4 py-2 border dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
                 >
                   Cancel
@@ -440,9 +506,10 @@ export default function CohortManagementPage() {
                 <button
                   type="submit"
                   disabled={creating}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
                 >
-                  {creating ? 'Creating...' : 'Create Cohort'}
+                  {creating && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {creating ? (autoGenerate ? 'Creating & Generating...' : 'Creating...') : (autoGenerate ? 'Create & Generate Labs' : 'Create Cohort')}
                 </button>
               </div>
             </form>
@@ -470,6 +537,41 @@ export default function CohortManagementPage() {
             Show archived cohorts
           </label>
         </div>
+
+        {/* Auto-generate result banner */}
+        {generateResult && (
+          <div className={`p-4 rounded-lg border flex items-start gap-3 ${
+            generateResult.success
+              ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+              : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+          }`}>
+            {generateResult.success ? (
+              <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
+            ) : (
+              <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+            )}
+            <div className="flex-1">
+              <p className={`font-medium ${
+                generateResult.success ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200'
+              }`}>
+                {generateResult.success
+                  ? `Created ${generateResult.created_count} lab days from templates`
+                  : `Lab day generation failed: ${generateResult.error}`}
+              </p>
+              {generateResult.success && generateResult.skipped_count !== undefined && generateResult.skipped_count > 0 && (
+                <p className="text-sm text-green-600 dark:text-green-400 mt-1">
+                  {generateResult.skipped_count} existing lab days skipped
+                </p>
+              )}
+            </div>
+            <button
+              onClick={() => setGenerateResult(null)}
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
 
         {/* Cohorts by Program */}
         {cohortsByProgram.map(({ program, cohorts: programCohorts }) => (
