@@ -11,6 +11,7 @@ import OnboardingTourWrapper from '@/components/OnboardingTourWrapper';
 import { OfflineProvider } from '@/components/OfflineProvider';
 import ServiceWorkerRegistration from '@/components/ServiceWorkerRegistration';
 import WhatsNewWrapper from '@/components/WhatsNewWrapper';
+import AppBanner from '@/components/AppBanner';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -39,6 +40,7 @@ export default function RootLayout({
         </a>
         <Providers>
           <OfflineProvider>
+            <AppBanner />
             <GlobalTimerBanner />
             {children}
             <ActivityTracker />

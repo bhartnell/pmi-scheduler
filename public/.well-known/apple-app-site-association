@@ -1,0 +1,11 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "TEAM_ID.edu.pmi.ems-scheduler",
+        "paths": ["/lab-management/*", "/student/*", "/clinical/*", "/scheduling/*", "/tasks/*"]
+      }
+    ]
+  }
+}
