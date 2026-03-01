@@ -51,6 +51,8 @@ import {
 } from '@/hooks/useTimerAudio';
 import { APP_VERSION, VERSION_DATE } from '@/lib/version';
 import WhatsNewModal from '@/components/WhatsNewModal';
+import TwoFactorPanel from '@/components/TwoFactorPanel';
+import { ShieldCheck } from 'lucide-react';
 
 // ---- Types ----
 
@@ -1591,6 +1593,22 @@ function SettingsPageContent() {
           </div>
           <div className="p-6">
             <ProfilePanel />
+          </div>
+        </div>
+
+        {/* Two-Factor Authentication card — always visible */}
+        <div className="mt-6 bg-white dark:bg-gray-800 rounded-xl shadow-sm">
+          <div className="px-6 py-4 border-b dark:border-gray-700">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-blue-600" />
+              Two-Factor Authentication
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Secure your account with a time-based one-time password (TOTP) authenticator app
+            </p>
+          </div>
+          <div className="p-6">
+            <TwoFactorPanel />
           </div>
         </div>
 

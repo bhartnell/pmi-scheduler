@@ -35,6 +35,7 @@ import {
   Clock,
   AlertTriangle,
   GraduationCap,
+  Webhook,
 } from 'lucide-react';
 import {
   canAccessAdmin,
@@ -259,6 +260,13 @@ export default function AdminPage() {
       title: 'Alumni Tracking',
       description: 'Track graduates: employment status, contact info, and continuing education',
       color: 'bg-blue-700',
+    },
+    {
+      href: '/admin/webhooks',
+      icon: Webhook,
+      title: 'Integration Webhooks',
+      description: 'Configure outbound webhooks to notify external systems of events in real time',
+      color: 'bg-indigo-700',
     },
   ];
 
