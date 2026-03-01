@@ -32,6 +32,7 @@ import {
   ClipboardCheck,
   CalendarDays,
   Star,
+  Clock,
 } from 'lucide-react';
 import {
   canAccessAdmin,
@@ -235,6 +236,13 @@ export default function AdminPage() {
       title: 'Assessment Rubrics',
       description: 'Build and manage scenario grading rubrics with criteria and rating scales',
       color: 'bg-violet-600',
+    },
+    {
+      href: '/admin/time-clock',
+      icon: Clock,
+      title: 'Instructor Time Clock',
+      description: 'Review, approve, and export instructor time entries for payroll',
+      color: 'bg-blue-600',
     },
   ];
 

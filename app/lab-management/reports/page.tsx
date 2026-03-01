@@ -191,6 +191,15 @@ export default function ReportsIndexPage() {
       color: 'text-emerald-600 dark:text-emerald-400',
       bgColor: 'bg-emerald-100 dark:bg-emerald-900/30',
     },
+    {
+      id: 'gradebook',
+      title: 'Grade Book',
+      description: 'Spreadsheet-style grade book aggregating scenarios, skills, clinical hours, attendance, and peer evaluations per student.',
+      icon: BookOpen,
+      href: '/reports/gradebook',
+      color: 'text-indigo-600 dark:text-indigo-400',
+      bgColor: 'bg-indigo-100 dark:bg-indigo-900/30',
+    },
   ];
 
   // Filter reports based on user role
