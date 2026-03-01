@@ -35,6 +35,10 @@ import {
   Home,
   Hash,
   Bell,
+  MessageSquare,
+  Clock,
+  Globe,
+  BellOff,
 } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -71,6 +75,10 @@ interface StudentRecord {
   emergency_contact_relationship: string | null;
   learning_style: string | null;
   cohort: Cohort | null;
+  preferred_contact_method: string | null;
+  best_contact_times: string | null;
+  language_preference: string | null;
+  contact_opt_out: boolean | null;
 }
 
 interface ProfileData {
@@ -95,7 +103,14 @@ interface PreferencesForm {
   learning_style: string;
 }
 
-type ActiveSection = 'contact' | 'emergency' | 'preferences' | null;
+interface CommPrefsForm {
+  preferred_contact_method: string;
+  best_contact_times: string;
+  language_preference: string;
+  contact_opt_out: boolean;
+}
+
+type ActiveSection = 'contact' | 'emergency' | 'preferences' | 'commprefs' | null;
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
 
@@ -233,6 +248,12 @@ export default function StudentProfilePage() {
     emergency_contact_relationship: '',
   });
   const [prefsForm, setPrefsForm] = useState<PreferencesForm>({ learning_style: '' });
+  const [commPrefsForm, setCommPrefsForm] = useState<CommPrefsForm>({
+    preferred_contact_method: 'email',
+    best_contact_times: '',
+    language_preference: 'en',
+    contact_opt_out: false,
+  });
 
   // ─── Toast helpers ─────────────────────────────────────────────────────────
 
@@ -265,6 +286,12 @@ export default function StudentProfilePage() {
           setPrefsForm({
             learning_style: s.learning_style ?? '',
           });
+          setCommPrefsForm({
+            preferred_contact_method: s.preferred_contact_method ?? 'email',
+            best_contact_times: s.best_contact_times ?? '',
+            language_preference: s.language_preference ?? 'en',
+            contact_opt_out: s.contact_opt_out ?? false,
+          });
         }
       }
     } catch (err) {
@@ -296,6 +323,13 @@ export default function StudentProfilePage() {
       });
     } else if (section === 'preferences') {
       setPrefsForm({ learning_style: s.learning_style ?? '' });
+    } else if (section === 'commprefs') {
+      setCommPrefsForm({
+        preferred_contact_method: s.preferred_contact_method ?? 'email',
+        best_contact_times: s.best_contact_times ?? '',
+        language_preference: s.language_preference ?? 'en',
+        contact_opt_out: s.contact_opt_out ?? false,
+      });
     }
     setActiveSection(section);
   }
@@ -309,7 +343,8 @@ export default function StudentProfilePage() {
   async function saveSection(section: ActiveSection) {
     if (!section) return;
 
-    let payload: Record<string, string | null> = {};
+    let payload: Record<string, string | boolean | null> = {};
+    let apiUrl = '/api/student/profile';
     let validationError: string | null = null;
 
     if (section === 'contact') {
@@ -321,9 +356,6 @@ export default function StudentProfilePage() {
         address: contactForm.address || null,
       };
     } else if (section === 'emergency') {
-      if (contactForm.phone && !isValidPhone(emergencyForm.emergency_contact_phone)) {
-        // only validate if non-empty
-      }
       if (
         emergencyForm.emergency_contact_phone &&
         !isValidPhone(emergencyForm.emergency_contact_phone)
@@ -339,6 +371,14 @@ export default function StudentProfilePage() {
       payload = {
         learning_style: prefsForm.learning_style || null,
       };
+    } else if (section === 'commprefs') {
+      payload = {
+        preferred_contact_method: commPrefsForm.preferred_contact_method || 'email',
+        best_contact_times: commPrefsForm.best_contact_times || null,
+        language_preference: commPrefsForm.language_preference || 'en',
+        contact_opt_out: commPrefsForm.contact_opt_out,
+      };
+      apiUrl = '/api/student/communication-preferences';
     }
 
     if (validationError) {
@@ -348,7 +388,7 @@ export default function StudentProfilePage() {
 
     setSaving(true);
     try {
-      const res = await fetch('/api/student/profile', {
+      const res = await fetch(apiUrl, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -758,6 +798,181 @@ export default function StudentProfilePage() {
                         : null
                     }
                   />
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Communication Preferences (editable) ─────────────────────────── */}
+        {student && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
+            <SectionHeader
+              title="Communication Preferences"
+              icon={MessageSquare}
+              iconColor="text-cyan-600 dark:text-cyan-400"
+              editing={activeSection === 'commprefs'}
+              canEdit={true}
+              onEdit={() => startEditing('commprefs')}
+              onCancel={cancelEditing}
+              onSave={() => saveSection('commprefs')}
+              saving={saving}
+            />
+            <div className="p-6">
+              {activeSection === 'commprefs' ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  {/* Preferred contact method */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                      Preferred Contact Method
+                    </label>
+                    <select
+                      value={commPrefsForm.preferred_contact_method}
+                      onChange={(e) =>
+                        setCommPrefsForm((prev) => ({
+                          ...prev,
+                          preferred_contact_method: e.target.value,
+                        }))
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 dark:focus:ring-cyan-400"
+                    >
+                      <option value="email">Email</option>
+                      <option value="phone">Phone call</option>
+                      <option value="text">Text / SMS</option>
+                      <option value="in_person">In person</option>
+                    </select>
+                  </div>
+
+                  {/* Best times to contact */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                      Best Times to Contact
+                    </label>
+                    <input
+                      type="text"
+                      value={commPrefsForm.best_contact_times}
+                      onChange={(e) =>
+                        setCommPrefsForm((prev) => ({
+                          ...prev,
+                          best_contact_times: e.target.value,
+                        }))
+                      }
+                      placeholder="e.g. mornings, after 3pm"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 dark:focus:ring-cyan-400"
+                    />
+                  </div>
+
+                  {/* Language preference */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                      Language Preference
+                    </label>
+                    <select
+                      value={commPrefsForm.language_preference}
+                      onChange={(e) =>
+                        setCommPrefsForm((prev) => ({
+                          ...prev,
+                          language_preference: e.target.value,
+                        }))
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500 dark:focus:ring-cyan-400"
+                    >
+                      <option value="en">English</option>
+                      <option value="es">Spanish</option>
+                      <option value="fr">French</option>
+                      <option value="zh">Chinese (Mandarin)</option>
+                      <option value="vi">Vietnamese</option>
+                      <option value="tl">Tagalog</option>
+                      <option value="ar">Arabic</option>
+                      <option value="ko">Korean</option>
+                      <option value="ru">Russian</option>
+                      <option value="pt">Portuguese</option>
+                    </select>
+                  </div>
+
+                  {/* Opt-out toggle */}
+                  <div className="flex items-start gap-3 sm:col-span-2">
+                    <div className="flex items-center h-5 mt-0.5">
+                      <input
+                        id="contact_opt_out"
+                        type="checkbox"
+                        checked={commPrefsForm.contact_opt_out}
+                        onChange={(e) =>
+                          setCommPrefsForm((prev) => ({
+                            ...prev,
+                            contact_opt_out: e.target.checked,
+                          }))
+                        }
+                        className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-cyan-600 focus:ring-cyan-500 dark:focus:ring-cyan-400 bg-white dark:bg-gray-700"
+                      />
+                    </div>
+                    <div>
+                      <label
+                        htmlFor="contact_opt_out"
+                        className="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer"
+                      >
+                        Opt out of non-essential contact
+                      </label>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        When checked, instructors will only contact you for urgent or required
+                        program matters.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                  <ReadOnlyField
+                    icon={MessageSquare}
+                    label="Preferred Contact Method"
+                    value={
+                      {
+                        email: 'Email',
+                        phone: 'Phone call',
+                        text: 'Text / SMS',
+                        in_person: 'In person',
+                      }[student.preferred_contact_method ?? 'email'] ??
+                      student.preferred_contact_method
+                    }
+                  />
+                  <ReadOnlyField
+                    icon={Clock}
+                    label="Best Times to Contact"
+                    value={student.best_contact_times}
+                  />
+                  <ReadOnlyField
+                    icon={Globe}
+                    label="Language Preference"
+                    value={
+                      {
+                        en: 'English',
+                        es: 'Spanish',
+                        fr: 'French',
+                        zh: 'Chinese (Mandarin)',
+                        vi: 'Vietnamese',
+                        tl: 'Tagalog',
+                        ar: 'Arabic',
+                        ko: 'Korean',
+                        ru: 'Russian',
+                        pt: 'Portuguese',
+                      }[student.language_preference ?? 'en'] ?? student.language_preference
+                    }
+                  />
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg shrink-0 mt-0.5">
+                      <BellOff className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">
+                        Non-Essential Contact
+                      </p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">
+                        {student.contact_opt_out
+                          ? 'Opted out'
+                          : 'Receiving all communications'}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
