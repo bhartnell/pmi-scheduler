@@ -20,6 +20,7 @@ import {
   TrendingUp,
   Award,
   Loader2,
+  BarChart3,
 } from 'lucide-react';
 
 // ============================================================
@@ -104,6 +105,15 @@ interface ComplianceItem {
   status: string;
   expiration_date: string | null;
   is_required: boolean;
+}
+
+interface CompetencyItem {
+  skill_id: string;
+  skill: { id: string; name: string; category: string } | null;
+  level: 'introduced' | 'practiced' | 'competent' | 'proficient';
+  demonstrations: number;
+  updated_at: string;
+  notes?: string | null;
 }
 
 interface Portfolio {
@@ -252,12 +262,16 @@ export default function StudentPortfolioPage() {
   // Section open/close state
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     skills: true,
+    competencies: true,
     scenarios: true,
     summative: true,
     attendance: true,
     compliance: true,
     clinical: true,
   });
+
+  // Competency data
+  const [competencies, setCompetencies] = useState<CompetencyItem[]>([]);
 
   const toggleSection = (section: string) => {
     setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
@@ -290,6 +304,16 @@ export default function StudentPortfolioPage() {
     };
 
     fetchPortfolio();
+  }, [studentId, status]);
+
+  useEffect(() => {
+    if (!studentId || status !== 'authenticated') return;
+    fetch(`/api/lab-management/competencies?student_id=${studentId}`)
+      .then(r => r.json())
+      .then(d => {
+        if (d.success) setCompetencies(d.competencies || []);
+      })
+      .catch(() => {/* competencies are supplementary; ignore errors */});
   }, [studentId, status]);
 
   if (status === 'loading' || loading) {
@@ -516,6 +540,63 @@ export default function StudentPortfolioPage() {
             </div>
           )}
         </div>
+
+        {/* ============================================================
+            SECTION 1b: Skill Competency Progress
+        ============================================================ */}
+        {competencies.length > 0 && (
+          <div className="bg-white dark:bg-gray-800 print:bg-white rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 print:border-gray-300 mb-4 overflow-hidden print-section print-no-shadow">
+            <SectionHeader
+              title="Skill Competency Progress"
+              icon={BarChart3}
+              isOpen={openSections.competencies}
+              onToggle={() => toggleSection('competencies')}
+              badge={competencies.length}
+            />
+            {(openSections.competencies || true) && (
+              <div className={openSections.competencies ? 'block' : 'hidden print:block'}>
+                <div className="border-t border-gray-200 dark:border-gray-700 print:border-gray-300 p-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {competencies
+                      .sort((a, b) => {
+                        const order = { proficient: 0, competent: 1, practiced: 2, introduced: 3 };
+                        return (order[a.level] ?? 4) - (order[b.level] ?? 4);
+                      })
+                      .map(comp => {
+                        const levelConfig: Record<string, { label: string; bg: string; text: string; printBg: string; printText: string; width: string }> = {
+                          introduced: { label: 'Introduced', bg: 'bg-gray-200 dark:bg-gray-600', text: 'text-gray-700 dark:text-gray-300', printBg: 'print:bg-gray-200', printText: 'print:text-gray-700', width: 'w-1/4' },
+                          practiced: { label: 'Practiced', bg: 'bg-blue-400 dark:bg-blue-500', text: 'text-blue-800 dark:text-blue-300', printBg: 'print:bg-blue-400', printText: 'print:text-blue-800', width: 'w-2/4' },
+                          competent: { label: 'Competent', bg: 'bg-amber-400 dark:bg-amber-500', text: 'text-amber-800 dark:text-amber-300', printBg: 'print:bg-amber-400', printText: 'print:text-amber-800', width: 'w-3/4' },
+                          proficient: { label: 'Proficient', bg: 'bg-green-500 dark:bg-green-500', text: 'text-green-800 dark:text-green-300', printBg: 'print:bg-green-500', printText: 'print:text-green-800', width: 'w-full' },
+                        };
+                        const cfg = levelConfig[comp.level] ?? levelConfig.introduced;
+                        const skillName = comp.skill?.name ?? 'Unknown Skill';
+                        const skillCategory = comp.skill?.category ?? '';
+                        return (
+                          <div key={comp.skill_id} className="flex items-center gap-3 bg-gray-50 dark:bg-gray-700/40 print:bg-gray-50 rounded-lg px-3 py-2">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-2 mb-1">
+                                <span className="text-sm font-medium text-gray-900 dark:text-white print:text-gray-900 truncate">{skillName}</span>
+                                <span className={`flex-shrink-0 text-xs font-medium px-1.5 py-0.5 rounded ${cfg.bg} ${cfg.text} ${cfg.printBg} ${cfg.printText}`}>
+                                  {cfg.label}
+                                </span>
+                              </div>
+                              <div className="h-1.5 bg-gray-200 dark:bg-gray-600 print:bg-gray-200 rounded-full overflow-hidden">
+                                <div className={`h-full rounded-full ${cfg.bg} ${cfg.printBg} ${cfg.width}`} />
+                              </div>
+                              {skillCategory && (
+                                <p className="text-xs text-gray-400 dark:text-gray-500 print:text-gray-400 mt-0.5 capitalize">{skillCategory}</p>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ============================================================
             SECTION 2: Scenario Assessments (Team Lead)
