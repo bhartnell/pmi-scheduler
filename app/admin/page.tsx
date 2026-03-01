@@ -33,6 +33,8 @@ import {
   CalendarDays,
   Star,
   Clock,
+  AlertTriangle,
+  GraduationCap,
 } from 'lucide-react';
 import {
   canAccessAdmin,
@@ -243,6 +245,20 @@ export default function AdminPage() {
       title: 'Instructor Time Clock',
       description: 'Review, approve, and export instructor time entries for payroll',
       color: 'bg-blue-600',
+    },
+    {
+      href: '/admin/incidents',
+      icon: AlertTriangle,
+      title: 'Incident Reports',
+      description: 'Log and track safety incidents in lab and clinical settings for OSHA compliance',
+      color: 'bg-red-600',
+    },
+    {
+      href: '/admin/alumni',
+      icon: GraduationCap,
+      title: 'Alumni Tracking',
+      description: 'Track graduates: employment status, contact info, and continuing education',
+      color: 'bg-blue-700',
     },
   ];
 
