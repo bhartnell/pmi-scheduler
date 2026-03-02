@@ -83,6 +83,10 @@ export async function GET(request: NextRequest) {
     const { data, error, count } = await query;
 
     if (error) {
+      // Graceful fallback if table hasn't been created yet
+      if (error.message.includes('does not exist')) {
+        return NextResponse.json({ success: true, participation: [], total: 0, limit, offset });
+      }
       console.error('Error fetching scenario participation:', error);
       return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
@@ -180,6 +184,9 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
+      if (error.message.includes('does not exist')) {
+        return NextResponse.json({ success: false, error: 'Scenario participation tracking is not yet configured. Please run database migrations.' }, { status: 503 });
+      }
       console.error('Error logging scenario participation:', error);
       return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }

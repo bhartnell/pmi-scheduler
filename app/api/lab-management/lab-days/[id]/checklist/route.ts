@@ -40,10 +40,19 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
       .order('sort_order', { ascending: true })
       .order('created_at', { ascending: true });
 
-    if (error) throw error;
+    if (error) {
+      if (error.message?.includes('does not exist')) {
+        return NextResponse.json({ success: true, items: [] });
+      }
+      throw error;
+    }
 
     return NextResponse.json({ success: true, items: data || [] });
-  } catch (error) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes('does not exist')) {
+      return NextResponse.json({ success: true, items: [] });
+    }
     console.error('Error fetching checklist items:', error);
     return NextResponse.json({ success: false, error: 'Failed to fetch checklist items' }, { status: 500 });
   }
@@ -189,7 +198,11 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     if (error) throw error;
 
     return NextResponse.json({ success: true, item: data });
-  } catch (error) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes('does not exist')) {
+      return NextResponse.json({ success: false, error: 'Checklist feature is not yet configured. Please run database migrations.' }, { status: 503 });
+    }
     console.error('Error creating checklist item:', error);
     return NextResponse.json({ success: false, error: 'Failed to create checklist item' }, { status: 500 });
   }
@@ -251,7 +264,11 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
     if (error) throw error;
 
     return NextResponse.json({ success: true, item: data });
-  } catch (error) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes('does not exist')) {
+      return NextResponse.json({ success: false, error: 'Checklist feature is not yet configured. Please run database migrations.' }, { status: 503 });
+    }
     console.error('Error updating checklist item:', error);
     return NextResponse.json({ success: false, error: 'Failed to update checklist item' }, { status: 500 });
   }
@@ -290,7 +307,11 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
     if (error) throw error;
 
     return NextResponse.json({ success: true });
-  } catch (error) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes('does not exist')) {
+      return NextResponse.json({ success: false, error: 'Checklist feature is not yet configured. Please run database migrations.' }, { status: 503 });
+    }
     console.error('Error deleting checklist item:', error);
     return NextResponse.json({ success: false, error: 'Failed to delete checklist item' }, { status: 500 });
   }

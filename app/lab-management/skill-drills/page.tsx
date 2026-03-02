@@ -336,7 +336,7 @@ export default function SkillDrillsPage() {
       description: drill.description || '',
       category: drill.category,
       estimated_duration_minutes: drill.estimated_duration_minutes,
-      equipment_needed: drill.equipment_needed?.length ? [...drill.equipment_needed] : [''],
+      equipment_needed: Array.isArray(drill.equipment_needed) && drill.equipment_needed.length ? [...drill.equipment_needed] : [''],
       instructions: drill.instructions || '',
     });
     setFormError('');
@@ -804,7 +804,7 @@ export default function SkillDrillsPage() {
                               {drill.description}
                             </p>
                           )}
-                          {drill.equipment_needed && drill.equipment_needed.length > 0 && (
+                          {Array.isArray(drill.equipment_needed) && drill.equipment_needed.length > 0 && (
                             <div className="flex items-start gap-1.5 mt-2">
                               <Package className="w-3.5 h-3.5 text-gray-400 mt-0.5 flex-shrink-0" />
                               <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">

@@ -63,7 +63,26 @@ export async function GET(
       .select('student_id, status, notes, marked_by, marked_at')
       .eq('lab_day_id', labDayId);
 
-    if (attendanceError) throw attendanceError;
+    if (attendanceError) {
+      if (attendanceError.message?.includes('does not exist')) {
+        const mergedStudents = (students || []).map(student => ({
+          student_id: student.id,
+          first_name: student.first_name,
+          last_name: student.last_name,
+          email: student.email,
+          photo_url: student.photo_url,
+          status: null,
+          notes: null,
+          marked_by: null,
+          marked_at: null,
+        }));
+        return NextResponse.json({
+          students: mergedStudents,
+          summary: { total: mergedStudents.length, present: 0, absent: 0, excused: 0, late: 0, unmarked: mergedStudents.length },
+        });
+      }
+      throw attendanceError;
+    }
 
     // Build a map of student_id -> attendance record
     const attendanceMap = new Map<string, {
@@ -113,7 +132,11 @@ export async function GET(
       students: mergedStudents,
       summary: { total, present, absent, excused, late, unmarked },
     });
-  } catch (error) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes('does not exist')) {
+      return NextResponse.json({ students: [], summary: { total: 0, present: 0, absent: 0, excused: 0, late: 0, unmarked: 0 } });
+    }
     console.error('Error fetching attendance:', error);
     return NextResponse.json({ error: 'Failed to fetch attendance' }, { status: 500 });
   }
@@ -179,7 +202,11 @@ export async function PUT(
     if (error) throw error;
 
     return NextResponse.json({ success: true, record: data });
-  } catch (error) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes('does not exist')) {
+      return NextResponse.json({ error: 'Attendance tracking is not yet configured. Please run database migrations.' }, { status: 503 });
+    }
     console.error('Error updating attendance:', error);
     return NextResponse.json({ error: 'Failed to update attendance' }, { status: 500 });
   }
@@ -255,7 +282,11 @@ export async function POST(
       success: true,
       summary: { total: upsertRows.length, present, absent, excused, late },
     });
-  } catch (error) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes('does not exist')) {
+      return NextResponse.json({ error: 'Attendance tracking is not yet configured. Please run database migrations.' }, { status: 503 });
+    }
     console.error('Error bulk updating attendance:', error);
     return NextResponse.json({ error: 'Failed to bulk update attendance' }, { status: 500 });
   }

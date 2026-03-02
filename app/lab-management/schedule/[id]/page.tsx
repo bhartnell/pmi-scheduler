@@ -129,6 +129,7 @@ interface Station {
   location: string | null;
   documentation_required: boolean;
   platinum_required: boolean;
+  drill_ids?: string[] | null;
   metadata?: StationMetadata;
 }
 
@@ -435,6 +436,7 @@ export default function LabDayPage() {
   // Edit station modal state
   const [editingStation, setEditingStation] = useState<Station | null>(null);
   const [editDrillData, setEditDrillData] = useState<Record<string, unknown> | null>(null);
+  const [editSkillDrills, setEditSkillDrills] = useState<{ id: string; name: string; category: string; station_id?: string }[]>([]);
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
   const [instructors, setInstructors] = useState<Instructor[]>([]);
@@ -452,6 +454,7 @@ export default function LabDayPage() {
     station_type: 'scenario' as string,
     scenario_id: '',
     selectedSkills: [] as string[],
+    selectedDrillIds: [] as string[],
     custom_title: '',
     skill_sheet_url: '',
     instructions_url: '',
@@ -1751,6 +1754,7 @@ export default function LabDayPage() {
       station_type: station.station_type || 'scenario',
       scenario_id: station.scenario?.id || '',
       selectedSkills: stationSkillIds,
+      selectedDrillIds: Array.isArray(station.drill_ids) ? station.drill_ids : [],
       custom_title: station.custom_title || '',
       skill_sheet_url: station.skill_sheet_url || '',
       instructions_url: station.instructions_url || '',
@@ -1769,6 +1773,17 @@ export default function LabDayPage() {
       // First try: use the station's own metadata if it has S3 drill data
       if (station.metadata?.objectives || station.metadata?.instructor_guide) {
         setEditDrillData(station.metadata as Record<string, unknown>);
+      }
+
+      // Fetch available skill drills for the picker
+      try {
+        const drillsRes = await fetch('/api/lab-management/skill-drills');
+        const drillsData = await drillsRes.json();
+        if (drillsData.success) {
+          setEditSkillDrills(drillsData.drills || []);
+        }
+      } catch (error) {
+        console.error('Error fetching skill drills:', error);
       }
     }
 
@@ -1981,6 +1996,7 @@ export default function LabDayPage() {
         body: JSON.stringify({
           station_type: editForm.station_type,
           scenario_id: editForm.station_type === 'scenario' ? (editForm.scenario_id || null) : null,
+          drill_ids: editForm.station_type === 'skill_drill' && editForm.selectedDrillIds.length > 0 ? editForm.selectedDrillIds : null,
           custom_title: editForm.custom_title || null,
           skill_sheet_url: editForm.skill_sheet_url || null,
           instructions_url: editForm.instructions_url || null,
@@ -4470,12 +4486,60 @@ export default function LabDayPage() {
                 </div>
               )}
 
-              {/* Skill Drill Info */}
+              {/* Skill Drill Info + Picker */}
               {editForm.station_type === 'skill_drill' && (
-                <div className="p-4 bg-orange-50 dark:bg-orange-900/30 rounded-lg">
-                  <p className="text-orange-800 dark:text-orange-300 text-sm">
-                    <strong>Skill Drill:</strong> Student-led practice station where students independently practice skills.
-                    No instructor grading required.
+                <div className="space-y-3">
+                  <div className="p-4 bg-orange-50 dark:bg-orange-900/30 rounded-lg">
+                    <p className="text-orange-800 dark:text-orange-300 text-sm">
+                      <strong>Skill Drill:</strong> Student-led practice station. Select drills from the library below.
+                    </p>
+                  </div>
+
+                  {/* Selected drills */}
+                  {editForm.selectedDrillIds.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {editForm.selectedDrillIds.map(id => {
+                        const drill = editSkillDrills.find(d => d.id === id);
+                        return drill ? (
+                          <span key={id} className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 text-sm rounded-full">
+                            {drill.name}
+                            <button type="button" onClick={() => setEditForm(prev => ({ ...prev, selectedDrillIds: prev.selectedDrillIds.filter(did => did !== id) }))} className="hover:text-red-600">×</button>
+                          </span>
+                        ) : null;
+                      })}
+                    </div>
+                  )}
+
+                  {/* Drill picker list */}
+                  {editSkillDrills.length > 0 && (
+                    <div className="max-h-48 overflow-y-auto border dark:border-gray-700 rounded-lg">
+                      {editSkillDrills.map(drill => {
+                        const isSelected = editForm.selectedDrillIds.includes(drill.id);
+                        return (
+                          <label key={drill.id} className={`flex items-center gap-3 p-2.5 cursor-pointer border-b last:border-0 dark:border-gray-700 transition-colors ${isSelected ? 'bg-orange-50 dark:bg-orange-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => setEditForm(prev => ({
+                                ...prev,
+                                selectedDrillIds: isSelected
+                                  ? prev.selectedDrillIds.filter(id => id !== drill.id)
+                                  : [...prev.selectedDrillIds, drill.id]
+                              }))}
+                              className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+                            />
+                            <div className="min-w-0">
+                              <span className="text-sm font-medium text-gray-900 dark:text-white">{drill.name}</span>
+                              {drill.category && <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">{drill.category}</span>}
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {editForm.selectedDrillIds.length === 0 ? 'No drills selected.' : `${editForm.selectedDrillIds.length} drill${editForm.selectedDrillIds.length !== 1 ? 's' : ''} selected.`}
                   </p>
                 </div>
               )}

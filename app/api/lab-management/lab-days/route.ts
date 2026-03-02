@@ -92,10 +92,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { stations, ...labDayData } = body;
 
-    // Create lab day
-    const insertData = {
+    // Create lab day — sanitize UUID fields so empty strings become null
+    const insertData: Record<string, unknown> = {
       date: labDayData.date,
-      cohort_id: labDayData.cohort_id,
+      cohort_id: labDayData.cohort_id || null,
       title: labDayData.title || null,
       start_time: labDayData.start_time || null,
       end_time: labDayData.end_time || null,
@@ -105,6 +105,7 @@ export async function POST(request: NextRequest) {
       num_rotations: labDayData.num_rotations || 4,
       rotation_duration: labDayData.rotation_duration || 30,
       notes: labDayData.notes || null,
+      source_template_id: labDayData.source_template_id || null,
     };
 
     const { data: labDay, error: labDayError } = await supabase

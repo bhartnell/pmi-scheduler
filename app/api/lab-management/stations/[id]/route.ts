@@ -127,6 +127,7 @@ export async function PATCH(
     if (body.skill_sheet_url !== undefined) updateData.skill_sheet_url = body.skill_sheet_url;
     if (body.instructions_url !== undefined) updateData.instructions_url = body.instructions_url;
     if (body.station_notes !== undefined) updateData.station_notes = body.station_notes;
+    if (body.drill_ids !== undefined) updateData.drill_ids = Array.isArray(body.drill_ids) && body.drill_ids.length > 0 ? body.drill_ids : null;
 
     // Check if this is a new instructor assignment (for notification)
     const isNewAssignment = body.instructor_email !== undefined;

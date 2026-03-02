@@ -82,7 +82,12 @@ export async function GET(request: NextRequest) {
     }
 
     const { data, error } = await query;
-    if (error) throw error;
+    if (error) {
+      if (error.message?.includes('does not exist')) {
+        return NextResponse.json({ success: true, records: [], overdueCount: 0 });
+      }
+      throw error;
+    }
 
     // Count overdue records (scheduled but past their scheduled_date)
     const today = new Date().toISOString().split('T')[0];
@@ -97,7 +102,11 @@ export async function GET(request: NextRequest) {
       records: data ?? [],
       overdueCount: overdueCount ?? 0,
     });
-  } catch (error) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes('does not exist')) {
+      return NextResponse.json({ success: true, records: [], overdueCount: 0 });
+    }
     console.error('Error fetching maintenance records:', error);
     return NextResponse.json({ error: 'Failed to fetch maintenance records' }, { status: 500 });
   }
@@ -191,7 +200,11 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ success: true, record: data }, { status: 201 });
-  } catch (error) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes('does not exist')) {
+      return NextResponse.json({ error: 'Equipment maintenance is not yet configured. Please run database migrations.' }, { status: 503 });
+    }
     console.error('Error creating maintenance record:', error);
     return NextResponse.json({ error: 'Failed to create maintenance record' }, { status: 500 });
   }

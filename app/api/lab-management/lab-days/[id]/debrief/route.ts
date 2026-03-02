@@ -39,10 +39,19 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
       .eq('lab_day_id', labDayId)
       .order('created_at', { ascending: true });
 
-    if (error) throw error;
+    if (error) {
+      if (error.message?.includes('does not exist')) {
+        return NextResponse.json({ success: true, debriefs: [] });
+      }
+      throw error;
+    }
 
     return NextResponse.json({ success: true, debriefs: data || [] });
-  } catch (error) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes('does not exist')) {
+      return NextResponse.json({ success: true, debriefs: [] });
+    }
     console.error('Error fetching debriefs:', error);
     return NextResponse.json({ success: false, error: 'Failed to fetch debriefs' }, { status: 500 });
   }
@@ -119,7 +128,11 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     if (error) throw error;
 
     return NextResponse.json({ success: true, debrief: data, updated: false });
-  } catch (error) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes('does not exist')) {
+      return NextResponse.json({ success: false, error: 'Debrief feature is not yet configured. Please run database migrations.' }, { status: 503 });
+    }
     console.error('Error submitting debrief:', error);
     return NextResponse.json({ success: false, error: 'Failed to submit debrief' }, { status: 500 });
   }
@@ -186,7 +199,11 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
     if (error) throw error;
 
     return NextResponse.json({ success: true, debrief: data });
-  } catch (error) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes('does not exist')) {
+      return NextResponse.json({ success: false, error: 'Debrief feature is not yet configured. Please run database migrations.' }, { status: 503 });
+    }
     console.error('Error updating debrief:', error);
     return NextResponse.json({ success: false, error: 'Failed to update debrief' }, { status: 500 });
   }

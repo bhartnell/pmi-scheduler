@@ -332,7 +332,11 @@ export async function GET(request: NextRequest) {
 
     // Limit to 5 suggestions to keep the UI manageable
     return NextResponse.json({ success: true, suggestions: suggestions.slice(0, 5) });
-  } catch (error) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes('does not exist')) {
+      return NextResponse.json({ success: true, suggestions: [] });
+    }
     console.error('Error fetching lab suggestions:', error);
     return NextResponse.json(
       { success: false, error: 'Failed to fetch suggestions' },

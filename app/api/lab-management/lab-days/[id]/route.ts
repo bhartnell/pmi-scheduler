@@ -48,6 +48,7 @@ export async function GET(
           skill_sheet_url,
           instructions_url,
           station_notes,
+          drill_ids,
           metadata,
           scenario:scenarios(id, title, category, difficulty)
         )
