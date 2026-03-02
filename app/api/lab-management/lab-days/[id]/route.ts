@@ -22,6 +22,9 @@ export async function GET(
       .from('lab_days')
       .select(`
         *,
+        source_template:lab_day_templates!source_template_id(
+          id, name, program, semester, week_number, day_number, updated_at
+        ),
         cohort:cohorts(
           id,
           cohort_number,

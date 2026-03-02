@@ -17,6 +17,73 @@ async function getCurrentUser(email: string) {
 }
 
 // ---------------------------------------------------------------------------
+// Helper – create a version snapshot of the current template state
+// ---------------------------------------------------------------------------
+async function createVersionSnapshot(
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  templateId: string,
+  createdBy: string,
+  changeSummary?: string,
+  sourceLabDayId?: string
+) {
+  // Fetch current template + stations
+  const { data: template } = await supabase
+    .from('lab_day_templates')
+    .select(`
+      id, name, description, program, semester, week_number, day_number,
+      stations:lab_template_stations(
+        id, sort_order, station_type, station_name, skills, scenario_id,
+        scenario_title, difficulty, notes, metadata
+      )
+    `)
+    .eq('id', templateId)
+    .single();
+
+  if (!template) return null;
+
+  // Get next version number
+  const { data: maxVersion } = await supabase
+    .from('lab_template_versions')
+    .select('version_number')
+    .eq('template_id', templateId)
+    .order('version_number', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const nextVersion = (maxVersion?.version_number || 0) + 1;
+
+  const snapshot = {
+    name: template.name,
+    description: template.description,
+    program: template.program,
+    semester: template.semester,
+    week_number: template.week_number,
+    day_number: template.day_number,
+    stations: (template as any).stations || [],
+  };
+
+  const { data: version, error } = await supabase
+    .from('lab_template_versions')
+    .insert({
+      template_id: templateId,
+      version_number: nextVersion,
+      snapshot,
+      change_summary: changeSummary || 'Manual edit',
+      source_lab_day_id: sourceLabDayId || null,
+      created_by: createdBy,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error creating version snapshot:', error);
+    return null;
+  }
+
+  return version;
+}
+
+// ---------------------------------------------------------------------------
 // GET /api/admin/lab-templates/[id]
 // Returns single template with all stations.
 // ---------------------------------------------------------------------------
@@ -120,6 +187,9 @@ export async function PUT(
     if (fetchError || !existing) {
       return NextResponse.json({ error: 'Template not found' }, { status: 404 });
     }
+
+    // Auto-create version snapshot before updates
+    await createVersionSnapshot(supabase, id, currentUser.email, 'Direct template edit');
 
     // Build update object
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };

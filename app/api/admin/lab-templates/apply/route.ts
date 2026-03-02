@@ -211,6 +211,7 @@ export async function POST(request: NextRequest) {
           week_number: weekNum,
           day_number: dayNum,
           notes: template.description || null,
+          source_template_id: template.id,
         })
         .select('id, date, title, week_number, day_number')
         .single();
