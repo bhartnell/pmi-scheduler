@@ -57,9 +57,12 @@ interface OldVitalsEntry {
   blood_glucose?: string;
   glucose?: string;
   notes?: string;
+  presentation?: string;
   presentation_notes?: string;
   expected_actions?: string;
   actions?: string;
+  interventions?: string;
+  trigger?: string;
   general_impression?: string;
   [key: string]: string | undefined;
 }
@@ -301,10 +304,10 @@ function transformScenario(
       newPhases = vitalsArray.map((entry, index) => ({
         id: `phase-${now}-${index}`,
         name: entry.phase || (index === 0 ? 'Initial Presentation' : `Phase ${index + 1}`),
-        trigger: index === 0 ? 'On arrival' : '',
+        trigger: index === 0 ? 'On arrival' : (entry.trigger || ''),
         vitals: mapVitalsFromEntry(entry),
-        presentation_notes: entry.notes || entry.presentation_notes || '',
-        expected_actions: entry.expected_actions || entry.actions || '',
+        presentation_notes: entry.notes || entry.presentation || entry.presentation_notes || '',
+        expected_actions: entry.interventions || entry.expected_actions || entry.actions || '',
         display_order: index,
         onset: '',
         provocation: '',

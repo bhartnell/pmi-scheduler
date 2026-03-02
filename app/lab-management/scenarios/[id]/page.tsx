@@ -757,6 +757,7 @@ export default function ScenarioEditorPage() {
   const [saving, setSaving] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
   const [fixingStructure, setFixingStructure] = useState(false);
+  const [hasOldFormat, setHasOldFormat] = useState(false);
   const [studentPrintMode, setStudentPrintMode] = useState(false);
   const [instructorPrintMode, setInstructorPrintMode] = useState(false);
   // Version history — bump this key to force the panel to reload after a save/restore
@@ -844,8 +845,14 @@ export default function ScenarioEditorPage() {
       const res = await fetch(`/api/lab-management/scenarios/${scenarioId}`);
       const data = await res.json();
       if (data.success && data.scenario) {
-        // Map the database fields to our state
+        // Detect old format: phases null/empty AND vitals populated as array
         const s = data.scenario;
+        const phasesEmpty = !s.phases || (Array.isArray(s.phases) && s.phases.length === 0);
+        const hasVitalsArray = Array.isArray(s.vitals) && s.vitals.length > 0;
+        const hasCriticalStrings = Array.isArray(s.critical_actions) && s.critical_actions.length > 0 && typeof s.critical_actions[0] === 'string';
+        setHasOldFormat(phasesEmpty && hasVitalsArray || hasCriticalStrings);
+
+        // Map the database fields to our state
         setScenario({
           id: s.id,
           title: s.title || '',
@@ -952,6 +959,7 @@ export default function ScenarioEditorPage() {
         const detail = data.results?.details?.[0];
         if (detail?.status === 'transformed') {
           alert(`Structure fixed!\n\nChanges:\n${(detail.changes || []).join('\n')}`);
+          setHasOldFormat(false);
           // Reload the scenario to reflect new data
           fetchScenario();
         } else if (detail?.status === 'already_correct') {
@@ -1197,6 +1205,31 @@ export default function ScenarioEditorPage() {
           </div>
         </div>
       </div>
+
+      {/* Old format detection banner */}
+      {isEditing && hasOldFormat && (
+        <div className="max-w-4xl mx-auto px-4 mt-4 print:hidden">
+          <div className="flex items-center gap-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-4">
+            <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
+                This scenario uses an old data format
+              </p>
+              <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
+                Phases are empty and vitals are stored in the legacy format. Click &quot;Fix Structure&quot; above to convert to the new format (original data will be backed up).
+              </p>
+            </div>
+            <button
+              onClick={handleFixStructure}
+              disabled={fixingStructure}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 rounded-lg disabled:opacity-50 whitespace-nowrap"
+            >
+              <Wand2 className="w-4 h-4" />
+              {fixingStructure ? 'Converting...' : 'Convert to New Format'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Print Header - only visible when printing */}
       <div className="hidden print:block print-header">
