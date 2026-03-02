@@ -59,6 +59,7 @@ export async function GET(request: NextRequest) {
         anchor_type,
         requires_review,
         review_notes,
+        template_data,
         created_by,
         created_at,
         updated_at,
@@ -72,7 +73,7 @@ export async function GET(request: NextRequest) {
           scenario_title,
           difficulty,
           notes,
-          scenario:scenarios(id, title)
+          metadata
         )
       `)
       .not('program', 'is', null)
@@ -99,9 +100,10 @@ export async function GET(request: NextRequest) {
     }));
 
     return NextResponse.json({ success: true, templates: enriched });
-  } catch (error) {
-    console.error('Error fetching lab templates:', error);
-    return NextResponse.json({ error: 'Failed to fetch lab templates' }, { status: 500 });
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('Error fetching lab templates:', msg, error);
+    return NextResponse.json({ error: 'Failed to fetch lab templates', details: msg }, { status: 500 });
   }
 }
 
@@ -219,12 +221,11 @@ export async function POST(request: NextRequest) {
       .select(`
         id, name, description, program, semester, week_number, day_number,
         category, instructor_count, is_anchor, anchor_type,
-        requires_review, review_notes,
+        requires_review, review_notes, template_data,
         created_by, created_at, updated_at,
         stations:lab_template_stations(
           id, sort_order, station_type, station_name, skills, scenario_id,
-          scenario_title, difficulty, notes,
-          scenario:scenarios(id, title)
+          scenario_title, difficulty, notes, metadata
         )
       `)
       .eq('id', template.id)
