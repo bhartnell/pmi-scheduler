@@ -242,7 +242,7 @@ export default function LabTemplateImportPage() {
               Seed Program Templates
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              Import all lab templates from embedded JSON files: Paramedic S1 &amp; S2, EMT S1.
+              Import all lab templates from embedded JSON files: Paramedic S1 &amp; S2, EMT S1, AEMT S1.
               This will create or update templates and their stations.
             </p>
             <div className="mt-4 flex items-center gap-4">
@@ -284,7 +284,8 @@ export default function LabTemplateImportPage() {
                 {seedResult.summary.files.map((f, i) => {
                   const label = f.file.replace('paramedic_s1_labs.json', 'Paramedic S1')
                     .replace('paramedic_s2_labs.json', 'Paramedic S2')
-                    .replace('emt_s1_labs.json', 'EMT S1');
+                    .replace('emt_s1_labs.json', 'EMT S1')
+                    .replace('aemt_s1_labs.json', 'AEMT S1');
                   return (
                     <div key={i} className="text-xs text-gray-500 dark:text-gray-400">
                       <span className="font-medium text-gray-700 dark:text-gray-300">{label}</span>: {f.templates} templates,{' '}

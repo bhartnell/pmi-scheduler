@@ -1,0 +1,764 @@
+{
+  "program": "aemt",
+  "semester": 1,
+  "_notes": [
+    "Built from AEMT SMC tracking data — Group 2.",
+    "AEMT scope builds on EMT foundations. Key additions over EMT:",
+    "  - IV access (20 attempts minimum)",
+    "  - IO access and IO medication administration",
+    "  - IV bolus medication (10 minimum)",
+    "  - IM injection (2 minimum)",
+    "  - Intranasal medication (2 minimum)",
+    "  - Supraglottic airway — advanced level (10 minimum)",
+    "  - ETCO2 monitoring (10 minimum)",
+    "  - Venous blood sampling (4 minimum, simulation permitted)",
+    "  - PPV/BVM at ALS level (10 minimum)",
+    "  - AED (2 minimum)",
+    "  - Chest compressions (2 minimum)",
+    "  - ET suction (2 minimum)",
+    "No ETI — supraglottic is the advanced airway ceiling for AEMT.",
+    "No cardiac interventions beyond AED and chest compressions.",
+    "Team leads: 10-20% of exposures (5-10) in field experience and capstone.",
+    "Program is Group 2 — building toward CoAEMSP readiness.",
+    "Scenario content not yet populated — no AEMT weekly spreadsheets parsed.",
+    "Run AEMT weekly spreadsheets through the lab parser to populate station scenario content."
+  ],
+  "templates": [
+    {
+      "week_number": 1,
+      "day_number": 1,
+      "title": "AEMT Program Orientation and EMT Skill Confirmation",
+      "category": "orientation",
+      "instructor_count": 2,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": false,
+      "review_notes": null,
+      "stations": [
+        {
+          "station_type": "skills",
+          "station_name": "Program Orientation",
+          "skills": [],
+          "format_notes": "Orientation to AEMT program scope, lab facilities, Platinum portal, and documentation expectations. AEMT builds on EMT — confirm EMT skill carry-over baseline."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "EMT Skill Baseline Confirmation",
+          "skills": [
+            {
+              "name": "PPV / BVM ventilation — adult",
+              "platinum_skill": true,
+              "min_attempts": 2,
+              "signoff_note": "EMT carry-over — confirm baseline before advancing to AEMT airway scope"
+            },
+            {
+              "name": "Chest compressions",
+              "platinum_skill": true,
+              "min_attempts": 2,
+              "signoff_note": "CoAEMSP minimum 2 — confirm carry-over from EMT"
+            },
+            {
+              "name": "AED / Automated Defibrillator",
+              "platinum_skill": true,
+              "min_attempts": 2,
+              "signoff_note": "CoAEMSP minimum 2 — confirm carry-over from EMT"
+            }
+          ],
+          "format_notes": "Verify EMT foundation skills before beginning AEMT-specific content. BVM, CPR, and AED are CoAEMSP minimums for AEMT — start the count here if not carried from EMT records."
+        }
+      ]
+    },
+    {
+      "week_number": 2,
+      "day_number": 1,
+      "title": "IV Access — Manikin Introduction",
+      "category": "skills_lab",
+      "instructor_count": 3,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": false,
+      "review_notes": null,
+      "stations": [
+        {
+          "station_type": "skills",
+          "station_name": "IV Access — Manikin Arms",
+          "skills": [
+            {
+              "name": "Establish IV access",
+              "platinum_skill": true,
+              "min_attempts": 4,
+              "signoff_note": "CoAEMSP minimum 20 total — begin accumulation. Manikin arms first, live stick introduced later. Track attempt count across all sessions."
+            }
+          ],
+          "format_notes": "IV access on manikin arms — technique foundation before live stick. CoAEMSP requires 20 successful IV attempts total across lab and clinical. Start tracking. Multiple rotations recommended."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "IV Bolus Medication Introduction",
+          "skills": [
+            {
+              "name": "Administer IV bolus medication",
+              "platinum_skill": true,
+              "min_attempts": 2,
+              "signoff_note": "CoAEMSP minimum 10 — begin accumulation. Simulation permitted."
+            }
+          ],
+          "format_notes": "IV bolus technique introduced alongside IV access. Simulation permitted for CoAEMSP count. CoAEMSP minimum 10 total."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "Med Math and Draw",
+          "skills": [],
+          "format_notes": "Medication math and draw practice to support IV and IM administration. SNHD protocol context."
+        }
+      ]
+    },
+    {
+      "week_number": 2,
+      "day_number": 2,
+      "title": "IM and Intranasal Medication Administration",
+      "category": "skills_lab",
+      "instructor_count": 2,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": false,
+      "review_notes": null,
+      "stations": [
+        {
+          "station_type": "skills",
+          "station_name": "IM Injection",
+          "skills": [
+            {
+              "name": "Administer IM injection",
+              "platinum_skill": true,
+              "min_attempts": 2,
+              "signoff_note": "CoAEMSP minimum 2 — simulation permitted"
+            }
+          ],
+          "format_notes": "IM injection technique. CoAEMSP minimum 2, simulation permitted. Equipment: IM injection trainers, appropriate needles and syringes."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "Intranasal Medication Administration",
+          "skills": [
+            {
+              "name": "Administer intranasal medication",
+              "platinum_skill": true,
+              "min_attempts": 2,
+              "signoff_note": "CoAEMSP minimum 2 — simulation permitted"
+            }
+          ],
+          "format_notes": "Intranasal administration technique — MAD device. CoAEMSP minimum 2, simulation permitted. Common agents: naloxone IN, midazolam IN."
+        }
+      ]
+    },
+    {
+      "week_number": 3,
+      "day_number": 1,
+      "title": "IO Access and IO Medication Administration",
+      "category": "skills_lab",
+      "instructor_count": 3,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": false,
+      "review_notes": null,
+      "stations": [
+        {
+          "station_type": "skills",
+          "station_name": "IO Access",
+          "skills": [
+            {
+              "name": "Establish IO access",
+              "platinum_skill": true,
+              "min_attempts": 2,
+              "signoff_note": "CoAEMSP minimum 2 — simulation permitted"
+            }
+          ],
+          "format_notes": "IO access technique — EZ-IO or similar. CoAEMSP minimum 2, simulation permitted. Equipment: IO drill, IO needles, IO trainers (tibial and humeral sites)."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "IO Medication Administration",
+          "skills": [
+            {
+              "name": "Administer IO medication",
+              "platinum_skill": true,
+              "min_attempts": 2,
+              "signoff_note": "CoAEMSP minimum 2 — simulation permitted"
+            }
+          ],
+          "format_notes": "IO medication administration following IO access establishment. CoAEMSP minimum 2, simulation permitted."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "Venous Blood Sampling",
+          "skills": [
+            {
+              "name": "Venous blood sampling",
+              "platinum_skill": true,
+              "min_attempts": 2,
+              "signoff_note": "CoAEMSP minimum 4 total — simulation permitted. Begin accumulation."
+            }
+          ],
+          "format_notes": "Venous blood sampling technique. CoAEMSP minimum 4, simulation permitted. Equipment: blood sampling trainers, Vacutainer system, appropriate tubes."
+        }
+      ]
+    },
+    {
+      "week_number": 3,
+      "day_number": 2,
+      "title": "IV Live Stick and IV Bolus Accumulation",
+      "category": "skills_lab",
+      "instructor_count": 3,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": false,
+      "review_notes": null,
+      "stations": [
+        {
+          "station_type": "skills",
+          "station_name": "IV Access — Live Stick",
+          "skills": [
+            {
+              "name": "Establish IV access — live stick",
+              "platinum_skill": true,
+              "min_attempts": 4,
+              "signoff_note": "Live stick begins. CoAEMSP minimum 20 total across all sessions — track cumulative count."
+            }
+          ],
+          "format_notes": "Live IV stick — two stations. CoAEMSP minimum 20 requires sustained practice across clinical and lab. Track attempt count carefully."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "IV Bolus Accumulation",
+          "skills": [
+            {
+              "name": "Administer IV bolus medication",
+              "platinum_skill": true,
+              "min_attempts": 2,
+              "signoff_note": "Accumulation session — CoAEMSP minimum 10 total."
+            }
+          ],
+          "format_notes": "IV bolus practice. Simulation permitted for CoAEMSP count."
+        },
+        {
+          "station_type": "scenario",
+          "station_name": "Medical Scenario — IV in Context",
+          "scenario_title": "Medical Emergency Requiring IV Access",
+          "difficulty": "intermediate",
+          "format_notes": "Apply IV access and medication administration in patient scenario context. Content pending from weekly spreadsheets."
+        }
+      ]
+    },
+    {
+      "week_number": 4,
+      "day_number": 1,
+      "title": "Supraglottic Airway — Advanced Level",
+      "category": "skills_lab",
+      "instructor_count": 3,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": false,
+      "review_notes": null,
+      "stations": [
+        {
+          "station_type": "skills",
+          "station_name": "Supraglottic Airway — All Devices",
+          "skills": [
+            {
+              "name": "Insert supraglottic airway — LMA",
+              "platinum_skill": true,
+              "min_attempts": 3,
+              "signoff_note": "CoAEMSP minimum 10 total across all SGA devices — supraglottic is the AEMT advanced airway ceiling. No ETI."
+            },
+            {
+              "name": "Insert supraglottic airway — King Airway",
+              "platinum_skill": true,
+              "min_attempts": 3,
+              "signoff_note": "CoAEMSP minimum 10 total — accumulate across devices and sessions"
+            },
+            {
+              "name": "Insert supraglottic airway — iGEL",
+              "platinum_skill": true,
+              "min_attempts": 3,
+              "signoff_note": "CoAEMSP minimum 10 total — accumulate across devices and sessions"
+            }
+          ],
+          "format_notes": "Supraglottic airway is the AEMT advanced airway ceiling — no ETI in scope. CoAEMSP minimum 10 total across all SGA devices. Equipment: LMA, King Airway, iGEL, airway manikins. Multiple rotations — high repetition session."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "PPV / BVM Advanced",
+          "skills": [
+            {
+              "name": "PPV / BVM ventilation",
+              "platinum_skill": true,
+              "min_attempts": 3,
+              "signoff_note": "CoAEMSP minimum 10 — accumulate across sessions"
+            }
+          ],
+          "format_notes": "BVM ventilation at ALS level — includes BVM with SGA in place. CoAEMSP minimum 10 total."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "ET Suctioning",
+          "skills": [
+            {
+              "name": "Perform endotracheal suctioning",
+              "platinum_skill": true,
+              "min_attempts": 2,
+              "signoff_note": "CoAEMSP minimum 2 — simulation permitted"
+            }
+          ],
+          "format_notes": "ET suction technique via SGA or in-line. CoAEMSP minimum 2, simulation permitted."
+        }
+      ]
+    },
+    {
+      "week_number": 4,
+      "day_number": 2,
+      "title": "ETCO2 Monitoring — Introduction",
+      "category": "skills_lab",
+      "instructor_count": 2,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": false,
+      "review_notes": null,
+      "stations": [
+        {
+          "station_type": "skills",
+          "station_name": "ETCO2 Monitoring",
+          "skills": [
+            {
+              "name": "ETCO2 monitoring",
+              "platinum_skill": true,
+              "min_attempts": 3,
+              "signoff_note": "CoAEMSP minimum 10 — begin accumulation. High volume required, continue across multiple sessions."
+            }
+          ],
+          "format_notes": "ETCO2 monitoring introduced. CoAEMSP minimum 10 — needs sustained accumulation across lab and clinical. Equipment: capnography-capable monitor, ETCO2 sampling lines, nasal cannula ETCO2, in-line ETCO2 adapters."
+        },
+        {
+          "station_type": "scenario",
+          "station_name": "Airway Scenario — ETCO2 in Context",
+          "scenario_title": "Respiratory Emergency with ETCO2 Monitoring",
+          "difficulty": "intermediate",
+          "format_notes": "Apply ETCO2 monitoring in respiratory scenario. ETCO2 count accrues here. Content pending from weekly spreadsheets."
+        }
+      ]
+    },
+    {
+      "week_number": 5,
+      "day_number": 1,
+      "title": "Cardiac Scenarios — Medical Emergency Integration",
+      "category": "skills_lab",
+      "instructor_count": 3,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": false,
+      "review_notes": null,
+      "stations": [
+        {
+          "station_type": "scenario",
+          "station_name": "Cardiac Pathology Scenario",
+          "scenario_title": "Cardiac Pathology — ACS / Chest Pain (AEMT scope)",
+          "difficulty": "intermediate",
+          "format_notes": "Cardiac pathology scenario within AEMT scope. No cardioversion or pacing — AED and CPR only for arrest. IV access and medication administration in context. CoAEMSP Cardiac pathology minimum 6."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "IV and ETCO2 Accumulation",
+          "skills": [
+            {
+              "name": "Establish IV access",
+              "platinum_skill": true,
+              "min_attempts": 3,
+              "signoff_note": "Accumulation — CoAEMSP minimum 20 total"
+            },
+            {
+              "name": "ETCO2 monitoring",
+              "platinum_skill": true,
+              "min_attempts": 2,
+              "signoff_note": "Accumulation — CoAEMSP minimum 10 total"
+            }
+          ],
+          "format_notes": "Skills accumulation in cardiac context. IV and ETCO2 counts continue."
+        },
+        {
+          "station_type": "scenario",
+          "station_name": "Cardiac Arrest",
+          "scenario_title": "Cardiac Arrest — AED and CPR (AEMT scope)",
+          "difficulty": "advanced",
+          "format_notes": "Cardiac arrest within AEMT scope — AED, CPR, airway management, IV access. CoAEMSP Cardiac arrest minimum 4 (simulation permitted). No advanced cardiac interventions."
+        }
+      ]
+    },
+    {
+      "week_number": 5,
+      "day_number": 2,
+      "title": "Trauma Scenarios and Hemorrhage Control Review",
+      "category": "skills_lab",
+      "instructor_count": 3,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": false,
+      "review_notes": null,
+      "stations": [
+        {
+          "station_type": "scenario",
+          "station_name": "Trauma Scenario",
+          "scenario_title": "Trauma — AEMT ALS Integration",
+          "difficulty": "intermediate",
+          "format_notes": "Trauma scenario with AEMT ALS interventions — IV access, fluid resuscitation, airway management. CoAEMSP Trauma minimum 6. Content pending from weekly spreadsheets."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "IV and Venous Blood Sampling Accumulation",
+          "skills": [
+            {
+              "name": "Establish IV access",
+              "platinum_skill": true,
+              "min_attempts": 3,
+              "signoff_note": "Accumulation — CoAEMSP minimum 20 total"
+            },
+            {
+              "name": "Venous blood sampling",
+              "platinum_skill": true,
+              "min_attempts": 2,
+              "signoff_note": "Accumulation — CoAEMSP minimum 4 total. Simulation permitted."
+            }
+          ],
+          "format_notes": "IV and venous blood sampling in trauma context."
+        }
+      ]
+    },
+    {
+      "week_number": 6,
+      "day_number": 1,
+      "title": "Respiratory Emergencies — ETCO2 and Airway Integration",
+      "category": "skills_lab",
+      "instructor_count": 3,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": false,
+      "review_notes": null,
+      "stations": [
+        {
+          "station_type": "scenario",
+          "station_name": "Respiratory Scenario",
+          "scenario_title": "Respiratory Emergency — AEMT ALS Management",
+          "difficulty": "advanced",
+          "format_notes": "Respiratory pathology scenario — SGA, BVM, ETCO2. CoAEMSP Respiratory minimum 6. ETCO2 and BVM counts accrue. Content pending from weekly spreadsheets."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "SGA and ETCO2 Accumulation",
+          "skills": [
+            {
+              "name": "Insert supraglottic airway",
+              "platinum_skill": true,
+              "min_attempts": 2,
+              "signoff_note": "Accumulation — CoAEMSP minimum 10 total"
+            },
+            {
+              "name": "ETCO2 monitoring",
+              "platinum_skill": true,
+              "min_attempts": 2,
+              "signoff_note": "Accumulation — CoAEMSP minimum 10 total"
+            },
+            {
+              "name": "PPV / BVM ventilation",
+              "platinum_skill": true,
+              "min_attempts": 2,
+              "signoff_note": "Accumulation — CoAEMSP minimum 10 total"
+            }
+          ],
+          "format_notes": "High-volume accumulation session for airway skills. All three CoAEMSP airway minimums accumulate here."
+        }
+      ]
+    },
+    {
+      "week_number": 6,
+      "day_number": 2,
+      "title": "Neurological Emergencies and Medical Integration",
+      "category": "skills_lab",
+      "instructor_count": 3,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": false,
+      "review_notes": null,
+      "stations": [
+        {
+          "station_type": "scenario",
+          "station_name": "Neurological Scenario",
+          "scenario_title": "Medical Neurologic Emergency — AEMT Scope",
+          "difficulty": "advanced",
+          "format_notes": "CVA, seizure, or altered LOC scenario. CoAEMSP Medical neurologic minimum 6. IV access and medication in context. Content pending from weekly spreadsheets."
+        },
+        {
+          "station_type": "scenario",
+          "station_name": "Psychiatric / Behavioral Scenario",
+          "scenario_title": "Psychiatric or Behavioral Emergency",
+          "difficulty": "intermediate",
+          "format_notes": "CoAEMSP Psychiatric/Behavioral minimum 6. IM or IN medication administration in context — counts accrue. Content pending from weekly spreadsheets."
+        }
+      ]
+    },
+    {
+      "week_number": 7,
+      "day_number": 1,
+      "title": "OB Emergencies — Delivery and Complications",
+      "category": "skills_lab",
+      "instructor_count": 3,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": false,
+      "review_notes": null,
+      "stations": [
+        {
+          "station_type": "scenario",
+          "station_name": "OB Delivery Scenario",
+          "scenario_title": "Normal OB Delivery — AEMT Scope",
+          "difficulty": "intermediate",
+          "format_notes": "CoAEMSP OB delivery minimum 3 (simulation permitted). Normal uncomplicated delivery with AEMT ALS interventions. SimMom or equivalent."
+        },
+        {
+          "station_type": "scenario",
+          "station_name": "Complicated OB Scenario",
+          "scenario_title": "Complicated OB — Distressed Neonate",
+          "difficulty": "advanced",
+          "format_notes": "CoAEMSP Distressed neonate minimum 3 (simulation permitted). Neonatal resuscitation within AEMT scope — BVM, warmth, stimulation. ALS baby manikin. Content pending from weekly spreadsheets."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "Neonatal BVM",
+          "skills": [
+            {
+              "name": "PPV / BVM ventilation — neonate",
+              "platinum_skill": true,
+              "min_attempts": 2,
+              "signoff_note": "Neonatal BVM within AEMT scope. Counts toward CoAEMSP PPV/BVM minimum 10."
+            }
+          ],
+          "format_notes": "Neonatal BVM technique. ALS baby manikins."
+        }
+      ]
+    },
+    {
+      "week_number": 7,
+      "day_number": 2,
+      "title": "Other Medical — Toxicology, Environmental, Endocrine",
+      "category": "skills_lab",
+      "instructor_count": 3,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": false,
+      "review_notes": null,
+      "stations": [
+        {
+          "station_type": "scenario",
+          "station_name": "Toxicology / Overdose Scenario",
+          "scenario_title": "Overdose / Toxicological Emergency — AEMT Scope",
+          "difficulty": "intermediate",
+          "format_notes": "CoAEMSP Other medical minimum 10. IN naloxone, IV access, airway management. Content pending from weekly spreadsheets."
+        },
+        {
+          "station_type": "scenario",
+          "station_name": "Diabetic Emergency",
+          "scenario_title": "Diabetic Emergency — Hypoglycemia / Hyperglycemia",
+          "difficulty": "intermediate",
+          "format_notes": "Other medical scenario. IV dextrose administration within AEMT scope. Content pending from weekly spreadsheets."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "IV Bolus and IM Accumulation",
+          "skills": [
+            {
+              "name": "Administer IV bolus medication",
+              "platinum_skill": true,
+              "min_attempts": 2,
+              "signoff_note": "Accumulation — CoAEMSP minimum 10 total"
+            },
+            {
+              "name": "Administer IM injection",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "signoff_note": "Accumulation — CoAEMSP minimum 2 total"
+            },
+            {
+              "name": "Administer intranasal medication",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "signoff_note": "Accumulation — CoAEMSP minimum 2 total"
+            }
+          ],
+          "format_notes": "Medication administration accumulation in medical scenario context."
+        }
+      ]
+    },
+    {
+      "week_number": 8,
+      "day_number": 1,
+      "title": "Multi-System Integration — High Acuity Scenarios",
+      "category": "skills_lab",
+      "instructor_count": 4,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": false,
+      "review_notes": null,
+      "stations": [
+        {
+          "station_type": "scenario",
+          "station_name": "Multi-System Scenario 1",
+          "scenario_title": "Multi-System Emergency — AEMT ALS Integration",
+          "difficulty": "advanced",
+          "format_notes": "Complex scenario requiring multiple AEMT interventions simultaneously — IV, airway, ETCO2, medication. Team lead role active. Content pending from weekly spreadsheets."
+        },
+        {
+          "station_type": "scenario",
+          "station_name": "Cardiac Arrest — AEMT Team Lead",
+          "scenario_title": "Cardiac Arrest — AEMT Team Lead with AED and CPR",
+          "difficulty": "advanced",
+          "format_notes": "Team lead running cardiac arrest within AEMT scope. CoAEMSP Cardiac arrest accumulation. AED, CPR, airway, IV. Counts toward team lead minimum (10-20% of exposures)."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "Skills Confirmation and Accumulation",
+          "skills": [
+            {
+              "name": "Establish IV access",
+              "platinum_skill": true,
+              "min_attempts": 3,
+              "signoff_note": "Final accumulation push — CoAEMSP minimum 20 total"
+            },
+            {
+              "name": "ETCO2 monitoring",
+              "platinum_skill": true,
+              "min_attempts": 2,
+              "signoff_note": "Final accumulation push — CoAEMSP minimum 10 total"
+            },
+            {
+              "name": "Insert supraglottic airway",
+              "platinum_skill": true,
+              "min_attempts": 2,
+              "signoff_note": "Final accumulation push — CoAEMSP minimum 10 total"
+            }
+          ],
+          "format_notes": "Final skills accumulation before capstone. Confirm counts against CoAEMSP minimums before this session — identify any students below threshold."
+        }
+      ]
+    },
+    {
+      "week_number": 8,
+      "day_number": 2,
+      "title": "Capstone — Team Leader Scenarios and Final Skill Sign-offs",
+      "category": "capstone",
+      "instructor_count": 4,
+      "is_anchor": true,
+      "anchor_type": "CAPSTONE_ASSESSMENT",
+      "requires_review": false,
+      "review_notes": null,
+      "stations": [
+        {
+          "station_type": "scenario",
+          "station_name": "Team Leader Capstone — Medical",
+          "scenario_title": "Capstone Team Lead — Medical Emergency",
+          "difficulty": "advanced",
+          "format_notes": "Student as team lead. CoAEMSP team lead minimum: 10-20% of total exposures (approximately 5-10). Counts toward field experience and capstone team lead requirements."
+        },
+        {
+          "station_type": "scenario",
+          "station_name": "Team Leader Capstone — Trauma",
+          "scenario_title": "Capstone Team Lead — Trauma Emergency",
+          "difficulty": "advanced",
+          "format_notes": "Student as team lead for trauma scenario. All AEMT scope interventions available. Final team lead assessment."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "CoAEMSP Minimum Confirmation",
+          "skills": [
+            {
+              "name": "Establish IV access — final count confirmation",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "signoff_note": "Verify minimum 20 total reached across all sessions and clinical"
+            },
+            {
+              "name": "Insert supraglottic airway — final count confirmation",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "signoff_note": "Verify minimum 10 total reached"
+            },
+            {
+              "name": "ETCO2 monitoring — final count confirmation",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "signoff_note": "Verify minimum 10 total reached"
+            },
+            {
+              "name": "Administer IV bolus medication — final count confirmation",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "signoff_note": "Verify minimum 10 total reached"
+            },
+            {
+              "name": "PPV / BVM ventilation — final count confirmation",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "signoff_note": "Verify minimum 10 total reached"
+            },
+            {
+              "name": "Venous blood sampling — final count confirmation",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "signoff_note": "Verify minimum 4 total reached. Simulation permitted."
+            },
+            {
+              "name": "Perform endotracheal suctioning — final count confirmation",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "signoff_note": "Verify minimum 2 total reached"
+            },
+            {
+              "name": "Administer IM injection — final count confirmation",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "signoff_note": "Verify minimum 2 total reached"
+            },
+            {
+              "name": "Administer intranasal medication — final count confirmation",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "signoff_note": "Verify minimum 2 total reached"
+            },
+            {
+              "name": "AED / Automated Defibrillator — final count confirmation",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "signoff_note": "Verify minimum 2 total reached"
+            },
+            {
+              "name": "Chest compressions — final count confirmation",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "signoff_note": "Verify minimum 2 total reached"
+            },
+            {
+              "name": "Establish IO access — final count confirmation",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "signoff_note": "Verify minimum 2 total reached"
+            },
+            {
+              "name": "Administer IO medication — final count confirmation",
+              "platinum_skill": true,
+              "min_attempts": 1,
+              "signoff_note": "Verify minimum 2 total reached"
+            }
+          ],
+          "format_notes": "Final CoAEMSP minimum verification before program completion. Cross-reference against SMC Summary Tracking sheet. Any student below minimum requires additional clinical encounters before completion. Team lead count: verify 10-20% of total patient exposures."
+        }
+      ]
+    }
+  ]
+}
