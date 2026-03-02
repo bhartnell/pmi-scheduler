@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { Square, Columns2, Columns3, Maximize2 } from 'lucide-react';
 
 // Size definitions: maps a size key to its Tailwind col-span class and a label/icon hint
 export type WidgetSize = 'sm' | 'md' | 'lg' | 'full';
@@ -81,21 +82,14 @@ function SizeButtons({ widgetId, currentSize, onChange }: SizeButtonsProps) {
   );
 }
 
-function SizeIcon({ size, active }: { size: WidgetSize; active: boolean }) {
-  const color = active ? 'bg-white' : 'bg-current';
-  // Represent sizes as 1, 2, 3, or 4 equal blocks
-  const blocks = size === 'sm' ? 1 : size === 'md' ? 2 : size === 'lg' ? 3 : 4;
-  return (
-    <span className="flex items-center gap-px" aria-hidden="true">
-      {Array.from({ length: blocks }).map((_, i) => (
-        <span
-          key={i}
-          className={`${color} rounded-sm`}
-          style={{ width: blocks === 4 ? 2 : 3, height: 8 }}
-        />
-      ))}
-    </span>
-  );
+function SizeIcon({ size }: { size: WidgetSize; active: boolean }) {
+  const cls = 'w-3.5 h-3.5';
+  switch (size) {
+    case 'sm':   return <Square className={cls} />;
+    case 'md':   return <Columns2 className={cls} />;
+    case 'lg':   return <Columns3 className={cls} />;
+    case 'full': return <Maximize2 className={cls} />;
+  }
 }
 
 // ---- The main ResizableWidget wrapper -----------------------------------
