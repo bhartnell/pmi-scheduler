@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from('skill_drills')
-      .select('id, name, description, category, estimated_duration, equipment_needed, instructions, created_by, is_active, created_at, updated_at, drill_data, station_id, program, semester, format')
+      .select('id, name, description, category, estimated_duration_minutes, equipment_needed, instructions, created_by, is_active, created_at, updated_at, drill_data, station_id, program, semester, format')
       .order('category')
       .order('name');
 
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
         name: body.name.trim(),
         description: body.description?.trim() || null,
         category: body.category.trim(),
-        estimated_duration: body.estimated_duration ? parseInt(body.estimated_duration) : 15,
+        estimated_duration_minutes: body.estimated_duration_minutes ? parseInt(body.estimated_duration_minutes) : 15,
         equipment_needed: Array.isArray(body.equipment_needed) ? body.equipment_needed.filter((e: string) => e.trim()) : [],
         instructions: body.instructions?.trim() || null,
         created_by: session.user.email,

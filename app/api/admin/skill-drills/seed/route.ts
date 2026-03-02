@@ -59,7 +59,7 @@ export async function POST() {
       const description = (drill.objective && drill.objective[0]) || drill.station_name;
       const category = drill.category;
       const equipment_needed = drill.equipment || [];
-      const estimated_duration =
+      const estimated_duration_minutes =
         drill.duration_per_rotation_minutes || drill.duration_per_student_minutes || 15;
       const format = drill.format;
       const station_id = drill.station_id;
@@ -125,7 +125,7 @@ export async function POST() {
             description,
             category,
             equipment_needed,
-            estimated_duration,
+            estimated_duration_minutes,
             format,
             program,
             semester,
@@ -140,7 +140,7 @@ export async function POST() {
           description,
           category,
           equipment_needed,
-          estimated_duration,
+          estimated_duration_minutes,
           instructions: description,
           format,
           program,

@@ -128,7 +128,7 @@ interface SkillDrill {
   name: string;
   description: string | null;
   category: string;
-  estimated_duration: number;
+  estimated_duration_minutes: number;
   equipment_needed: string[] | null;
 }
 
@@ -2156,7 +2156,7 @@ function NewLabDayPageContent() {
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2 flex-wrap">
                                       <span className="font-medium text-sm text-gray-900 dark:text-white">{drill.name}</span>
-                                      <span className="text-xs text-gray-500 dark:text-gray-400">{drill.estimated_duration} min</span>
+                                      <span className="text-xs text-gray-500 dark:text-gray-400">{drill.estimated_duration_minutes} min</span>
                                       <span className="text-xs px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded">
                                         {drill.category.replace(/_/g, ' ')}
                                       </span>

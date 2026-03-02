@@ -96,7 +96,7 @@ export async function PUT(
     if (body.name !== undefined) updateData.name = body.name.trim();
     if (body.description !== undefined) updateData.description = body.description?.trim() || null;
     if (body.category !== undefined) updateData.category = body.category.trim();
-    if (body.estimated_duration !== undefined) updateData.estimated_duration = parseInt(body.estimated_duration);
+    if (body.estimated_duration_minutes !== undefined) updateData.estimated_duration_minutes = parseInt(body.estimated_duration_minutes);
     if (body.equipment_needed !== undefined) {
       updateData.equipment_needed = Array.isArray(body.equipment_needed)
         ? body.equipment_needed.filter((e: string) => e.trim())

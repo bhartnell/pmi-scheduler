@@ -43,7 +43,7 @@ interface SkillDrill {
   name: string;
   description: string | null;
   category: string;
-  estimated_duration: number;
+  estimated_duration_minutes: number;
   equipment_needed: string[] | null;
   instructions: string | null;
   created_by: string;
@@ -91,7 +91,7 @@ const EMPTY_FORM = {
   name: '',
   description: '',
   category: 'general',
-  estimated_duration: 15,
+  estimated_duration_minutes: 15,
   equipment_needed: [''],
   instructions: '',
 };
@@ -335,7 +335,7 @@ export default function SkillDrillsPage() {
       name: drill.name,
       description: drill.description || '',
       category: drill.category,
-      estimated_duration: drill.estimated_duration,
+      estimated_duration_minutes: drill.estimated_duration_minutes,
       equipment_needed: drill.equipment_needed?.length ? [...drill.equipment_needed] : [''],
       instructions: drill.instructions || '',
     });
@@ -374,7 +374,7 @@ export default function SkillDrillsPage() {
       name: form.name.trim(),
       description: form.description.trim() || null,
       category: form.category,
-      estimated_duration: form.estimated_duration,
+      estimated_duration_minutes: form.estimated_duration_minutes,
       equipment_needed: form.equipment_needed.filter(e => e.trim()),
       instructions: form.instructions.trim() || null,
     };
@@ -779,7 +779,7 @@ export default function SkillDrillsPage() {
                             <h3 className="font-semibold text-gray-900 dark:text-white">{drill.name}</h3>
                             <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">
                               <Clock className="w-3 h-3" />
-                              {drill.estimated_duration} min
+                              {drill.estimated_duration_minutes} min
                             </span>
                             {/* Document count badge */}
                             {(docCounts[drill.id] ?? 0) > 0 && (
@@ -935,8 +935,8 @@ export default function SkillDrillsPage() {
                     min="5"
                     max="120"
                     step="5"
-                    value={form.estimated_duration}
-                    onChange={(e) => setForm(f => ({ ...f, estimated_duration: parseInt(e.target.value) || 15 }))}
+                    value={form.estimated_duration_minutes}
+                    onChange={(e) => setForm(f => ({ ...f, estimated_duration_minutes: parseInt(e.target.value) || 15 }))}
                     className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                   />
                 </div>
