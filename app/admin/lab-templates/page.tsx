@@ -104,6 +104,11 @@ const STATION_TYPE_CONFIG: Record<StationType, { label: string; icon: React.Reac
 };
 
 const SEMESTERS = [1, 2, 3, 4];
+const PROGRAMS = [
+  { value: 'paramedic', label: 'Paramedic' },
+  { value: 'emt', label: 'EMT' },
+  { value: 'aemt', label: 'AEMT' },
+];
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -523,22 +528,52 @@ function ApplySection({ cohorts }: ApplySectionProps) {
   const [program, setProgram] = useState('');
   const [semester, setSemester] = useState(1);
   const [startDate, setStartDate] = useState('');
+  const [breakWeeksText, setBreakWeeksText] = useState('');
   const [applying, setApplying] = useState(false);
-  const [result, setResult] = useState<{ created_count: number; lab_days: any[] } | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [result, setResult] = useState<{ created_count: number; skipped_count?: number; break_weeks_applied?: number; errors?: string[]; lab_days: any[] } | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
 
+  // Auto-set program when cohort is selected (if cohort has program info)
+  const handleCohortChange = (id: string) => {
+    setCohortId(id);
+    const cohort = cohorts.find((c) => c.id === id);
+    if (cohort?.program?.abbreviation) {
+      const abbr = cohort.program.abbreviation.toLowerCase();
+      // Map abbreviation to template program name
+      const match = PROGRAMS.find((p) => p.value === abbr || p.label.toLowerCase() === abbr);
+      if (match) setProgram(match.value);
+    }
+  };
+
+  // Parse break weeks from text input (comma-separated)
+  const parseBreakWeeks = (): number[] => {
+    if (!breakWeeksText.trim()) return [];
+    return breakWeeksText
+      .split(',')
+      .map((s) => parseInt(s.trim()))
+      .filter((n) => !isNaN(n) && n > 0);
+  };
+
   const handleApply = async () => {
-    if (!cohortId || !program.trim() || !startDate) {
+    if (!cohortId || !program || !startDate) {
       toast.error('Please fill in all fields');
       return;
     }
     setApplying(true);
     setResult(null);
     try {
+      const breakWeeks = parseBreakWeeks();
       const res = await fetch('/api/admin/lab-templates/apply', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cohort_id: cohortId, program: program.trim(), semester, start_date: startDate }),
+        body: JSON.stringify({
+          cohort_id: cohortId,
+          program,
+          semester,
+          start_date: startDate,
+          break_weeks: breakWeeks.length > 0 ? breakWeeks : undefined,
+        }),
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.error || 'Apply failed');
@@ -553,6 +588,7 @@ function ApplySection({ cohorts }: ApplySectionProps) {
   };
 
   const selectedCohort = cohorts.find((c) => c.id === cohortId);
+  const selectedProgram = PROGRAMS.find((p) => p.value === program);
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700">
@@ -569,7 +605,7 @@ function ApplySection({ cohorts }: ApplySectionProps) {
             </label>
             <select
               value={cohortId}
-              onChange={(e) => setCohortId(e.target.value)}
+              onChange={(e) => handleCohortChange(e.target.value)}
               className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500"
             >
               <option value="">-- Select cohort --</option>
@@ -585,13 +621,16 @@ function ApplySection({ cohorts }: ApplySectionProps) {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Program
             </label>
-            <input
-              type="text"
+            <select
               value={program}
               onChange={(e) => setProgram(e.target.value)}
-              placeholder="e.g., Paramedic, EMT"
-              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-gray-400 dark:placeholder-gray-500"
-            />
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500"
+            >
+              <option value="">-- Select program --</option>
+              {PROGRAMS.map((p) => (
+                <option key={p.value} value={p.value}>{p.label}</option>
+              ))}
+            </select>
           </div>
 
           <div>
@@ -611,7 +650,7 @@ function ApplySection({ cohorts }: ApplySectionProps) {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Start Date
+              Start Date (Week 1 Day 1)
             </label>
             <input
               type="date"
@@ -622,11 +661,28 @@ function ApplySection({ cohorts }: ApplySectionProps) {
           </div>
         </div>
 
+        {/* Break weeks */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Break Weeks <span className="font-normal text-gray-400 dark:text-gray-500">(optional)</span>
+          </label>
+          <input
+            type="text"
+            value={breakWeeksText}
+            onChange={(e) => setBreakWeeksText(e.target.value)}
+            placeholder="e.g., 3, 4 for a 2-week break after week 2"
+            className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-gray-400 dark:placeholder-gray-500"
+          />
+          <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+            Comma-separated week numbers to skip (e.g. Christmas break). Lab days after the break shift forward.
+          </p>
+        </div>
+
         {/* Confirmation prompt */}
         {!showConfirm ? (
           <button
             onClick={() => setShowConfirm(true)}
-            disabled={!cohortId || !program.trim() || !startDate || applying}
+            disabled={!cohortId || !program || !startDate || applying}
             className="flex items-center gap-2 px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
           >
             <CalendarCheck className="w-4 h-4" />
@@ -635,13 +691,18 @@ function ApplySection({ cohorts }: ApplySectionProps) {
         ) : (
           <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-4 space-y-3">
             <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
-              Confirm: Apply all Semester {semester} templates from the{' '}
-              <strong>{program}</strong> program to cohort{' '}
+              Confirm: Apply all Semester {semester} templates from{' '}
+              <strong>{selectedProgram?.label || program}</strong> to cohort{' '}
               <strong>{selectedCohort?.cohort_number}</strong> starting{' '}
               <strong>{startDate}</strong>?
             </p>
+            {parseBreakWeeks().length > 0 && (
+              <p className="text-xs text-amber-700 dark:text-amber-300">
+                Break weeks: {parseBreakWeeks().join(', ')} — lab days after these weeks will shift forward.
+              </p>
+            )}
             <p className="text-xs text-amber-700 dark:text-amber-300">
-              This will create lab days for each template in the set. Lab days are scheduled by week number relative to the start date.
+              This will create lab days for each template in the set. Existing lab days for this semester will be skipped.
             </p>
             <div className="flex gap-2">
               <button

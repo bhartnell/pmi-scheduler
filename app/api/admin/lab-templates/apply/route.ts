@@ -30,12 +30,14 @@ async function getCurrentUser(email: string) {
 //   start_date: string (YYYY-MM-DD),
 //   day_spacing?: number (days between Day 1 and Day 2, default 2),
 //   skip_existing?: boolean (default true — don't create duplicates),
-//   force?: boolean (default false — if true, delete existing lab days first)
+//   force?: boolean (default false — if true, delete existing lab days first),
+//   break_weeks?: number[] (week numbers to skip — e.g. [3, 4] for Christmas)
 // }
 //
-// Date calculation:
-//   Week N Day 1 = start_date + (N - 1) * 7 days
-//   Week N Day 2 = start_date + (N - 1) * 7 + day_spacing days
+// Date calculation (with break handling):
+//   Effective week = week_number + number of break weeks before it
+//   Week N Day 1 = start_date + (effective_week - 1) * 7 days
+//   Week N Day 2 = start_date + (effective_week - 1) * 7 + day_spacing days
 //
 // Requires admin+ role.
 // ---------------------------------------------------------------------------
@@ -59,14 +61,18 @@ export async function POST(request: NextRequest) {
       day_spacing?: number;
       skip_existing?: boolean;
       force?: boolean;
+      break_weeks?: number[];
     };
 
     // Accept both `program` and legacy `program_id` from callers
-    const program = body.program || (body as unknown as Record<string, string>).program_id;
+    // Normalize to lowercase for consistent DB matching
+    const rawProgram = body.program || (body as unknown as Record<string, string>).program_id;
+    const program = rawProgram ? rawProgram.trim().toLowerCase() : '';
     const { cohort_id, semester, start_date } = body;
     const daySpacing = body.day_spacing ?? 2;
     const skipExisting = body.skip_existing !== false; // default true
     const force = body.force === true;
+    const breakWeeks = new Set(body.break_weeks ?? []);
 
     if (!cohort_id || !program || !semester || !start_date) {
       return NextResponse.json(
@@ -104,7 +110,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch all templates for the given program + semester, with their stations
-    // Include new columns: day_number, category, instructor_count, etc.
     const { data: templates, error: templatesError } = await supabase
       .from('lab_day_templates')
       .select(`
@@ -112,7 +117,7 @@ export async function POST(request: NextRequest) {
         instructor_count, is_anchor, anchor_type, requires_review, review_notes,
         stations:lab_template_stations(
           id, sort_order, station_type, station_name, skills, scenario_id,
-          scenario_title, difficulty, notes
+          scenario_title, difficulty, notes, metadata
         )
       `)
       .eq('program', program)
@@ -120,11 +125,17 @@ export async function POST(request: NextRequest) {
       .not('program', 'is', null)
       .order('week_number', { ascending: true });
 
-    if (templatesError) throw templatesError;
+    if (templatesError) {
+      console.error('Error fetching templates for apply:', templatesError);
+      return NextResponse.json(
+        { error: `Failed to fetch templates: ${templatesError.message}` },
+        { status: 500 }
+      );
+    }
 
     if (!templates || templates.length === 0) {
       return NextResponse.json(
-        { error: 'No templates found for the specified program and semester' },
+        { error: `No templates found for program "${program}" semester ${semester}. Have you seeded templates first?` },
         { status: 404 }
       );
     }
@@ -156,8 +167,14 @@ export async function POST(request: NextRequest) {
     const [year, month, day] = start_date.split('-').map(Number);
     const baseDate = new Date(Date.UTC(year, month - 1, day));
 
+    // Build a mapping from template week_number to calendar week,
+    // accounting for break weeks. Break weeks push later weeks forward.
+    // Example: break_weeks=[3,4], template week 5 → calendar week 7
+    const sortedBreakWeeks = [...breakWeeks].sort((a, b) => a - b);
+
     const createdLabDays: Array<{ id: string; date: string; title: string; week_number: number; day_number: number }> = [];
     let skippedCount = 0;
+    const errors: string[] = [];
 
     for (const template of sorted) {
       const weekNum = template.week_number || 1;
@@ -170,8 +187,12 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      // Calculate date: Week N Day 1 = start + (N-1)*7, Day 2 = start + (N-1)*7 + daySpacing
-      const weekOffset = (weekNum - 1) * 7;
+      // Calculate effective calendar week by adding break weeks that fall before this week
+      const breaksBeforeThisWeek = sortedBreakWeeks.filter(bw => bw <= weekNum).length;
+      const calendarWeek = weekNum + breaksBeforeThisWeek;
+
+      // Calculate date: calendar week offset + day offset
+      const weekOffset = (calendarWeek - 1) * 7;
       const dayOffset = dayNum > 1 ? (dayNum - 1) * daySpacing : 0;
       const labDate = new Date(baseDate);
       labDate.setUTCDate(baseDate.getUTCDate() + weekOffset + dayOffset);
@@ -179,7 +200,7 @@ export async function POST(request: NextRequest) {
 
       const displayTitle = template.name || `Week ${weekNum} Day ${dayNum}`;
 
-      // Create the lab day with new columns
+      // Create the lab day
       const { data: labDay, error: labDayError } = await supabase
         .from('lab_days')
         .insert({
@@ -196,25 +217,18 @@ export async function POST(request: NextRequest) {
 
       if (labDayError) {
         console.error('Error creating lab day from template:', labDayError);
+        errors.push(`W${weekNum}D${dayNum}: ${labDayError.message}`);
         continue;
       }
 
       createdLabDays.push(labDay);
 
       // Create stations for this lab day from the template's stations
-      const templateStations = (template as Record<string, unknown>).stations as Array<{
-        sort_order?: number;
-        station_type?: string;
-        station_name?: string;
-        skills?: unknown[];
-        scenario_id?: string;
-        scenario_title?: string;
-        difficulty?: string;
-        notes?: string;
-      }> | undefined;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const templateStations = (template as Record<string, unknown>).stations as Array<any> | undefined;
 
       if (templateStations && templateStations.length > 0) {
-        const stationsToInsert = templateStations.map((s) => ({
+        const stationsToInsert = templateStations.map((s: { sort_order?: number; station_type?: string; station_name?: string; scenario_id?: string }) => ({
           lab_day_id: labDay.id,
           station_number: s.sort_order || 1,
           station_type: s.station_type || 'scenario',
@@ -230,6 +244,7 @@ export async function POST(request: NextRequest) {
 
         if (stationsError) {
           console.error('Error creating stations from template:', stationsError);
+          errors.push(`W${weekNum}D${dayNum} stations: ${stationsError.message}`);
         }
       }
     }
@@ -239,10 +254,13 @@ export async function POST(request: NextRequest) {
       created_count: createdLabDays.length,
       skipped_count: skippedCount,
       total_templates: sorted.length,
+      break_weeks_applied: breakWeeks.size,
       lab_days: createdLabDays,
+      errors: errors.length > 0 ? errors : undefined,
     });
-  } catch (error) {
-    console.error('Error applying lab templates:', error);
-    return NextResponse.json({ error: 'Failed to apply lab templates' }, { status: 500 });
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('Error applying lab templates:', msg, error);
+    return NextResponse.json({ error: `Failed to apply lab templates: ${msg}` }, { status: 500 });
   }
 }
