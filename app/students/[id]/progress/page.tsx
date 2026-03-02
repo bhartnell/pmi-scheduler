@@ -653,7 +653,7 @@ export default function StudentProgressPage() {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
         {/* Header skeleton */}
         <div className="bg-white dark:bg-gray-800 shadow-sm print:shadow-none">
-          <div className="max-w-6xl mx-auto px-4 py-4 animate-pulse">
+          <div className="max-w-7xl mx-auto px-4 py-4 animate-pulse">
             <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-48 mb-4"></div>
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 rounded-full bg-gray-200 dark:bg-gray-700"></div>
@@ -664,7 +664,7 @@ export default function StudentProgressPage() {
             </div>
           </div>
         </div>
-        <main className="max-w-6xl mx-auto px-4 py-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <main className="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 md:grid-cols-2 gap-6">
           {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} lines={4} />)}
         </main>
       </div>
@@ -723,7 +723,7 @@ export default function StudentProgressPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* ---- HEADER ---- */}
       <div className="bg-white dark:bg-gray-800 shadow-sm print:shadow-none">
-        <div className="max-w-6xl mx-auto px-4 py-4">
+        <div className="max-w-7xl mx-auto px-4 py-4">
           {/* Breadcrumb + actions */}
           <div className="flex items-center justify-between mb-4 print:hidden">
             <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
@@ -793,7 +793,7 @@ export default function StudentProgressPage() {
         </div>
       </div>
 
-      <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
+      <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
         {/* ---- OVERVIEW CARDS ---- */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Skills completion */}

@@ -131,9 +131,14 @@ export async function GET(request: NextRequest) {
     }));
 
     return NextResponse.json({ success: true, announcements: result });
-  } catch (error) {
+  } catch (error: unknown) {
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes('does not exist')) {
+      return NextResponse.json({ success: true, announcements: [] });
+    }
     console.error('Error fetching announcements:', error);
-    return NextResponse.json({ error: 'Failed to fetch announcements' }, { status: 500 });
+    // Announcements are non-critical UI — return empty array instead of 500
+    return NextResponse.json({ success: true, announcements: [] });
   }
 }
 

@@ -310,7 +310,7 @@ export default function AdminTimeClockPage() {
 
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 py-4">
+        <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
             <Link
               href="/"
@@ -359,7 +359,7 @@ export default function AdminTimeClockPage() {
         </div>
       </div>
 
-      <main className="max-w-6xl mx-auto px-4 py-6 space-y-4">
+      <main className="max-w-7xl mx-auto px-4 py-6 space-y-4">
 
         {/* Filters */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 space-y-4">

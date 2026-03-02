@@ -525,7 +525,7 @@ export default function InternshipDetailPage() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-teal-50 to-cyan-100 dark:from-gray-900 dark:to-gray-800">
         <div className="bg-white dark:bg-gray-800 shadow-sm">
-          <div className="max-w-4xl mx-auto px-4 py-6">
+          <div className="max-w-7xl mx-auto px-4 py-6">
             <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
               <Link href="/" className="hover:text-teal-600 dark:hover:text-teal-400 flex items-center gap-1">
                 <Home className="w-3 h-3" />
@@ -538,7 +538,7 @@ export default function InternshipDetailPage() {
             </div>
           </div>
         </div>
-        <main className="max-w-4xl mx-auto px-4 py-8">
+        <main className="max-w-7xl mx-auto px-4 py-8">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-8 text-center">
             <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Error Loading Internship</h2>
@@ -709,7 +709,7 @@ export default function InternshipDetailPage() {
 
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 py-6">
+        <div className="max-w-7xl mx-auto px-4 py-6">
           <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
             <Link href="/" className="hover:text-teal-600 dark:hover:text-teal-400 flex items-center gap-1">
               <Home className="w-3 h-3" />
@@ -766,7 +766,7 @@ export default function InternshipDetailPage() {
         </div>
       </div>
 
-      <main className="max-w-6xl mx-auto px-4 py-8">
+      <main className="max-w-7xl mx-auto px-4 py-8">
         {/* Overall Progress Card */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 mb-6">
           <div className="flex items-center justify-between mb-4">

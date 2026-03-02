@@ -292,7 +292,7 @@ export default function DeepLinksPage() {
         </div>
       )}
 
-      <div className="max-w-5xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Breadcrumb */}
         <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 mb-6">
           <Link href="/" className="hover:text-gray-900 dark:hover:text-white flex items-center gap-1">

@@ -179,7 +179,7 @@ export default function AnnouncementBanner() {
   if (sorted.length === 0) return null;
 
   return (
-    <div className="mb-6 max-w-5xl mx-auto space-y-3">
+    <div className="mb-6 max-w-7xl mx-auto space-y-3">
       {sorted.map((announcement) => (
         <AnnouncementItem
           key={announcement.id}

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { createClient } from '@supabase/supabase-js';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
 export async function GET(request: NextRequest) {
@@ -22,6 +21,174 @@ export async function GET(request: NextRequest) {
     const supabase = getSupabaseAdmin();
 
     switch (reportType) {
+      case 'dashboard': {
+        // ── Shift stats: total, filled, open ──
+        const { data: allShifts, error: shiftErr } = await supabase
+          .from('open_shifts')
+          .select(`
+            id,
+            title,
+            date,
+            start_time,
+            end_time,
+            location,
+            department,
+            min_instructors,
+            max_instructors,
+            is_filled,
+            is_cancelled,
+            created_at,
+            signups:shift_signups(
+              id,
+              status,
+              instructor:lab_users!shift_signups_instructor_id_fkey(name, email)
+            )
+          `)
+          .gte('date', startDate)
+          .lte('date', endDate)
+          .order('date', { ascending: true })
+          .order('start_time', { ascending: true });
+
+        if (shiftErr) throw shiftErr;
+
+        const shifts = allShifts || [];
+        const activeShifts = shifts.filter(s => !s.is_cancelled);
+        const filledCount = activeShifts.filter(s => {
+          const confirmed = s.signups?.filter((su: any) => su.status === 'confirmed').length || 0;
+          return confirmed >= s.min_instructors;
+        }).length;
+        const openCount = activeShifts.length - filledCount;
+
+        const shiftStats = {
+          total: shifts.length,
+          active: activeShifts.length,
+          filled: filledCount,
+          open: openCount,
+          cancelled: shifts.length - activeShifts.length,
+        };
+
+        // ── Coverage breakdown per shift ──
+        const coverageReport = shifts.map(shift => {
+          const confirmedCount = shift.signups?.filter((s: any) => s.status === 'confirmed').length || 0;
+          const pendingCount = shift.signups?.filter((s: any) => s.status === 'pending').length || 0;
+
+          let status = 'unfilled';
+          if (shift.is_cancelled) {
+            status = 'cancelled';
+          } else if (confirmedCount >= shift.min_instructors) {
+            status = 'filled';
+          } else if (confirmedCount > 0 || pendingCount > 0) {
+            status = 'partial';
+          }
+
+          return {
+            id: shift.id,
+            title: shift.title,
+            date: shift.date,
+            start_time: shift.start_time,
+            end_time: shift.end_time,
+            location: shift.location,
+            department: shift.department,
+            min_instructors: shift.min_instructors,
+            confirmed_count: confirmedCount,
+            pending_count: pendingCount,
+            status,
+            instructors: shift.signups
+              ?.filter((s: any) => s.status === 'confirmed')
+              .map((s: any) => s.instructor?.name || s.instructor?.email) || [],
+          };
+        });
+
+        // ── Availability by week ──
+        const { data: availability, error: availErr } = await supabase
+          .from('instructor_availability')
+          .select(`
+            id,
+            date,
+            start_time,
+            end_time,
+            is_all_day,
+            instructor:lab_users!instructor_availability_instructor_id_fkey(id, name, email)
+          `)
+          .gte('date', startDate)
+          .lte('date', endDate)
+          .order('date');
+
+        if (availErr) throw availErr;
+
+        // Group by ISO week
+        const byWeek: Record<string, Record<string, {
+          name: string;
+          email: string;
+          dates: Array<{ date: string; start_time: string | null; end_time: string | null; is_all_day: boolean }>;
+        }>> = {};
+
+        for (const avail of availability || []) {
+          const instructor = avail.instructor as any;
+          if (!instructor) continue;
+
+          // Calculate week start (Monday)
+          const d = new Date(avail.date + 'T12:00:00');
+          const day = d.getDay();
+          const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+          const weekStart = new Date(d.setDate(diff));
+          const weekKey = weekStart.toISOString().split('T')[0];
+
+          if (!byWeek[weekKey]) byWeek[weekKey] = {};
+          if (!byWeek[weekKey][instructor.id]) {
+            byWeek[weekKey][instructor.id] = {
+              name: instructor.name || instructor.email,
+              email: instructor.email,
+              dates: [],
+            };
+          }
+
+          byWeek[weekKey][instructor.id].dates.push({
+            date: avail.date,
+            start_time: avail.start_time,
+            end_time: avail.end_time,
+            is_all_day: avail.is_all_day,
+          });
+        }
+
+        const availabilityByWeek = Object.entries(byWeek)
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([weekStart, instructors]) => ({
+            week_start: weekStart,
+            instructors: Object.values(instructors).sort((a, b) => a.name.localeCompare(b.name)),
+          }));
+
+        // ── Recent shift activity (last 10 created/modified) ──
+        const { data: recentShifts, error: recentErr } = await supabase
+          .from('open_shifts')
+          .select(`
+            id,
+            title,
+            date,
+            start_time,
+            end_time,
+            location,
+            department,
+            is_filled,
+            is_cancelled,
+            created_at,
+            updated_at
+          `)
+          .order('created_at', { ascending: false })
+          .limit(10);
+
+        if (recentErr) throw recentErr;
+
+        return NextResponse.json({
+          success: true,
+          reportType: 'dashboard',
+          shiftStats,
+          coverageReport,
+          availabilityByWeek,
+          recentActivity: recentShifts || [],
+        });
+      }
+
       case 'hours_by_instructor': {
         // Get all confirmed signups within date range
         const { data: signups, error } = await supabase

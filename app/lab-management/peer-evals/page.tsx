@@ -233,7 +233,7 @@ export default function PeerEvalsInstructorPage() {
         breadcrumbs={[{ label: 'Peer Evals' }]}
       />
 
-      <main className="max-w-6xl mx-auto px-4 py-6">
+      <main className="max-w-7xl mx-auto px-4 py-6">
         {/* Summary Bar */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 flex items-center gap-3">

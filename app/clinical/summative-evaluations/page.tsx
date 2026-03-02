@@ -345,7 +345,7 @@ export default function SummativeEvaluationsPage() {
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 py-6">
+        <div className="max-w-7xl mx-auto px-4 py-6">
           <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
             <Link href="/" className="hover:text-orange-600 dark:hover:text-orange-400 flex items-center gap-1">
               <Home className="w-3 h-3" />
@@ -381,7 +381,7 @@ export default function SummativeEvaluationsPage() {
         </div>
       </div>
 
-      <main className="max-w-6xl mx-auto px-4 py-8">
+      <main className="max-w-7xl mx-auto px-4 py-8">
         {/* Filters */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow mb-6 p-4">
           <div className="flex flex-wrap gap-4">

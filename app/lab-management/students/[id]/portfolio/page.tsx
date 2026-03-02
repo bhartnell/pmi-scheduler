@@ -327,7 +327,7 @@ export default function StudentPortfolioPage() {
 
   if (error) {
     return (
-      <div className="max-w-4xl mx-auto p-6">
+      <div className="max-w-7xl mx-auto p-6">
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 text-center">
           <AlertTriangle className="w-8 h-8 text-red-600 mx-auto mb-2" />
           <p className="text-red-700 dark:text-red-300 font-medium">{error}</p>
@@ -369,7 +369,7 @@ export default function StudentPortfolioPage() {
         }
       `}</style>
 
-      <div className="max-w-5xl mx-auto px-4 py-6 print-full-width">
+      <div className="max-w-7xl mx-auto px-4 py-6 print-full-width">
 
         {/* Breadcrumb - hidden on print */}
         <nav className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 mb-6 print-hide" aria-label="Breadcrumb">

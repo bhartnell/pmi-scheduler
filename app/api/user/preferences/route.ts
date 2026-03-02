@@ -53,8 +53,8 @@ export async function GET(request: NextRequest) {
         .eq('email', session.user.email)
         .single();
 
-      const role = user?.role || 'instructor';
-      const defaults = ROLE_DEFAULTS[role] || ROLE_DEFAULTS.instructor;
+      const role = user?.role || 'guest';
+      const defaults = ROLE_DEFAULTS[role] || ROLE_DEFAULTS.guest;
 
       return NextResponse.json({
         success: true,

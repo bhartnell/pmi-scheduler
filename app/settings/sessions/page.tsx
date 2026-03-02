@@ -352,7 +352,7 @@ export default function SessionsPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 shadow-sm">
-        <div className="max-w-4xl mx-auto px-4 py-4">
+        <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Link
@@ -412,7 +412,7 @@ export default function SessionsPage() {
       </header>
 
       {/* Main Content */}
-      <main id="main-content" className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+      <main id="main-content" className="max-w-7xl mx-auto px-4 py-6 space-y-6">
 
         {/* Summary + revoke all */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

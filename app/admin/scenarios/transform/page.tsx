@@ -265,7 +265,7 @@ export default function ScenarioTransformPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-6 space-y-6">
+    <div className="max-w-7xl mx-auto p-6 space-y-6">
       {/* Confirmation modal */}
       {showConfirmModal && preview && (
         <ConfirmModal

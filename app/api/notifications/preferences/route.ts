@@ -73,8 +73,8 @@ export async function GET() {
       .eq('email', session.user.email)
       .single();
 
-    const role = user?.role || 'instructor';
-    const defaults = ROLE_DEFAULTS[role] || ROLE_DEFAULTS.instructor;
+    const role = user?.role || 'guest';
+    const defaults = ROLE_DEFAULTS[role] || ROLE_DEFAULTS.guest;
 
     // Get user preferences
     const { data: prefs } = await supabase

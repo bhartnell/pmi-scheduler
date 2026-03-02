@@ -1090,7 +1090,7 @@ export default function AlumniPage() {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
         {/* Header */}
         <div className="bg-white dark:bg-gray-800 shadow-sm">
-          <div className="max-w-6xl mx-auto px-4 py-6">
+          <div className="max-w-7xl mx-auto px-4 py-6">
             {/* Breadcrumb */}
             <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
               <Link
@@ -1167,7 +1167,7 @@ export default function AlumniPage() {
           </div>
         </div>
 
-        <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
+        <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
           {loading ? (
             <div className="space-y-4 animate-pulse">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">

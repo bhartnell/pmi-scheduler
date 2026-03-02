@@ -477,7 +477,7 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
   // Mode Selection View
   if (view === 'mode-select') {
     return (
-      <div className="max-w-4xl mx-auto px-4">
+      <div className="max-w-7xl mx-auto px-4">
         <div className="text-center mb-6 md:mb-8">
           <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-2 md:mb-3">Select Poll Type</h1>
           <p className="text-gray-700 text-sm md:text-base">Choose the type of scheduling poll to create</p>
@@ -574,7 +574,7 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
     };
 
     return (
-      <div className="max-w-6xl mx-auto px-4">
+      <div className="max-w-7xl mx-auto px-4">
         <div className="bg-white rounded-lg shadow-lg p-4 md:p-6 mb-4 md:mb-6">
           <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-3 md:mb-4">
             Create {schedulingMode === 'individual' ? 'Individual Meeting' : 'Group Session'} Poll
@@ -791,7 +791,7 @@ export default function Scheduler({ mode, pollData, onComplete }: SchedulerProps
     };
 
     return (
-      <div className="max-w-6xl mx-auto px-4" onMouseUp={handleMouseUp} onTouchEnd={handleMouseUp}>
+      <div className="max-w-7xl mx-auto px-4" onMouseUp={handleMouseUp} onTouchEnd={handleMouseUp}>
         <div className="bg-white rounded-lg shadow-lg p-4 md:p-6 mb-4 md:mb-6">
           <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">{pollData?.title}</h1>
           {pollData?.description && <p className="text-gray-700 text-sm md:text-base">{pollData.description}</p>}

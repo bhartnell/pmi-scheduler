@@ -4,6 +4,7 @@ import { createNotification } from '@/lib/notifications';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
 const VALID_STATUSES = ['new', 'read', 'in_progress', 'needs_investigation', 'resolved', 'archived'];
+const VALID_TYPES = ['bug', 'feature', 'other'];
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function parseCSV(text: string): Record<string, string>[] {
@@ -67,6 +68,29 @@ function normalizeStatus(raw: string): string | null {
   return labelMap[lower] || null;
 }
 
+// Map display labels back to DB values for report type
+function normalizeType(raw: string): string | null {
+  const lower = raw.toLowerCase().trim();
+  if (VALID_TYPES.includes(lower)) return lower;
+  const labelMap: Record<string, string> = {
+    'bug': 'bug',
+    'bug report': 'bug',
+    'feature': 'feature',
+    'feature request': 'feature',
+    'feedback': 'other',
+    'other': 'other',
+  };
+  return labelMap[lower] || null;
+}
+
+// Map display labels back to DB values for priority
+function normalizePriority(raw: string): string | null {
+  const lower = raw.toLowerCase().trim();
+  const validPriorities = ['critical', 'high', 'medium', 'low'];
+  if (validPriorities.includes(lower)) return lower;
+  return null;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const supabase = getSupabaseAdmin();
@@ -100,13 +124,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'CSV file is empty or has no data rows' }, { status: 400 });
     }
 
-    // Validate required columns
+    // Validate required columns (headers are lowercased by parseCSV)
     const firstRow = rows[0];
-    if (!('id' in firstRow)) {
+    const columnNames = Object.keys(firstRow);
+    if (!columnNames.includes('id')) {
       return NextResponse.json({ success: false, error: 'CSV must have an "id" column' }, { status: 400 });
     }
-    if (!('status' in firstRow)) {
-      return NextResponse.json({ success: false, error: 'CSV must have a "status" column' }, { status: 400 });
+    if (!columnNames.includes('status')) {
+      return NextResponse.json({ success: false, error: `CSV must have a "status" column. Found columns: ${columnNames.join(', ')}` }, { status: 400 });
     }
 
     const results = {
@@ -118,8 +143,10 @@ export async function POST(request: NextRequest) {
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
       const rowNum = i + 2; // +2 for 1-based + header row
-      const id = row.id?.trim();
-      const rawStatus = row.status?.trim();
+      const id = row['id']?.trim();
+      const rawStatus = row['status']?.trim();
+      const rawType = row['type']?.trim();
+      const rawPriority = row['priority']?.trim();
       const resolutionNotes = row['resolution notes'] || row['resolution_notes'] || '';
 
       // Validate UUID
@@ -128,17 +155,37 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
+      // Normalize and validate type (if present in CSV)
+      let newType: string | null = null;
+      if (rawType) {
+        newType = normalizeType(rawType);
+        if (!newType) {
+          results.errors.push(`Row ${rowNum}: Invalid type "${rawType}" (valid: BUG REPORT, FEATURE REQUEST, FEEDBACK)`);
+          continue;
+        }
+      }
+
       // Normalize status (handle both DB values and display labels)
       const newStatus = normalizeStatus(rawStatus || '');
       if (!newStatus) {
-        results.errors.push(`Row ${rowNum}: Invalid status "${rawStatus}"`);
+        results.errors.push(`Row ${rowNum}: Invalid status "${rawStatus}" (valid: New, Read, In Progress, Needs Investigation, Resolved, Archived)`);
         continue;
+      }
+
+      // Normalize priority (if present in CSV)
+      let newPriority: string | null = null;
+      if (rawPriority) {
+        newPriority = normalizePriority(rawPriority);
+        if (!newPriority) {
+          results.errors.push(`Row ${rowNum}: Invalid priority "${rawPriority}" (valid: critical, high, medium, low)`);
+          continue;
+        }
       }
 
       // Fetch current report
       const { data: current, error: fetchError } = await supabase
         .from('feedback_reports')
-        .select('id, status, user_email, report_type, page_url, description')
+        .select('id, status, report_type, priority, user_email, page_url, description')
         .eq('id', id)
         .single();
 
@@ -147,11 +194,13 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      // Skip if status hasn't changed and no resolution notes to update
+      // Determine what changed
       const statusChanged = current.status !== newStatus;
+      const typeChanged = newType && current.report_type !== newType;
+      const priorityChanged = newPriority && current.priority !== newPriority;
       const hasNotes = resolutionNotes.trim().length > 0;
 
-      if (!statusChanged && !hasNotes) {
+      if (!statusChanged && !typeChanged && !priorityChanged && !hasNotes) {
         results.skipped++;
         continue;
       }
@@ -173,6 +222,14 @@ export async function POST(request: NextRequest) {
         } else if (newStatus === 'archived') {
           updateData.archived_at = new Date().toISOString();
         }
+      }
+
+      if (typeChanged) {
+        updateData.report_type = newType;
+      }
+
+      if (priorityChanged) {
+        updateData.priority = newPriority;
       }
 
       if (hasNotes) {

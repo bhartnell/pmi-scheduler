@@ -390,7 +390,7 @@ export default function MyProgressPage() {
       : 0;
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8 space-y-6">
+    <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
         <Link href="/" className="flex items-center gap-1 hover:text-cyan-600 dark:hover:text-cyan-400">

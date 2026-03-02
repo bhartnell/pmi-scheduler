@@ -926,7 +926,7 @@ function ScenarioEditorContent() {
 
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 py-4">
+        <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
             <Link href="/" className="hover:text-blue-600">Home</Link>
             <ChevronRight className="w-4 h-4" />
@@ -972,7 +972,7 @@ function ScenarioEditorContent() {
         </div>
       </div>
 
-      <main className="max-w-4xl mx-auto px-4 py-6 space-y-4">
+      <main className="max-w-7xl mx-auto px-4 py-6 space-y-4">
         {/* Basic Info */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
           <h2 className="font-semibold text-gray-900 dark:text-white mb-4">Basic Information</h2>

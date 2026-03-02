@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
       .eq('email', session.user.email)
       .single();
 
-    const role = user?.role || 'instructor';
+    const role = user?.role || 'guest';
 
     // Get user's notification preferences
     let enabledCategories: string[] = [];
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
         .eq('user_email', session.user.email)
         .single();
 
-      const categoryPrefs = prefs?.notification_settings?.category_preferences || ROLE_DEFAULTS[role] || ROLE_DEFAULTS.instructor;
+      const categoryPrefs = prefs?.notification_settings?.category_preferences || ROLE_DEFAULTS[role] || ROLE_DEFAULTS.guest;
 
       // Build list of enabled categories
       enabledCategories = Object.entries(categoryPrefs)

@@ -191,7 +191,7 @@ export default function StudentDashboard() {
   const completed = stations.filter(s => s.status === 'pass');
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto px-4 py-8">
       {/* Welcome Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">

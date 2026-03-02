@@ -265,7 +265,7 @@ export default function InstructorCertificationsPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
-        <div className="max-w-4xl mx-auto px-4 py-4">
+        <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
             <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400">Home</Link>
             <ChevronRight className="w-4 h-4" />
@@ -293,7 +293,7 @@ export default function InstructorCertificationsPage() {
         </div>
       </div>
 
-      <main className="max-w-4xl mx-auto px-4 py-6">
+      <main className="max-w-7xl mx-auto px-4 py-6">
         {/* Expiring-soon alert banner */}
         {(() => {
           const expiringSoon = certifications.filter((c) => {

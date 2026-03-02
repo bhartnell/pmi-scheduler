@@ -261,7 +261,7 @@ export default function InstructorTimeClockPage() {
 
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
-        <div className="max-w-4xl mx-auto px-4 py-4">
+        <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
             <Link
               href="/"
@@ -298,7 +298,7 @@ export default function InstructorTimeClockPage() {
         </div>
       </div>
 
-      <main className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+      <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
 
         {/* Overtime Warning */}
         {stats?.isOvertime && (
