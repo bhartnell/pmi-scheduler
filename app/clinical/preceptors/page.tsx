@@ -23,6 +23,7 @@ import {
   Building2
 } from 'lucide-react';
 import { canEditClinical, canAccessClinical, isSuperadmin, type Role } from '@/lib/permissions';
+import { parseDateSafe } from '@/lib/utils';
 
 interface Agency {
   id: string;
@@ -275,7 +276,7 @@ export default function PreceptorsPage() {
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleDateString();
+    return parseDateSafe(dateStr).toLocaleDateString();
   };
 
   if (status === 'loading' || loading) {

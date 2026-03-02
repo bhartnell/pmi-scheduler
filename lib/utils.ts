@@ -75,3 +75,18 @@ export function sleep(ms: number): Promise<void> {
 export function generateId(): string {
   return Math.random().toString(36).substring(2, 9);
 }
+
+/**
+ * Safely parse a date string, handling date-only strings to avoid timezone issues.
+ * Date-only strings (e.g., "2025-03-01") are parsed as UTC midnight, which can
+ * display as the previous day in western timezones. This adds T12:00:00 to avoid that.
+ */
+export function parseDateSafe(dateString: string): Date {
+  if (!dateString) return new Date();
+  // If it already has a time component, parse as-is
+  if (dateString.includes('T') || dateString.includes(' ')) {
+    return new Date(dateString);
+  }
+  // Date-only string: add noon time to avoid timezone day-shift
+  return new Date(dateString + 'T12:00:00');
+}

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole } from '@/lib/permissions';
+import { parseDateSafe } from '@/lib/utils';
 
 async function getCallerRole(email: string): Promise<string | null> {
   const supabase = getSupabaseAdmin();
@@ -92,7 +93,7 @@ export async function GET(
         auto_checked: !!(internship.phase_2_eval_completed || internship.internship_completion_date),
         manual_override: false,
         details: internship.internship_completion_date
-          ? `Completed ${new Date(internship.internship_completion_date).toLocaleDateString()}`
+          ? `Completed ${parseDateSafe(internship.internship_completion_date).toLocaleDateString()}`
           : internship.phase_2_eval_completed
           ? 'Phase 2 eval completed'
           : '',
@@ -103,7 +104,7 @@ export async function GET(
         auto_checked: !!(internship.phase_2_eval_completed),
         manual_override: false,
         details: internship.phase_2_eval_scheduled
-          ? `Eval scheduled ${new Date(internship.phase_2_eval_scheduled).toLocaleDateString()}`
+          ? `Eval scheduled ${parseDateSafe(internship.phase_2_eval_scheduled).toLocaleDateString()}`
           : '',
       },
       {
@@ -119,7 +120,7 @@ export async function GET(
         auto_checked: !!(internship.snhd_field_docs_submitted_at),
         manual_override: false,
         details: internship.snhd_field_docs_submitted_at
-          ? `Submitted ${new Date(internship.snhd_field_docs_submitted_at).toLocaleDateString()}`
+          ? `Submitted ${parseDateSafe(internship.snhd_field_docs_submitted_at).toLocaleDateString()}`
           : '',
       },
       {
@@ -128,7 +129,7 @@ export async function GET(
         auto_checked: !!(internship.snhd_course_completion_submitted_at),
         manual_override: false,
         details: internship.snhd_course_completion_submitted_at
-          ? `Submitted ${new Date(internship.snhd_course_completion_submitted_at).toLocaleDateString()}`
+          ? `Submitted ${parseDateSafe(internship.snhd_course_completion_submitted_at).toLocaleDateString()}`
           : '',
       },
       {
@@ -137,7 +138,7 @@ export async function GET(
         auto_checked: !!(internship.written_exam_passed),
         manual_override: false,
         details: internship.written_exam_date
-          ? `Passed ${new Date(internship.written_exam_date).toLocaleDateString()}`
+          ? `Passed ${parseDateSafe(internship.written_exam_date).toLocaleDateString()}`
           : '',
       },
       {
@@ -146,7 +147,7 @@ export async function GET(
         auto_checked: !!(internship.psychomotor_exam_passed),
         manual_override: false,
         details: internship.psychomotor_exam_date
-          ? `Passed ${new Date(internship.psychomotor_exam_date).toLocaleDateString()}`
+          ? `Passed ${parseDateSafe(internship.psychomotor_exam_date).toLocaleDateString()}`
           : '',
       },
     ];

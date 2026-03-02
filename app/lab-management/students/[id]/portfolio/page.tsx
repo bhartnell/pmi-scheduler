@@ -22,6 +22,7 @@ import {
   Loader2,
   BarChart3,
 } from 'lucide-react';
+import { parseDateSafe } from '@/lib/utils';
 
 // ============================================================
 // Types
@@ -235,7 +236,7 @@ function GradeBadge({ grade }: { grade: string }) {
 function formatDate(dateStr: string | null): string {
   if (!dateStr) return '—';
   try {
-    return new Date(dateStr).toLocaleDateString('en-US', {
+    return parseDateSafe(dateStr).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',

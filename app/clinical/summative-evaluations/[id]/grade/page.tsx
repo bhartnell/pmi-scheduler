@@ -33,6 +33,7 @@ import {
   Zap
 } from 'lucide-react';
 import { canAccessClinical, canEditClinical, type Role } from '@/lib/permissions';
+import { parseDateSafe } from '@/lib/utils';
 
 interface Student {
   id: string;
@@ -382,7 +383,7 @@ function GradingPageContent() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    return parseDateSafe(dateString).toLocaleDateString('en-US', {
       weekday: 'short',
       month: 'short',
       day: 'numeric',

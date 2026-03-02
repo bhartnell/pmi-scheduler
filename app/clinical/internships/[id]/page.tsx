@@ -30,6 +30,7 @@ import {
   X
 } from 'lucide-react';
 import { canAccessClinical, canEditClinical, hasMinRole, type Role } from '@/lib/permissions';
+import { parseDateSafe } from '@/lib/utils';
 import SummativeEvaluationsSection from '@/components/clinical/SummativeEvaluationsSection';
 import PreceptorsSection from '@/components/clinical/PreceptorsSection';
 import CloseoutSection from '@/components/clinical/CloseoutSection';
@@ -506,7 +507,7 @@ export default function InternshipDetailPage() {
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return '';
-    return new Date(dateString).toLocaleDateString();
+    return parseDateSafe(dateString).toLocaleDateString();
   };
 
   if (sessionStatus === 'loading' || loading) {

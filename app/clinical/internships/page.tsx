@@ -28,6 +28,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { canEditClinical, isSuperadmin, type Role } from '@/lib/permissions';
+import { parseDateSafe } from '@/lib/utils';
 
 interface Student {
   id: string;
@@ -767,7 +768,7 @@ export default function InternshipTrackerPage() {
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return parseDateSafe(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
   if (status === 'loading' || loading) {

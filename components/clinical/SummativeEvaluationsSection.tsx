@@ -16,6 +16,7 @@ import {
   X,
   Search
 } from 'lucide-react';
+import { parseDateSafe } from '@/lib/utils';
 
 interface Scenario {
   id: string;
@@ -238,7 +239,7 @@ export default function SummativeEvaluationsSection({
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    return parseDateSafe(dateString).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric'

@@ -25,6 +25,7 @@ import {
   X,
   BookOpen,
 } from 'lucide-react';
+import { parseDateSafe } from '@/lib/utils';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -226,7 +227,7 @@ function isMac(): boolean {
 
 function formatDate(dateStr: string): string {
   try {
-    return new Date(dateStr).toLocaleDateString('en-US', {
+    return parseDateSafe(dateStr).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',

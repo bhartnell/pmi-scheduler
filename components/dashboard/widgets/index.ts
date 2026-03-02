@@ -107,19 +107,19 @@ export type WidgetId = keyof typeof WIDGET_DEFINITIONS;
 // Role-based default configurations
 export const ROLE_DEFAULTS: Record<string, { widgets: string[]; quickLinks: string[] }> = {
   superadmin: {
-    widgets: ['notifications', 'my_tasks', 'my_labs', 'quick_links', 'needs_attention', 'overview_stats', 'recent_feedback', 'quick_stats', 'recent_activity', 'overdue_tasks', 'cert_expiry', 'at_risk_students'],
+    widgets: ['needs_attention', 'at_risk_students', 'overview_stats', 'my_tasks', 'quick_stats', 'my_labs', 'overdue_tasks', 'notifications', 'recent_activity', 'cert_expiry', 'recent_feedback', 'quick_links'],
     quickLinks: ['scenarios', 'students', 'schedule', 'emt_tracker', 'clinical', 'feedback', 'admin'],
   },
   admin: {
-    widgets: ['notifications', 'my_tasks', 'my_labs', 'quick_links', 'needs_attention', 'overview_stats', 'recent_feedback', 'quick_stats', 'recent_activity', 'overdue_tasks', 'cert_expiry', 'at_risk_students'],
+    widgets: ['needs_attention', 'at_risk_students', 'overview_stats', 'my_tasks', 'quick_stats', 'my_labs', 'overdue_tasks', 'notifications', 'recent_activity', 'cert_expiry', 'recent_feedback', 'quick_links'],
     quickLinks: ['scenarios', 'students', 'schedule', 'emt_tracker', 'clinical', 'feedback', 'admin'],
   },
   lead_instructor: {
-    widgets: ['notifications', 'my_tasks', 'my_labs', 'quick_links', 'open_stations', 'overview_stats', 'quick_stats', 'overdue_tasks', 'cert_expiry', 'at_risk_students'],
+    widgets: ['needs_attention', 'my_tasks', 'my_labs', 'at_risk_students', 'overview_stats', 'quick_stats', 'open_stations', 'overdue_tasks', 'cert_expiry', 'notifications', 'quick_links'],
     quickLinks: ['scenarios', 'students', 'schedule', 'emt_tracker', 'clinical'],
   },
   instructor: {
-    widgets: ['notifications', 'my_tasks', 'onboarding', 'my_labs', 'quick_links', 'open_stations', 'overdue_tasks', 'cert_expiry'],
+    widgets: ['my_tasks', 'my_labs', 'notifications', 'quick_stats', 'open_stations', 'overdue_tasks', 'cert_expiry', 'quick_links'],
     quickLinks: ['scenarios', 'students', 'schedule', 'my_certs', 'onboarding'],
   },
   guest: {

@@ -21,6 +21,7 @@ import {
 import CloseoutSurveyModal from './CloseoutSurveyModal';
 import EmploymentVerificationModal from './EmploymentVerificationModal';
 import PreceptorEvalModal from './PreceptorEvalModal';
+import { parseDateSafe } from '@/lib/utils';
 
 interface ChecklistItem {
   key: string;
@@ -335,7 +336,7 @@ export default function CloseoutSection({
   const pendingItems = checklist.filter(item => !item.auto_checked && !item.manual_override);
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+    return parseDateSafe(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -354,7 +355,7 @@ export default function CloseoutSection({
 
   const formatDateLong = (dateString: string | null): string => {
     if (!dateString) return '';
-    return new Date(dateString).toLocaleDateString('en-US', {
+    return parseDateSafe(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'long',
       day: 'numeric',

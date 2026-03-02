@@ -33,6 +33,7 @@ import {
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
+import { parseDateSafe } from '@/lib/utils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -153,7 +154,7 @@ interface ProgressData {
 
 function formatDate(dateStr: string | null): string {
   if (!dateStr) return '--';
-  return new Date(dateStr).toLocaleDateString('en-US', {
+  return parseDateSafe(dateStr).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',

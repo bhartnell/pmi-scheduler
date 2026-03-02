@@ -23,6 +23,7 @@ import {
   ChevronRight,
   LineChart,
 } from 'lucide-react';
+import { parseDateSafe } from '@/lib/utils';
 
 // -----------------------------------------------
 // Types
@@ -160,7 +161,7 @@ function formatRelativeTime(dateStr: string): string {
 
 function formatDate(dateStr: string | undefined | null): string {
   if (!dateStr) return '—';
-  return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  return parseDateSafe(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 // -----------------------------------------------
