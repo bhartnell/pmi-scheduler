@@ -30,11 +30,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Cohort ID required' }, { status: 400 });
     }
 
-    // Get all students in the cohort
+    // Get all active students in the cohort (exclude withdrawn/dropped students)
     const { data: students } = await supabase
       .from('students')
       .select('id')
-      .eq('cohort_id', cohortId);
+      .eq('cohort_id', cohortId)
+      .eq('status', 'active');
 
     const studentIds = students?.map(s => s.id) || [];
 

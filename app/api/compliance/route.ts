@@ -79,6 +79,7 @@ export async function GET(request: NextRequest) {
         .from('students')
         .select('id, first_name, last_name, email')
         .eq('cohort_id', cohortId)
+        .eq('status', 'active')
         .order('last_name', { ascending: true });
 
       const studentIds = (students || []).map((s: any) => s.id);
