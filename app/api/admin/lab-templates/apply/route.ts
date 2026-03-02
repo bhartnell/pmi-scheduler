@@ -228,16 +228,79 @@ export async function POST(request: NextRequest) {
       const templateStations = (template as Record<string, unknown>).stations as Array<any> | undefined;
 
       if (templateStations && templateStations.length > 0) {
-        const stationsToInsert = templateStations.map((s: { sort_order?: number; station_type?: string; station_name?: string; scenario_id?: string; notes?: string; metadata?: Record<string, unknown> }) => ({
-          lab_day_id: labDay.id,
-          station_number: s.sort_order || 1,
-          station_type: s.station_type || 'scenario',
-          scenario_id: s.scenario_id || null,
-          custom_title: s.station_name || null,
-          documentation_required: false,
-          platinum_required: false,
-          station_notes: s.notes || null,
-          metadata: s.metadata && Object.keys(s.metadata).length > 0 ? s.metadata : {},
+        const stationsToInsert = await Promise.all(templateStations.map(async (s: {
+          sort_order?: number;
+          station_type?: string;
+          station_name?: string;
+          scenario_id?: string;
+          notes?: string;
+          metadata?: Record<string, unknown>;
+        }) => {
+          let drill_ids: string[] | null = null;
+          let enrichedMetadata = s.metadata && Object.keys(s.metadata).length > 0 ? { ...s.metadata } : {};
+
+          // Link skill_drill stations to skill_drills rows by station_id
+          if (s.station_type === 'skill_drill') {
+            // Check the primary station_id
+            if (enrichedMetadata.station_id) {
+              const { data: drillRow } = await supabase
+                .from('skill_drills')
+                .select('id, drill_data')
+                .eq('station_id', enrichedMetadata.station_id as string)
+                .eq('is_active', true)
+                .maybeSingle();
+
+              if (drillRow) {
+                drill_ids = [drillRow.id];
+                // Merge drill_data into metadata for TemplateGuideSection
+                if (drillRow.drill_data && typeof drillRow.drill_data === 'object' && Object.keys(drillRow.drill_data).length > 0) {
+                  const dd = drillRow.drill_data as Record<string, unknown>;
+                  if (dd.objectives) enrichedMetadata.objectives = dd.objectives;
+                  if (dd.student_instructions) enrichedMetadata.student_instructions = dd.student_instructions;
+                  if (dd.instructor_guide) enrichedMetadata.instructor_guide = dd.instructor_guide;
+                  if (dd.case_bank) enrichedMetadata.case_bank = dd.case_bank;
+                  if (dd.rhythm_cases) enrichedMetadata.rhythm_cases = dd.rhythm_cases;
+                  if (dd.minicode_phase_overlay) enrichedMetadata.minicode_phase_overlay = dd.minicode_phase_overlay;
+                  if (dd.key_observations) enrichedMetadata.key_observations = dd.key_observations;
+                  if (dd.stress_layers) enrichedMetadata.stress_layers_detailed = dd.stress_layers;
+                  if (dd.common_errors && !enrichedMetadata.common_errors) enrichedMetadata.common_errors = dd.common_errors;
+                }
+              }
+            }
+
+            // Also check available_stations for sub-station drill linkage
+            const availableStations = enrichedMetadata.available_stations as Array<{ station_id?: string }> | undefined;
+            if (availableStations && Array.isArray(availableStations)) {
+              const subDrillIds: string[] = [];
+              for (const sub of availableStations) {
+                if (sub.station_id) {
+                  const { data: subDrill } = await supabase
+                    .from('skill_drills')
+                    .select('id')
+                    .eq('station_id', sub.station_id)
+                    .eq('is_active', true)
+                    .maybeSingle();
+                  if (subDrill) subDrillIds.push(subDrill.id);
+                }
+              }
+              if (subDrillIds.length > 0) {
+                drill_ids = [...(drill_ids || []), ...subDrillIds];
+              }
+            }
+          }
+
+          return {
+            lab_day_id: labDay.id,
+            station_number: s.sort_order || 1,
+            station_type: s.station_type || 'scenario',
+            scenario_id: s.scenario_id || null,
+            drill_ids: drill_ids,
+            custom_title: s.station_name || null,
+            documentation_required: false,
+            platinum_required: false,
+            station_notes: s.notes || null,
+            metadata: Object.keys(enrichedMetadata).length > 0 ? enrichedMetadata : {},
+          };
         }));
 
         const { error: stationsError } = await supabase

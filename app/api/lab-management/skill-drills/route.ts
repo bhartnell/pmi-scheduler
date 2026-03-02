@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from('skill_drills')
-      .select('id, name, description, category, estimated_duration, equipment_needed, instructions, created_by, is_active, created_at, updated_at')
+      .select('id, name, description, category, estimated_duration, equipment_needed, instructions, created_by, is_active, created_at, updated_at, drill_data, station_id, program, semester, format')
       .order('category')
       .order('name');
 
@@ -37,6 +37,16 @@ export async function GET(request: NextRequest) {
     if (search) {
       const safeSearch = search.replace(/[%_,.()\\/]/g, '');
       query = query.or(`name.ilike.%${safeSearch}%,description.ilike.%${safeSearch}%,category.ilike.%${safeSearch}%`);
+    }
+
+    const program = searchParams.get('program');
+    const semester = searchParams.get('semester');
+
+    if (program) {
+      query = query.eq('program', program);
+    }
+    if (semester) {
+      query = query.eq('semester', parseInt(semester));
     }
 
     const { data, error } = await query;
@@ -93,6 +103,11 @@ export async function POST(request: NextRequest) {
         instructions: body.instructions?.trim() || null,
         created_by: session.user.email,
         is_active: true,
+        drill_data: body.drill_data || {},
+        station_id: body.station_id || null,
+        program: body.program || null,
+        semester: body.semester ? parseInt(body.semester) : null,
+        format: body.format || null,
       })
       .select()
       .single();

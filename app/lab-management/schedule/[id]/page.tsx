@@ -419,6 +419,7 @@ export default function LabDayPage() {
 
   // Edit station modal state
   const [editingStation, setEditingStation] = useState<Station | null>(null);
+  const [editDrillData, setEditDrillData] = useState<Record<string, unknown> | null>(null);
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
   const [instructors, setInstructors] = useState<Instructor[]>([]);
@@ -1746,6 +1747,15 @@ export default function LabDayPage() {
     });
 
     setEditCustomSkills(customSkillsList);
+
+    // Fetch drill data for S3 skill_drill stations
+    setEditDrillData(null); // Reset
+    if (station.station_type === 'skill_drill') {
+      // First try: use the station's own metadata if it has S3 drill data
+      if (station.metadata?.objectives || station.metadata?.instructor_guide) {
+        setEditDrillData(station.metadata as Record<string, unknown>);
+      }
+    }
 
     // Fetch station instructors
     try {
@@ -4429,6 +4439,22 @@ export default function LabDayPage() {
                     No instructor grading required.
                   </p>
                 </div>
+              )}
+
+              {/* S3 Drill Guide (from metadata or fetched drill_data) */}
+              {editForm.station_type === 'skill_drill' && editDrillData && Object.keys(editDrillData).length > 0 && (
+                <TemplateGuideSection metadata={{
+                  objectives: editDrillData.objectives as string[] | undefined,
+                  student_instructions: editDrillData.student_instructions as string[] | undefined,
+                  instructor_guide: editDrillData.instructor_guide as StationMetadata['instructor_guide'],
+                  case_bank: editDrillData.case_bank as StationMetadata['case_bank'],
+                  rhythm_cases: editDrillData.rhythm_cases as StationMetadata['rhythm_cases'],
+                  minicode_phase_overlay: editDrillData.minicode_phase_overlay as StationMetadata['minicode_phase_overlay'],
+                  key_observations: editDrillData.key_observations as string[] | undefined,
+                  common_errors: editDrillData.common_errors as string[] | undefined,
+                  stress_layers_detailed: editDrillData.stress_layers_detailed as StationMetadata['stress_layers_detailed'],
+                  equipment: editDrillData.equipment as string[] | undefined,
+                }} />
               )}
 
               {/* Template Guide from applied template */}

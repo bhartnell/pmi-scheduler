@@ -104,6 +104,11 @@ export async function PUT(
     }
     if (body.instructions !== undefined) updateData.instructions = body.instructions?.trim() || null;
     if (body.is_active !== undefined) updateData.is_active = Boolean(body.is_active);
+    if (body.drill_data !== undefined) updateData.drill_data = body.drill_data;
+    if (body.station_id !== undefined) updateData.station_id = body.station_id || null;
+    if (body.program !== undefined) updateData.program = body.program || null;
+    if (body.semester !== undefined) updateData.semester = body.semester != null ? parseInt(body.semester) : null;
+    if (body.format !== undefined) updateData.format = body.format || null;
 
     const { data, error } = await supabase
       .from('skill_drills')

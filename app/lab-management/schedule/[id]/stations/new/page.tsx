@@ -83,6 +83,11 @@ interface SkillDrill {
   category: string;
   estimated_duration: number;
   equipment_needed: string[] | null;
+  drill_data?: Record<string, unknown>;
+  station_id?: string | null;
+  program?: string | null;
+  semester?: number | null;
+  format?: string | null;
 }
 
 interface DrillDocument {
@@ -128,6 +133,7 @@ export default function NewStationPage() {
   const [selectedDrillIds, setSelectedDrillIds] = useState<string[]>([]);
   const [drillSearch, setDrillSearch] = useState('');
   const [drillCategoryFilter, setDrillCategoryFilter] = useState('');
+  const [drillViewMode, setDrillViewMode] = useState<'all' | 'generic' | 's3'>('all');
   const [instructorName, setInstructorName] = useState('');
   const [instructorEmail, setInstructorEmail] = useState('');
   const [room, setRoom] = useState('');
@@ -684,6 +690,22 @@ export default function NewStationPage() {
                   </div>
                 )}
 
+                {/* Drill view mode toggle */}
+                <div className="flex gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5 mb-3">
+                  <button onClick={() => setDrillViewMode('all')}
+                    className={`px-3 py-1.5 text-xs rounded-md transition-colors ${drillViewMode === 'all' ? 'bg-white dark:bg-gray-600 shadow-sm text-gray-900 dark:text-white font-medium' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}>
+                    All Drills
+                  </button>
+                  <button onClick={() => setDrillViewMode('generic')}
+                    className={`px-3 py-1.5 text-xs rounded-md transition-colors ${drillViewMode === 'generic' ? 'bg-white dark:bg-gray-600 shadow-sm text-gray-900 dark:text-white font-medium' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}>
+                    Generic
+                  </button>
+                  <button onClick={() => setDrillViewMode('s3')}
+                    className={`px-3 py-1.5 text-xs rounded-md transition-colors ${drillViewMode === 's3' ? 'bg-white dark:bg-gray-600 shadow-sm text-gray-900 dark:text-white font-medium' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'}`}>
+                    S3 Program
+                  </button>
+                </div>
+
                 {/* Search + category filter */}
                 <div className="flex gap-2">
                   <div className="relative flex-1">
@@ -713,7 +735,10 @@ export default function NewStationPage() {
                   {skillDrills
                     .filter(d =>
                       (!drillSearch || d.name.toLowerCase().includes(drillSearch.toLowerCase()) || (d.description || '').toLowerCase().includes(drillSearch.toLowerCase())) &&
-                      (!drillCategoryFilter || d.category === drillCategoryFilter)
+                      (!drillCategoryFilter || d.category === drillCategoryFilter) &&
+                      (drillViewMode === 'all' ||
+                       (drillViewMode === 'generic' && !d.station_id) ||
+                       (drillViewMode === 's3' && !!d.station_id))
                     )
                     .map(drill => {
                       const isSelected = selectedDrillIds.includes(drill.id);
@@ -743,6 +768,16 @@ export default function NewStationPage() {
                               <span className="text-xs px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded">
                                 {drill.category.replace(/_/g, ' ')}
                               </span>
+                              {drill.station_id && (
+                                <span className="ml-1 px-1.5 py-0.5 text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 rounded">
+                                  S3
+                                </span>
+                              )}
+                              {drill.format && (
+                                <span className="ml-1 px-1 py-0.5 text-xs bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 rounded">
+                                  {drill.format === 'team_rotation' ? 'Team' : 'Individual'}
+                                </span>
+                              )}
                             </div>
                             {drill.description && (
                               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-1">
@@ -763,6 +798,15 @@ export default function NewStationPage() {
                   {selectedDrillIds.length === 0 ? 'No drills selected — station will show as open drill time.' : `${selectedDrillIds.length} drill${selectedDrillIds.length !== 1 ? 's' : ''} selected.`}
                   {' '}<Link href="/lab-management/skill-drills" target="_blank" className="text-blue-600 dark:text-blue-400 hover:underline">Manage drill library</Link>
                 </p>
+
+                {selectedDrillIds.some(id => {
+                  const drill = skillDrills.find(d => d.id === id);
+                  return drill?.station_id && drill?.drill_data && Object.keys(drill.drill_data).length > 0;
+                }) && (
+                  <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800 text-sm text-orange-700 dark:text-orange-300">
+                    <strong>S3 Program Drill selected.</strong> Instructor guides, case banks, and stress layers will be available on the station detail page after creation.
+                  </div>
+                )}
 
                 {/* Auto-loaded documents from selected drills */}
                 {drillDocuments.length > 0 && (

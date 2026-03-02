@@ -1,0 +1,953 @@
+{
+  "program": "paramedic",
+  "semester": 3,
+  "skill_drills": [
+    {
+      "station_id": "acls-rhythm-leadership",
+      "station_name": "ACLS Rhythm Leadership Drill (Minicode)",
+      "category": "cardiology",
+      "format": "team_rotation",
+      "duration_per_rotation_minutes": 10,
+      "cases_per_rotation": 2,
+      "rotation_interval_minutes": 10,
+      "objective": [
+        "Reinforce accurate recognition of ACLS rhythms",
+        "Practice timely pharmacologic and electrical interventions",
+        "Develop team leader communication and decision-making skills under pressure"
+      ],
+      "equipment": [
+        "Cardiac monitor/defibrillator (functional, with rhythm generator or pre-programmed strips)",
+        "IV/IO training equipment with med syringes or mock drug kit",
+        "Airway adjuncts (BVM, OPA/NPA, advanced airway optional)",
+        "Stopwatch/timer"
+      ],
+      "roles": [
+        { "role_id": "team_lead", "role_name": "Team Lead", "responsibility": "Recognizes rhythm, announces treatment plan, directs crew" },
+        { "role_id": "med_tech", "role_name": "Medication Provider", "responsibility": "Prepares and administers drugs at Team Lead command" },
+        { "role_id": "monitor_tech", "role_name": "Monitor Operator", "responsibility": "Applies pads, interprets rhythm with Team Lead, performs electrical therapy as directed" }
+      ],
+      "student_instructions": [
+        "Team Lead is responsible for recognizing rhythm, announcing treatment plan, and directing crew",
+        "Med provider prepares and administers drugs at the command of the Team Lead",
+        "Monitor operator applies pads, interprets rhythm with Team Lead, and performs electrical therapy as directed",
+        "Scenario runs in short cycles (3-5 min) per rhythm case",
+        "Rotate Team Lead role each round to maximize repetitions"
+      ],
+      "instructor_guide": {
+        "briefing": {
+          "duration_minutes": 2,
+          "script": "Focus on speed, accuracy, and communication. You'll rotate as Team Lead, and I'll stop you if I need to clarify reasoning."
+        },
+        "during_scenario": [
+          "Watch time-to-intervention (defib, drug, pacing)",
+          "Prompt Team Lead if indecisive: 'What's your next step?'",
+          "If Team Lead hesitates >15 sec, add stress (alarms, bystander, nurse asking for orders)"
+        ],
+        "rotation_instructions": [
+          "Run 2 rhythm cases per Team Lead",
+          "Rotate every 8-10 minutes",
+          "Encourage speed but do not allow skipping safety steps (e.g., 'All clear!' before shock)"
+        ]
+      },
+      "rhythm_cases": [
+        {
+          "case_id": "acls-case-svt",
+          "rhythm": "SVT",
+          "stable_presentation": "Adenosine sequence: 6mg rapid IV push → 12mg → 12mg. Flush with 20mL NS via stopcock. If converts, monitor.",
+          "unstable_presentation": "Synchronized cardioversion. Sedate if time allows. Start at 50-100J.",
+          "decision_point": "Stability assessment determines electrical vs pharmacologic pathway"
+        },
+        {
+          "case_id": "acls-case-brady",
+          "rhythm": "Symptomatic Bradycardia",
+          "treatment_sequence": "Atropine 1mg IV q3-5 min (max 3mg) → Transcutaneous pacing → Dopamine 5-20 mcg/kg/min or Epinephrine 2-10 mcg/min infusion",
+          "decision_point": "Atropine vs immediate pacing depends on severity of symptoms and response"
+        },
+        {
+          "case_id": "acls-case-vfvt",
+          "rhythm": "VF/VT Arrest",
+          "treatment_sequence": "Defibrillation (200J biphasic) → CPR 2 min → Rhythm check → Epi 1mg q3-5 min → 2nd shock → Amiodarone 300mg → 3rd shock → Amiodarone 150mg",
+          "decision_point": "Timing of epi vs amiodarone in the cycle; CPR quality metrics"
+        },
+        {
+          "case_id": "acls-case-torsades",
+          "rhythm": "Torsades de Pointes",
+          "treatment_sequence": "Magnesium sulfate 1-2g IV over 5-20 min (or faster if pulseless) → Defibrillation if pulseless → Avoid amiodarone (may worsen QT prolongation)",
+          "decision_point": "Recognizing Torsades vs standard VT — treatment differs significantly"
+        }
+      ],
+      "key_observations": [
+        "Rhythm identified correctly and announced out loud",
+        "Correct intervention chosen (pharmacologic vs electrical)",
+        "Timeliness (within ACLS standards)",
+        "Clear communication and delegation"
+      ],
+      "common_errors": [
+        "Delay in rhythm recognition",
+        "Wrong drug/dose sequence",
+        "Failing to confirm rhythm before intervention",
+        "Poor delegation ('I'll do everything myself')"
+      ],
+      "stress_layers": [
+        { "layer": "Monitor artifact", "description": "Add artifact to monitor — requires recheck before shocking" },
+        { "layer": "Wrong med offered", "description": "Partner offers wrong medication — Team Lead must correct" },
+        { "layer": "Family member", "description": "Role player shouting, adding stress and distraction" },
+        { "layer": "Hesitation pressure", "description": "If >15 sec hesitation, add alarms, bystander, or nurse asking for orders" }
+      ],
+      "minicode_phase_overlay": {
+        "walk_through": {
+          "weeks": "2-4",
+          "instructor_role": "Active coach. Prompts: 'What rhythm is this? What's your next step? Why?' Corrects errors immediately.",
+          "student_expectation": "Verbalize every decision before acting. No time pressure.",
+          "stress_layers_active": false,
+          "rhythm_complexity": "Core rhythms only — NSR, VFib, VT, bradycardia, SVT. Clear presentations.",
+          "pass_criteria": "Demonstrates correct algorithm knowledge when walked through."
+        },
+        "pressured": {
+          "weeks": "5-8",
+          "instructor_role": "Introduces stressors but still intervenes on critical safety errors.",
+          "student_expectation": "Manage distractions while maintaining algorithm fidelity. Time constraints active.",
+          "stress_layers_active": true,
+          "rhythm_complexity": "Core + intermediate rhythms. May include artifact or ambiguous presentations.",
+          "pass_criteria": "Maintains algorithm fidelity under pressure with acceptable error rate."
+        },
+        "full_lead": {
+          "weeks": "9-13",
+          "instructor_role": "Observer/FTO. Does not intervene unless patient safety issue.",
+          "student_expectation": "Run the code independently. Direct team, identify rhythms, order meds without prompting.",
+          "stress_layers_active": true,
+          "rhythm_complexity": "Full rhythm library. May include rhythm changes mid-scenario.",
+          "pass_criteria": "Independently leads code to completion with correct decisions and team direction."
+        }
+      }
+    },
+
+    {
+      "station_id": "decision-tree-hot-seat",
+      "station_name": "Decision Tree Hot Seat",
+      "category": "clinical-reasoning",
+      "format": "individual",
+      "duration_per_student_minutes": 8,
+      "response_window_seconds": 60,
+      "objective": [
+        "Build rapid decision-making skills under time pressure",
+        "Practice prioritizing interventions as the team lead",
+        "Strengthen verbalization of reasoning and treatment plans"
+      ],
+      "equipment": [
+        "Chairs (students in a hot seat rotation)",
+        "Whiteboard, projector, or printed case cards",
+        "Stopwatch/timer",
+        "List of short case vignettes"
+      ],
+      "student_instructions": [
+        "One student sits in the Hot Seat as Team Lead",
+        "Instructor presents a case vignette (1-2 sentences, vitals included)",
+        "Student has 30-60 seconds to announce: initial impression (sick/not sick), first 1-2 interventions, next steps or transport decision",
+        "Instructor may ask 1-2 follow-up questions",
+        "Rotate every 1-2 minutes to keep pace; all students should cycle through multiple cases"
+      ],
+      "instructor_guide": {
+        "briefing": {
+          "duration_minutes": 2,
+          "script": "You're in the hot seat. Fast thinking, not perfect answers. Prioritize and speak your plan."
+        },
+        "during_case": [
+          "Enforce time limits — if >1 min, patient 'worsens'",
+          "If vague response, press: 'What's your NEXT SPECIFIC step?'",
+          "If wrong answer, allow learning moment: 'How would your FTO redirect you here?'"
+        ],
+        "pacing": "Use 6-8 cases per rotation session"
+      },
+      "case_bank": [
+        {
+          "case_id": "hot-seat-stroke",
+          "case_name": "Stroke",
+          "vignette": "67M, right-sided weakness, slurred speech, onset 45 min ago, BP 210/110.",
+          "vitals": "HR 88, BP 210/110, RR 16, SpO2 97%, GCS 13",
+          "expected_response": {
+            "sick_not_sick": "Sick",
+            "priority_interventions": ["Stroke assessment (Cincinnati/LAMS)", "Establish last known well time", "BGL check", "Do NOT treat hypertension (permissive)", "IV saline lock"],
+            "transport_decision": "Rapid transport to comprehensive stroke center with pre-notification"
+          },
+          "follow_up_questions": [
+            "Why not treat the BP?",
+            "What's the difference between a primary and comprehensive stroke center?"
+          ]
+        },
+        {
+          "case_id": "hot-seat-seizure",
+          "case_name": "Seizure / Postictal",
+          "vignette": "18F, postictal, SpO2 85%, unresponsive, GCS 7.",
+          "vitals": "HR 110, BP 148/90, RR 8, SpO2 85%, GCS 7",
+          "expected_response": {
+            "sick_not_sick": "Sick — airway and respiratory compromise in postictal state",
+            "priority_interventions": ["Airway positioning (recovery position)", "Suction if needed", "High-flow O2 via NRB or BVM assist", "BGL check", "IV access"],
+            "transport_decision": "Transport with ongoing airway monitoring; prepare for recurrent seizure"
+          },
+          "follow_up_questions": [
+            "What if she seizes again en route?",
+            "BGL is 42 — what changes?"
+          ]
+        },
+        {
+          "case_id": "hot-seat-acs",
+          "case_name": "Chest Pain / ACS (Anterior STEMI)",
+          "vignette": "54M, crushing chest pain, 12-lead shows anterior STEMI, BP 80/50.",
+          "vitals": "HR 110, BP 80/50, RR 22, SpO2 94%, GCS 14",
+          "expected_response": {
+            "sick_not_sick": "Sick — STEMI with cardiogenic shock",
+            "priority_interventions": ["Aspirin 324mg", "NO nitroglycerin (hypotensive)", "IV access", "Cath lab activation", "Cautious fluid bolus (250mL) if tolerated"],
+            "transport_decision": "Emergent transport to PCI-capable facility"
+          },
+          "follow_up_questions": [
+            "Why no nitroglycerin?",
+            "BP drops to 60/palp after 500mL NS — now what?"
+          ]
+        },
+        {
+          "case_id": "hot-seat-trauma-mvc",
+          "case_name": "Trauma MVC",
+          "vignette": "24M, entrapped in MVC, GCS 7, BP 80 palp, SpO2 90%.",
+          "vitals": "HR 135, BP 80/palp, RR 28, SpO2 90%, GCS 7",
+          "expected_response": {
+            "sick_not_sick": "Sick — multi-system trauma with hemorrhagic shock and altered mental status",
+            "priority_interventions": ["C-spine precautions", "Airway management (BVM, prepare for advanced)", "Bilateral IV/IO large bore", "Fluid resuscitation", "Rapid extrication"],
+            "transport_decision": "Load-and-go to trauma center"
+          },
+          "follow_up_questions": [
+            "Extrication will take 20 more minutes — what do you do on scene?",
+            "Breath sounds diminished on the right — what now?"
+          ]
+        },
+        {
+          "case_id": "hot-seat-chf",
+          "case_name": "Respiratory Distress / CHF",
+          "vignette": "72F with CHF history, pink frothy sputum, SpO2 70%, tripod position.",
+          "vitals": "HR 118, BP 188/102, RR 32, SpO2 70%, GCS 14",
+          "expected_response": {
+            "sick_not_sick": "Sick — acute pulmonary edema / decompensated CHF",
+            "priority_interventions": ["High-flow O2 immediately", "CPAP if available", "Nitroglycerin (BP supports it)", "IV access — do NOT fluid bolus", "12-lead"],
+            "transport_decision": "Emergent transport; position of comfort (sitting upright)"
+          },
+          "follow_up_questions": [
+            "Why not fluid bolus?",
+            "SpO2 still 78% after CPAP — what's next?"
+          ]
+        },
+        {
+          "case_id": "hot-seat-peds-stridor",
+          "case_name": "Pediatric Stridor",
+          "vignette": "6-year-old, stridor at rest, febrile, drooling.",
+          "vitals": "HR 140, RR 30, SpO2 92%, Temp 103.8°F",
+          "expected_response": {
+            "sick_not_sick": "Sick — upper airway obstruction, likely epiglottitis",
+            "priority_interventions": ["Keep child calm (minimal intervention approach)", "Humidified O2 blow-by", "Do NOT examine throat or lay supine", "Prepare advanced airway equipment as backup only"],
+            "transport_decision": "Rapid transport — let the ED/OR manage the airway in a controlled environment"
+          },
+          "follow_up_questions": [
+            "Child becomes completely obstructed — what now?",
+            "Parents are refusing transport — how do you handle this?"
+          ]
+        },
+        {
+          "case_id": "hot-seat-anaphylaxis",
+          "case_name": "Anaphylaxis",
+          "vignette": "32F, sudden onset facial swelling, urticaria, and wheezing after eating shellfish at a restaurant. BP 78/42, HR 130, SpO2 88%, GCS 15.",
+          "vitals": "HR 130, BP 78/42, RR 28, SpO2 88%, GCS 15",
+          "expected_response": {
+            "sick_not_sick": "Sick — hypotension + respiratory compromise = severe anaphylaxis",
+            "priority_interventions": ["IM epinephrine 0.3mg (anterolateral thigh) FIRST", "Aggressive IV fluid bolus (NS wide open)", "Supplemental O2 via NRB", "Prepare for advanced airway if swelling worsens", "Diphenhydramine/famotidine as adjuncts (NOT substitutes for epi)"],
+            "transport_decision": "Emergent transport; repeat epi q5-15 min if no improvement"
+          },
+          "follow_up_questions": [
+            "What if the patient's airway swells shut after your first dose of epi?",
+            "Patient improves but BP drops again 20 minutes later — what now?"
+          ],
+          "instructor_tip": "Students often give diphenhydramine first — redirect to epinephrine as the only first-line treatment."
+        },
+        {
+          "case_id": "hot-seat-hypoglycemia",
+          "case_name": "Diabetic Emergency — Hypoglycemia",
+          "vignette": "45M, found confused and diaphoretic by coworkers. Known diabetic on insulin. BGL 28 mg/dL, HR 110, BP 138/80, GCS 10 (E3 V3 M4).",
+          "vitals": "HR 110, BP 138/80, RR 18, SpO2 97%, GCS 10, BGL 28",
+          "expected_response": {
+            "sick_not_sick": "Sick — severely altered mental status with critically low BGL",
+            "priority_interventions": ["IV access → D10 or D50 (per protocol) titrated to mental status", "If no IV: glucagon 1mg IM", "Reassess BGL q5 min; repeat dextrose if needed", "Airway positioning and suction standby (aspiration risk)"],
+            "transport_decision": "Transport for evaluation; search for underlying cause"
+          },
+          "follow_up_questions": [
+            "You can't get IV access — what's your backup plan?",
+            "BGL comes up to 110 but patient refuses transport — how do you counsel them?"
+          ],
+          "instructor_tip": "Common freeze point is when IV access fails. Prompt for IM glucagon."
+        },
+        {
+          "case_id": "hot-seat-overdose",
+          "case_name": "Overdose / Toxicology",
+          "vignette": "22M, found unresponsive in a parking lot. Pinpoint pupils, RR 4, SpO2 72%, HR 58, BP 90/60. Track marks noted on arms.",
+          "vitals": "HR 58, BP 90/60, RR 4, SpO2 72%, GCS 3",
+          "expected_response": {
+            "sick_not_sick": "Sick — respiratory failure from suspected opioid overdose",
+            "priority_interventions": ["BVM ventilations immediately (address hypoxia FIRST)", "Naloxone 0.4-2mg IN/IV/IM — titrate to adequate respirations, NOT full consciousness", "Continuous SpO2 and ETCO2 monitoring", "Prepare for vomiting/agitation on waking — recovery position, suction ready"],
+            "transport_decision": "Transport; consider polysubstance if poor response to naloxone"
+          },
+          "follow_up_questions": [
+            "You give 2mg naloxone IN and no response after 3 minutes — next steps?",
+            "Patient wakes up combative and wants to leave — what are your concerns?"
+          ],
+          "instructor_tip": "Watch for students who over-dose naloxone. Emphasize titrating to respiratory effort, not alertness."
+        },
+        {
+          "case_id": "hot-seat-vfib-arrest",
+          "case_name": "Cardiac Arrest — Witnessed VFib",
+          "vignette": "58M, collapsed at a gym, bystander CPR in progress. AED applied, advises shock. No pulse confirmed.",
+          "vitals": "Pulseless, apneic, AED advises shock (VFib)",
+          "expected_response": {
+            "sick_not_sick": "Dead — cardiac arrest",
+            "priority_interventions": ["Immediate defibrillation", "High-quality CPR: 2-minute cycles, minimize interruptions", "IV/IO access → Epi 1mg q3-5 min", "After 2nd shock: amiodarone 300mg IV", "ETCO2 monitoring for CPR quality and ROSC detection"],
+            "transport_decision": "Work on scene unless specific transport criteria met; identify reversible causes (H's and T's)"
+          },
+          "follow_up_questions": [
+            "After 3 shocks and 2 rounds of epi, patient is now in PEA — what changes?",
+            "You get ROSC — what are your immediate priorities?"
+          ],
+          "instructor_tip": "Push for verbalization of CPR quality metrics (rate, depth, recoil, fraction)."
+        },
+        {
+          "case_id": "hot-seat-burns",
+          "case_name": "Burns — Thermal / Inhalation",
+          "vignette": "30F, pulled from a house fire. Singed nasal hairs, hoarse voice, circumferential burns to both arms and anterior chest. HR 128, BP 100/60, SpO2 94%, RR 28.",
+          "vitals": "HR 128, BP 100/60, RR 28, SpO2 94%",
+          "expected_response": {
+            "sick_not_sick": "Sick — inhalation injury signs + significant BSA burns (~27% by Rule of 9's)",
+            "priority_interventions": ["Early intubation — hoarseness and singed nasal hairs indicate impending airway compromise", "High-flow O2 via NRB (CO poisoning risk)", "IV fluid resuscitation: Parkland formula (4mL × kg × %BSA), half in first 8 hrs", "Dry sterile dressings", "Pain management"],
+            "transport_decision": "Rapid transport to burn center"
+          },
+          "follow_up_questions": [
+            "Patient's voice is getting progressively weaker — how urgent is your airway intervention?",
+            "What if your transport time to the burn center is 45 minutes?"
+          ],
+          "instructor_tip": "Students frequently underestimate inhalation injury. The airway question should come before burn care."
+        },
+        {
+          "case_id": "hot-seat-sepsis",
+          "case_name": "Sepsis",
+          "vignette": "78F, nursing home patient, fever 103.2°F, altered from baseline. HR 126, BP 82/48, RR 26, SpO2 91%, skin mottled and cool. Foley catheter in place.",
+          "vitals": "HR 126, BP 82/48, RR 26, SpO2 91%, Temp 103.2°F",
+          "expected_response": {
+            "sick_not_sick": "Sick — meets sepsis criteria (suspected infection + hypotension + AMS + tachycardia)",
+            "priority_interventions": ["High-flow O2 to target SpO2 ≥94%", "Aggressive IV NS fluid bolus (30 mL/kg initial)", "Obtain 12-lead, BGL, temperature", "If hypotension persists after fluids: push-dose epi or norepinephrine drip per protocol"],
+            "transport_decision": "Early hospital notification — sepsis alert; rapid transport"
+          },
+          "follow_up_questions": [
+            "You've given 2 liters of NS and BP is still 76/40 — what now?",
+            "What's your likely source of infection here?"
+          ],
+          "instructor_tip": "Many students miss aggressive fluid resuscitation as a prehospital intervention. This is a volume problem first."
+        },
+        {
+          "case_id": "hot-seat-excited-delirium",
+          "case_name": "Behavioral / Excited Delirium",
+          "vignette": "28M, found running in traffic, screaming incoherently. Tased by PD with no effect. Profusely diaphoretic, superhuman strength reported. HR 188, temp 105.4°F.",
+          "vitals": "HR 188, Temp 105.4°F",
+          "expected_response": {
+            "sick_not_sick": "Sick — excited delirium is a life-threatening emergency (high cardiac arrest risk)",
+            "priority_interventions": ["Scene safety paramount — coordinate with law enforcement", "Chemical sedation early: ketamine IM (4 mg/kg) or midazolam per protocol", "Once safe: cardiac monitor, SpO2, BGL, 12-lead", "Active cooling measures (ice packs to groin/axillae, cold saline if available)"],
+            "transport_decision": "Rapid transport; continuous monitoring — high risk for sudden cardiac arrest"
+          },
+          "follow_up_questions": [
+            "After sedation the patient goes into cardiac arrest — what's your differential?",
+            "How does your approach change if ketamine isn't in your formulary?"
+          ],
+          "instructor_tip": "Scene safety and early sedation are critical — students may try to assess before the scene is controlled."
+        },
+        {
+          "case_id": "hot-seat-prolapsed-cord",
+          "case_name": "Obstetric — Prolapsed Cord",
+          "vignette": "28F, 37 weeks pregnant, reports her water broke and feels something between her legs. Umbilical cord visible at introitus. FHR by doppler: 80 bpm (bradycardic).",
+          "vitals": "Mother: HR 108, BP 118/72, RR 22, SpO2 98%. FHR 80 bpm",
+          "expected_response": {
+            "sick_not_sick": "Sick — true obstetric emergency with immediate threat to fetal life",
+            "priority_interventions": ["Do NOT push cord back in", "Keep cord moist with warm saline-soaked gauze", "Gloved hand in vagina to elevate presenting part off cord (relieve compression)", "Trendelenburg or knee-chest position", "High-flow O2 to mother, IV fluid bolus"],
+            "transport_decision": "Emergent transport — notify hospital for immediate C-section. Do NOT delay on scene."
+          },
+          "follow_up_questions": [
+            "FHR drops to 60 during transport — are you still holding pressure off the cord?",
+            "What if the mother starts pushing involuntarily?"
+          ],
+          "instructor_tip": "High-stress, low-frequency call. Students may not remember the hand-in-vagina maneuver — coach through it."
+        }
+      ],
+      "key_observations": [
+        "Clear sick/not sick declaration",
+        "Immediate life threat addressed first",
+        "Logical sequencing (e.g., airway before IV)",
+        "Confidence and communication under pressure"
+      ],
+      "common_errors": [
+        "Freezing or overthinking",
+        "Overcomplicating treatment instead of addressing basics",
+        "Forgetting transport/scene time considerations"
+      ],
+      "stress_layers": [
+        { "layer": "Lightning Round", "description": "Only 15 seconds to answer" },
+        { "layer": "Delegation", "description": "Student in hot seat must delegate tasks to 2 crew members" },
+        { "layer": "Dynamic vitals", "description": "Change vitals mid-answer (BP drops, LOC worsens)" },
+        { "layer": "Noise", "description": "Background noise or radio interruptions" },
+        { "layer": "Bystander", "description": "Role-player asking irrelevant questions ('Can I ride in the ambulance?')" }
+      ]
+    },
+
+    {
+      "station_id": "limited-resource-drill",
+      "station_name": "Limited Resource / Stress Tolerance Drill",
+      "category": "adaptability",
+      "format": "team_rotation",
+      "duration_per_rotation_minutes": 7,
+      "objective": [
+        "Develop adaptability when equipment, time, or personnel are limited",
+        "Practice prioritization of interventions and patient safety under pressure",
+        "Reinforce leadership and delegation skills when resources are constrained"
+      ],
+      "equipment": [
+        "Manikin or role player (medical or trauma case)",
+        "Partial equipment setup (deliberately leave items missing or broken)",
+        "2-3 students per group: Team Lead + Partner(s)",
+        "Instructor sheet with case details and resource restrictions"
+      ],
+      "student_instructions": [
+        "Team Lead receives case presentation",
+        "Instructor announces a limitation (e.g., 'You only have one oxygen source,' 'Your IV kit is missing catheters')",
+        "Students must manage patient with available resources, directing team and adapting plan",
+        "Case runs for 5-7 minutes, then rotate Team Lead",
+        "Quick feedback provided before next run"
+      ],
+      "instructor_guide": {
+        "briefing": {
+          "duration_minutes": 2,
+          "script": "You don't always get what you want in the field. Today you'll have to adapt, prioritize, and make the best clinical decisions with what you've got."
+        },
+        "during_scenario": [
+          "Ensure Team Lead gives clear delegation (not just 'I'll do it all')",
+          "Prompt if they freeze: 'What's your backup if you don't have X?'",
+          "Push realism — FTOs will expect resourcefulness, not excuses"
+        ]
+      },
+      "case_bank": [
+        {
+          "case_id": "limited-sepsis",
+          "case_name": "Sepsis with Limited IV Supplies",
+          "vignette": "Hypotensive, febrile patient — but IV supplies limited to one catheter and one bag of NS.",
+          "vitals": "HR 126, BP 82/48, RR 26, SpO2 91%, Temp 103.2°F",
+          "resource_restriction": "Only 1 IV catheter and 1 liter NS available",
+          "expected_adaptation": "Prioritize single successful IV attempt. If missed: IO access. Conserve fluid — run wide open but be aware of limited supply. Request mutual aid for additional supplies. Focus on O2, transport, early notification.",
+          "life_threat_priority": "Hypotension and sepsis — fluid resuscitation is critical even with limited supply"
+        },
+        {
+          "case_id": "limited-chf",
+          "case_name": "CHF with One Oxygen Source",
+          "vignette": "Severe respiratory distress, SpO2 70% — but only one oxygen tank available.",
+          "vitals": "HR 118, BP 188/102, RR 32, SpO2 70%, GCS 14",
+          "resource_restriction": "Single portable O2 tank, partially full",
+          "expected_adaptation": "Patient gets the O2 first (NRB or CPAP if available). Conserve flow rate if possible. Consider: can you use BVM without supplemental O2 as backup? Nitroglycerin for preload reduction. Rapid transport.",
+          "life_threat_priority": "Hypoxia — the single O2 source goes to the patient, not to power a nebulizer or other secondary use"
+        },
+        {
+          "case_id": "limited-trauma",
+          "case_name": "Trauma with Non-Functional Monitor",
+          "vignette": "MVC with hypotension and hypoxia — but monitor won't power up for first 2 minutes.",
+          "vitals": "HR ~130 (manual), BP 80/palp (manual), RR 28, SpO2 unknown initially",
+          "resource_restriction": "Cardiac monitor non-functional for the first 2 minutes of patient contact",
+          "expected_adaptation": "Rely on clinical signs: manual pulse rate and quality, skin signs (pale, cool, diaphoretic), mental status, manual BP. Don't freeze waiting for the monitor. Begin interventions based on clinical assessment. Reassess when monitor becomes available.",
+          "life_threat_priority": "Hemorrhagic shock — don't delay treatment waiting for technology"
+        },
+        {
+          "case_id": "limited-anaphylaxis",
+          "case_name": "Anaphylaxis with Missing Epinephrine",
+          "vignette": "Facial swelling, wheezing — but Epi 1:1000 not in kit.",
+          "vitals": "HR 130, BP 78/42, RR 28, SpO2 88%",
+          "resource_restriction": "Epi 1:1000 vial missing from drug kit. Autoinjector (EpiPen) available. Epi 1:10,000 (cardiac concentration) available.",
+          "expected_adaptation": "Use autoinjector if available (0.3mg IM). If only cardiac epi (1:10,000): can draw 0.3mg (3mL) and give IM — know the concentration difference. Aggressive IV fluids. High-flow O2. Diphenhydramine as adjunct.",
+          "life_threat_priority": "Anaphylaxis — epinephrine by any available route is the priority. Don't withhold treatment because the preferred formulation isn't available."
+        }
+      ],
+      "key_observations": [
+        "Does the Team Lead recognize limitations quickly?",
+        "Do they adapt safely instead of stalling?",
+        "Do they communicate changes to the team clearly?",
+        "Do they still address life threats first?"
+      ],
+      "common_errors": [
+        "Students freeze when expected equipment isn't available",
+        "Ignoring alternatives (e.g., IO if IV fails, BLS airway if advanced unavailable)",
+        "Wasting time trying to 'fix' problem instead of treating patient"
+      ],
+      "stress_layers": [
+        { "layer": "Equipment pulled mid-scenario", "description": "Tank runs out, monitor dies, partner's IV infiltrates" },
+        { "layer": "Solo leadership", "description": "Only one crew member available — force solo leadership" },
+        { "layer": "Countdown timer", "description": "Visible timer adding time pressure" },
+        { "layer": "Patient deterioration", "description": "Patient worsens if not managed within 2-3 minutes" },
+        { "layer": "Second patient", "description": "Add second minor patient needing attention — forces triage/prioritization" }
+      ]
+    },
+
+    {
+      "station_id": "communication-delegation",
+      "station_name": "Communication & Delegation Drill",
+      "category": "team-leading",
+      "format": "team_rotation",
+      "duration_per_rotation_minutes": 8,
+      "objective": [
+        "Strengthen team leadership and closed-loop communication",
+        "Develop ability to assign tasks and manage scene flow",
+        "Reinforce that clear direction equals smoother patient care and better outcomes"
+      ],
+      "equipment": [
+        "One manikin or role player (moderate medical or trauma case)",
+        "2-3 crew members (students role-playing partners/EMTs)",
+        "Radio or simulated hospital patch script",
+        "Basic airway, monitor, IV/IO kit",
+        "Stopwatch/timer"
+      ],
+      "student_instructions": [
+        "One student is designated Team Lead. Others act as crew.",
+        "Team Lead must: assign initial roles (airway, monitor, IV, meds), direct interventions in correct order, verbally summarize findings and plan, give a brief radio report to receiving hospital",
+        "Each scenario runs 7-8 minutes",
+        "Rotate Team Lead role each round so every student practices"
+      ],
+      "instructor_guide": {
+        "briefing": {
+          "duration_minutes": 2,
+          "script": "Your job is not just to know what to do, but to get others to do it. Today's focus is on communication and clear delegation."
+        },
+        "during_scenario": [
+          "Crew members may 'act confused' if instructions aren't clear",
+          "Prompt if Team Lead forgets delegation: 'Who's doing airway?'",
+          "Observe tone, clarity, and whether Team Lead reassesses/re-directs as needed"
+        ]
+      },
+      "case_bank": [
+        {
+          "case_id": "comm-chf",
+          "case_name": "CHF Exacerbation",
+          "vignette": "Elderly patient, pink frothy sputum, tripod position, severe distress.",
+          "vitals": "HR 118, BP 188/102, RR 32, SpO2 72%",
+          "expected_delegations": ["Airway: High-flow O2 → CPAP", "Monitor: 12-lead, continuous SpO2", "IV: Saline lock (no bolus)", "Meds: Nitroglycerin per protocol"],
+          "radio_report_elements": ["Age/sex", "Chief complaint", "Vitals", "Interventions given", "ETA", "Request"]
+        },
+        {
+          "case_id": "comm-hypoglycemia",
+          "case_name": "Hypoglycemia",
+          "vignette": "Diaphoretic, confused patient, BGL 32.",
+          "vitals": "HR 110, BP 138/80, RR 18, SpO2 97%, BGL 32, GCS 10",
+          "expected_delegations": ["Airway: Position, suction standby", "IV: Access → D10/D50 administration", "Monitor: Continuous, BGL recheck q5 min"],
+          "radio_report_elements": ["Known diabetic", "BGL", "Interventions and response", "Current mental status"]
+        },
+        {
+          "case_id": "comm-mvc",
+          "case_name": "MVC Trauma",
+          "vignette": "Patient with abdominal pain, tachycardia, borderline BP.",
+          "vitals": "HR 128, BP 88/58, RR 24, SpO2 94%, GCS 14",
+          "expected_delegations": ["C-spine: Manual stabilization", "Airway: O2 via NRB", "IV: Bilateral large bore, fluid bolus", "Monitor: Continuous, 12-lead", "Assessment: Full rapid trauma"],
+          "radio_report_elements": ["Mechanism", "Injuries found", "Vitals trending", "Interventions", "ETA to trauma center"]
+        }
+      ],
+      "key_observations": [
+        "Initial role assignments — Team Lead sets direction immediately",
+        "Clear, concise instructions with names ('John, get the monitor on. Sarah, get IV access.')",
+        "Closed-loop communication ('Repeat back the med and dose before giving')",
+        "Updates to crew and hospital patch"
+      ],
+      "common_errors": [
+        "Vague orders ('Somebody get an IV')",
+        "Trying to do everything themselves",
+        "Not correcting partner mistakes",
+        "Forgetting hospital/radio communication"
+      ],
+      "stress_layers": [
+        { "layer": "Timer countdown", "description": "Visible countdown for interventions" },
+        { "layer": "Hospital callback", "description": "Instructor interrupts: 'Hospital calling for ETA'" },
+        { "layer": "Patient deterioration", "description": "Rhythm change or vitals drop mid-scenario" },
+        { "layer": "Partner challenge", "description": "Crew member suggests wrong intervention ('Let's just give morphine')" },
+        { "layer": "Crew loss", "description": "Mid-scenario role switch — crew member gets 'pulled away'" }
+      ]
+    },
+
+    {
+      "station_id": "cognitive-load-skill",
+      "station_name": "Cognitive Load Skill Drill",
+      "category": "psychomotor-under-stress",
+      "format": "individual",
+      "duration_per_student_minutes": 8,
+      "skill_time_limit_minutes": 3,
+      "questions_per_attempt": 6,
+      "objective": [
+        "Reinforce psychomotor skills under distraction",
+        "Develop ability to verbalize reasoning while performing tasks",
+        "Build stress tolerance for real-world interruptions (FTO questioning, radio calls, family members)"
+      ],
+      "equipment": [
+        "Choose one skill per round (rotate weekly): IV/IO start (arm trainer or IO trainer), Airway management (BVM, adjuncts, supraglottic, ET), Medication draw-up/administration (mock meds and syringes)",
+        "Instructor with question bank (printed cards or list)",
+        "Timer",
+        "Optional background noise (radio chatter, music)"
+      ],
+      "skills_rotated": [
+        { "skill": "IV/IO Start", "equipment": "Arm trainer or IO trainer, IV start kit, IO kit" },
+        { "skill": "Airway Management", "equipment": "BVM, OPA/NPA, supraglottic airway, ET tube, laryngoscope, intubation head" },
+        { "skill": "Medication Draw-Up/Administration", "equipment": "Mock med vials, syringes, 3-way stopcock, IV tubing" }
+      ],
+      "student_instructions": [
+        "Student begins performing the assigned skill",
+        "Instructor asks clinical reasoning and recall questions throughout",
+        "Student must answer while continuing the skill",
+        "Skill must be completed successfully within time limit (2-3 minutes)",
+        "Rotate students quickly; all should complete at least one skill attempt"
+      ],
+      "instructor_guide": {
+        "briefing": {
+          "duration_minutes": 2,
+          "script": "In the field, you'll be asked questions or distracted while doing critical skills. The goal here is to keep working and think out loud."
+        },
+        "during_scenario": [
+          "Start timer",
+          "Begin skill performance",
+          "Fire off 4-6 questions during the attempt",
+          "Stop if unsafe technique, otherwise allow to complete"
+        ],
+        "debrief_each_student": [
+          "Did they keep moving hands while answering?",
+          "Were answers accurate and confident?",
+          "Did they demonstrate resilience under stress?"
+        ]
+      },
+      "question_bank": {
+        "pathophysiology_indications": [
+          "What physiologic problem are we trying to correct with push-dose epinephrine?",
+          "Why might a patient become hypotensive after induction for RSI?",
+          "How does epinephrine improve coronary and cerebral perfusion pressure during shock?",
+          "What is the difference between distributive shock and cardiogenic shock in terms of vascular tone?",
+          "Why is push-dose epinephrine appropriate for peri-intubation hypotension but not for cardiac arrest?"
+        ],
+        "pharmacodynamics_pharmacokinetics": [
+          "What receptor types does epinephrine act on?",
+          "Which receptor effect predominates at lower doses? At higher doses?",
+          "How does epinephrine increase blood pressure?",
+          "What is the onset and duration of action for push-dose epinephrine?",
+          "How does the half-life of epinephrine affect your need to monitor and potentially redose?"
+        ],
+        "dosing_administration": [
+          "What is the concentration of push-dose epinephrine after dilution?",
+          "Walk me through the math to make 10 mcg/mL from a cardiac epi amp (1 mg/10 mL).",
+          "What is the usual dose range for push-dose epi?",
+          "Why do we dilute epinephrine before giving it IV push?",
+          "What's the maximum total dose you'd reasonably expect to give in this setting?"
+        ],
+        "adverse_effects_safety": [
+          "What are the major risks of giving push-dose epinephrine?",
+          "What would you do if the patient develops tachyarrhythmia after a dose?",
+          "How could dosing errors with push-dose epinephrine be dangerous?",
+          "What's the difference in effect between giving 10 mcg IV push versus accidentally giving 1 mg IV push?",
+          "How might push-dose epi affect myocardial oxygen demand?"
+        ],
+        "comparisons_alternatives": [
+          "How does push-dose epi compare to phenylephrine?",
+          "Why might norepinephrine be preferred for continuous infusion over push-dose epi?",
+          "If you had no epinephrine, what other medication could you use for peri-intubation hypotension?",
+          "In what patient populations might phenylephrine be a safer option than epinephrine?"
+        ],
+        "scenario_based": [
+          "You give a dose of push-dose epi, but the blood pressure only improves for 2 minutes before dropping again. What's your next step?",
+          "Your patient's heart rate jumps from 88 to 160 after a dose. What are your priorities?",
+          "A patient in septic shock is profoundly hypotensive despite fluids. Is push-dose epi appropriate, or do you need something else? Why?",
+          "During RSI, the BP is 60/40 after induction. You have phenylephrine and epinephrine available — how do you choose?"
+        ]
+      },
+      "key_observations": [
+        "Hands keep moving while answering",
+        "Clear, concise responses (not long-winded)",
+        "Accurate recall of key clinical facts",
+        "Ability to stay composed under distraction"
+      ],
+      "common_errors": [
+        "Freezing or stopping the skill to answer",
+        "Incorrect or hesitant answers",
+        "Poor sterile/aseptic technique when distracted"
+      ],
+      "stress_layers": [
+        { "layer": "Shortened timer", "description": "Reduce skill time limit" },
+        { "layer": "Faster questions", "description": "Increase question speed and overlap" },
+        { "layer": "Bystander role-play", "description": "Another student plays family asking irrelevant questions" },
+        { "layer": "Radio call", "description": "Interrupt mid-skill with a radio call requiring a one-sentence hospital update" }
+      ]
+    },
+
+    {
+      "station_id": "pediatric-med-draw",
+      "station_name": "Pediatric Medication Draw (Broselow + 3-Way Stopcock)",
+      "category": "pediatrics",
+      "format": "individual",
+      "duration_per_student_minutes": 12,
+      "time_target_minutes": 5,
+      "cards_per_session": 3,
+      "objective": [
+        "Reinforce weight-based pediatric medication dosing using the Broselow tape system",
+        "Build proficiency with 3-way stopcock technique for pediatric IV medication administration",
+        "Develop accuracy and speed in high-stress, low-frequency pediatric medication scenarios",
+        "Practice verbalized dosing confirmation (closed-loop: calculate, state dose aloud, confirm with partner before administration)"
+      ],
+      "equipment": [
+        "Broselow tape (current edition)",
+        "3-way stopcock assembly with IV tubing and flush syringe",
+        "Assorted syringes (1 mL, 3 mL, 5 mL, 10 mL)",
+        "Mock medication vials or labels (epinephrine 1:10,000, atropine, amiodarone, dextrose, normal saline flushes)",
+        "Pediatric weight/age scenario cards",
+        "Drug dosing reference card (for verification, not primary calculation)",
+        "Timer",
+        "Sharps-safe workspace"
+      ],
+      "student_instructions": [
+        "Student receives a pediatric scenario card with patient age, weight (or Broselow color), and the medication order",
+        "Student must: identify the correct Broselow color zone, calculate the correct dose using weight-based dosing, state the dose/concentration/volume aloud (closed-loop confirmation), draw the correct volume using appropriate syringe, demonstrate proper 3-way stopcock technique (connect, turn stopcock, administer, flush)",
+        "Time target: complete the full process within 3-5 minutes",
+        "Rotate through 2-3 medication scenarios per session"
+      ],
+      "instructor_guide": {
+        "briefing": {
+          "duration_minutes": 2,
+          "script": "Pediatric medication errors are among the most dangerous things you can do in the field. Today's goal is accuracy first, then speed. Calculate, state your dose out loud, and confirm before you push anything."
+        },
+        "during_station": [
+          "Hand student a scenario card",
+          "Student works through: Broselow → calculation → draw → stopcock → administration",
+          "Observe silently during the attempt. Do not correct mid-attempt unless there is a critical safety error (10x dosing error)",
+          "Time the attempt"
+        ],
+        "debrief_each_student": [
+          "Was the dose calculated correctly?",
+          "Was the correct syringe size selected?",
+          "Was the 3-way stopcock technique correct (position, flush, no air)?",
+          "Did the student verbalize and confirm before pushing?",
+          "Time to completion"
+        ]
+      },
+      "scenario_cards": [
+        {
+          "card_id": "peds-med-01",
+          "patient": "2-year-old, 12 kg",
+          "broselow_color": "Yellow",
+          "medication_order": "Epinephrine 1:10,000 IV for cardiac arrest",
+          "expected_dose_mg": "0.12 mg",
+          "expected_volume": "1.2 mL of 0.1 mg/mL",
+          "calculation": "0.01 mg/kg × 12 kg = 0.12 mg. Concentration: 0.1 mg/mL (1:10,000). Volume: 0.12 / 0.1 = 1.2 mL",
+          "syringe_size": "3 mL"
+        },
+        {
+          "card_id": "peds-med-02",
+          "patient": "5-year-old, 18 kg",
+          "broselow_color": "White",
+          "medication_order": "Amiodarone IV for pulseless VT",
+          "expected_dose_mg": "90 mg",
+          "expected_volume": "1.8 mL of 50 mg/mL",
+          "calculation": "5 mg/kg × 18 kg = 90 mg. Concentration: 50 mg/mL. Volume: 90 / 50 = 1.8 mL",
+          "syringe_size": "3 mL"
+        },
+        {
+          "card_id": "peds-med-03",
+          "patient": "8-month-old, 8 kg",
+          "broselow_color": "Pink",
+          "medication_order": "Dextrose 10% IV for hypoglycemia",
+          "expected_dose_mg": "N/A — volume-based",
+          "expected_volume": "32 mL of D10",
+          "calculation": "4 mL/kg × 8 kg = 32 mL of D10. (Alternatively: 0.5-1 g/kg dextrose = 4-8 g. D10 = 0.1 g/mL → 40-80 mL range.)",
+          "syringe_size": "10 mL (multiple draws) or 60 mL syringe"
+        },
+        {
+          "card_id": "peds-med-04",
+          "patient": "6-year-old, 20 kg",
+          "broselow_color": "Blue",
+          "medication_order": "Atropine IV for symptomatic bradycardia",
+          "expected_dose_mg": "0.4 mg",
+          "expected_volume": "2 mL of 0.1 mg/mL dilution (or 4 mL of standard 0.1 mg/mL)",
+          "calculation": "0.02 mg/kg × 20 kg = 0.4 mg. Minimum dose: 0.1 mg. Max single dose: 0.5 mg child.",
+          "syringe_size": "5 mL"
+        },
+        {
+          "card_id": "peds-med-05",
+          "patient": "3-year-old, 14 kg",
+          "broselow_color": "Yellow",
+          "medication_order": "Epinephrine 1:10,000 IV — second dose, cardiac arrest still in PEA",
+          "expected_dose_mg": "0.14 mg",
+          "expected_volume": "1.4 mL of 0.1 mg/mL",
+          "calculation": "0.01 mg/kg × 14 kg = 0.14 mg. Same dose as first. Confirm ≥3 min since last dose.",
+          "syringe_size": "3 mL",
+          "special_note": "Must confirm timing ≥3 min from last dose before administering"
+        },
+        {
+          "card_id": "peds-med-06",
+          "patient": "10-month-old, 9 kg",
+          "broselow_color": "Pink",
+          "medication_order": "Adenosine IV for SVT — first dose",
+          "expected_dose_mg": "0.9 mg",
+          "expected_volume": "0.9 mL of 1 mg/mL",
+          "calculation": "0.1 mg/kg × 9 kg = 0.9 mg. Concentration: 3 mg/mL from vial → draw 0.3 mL OR dilute to 1 mg/mL first.",
+          "syringe_size": "1 mL",
+          "special_note": "MUST be rapid push with immediate NS flush via stopcock. Slow push = ineffective."
+        }
+      ],
+      "key_observations": [
+        "Correct Broselow color identification",
+        "Accurate weight-based dose calculation (mg and mL)",
+        "Proper syringe selection for the volume",
+        "3-way stopcock positioning and flush technique",
+        "Verbal confirmation of dose before administration",
+        "Time to completion"
+      ],
+      "common_errors": [
+        "Confusing concentration with dose (mg vs mL)",
+        "Using the wrong Broselow zone (off by one color)",
+        "Drawing from the wrong concentration vial",
+        "Forgetting to flush the line after administration",
+        "Pushing adenosine slowly (must be rapid push + immediate flush)",
+        "Not verbalizing dose — just drawing and pushing silently"
+      ],
+      "stress_layers": [
+        { "layer": "Shortened timer", "description": "Reduce to 2 minutes" },
+        { "layer": "Parent role-player", "description": "Background noise or panicked questions from parent" },
+        { "layer": "Sequential orders", "description": "Give a second medication order immediately after the first" },
+        { "layer": "Wrong weight", "description": "Provide incorrect weight and see if student catches it against Broselow" }
+      ],
+      "completion_criteria": "Student successfully calculates correct dose, draws correct volume, demonstrates proper 3-way stopcock technique, and verbalizes confirmation for at least 2 of 3 scenario cards.",
+      "result_options": ["pass", "needs_review"],
+      "needs_review_flags": ["dosing_calculation", "syringe_selection", "stopcock_technique", "verbalization"]
+    },
+
+    {
+      "station_id": "trauma-hemorrhage",
+      "station_name": "Trauma Hemorrhage Management (Junctional Wound Packing)",
+      "category": "trauma",
+      "format": "individual",
+      "duration_per_student_minutes": 10,
+      "time_target_hemorrhage_control_seconds": 60,
+      "time_target_packing_complete_minutes": 3,
+      "objective": [
+        "Reinforce junctional wound packing technique for non-compressible hemorrhage sites (axilla, groin, neck)",
+        "Integrate hemorrhage control skills into a clinical context: hemorrhagic shock recognition, treatment sequencing, and transport decision-making",
+        "Build psychomotor confidence with hemostatic gauze application under pressure"
+      ],
+      "equipment": [
+        "Wound packing trainer (junctional wound model — commercial trainer or improvised with SimMan/moulage)",
+        "Hemostatic gauze (training rolls — QuikClot, Celox, or equivalent training material)",
+        "Combat gauze / standard gauze for comparison",
+        "Tourniquet (CAT or SOF-T — for extremity hemorrhage component if included)",
+        "Pressure dressing / Israeli bandage",
+        "IV/IO equipment (mock or training)",
+        "Blood pressure cuff, pulse oximeter, cardiac monitor",
+        "Moulage supplies: fake blood, wound inserts",
+        "Timer"
+      ],
+      "student_instructions": [
+        "Student receives a trauma scenario with a junctional hemorrhage that cannot be controlled by tourniquet",
+        "Student must: identify the hemorrhage source and recognize it as junctional (non-tourniquet-able), expose the wound appropriately, pack the wound with hemostatic gauze using correct technique (deep packing, direct pressure, maintain pressure 3+ min), apply a pressure dressing over the packed wound",
+        "Simultaneously manage hemorrhagic shock: assess mental status, vitals, IV/IO access, fluid resuscitation per protocol",
+        "Make transport decision (this is a load-and-go patient)",
+        "Time target: hemorrhage control initiated within 60 seconds of wound identification"
+      ],
+      "instructor_guide": {
+        "briefing": {
+          "duration_minutes": 2,
+          "script": "Junctional hemorrhage kills fast and you can't tourniquet it. Today is about speed, technique, and managing the whole patient — not just the wound. Hemorrhage control is your first priority, but you still have a patient in shock who needs everything else too."
+        },
+        "packing_technique_evaluation": [
+          "Gauze packed deep into wound cavity (not laid on top)",
+          "Direct pressure maintained during and after packing",
+          "Hemostatic agent used appropriately (not just standard gauze for arterial junctional bleeding)",
+          "Pressure dressing applied securely over the packed wound",
+          "Hands not removed prematurely"
+        ],
+        "clinical_management_evaluation": [
+          "Hemorrhagic shock recognized (tachycardia, hypotension, altered mental status)",
+          "IV/IO access established or attempted",
+          "Fluid resuscitation initiated per protocol",
+          "Transport decision made appropriately (load-and-go)",
+          "Ongoing reassessment verbalized"
+        ],
+        "debrief_each_student": [
+          "Time to hemorrhage control initiation",
+          "Packing technique quality",
+          "Shock management sequencing",
+          "Transport decision rationale"
+        ]
+      },
+      "scenario_cards": [
+        {
+          "card_id": "trauma-01",
+          "mechanism": "Stabbing, 28M",
+          "wound_location": "Left axilla",
+          "vitals": "HR 128, BP 84/56, RR 26, SpO2 94%, GCS 14",
+          "complicating_factor": "Patient agitated, won't hold still",
+          "expected_actions": ["Expose wound", "Identify junctional location", "Pack with hemostatic gauze deep into axillary wound", "Direct pressure", "IV/IO fluid resuscitation", "Rapid transport"]
+        },
+        {
+          "card_id": "trauma-02",
+          "mechanism": "Industrial accident, 42M",
+          "wound_location": "Right inguinal/groin",
+          "vitals": "HR 140, BP 72/40, RR 30, SpO2 90%, GCS 12",
+          "complicating_factor": "Active arterial bleeding — blood pooling rapidly",
+          "expected_actions": ["Expose wound", "Immediate wound packing with hemostatic gauze", "Sustained direct pressure", "Bilateral IV/IO", "Aggressive fluid resuscitation", "Load-and-go"]
+        },
+        {
+          "card_id": "trauma-03",
+          "mechanism": "GSW, 35F",
+          "wound_location": "Left neck (Zone II)",
+          "vitals": "HR 118, BP 90/62, RR 24, SpO2 96%, GCS 15",
+          "complicating_factor": "Expanding hematoma, patient anxious about breathing",
+          "expected_actions": ["Expose and assess neck wound", "Pack wound carefully — be aware of airway proximity", "Direct pressure without compressing airway", "Monitor for airway compromise", "IV access", "Rapid transport"]
+        },
+        {
+          "card_id": "trauma-04",
+          "mechanism": "MVC with impalement, 55M",
+          "wound_location": "Right axilla/lateral chest",
+          "vitals": "HR 132, BP 78/48, RR 32, SpO2 88%, GCS 13",
+          "complicating_factor": "Impaled object removed by bystanders prior to arrival — active hemorrhage",
+          "expected_actions": ["Assess wound (impalement removed — now open hemorrhage)", "Pack wound cavity", "Direct pressure and dressing", "Assess for pneumothorax (lateral chest involvement)", "IV/IO, fluids", "Rapid transport"]
+        },
+        {
+          "card_id": "trauma-05",
+          "mechanism": "Assault with weapon, 22M",
+          "wound_location": "Left groin",
+          "vitals": "HR 145, BP 68/palp, RR 34, SpO2 92%, GCS 11",
+          "complicating_factor": "PD on scene, patient in handcuffs, scene safety concerns",
+          "expected_actions": ["Ensure scene safety with PD", "Request handcuff repositioning for access if safe", "Expose wound", "Aggressive wound packing", "IO if IV difficult (patient in extremis)", "Load-and-go — this patient is dying"]
+        }
+      ],
+      "key_observations": [
+        "Hemorrhage source identified and junctional location recognized",
+        "Wound exposure (clothing removed/cut away appropriately)",
+        "Correct packing technique — deep, firm, using hemostatic agent",
+        "Pressure maintained for adequate time",
+        "Shock management initiated concurrently, not sequentially after wound packing",
+        "Transport decision appropriate for the clinical picture"
+      ],
+      "common_errors": [
+        "Laying gauze on top of wound instead of packing into cavity",
+        "Attempting tourniquet on a junctional wound",
+        "Releasing pressure too early to do other tasks",
+        "Tunnel vision on the wound while ignoring shock management",
+        "Delayed transport decision — spending too long on scene",
+        "Forgetting to reassess the wound/dressing for re-bleeding"
+      ],
+      "stress_layers": [
+        { "layer": "Combative patient", "description": "Patient becomes combative from altered mental status" },
+        { "layer": "Dressing failure", "description": "Dressing saturates through — student must re-pack" },
+        { "layer": "Second patient", "description": "Second patient identified — forces triage decision" },
+        { "layer": "Bystander pressure", "description": "'Is he going to die?!'" },
+        { "layer": "Supply limitation", "description": "Only one pack of gauze available" }
+      ],
+      "completion_criteria": "Student demonstrates correct junctional wound packing technique and initiates concurrent hemorrhagic shock management within time targets.",
+      "result_options": ["pass", "needs_review"],
+      "needs_review_flags": ["packing_technique", "shock_management", "transport_decision", "time_performance"]
+    }
+  ]
+}

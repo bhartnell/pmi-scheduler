@@ -50,6 +50,11 @@ interface SkillDrill {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  drill_data?: Record<string, unknown>;
+  station_id?: string | null;
+  program?: string | null;
+  semester?: number | null;
+  format?: string | null;
 }
 
 const CATEGORIES = [
@@ -60,6 +65,12 @@ const CATEGORIES = [
   { value: 'pharmacology', label: 'Pharmacology', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' },
   { value: 'assessment', label: 'Assessment', color: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300' },
   { value: 'general', label: 'General', color: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300' },
+  { value: 'cardiology', label: 'Cardiology', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' },
+  { value: 'clinical-reasoning', label: 'Clinical Reasoning', color: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300' },
+  { value: 'adaptability', label: 'Adaptability', color: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300' },
+  { value: 'team-leading', label: 'Team Leading', color: 'bg-teal-100 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300' },
+  { value: 'psychomotor-under-stress', label: 'Psychomotor Under Stress', color: 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300' },
+  { value: 'pediatrics', label: 'Pediatrics', color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300' },
 ];
 
 const DOC_TYPE_STYLES: Record<string, string> = {
@@ -101,6 +112,104 @@ function getCategoryLabel(category: string) {
   return CATEGORIES.find(c => c.value === category)?.label || category;
 }
 
+function DrillGuideExpanded({ drillData }: { drillData: Record<string, unknown> }) {
+  const objectives = drillData.objectives as string[] | undefined;
+  const instructorGuide = drillData.instructor_guide as { briefing?: { script?: string }; during_scenario?: string[]; during_case?: string[] } | undefined;
+  const caseBank = drillData.case_bank as Array<{ case_name?: string; case_id: string }> | undefined;
+  const rhythmCases = drillData.rhythm_cases as Array<{ rhythm?: string; case_id: string }> | undefined;
+  const minicode = drillData.minicode_phase_overlay as Record<string, { weeks?: string; instructor_role?: string }> | undefined;
+  const keyObs = drillData.key_observations as string[] | undefined;
+  const commonErrors = drillData.common_errors as string[] | undefined;
+  const stressLayers = drillData.stress_layers as Array<{ layer: string; description: string }> | undefined;
+
+  return (
+    <div className="space-y-3 text-sm">
+      {objectives && objectives.length > 0 && (
+        <div>
+          <h4 className="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 mb-1">Objectives</h4>
+          <ol className="list-decimal list-inside space-y-0.5 text-gray-700 dark:text-gray-300">
+            {objectives.map((o, i) => <li key={i}>{o}</li>)}
+          </ol>
+        </div>
+      )}
+      {instructorGuide?.briefing?.script && (
+        <div>
+          <h4 className="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 mb-1">Instructor Briefing</h4>
+          <p className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-blue-800 dark:text-blue-300 text-sm italic">
+            &ldquo;{instructorGuide.briefing.script}&rdquo;
+          </p>
+        </div>
+      )}
+      {(instructorGuide?.during_scenario || instructorGuide?.during_case) && (
+        <div>
+          <h4 className="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 mb-1">During Activity</h4>
+          <ul className="list-disc list-inside space-y-0.5 text-gray-700 dark:text-gray-300">
+            {(instructorGuide.during_scenario || instructorGuide.during_case || []).map((item, i) => (
+              <li key={i}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {(caseBank || rhythmCases) && (
+        <div>
+          <h4 className="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 mb-1">
+            {caseBank ? `Case Bank (${caseBank.length})` : `Rhythm Cases (${rhythmCases!.length})`}
+          </h4>
+          <div className="flex flex-wrap gap-1">
+            {(caseBank || rhythmCases || []).map((c, i) => (
+              <span key={i} className="px-2 py-0.5 text-xs bg-gray-100 dark:bg-gray-700 rounded">
+                {('case_name' in c && c.case_name) || ('rhythm' in c && c.rhythm) || c.case_id}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+      {minicode && (
+        <div>
+          <h4 className="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 mb-1">Minicode Phases</h4>
+          <div className="grid grid-cols-3 gap-1 text-xs">
+            {Object.entries(minicode).map(([phase, data]) => (
+              <div key={phase} className="p-1.5 bg-gray-50 dark:bg-gray-800 rounded border dark:border-gray-700">
+                <p className="font-medium capitalize">{phase.replace(/_/g, ' ')}</p>
+                {data.weeks && <p className="text-gray-500">Wk {data.weeks}</p>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {keyObs && keyObs.length > 0 && (
+        <div>
+          <h4 className="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 mb-1">Key Observations</h4>
+          <ul className="list-disc list-inside space-y-0.5 text-gray-700 dark:text-gray-300">
+            {keyObs.map((o, i) => <li key={i}>{o}</li>)}
+          </ul>
+        </div>
+      )}
+      {commonErrors && commonErrors.length > 0 && (
+        <div>
+          <h4 className="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 mb-1">Common Errors</h4>
+          <ul className="list-disc list-inside space-y-0.5 text-amber-700 dark:text-amber-300">
+            {commonErrors.map((e, i) => <li key={i}>{e}</li>)}
+          </ul>
+        </div>
+      )}
+      {stressLayers && stressLayers.length > 0 && (
+        <div>
+          <h4 className="text-xs font-semibold uppercase text-gray-500 dark:text-gray-400 mb-1">Stress Layers</h4>
+          <div className="space-y-1">
+            {stressLayers.map((sl, i) => (
+              <div key={i} className="flex gap-2 text-xs">
+                <span className="font-medium text-red-600 dark:text-red-400 whitespace-nowrap">{sl.layer}:</span>
+                <span className="text-gray-600 dark:text-gray-400">{sl.description}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function SkillDrillsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -134,6 +243,10 @@ export default function SkillDrillsPage() {
   // Delete state
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // S3 seeding state
+  const [seeding, setSeeding] = useState(false);
+  const [expandedDrillId, setExpandedDrillId] = useState<string | null>(null);
 
   // Toast
   const [toast, setToast] = useState('');
@@ -313,6 +426,25 @@ export default function SkillDrillsPage() {
       showToast('An unexpected error occurred', 'error');
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleSeedS3Drills = async () => {
+    if (!confirm('Seed/update S3 Skill Drills from data file? Existing S3 drills will be updated.')) return;
+    setSeeding(true);
+    try {
+      const res = await fetch('/api/admin/skill-drills/seed', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        alert(`S3 drills seeded: ${data.created} created, ${data.updated} updated`);
+        fetchDrills();
+      } else {
+        alert(data.error || 'Failed to seed S3 drills');
+      }
+    } catch {
+      alert('Error seeding S3 drills');
+    } finally {
+      setSeeding(false);
     }
   };
 
@@ -515,6 +647,13 @@ export default function SkillDrillsPage() {
               </div>
             </div>
             <button
+              onClick={handleSeedS3Drills}
+              disabled={seeding}
+              className="px-4 py-2 bg-amber-600 text-white text-sm rounded-lg hover:bg-amber-700 disabled:opacity-50 flex items-center gap-2"
+            >
+              {seeding ? 'Seeding...' : 'Seed S3 Drills'}
+            </button>
+            <button
               onClick={openAddModal}
               className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors font-medium"
             >
@@ -649,6 +788,16 @@ export default function SkillDrillsPage() {
                                 {docCounts[drill.id]} doc{docCounts[drill.id] !== 1 ? 's' : ''}
                               </span>
                             )}
+                            {drill.station_id && (
+                              <span className="px-1.5 py-0.5 text-xs font-medium bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 rounded">
+                                S3
+                              </span>
+                            )}
+                            {drill.format && (
+                              <span className="px-1.5 py-0.5 text-xs bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 rounded">
+                                {drill.format === 'team_rotation' ? 'Team' : 'Individual'}
+                              </span>
+                            )}
                           </div>
                           {drill.description && (
                             <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">
@@ -675,6 +824,21 @@ export default function SkillDrillsPage() {
                             <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                               Added by {drill.created_by}
                             </p>
+                          )}
+                          {drill.station_id && drill.drill_data && Object.keys(drill.drill_data).length > 0 && (
+                            <>
+                              <button
+                                onClick={() => setExpandedDrillId(expandedDrillId === drill.id ? null : drill.id)}
+                                className="text-xs text-orange-600 dark:text-orange-400 hover:underline mt-2"
+                              >
+                                {expandedDrillId === drill.id ? 'Hide Guide' : 'View Full Guide'}
+                              </button>
+                              {expandedDrillId === drill.id && (
+                                <div className="mt-2 border-t dark:border-gray-700 pt-2">
+                                  <DrillGuideExpanded drillData={drill.drill_data} />
+                                </div>
+                              )}
+                            </>
                           )}
                         </div>
 
