@@ -29,7 +29,8 @@ import {
   Printer,
   ArrowLeft,
   Users,
-  Copy
+  Copy,
+  Wand2
 } from 'lucide-react';
 
 // Helper to safely convert DB values to arrays (handles string, array, null)
@@ -755,6 +756,7 @@ export default function ScenarioEditorPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
+  const [fixingStructure, setFixingStructure] = useState(false);
   const [studentPrintMode, setStudentPrintMode] = useState(false);
   const [instructorPrintMode, setInstructorPrintMode] = useState(false);
   // Version history — bump this key to force the panel to reload after a save/restore
@@ -931,6 +933,40 @@ export default function ScenarioEditorPage() {
       alert('Failed to duplicate scenario');
     } finally {
       setDuplicating(false);
+    }
+  };
+
+  const handleFixStructure = async () => {
+    if (!scenarioId) return;
+    if (!confirm('This will transform this scenario to the correct structure format.\n\nOriginal data will be backed up in the legacy_data column.\n\nContinue?')) return;
+
+    setFixingStructure(true);
+    try {
+      const res = await fetch('/api/admin/scenarios/transform', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scenarioIds: [scenarioId] })
+      });
+      const data = await res.json();
+      if (data.success) {
+        const detail = data.results?.details?.[0];
+        if (detail?.status === 'transformed') {
+          alert(`Structure fixed!\n\nChanges:\n${(detail.changes || []).join('\n')}`);
+          // Reload the scenario to reflect new data
+          fetchScenario();
+        } else if (detail?.status === 'already_correct') {
+          alert('This scenario already has the correct structure.');
+        } else if (detail?.status === 'error') {
+          alert(`Error: ${detail.error}`);
+        }
+      } else {
+        alert('Transform failed: ' + (data.error || 'Unknown error'));
+      }
+    } catch (err) {
+      console.error('Error fixing structure:', err);
+      alert('Failed to fix scenario structure');
+    } finally {
+      setFixingStructure(false);
     }
   };
 
@@ -1133,6 +1169,15 @@ export default function ScenarioEditorPage() {
                   >
                     <Copy className="w-4 h-4" />
                     {duplicating ? 'Duplicating...' : 'Duplicate'}
+                  </button>
+                  <button
+                    onClick={handleFixStructure}
+                    disabled={fixingStructure}
+                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/30 border border-amber-300 dark:border-amber-600 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/50 disabled:opacity-50"
+                    title="Fix scenario data structure (backup + transform)"
+                  >
+                    <Wand2 className="w-4 h-4" />
+                    {fixingStructure ? 'Fixing...' : 'Fix Structure'}
                   </button>
                 </>
               )}
