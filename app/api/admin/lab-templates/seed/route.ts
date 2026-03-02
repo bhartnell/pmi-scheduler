@@ -23,7 +23,7 @@ async function getCurrentUser(email: string) {
 // POST /api/admin/lab-templates/seed
 //
 // Seeds lab templates from embedded JSON files:
-//   data/paramedic_s1_labs.json, data/paramedic_s2_labs.json, data/emt_s1_labs.json, data/aemt_s1_labs.json
+//   data/paramedic_s1_labs.json, data/paramedic_s2_labs.json, data/paramedic_s3_labs.json, data/emt_s1_labs.json, data/aemt_s1_labs.json
 // No request body needed — reads from project data files.
 // Requires admin+ role.
 // ---------------------------------------------------------------------------
@@ -41,7 +41,7 @@ export async function POST() {
 
     const supabase = getSupabaseAdmin();
     const dataDir = path.join(process.cwd(), 'data');
-    const files = ['paramedic_s1_labs.json', 'paramedic_s2_labs.json', 'emt_s1_labs.json', 'aemt_s1_labs.json'];
+    const files = ['paramedic_s1_labs.json', 'paramedic_s2_labs.json', 'paramedic_s3_labs.json', 'emt_s1_labs.json', 'aemt_s1_labs.json'];
     const results: Array<{ file: string; templates: number; stations: number; errors: string[] }> = [];
 
     for (const file of files) {
@@ -71,6 +71,12 @@ export async function POST() {
             .eq('day_number', tmpl.day_number)
             .maybeSingle();
 
+          // Build template_data from extra JSON fields (S3 has richer data)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const templateData: Record<string, any> = {};
+          if (tmpl.minicode_phase) templateData.minicode_phase = tmpl.minicode_phase;
+          if (tmpl.session_duration_minutes) templateData.session_duration_minutes = tmpl.session_duration_minutes;
+
           let templateId: string;
 
           if (existing) {
@@ -86,6 +92,7 @@ export async function POST() {
                 anchor_type: tmpl.anchor_type,
                 requires_review: tmpl.requires_review,
                 review_notes: tmpl.review_notes,
+                template_data: Object.keys(templateData).length > 0 ? templateData : {},
                 updated_at: new Date().toISOString(),
               })
               .eq('id', existing.id);
@@ -113,7 +120,7 @@ export async function POST() {
                 anchor_type: tmpl.anchor_type,
                 requires_review: tmpl.requires_review,
                 review_notes: tmpl.review_notes,
-                template_data: {},
+                template_data: Object.keys(templateData).length > 0 ? templateData : {},
                 is_shared: true,
                 created_by: currentUser.email,
                 updated_at: new Date().toISOString(),
@@ -129,16 +136,37 @@ export async function POST() {
 
           // Insert stations
           if (tmpl.stations && tmpl.stations.length > 0) {
-            const rows = tmpl.stations.map((s: { station_type: string; station_name: string; skills?: unknown[]; scenario_title?: string; difficulty?: string; format_notes?: string }, idx: number) => ({
-              template_id: templateId,
-              sort_order: idx + 1,
-              station_type: s.station_type,
-              station_name: s.station_name || null,
-              skills: s.skills && s.skills.length > 0 ? s.skills : null,
-              scenario_title: s.scenario_title || null,
-              difficulty: s.difficulty || null,
-              notes: s.format_notes || null,
-            }));
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const rows = tmpl.stations.map((s: any, idx: number) => {
+              // Collect extended metadata fields (S3 has richer station data)
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const metadata: Record<string, any> = {};
+              if (s.station_id) metadata.station_id = s.station_id;
+              if (s.duration_minutes) metadata.duration_minutes = s.duration_minutes;
+              if (s.time_block) metadata.time_block = s.time_block;
+              if (s.equipment && s.equipment.length > 0) metadata.equipment = s.equipment;
+              if (s.tracking) metadata.tracking = s.tracking;
+              if (s.instructor_required !== undefined) metadata.instructor_required = s.instructor_required;
+              if (s.roles) metadata.roles = s.roles;
+              if (s.instructor_tiering) metadata.instructor_tiering = s.instructor_tiering;
+              if (s.stress_layers) metadata.stress_layers = s.stress_layers;
+              if (s.common_errors) metadata.common_errors = s.common_errors;
+              if (s.available_stations) metadata.available_stations = s.available_stations;
+              if (s.scenario_cards) metadata.scenario_cards = s.scenario_cards;
+              if (s.available_scenarios) metadata.available_scenarios = s.available_scenarios;
+
+              return {
+                template_id: templateId,
+                sort_order: idx + 1,
+                station_type: s.station_type,
+                station_name: s.station_name || null,
+                skills: s.skills && s.skills.length > 0 ? s.skills : null,
+                scenario_title: s.scenario_title || null,
+                difficulty: s.difficulty || null,
+                notes: s.format_notes || s.description || null,
+                metadata: Object.keys(metadata).length > 0 ? metadata : {},
+              };
+            });
 
             const { error: stErr } = await supabase
               .from('lab_template_stations')

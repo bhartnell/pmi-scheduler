@@ -1,0 +1,1430 @@
+{
+  "program": "paramedic",
+  "semester": 3,
+  "templates": [
+    {
+      "week_number": 1,
+      "day_number": 1,
+      "title": "S3 Week 1 - No Lab (Semester Orientation)",
+      "category": "skills_lab",
+      "instructor_count": 0,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": false,
+      "review_notes": null,
+      "stations": []
+    },
+    {
+      "week_number": 2,
+      "day_number": 1,
+      "title": "S3 Week 2 - Baseline & Team Foundations",
+      "category": "skills_lab",
+      "instructor_count": 2,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": false,
+      "review_notes": null,
+      "minicode_phase": "walk_through",
+      "session_duration_minutes": 90,
+      "stations": [
+        {
+          "station_id": "ekg-warmup",
+          "station_name": "EKG Warm-Up: Baseline Rhythm ID Assessment",
+          "station_type": "warmup",
+          "duration_minutes": 10,
+          "time_block": "0:00-0:10",
+          "description": "Baseline rhythm ID quiz — timed, scored, all 20 core rhythms. This establishes the per-rhythm starting point for every student. Score per-rhythm: Correct / Partial / Missed.",
+          "equipment": [
+            "Printed rhythm strips (all 20 core rhythms) or monitor display",
+            "Timer",
+            "Scoring sheet or webapp"
+          ],
+          "instructor_required": true,
+          "tracking": {
+            "type": "per_rhythm",
+            "log_as": "baseline-ekg-assessment",
+            "rhythms_assessed": [
+              "Normal Sinus Rhythm",
+              "Sinus Bradycardia",
+              "Sinus Tachycardia",
+              "Atrial Fibrillation (Controlled)",
+              "Atrial Fibrillation (RVR)",
+              "Atrial Flutter",
+              "SVT",
+              "VT (Monomorphic, With Pulse)",
+              "VT (Pulseless)",
+              "Ventricular Fibrillation",
+              "Torsades de Pointes",
+              "Asystole",
+              "PEA",
+              "1st Degree AV Block",
+              "2nd Degree Type I (Wenckebach)",
+              "2nd Degree Type II",
+              "3rd Degree (Complete) Heart Block",
+              "Junctional Rhythm",
+              "Idioventricular Rhythm",
+              "Agonal Rhythm"
+            ]
+          }
+        },
+        {
+          "station_id": "team-role-review",
+          "station_name": "Team Role Review + Assignment",
+          "station_type": "briefing",
+          "duration_minutes": 5,
+          "time_block": "0:10-0:15",
+          "description": "Review team roles for the semester: Team Lead, Medication Tech, Monitor Tech, Airway Tech. Assign groups. Set expectations for the minicode walk-through format.",
+          "equipment": [],
+          "instructor_required": true,
+          "tracking": null
+        },
+        {
+          "station_id": "acls-rhythm-leadership",
+          "station_name": "ACLS Rhythm Leadership Drill (Minicode — Walk-Through Phase)",
+          "station_type": "skill_drill",
+          "duration_minutes": 65,
+          "time_block": "0:15-1:20",
+          "description": "Team-based ACLS rhythm scenarios. Walk-Through phase: student verbalizes every decision before acting. Instructor actively coaches — prompts with questions, corrects errors immediately. No time pressure. Run 2 rhythm cases per Team Lead, rotate every 8-10 min. Rhythm cases: SVT (stable/unstable), symptomatic bradycardia, VF/VT arrest, Torsades.",
+          "equipment": [
+            "Cardiac monitor/defibrillator with rhythm generator or pre-programmed strips",
+            "IV/IO training equipment with med syringes or mock drug kit",
+            "Airway adjuncts (BVM, OPA/NPA)",
+            "Timer"
+          ],
+          "roles": [
+            "team_lead",
+            "med_tech",
+            "monitor_tech"
+          ],
+          "instructor_required": true,
+          "instructor_tiering": {
+            "three_instructors": "Run 2 minicode stations simultaneously + 1 instructor managing rhythm strip review group",
+            "two_instructors": "1 runs minicode + 1 manages remaining students on rhythm strip review",
+            "one_instructor": "Run minicode with full group observing; structured debrief after each Team Lead rotation"
+          },
+          "tracking": {
+            "type": "scenario_participation",
+            "log_fields": [
+              "student_id",
+              "role",
+              "date",
+              "minicode_phase",
+              "instructor_notes"
+            ]
+          },
+          "stress_layers": [],
+          "common_errors": [
+            "Delayed rhythm recognition",
+            "Wrong drug/dose sequence",
+            "Failing to confirm rhythm before intervention",
+            "Poor delegation"
+          ]
+        },
+        {
+          "station_id": "debrief",
+          "station_name": "Debrief & Webapp Logging",
+          "station_type": "debrief",
+          "duration_minutes": 10,
+          "time_block": "1:20-1:30",
+          "description": "Key takeaways from the session. Log baseline EKG scores and minicode participation in webapp. Preview Week 3.",
+          "equipment": [],
+          "instructor_required": true,
+          "tracking": null
+        }
+      ]
+    },
+    {
+      "week_number": 3,
+      "day_number": 1,
+      "title": "S3 Week 3 - Dynamic Cardiology I",
+      "category": "skills_lab",
+      "instructor_count": 3,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": false,
+      "review_notes": null,
+      "minicode_phase": "walk_through",
+      "session_duration_minutes": 90,
+      "stations": [
+        {
+          "station_id": "ekg-warmup",
+          "station_name": "EKG Warm-Up: Rhythm Strip Rapid-Fire",
+          "station_type": "warmup",
+          "duration_minutes": 10,
+          "time_block": "0:00-0:10",
+          "description": "5 rhythm strips, timed recognition drill. Recognition only — student names the rhythm. Score per strip.",
+          "equipment": [
+            "Printed rhythm strips (5 selected)",
+            "Timer"
+          ],
+          "instructor_required": true,
+          "tracking": {
+            "type": "ekg_warmup_score",
+            "max_score": 5
+          }
+        },
+        {
+          "station_id": "briefing",
+          "station_name": "Briefing & Station Assignment",
+          "station_type": "briefing",
+          "duration_minutes": 5,
+          "time_block": "0:10-0:15",
+          "description": "Review objectives: individual drill card stations today. Assign groups to stations. Instructors select stations from available pool.",
+          "equipment": [],
+          "instructor_required": true,
+          "tracking": null
+        },
+        {
+          "station_id": "drill-card-rotation",
+          "station_name": "Drill Card Stations — Set A (Instructor Selects from Pool)",
+          "station_type": "skill_drill",
+          "duration_minutes": 65,
+          "time_block": "0:15-1:20",
+          "description": "Individual drill card stations. Instructors select from available station pool based on staffing and student completion needs. Students rotate through stations. Each station 8-10 min per student.",
+          "equipment": [
+            "Station-specific equipment per selected drill cards",
+            "Webapp for completion logging"
+          ],
+          "available_stations": [
+            {
+              "station_id": "decision-tree-hot-seat",
+              "station_name": "Decision Tree Hot Seat",
+              "category": "clinical-reasoning",
+              "duration_per_student_minutes": 8,
+              "description": "Rapid decision-making: student in hot seat receives case vignette, 30-60 sec to announce impression, interventions, next steps. 14 case bank available.",
+              "equipment": [
+                "Chairs",
+                "Case cards or projector",
+                "Timer"
+              ]
+            },
+            {
+              "station_id": "cognitive-load-skill",
+              "station_name": "Cognitive Load Skill Drill",
+              "category": "psychomotor-under-stress",
+              "duration_per_student_minutes": 8,
+              "description": "Student performs psychomotor skill (IV/IO, airway, or med draw) while answering clinical reasoning questions. Must answer while continuing skill.",
+              "equipment": [
+                "Skill-specific equipment (rotate weekly)",
+                "Question bank",
+                "Timer"
+              ]
+            },
+            {
+              "station_id": "communication-delegation",
+              "station_name": "Communication & Delegation Drill",
+              "category": "team-leading",
+              "duration_per_student_minutes": 8,
+              "description": "Team Lead assigns tasks, directs interventions, gives radio report. 7-8 min scenarios with crew members.",
+              "equipment": [
+                "Manikin or role player",
+                "2-3 student crew",
+                "Radio script",
+                "Basic equipment"
+              ]
+            },
+            {
+              "station_id": "limited-resource-drill",
+              "station_name": "Limited Resource / Stress Tolerance Drill",
+              "category": "adaptability",
+              "duration_per_student_minutes": 7,
+              "description": "Manage patient with deliberately limited equipment. Instructor announces resource restrictions.",
+              "equipment": [
+                "Manikin or role player",
+                "Incomplete equipment setup",
+                "Resource restriction cards"
+              ]
+            },
+            {
+              "station_id": "dynamic-cardiology",
+              "station_name": "Dynamic Cardiology — Rhythm Strip Assessment",
+              "category": "cardiology",
+              "duration_per_student_minutes": 10,
+              "description": "Webapp-integrated rhythm strip assessment. Standard set (8-10 rhythms). Instructor grades per-rhythm.",
+              "equipment": [
+                "Rhythm strips or monitor",
+                "Webapp on instructor device"
+              ]
+            }
+          ],
+          "instructor_required": true,
+          "instructor_tiering": {
+            "three_instructors": "3 stations simultaneously; students rotate every 8-10 min. Remaining students on self-directed rhythm strip packet.",
+            "two_instructors": "2 stations + 1 self-directed rhythm packet or protocol case cards. Rotate groups.",
+            "one_instructor": "1 station at a time; remaining students work rhythm strips or protocol review independently."
+          },
+          "tracking": {
+            "type": "station_completion",
+            "log_fields": [
+              "student_id",
+              "station_id",
+              "date",
+              "result",
+              "logged_by",
+              "notes"
+            ]
+          }
+        },
+        {
+          "station_id": "debrief",
+          "station_name": "Debrief & Webapp Logging",
+          "station_type": "debrief",
+          "duration_minutes": 10,
+          "time_block": "1:20-1:30",
+          "description": "Key takeaways. Log all station completions in webapp. Preview Week 4.",
+          "equipment": [],
+          "instructor_required": true,
+          "tracking": null
+        }
+      ]
+    },
+    {
+      "week_number": 4,
+      "day_number": 1,
+      "title": "S3 Week 4 - Team Leading + Minicode",
+      "category": "skills_lab",
+      "instructor_count": 2,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": false,
+      "review_notes": null,
+      "minicode_phase": "walk_through",
+      "session_duration_minutes": 90,
+      "stations": [
+        {
+          "station_id": "ekg-warmup",
+          "station_name": "EKG Warm-Up: Recognition Drill",
+          "station_type": "warmup",
+          "duration_minutes": 10,
+          "time_block": "0:00-0:10",
+          "description": "5 rhythm strips, 2 minutes each. Recognition focus — name the rhythm. Score per strip.",
+          "equipment": [
+            "Printed rhythm strips (5 selected)",
+            "Timer"
+          ],
+          "instructor_required": true,
+          "tracking": {
+            "type": "ekg_warmup_score",
+            "max_score": 5
+          }
+        },
+        {
+          "station_id": "briefing",
+          "station_name": "Briefing & Group Assignment",
+          "station_type": "briefing",
+          "duration_minutes": 5,
+          "time_block": "0:10-0:15",
+          "description": "Today: team lead scenarios with cognitive stressors + minicode (walk-through). Assign groups and initial Team Leads.",
+          "equipment": [],
+          "instructor_required": true,
+          "tracking": null
+        },
+        {
+          "station_id": "team-lead-scenarios",
+          "station_name": "Team Lead Scenarios + Minicode (Walk-Through)",
+          "station_type": "scenario",
+          "duration_minutes": 65,
+          "time_block": "0:15-1:20",
+          "description": "Team lead scenarios with cognitive stressors (questioning, interruptions). Minicode in Walk-Through phase: student verbalizes every decision before acting. Rotate Team Lead each scenario. Run 3-4 scenarios. Scenarios: CHF exacerbation, hypoglycemia, MVC trauma. Add minicode rhythm case between scenarios.",
+          "equipment": [
+            "Manikin or role player",
+            "Cardiac monitor/defibrillator",
+            "IV/IO kit, drug kit, airway equipment",
+            "Timer"
+          ],
+          "roles": [
+            "team_lead",
+            "med_tech",
+            "monitor_tech",
+            "airway_tech",
+            "observer"
+          ],
+          "instructor_required": true,
+          "instructor_tiering": {
+            "three_instructors": "1 runs scenario, 1 acts as FTO/evaluator, 1 manages rhythm warm-up group for non-active students",
+            "two_instructors": "1 runs scenario + evaluates, 1 manages remaining students on structured activity",
+            "one_instructor": "Run scenario with full group observing; structured debrief after each rotation. Observers have protocol case cards."
+          },
+          "tracking": {
+            "type": "scenario_participation",
+            "log_fields": [
+              "student_id",
+              "role",
+              "date",
+              "scenario_name",
+              "minicode_phase",
+              "instructor_notes"
+            ]
+          },
+          "stress_layers": [
+            "Questioning during assessment",
+            "Interruptions from bystander",
+            "Equipment malfunction"
+          ],
+          "common_errors": [
+            "Vague orders",
+            "Trying to do everything themselves",
+            "Not correcting partner mistakes",
+            "Forgetting radio communication"
+          ]
+        },
+        {
+          "station_id": "debrief",
+          "station_name": "Debrief & Webapp Logging",
+          "station_type": "debrief",
+          "duration_minutes": 10,
+          "time_block": "1:20-1:30",
+          "description": "Key takeaways on communication and team leading. Log scenario participation and roles. Preview Week 5.",
+          "equipment": [],
+          "instructor_required": true,
+          "tracking": null
+        }
+      ]
+    },
+    {
+      "week_number": 5,
+      "day_number": 1,
+      "title": "S3 Week 5 - Dynamic Cardiology II",
+      "category": "skills_lab",
+      "instructor_count": 3,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": false,
+      "review_notes": null,
+      "minicode_phase": "pressured",
+      "session_duration_minutes": 90,
+      "stations": [
+        {
+          "station_id": "ekg-warmup",
+          "station_name": "EKG Warm-Up: Megacode Decision-Point Review",
+          "station_type": "warmup",
+          "duration_minutes": 10,
+          "time_block": "0:00-0:10",
+          "description": "5 rhythms — student must ID rhythm AND verbalize the treatment plan before moving on. Recognition + treatment phase begins.",
+          "equipment": [
+            "Printed rhythm strips (5 selected)",
+            "Timer"
+          ],
+          "instructor_required": true,
+          "tracking": {
+            "type": "ekg_warmup_score",
+            "max_score": 5
+          }
+        },
+        {
+          "station_id": "briefing",
+          "station_name": "Briefing & Station Assignment",
+          "station_type": "briefing",
+          "duration_minutes": 5,
+          "time_block": "0:10-0:15",
+          "description": "Drill card stations Set B + ACLS algorithm walkthrough. Minicode now enters Pressured phase — inform students. Assign groups.",
+          "equipment": [],
+          "instructor_required": true,
+          "tracking": null
+        },
+        {
+          "station_id": "drill-card-rotation",
+          "station_name": "Drill Card Stations — Set B + ACLS Walkthrough",
+          "station_type": "skill_drill",
+          "duration_minutes": 65,
+          "time_block": "0:15-1:20",
+          "description": "Instructors select from remaining station pool. Focus on stations students haven't completed yet. Include static cardiology (12-lead) if instructor available. ACLS algorithm walkthrough can run as a group station.",
+          "equipment": [
+            "Station-specific equipment",
+            "12-lead ECG prints for static cardiology",
+            "ACLS algorithm reference cards",
+            "Webapp"
+          ],
+          "available_stations": [
+            {
+              "station_id": "static-cardiology",
+              "station_name": "Static Cardiology — 12-Lead Interpretation",
+              "category": "cardiology",
+              "duration_per_student_minutes": 10
+            },
+            {
+              "station_id": "dynamic-cardiology",
+              "station_name": "Dynamic Cardiology — Rhythm Strip Assessment",
+              "category": "cardiology",
+              "duration_per_student_minutes": 10
+            },
+            {
+              "station_id": "decision-tree-hot-seat",
+              "station_name": "Decision Tree Hot Seat",
+              "category": "clinical-reasoning",
+              "duration_per_student_minutes": 8
+            },
+            {
+              "station_id": "limited-resource-drill",
+              "station_name": "Limited Resource / Stress Tolerance Drill",
+              "category": "adaptability",
+              "duration_per_student_minutes": 7
+            },
+            {
+              "station_id": "cognitive-load-skill",
+              "station_name": "Cognitive Load Skill Drill",
+              "category": "psychomotor-under-stress",
+              "duration_per_student_minutes": 8
+            }
+          ],
+          "instructor_required": true,
+          "instructor_tiering": {
+            "three_instructors": "3 stations simultaneously. Prioritize stations with lowest completion rates.",
+            "two_instructors": "2 stations + self-directed rhythm/protocol review.",
+            "one_instructor": "1 station at a time; remaining students work independently."
+          },
+          "tracking": {
+            "type": "station_completion",
+            "log_fields": [
+              "student_id",
+              "station_id",
+              "date",
+              "result",
+              "logged_by",
+              "notes"
+            ]
+          }
+        },
+        {
+          "station_id": "debrief",
+          "station_name": "Debrief & Webapp Logging",
+          "station_type": "debrief",
+          "duration_minutes": 10,
+          "time_block": "1:20-1:30",
+          "description": "Log completions. Review mid-point station completion status. Preview Week 6 trauma focus.",
+          "equipment": [],
+          "instructor_required": true,
+          "tracking": null
+        }
+      ]
+    },
+    {
+      "week_number": 6,
+      "day_number": 1,
+      "title": "S3 Week 6 - Trauma + Hemorrhage Management",
+      "category": "skills_lab",
+      "instructor_count": 2,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": false,
+      "review_notes": null,
+      "minicode_phase": "pressured",
+      "session_duration_minutes": 90,
+      "stations": [
+        {
+          "station_id": "ekg-warmup",
+          "station_name": "EKG Warm-Up: Rhythm ID During Trauma",
+          "station_type": "warmup",
+          "duration_minutes": 10,
+          "time_block": "0:00-0:10",
+          "description": "5 rhythms — student IDs rhythm AND states treatment. Context: 'Your trauma patient is on the monitor — what do you see and what do you do?'",
+          "equipment": [
+            "Printed rhythm strips",
+            "Timer"
+          ],
+          "instructor_required": true,
+          "tracking": {
+            "type": "ekg_warmup_score",
+            "max_score": 5
+          }
+        },
+        {
+          "station_id": "briefing",
+          "station_name": "Briefing & Station Assignment",
+          "station_type": "briefing",
+          "duration_minutes": 5,
+          "time_block": "0:10-0:15",
+          "description": "Today: junctional wound packing + hemorrhagic shock scenario. Assign groups.",
+          "equipment": [],
+          "instructor_required": true,
+          "tracking": null
+        },
+        {
+          "station_id": "trauma-hemorrhage",
+          "station_name": "Trauma Hemorrhage Management Station",
+          "station_type": "skill_drill",
+          "duration_minutes": 35,
+          "time_block": "0:15-0:50",
+          "description": "Individual junctional wound packing drill. Student receives trauma scenario card, identifies junctional hemorrhage, packs wound with hemostatic gauze, applies pressure dressing. Concurrent hemorrhagic shock management. 8-10 min per student.",
+          "equipment": [
+            "Wound packing trainer (junctional wound model)",
+            "Hemostatic gauze (training rolls)",
+            "Tourniquet (CAT or SOF-T)",
+            "Pressure dressing / Israeli bandage",
+            "IV/IO equipment",
+            "Moulage supplies",
+            "Timer"
+          ],
+          "scenario_cards": [
+            {
+              "card_id": "trauma-01",
+              "mechanism": "Stabbing, 28M",
+              "wound": "Left axilla",
+              "vitals": "HR 128, BP 84/56, RR 26, SpO2 94%, GCS 14"
+            },
+            {
+              "card_id": "trauma-02",
+              "mechanism": "Industrial accident, 42M",
+              "wound": "Right inguinal/groin",
+              "vitals": "HR 140, BP 72/40, RR 30, SpO2 90%, GCS 12"
+            },
+            {
+              "card_id": "trauma-03",
+              "mechanism": "GSW, 35F",
+              "wound": "Left neck (Zone II)",
+              "vitals": "HR 118, BP 90/62, RR 24, SpO2 96%, GCS 15"
+            }
+          ],
+          "instructor_required": true,
+          "tracking": {
+            "type": "station_completion",
+            "log_fields": [
+              "student_id",
+              "station_id",
+              "date",
+              "result",
+              "logged_by",
+              "notes"
+            ]
+          },
+          "common_errors": [
+            "Laying gauze on top instead of packing",
+            "Attempting tourniquet on junctional wound",
+            "Releasing pressure too early",
+            "Tunnel vision on wound ignoring shock",
+            "Delayed transport decision"
+          ]
+        },
+        {
+          "station_id": "trauma-scenario",
+          "station_name": "Hemorrhagic Shock Scenario (Team-Based)",
+          "station_type": "scenario",
+          "duration_minutes": 30,
+          "time_block": "0:50-1:20",
+          "description": "Full team scenario: trauma patient with hemorrhagic shock. Team Lead runs the call. Pressured minicode phase applies — time constraints and interruptions active. Rotate Team Lead between scenarios.",
+          "equipment": [
+            "Manikin with moulage",
+            "Full trauma kit",
+            "Monitor",
+            "Timer"
+          ],
+          "roles": [
+            "team_lead",
+            "med_tech",
+            "monitor_tech",
+            "airway_tech",
+            "observer"
+          ],
+          "instructor_required": true,
+          "tracking": {
+            "type": "scenario_participation",
+            "log_fields": [
+              "student_id",
+              "role",
+              "date",
+              "scenario_name"
+            ]
+          }
+        },
+        {
+          "station_id": "debrief",
+          "station_name": "Debrief & Webapp Logging",
+          "station_type": "debrief",
+          "duration_minutes": 10,
+          "time_block": "1:20-1:30",
+          "description": "Key takeaways on hemorrhage control and shock management. Log completions and scenario participation. Preview Week 7 MCI drill.",
+          "equipment": [],
+          "instructor_required": true,
+          "tracking": null
+        }
+      ]
+    },
+    {
+      "week_number": 7,
+      "day_number": 1,
+      "title": "S3 Week 7 - MCI Drill",
+      "category": "skills_lab",
+      "instructor_count": 3,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": true,
+      "review_notes": "Requires volunteer patient coordination at least 2 weeks prior. Contingency: if volunteers fall through, repurpose as team lead scenario block. Coordinate with ALS Operations course schedule.",
+      "minicode_phase": "pressured",
+      "session_duration_minutes": 90,
+      "stations": [
+        {
+          "station_id": "mci-drill",
+          "station_name": "Multi-Casualty Incident Exercise",
+          "station_type": "special_event",
+          "duration_minutes": 90,
+          "time_block": "0:00-1:30",
+          "description": "Full MCI exercise with volunteer patients. Students rotate through incident commander and treatment roles. Include at least one cardiac arrest patient within the MCI for rhythm recognition integration. Debrief focuses on triage decisions, communication, and resource allocation.",
+          "equipment": [
+            "Volunteer patients with moulage and scenario cards",
+            "Triage tags",
+            "Full field equipment for multiple patient contacts",
+            "Cardiac monitor for arrest patient"
+          ],
+          "roles": [
+            "team_lead",
+            "med_tech",
+            "monitor_tech",
+            "airway_tech"
+          ],
+          "instructor_required": true,
+          "tracking": {
+            "type": "participation",
+            "log_fields": [
+              "student_id",
+              "role",
+              "date"
+            ]
+          }
+        }
+      ],
+      "contingency": {
+        "title": "S3 Week 7 - Team Lead Scenario Block (MCI Contingency)",
+        "description": "If MCI volunteers are unavailable, run team lead scenarios with Pressured phase minicode.",
+        "stations": [
+          {
+            "station_id": "ekg-warmup",
+            "station_name": "EKG Warm-Up",
+            "station_type": "warmup",
+            "duration_minutes": 10,
+            "time_block": "0:00-0:10"
+          },
+          {
+            "station_id": "team-lead-scenarios",
+            "station_name": "Team Lead Scenarios (Pressured Phase)",
+            "station_type": "scenario",
+            "duration_minutes": 70,
+            "time_block": "0:10-1:20"
+          },
+          {
+            "station_id": "debrief",
+            "station_name": "Debrief",
+            "station_type": "debrief",
+            "duration_minutes": 10,
+            "time_block": "1:20-1:30"
+          }
+        ]
+      }
+    },
+    {
+      "week_number": 8,
+      "day_number": 1,
+      "title": "S3 Week 8 - ACLS Integration + Minicode",
+      "category": "skills_lab",
+      "instructor_count": 3,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": false,
+      "review_notes": null,
+      "minicode_phase": "pressured",
+      "session_duration_minutes": 90,
+      "stations": [
+        {
+          "station_id": "ekg-warmup",
+          "station_name": "EKG Warm-Up: Integrated ACLS",
+          "station_type": "warmup",
+          "duration_minutes": 10,
+          "time_block": "0:00-0:10",
+          "description": "Entire session is ACLS-focused. Warm-up: 5 rhythms with full treatment pathway verbalization including drug doses.",
+          "equipment": [
+            "Rhythm strips",
+            "Timer"
+          ],
+          "instructor_required": true,
+          "tracking": {
+            "type": "ekg_warmup_score",
+            "max_score": 5
+          }
+        },
+        {
+          "station_id": "briefing",
+          "station_name": "Briefing",
+          "station_type": "briefing",
+          "duration_minutes": 5,
+          "time_block": "0:10-0:15",
+          "description": "Today: full megacode practice + Pressured phase minicode. Time pressure and interruptions active. Assign rotation order.",
+          "equipment": [],
+          "instructor_required": true,
+          "tracking": null
+        },
+        {
+          "station_id": "megacode-minicode",
+          "station_name": "Full Megacode Practice + Minicode (Pressured Phase)",
+          "station_type": "skill_drill",
+          "duration_minutes": 65,
+          "time_block": "0:15-1:20",
+          "description": "Individual megacode rotations. Each student runs at least one complete megacode as Team Lead. Pressured phase: time constraints, interruptions (bystander questions, equipment issues), questioning during task. Instructor intervenes only on critical safety errors.",
+          "equipment": [
+            "Cardiac monitor/defibrillator",
+            "IV/IO training equipment",
+            "Mock drug kit (epi, amiodarone, atropine, adenosine, mag sulfate)",
+            "Airway equipment",
+            "Timer"
+          ],
+          "roles": [
+            "team_lead",
+            "med_tech",
+            "monitor_tech"
+          ],
+          "instructor_required": true,
+          "instructor_tiering": {
+            "three_instructors": "2 megacode stations + 1 rhythm/pharmacology review station",
+            "two_instructors": "1 megacode station + 1 algorithm walkthrough/rhythm review station",
+            "one_instructor": "1 megacode at a time; group observes and debriefs between rotations"
+          },
+          "tracking": {
+            "type": "scenario_participation",
+            "log_fields": [
+              "student_id",
+              "role",
+              "date",
+              "minicode_phase",
+              "instructor_notes"
+            ]
+          },
+          "stress_layers": [
+            "Time pressure",
+            "Bystander interruptions",
+            "Equipment malfunction",
+            "Questioning during task",
+            "Rhythm change mid-scenario"
+          ]
+        },
+        {
+          "station_id": "debrief",
+          "station_name": "Debrief & Mid-Semester Check",
+          "station_type": "debrief",
+          "duration_minutes": 10,
+          "time_block": "1:20-1:30",
+          "description": "Debrief megacode performance. Review mid-semester completion status from webapp. Identify students with gaps. Determine Week 9 flex content based on data. Log completions.",
+          "equipment": [],
+          "instructor_required": true,
+          "tracking": null
+        }
+      ]
+    },
+    {
+      "week_number": 9,
+      "day_number": 1,
+      "title": "S3 Week 9 - Flex / Clinical Remediation",
+      "category": "skills_lab",
+      "instructor_count": 2,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": true,
+      "review_notes": "Content determined by mid-semester data — FTO feedback, webapp completion gaps, instructor observations. Decision made by end of Week 7. This is intentionally open.",
+      "minicode_phase": "full_lead",
+      "session_duration_minutes": 90,
+      "stations": [
+        {
+          "station_id": "ekg-warmup",
+          "station_name": "EKG Warm-Up: Targeted Rhythms",
+          "station_type": "warmup",
+          "duration_minutes": 10,
+          "time_block": "0:00-0:10",
+          "description": "5 rhythms — focus on specific rhythms students are missing on internship per FTO feedback data.",
+          "equipment": [
+            "Rhythm strips (targeted selection)",
+            "Timer"
+          ],
+          "instructor_required": true,
+          "tracking": {
+            "type": "ekg_warmup_score",
+            "max_score": 5
+          }
+        },
+        {
+          "station_id": "flex-content",
+          "station_name": "Flex Content — Determined by Data",
+          "station_type": "flex",
+          "duration_minutes": 70,
+          "time_block": "0:10-1:20",
+          "description": "Potential uses: targeted skill remediation based on FTO feedback, drill card makeup for incomplete students, focused rhythm review if EKG gaps persist, protocol review for identified weak areas, additional minicode practice if progression needs more time at Pressured phase.",
+          "equipment": [
+            "Determined by selected content"
+          ],
+          "instructor_required": true,
+          "tracking": {
+            "type": "station_completion",
+            "log_fields": [
+              "student_id",
+              "station_id",
+              "date",
+              "result",
+              "logged_by",
+              "notes"
+            ],
+            "note": "Log whatever is completed during flex week"
+          }
+        },
+        {
+          "station_id": "debrief",
+          "station_name": "Debrief & Logging",
+          "station_type": "debrief",
+          "duration_minutes": 10,
+          "time_block": "1:20-1:30",
+          "description": "Log all completions and remediation work. Preview Weeks 10-13 expectations.",
+          "equipment": [],
+          "instructor_required": true,
+          "tracking": null
+        }
+      ]
+    },
+    {
+      "week_number": 10,
+      "day_number": 1,
+      "title": "S3 Week 10 - Pediatrics + ACLS",
+      "category": "skills_lab",
+      "instructor_count": 3,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": false,
+      "review_notes": null,
+      "minicode_phase": "full_lead",
+      "session_duration_minutes": 90,
+      "stations": [
+        {
+          "station_id": "ekg-warmup",
+          "station_name": "EKG Warm-Up: Recognition + Treatment",
+          "station_type": "warmup",
+          "duration_minutes": 10,
+          "time_block": "0:00-0:10",
+          "description": "5 rhythm strips, timed. ID rhythm + state treatment. Focus on rhythms students have been weakest on.",
+          "equipment": [
+            "Printed rhythm strips (5 selected based on weak areas)",
+            "Timer"
+          ],
+          "instructor_required": true,
+          "tracking": {
+            "type": "ekg_warmup_score",
+            "max_score": 5
+          }
+        },
+        {
+          "station_id": "briefing",
+          "station_name": "Briefing",
+          "station_type": "briefing",
+          "duration_minutes": 5,
+          "time_block": "0:10-0:15",
+          "description": "Today: pediatric medication accuracy + Full Lead minicode. Assign groups to stations.",
+          "equipment": [],
+          "instructor_required": true,
+          "tracking": null
+        },
+        {
+          "station_id": "pediatric-med-draw",
+          "station_name": "Pediatric Medication Draw (Broselow + 3-Way Stopcock)",
+          "station_type": "skill_drill",
+          "duration_minutes": 35,
+          "time_block": "0:15-0:50",
+          "description": "Individual station. Student receives pediatric scenario card, identifies Broselow color, calculates weight-based dose, draws medication, demonstrates 3-way stopcock technique, verbalizes dose confirmation. 8-12 min per student. Rotate through 2-3 cards.",
+          "equipment": [
+            "Broselow tape (current edition)",
+            "3-way stopcock assembly with IV tubing and flush syringe",
+            "Assorted syringes (1/3/5/10 mL)",
+            "Mock medication vials (epi 1:10000, atropine, amiodarone, D10, adenosine)",
+            "Pediatric scenario cards (6 available)",
+            "Drug dosing reference card (verification only)",
+            "Timer"
+          ],
+          "scenario_cards": [
+            {
+              "card_id": "peds-med-01",
+              "patient": "2yo, 12 kg, Yellow zone",
+              "medication": "Epi 1:10,000 IV — cardiac arrest",
+              "expected": "0.12 mg (1.2 mL)"
+            },
+            {
+              "card_id": "peds-med-02",
+              "patient": "5yo, 18 kg, White zone",
+              "medication": "Amiodarone IV — pulseless VT",
+              "expected": "90 mg (1.8 mL)"
+            },
+            {
+              "card_id": "peds-med-03",
+              "patient": "8mo, 8 kg, Pink zone",
+              "medication": "D10 IV — hypoglycemia",
+              "expected": "32 mL of D10"
+            },
+            {
+              "card_id": "peds-med-04",
+              "patient": "6yo, 20 kg, Blue zone",
+              "medication": "Atropine IV — symptomatic brady",
+              "expected": "0.4 mg (2 mL)"
+            },
+            {
+              "card_id": "peds-med-05",
+              "patient": "3yo, 14 kg, Yellow zone",
+              "medication": "Epi 1:10,000 IV — 2nd dose PEA",
+              "expected": "0.14 mg (1.4 mL)"
+            },
+            {
+              "card_id": "peds-med-06",
+              "patient": "10mo, 9 kg, Pink zone",
+              "medication": "Adenosine IV — SVT",
+              "expected": "0.9 mg (0.9 mL) rapid push"
+            }
+          ],
+          "instructor_required": true,
+          "tracking": {
+            "type": "station_completion",
+            "log_fields": [
+              "student_id",
+              "station_id",
+              "date",
+              "result",
+              "logged_by",
+              "notes"
+            ]
+          },
+          "common_errors": [
+            "Confusing mg vs mL",
+            "Wrong Broselow zone",
+            "Wrong concentration vial",
+            "Forgetting flush",
+            "Slow adenosine push",
+            "No verbal confirmation"
+          ]
+        },
+        {
+          "station_id": "acls-rhythm-leadership",
+          "station_name": "Minicode — Pediatric Cardiac Arrest (Full Lead Phase)",
+          "station_type": "scenario",
+          "duration_minutes": 30,
+          "time_block": "0:50-1:20",
+          "description": "Pediatric cardiac arrest minicode. Full Lead phase — Team Lead runs the code independently, no coaching. Instructor observes as FTO. Debrief after each rotation.",
+          "equipment": [
+            "Cardiac monitor/defibrillator",
+            "Pediatric drug kit",
+            "Airway equipment",
+            "BVM",
+            "Timer"
+          ],
+          "roles": [
+            "team_lead",
+            "med_tech",
+            "monitor_tech"
+          ],
+          "instructor_required": true,
+          "tracking": {
+            "type": "scenario_participation",
+            "log_fields": [
+              "student_id",
+              "role",
+              "date",
+              "minicode_phase",
+              "instructor_notes"
+            ]
+          }
+        },
+        {
+          "station_id": "debrief",
+          "station_name": "Debrief & Webapp Logging",
+          "station_type": "debrief",
+          "duration_minutes": 10,
+          "time_block": "1:20-1:30",
+          "description": "Key takeaways. Log Peds Med Draw completions and minicode participation. Preview Weeks 11-13 expectations.",
+          "equipment": [],
+          "instructor_required": true,
+          "tracking": null
+        }
+      ]
+    },
+    {
+      "week_number": 11,
+      "day_number": 1,
+      "title": "S3 Week 11 - Capstone Scenario Block",
+      "category": "skills_lab",
+      "instructor_count": 2,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": true,
+      "review_notes": "Select 3-4 capstone scenarios based on cohort weak areas. Each should include a 12-lead component and oral defense questions.",
+      "minicode_phase": "full_lead",
+      "session_duration_minutes": 90,
+      "stations": [
+        {
+          "station_id": "ekg-warmup",
+          "station_name": "EKG Warm-Up: Integrated Application",
+          "station_type": "warmup",
+          "duration_minutes": 10,
+          "time_block": "0:00-0:10",
+          "description": "5 rhythms — full treatment pathway verbalization including drug names, doses, and decision points. Integrated application phase.",
+          "equipment": [
+            "Rhythm strips",
+            "Timer"
+          ],
+          "instructor_required": true,
+          "tracking": {
+            "type": "ekg_warmup_score",
+            "max_score": 5
+          }
+        },
+        {
+          "station_id": "briefing",
+          "station_name": "Briefing",
+          "station_type": "briefing",
+          "duration_minutes": 5,
+          "time_block": "0:10-0:15",
+          "description": "Capstone scenarios today. Full Lead: you run the call, instructor observes. Oral defense questions after each scenario. Assign first team.",
+          "equipment": [],
+          "instructor_required": true,
+          "tracking": null
+        },
+        {
+          "station_id": "capstone-scenarios",
+          "station_name": "Capstone Scenarios with Oral Defense",
+          "station_type": "scenario",
+          "duration_minutes": 60,
+          "time_block": "0:15-1:15",
+          "description": "3-4 complex scenarios, 12-15 min each (including debrief). Team Lead rotates each scenario. Full Lead phase — no coaching. 2-3 oral defense questions after each scenario directed at Team Lead. Every student gets at least 1 Team Lead rotation.",
+          "equipment": [
+            "Manikin or role player",
+            "Cardiac monitor",
+            "IV/IO kit, drug kit, airway equipment",
+            "12-lead ECG prints for scenario integration",
+            "Timer"
+          ],
+          "available_scenarios": [
+            {
+              "scenario_id": "scenario-stemi-cardiogenic",
+              "name": "Anterior STEMI with Cardiogenic Shock",
+              "category": "cardiac",
+              "difficulty": "complex"
+            },
+            {
+              "scenario_id": "scenario-sepsis-refractory",
+              "name": "Sepsis — Refractory Hypotension",
+              "category": "medical",
+              "difficulty": "complex"
+            },
+            {
+              "scenario_id": "scenario-peds-arrest-drowning",
+              "name": "Pediatric Cardiac Arrest — Drowning",
+              "category": "pediatric",
+              "difficulty": "capstone"
+            },
+            {
+              "scenario_id": "scenario-anaphylaxis-airway",
+              "name": "Anaphylaxis Progressing to Airway Loss",
+              "category": "medical",
+              "difficulty": "complex"
+            },
+            {
+              "scenario_id": "scenario-hemorrhagic-junctional",
+              "name": "Hemorrhagic Shock — Junctional Trauma",
+              "category": "trauma",
+              "difficulty": "complex"
+            },
+            {
+              "scenario_id": "scenario-vfib-rosc",
+              "name": "Witnessed VFib → ROSC → Post-ROSC",
+              "category": "cardiac",
+              "difficulty": "complex"
+            },
+            {
+              "scenario_id": "scenario-excited-delirium",
+              "name": "Excited Delirium → Cardiac Arrest",
+              "category": "behavioral",
+              "difficulty": "capstone"
+            },
+            {
+              "scenario_id": "scenario-multi-system-mvc",
+              "name": "Multi-System MVC",
+              "category": "trauma",
+              "difficulty": "capstone"
+            }
+          ],
+          "roles": [
+            "team_lead",
+            "med_tech",
+            "monitor_tech",
+            "airway_tech",
+            "observer"
+          ],
+          "instructor_required": true,
+          "instructor_tiering": {
+            "two_instructors": "1 runs scenario (presents case, controls deterioration), 1 acts as FTO/evaluator (observes Team Lead, documents, leads oral defense)",
+            "one_instructor": "Run scenarios sequentially with full group. Solo instructor runs and evaluates. Observers identify what went right and what they'd do differently."
+          },
+          "tracking": {
+            "type": "scenario_participation",
+            "log_fields": [
+              "student_id",
+              "role",
+              "date",
+              "scenario_id",
+              "minicode_phase",
+              "instructor_notes"
+            ]
+          }
+        },
+        {
+          "station_id": "debrief",
+          "station_name": "Group Debrief & Logging",
+          "station_type": "debrief",
+          "duration_minutes": 15,
+          "time_block": "1:15-1:30",
+          "description": "Themes from capstone scenarios. Common errors across all runs. Preview: Weeks 12-13 are 4-hour extended blocks — come ready to work. Log all scenario participation and roles.",
+          "equipment": [],
+          "instructor_required": true,
+          "tracking": null
+        }
+      ]
+    },
+    {
+      "week_number": 12,
+      "day_number": 1,
+      "title": "S3 Week 12 - Internship Prep I (Extended Block)",
+      "category": "skills_lab",
+      "instructor_count": 3,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": true,
+      "review_notes": "Pull webapp completion data: who still has gaps? Prepare repeat EKG assessment strips (same 20 core rhythms as Week 2 baseline). Select 4-6 capstone scenarios. Print protocol case card sets or prepare protocol books with chief complaint cards.",
+      "minicode_phase": "full_lead",
+      "session_duration_minutes": 240,
+      "stations": [
+        {
+          "station_id": "ekg-repeat-assessment",
+          "station_name": "Rhythm Speed Drill / Repeat EKG Assessment",
+          "station_type": "warmup",
+          "duration_minutes": 15,
+          "time_block": "0:00-0:15",
+          "description": "Full group: 20 rhythm strips, timed. This doubles as the repeat EKG assessment — use same strip set as Week 2 baseline. Score per-rhythm for comparison.",
+          "equipment": [
+            "Rhythm strips (all 20 core rhythms)",
+            "Timer",
+            "Webapp or scoring sheets"
+          ],
+          "instructor_required": true,
+          "tracking": {
+            "type": "per_rhythm",
+            "log_as": "repeat-ekg-assessment"
+          }
+        },
+        {
+          "station_id": "briefing",
+          "station_name": "Briefing & Group Split",
+          "station_type": "briefing",
+          "duration_minutes": 5,
+          "time_block": "0:15-0:20",
+          "description": "Assign Group A (~10 students) and Group B (~10 students). Explain rotation: Group A starts with scenarios, Group B starts with protocol review + skills. Groups swap at midpoint.",
+          "equipment": [],
+          "instructor_required": true,
+          "tracking": null
+        },
+        {
+          "station_id": "block-1-scenarios",
+          "station_name": "Block 1 — Capstone Scenarios (Group A) / Protocol + Skills (Group B)",
+          "station_type": "extended_block",
+          "duration_minutes": 85,
+          "time_block": "0:20-1:45",
+          "description": "GROUP A: Capstone scenarios with oral defense. 2-3 scenarios, rotating Team Lead. Full Lead — no coaching. || GROUP B: Protocol review case cards by category (Cardiac → Respiratory → Trauma → Medical → Pediatric → Toxicology) with self-check answer keys. Drill card makeup for incomplete students. Individual megacode rotations if instructor available.",
+          "equipment": [
+            "Full scenario setup for Group A",
+            "Protocol case cards or protocol books + chief complaint cards for Group B",
+            "Drill card equipment for makeup stations",
+            "Webapp for logging"
+          ],
+          "instructor_required": true,
+          "instructor_tiering": {
+            "three_instructors": "1-2 run scenarios, 1 facilitates protocol review + skill makeup for Group B",
+            "two_instructors": "1 runs scenario, 1 rotates between FTO role and protocol review oversight",
+            "one_instructor": "Run scenarios sequentially; Group B works protocol case cards with self-check answer keys independently"
+          },
+          "tracking": {
+            "type": "mixed",
+            "note": "Log scenario participation for Group A, station completions for Group B makeup, protocol categories reviewed"
+          }
+        },
+        {
+          "station_id": "break",
+          "station_name": "Break + Reset",
+          "station_type": "break",
+          "duration_minutes": 15,
+          "time_block": "1:45-2:00",
+          "description": "Full group break. Groups prepare to swap.",
+          "equipment": [],
+          "instructor_required": false,
+          "tracking": null
+        },
+        {
+          "station_id": "block-2-swap",
+          "station_name": "Block 2 — Groups Swap",
+          "station_type": "extended_block",
+          "duration_minutes": 90,
+          "time_block": "2:00-3:30",
+          "description": "GROUP B (now): Capstone scenarios — different scenarios if possible. || GROUP A (now): Protocol case cards (different category sets), megacode rotations, skill makeup. Every student gets scenario time AND protocol review time.",
+          "equipment": [
+            "Same as Block 1"
+          ],
+          "instructor_required": true,
+          "tracking": {
+            "type": "mixed",
+            "note": "Continue logging all completions and scenario participation"
+          }
+        },
+        {
+          "station_id": "debrief",
+          "station_name": "Debrief + SNHD Protocol Test Reminders",
+          "station_type": "debrief",
+          "duration_minutes": 30,
+          "time_block": "3:30-4:00",
+          "description": "Full group debrief. Common themes. SNHD protocol test reminders. Preview Week 13: last lab before OSCE. Log ALL completions.",
+          "equipment": [],
+          "instructor_required": true,
+          "tracking": null
+        }
+      ]
+    },
+    {
+      "week_number": 13,
+      "day_number": 1,
+      "title": "S3 Week 13 - Internship Prep II (Extended Block)",
+      "category": "skills_lab",
+      "instructor_count": 3,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": true,
+      "review_notes": "LAST LAB BEFORE OSCE. Pull all completion data. Compare Week 2 baseline EKG to Week 12 repeat. Identify students with remaining gaps. Prepare OSCE expectations brief.",
+      "minicode_phase": "full_lead",
+      "session_duration_minutes": 240,
+      "stations": [
+        {
+          "station_id": "rhythm-speed-drill",
+          "station_name": "Rhythm Recognition Speed Drill",
+          "station_type": "warmup",
+          "duration_minutes": 15,
+          "time_block": "0:00-0:15",
+          "description": "Full group: 15-20 strips, rapid fire. Goal: identify each rhythm in <10 seconds. Confidence builder, not formal assessment.",
+          "equipment": [
+            "Rhythm strips (15-20)",
+            "Timer"
+          ],
+          "instructor_required": true,
+          "tracking": null
+        },
+        {
+          "station_id": "briefing",
+          "station_name": "Briefing",
+          "station_type": "briefing",
+          "duration_minutes": 5,
+          "time_block": "0:15-0:20",
+          "description": "Last lab before OSCE. Set the tone. Assign groups A and B.",
+          "equipment": [],
+          "instructor_required": true,
+          "tracking": null
+        },
+        {
+          "station_id": "block-1-marathon",
+          "station_name": "Block 1 — Scenario Marathon (Group A) / Protocol + Final Makeup (Group B)",
+          "station_type": "extended_block",
+          "duration_minutes": 85,
+          "time_block": "0:20-1:45",
+          "description": "GROUP A: Back-to-back capstone scenarios with minimal reset time. Extended oral defense questioning — push deeper: 'What's your differential? Why not X? What would you tell the receiving physician?' Every student MUST get a Team Lead rotation today. || GROUP B: Focus on uncompleted protocol categories. Final drill card makeup. Students who scored poorly on repeat EKG work through weak rhythms with strips and answer keys.",
+          "equipment": [
+            "Full scenario setup",
+            "Protocol materials",
+            "Makeup station equipment",
+            "Webapp"
+          ],
+          "instructor_required": true,
+          "tracking": {
+            "type": "mixed",
+            "note": "Log everything — this is the final data capture before OSCE"
+          }
+        },
+        {
+          "station_id": "break",
+          "station_name": "Break + Reset",
+          "station_type": "break",
+          "duration_minutes": 15,
+          "time_block": "1:45-2:00",
+          "description": "Break. Groups swap.",
+          "equipment": [],
+          "instructor_required": false,
+          "tracking": null
+        },
+        {
+          "station_id": "block-2-swap",
+          "station_name": "Block 2 — Groups Swap",
+          "station_type": "extended_block",
+          "duration_minutes": 75,
+          "time_block": "2:00-3:15",
+          "description": "Groups swap. Fresh scenarios if available. Continue oral defense intensity. Push through remaining protocol and skill gaps. Students who have completed everything can pair up and quiz each other using Hot Seat format.",
+          "equipment": [
+            "Same as Block 1"
+          ],
+          "instructor_required": true,
+          "tracking": {
+            "type": "mixed",
+            "note": "Final completions logged"
+          }
+        },
+        {
+          "station_id": "osce-prep-brief",
+          "station_name": "OSCE Expectations Brief + Final Debrief",
+          "station_type": "debrief",
+          "duration_minutes": 45,
+          "time_block": "3:15-4:00",
+          "description": "FULL GROUP: What to expect at OSCE — single complex scenario + structured oral board with Medical Director(s). Evaluation areas: clinical reasoning, prioritization, intervention accuracy, communication, stress performance. How to prepare between now and Week 14: review protocols, practice rhythm ID, think through decisions out loud. Q&A. Address anxiety. Reinforce: if you've been doing the work in lab, you're prepared. END-OF-DAY DATA CHECK: verify all drill card completions, all students have had Team Lead rotation in Weeks 11-13, EKG repeat assessment logged, flag students with significant gaps for Medical Directors.",
+          "equipment": [
+            "OSCE format briefing notes (from OSCE planning chat)"
+          ],
+          "instructor_required": true,
+          "tracking": null
+        }
+      ]
+    },
+    {
+      "week_number": 14,
+      "day_number": 1,
+      "title": "S3 Week 14 - OSCE Review Board",
+      "category": "skills_lab",
+      "instructor_count": null,
+      "is_anchor": true,
+      "anchor_type": "osce",
+      "requires_review": true,
+      "review_notes": "Format and logistics determined by OSCE planning chat. Medical Director availability drives scheduling. Webapp completion data can be shared with Medical Directors as context for oral board questioning.",
+      "minicode_phase": "full_lead",
+      "session_duration_minutes": null,
+      "stations": [
+        {
+          "station_id": "osce",
+          "station_name": "OSCE — Single Complex Scenario + Structured Oral Board",
+          "station_type": "osce",
+          "duration_minutes": null,
+          "description": "Single complex medical scenario with psychomotor integration followed by structured post-scenario oral board. Evaluation domains: clinical reasoning, prioritization, intervention accuracy, communication clarity, stress performance. Observers: Medical Director(s), program leadership, instructors. Detailed plan from OSCE planning chat.",
+          "equipment": [
+            "Determined by OSCE planning chat"
+          ],
+          "roles": [
+            "team_lead"
+          ],
+          "instructor_required": true,
+          "tracking": {
+            "type": "osce_evaluation",
+            "note": "Grading rubric and evaluation tool from OSCE planning chat"
+          }
+        }
+      ]
+    },
+    {
+      "week_number": 15,
+      "day_number": 1,
+      "title": "S3 Week 15 - No Lab (Semester Close)",
+      "category": "skills_lab",
+      "instructor_count": 0,
+      "is_anchor": false,
+      "anchor_type": null,
+      "requires_review": false,
+      "review_notes": null,
+      "stations": []
+    }
+  ]
+}
