@@ -228,7 +228,7 @@ export async function POST(request: NextRequest) {
       const templateStations = (template as Record<string, unknown>).stations as Array<any> | undefined;
 
       if (templateStations && templateStations.length > 0) {
-        const stationsToInsert = templateStations.map((s: { sort_order?: number; station_type?: string; station_name?: string; scenario_id?: string }) => ({
+        const stationsToInsert = templateStations.map((s: { sort_order?: number; station_type?: string; station_name?: string; scenario_id?: string; notes?: string; metadata?: Record<string, unknown> }) => ({
           lab_day_id: labDay.id,
           station_number: s.sort_order || 1,
           station_type: s.station_type || 'scenario',
@@ -236,6 +236,8 @@ export async function POST(request: NextRequest) {
           custom_title: s.station_name || null,
           documentation_required: false,
           platinum_required: false,
+          station_notes: s.notes || null,
+          metadata: s.metadata && Object.keys(s.metadata).length > 0 ? s.metadata : {},
         }));
 
         const { error: stationsError } = await supabase

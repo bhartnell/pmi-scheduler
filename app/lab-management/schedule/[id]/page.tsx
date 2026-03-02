@@ -61,6 +61,8 @@ import { downloadICS, parseLocalDate } from '@/lib/ics-export';
 import { useToast } from '@/components/Toast';
 import { hasMinRole } from '@/lib/permissions';
 import HelpTooltip from '@/components/HelpTooltip';
+import TemplateGuideSection from '@/components/TemplateGuideSection';
+import type { StationMetadata } from '@/components/TemplateGuideSection';
 
 interface LabDay {
   id: string;
@@ -115,6 +117,7 @@ interface Station {
   location: string | null;
   documentation_required: boolean;
   platinum_required: boolean;
+  metadata?: StationMetadata;
 }
 
 interface Scenario {
@@ -2789,6 +2792,13 @@ export default function LabDayPage() {
                     </div>
                   )}
 
+                  {/* Template Guide (from applied template metadata) */}
+                  {station.metadata && Object.keys(station.metadata).length > 0 && (
+                    <div className="mb-3">
+                      <TemplateGuideSection metadata={station.metadata} />
+                    </div>
+                  )}
+
                   {/* Actions */}
                   <div className="flex gap-2 pt-3 border-t dark:border-gray-700 print:hidden">
                     <button
@@ -4419,6 +4429,11 @@ export default function LabDayPage() {
                     No instructor grading required.
                   </p>
                 </div>
+              )}
+
+              {/* Template Guide from applied template */}
+              {editingStation?.metadata && Object.keys(editingStation.metadata).length > 0 && (
+                <TemplateGuideSection metadata={editingStation.metadata} />
               )}
 
               {/* Skills Selection (for skills or skill_drill type) */}
