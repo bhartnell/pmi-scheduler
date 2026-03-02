@@ -25,11 +25,14 @@ import {
   RotateCcw,
   HelpCircle,
   Search,
+  LayoutGrid,
+  Check,
 } from 'lucide-react';
 import { canAccessAdmin, canAccessClinical, getRoleLabel, getRoleBadgeClasses } from '@/lib/permissions';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import NotificationBell from '@/components/NotificationBell';
 import CustomizeModal from '@/components/dashboard/CustomizeModal';
+import DraggableWidgetGrid from '@/components/dashboard/DraggableWidgetGrid';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { PageErrorBoundary } from '@/components/PageErrorBoundary';
 import {
@@ -48,6 +51,7 @@ import {
   CertExpiryWidget,
   AtRiskStudentsWidget,
   ROLE_DEFAULTS,
+  WIDGET_DEFINITIONS,
 } from '@/components/dashboard/widgets';
 import AnnouncementBanner from '@/components/dashboard/AnnouncementBanner';
 import ResizableWidget, { useWidgetSizes } from '@/components/dashboard/ResizableWidget';
@@ -71,6 +75,9 @@ export default function HomePage() {
   const [hasOnboarding, setHasOnboarding] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [resetting, setResetting] = useState(false);
+  // Edit mode state — local widget order until "Done" is clicked
+  const [editMode, setEditMode] = useState(false);
+  const [editWidgets, setEditWidgets] = useState<string[]>([]);
 
   // Sync layout to DB (fire-and-forget, called whenever prefs change)
   const syncLayoutToDB = useCallback(async (widgets: string[], quickLinks: string[]) => {
@@ -201,12 +208,38 @@ export default function HomePage() {
       }
       toast.success('Dashboard reset to default layout');
       setShowResetConfirm(false);
+      // Exit edit mode if active
+      setEditMode(false);
     } catch (error) {
       console.error('Error resetting to default:', error);
       toast.error('Failed to reset dashboard layout');
     }
     setResetting(false);
   };
+
+  // Enter edit mode: snapshot current widget order into editWidgets
+  const handleEnterEditMode = () => {
+    setEditWidgets(preferences?.dashboard_widgets ?? []);
+    setEditMode(true);
+  };
+
+  // Finish edit mode: persist the edited widget list, then exit
+  const handleDoneEditing = async () => {
+    const quickLinks = preferences?.quick_links ?? [];
+    await handleSavePreferences(editWidgets, quickLinks);
+    setEditMode(false);
+  };
+
+  // Cancel edit mode without saving
+  const handleCancelEditMode = () => {
+    setEditMode(false);
+    setEditWidgets([]);
+  };
+
+  // Compute widgets NOT currently displayed (available to add)
+  const allWidgetIds = Object.keys(WIDGET_DEFINITIONS);
+  const activeWidgets = editMode ? editWidgets : (preferences?.dashboard_widgets ?? []);
+  const availableWidgets = allWidgetIds.filter(id => !activeWidgets.includes(id));
 
   // Render a widget by ID, wrapped in ResizableWidget
   const renderWidget = (widgetId: string) => {
@@ -271,7 +304,7 @@ export default function HomePage() {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
         {/* Header Skeleton */}
         <header className="bg-white dark:bg-gray-800 shadow-sm">
-          <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" />
               <div className="space-y-2">
@@ -287,19 +320,19 @@ export default function HomePage() {
         </header>
 
         {/* Main Content Skeleton */}
-        <main className="max-w-6xl mx-auto px-4 py-12">
+        <main className="max-w-7xl mx-auto px-4 py-12">
           <div className="text-center mb-8">
             <div className="h-8 w-64 bg-gray-200 dark:bg-gray-700 rounded mx-auto mb-2 animate-pulse" />
             <div className="h-4 w-48 bg-gray-200 dark:bg-gray-700 rounded mx-auto animate-pulse" />
           </div>
 
           {/* Stats skeleton */}
-          <div className="mb-8 max-w-5xl mx-auto">
+          <div className="mb-8 max-w-7xl mx-auto">
             <SkeletonStats rows={4} />
           </div>
 
           {/* Card grid skeleton */}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 max-w-5xl mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 max-w-7xl mx-auto">
             <SkeletonCard rows={6} />
           </div>
         </main>
@@ -396,7 +429,7 @@ export default function HomePage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 shadow-sm print:hidden">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center" aria-hidden="true">
               <Stethoscope className="w-5 h-5 text-white" />
@@ -447,7 +480,7 @@ export default function HomePage() {
       </header>
 
       {/* Main Content */}
-      <main id="main-content" className="max-w-6xl mx-auto px-4 py-12">
+      <main id="main-content" className="max-w-7xl mx-auto px-4 py-12">
         <PageErrorBoundary>
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Welcome, {session.user?.name?.split(' ')[0] || 'User'}!</h1>
@@ -460,66 +493,112 @@ export default function HomePage() {
         </ErrorBoundary>
 
         {/* Customizable Dashboard Widgets - First thing instructors see */}
-        {preferences && preferences.dashboard_widgets.length > 0 && (
+        {preferences && (preferences.dashboard_widgets.length > 0 || editMode) && (
           <ErrorBoundary>
-          <div className="mb-10 max-w-5xl mx-auto">
+          <div className="mb-10 max-w-7xl mx-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-1">
                 Your Dashboard
-                <HelpTooltip text="Quick Stats shows counts of active students, upcoming labs, and open tasks. Widgets can be customized using the Customize button." />
+                {!editMode && (
+                  <HelpTooltip text="Quick Stats shows counts of active students, upcoming labs, and open tasks. Widgets can be customized using the Customize button." />
+                )}
               </h3>
               <div className="flex items-center gap-2 print:hidden">
-                {/* Reset to Default */}
-                {showResetConfirm ? (
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">Reset to default?</span>
+                {editMode ? (
+                  /* Edit mode toolbar */
+                  <>
+                    <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">
+                      Drag to reorder, X to remove
+                    </span>
                     <button
-                      onClick={handleResetToDefault}
-                      disabled={resetting}
-                      className="px-3 py-1.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
-                    >
-                      {resetting ? 'Resetting...' : 'Yes, Reset'}
-                    </button>
-                    <button
-                      onClick={() => setShowResetConfirm(false)}
-                      disabled={resetting}
-                      className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors"
+                      onClick={handleCancelEditMode}
+                      className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                     >
                       Cancel
                     </button>
-                  </div>
+                    <button
+                      onClick={handleDoneEditing}
+                      className="flex items-center gap-2 px-3 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+                    >
+                      <Check className="w-4 h-4" />
+                      Done
+                    </button>
+                  </>
                 ) : (
-                  <button
-                    onClick={() => setShowResetConfirm(true)}
-                    className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                    title="Reset dashboard to role default"
-                  >
-                    <RotateCcw className="w-4 h-4" />
-                    Reset
-                  </button>
-                )}
-                {/* Customize */}
-                {!showResetConfirm && (
-                  <button
-                    onClick={() => setShowCustomize(true)}
-                    className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                  >
-                    <Settings className="w-4 h-4" />
-                    Customize
-                  </button>
+                  /* Normal mode toolbar */
+                  <>
+                    {/* Reset to Default */}
+                    {showResetConfirm ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-600 dark:text-gray-400">Reset to default?</span>
+                        <button
+                          onClick={handleResetToDefault}
+                          disabled={resetting}
+                          className="px-3 py-1.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+                        >
+                          {resetting ? 'Resetting...' : 'Yes, Reset'}
+                        </button>
+                        <button
+                          onClick={() => setShowResetConfirm(false)}
+                          disabled={resetting}
+                          className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setShowResetConfirm(true)}
+                        className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                        title="Reset dashboard to role default"
+                      >
+                        <RotateCcw className="w-4 h-4" />
+                        Reset
+                      </button>
+                    )}
+                    {/* Edit Layout */}
+                    {!showResetConfirm && (
+                      <button
+                        onClick={handleEnterEditMode}
+                        className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                        title="Drag and drop to rearrange widgets"
+                      >
+                        <LayoutGrid className="w-4 h-4" />
+                        Edit Layout
+                      </button>
+                    )}
+                    {/* Customize (detailed modal) */}
+                    {!showResetConfirm && (
+                      <button
+                        onClick={() => setShowCustomize(true)}
+                        className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        <Settings className="w-4 h-4" />
+                        Customize
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {preferences.dashboard_widgets.map(widgetId => renderWidget(widgetId))}
-            </div>
+
+            {/* Widget grid — DraggableWidgetGrid handles both edit and normal modes */}
+            <DraggableWidgetGrid
+              widgets={activeWidgets}
+              editMode={editMode}
+              onReorder={setEditWidgets}
+              onRemove={(widgetId) => setEditWidgets(prev => prev.filter(id => id !== widgetId))}
+              onAdd={(widgetId) => setEditWidgets(prev => [...prev, widgetId])}
+              renderWidget={renderWidget}
+              availableWidgets={availableWidgets}
+            />
           </div>
           </ErrorBoundary>
         )}
 
         {/* Quick Action - Site Visit Check-In (for clinical users) */}
         {currentUser && canAccessClinical(currentUser.role) && (
-          <div className="mb-8 max-w-5xl mx-auto">
+          <div className="mb-8 max-w-7xl mx-auto">
             <Link
               href="/clinical/site-visits"
               className="block bg-gradient-to-r from-cyan-500 to-teal-500 dark:from-cyan-600 dark:to-teal-600 rounded-2xl shadow-lg hover:shadow-xl transition-all hover:scale-[1.02] p-6 group"
@@ -546,7 +625,7 @@ export default function HomePage() {
         {/* Main Navigation Cards */}
         <ErrorBoundary>
         <nav aria-label="Main navigation">
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 max-w-5xl mx-auto">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 max-w-7xl mx-auto">
           {/* Lab Management Card - Not for volunteer instructors */}
           {currentUser && currentUser.role !== 'volunteer_instructor' && (
             <Link

@@ -170,7 +170,7 @@ export default function LabManagementDashboard() {
         }
       />
 
-      <main id="main-content" className="max-w-6xl mx-auto px-4 py-6">
+      <main id="main-content" className="max-w-7xl mx-auto px-4 py-6">
         {/* Welcome Header */}
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
