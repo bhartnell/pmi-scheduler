@@ -23,6 +23,8 @@ import {
   Layers,
   CalendarCheck,
   Check,
+  Clock,
+  RotateCcw,
 } from 'lucide-react';
 import { canAccessAdmin, hasMinRole } from '@/lib/permissions';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -62,6 +64,9 @@ interface LabTemplate {
   program: string | null;
   semester: number;
   week_number: number;
+  day_number?: number;
+  category?: string;
+  instructor_count?: number;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -749,6 +754,112 @@ function ApplySection({ cohorts }: ApplySectionProps) {
 }
 
 // ---------------------------------------------------------------------------
+// Template Version History
+// ---------------------------------------------------------------------------
+
+interface TemplateVersion {
+  id: string;
+  version_number: number;
+  change_summary: string | null;
+  created_by: string;
+  created_at: string;
+  source_lab_day_id: string | null;
+}
+
+function TemplateVersionHistory({
+  templateId,
+  isAdmin,
+  onRestore,
+}: {
+  templateId: string;
+  isAdmin: boolean;
+  onRestore: () => void;
+}) {
+  const [versions, setVersions] = useState<TemplateVersion[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [restoring, setRestoring] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchVersions = async () => {
+      try {
+        const res = await fetch(`/api/admin/lab-templates/${templateId}/versions`);
+        if (res.ok) {
+          const data = await res.json();
+          setVersions(data.versions || []);
+        }
+      } catch {
+        // silently fail
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchVersions();
+  }, [templateId]);
+
+  const handleRestore = async (versionId: string) => {
+    if (!confirm('Restore this version? Current template state will be saved as a new version first.')) return;
+    setRestoring(versionId);
+    try {
+      const res = await fetch(`/api/admin/lab-templates/${templateId}/versions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ version_id: versionId }),
+      });
+      if (res.ok) {
+        onRestore();
+      }
+    } catch {
+      // error
+    } finally {
+      setRestoring(null);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="py-2 text-center text-sm text-gray-500">
+        <Loader2 className="w-4 h-4 animate-spin inline" />
+      </div>
+    );
+  }
+  if (versions.length === 0) {
+    return (
+      <p className="py-2 text-sm text-gray-500 dark:text-gray-400 text-center">No version history</p>
+    );
+  }
+
+  return (
+    <div className="space-y-1 max-h-48 overflow-y-auto">
+      {versions.map((v) => (
+        <div key={v.id} className="flex items-center gap-2 py-1.5 px-2 text-xs bg-gray-50 dark:bg-gray-700/50 rounded">
+          <span className="font-mono font-bold text-gray-600 dark:text-gray-300">v{v.version_number}</span>
+          <span className="flex-1 text-gray-600 dark:text-gray-400 truncate">
+            {v.change_summary || 'No description'}
+          </span>
+          <span className="text-gray-400 dark:text-gray-500 whitespace-nowrap">
+            {new Date(v.created_at).toLocaleDateString()}
+          </span>
+          {isAdmin && (
+            <button
+              onClick={() => handleRestore(v.id)}
+              disabled={restoring === v.id}
+              className="px-2 py-0.5 text-xs text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded transition-colors disabled:opacity-50"
+              title="Restore this version"
+            >
+              {restoring === v.id ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : (
+                <RotateCcw className="w-3 h-3" />
+              )}
+            </button>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Template Card
 // ---------------------------------------------------------------------------
 
@@ -757,9 +868,12 @@ interface TemplateCardProps {
   isAdmin: boolean;
   onEdit: (template: LabTemplate) => void;
   onDelete: (template: LabTemplate) => void;
+  expandedVersionHistory: string | null;
+  onToggleVersionHistory: (templateId: string) => void;
+  onRestoreVersion: () => void;
 }
 
-function TemplateCard({ template, isAdmin, onEdit, onDelete }: TemplateCardProps) {
+function TemplateCard({ template, isAdmin, onEdit, onDelete, expandedVersionHistory, onToggleVersionHistory, onRestoreVersion }: TemplateCardProps) {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
       {/* Card header */}
@@ -829,6 +943,31 @@ function TemplateCard({ template, isAdmin, onEdit, onDelete }: TemplateCardProps
           No stations defined
         </div>
       )}
+
+      {/* Version History Toggle */}
+      <div className="px-4 py-2 border-t border-gray-200 dark:border-gray-600">
+        <button
+          onClick={() => onToggleVersionHistory(template.id)}
+          className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+        >
+          <Clock className="w-3 h-3" />
+          Version History
+          {expandedVersionHistory === template.id ? (
+            <ChevronUp className="w-3 h-3" />
+          ) : (
+            <ChevronDown className="w-3 h-3" />
+          )}
+        </button>
+        {expandedVersionHistory === template.id && (
+          <div className="mt-2">
+            <TemplateVersionHistory
+              templateId={template.id}
+              isAdmin={isAdmin}
+              onRestore={onRestoreVersion}
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -861,6 +1000,9 @@ export default function LabTemplatesPage() {
   // Delete confirm
   const [deletingTemplate, setDeletingTemplate] = useState<LabTemplate | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Version history
+  const [expandedVersionHistory, setExpandedVersionHistory] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/');
@@ -1109,6 +1251,14 @@ export default function LabTemplatesPage() {
                       isAdmin={isAdmin}
                       onEdit={handleOpenEdit}
                       onDelete={handleDeleteClick}
+                      expandedVersionHistory={expandedVersionHistory}
+                      onToggleVersionHistory={(id) =>
+                        setExpandedVersionHistory(expandedVersionHistory === id ? null : id)
+                      }
+                      onRestoreVersion={() => {
+                        setExpandedVersionHistory(null);
+                        fetchTemplates();
+                      }}
                     />
                   ))}
                 </div>

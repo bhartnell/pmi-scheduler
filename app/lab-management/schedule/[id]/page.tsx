@@ -50,7 +50,8 @@ import {
   CheckCircle,
   XCircle,
   Shield,
-  DollarSign
+  DollarSign,
+  Layers
 } from 'lucide-react';
 import LabTimer from '@/components/LabTimer';
 import InlineTimerWidget from '@/components/InlineTimerWidget';
@@ -59,10 +60,11 @@ import AttendanceSection from '@/components/AttendanceSection';
 import LearningStyleDistribution from '@/components/LearningStyleDistribution';
 import { downloadICS, parseLocalDate } from '@/lib/ics-export';
 import { useToast } from '@/components/Toast';
-import { hasMinRole } from '@/lib/permissions';
+import { hasMinRole, canAccessAdmin } from '@/lib/permissions';
 import HelpTooltip from '@/components/HelpTooltip';
 import TemplateGuideSection from '@/components/TemplateGuideSection';
 import type { StationMetadata } from '@/components/TemplateGuideSection';
+import TemplateDiffModal from '@/components/TemplateDiffModal';
 
 interface LabDay {
   id: string;
@@ -86,6 +88,16 @@ interface LabDay {
     };
   };
   stations: Station[];
+  source_template_id?: string | null;
+  source_template?: {
+    id: string;
+    name: string;
+    program: string;
+    semester: number;
+    week_number: number;
+    day_number: number;
+    updated_at: string;
+  } | null;
 }
 
 interface Station {
@@ -312,6 +324,9 @@ export default function LabDayPage() {
     observer: ''
   });
   const [savingRoles, setSavingRoles] = useState(false);
+
+  // Template diff modal state
+  const [showDiffModal, setShowDiffModal] = useState(false);
 
   // Duplicate lab day modal state
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
@@ -2594,6 +2609,30 @@ export default function LabDayPage() {
           <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded-lg p-4 mb-6">
             <h3 className="font-medium text-yellow-800 dark:text-yellow-300 mb-1">Notes</h3>
             <p className="text-yellow-700 dark:text-yellow-400 text-sm">{labDay.notes}</p>
+          </div>
+        )}
+
+        {/* Source Template */}
+        {labDay.source_template && (
+          <div className="flex items-center gap-3 p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-200 dark:border-indigo-800 mb-6 print:hidden">
+            <Layers className="w-5 h-5 text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-indigo-900 dark:text-indigo-200">
+                Source Template: {labDay.source_template.name}
+              </p>
+              <p className="text-xs text-indigo-600 dark:text-indigo-400">
+                {labDay.source_template.program?.toUpperCase()} S{labDay.source_template.semester} &bull; Week {labDay.source_template.week_number} Day {labDay.source_template.day_number}
+              </p>
+            </div>
+            {userRole && canAccessAdmin(userRole) && (
+              <button
+                onClick={() => setShowDiffModal(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-800/50 rounded-lg hover:bg-indigo-200 dark:hover:bg-indigo-700/50 transition-colors"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Compare &amp; Update Template
+              </button>
+            )}
           </div>
         )}
 
@@ -5418,6 +5457,21 @@ export default function LabDayPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Template Diff Modal */}
+      {showDiffModal && labDay.source_template && (
+        <TemplateDiffModal
+          labDayId={labDay.id}
+          templateId={labDay.source_template.id}
+          templateName={labDay.source_template.name}
+          onClose={() => setShowDiffModal(false)}
+          onApplied={() => {
+            setShowDiffModal(false);
+            toast.success('Template updated successfully');
+            fetchLabDay();
+          }}
+        />
       )}
 
       {/* Copy to Next Week Confirm Dialog */}
