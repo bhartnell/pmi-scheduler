@@ -593,7 +593,7 @@ export default function MentorshipPage() {
                           <div className="flex items-center gap-3 mt-0.5">
                             <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
                               <Calendar className="w-3 h-3" />
-                              Started {new Date(pair.start_date).toLocaleDateString()}
+                              Started {new Date(pair.start_date + 'T12:00:00').toLocaleDateString()}
                             </span>
                             <span className="text-xs text-gray-400 dark:text-gray-500">
                               {formatDuration(pair.start_date, pair.end_date)} duration
@@ -813,7 +813,7 @@ export default function MentorshipPage() {
                                     <div className="flex items-start justify-between gap-2 mb-1">
                                       <span className="text-xs font-medium text-blue-700 dark:text-blue-400 flex items-center gap-1">
                                         <Calendar className="w-3 h-3" />
-                                        {new Date(log.log_date).toLocaleDateString('en-US', {
+                                        {new Date(log.log_date + 'T12:00:00').toLocaleDateString('en-US', {
                                           month: 'short',
                                           day: 'numeric',
                                           year: 'numeric',

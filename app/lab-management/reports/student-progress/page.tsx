@@ -505,7 +505,7 @@ function StudentProgressReportContent() {
                           {reportData.scenarioPerformance.recentScenarios.map((scenario, idx) => (
                             <tr key={idx}>
                               <td className="px-4 py-2 text-gray-600 dark:text-gray-400">
-                                {new Date(scenario.date).toLocaleDateString()}
+                                {new Date(scenario.date + 'T12:00:00').toLocaleDateString()}
                               </td>
                               <td className="px-4 py-2 text-gray-900 dark:text-white">
                                 {scenario.scenarioTitle}
@@ -624,7 +624,7 @@ function StudentProgressReportContent() {
                       <div key={idx} className="flex items-center gap-3 p-2 bg-gray-50 dark:bg-gray-700/50 rounded">
                         <Calendar className="w-4 h-4 text-gray-400" />
                         <span className="text-sm text-gray-600 dark:text-gray-400">
-                          {new Date(rotation.date).toLocaleDateString()}
+                          {new Date(rotation.date + 'T12:00:00').toLocaleDateString()}
                         </span>
                         <span className="text-sm text-gray-900 dark:text-white">
                           {rotation.scenario}
@@ -685,7 +685,7 @@ function StudentProgressReportContent() {
                         </div>
                         {item.date && (
                           <p className="text-sm text-orange-600 dark:text-orange-400">
-                            {new Date(item.date).toLocaleDateString()}
+                            {new Date(item.date + 'T12:00:00').toLocaleDateString()}
                           </p>
                         )}
                       </div>

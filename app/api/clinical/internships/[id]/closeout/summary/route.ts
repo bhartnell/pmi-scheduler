@@ -13,6 +13,19 @@ async function getCallerRole(email: string): Promise<string | null> {
   return data?.role ?? null;
 }
 
+// Compute required hours based on shift type
+function getRequiredHours(shiftType: string | null): number {
+  switch (shiftType) {
+    case '24_hour':
+      return 480;
+    case '12_hour':
+    case '14_hour':
+      return 360;
+    default:
+      return 480; // Default fallback
+  }
+}
+
 // GET - Aggregate all completion data for an internship completion summary
 export async function GET(
   request: NextRequest,
@@ -86,9 +99,11 @@ export async function GET(
       );
     }
 
+    // Compute required hours based on shift type (BUG 4 fix)
+    const requiredHours = getRequiredHours(internship.shift_type);
+
     // Fetch clinical hours
     let totalHours = 0;
-    const requiredHours = 480;
     if (internship.student_id) {
       const { data: hoursRecord } = await supabase
         .from('student_clinical_hours')

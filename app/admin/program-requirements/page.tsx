@@ -70,7 +70,8 @@ const CATEGORIES: { key: string; label: string }[] = [
 // ---------------------------------------------------------------------------
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', {
+  const safe = iso.includes('T') || iso.includes(' ') ? iso : iso + 'T12:00:00';
+  return new Date(safe).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',

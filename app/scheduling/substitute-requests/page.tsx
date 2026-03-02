@@ -117,7 +117,8 @@ function formatLabDayLabel(labDay: LabDay): string {
 }
 
 function formatRequestDate(isoStr: string): string {
-  return new Date(isoStr).toLocaleDateString('en-US', {
+  const safe = isoStr.includes('T') || isoStr.includes(' ') ? isoStr : isoStr + 'T12:00:00';
+  return new Date(safe).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',

@@ -394,7 +394,7 @@ export default function TeamLeadsReportPage() {
                     {reportData.recentRotations.slice(0, 10).map((rotation, idx) => (
                       <div key={idx} className="flex items-center gap-4 p-2 bg-gray-50 dark:bg-gray-700/50 rounded">
                         <span className="text-sm text-gray-500 dark:text-gray-400 w-24">
-                          {new Date(rotation.date).toLocaleDateString()}
+                          {new Date(rotation.date + 'T12:00:00').toLocaleDateString()}
                         </span>
                         <span className="font-medium text-gray-900 dark:text-white">{rotation.studentName}</span>
                         <span className="text-sm text-gray-600 dark:text-gray-400">{rotation.scenario}</span>
@@ -428,7 +428,7 @@ export default function TeamLeadsReportPage() {
                             </span>
                           </td>
                           <td className="px-4 py-3 text-center text-gray-600 dark:text-gray-400">
-                            {student.lastRotationDate ? new Date(student.lastRotationDate).toLocaleDateString() : 'Never'}
+                            {student.lastRotationDate ? new Date(student.lastRotationDate + 'T12:00:00').toLocaleDateString() : 'Never'}
                           </td>
                           <td className="px-4 py-3 text-center">
                             {student.needsMore ? (

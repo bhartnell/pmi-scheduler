@@ -380,7 +380,7 @@ export default function InstructorDashboard() {
                         </div>
                         <div className="text-right">
                           <p className="text-sm font-medium text-gray-900 dark:text-white">
-                            {new Date(lab.lab_date).toLocaleDateString('en-US', {
+                            {new Date(lab.lab_date + 'T12:00:00').toLocaleDateString('en-US', {
                               weekday: 'short',
                               month: 'short',
                               day: 'numeric'

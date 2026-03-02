@@ -19,6 +19,7 @@ import {
 import { ThemeToggle } from '@/components/ThemeToggle';
 import NotificationBell from '@/components/NotificationBell';
 import { type InstructorAvailability, formatTime, type CurrentUser } from '@/types';
+import { toDateStr, addWeeksToDate } from '@/lib/utils';
 
 // ─── Suggestion types ───────────────────────────────────────────────────────
 
@@ -288,8 +289,8 @@ export default function MyAvailabilityPage() {
       endDate.setDate(endDate.getDate() + (6 - endDate.getDay()));
 
       const params = new URLSearchParams({
-        start_date: startDate.toISOString().split('T')[0],
-        end_date: endDate.toISOString().split('T')[0]
+        start_date: toDateStr(startDate),
+        end_date: toDateStr(endDate)
       });
 
       const res = await fetch(`/api/scheduling/availability?${params}`);
@@ -331,7 +332,7 @@ export default function MyAvailabilityPage() {
     const daysUntilTarget = (suggestion.day_of_week - today.getDay() + 7) % 7 || 7;
     const targetDate = new Date(today);
     targetDate.setDate(today.getDate() + daysUntilTarget);
-    const dateStr = targetDate.toISOString().split('T')[0];
+    const dateStr = toDateStr(targetDate);
 
     try {
       await fetch('/api/scheduling/availability', {
@@ -362,7 +363,7 @@ export default function MyAvailabilityPage() {
       const targetDate = new Date(today);
       targetDate.setDate(today.getDate() + daysUntilTarget);
       return {
-        date: targetDate.toISOString().split('T')[0],
+        date: toDateStr(targetDate),
         is_all_day: true,
         notes: `Auto-suggested (${suggestion.pattern})`,
       };
@@ -429,7 +430,7 @@ export default function MyAvailabilityPage() {
   };
 
   const handleDayClick = (date: Date) => {
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = toDateStr(date);
     setSelectedDate(dateStr);
 
     const entries = availabilityByDate.get(dateStr);
@@ -468,10 +469,8 @@ export default function MyAvailabilityPage() {
         // Bulk create for recurring availability
         const entries = [];
         for (let i = 0; i <= formData.repeat_weeks; i++) {
-          const date = new Date(formData.date);
-          date.setDate(date.getDate() + i * 7);
           entries.push({
-            date: date.toISOString().split('T')[0],
+            date: addWeeksToDate(formData.date, i),
             is_all_day: formData.is_all_day,
             start_time: formData.is_all_day ? null : formData.start_time,
             end_time: formData.is_all_day ? null : formData.end_time,
@@ -671,7 +670,7 @@ export default function MyAvailabilityPage() {
           {/* Calendar days */}
           <div className="grid grid-cols-7">
             {calendarDays.map(({ date, isCurrentMonth }, index) => {
-              const dateStr = date.toISOString().split('T')[0];
+              const dateStr = toDateStr(date);
               const dayAvailability = availabilityByDate.get(dateStr) || [];
               const hasAvailability = dayAvailability.length > 0;
 

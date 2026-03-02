@@ -18,6 +18,7 @@ import {
   RefreshCw,
   Calendar,
 } from 'lucide-react';
+import { parseDateSafe } from '@/lib/utils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -94,7 +95,7 @@ const TYPE_FILTER_OPTIONS: Array<{ value: CommType | 'all'; label: string }> = [
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', {
+  return parseDateSafe(iso).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',

@@ -315,7 +315,7 @@ export default function GuestAccessPage() {
                       {guest.lab_day ? (
                         <div className="flex items-center gap-1">
                           <Calendar className="w-4 h-4 text-gray-400" />
-                          {new Date(guest.lab_day.date).toLocaleDateString()}
+                          {new Date(guest.lab_day.date + 'T12:00:00').toLocaleDateString()}
                           {guest.lab_day.cohort && (
                             <span className="text-gray-500 dark:text-gray-400">
                               ({guest.lab_day.cohort.program?.abbreviation} {guest.lab_day.cohort.cohort_number})
@@ -442,7 +442,7 @@ export default function GuestAccessPage() {
                   <option value="">Select lab day...</option>
                   {labDays.map(ld => (
                     <option key={ld.id} value={ld.id}>
-                      {new Date(ld.date).toLocaleDateString()} - {ld.cohort?.program?.abbreviation} {ld.cohort?.cohort_number}
+                      {new Date(ld.date + 'T12:00:00').toLocaleDateString()} - {ld.cohort?.program?.abbreviation} {ld.cohort?.cohort_number}
                     </option>
                   ))}
                 </select>

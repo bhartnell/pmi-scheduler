@@ -18,6 +18,7 @@ export async function GET(
   try {
     const supabase = getSupabaseAdmin();
 
+    // Try full query with source_template join first
     const { data, error } = await supabase
       .from('lab_days')
       .select(`
@@ -56,7 +57,62 @@ export async function GET(
       .eq('id', id)
       .single();
 
-    if (error) throw error;
+    if (error) {
+      // If the error is due to source_template_id column or lab_day_templates table not existing,
+      // fall back to a query without the source_template join
+      const errMsg = (error.message || '').toLowerCase();
+      const errDetails = (typeof error.details === 'string' ? error.details : '').toLowerCase();
+      const combined = errMsg + ' ' + errDetails;
+
+      if (combined.includes('source_template_id') || combined.includes('does not exist') || combined.includes('lab_day_templates')) {
+        console.warn('source_template join failed, falling back to query without it:', error.message);
+
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('lab_days')
+          .select(`
+            *,
+            cohort:cohorts(
+              id,
+              cohort_number,
+              program:programs(name, abbreviation)
+            ),
+            stations:lab_stations(
+              id,
+              station_number,
+              station_type,
+              scenario_id,
+              skill_name,
+              custom_title,
+              instructor_name,
+              instructor_email,
+              room,
+              notes,
+              rotation_minutes,
+              num_rotations,
+              documentation_required,
+              platinum_required,
+              skill_sheet_url,
+              instructions_url,
+              station_notes,
+              drill_ids,
+              metadata,
+              scenario:scenarios(id, title, category, difficulty)
+            )
+          `)
+          .eq('id', id)
+          .single();
+
+        if (fallbackError) throw fallbackError;
+
+        if (fallbackData.stations) {
+          fallbackData.stations.sort((a: any, b: any) => a.station_number - b.station_number);
+        }
+
+        return NextResponse.json({ success: true, labDay: { ...fallbackData, source_template: null } });
+      }
+
+      throw error;
+    }
 
     if (data.stations) {
       data.stations.sort((a: any, b: any) => a.station_number - b.station_number);

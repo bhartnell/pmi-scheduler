@@ -14,6 +14,19 @@ async function getCallerRole(email: string): Promise<string | null> {
   return data?.role ?? null;
 }
 
+// Compute required hours based on shift type
+function getRequiredHours(shiftType: string | null): number {
+  switch (shiftType) {
+    case '24_hour':
+      return 480;
+    case '12_hour':
+    case '14_hour':
+      return 360;
+    default:
+      return 480; // Default fallback
+  }
+}
+
 // GET - Fetch closeout checklist and documents for an internship
 export async function GET(
   request: NextRequest,
@@ -53,9 +66,11 @@ export async function GET(
       return NextResponse.json({ success: false, error: 'Internship not found' }, { status: 404 });
     }
 
+    // Compute required hours based on shift type (BUG 4 fix)
+    const requiredHours = getRequiredHours(internship.shift_type);
+
     // Fetch clinical hours from student_clinical_hours (if available)
     let totalHours = 0;
-    const requiredHours = 480;
     if (internship.student_id) {
       const { data: hoursRecord } = await supabase
         .from('student_clinical_hours')
@@ -78,20 +93,23 @@ export async function GET(
       console.error('Error fetching closeout documents:', docsError.message);
     }
 
-    // Build checklist
+    // Read persisted manual overrides (BUG 3 fix)
+    const savedOverrides: Record<string, boolean> = internship.closeout_overrides || {};
+
+    // Build checklist - restore persisted overrides
     const checklist = [
       {
         key: 'shifts_completed',
         label: 'All required shifts completed',
         auto_checked: totalHours >= requiredHours,
-        manual_override: false,
+        manual_override: !!savedOverrides['shifts_completed'],
         details: `${totalHours}/${requiredHours} hours`,
       },
       {
         key: 'final_eval_submitted',
         label: 'Final evaluation submitted',
         auto_checked: !!(internship.phase_2_eval_completed || internship.internship_completion_date),
-        manual_override: false,
+        manual_override: !!savedOverrides['final_eval_submitted'],
         details: internship.internship_completion_date
           ? `Completed ${parseDateSafe(internship.internship_completion_date).toLocaleDateString()}`
           : internship.phase_2_eval_completed
@@ -102,7 +120,7 @@ export async function GET(
         key: 'preceptor_signoff',
         label: 'Preceptor sign-off received',
         auto_checked: !!(internship.phase_2_eval_completed),
-        manual_override: false,
+        manual_override: !!savedOverrides['preceptor_signoff'],
         details: internship.phase_2_eval_scheduled
           ? `Eval scheduled ${parseDateSafe(internship.phase_2_eval_scheduled).toLocaleDateString()}`
           : '',
@@ -111,14 +129,14 @@ export async function GET(
         key: 'hours_verified',
         label: 'Clinical hours verified',
         auto_checked: totalHours >= requiredHours,
-        manual_override: false,
+        manual_override: !!savedOverrides['hours_verified'],
         details: `${totalHours} total hours logged`,
       },
       {
         key: 'snhd_field_docs',
         label: 'SNHD field docs submitted',
         auto_checked: !!(internship.snhd_field_docs_submitted_at),
-        manual_override: false,
+        manual_override: !!savedOverrides['snhd_field_docs'],
         details: internship.snhd_field_docs_submitted_at
           ? `Submitted ${parseDateSafe(internship.snhd_field_docs_submitted_at).toLocaleDateString()}`
           : '',
@@ -127,7 +145,7 @@ export async function GET(
         key: 'snhd_course_completion',
         label: 'SNHD course completion submitted',
         auto_checked: !!(internship.snhd_course_completion_submitted_at),
-        manual_override: false,
+        manual_override: !!savedOverrides['snhd_course_completion'],
         details: internship.snhd_course_completion_submitted_at
           ? `Submitted ${parseDateSafe(internship.snhd_course_completion_submitted_at).toLocaleDateString()}`
           : '',
@@ -136,7 +154,7 @@ export async function GET(
         key: 'written_exam',
         label: 'Written exam passed',
         auto_checked: !!(internship.written_exam_passed),
-        manual_override: false,
+        manual_override: !!savedOverrides['written_exam'],
         details: internship.written_exam_date
           ? `Passed ${parseDateSafe(internship.written_exam_date).toLocaleDateString()}`
           : '',
@@ -145,7 +163,7 @@ export async function GET(
         key: 'psychomotor_exam',
         label: 'Psychomotor exam passed',
         auto_checked: !!(internship.psychomotor_exam_passed),
-        manual_override: false,
+        manual_override: !!savedOverrides['psychomotor_exam'],
         details: internship.psychomotor_exam_date
           ? `Passed ${parseDateSafe(internship.psychomotor_exam_date).toLocaleDateString()}`
           : '',
@@ -162,6 +180,54 @@ export async function GET(
   } catch (error) {
     console.error('Error fetching closeout data:', error);
     return NextResponse.json({ success: false, error: 'Failed to fetch closeout data' }, { status: 500 });
+  }
+}
+
+// PATCH - Save manual overrides for closeout checklist items
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const supabase = getSupabaseAdmin();
+
+    const session = await getServerSession();
+    if (!session?.user?.email) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const callerRole = await getCallerRole(session.user.email);
+    if (!callerRole || !hasMinRole(callerRole, 'lead_instructor')) {
+      return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
+    }
+
+    const { id } = await params;
+    const body = await request.json();
+    const { overrides } = body;
+
+    if (!overrides || typeof overrides !== 'object') {
+      return NextResponse.json({ success: false, error: 'Invalid overrides data' }, { status: 400 });
+    }
+
+    const now = new Date().toISOString();
+
+    const { error } = await supabase
+      .from('student_internships')
+      .update({
+        closeout_overrides: overrides,
+        updated_at: now,
+      })
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error saving closeout overrides:', error.message);
+      return NextResponse.json({ success: false, error: 'Failed to save overrides' }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error in closeout PATCH:', error);
+    return NextResponse.json({ success: false, error: 'Failed to save overrides' }, { status: 500 });
   }
 }
 

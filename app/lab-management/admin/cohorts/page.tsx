@@ -685,9 +685,9 @@ export default function CohortManagementPage() {
                               {(cohort.start_date || cohort.expected_end_date) && (
                                 <span className="flex items-center gap-1">
                                   <Calendar className="w-4 h-4" />
-                                  {cohort.start_date ? new Date(cohort.start_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '?'}
+                                  {cohort.start_date ? new Date(cohort.start_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '?'}
                                   {' - '}
-                                  {cohort.expected_end_date ? new Date(cohort.expected_end_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '?'}
+                                  {cohort.expected_end_date ? new Date(cohort.expected_end_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '?'}
                                 </span>
                               )}
                               {cohort.archived_at && (

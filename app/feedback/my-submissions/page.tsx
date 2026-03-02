@@ -4,6 +4,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { parseDateSafe } from '@/lib/utils';
 import {
   Home,
   ChevronRight,
@@ -116,7 +117,7 @@ type TypeKey = keyof typeof TYPE_CONFIG;
 // ---- Helpers ----
 
 function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString('en-US', {
+  return parseDateSafe(dateString).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -127,7 +128,7 @@ function formatDate(dateString: string): string {
 }
 
 function formatDateShort(dateString: string): string {
-  return new Date(dateString).toLocaleDateString('en-US', {
+  return parseDateSafe(dateString).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',

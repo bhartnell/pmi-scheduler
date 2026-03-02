@@ -26,6 +26,7 @@ import {
 import { hasMinRole } from '@/lib/permissions';
 import { PageLoader } from '@/components/ui';
 import { useToast } from '@/components/Toast';
+import { parseDateSafe } from '@/lib/utils';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -103,7 +104,7 @@ const MIN_ROLE_OPTIONS = [
 // ---------------------------------------------------------------------------
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', {
+  return parseDateSafe(iso).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',

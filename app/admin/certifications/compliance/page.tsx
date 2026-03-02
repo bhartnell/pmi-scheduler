@@ -306,7 +306,7 @@ export default function CertificationCompliancePage() {
                           <span>{cert.name}</span>
                           {cert.expiresAt && cert.status !== 'missing' && (
                             <span className="opacity-75">
-                              {new Date(cert.expiresAt).toLocaleDateString()}
+                              {new Date(cert.expiresAt + 'T12:00:00').toLocaleDateString()}
                             </span>
                           )}
                         </div>

@@ -3,7 +3,18 @@ import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
-const INTERNSHIP_HOURS_REQUIRED = 480; // Default requirement
+// Compute required hours based on shift type
+function getRequiredHours(shiftType: string | null): number {
+  switch (shiftType) {
+    case '24_hour':
+      return 480;
+    case '12_hour':
+    case '14_hour':
+      return 360;
+    default:
+      return 480; // Default fallback
+  }
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -83,6 +94,7 @@ export async function GET(request: NextRequest) {
       let preceptor = null;
       let startDate = null;
       let hoursCompleted = 0;
+      let hoursRequired = 480;
 
       if (internship) {
         status = internship.status || 'Pending';
@@ -90,6 +102,7 @@ export async function GET(request: NextRequest) {
         preceptor = internship.preceptor ? `${internship.preceptor.first_name} ${internship.preceptor.last_name}` : null;
         startDate = internship.start_date;
         hoursCompleted = internship.hours_completed || 0;
+        hoursRequired = getRequiredHours(internship.shift_type);
 
         // Track agency
         if (agency) {
@@ -129,7 +142,7 @@ export async function GET(request: NextRequest) {
           reason: 'No preceptor assigned',
           details: agency || 'Unknown agency',
         });
-      } else if (hoursCompleted < INTERNSHIP_HOURS_REQUIRED * 0.25 && startDate) {
+      } else if (hoursCompleted < hoursRequired * 0.25 && startDate) {
         // Check if they're behind on hours (started but less than 25% complete)
         const daysSinceStart = Math.floor((Date.now() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24));
         if (daysSinceStart > 30) { // More than a month in
@@ -137,7 +150,7 @@ export async function GET(request: NextRequest) {
             id: student.id,
             name: studentName,
             reason: 'Behind on hours',
-            details: `${hoursCompleted}/${INTERNSHIP_HOURS_REQUIRED}h`,
+            details: `${hoursCompleted}/${hoursRequired}h`,
           });
         }
       }
@@ -150,7 +163,7 @@ export async function GET(request: NextRequest) {
         preceptor,
         startDate,
         hoursCompleted,
-        hoursRequired: INTERNSHIP_HOURS_REQUIRED,
+        hoursRequired,
       });
     });
 

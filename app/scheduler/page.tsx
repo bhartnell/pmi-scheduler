@@ -171,7 +171,7 @@ export default function SchedulerHome() {
                     <div className="flex flex-wrap gap-3 mt-3 text-sm text-gray-500 dark:text-gray-400">
                       <span className="inline-flex items-center gap-1">
                         <Calendar className="w-4 h-4" />
-                        {new Date(poll.start_date).toLocaleDateString()} - {poll.num_weeks} weeks
+                        {new Date(poll.start_date + 'T12:00:00').toLocaleDateString()} - {poll.num_weeks} weeks
                       </span>
                       <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
                         poll.mode === 'individual' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' : 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300'

@@ -551,7 +551,7 @@ export default function StudentProfilePage() {
                 <ReadOnlyField
                   icon={Calendar}
                   label="Enrollment Date"
-                  value={new Date(student.enrollment_date).toLocaleDateString('en-US', {
+                  value={new Date(student.enrollment_date + 'T12:00:00').toLocaleDateString('en-US', {
                     year: 'numeric',
                     month: 'long',
                     day: 'numeric',
@@ -562,7 +562,7 @@ export default function StudentProfilePage() {
                 <ReadOnlyField
                   icon={Calendar}
                   label="Program Start"
-                  value={new Date(cohort.start_date).toLocaleDateString('en-US', {
+                  value={new Date(cohort.start_date + 'T12:00:00').toLocaleDateString('en-US', {
                     year: 'numeric',
                     month: 'long',
                     day: 'numeric',

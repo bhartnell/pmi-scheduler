@@ -399,7 +399,7 @@ export default function StudentDashboard() {
                       {ekgData.summary.ekg.latest_score.score}/{ekgData.summary.ekg.latest_score.max_score}
                     </div>
                     <div className="text-sm text-gray-500 dark:text-gray-400">
-                      Latest Score ({new Date(ekgData.summary.ekg.latest_score.date).toLocaleDateString()})
+                      Latest Score ({new Date(ekgData.summary.ekg.latest_score.date + 'T12:00:00').toLocaleDateString()})
                     </div>
                   </div>
                 )}
@@ -520,7 +520,7 @@ export default function StudentDashboard() {
                               {scenario.scenario_name}
                             </p>
                             <p className="text-xs text-gray-500 dark:text-gray-400">
-                              {scenario.role.replace(/_/g, ' ')} • {new Date(scenario.date).toLocaleDateString()}
+                              {scenario.role.replace(/_/g, ' ')} • {new Date(scenario.date + 'T12:00:00').toLocaleDateString()}
                             </p>
                           </div>
                         </div>

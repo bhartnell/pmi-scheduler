@@ -490,7 +490,7 @@ export default function OnboardingPage() {
                                   )}
                                   <p className="flex items-center gap-1">
                                     <Calendar className="w-3 h-3" />
-                                    Started: {new Date(assignment.start_date).toLocaleDateString()}
+                                    Started: {new Date(assignment.start_date + 'T12:00:00').toLocaleDateString()}
                                   </p>
                                 </div>
                               </div>
@@ -760,7 +760,7 @@ export default function OnboardingPage() {
                                   )}
                                   <p className="flex items-center gap-1">
                                     <Calendar className="w-3 h-3" />
-                                    Started: {new Date(assignment.start_date).toLocaleDateString()}
+                                    Started: {new Date(assignment.start_date + 'T12:00:00').toLocaleDateString()}
                                   </p>
                                 </div>
                               </div>
@@ -798,9 +798,9 @@ export default function OnboardingPage() {
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Overall Progress</h2>
               {assignment?.start_date && (
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Started {new Date(assignment.start_date).toLocaleDateString()}
+                  Started {new Date(assignment.start_date + 'T12:00:00').toLocaleDateString()}
                   {assignment.target_completion_date && (
-                    <> &bull; Target: {new Date(assignment.target_completion_date).toLocaleDateString()}</>
+                    <> &bull; Target: {new Date(assignment.target_completion_date + 'T12:00:00').toLocaleDateString()}</>
                   )}
                 </p>
               )}

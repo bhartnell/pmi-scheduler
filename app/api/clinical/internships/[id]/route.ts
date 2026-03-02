@@ -215,18 +215,52 @@ export async function PUT(
       }
     }
 
-    const { data, error } = await supabase
-      .from('student_internships')
-      .update(updateData)
-      .eq('id', id)
-      .select(`
+    // Columns that may not exist yet if migration hasn't been applied
+    const OPTIONAL_COLUMNS = [
+      'snhd_course_completion_submitted_date',
+      'field_internship_docs_submitted_date',
+      'snhd_field_docs_submitted_at',
+      'snhd_course_completion_submitted_at',
+    ];
+
+    const selectQuery = `
         *,
         students (id, first_name, last_name, email),
         cohorts (id, cohort_number, programs (id, name, abbreviation)),
         field_preceptors (id, first_name, last_name, agency_name),
         agencies (id, name, abbreviation)
-      `)
+      `;
+
+    let { data, error } = await supabase
+      .from('student_internships')
+      .update(updateData)
+      .eq('id', id)
+      .select(selectQuery)
       .single();
+
+    // Defensive retry: if the error is about a missing column (PGRST204 or column does not exist),
+    // strip the problematic optional columns and retry the update
+    if (error && (
+      error.code === 'PGRST204' ||
+      error.message?.includes('does not exist') ||
+      OPTIONAL_COLUMNS.some(col => error!.message?.includes(col))
+    )) {
+      console.warn('Column missing in student_internships, retrying without optional columns:', error.message);
+      const retryData = { ...updateData };
+      for (const col of OPTIONAL_COLUMNS) {
+        delete retryData[col];
+      }
+
+      const retryResult = await supabase
+        .from('student_internships')
+        .update(retryData)
+        .eq('id', id)
+        .select(selectQuery)
+        .single();
+
+      data = retryResult.data;
+      error = retryResult.error;
+    }
 
     if (error) {
       console.error('Supabase update error:', error.code, error.message, error.details);

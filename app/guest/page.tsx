@@ -167,7 +167,7 @@ export default function GuestPage() {
                   <div>
                     <p className="text-sm text-gray-500 dark:text-gray-400">Date</p>
                     <p className="font-medium text-gray-900 dark:text-white">
-                      {new Date(guestSession.lab_day.date).toLocaleDateString('en-US', {
+                      {new Date(guestSession.lab_day.date + 'T12:00:00').toLocaleDateString('en-US', {
                         weekday: 'long',
                         year: 'numeric',
                         month: 'long',

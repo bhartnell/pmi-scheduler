@@ -242,10 +242,43 @@ export default function CloseoutSection({
     setTimeout(() => setToast(null), 3500);
   };
 
-  const handleManualOverride = (key: string, checked: boolean) => {
-    setChecklist(prev =>
-      prev.map(item => (item.key === key ? { ...item, manual_override: checked } : item))
+  const handleManualOverride = async (key: string, checked: boolean) => {
+    // Update local state immediately for responsive UI
+    const updatedChecklist = checklist.map(item =>
+      item.key === key ? { ...item, manual_override: checked } : item
     );
+    setChecklist(updatedChecklist);
+
+    // Build overrides object from current checklist state and persist to DB
+    const overrides: Record<string, boolean> = {};
+    for (const item of updatedChecklist) {
+      if (item.manual_override) {
+        overrides[item.key] = true;
+      }
+    }
+
+    try {
+      const res = await fetch(`/api/clinical/internships/${internshipId}/closeout`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ overrides }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        // Revert on failure
+        setChecklist(prev =>
+          prev.map(item => (item.key === key ? { ...item, manual_override: !checked } : item))
+        );
+        showToastMessage('Failed to save override', 'error');
+      }
+    } catch (error) {
+      console.error('Error saving override:', error);
+      // Revert on failure
+      setChecklist(prev =>
+        prev.map(item => (item.key === key ? { ...item, manual_override: !checked } : item))
+      );
+      showToastMessage('Failed to save override', 'error');
+    }
   };
 
   const handleFileUpload = async (file: File) => {

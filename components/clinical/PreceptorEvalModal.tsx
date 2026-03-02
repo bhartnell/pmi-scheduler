@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { X, Send, Loader2, CheckCircle2, Copy, ExternalLink, AlertCircle, Clock } from 'lucide-react';
+import { parseDateSafe } from '@/lib/utils';
 
 interface EvalToken {
   id: string;
@@ -98,7 +99,7 @@ export default function PreceptorEvalModal({
   };
 
   const formatExpiry = (iso: string) => {
-    return new Date(iso).toLocaleDateString('en-US', {
+    return parseDateSafe(iso).toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',

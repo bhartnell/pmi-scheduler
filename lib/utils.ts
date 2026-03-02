@@ -90,3 +90,55 @@ export function parseDateSafe(dateString: string): Date {
   // Date-only string: add noon time to avoid timezone day-shift
   return new Date(dateString + 'T12:00:00');
 }
+
+/**
+ * Convert a Date object to a YYYY-MM-DD string using local timezone.
+ * Use this instead of date.toISOString().split('T')[0] which uses UTC
+ * and can return the wrong date in western timezones.
+ *
+ * @example
+ * toDateStr(new Date(2024, 0, 15)) // "2024-01-15"
+ */
+export function toDateStr(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+/**
+ * Add weeks to a date string, returning a new YYYY-MM-DD string.
+ * Uses noon local time for date arithmetic to avoid DST and timezone issues.
+ *
+ * @example
+ * addWeeksToDate('2024-01-15', 2) // "2024-01-29"
+ */
+export function addWeeksToDate(dateStr: string, weeks: number): string {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const base = new Date(year, month - 1, day, 12, 0, 0); // noon avoids DST issues
+  base.setDate(base.getDate() + (7 * weeks));
+  return toDateStr(base);
+}
+
+/**
+ * Safely format a date string or ISO timestamp for display.
+ * Handles both date-only strings (YYYY-MM-DD) and full ISO timestamps.
+ * Uses parseDateSafe internally to avoid timezone off-by-one errors.
+ *
+ * @example
+ * formatDateSafe('2024-01-15') // "January 15, 2024"
+ * formatDateSafe('2024-01-15T08:30:00Z') // "January 15, 2024"
+ * formatDateSafe('2024-01-15', { month: 'short', day: 'numeric' }) // "Jan 15"
+ */
+export function formatDateSafe(
+  dateString: string | null | undefined,
+  options?: Intl.DateTimeFormatOptions
+): string {
+  if (!dateString) return '';
+  const date = parseDateSafe(dateString);
+  return date.toLocaleDateString('en-US', options || {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+}

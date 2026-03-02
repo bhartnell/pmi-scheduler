@@ -1198,7 +1198,7 @@ export default function StudentDetailPage() {
             </div>
             <div className="text-lg font-bold text-gray-900 dark:text-white">
               {student.last_team_lead_date
-                ? new Date(student.last_team_lead_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                ? new Date(student.last_team_lead_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
                 : '—'}
             </div>
           </div>
@@ -1462,7 +1462,7 @@ export default function StudentDetailPage() {
                                   )}
                                   {item.record?.expiration_date && (
                                     <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                                      Expires: {new Date(item.record.expiration_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                      Expires: {new Date(item.record.expiration_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                                     </p>
                                   )}
                                   {item.record?.notes && (
@@ -2048,7 +2048,7 @@ export default function StudentDetailPage() {
                 )}
                 {learningStyle.assessed_date && (
                   <div className="text-xs text-gray-500 dark:text-gray-400">
-                    Assessed: {new Date(learningStyle.assessed_date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                    Assessed: {new Date(learningStyle.assessed_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                   </div>
                 )}
               </div>
@@ -2227,7 +2227,7 @@ export default function StudentDetailPage() {
                       {entry.scenario?.title || `Station ${entry.lab_station.station_number}`}
                     </div>
                     <div className="text-sm text-gray-600 dark:text-gray-400">
-                      {new Date(entry.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                      {new Date(entry.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                       {entry.lab_day.week_number && ` • Week ${entry.lab_day.week_number}, Day ${entry.lab_day.day_number}`}
                     </div>
                   </div>

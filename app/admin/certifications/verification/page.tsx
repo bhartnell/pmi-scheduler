@@ -70,7 +70,8 @@ interface VerifyModalState {
 
 function formatDate(value: string | null): string {
   if (!value) return '-';
-  return new Date(value).toLocaleDateString(undefined, {
+  const safe = value.includes('T') || value.includes(' ') ? value : value + 'T12:00:00';
+  return new Date(safe).toLocaleDateString(undefined, {
     year: 'numeric',
     month: 'short',
     day: 'numeric',

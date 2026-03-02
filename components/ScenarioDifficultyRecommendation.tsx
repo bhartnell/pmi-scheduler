@@ -15,6 +15,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { useToast } from '@/components/Toast';
+import { parseDateSafe } from '@/lib/utils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -65,7 +66,7 @@ function canApplyRecommendation(role: string): boolean {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', {
+  return parseDateSafe(iso).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
