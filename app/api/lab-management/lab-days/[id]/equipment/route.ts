@@ -56,7 +56,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ success: true, items: [] });
     }
     console.error('Error fetching equipment items:', error);
-    return NextResponse.json({ success: false, error: 'Failed to fetch equipment items' }, { status: 500 });
+    return NextResponse.json({ success: false, error: (error instanceof Error ? error.message : (error as any)?.message) || 'Failed to fetch equipment items' }, { status: 500 });
   }
 }
 
@@ -110,7 +110,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ success: false, error: 'Equipment tracking is not yet configured. Please run database migrations.' }, { status: 503 });
     }
     console.error('Error creating equipment item:', error);
-    return NextResponse.json({ success: false, error: 'Failed to create equipment item' }, { status: 500 });
+    return NextResponse.json({ success: false, error: (error instanceof Error ? error.message : (error as any)?.message) || 'Failed to create equipment item' }, { status: 500 });
   }
 }
 
@@ -179,7 +179,7 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ success: false, error: 'Equipment tracking is not yet configured. Please run database migrations.' }, { status: 503 });
     }
     console.error('Error updating equipment item:', error);
-    return NextResponse.json({ success: false, error: 'Failed to update equipment item' }, { status: 500 });
+    return NextResponse.json({ success: false, error: (error instanceof Error ? error.message : (error as any)?.message) || 'Failed to update equipment item' }, { status: 500 });
   }
 }
 
@@ -222,6 +222,6 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ success: false, error: 'Equipment tracking is not yet configured. Please run database migrations.' }, { status: 503 });
     }
     console.error('Error deleting equipment item:', error);
-    return NextResponse.json({ success: false, error: 'Failed to delete equipment item' }, { status: 500 });
+    return NextResponse.json({ success: false, error: (error instanceof Error ? error.message : (error as any)?.message) || 'Failed to delete equipment item' }, { status: 500 });
   }
 }

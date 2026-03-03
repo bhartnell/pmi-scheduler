@@ -53,7 +53,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ success: true, debriefs: [] });
     }
     console.error('Error fetching debriefs:', error);
-    return NextResponse.json({ success: false, error: 'Failed to fetch debriefs' }, { status: 500 });
+    return NextResponse.json({ success: false, error: (error instanceof Error ? error.message : (error as any)?.message) || 'Failed to fetch debriefs' }, { status: 500 });
   }
 }
 
@@ -134,7 +134,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ success: false, error: 'Debrief feature is not yet configured. Please run database migrations.' }, { status: 503 });
     }
     console.error('Error submitting debrief:', error);
-    return NextResponse.json({ success: false, error: 'Failed to submit debrief' }, { status: 500 });
+    return NextResponse.json({ success: false, error: (error instanceof Error ? error.message : (error as any)?.message) || 'Failed to submit debrief' }, { status: 500 });
   }
 }
 
@@ -205,6 +205,6 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ success: false, error: 'Debrief feature is not yet configured. Please run database migrations.' }, { status: 503 });
     }
     console.error('Error updating debrief:', error);
-    return NextResponse.json({ success: false, error: 'Failed to update debrief' }, { status: 500 });
+    return NextResponse.json({ success: false, error: (error instanceof Error ? error.message : (error as any)?.message) || 'Failed to update debrief' }, { status: 500 });
   }
 }
