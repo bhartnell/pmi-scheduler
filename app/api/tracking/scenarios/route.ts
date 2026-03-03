@@ -48,7 +48,6 @@ export async function GET(request: NextRequest) {
         *,
         student:students(id, first_name, last_name, cohort_id),
         scenario:scenarios(id, title, category),
-        logged_by_user:lab_users!logged_by(id, name),
         lab_day:lab_days(id, date)
       `, { count: 'exact' })
       .order('date', { ascending: false })
@@ -178,8 +177,7 @@ export async function POST(request: NextRequest) {
       .select(`
         *,
         student:students(id, first_name, last_name),
-        scenario:scenarios(id, title, category),
-        logged_by_user:lab_users!logged_by(id, name)
+        scenario:scenarios(id, title, category)
       `)
       .single();
 
