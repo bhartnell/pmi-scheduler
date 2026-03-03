@@ -34,7 +34,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
 
   try {
     const { data, error } = await supabase
-      .from('lab_equipment_items')
+      .from('lab_day_equipment')
       .select(`
         *,
         station:lab_stations(id, station_number, custom_title, skill_name, station_type)
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     }
 
     const { data, error } = await supabase
-      .from('lab_equipment_items')
+      .from('lab_day_equipment')
       .insert({
         lab_day_id: labDayId,
         name: name.trim(),
@@ -160,7 +160,7 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
     }
 
     const { data, error } = await supabase
-      .from('lab_equipment_items')
+      .from('lab_day_equipment')
       .update(updates)
       .eq('id', item_id)
       .eq('lab_day_id', labDayId)
@@ -208,7 +208,7 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
 
   try {
     const { error } = await supabase
-      .from('lab_equipment_items')
+      .from('lab_day_equipment')
       .delete()
       .eq('id', itemId)
       .eq('lab_day_id', labDayId);
