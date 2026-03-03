@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import {
   BarChart3,
@@ -129,9 +129,7 @@ export default function SchedulerReportsPage() {
   const [availabilityByWeek, setAvailabilityByWeek] = useState<WeekAvailability[]>([]);
   const [recentActivity, setRecentActivity] = useState<RecentShift[]>([]);
 
-  // Detail report states (for the tabbed section)
-  type DetailReportType = 'hours_by_instructor' | 'shift_coverage' | 'availability_summary';
-  const [detailReport, setDetailReport] = useState<DetailReportType>('hours_by_instructor');
+  // Hours by instructor data
   const [hoursReport, setHoursReport] = useState<Array<{
     instructor_id: string;
     instructor_name: string;
@@ -148,7 +146,7 @@ export default function SchedulerReportsPage() {
   }, [status, router]);
 
   // Fetch dashboard data
-  const fetchDashboard = async () => {
+  const fetchDashboard = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch(
@@ -166,39 +164,32 @@ export default function SchedulerReportsPage() {
       console.error('Error fetching dashboard:', error);
     }
     setLoading(false);
-  };
+  }, [startDate, endDate]);
 
-  // Fetch detail report
-  const fetchDetailReport = async () => {
+  // Fetch hours-by-instructor detail
+  const fetchHoursReport = useCallback(async () => {
     setDetailLoading(true);
     try {
       const res = await fetch(
-        `/api/scheduling/reports?type=${detailReport}&start_date=${startDate}&end_date=${endDate}`
+        `/api/scheduling/reports?type=hours_by_instructor&start_date=${startDate}&end_date=${endDate}`
       );
       const data = await res.json();
 
       if (data.success) {
-        if (detailReport === 'hours_by_instructor') {
-          setHoursReport(data.report || []);
-        }
+        setHoursReport(data.report || []);
       }
     } catch (error) {
-      console.error('Error fetching detail report:', error);
+      console.error('Error fetching hours report:', error);
     }
     setDetailLoading(false);
-  };
+  }, [startDate, endDate]);
 
   useEffect(() => {
     if (session) {
       fetchDashboard();
+      fetchHoursReport();
     }
-  }, [session, startDate, endDate]);
-
-  useEffect(() => {
-    if (session && detailReport === 'hours_by_instructor') {
-      fetchDetailReport();
-    }
-  }, [session, detailReport, startDate, endDate]);
+  }, [session, fetchDashboard, fetchHoursReport]);
 
   const exportToCSV = () => {
     let csv = '';
