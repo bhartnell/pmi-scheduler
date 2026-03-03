@@ -92,10 +92,18 @@ export async function PATCH(
     // Phases
     if (body.phases !== undefined) {
       updateData.phases = body.phases;
-      // Also update legacy initial_vitals for compatibility
+      // Also update legacy initial_vitals and ekg_findings for compatibility
       if (body.phases.length > 0) {
         updateData.initial_vitals = body.phases[0].vitals || null;
         updateData.general_impression = body.phases[0].presentation_notes || null;
+        // Sync ekg_findings column from phase vitals
+        const phaseVitals = body.phases[0].vitals;
+        if (phaseVitals && (phaseVitals.ekg_rhythm || phaseVitals.twelve_lead_notes)) {
+          updateData.ekg_findings = {
+            rhythm: phaseVitals.ekg_rhythm || null,
+            twelve_lead: phaseVitals.twelve_lead_notes || null,
+          };
+        }
       }
     }
     

@@ -269,11 +269,11 @@ function ShiftsPageContent() {
         setActiveTab('trades');
         fetchTrades();
       } else {
-        alert(data.error || 'Failed to submit trade request');
+        toast.error(data.error || 'Failed to submit trade request');
       }
     } catch (error) {
       console.error('Error submitting trade request:', error);
-      alert('Failed to submit trade request');
+      toast.error('Failed to submit trade request');
     }
     setSubmittingTrade(false);
   };
@@ -300,11 +300,11 @@ function ShiftsPageContent() {
           fetchShifts();
         }
       } else {
-        alert(data.error || 'Failed to update trade request');
+        toast.error(data.error || 'Failed to update trade request');
       }
     } catch (error) {
       console.error('Error updating trade request:', error);
-      alert('Failed to update trade request');
+      toast.error('Failed to update trade request');
     }
     setTradingId(null);
   };
@@ -339,11 +339,11 @@ function ShiftsPageContent() {
         setShowSignupModal(false);
         fetchShifts();
       } else {
-        alert(data.error || 'Failed to sign up');
+        toast.error(data.error || 'Failed to sign up');
       }
     } catch (error) {
       console.error('Error signing up:', error);
-      alert('Failed to sign up');
+      toast.error('Failed to sign up');
     }
     setSigningUp(false);
   };
@@ -360,11 +360,11 @@ function ShiftsPageContent() {
         fetchShifts();
         if (showDetailModal) setShowDetailModal(false);
       } else {
-        alert(data.error || 'Failed to withdraw');
+        toast.error(data.error || 'Failed to withdraw');
       }
     } catch (error) {
       console.error('Error withdrawing:', error);
-      alert('Failed to withdraw');
+      toast.error('Failed to withdraw');
     }
   };
 
@@ -412,12 +412,13 @@ function ShiftsPageContent() {
         setShowEditModal(false);
         setEditingShift(null);
         fetchShifts();
+        toast.success('Shift updated successfully');
       } else {
-        alert(data.error || 'Failed to save changes');
+        toast.error(data.error || 'Failed to save changes');
       }
     } catch (error) {
       console.error('Error saving shift:', error);
-      alert('Failed to save changes');
+      toast.error('Failed to save changes');
     }
     setSavingEdit(false);
   };
@@ -438,12 +439,13 @@ function ShiftsPageContent() {
         setShowDetailModal(false);
         setEditingShift(null);
         fetchShifts();
+        toast.success('Shift deleted successfully');
       } else {
-        alert(data.error || 'Failed to delete shift');
+        toast.error(data.error || 'Failed to delete shift');
       }
     } catch (error) {
       console.error('Error deleting shift:', error);
-      alert('Failed to delete shift');
+      toast.error('Failed to delete shift');
     }
     setDeletingShift(false);
   };
@@ -1056,36 +1058,64 @@ function ShiftsPageContent() {
               )}
             </div>
 
-            <div className="flex justify-end gap-3 p-4 border-t dark:border-gray-700">
-              <button
-                onClick={() => setShowDetailModal(false)}
-                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-              >
-                Close
-              </button>
-              {!detailShift.user_signup && !isShiftFull(detailShift) && (
-                <button
-                  onClick={() => {
-                    setShowDetailModal(false);
-                    handleSignUpClick(detailShift);
-                  }}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Sign Up
-                </button>
+            <div className="flex items-center justify-between p-4 border-t dark:border-gray-700">
+              {/* Director actions: Edit / Delete */}
+              {userIsDirector ? (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      setShowDetailModal(false);
+                      handleEditClick(detailShift);
+                    }}
+                    className="flex items-center gap-1.5 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 border border-blue-300 dark:border-blue-700 rounded-lg transition-colors"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDeleteShift(detailShift.id)}
+                    disabled={deletingShift}
+                    className="flex items-center gap-1.5 px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 border border-red-300 dark:border-red-700 rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    {deletingShift ? 'Deleting...' : 'Delete'}
+                  </button>
+                </div>
+              ) : (
+                <div />
               )}
-              {detailShift.user_signup?.status === 'confirmed' && (
+
+              <div className="flex gap-3">
                 <button
-                  onClick={() => {
-                    setShowDetailModal(false);
-                    handleRequestTrade(detailShift);
-                  }}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+                  onClick={() => setShowDetailModal(false)}
+                  className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                 >
-                  <ArrowLeftRight className="w-4 h-4" />
-                  Request Trade
+                  Close
                 </button>
-              )}
+                {!detailShift.user_signup && !isShiftFull(detailShift) && (
+                  <button
+                    onClick={() => {
+                      setShowDetailModal(false);
+                      handleSignUpClick(detailShift);
+                    }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Sign Up
+                  </button>
+                )}
+                {detailShift.user_signup?.status === 'confirmed' && (
+                  <button
+                    onClick={() => {
+                      setShowDetailModal(false);
+                      handleRequestTrade(detailShift);
+                    }}
+                    className="flex items-center gap-1.5 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+                  >
+                    <ArrowLeftRight className="w-4 h-4" />
+                    Request Trade
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>

@@ -239,7 +239,7 @@ export default function ClinicalHoursTrackerPage() {
         }
       }
 
-      const cohortsRes = await fetch('/api/lab-management/cohorts?activeOnly=true');
+      const cohortsRes = await fetch('/api/lab-management/cohorts?activeOnly=false');
       const cohortsData = await cohortsRes.json();
       if (cohortsData.success) {
         const fetched: CohortOption[] = cohortsData.cohorts || [];
@@ -265,7 +265,7 @@ export default function ClinicalHoursTrackerPage() {
       const includeInactive = fetchInactive !== undefined ? fetchInactive : showInactive;
       const [studentsRes, hoursRes] = await Promise.all([
         fetch(`/api/students?cohortId=${selectedCohort}&activeOnly=${!includeInactive}`),
-        fetch(`/api/clinical/hours?cohortId=${selectedCohort}`),
+        fetch(`/api/clinical/hours?cohortId=${selectedCohort}&activeOnly=${!includeInactive}`),
       ]);
 
       const studentsData = await studentsRes.json();

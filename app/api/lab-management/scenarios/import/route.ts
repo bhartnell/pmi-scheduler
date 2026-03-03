@@ -213,6 +213,17 @@ export async function POST(request: NextRequest) {
           // Legacy compatibility
           initial_vitals: phases[0]?.vitals || null,
           general_impression: phases[0]?.presentation_notes || null,
+          // Sync ekg_findings column from phase vitals
+          ekg_findings: (() => {
+            const phaseVitals = phases[0]?.vitals;
+            if (phaseVitals && (phaseVitals.ekg_rhythm || phaseVitals.twelve_lead_notes)) {
+              return {
+                rhythm: phaseVitals.ekg_rhythm || null,
+                twelve_lead: phaseVitals.twelve_lead_notes || null,
+              };
+            }
+            return null;
+          })(),
 
           // Status
           is_active: true

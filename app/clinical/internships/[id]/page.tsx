@@ -398,35 +398,26 @@ export default function InternshipDetailPage() {
   };
 
   const handleNotifyRyan = async () => {
-    if (!canEdit || !isClearedForNREMT) return;
+    if (!canEdit) return;
 
     setNotifying(true);
     try {
-      // Mark as notified and save
-      const updatedData = {
-        ...formData,
-        ryan_notified: true,
-        ryan_notified_date: new Date().toISOString().split('T')[0],
-      };
-
-      const res = await fetch(`/api/clinical/internships/${internshipId}`, {
-        method: 'PUT',
+      // Call the dedicated notify-nremt endpoint (creates in-app + email notification)
+      const res = await fetch(`/api/clinical/internships/${internshipId}/notify-nremt`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedData),
       });
 
       const data = await res.json();
       if (data.success) {
-        setFormData(updatedData);
-        setHasChanges(false);
-        showToast('Ryan has been notified! Student is cleared for NREMT.', 'success');
+        showToast('Ryan has been notified that student is ready for NREMT clearance review.', 'success');
         await fetchData();
       } else {
-        showToast('Failed to notify', 'error');
+        showToast(data.error || 'Failed to notify Ryan', 'error');
       }
     } catch (error) {
-      console.error('Error notifying:', error);
-      showToast('Failed to notify', 'error');
+      console.error('Error notifying Ryan:', error);
+      showToast('Failed to send notification', 'error');
     }
     setNotifying(false);
   };
@@ -814,42 +805,62 @@ export default function InternshipDetailPage() {
 
           {/* NREMT Clearance Status */}
           <div className={`mt-6 p-4 rounded-lg ${
-            isClearedForNREMT
+            formData.cleared_for_nremt
               ? 'bg-green-100 dark:bg-green-900/30 border-2 border-green-500'
+              : formData.ryan_notified
+              ? 'bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-400'
               : 'bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600'
           }`}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Award className={`w-6 h-6 ${isClearedForNREMT ? 'text-green-600 dark:text-green-400' : 'text-gray-400'}`} />
+                <Award className={`w-6 h-6 ${formData.cleared_for_nremt ? 'text-green-600 dark:text-green-400' : formData.ryan_notified ? 'text-blue-500 dark:text-blue-400' : 'text-gray-400'}`} />
                 <div>
-                  <div className={`font-semibold ${isClearedForNREMT ? 'text-green-800 dark:text-green-300' : 'text-gray-700 dark:text-gray-300'}`}>
-                    {isClearedForNREMT ? 'Cleared for NREMT!' : 'Not Yet Cleared for NREMT'}
+                  <div className={`font-semibold ${formData.cleared_for_nremt ? 'text-green-800 dark:text-green-300' : formData.ryan_notified ? 'text-blue-800 dark:text-blue-300' : 'text-gray-700 dark:text-gray-300'}`}>
+                    {formData.cleared_for_nremt
+                      ? 'Cleared for NREMT!'
+                      : formData.ryan_notified
+                      ? 'Awaiting NREMT Clearance'
+                      : 'Not Yet Cleared for NREMT'}
                   </div>
                   <div className="text-sm text-gray-600 dark:text-gray-400">
-                    {isClearedForNREMT
-                      ? 'All required items completed. Student can proceed to NREMT exam.'
-                      : `${allRequiredItems.filter(i => !isItemComplete(i)).length} required items remaining`}
+                    {formData.cleared_for_nremt
+                      ? 'Student can proceed to NREMT exam.'
+                      : formData.ryan_notified
+                      ? `Ryan notified ${formData.ryan_notified_date ? formatDate(formData.ryan_notified_date) : ''} - awaiting clearance approval.`
+                      : 'Notify Ryan when student is ready for NREMT clearance review.'}
                   </div>
                 </div>
               </div>
 
-              {canEdit && isClearedForNREMT && !formData.ryan_notified && (
-                <button
-                  onClick={handleNotifyRyan}
-                  disabled={notifying}
-                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
-                >
-                  {notifying ? <Loader2 className="w-4 h-4 animate-spin" /> : <Bell className="w-4 h-4" />}
-                  Notify Ryan
-                </button>
-              )}
+              <div className="flex items-center gap-2">
+                {/* Step 1: Notify Ryan (show when not yet notified) */}
+                {canEdit && !formData.ryan_notified && !formData.cleared_for_nremt && (
+                  <button
+                    onClick={handleNotifyRyan}
+                    disabled={notifying}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {notifying ? <Loader2 className="w-4 h-4 animate-spin" /> : <Bell className="w-4 h-4" />}
+                    Notify Ryan
+                  </button>
+                )}
 
-              {formData.ryan_notified && (
-                <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
-                  <CheckCircle2 className="w-5 h-5" />
-                  <span className="text-sm">Notified {formData.ryan_notified_date && formatDate(formData.ryan_notified_date)}</span>
-                </div>
-              )}
+                {/* Show notified status badge when notified but not yet cleared */}
+                {formData.ryan_notified && !formData.cleared_for_nremt && (
+                  <div className="flex items-center gap-2 text-blue-700 dark:text-blue-400">
+                    <CheckCircle2 className="w-5 h-5" />
+                    <span className="text-sm">Notified {formData.ryan_notified_date && formatDate(formData.ryan_notified_date)}</span>
+                  </div>
+                )}
+
+                {/* Show cleared status badge when cleared */}
+                {formData.cleared_for_nremt && (
+                  <div className="flex items-center gap-2 text-green-700 dark:text-green-400">
+                    <CheckCircle2 className="w-5 h-5" />
+                    <span className="text-sm">Cleared {formData.nremt_clearance_date && formatDate(formData.nremt_clearance_date)}</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -1445,30 +1456,100 @@ export default function InternshipDetailPage() {
                   );
                 })()}
 
-                {/* Step 3: NREMT Clearance */}
-                <CloseoutStep
-                  step={3}
-                  label="NREMT Clearance"
-                  description="Cleared to take national registry exam"
-                  dateKey="nremt_clearance_date"
-                  dateValue={formData.nremt_clearance_date}
-                  isComplete={formData.cleared_for_nremt}
-                  onMarkComplete={() => {
-                    const today = new Date().toISOString().split('T')[0];
-                    handleInputChange('cleared_for_nremt', true);
-                    handleInputChange('nremt_clearance_date', today);
-                  }}
-                  onDateChange={(date) => {
-                    handleInputChange('nremt_clearance_date', date);
-                    if (date) handleInputChange('cleared_for_nremt', true);
-                  }}
-                  onClear={() => {
-                    handleInputChange('cleared_for_nremt', false);
-                    handleInputChange('nremt_clearance_date', '');
-                  }}
-                  canEdit={canEdit}
-                  buttonLabel="Clear"
-                />
+                {/* Step 3: NREMT Clearance (Notify Ryan -> Mark Cleared) */}
+                <div className={`p-3 rounded-lg border-2 transition-all ${
+                  formData.cleared_for_nremt
+                    ? 'bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700'
+                    : formData.ryan_notified
+                    ? 'bg-blue-50 dark:bg-blue-900/10 border-blue-300 dark:border-blue-700'
+                    : 'bg-gray-50 dark:bg-gray-700/30 border-gray-200 dark:border-gray-600'
+                }`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                        formData.cleared_for_nremt
+                          ? 'bg-green-500 text-white'
+                          : formData.ryan_notified
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-gray-300 dark:bg-gray-600 text-gray-600 dark:text-gray-300'
+                      }`}>
+                        {formData.cleared_for_nremt ? <CheckCircle2 className="w-5 h-5" /> : 3}
+                      </div>
+                      <div>
+                        <div className={`font-medium ${formData.cleared_for_nremt ? 'text-green-800 dark:text-green-300' : formData.ryan_notified ? 'text-blue-800 dark:text-blue-300' : 'text-gray-900 dark:text-white'}`}>
+                          NREMT Clearance
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          {formData.cleared_for_nremt
+                            ? 'Cleared to take national registry exam'
+                            : formData.ryan_notified
+                            ? 'Ryan notified - awaiting clearance approval'
+                            : 'Notify Ryan, then mark cleared after approval'}
+                        </div>
+                        {formData.nremt_clearance_date && (
+                          <div className="text-xs text-green-600 dark:text-green-400 mt-1">
+                            Cleared: {formatDate(formData.nremt_clearance_date)}
+                          </div>
+                        )}
+                        {!formData.cleared_for_nremt && formData.ryan_notified && formData.ryan_notified_date && (
+                          <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                            Ryan notified: {formatDate(formData.ryan_notified_date)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {canEdit && (
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {/* Step 3a: Notify Ryan first */}
+                        {!formData.ryan_notified && !formData.cleared_for_nremt && (
+                          <button
+                            onClick={handleNotifyRyan}
+                            disabled={notifying}
+                            className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1"
+                          >
+                            {notifying ? <Loader2 className="w-3 h-3 animate-spin" /> : <Bell className="w-3 h-3" />}
+                            Notify Ryan
+                          </button>
+                        )}
+                        {/* Step 3b: Mark Cleared (after notification, or independently) */}
+                        {!formData.cleared_for_nremt && (
+                          <button
+                            onClick={() => {
+                              const today = new Date().toISOString().split('T')[0];
+                              handleInputChange('cleared_for_nremt', true);
+                              handleInputChange('nremt_clearance_date', today);
+                            }}
+                            className="px-3 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                          >
+                            Mark Cleared
+                          </button>
+                        )}
+                        {/* Undo button when already cleared */}
+                        {formData.cleared_for_nremt && (
+                          <button
+                            onClick={() => {
+                              handleInputChange('cleared_for_nremt', false);
+                              handleInputChange('nremt_clearance_date', '');
+                            }}
+                            className="px-3 py-1.5 text-sm bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
+                          >
+                            Undo
+                          </button>
+                        )}
+                        <input
+                          type="date"
+                          value={formData.nremt_clearance_date || ''}
+                          onChange={(e) => {
+                            handleInputChange('nremt_clearance_date', e.target.value);
+                            if (e.target.value) handleInputChange('cleared_for_nremt', true);
+                          }}
+                          className="px-2 py-1 text-sm border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white w-32"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
 
                 {/* Step 4: Closeout Meeting */}
                 <CloseoutStep

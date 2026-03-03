@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
@@ -45,26 +44,31 @@ export async function GET(request: NextRequest) {
     }
 
     // Fetch students in cohort
-    const { data: students, error: studentsError } = await supabase
+    const activeOnly = searchParams.get('activeOnly') !== 'false';
+    let studentsQuery = supabase
       .from('students')
       .select('id, first_name, last_name')
       .eq('cohort_id', cohortId)
-      .eq('status', 'active')
       .order('last_name');
+
+    if (activeOnly) {
+      studentsQuery = studentsQuery.in('status', ['active', 'enrolled']);
+    }
+
+    const { data: students, error: studentsError } = await studentsQuery;
 
     if (studentsError) throw studentsError;
 
     const studentIds = students?.map(s => s.id) || [];
 
     // Fetch clinical hours for all students
-    let hoursQuery = supabase
+    const { data: clinicalHours } = await supabase
       .from('student_clinical_hours')
       .select('*')
       .in('student_id', studentIds);
 
-    const { data: clinicalHours } = await hoursQuery;
-
     // Build hours map by student and department
+    // student_clinical_hours uses a wide table: one row per student with columns like ed_hours, ed_shifts, etc.
     const hoursMap: Record<string, Record<string, { hours: number; shifts: number }>> = {};
     studentIds.forEach(id => {
       hoursMap[id] = {
@@ -77,26 +81,24 @@ export async function GET(request: NextRequest) {
 
     clinicalHours?.forEach((record: any) => {
       const studentId = record.student_id;
-      const dept = record.department?.toLowerCase();
+      if (!hoursMap[studentId]) return;
 
-      if (hoursMap[studentId] && dept) {
-        // Map department names to standard keys
-        let key = dept;
-        if (dept === 'cardio' || dept === 'cath' || dept === 'cath lab') {
-          key = 'ccl';
-        } else if (dept === 'emergency' || dept === 'ed') {
-          key = 'er';
-        } else if (dept === 'icu' || dept === 'critical care') {
-          key = 'icr';
-        } else if (dept === 'field' || dept === 'ambulance') {
-          key = 'ems';
-        }
+      // Map wide-table columns to report department keys
+      // ER = ed_hours + peds_ed_hours (all emergency department hours)
+      hoursMap[studentId].er.hours = (record.ed_hours || 0) + (record.peds_ed_hours || 0);
+      hoursMap[studentId].er.shifts = (record.ed_shifts || 0) + (record.peds_ed_shifts || 0);
 
-        if (hoursMap[studentId][key]) {
-          hoursMap[studentId][key].hours += record.hours || 0;
-          hoursMap[studentId][key].shifts += record.shifts || 0;
-        }
-      }
+      // ICR = icu_hours + peds_icu_hours (all intensive care hours)
+      hoursMap[studentId].icr.hours = (record.icu_hours || 0) + (record.peds_icu_hours || 0);
+      hoursMap[studentId].icr.shifts = (record.icu_shifts || 0) + (record.peds_icu_shifts || 0);
+
+      // CCL = cardiology_hours (cardiac cath lab)
+      hoursMap[studentId].ccl.hours = record.cardiology_hours || 0;
+      hoursMap[studentId].ccl.shifts = record.cardiology_shifts || 0;
+
+      // EMS = ems_field_hours + ems_ridealong_hours (all EMS hours)
+      hoursMap[studentId].ems.hours = (record.ems_field_hours || 0) + (record.ems_ridealong_hours || 0);
+      hoursMap[studentId].ems.shifts = (record.ems_field_shifts || 0) + (record.ems_ridealong_shifts || 0);
     });
 
     // Calculate totals by department
@@ -136,6 +138,7 @@ export async function GET(request: NextRequest) {
       const icrHours = hours.icr.hours;
       const cclHours = hours.ccl.hours;
       const emsHours = hours.ems.hours;
+      // Total includes all tracked department hours (ER/ICR/CCL/EMS are the 4 reported categories)
       const totalHours = erHours + icrHours + cclHours + emsHours;
 
       // Check if on track (simplified - just checking totals)
