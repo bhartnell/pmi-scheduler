@@ -5,7 +5,7 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 
 // GET - Fetch preceptor assignments for internship
 // Joins with field_preceptors for name/credentials
-// Sorts: active first, then by role (primary > secondary > tertiary), then start_date desc
+// Sorts: active first, then by role (primary > secondary > tertiary), then created_at desc
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -26,8 +26,6 @@ export async function GET(
         internship_id,
         preceptor_id,
         role,
-        start_date,
-        end_date,
         notes,
         is_active,
         created_at,
@@ -46,7 +44,7 @@ export async function GET(
       .eq('internship_id', internshipId)
       .order('is_active', { ascending: false })
       .order('role', { ascending: true })
-      .order('start_date', { ascending: false });
+      .order('created_at', { ascending: false });
 
     if (error) {
       console.error('Error fetching preceptor assignments:', error);
@@ -64,7 +62,7 @@ export async function GET(
 }
 
 // POST - Create new preceptor assignment
-// Body: { preceptor_id, role, start_date, notes }
+// Body: { preceptor_id, role, notes }
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -78,7 +76,7 @@ export async function POST(
 
     const { id: internshipId } = await params;
     const body = await request.json();
-    const { preceptor_id, role = 'primary', start_date, notes } = body;
+    const { preceptor_id, role = 'primary', notes } = body;
 
     if (!preceptor_id) {
       return NextResponse.json(
@@ -93,7 +91,6 @@ export async function POST(
         .from('student_preceptor_assignments')
         .update({
           is_active: false,
-          end_date: new Date().toISOString().split('T')[0],
         })
         .eq('internship_id', internshipId)
         .eq('role', 'primary')
@@ -112,7 +109,6 @@ export async function POST(
         internship_id: internshipId,
         preceptor_id,
         role,
-        start_date: start_date || new Date().toISOString().split('T')[0],
         notes: notes || null,
         is_active: true,
       })
@@ -121,8 +117,6 @@ export async function POST(
         internship_id,
         preceptor_id,
         role,
-        start_date,
-        end_date,
         notes,
         is_active,
         created_at,
@@ -155,8 +149,8 @@ export async function POST(
   }
 }
 
-// PATCH - Update assignment (end it or change role)
-// Body: { assignmentId, end_date?, is_active?, role?, notes? }
+// PATCH - Update assignment (deactivate or change role)
+// Body: { assignmentId, is_active?, role?, notes? }
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -170,7 +164,7 @@ export async function PATCH(
 
     await params; // Await params even though we don't use it, for consistency
     const body = await request.json();
-    const { assignmentId, end_date, is_active, role, notes } = body;
+    const { assignmentId, is_active, role, notes } = body;
 
     if (!assignmentId) {
       return NextResponse.json(
@@ -180,7 +174,6 @@ export async function PATCH(
     }
 
     const updateData: any = {};
-    if (end_date !== undefined) updateData.end_date = end_date;
     if (is_active !== undefined) updateData.is_active = is_active;
     if (role !== undefined) updateData.role = role;
     if (notes !== undefined) updateData.notes = notes;
@@ -194,8 +187,6 @@ export async function PATCH(
         internship_id,
         preceptor_id,
         role,
-        start_date,
-        end_date,
         notes,
         is_active,
         created_at,

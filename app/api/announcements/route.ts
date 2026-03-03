@@ -95,20 +95,20 @@ export async function GET(request: NextRequest) {
       .from('announcements')
       .select('*')
       .eq('is_active', true)
-      .lte('starts_at', now)
+      .lte('start_date', now)
       .order('priority', { ascending: false })
-      .order('starts_at', { ascending: false });
+      .order('start_date', { ascending: false });
 
-    // ends_at is null OR ends_at >= now
+    // end_date is null OR end_date >= now
     // Supabase doesn't support OR with null easily, so we filter client-side below
 
     const { data: announcements, error } = await query;
     if (error) throw error;
 
-    // Filter: ends_at is null or ends_at >= now
+    // Filter: end_date is null or end_date >= now
     const filtered = (announcements ?? []).filter((a) => {
-      if (a.ends_at === null) return true;
-      return new Date(a.ends_at) >= new Date(now);
+      if (a.end_date === null) return true;
+      return new Date(a.end_date) >= new Date(now);
     });
 
     // Get current user's read status
@@ -145,7 +145,7 @@ export async function GET(request: NextRequest) {
 // ---------------------------------------------------------------------------
 // POST /api/announcements
 // Create a new announcement (admin+ only)
-// Body: { title, body, priority, target_audience, starts_at?, ends_at? }
+// Body: { title, body, priority, target_audience, start_date?, end_date? }
 // ---------------------------------------------------------------------------
 export async function POST(request: NextRequest) {
   try {
@@ -164,11 +164,11 @@ export async function POST(request: NextRequest) {
       body: string;
       priority: 'info' | 'warning' | 'critical';
       target_audience: 'all' | 'instructors' | 'students';
-      starts_at?: string;
-      ends_at?: string;
+      start_date?: string;
+      end_date?: string;
     };
 
-    const { title, body: bodyText, priority, target_audience, starts_at, ends_at } = body;
+    const { title, body: bodyText, priority, target_audience, start_date, end_date } = body;
 
     if (!title || !bodyText || !priority || !target_audience) {
       return NextResponse.json(
@@ -195,8 +195,8 @@ export async function POST(request: NextRequest) {
         body: bodyText,
         priority,
         target_audience,
-        starts_at: starts_at ?? new Date().toISOString(),
-        ends_at: ends_at ?? null,
+        start_date: start_date ?? new Date().toISOString(),
+        end_date: end_date ?? null,
         is_active: true,
         created_by: currentUser.email,
       })
@@ -215,7 +215,7 @@ export async function POST(request: NextRequest) {
 // ---------------------------------------------------------------------------
 // PUT /api/announcements
 // Update an announcement (admin+ only)
-// Body: { id, title?, body?, priority?, target_audience?, starts_at?, ends_at?, is_active? }
+// Body: { id, title?, body?, priority?, target_audience?, start_date?, end_date?, is_active? }
 // ---------------------------------------------------------------------------
 export async function PUT(request: NextRequest) {
   try {
@@ -235,8 +235,8 @@ export async function PUT(request: NextRequest) {
       body?: string;
       priority?: 'info' | 'warning' | 'critical';
       target_audience?: 'all' | 'instructors' | 'students';
-      starts_at?: string;
-      ends_at?: string | null;
+      start_date?: string;
+      end_date?: string | null;
       is_active?: boolean;
     };
 
