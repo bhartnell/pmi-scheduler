@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole } from '@/lib/permissions';
@@ -27,17 +26,23 @@ export async function GET(request: NextRequest) {
     const cohortId = searchParams.get('cohortId');
     const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
     const offset = parseInt(searchParams.get('offset') || '0');
+    const activeOnly = searchParams.get('activeOnly') !== 'false';
 
     if (!cohortId) {
       return NextResponse.json({ success: false, error: 'Cohort ID required' }, { status: 400 });
     }
 
-    // Get all active students in the cohort (exclude withdrawn/dropped students)
-    const { data: students } = await supabase
+    // Get students in the cohort, optionally filtering by status
+    let studentsQuery = supabase
       .from('students')
       .select('id')
-      .eq('cohort_id', cohortId)
-      .eq('status', 'active');
+      .eq('cohort_id', cohortId);
+
+    if (activeOnly) {
+      studentsQuery = studentsQuery.in('status', ['active', 'enrolled']);
+    }
+
+    const { data: students } = await studentsQuery;
 
     const studentIds = students?.map(s => s.id) || [];
 

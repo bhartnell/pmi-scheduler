@@ -543,6 +543,13 @@ export async function POST(request: NextRequest) {
 
         if (newInitialVitals !== null) {
           updatePayload.initial_vitals = newInitialVitals;
+          // Sync ekg_findings column from phase vitals
+          if (newInitialVitals.ekg_rhythm || newInitialVitals.twelve_lead_notes) {
+            updatePayload.ekg_findings = {
+              rhythm: newInitialVitals.ekg_rhythm || null,
+              twelve_lead: newInitialVitals.twelve_lead_notes || null,
+            };
+          }
         }
 
         if (newCriticalActions !== null) {

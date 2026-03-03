@@ -55,15 +55,37 @@ export interface Vitals {
   time?: string;
   bp?: string;
   pulse?: number;
+  hr?: number | string;
   resp?: number;
-  spo2?: number;
-  etco2?: number;
+  rr?: number | string;
+  spo2?: number | string;
+  etco2?: number | string;
   temp?: string;
   glucose?: number;
-  gcs?: number;
+  blood_glucose?: string;
+  gcs?: number | string;
+  gcs_total?: string;
+  gcs_e?: string;
+  gcs_v?: string;
+  gcs_m?: string;
   pupils?: string;
   skin?: string;
+  loc?: string;
+  pain?: string;
+  // Cardiac
+  ekg_rhythm?: string;
+  twelve_lead_notes?: string;
+  // Respiratory
+  lung_sounds?: string;
+  lung_notes?: string;
+  // Circulation
+  jvd?: string;
+  edema?: string;
+  capillary_refill?: string;
+  pulse_quality?: string;
   notes?: string;
+  // Other findings
+  other_findings?: { key: string; value: string }[];
 }
 
 export interface SampleHistory {

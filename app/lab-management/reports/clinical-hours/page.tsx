@@ -103,7 +103,7 @@ export default function ClinicalHoursReportPage() {
 
   const fetchCohorts = async () => {
     try {
-      const res = await fetch('/api/lab-management/cohorts?activeOnly=true');
+      const res = await fetch('/api/lab-management/cohorts?activeOnly=false');
       const data = await res.json();
       if (data.success) {
         setCohorts(data.cohorts || []);

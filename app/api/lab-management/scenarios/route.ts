@@ -113,6 +113,17 @@ export async function POST(request: NextRequest) {
       // Legacy fields (keep for compatibility)
       initial_vitals: body.phases?.[0]?.vitals || null,
       general_impression: body.phases?.[0]?.presentation_notes || null,
+      // Sync ekg_findings column from phase vitals
+      ekg_findings: (() => {
+        const phaseVitals = body.phases?.[0]?.vitals;
+        if (phaseVitals && (phaseVitals.ekg_rhythm || phaseVitals.twelve_lead_notes)) {
+          return {
+            rhythm: phaseVitals.ekg_rhythm || null,
+            twelve_lead: phaseVitals.twelve_lead_notes || null,
+          };
+        }
+        return null;
+      })(),
     };
 
     const { data, error } = await supabase
