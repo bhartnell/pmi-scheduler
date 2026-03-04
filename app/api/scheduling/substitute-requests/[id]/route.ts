@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole } from '@/lib/permissions';
-import { createNotification } from '@/lib/notifications';
+import { createNotification, getEligibleShiftRecipients } from '@/lib/notifications';
 
 // Helper to get current user from lab_users
 async function getCurrentUser(email: string) {
@@ -162,19 +162,15 @@ export async function PUT(
             referenceId: id,
           });
         } else {
-          // Notify all available instructors that coverage is needed
-          const { data: instructors } = await supabase
-            .from('lab_users')
-            .select('email')
-            .in('role', ['instructor', 'lead_instructor', 'volunteer_instructor'])
-            .eq('is_active', true)
-            .neq('email', existingRequest.requester_email);
+          // Notify eligible part-time/volunteer instructors that coverage is needed
+          const requesterEmailStr = existingRequest.requester_email as string | undefined;
+          const recipients = await getEligibleShiftRecipients(requesterEmailStr);
 
-          if (instructors && instructors.length > 0) {
+          if (recipients.length > 0) {
             await Promise.all(
-              instructors.map(instructor =>
+              recipients.map(recipient =>
                 createNotification({
-                  userEmail: instructor.email,
+                  userEmail: recipient.email,
                   title: 'Coverage needed',
                   message: `A substitute is needed to cover ${labLabel} — ${existingRequest.reason}`,
                   type: 'shift_available',

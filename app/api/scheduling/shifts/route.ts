@@ -3,6 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
 import { isDirector } from '@/lib/endorsements';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { createNotification, getEligibleShiftRecipients } from '@/lib/notifications';
+import { sendShiftAvailableEmail } from '@/lib/email';
 
 // Helper to get current user
 async function getCurrentUser(email: string) {
@@ -240,7 +242,49 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error;
 
-    // TODO: Send notification to available instructors
+    // Notify eligible part-time/volunteer instructors about new shift(s)
+    try {
+      const recipients = await getEligibleShiftRecipients(session.user.email);
+
+      if (recipients.length > 0 && shifts && shifts.length > 0) {
+        const firstShift = shifts[0];
+        const shiftDate = new Date(firstShift.date + 'T12:00:00').toLocaleDateString('en-US', {
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric',
+        });
+        const shiftLabel = shifts.length > 1
+          ? `${firstShift.title} (${shifts.length} dates starting ${shiftDate})`
+          : `${firstShift.title} on ${shiftDate}`;
+
+        await Promise.all(
+          recipients.map(async (recipient) => {
+            // In-app notification
+            await createNotification({
+              userEmail: recipient.email,
+              title: 'New shift available',
+              message: `A new shift has been posted: ${shiftLabel}`,
+              type: 'shift_available',
+              linkUrl: '/scheduling/shifts',
+              referenceType: 'open_shift',
+              referenceId: firstShift.id,
+            });
+
+            // Email notification (respects user preferences via the email system)
+            await sendShiftAvailableEmail(recipient.email, {
+              title: firstShift.title,
+              date: shiftDate,
+              startTime: firstShift.start_time,
+              endTime: firstShift.end_time,
+              location: firstShift.location,
+            });
+          })
+        );
+      }
+    } catch (notifError) {
+      // Non-fatal: don't fail shift creation if notifications fail
+      console.error('Error sending shift available notifications:', notifError);
+    }
 
     return NextResponse.json({
       success: true,

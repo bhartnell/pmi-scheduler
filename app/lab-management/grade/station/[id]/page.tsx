@@ -292,6 +292,9 @@ export default function GradeStationPage() {
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const savedIndicatorTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Skill sheet lookup state (maps skill name -> skill_sheet id)
+  const [skillSheetIds, setSkillSheetIds] = useState<Record<string, string>>({});
+
   // Computed values
   const selectedGroup = labGroups.find(g => g.id === selectedGroupId);
   const satisfactoryCount = criteriaRatings.filter(r => r.rating === 'S').length;
@@ -355,6 +358,31 @@ export default function GradeStationPage() {
     }
   }, [station?.station_type]);
 
+  // Look up skill sheets for each assigned skill by name + program
+  useEffect(() => {
+    if (station?.lab_day?.cohort?.program?.abbreviation) {
+      const allSkillNames: string[] = [];
+      if (station.station_skills) {
+        for (const ss of station.station_skills) {
+          allSkillNames.push(ss.skill.name);
+        }
+      }
+      if (station.custom_skills) {
+        for (const cs of station.custom_skills) {
+          allSkillNames.push(cs.name);
+        }
+      }
+      // Also look up the station's main skill name
+      const mainSkillName = station.skill_name || station.custom_title;
+      if (mainSkillName) {
+        allSkillNames.push(mainSkillName);
+      }
+      if (allSkillNames.length > 0) {
+        lookupSkillSheets(allSkillNames, station.lab_day.cohort.program.abbreviation);
+      }
+    }
+  }, [station]);
+
   const fetchStation = async () => {
     try {
       const res = await fetch(`/api/lab-management/stations/${stationId}`);
@@ -366,6 +394,21 @@ export default function GradeStationPage() {
       console.error('Error fetching station:', error);
     }
     setLoading(false);
+  };
+
+  // Look up skill sheets for each skill name via the by-skill-name API
+  const lookupSkillSheets = async (skillNames: string[], program: string) => {
+    const results: Record<string, string> = {};
+    for (const skillName of skillNames) {
+      try {
+        const res = await fetch(`/api/skill-sheets/by-skill-name?name=${encodeURIComponent(skillName)}&program=${encodeURIComponent(program.toLowerCase())}`);
+        const data = await res.json();
+        if (data.success && data.sheets && data.sheets.length > 0) {
+          results[skillName] = data.sheets[0].id;
+        }
+      } catch { /* ignore - skill sheets feature may not be available */ }
+    }
+    setSkillSheetIds(results);
   };
 
   const fetchLabGroups = async (cohortId: string) => {
@@ -777,6 +820,23 @@ export default function GradeStationPage() {
               </div>
             </div>
 
+            {/* View Skill Sheet for main station skill */}
+            {(station.skill_name || station.custom_title) && (
+              <div className="mb-3">
+                {skillSheetIds[station.skill_name || station.custom_title || ''] ? (
+                  <Link
+                    href={`/skill-sheets/${skillSheetIds[station.skill_name || station.custom_title || '']}`}
+                    className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded hover:bg-emerald-100 dark:hover:bg-emerald-900/50"
+                  >
+                    <ClipboardCheck className="w-3 h-3" />
+                    View Skill Sheet
+                  </Link>
+                ) : (
+                  <span className="text-xs text-gray-400 dark:text-gray-500 italic">No skill sheet available</span>
+                )}
+              </div>
+            )}
+
             {/* Station Details/Instructions */}
             {station.station_details && (
               <div className="mb-4 p-3 bg-white dark:bg-gray-800 rounded-lg border border-green-200 dark:border-green-700">
@@ -789,16 +849,42 @@ export default function GradeStationPage() {
             {((station.station_skills && station.station_skills.length > 0) || (station.custom_skills && station.custom_skills.length > 0)) && (
               <div className="mb-4 p-3 bg-white dark:bg-gray-800 rounded-lg border border-green-200 dark:border-green-700">
                 <div className="text-sm font-medium text-green-700 dark:text-green-400 mb-2">Skills to Practice:</div>
-                <div className="flex flex-wrap gap-2">
-                  {station.station_skills?.map((ss, idx) => (
-                    <span key={ss.skill.id} className="px-2 py-1 bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200 text-sm rounded-lg">
-                      {ss.skill.name}
-                    </span>
+                <div className="space-y-2">
+                  {station.station_skills?.map((ss) => (
+                    <div key={ss.skill.id} className="flex items-center gap-2 flex-wrap">
+                      <span className="px-2 py-1 bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200 text-sm rounded-lg">
+                        {ss.skill.name}
+                      </span>
+                      {skillSheetIds[ss.skill.name] ? (
+                        <Link
+                          href={`/skill-sheets/${skillSheetIds[ss.skill.name]}`}
+                          className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded hover:bg-emerald-100 dark:hover:bg-emerald-900/50"
+                        >
+                          <ClipboardCheck className="w-3 h-3" />
+                          View Skill Sheet
+                        </Link>
+                      ) : (
+                        <span className="text-xs text-gray-400 dark:text-gray-500 italic">No skill sheet</span>
+                      )}
+                    </div>
                   ))}
                   {station.custom_skills?.map((cs) => (
-                    <span key={cs.id} className="px-2 py-1 bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 text-sm rounded-lg">
-                      {cs.name} <span className="text-xs opacity-70">(custom)</span>
-                    </span>
+                    <div key={cs.id} className="flex items-center gap-2 flex-wrap">
+                      <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 text-sm rounded-lg">
+                        {cs.name} <span className="text-xs opacity-70">(custom)</span>
+                      </span>
+                      {skillSheetIds[cs.name] ? (
+                        <Link
+                          href={`/skill-sheets/${skillSheetIds[cs.name]}`}
+                          className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded hover:bg-emerald-100 dark:hover:bg-emerald-900/50"
+                        >
+                          <ClipboardCheck className="w-3 h-3" />
+                          View Skill Sheet
+                        </Link>
+                      ) : (
+                        <span className="text-xs text-gray-400 dark:text-gray-500 italic">No skill sheet</span>
+                      )}
+                    </div>
                   ))}
                 </div>
               </div>

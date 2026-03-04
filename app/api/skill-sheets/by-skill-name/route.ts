@@ -150,6 +150,45 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, sheets: sorted });
     }
 
+    // -----------------------------------------------
+    // Step 4: Fuzzy match via ILIKE on canonical_skills.canonical_name
+    // This handles cases like "Medical Assessment" matching
+    // a canonical skill "Patient Assessment — Medical"
+    // -----------------------------------------------
+    const { data: canonicalMatches, error: canonicalError } = await supabase
+      .from('canonical_skills')
+      .select('id')
+      .ilike('canonical_name', `%${name}%`);
+
+    if (canonicalError && !canonicalError.message?.includes('does not exist')) {
+      throw canonicalError;
+    }
+
+    if (canonicalMatches && canonicalMatches.length > 0) {
+      const canonicalIds = canonicalMatches.map(c => c.id);
+
+      let canonicalSheetQuery = supabase
+        .from('skill_sheets')
+        .select('id')
+        .in('canonical_skill_id', canonicalIds);
+
+      if (program) {
+        canonicalSheetQuery = canonicalSheetQuery.or(`program.eq.${program},program.eq.all`);
+      }
+
+      const { data: canonicalSheetMatches, error: canonicalSheetError } = await canonicalSheetQuery;
+
+      if (canonicalSheetError && !canonicalSheetError.message?.includes('does not exist')) {
+        throw canonicalSheetError;
+      }
+
+      if (canonicalSheetMatches && canonicalSheetMatches.length > 0) {
+        const sheets = await fetchFullSheets(canonicalSheetMatches.map(m => m.id));
+        const sorted = applyNremtPriority(sheets);
+        return NextResponse.json({ success: true, sheets: sorted });
+      }
+    }
+
     // No results found
     return NextResponse.json({ success: true, sheets: [] });
   } catch (error) {
