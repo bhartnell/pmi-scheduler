@@ -134,7 +134,8 @@ export default function LabTimer({
   }, [playBeeps]);
 
   // Fetch timer state from server
-  const fetchTimerState = useCallback(async (checkStale = false) => {
+  // Returns the timer object (or null) so callers can use it without a second fetch
+  const fetchTimerState = useCallback(async (checkStale = false): Promise<TimerState | null> => {
     try {
       const res = await fetch(`/api/lab-management/timer?labDayId=${labDayId}`);
       const data = await res.json();
@@ -147,18 +148,22 @@ export default function LabTimer({
           if (checkStale && data.isStale && data.timer.status !== 'stopped') {
             setShowStaleWarning(true);
           }
+          return data.timer;
         }
         // Log if table doesn't exist yet
         if (data.tableExists === false) {
           console.warn('Timer table not created - run migration: 20260123_lab_timer_state.sql');
         }
+        return null;
       } else {
         setIsConnected(false);
         console.error('Timer API error:', data.error);
+        return null;
       }
     } catch (error) {
       console.error('Error fetching timer:', error);
       setIsConnected(false);
+      return null;
     }
   }, [labDayId]);
 
@@ -272,11 +277,10 @@ export default function LabTimer({
   // Initialize on mount
   useEffect(() => {
     const init = async () => {
-      await fetchTimerState(true); // Check for stale on initial load
+      const timer = await fetchTimerState(true); // Check for stale on initial load
       await fetchReadyStatuses();
-      const res = await fetch(`/api/lab-management/timer?labDayId=${labDayId}`);
-      const data = await res.json();
-      if (data.success && !data.timer && isController) {
+      // If no timer exists yet and we're the controller, initialize one
+      if (!timer && isController) {
         await initializeTimer();
       }
     };
@@ -299,7 +303,9 @@ export default function LabTimer({
   };
 
   // Poll for updates with visibility awareness - timer state
-  useVisibilityPolling(fetchTimerState, getTimerPollInterval(), { immediate: false });
+  // Wrap fetchTimerState to discard return value for useVisibilityPolling's void signature
+  const pollTimerState = useCallback(async () => { await fetchTimerState(); }, [fetchTimerState]);
+  useVisibilityPolling(pollTimerState, getTimerPollInterval(), { immediate: false });
 
   // Poll for updates with visibility awareness - ready statuses
   useVisibilityPolling(fetchReadyStatuses, getReadyPollInterval(), { immediate: false });

@@ -377,8 +377,15 @@ export default function GradeStationPage() {
         }
       }
       // Also look up the station's main skill name
-      const mainSkillName = station.skill_name || station.custom_title;
+      // custom_title may include cohort/date prefix like "EMT4 03/04/26 - Skill Name"
+      // Strip the prefix to get just the skill name for lookup
+      let mainSkillName = station.skill_name || station.custom_title;
       if (mainSkillName) {
+        // Strip "COHORT MM/DD/YY - " prefix pattern
+        const prefixMatch = mainSkillName.match(/^[A-Za-z0-9]+\s+\d{1,2}\/\d{1,2}\/\d{2,4}\s*[-–]\s*(.+)$/);
+        if (prefixMatch) {
+          mainSkillName = prefixMatch[1].trim();
+        }
         allSkillNames.push(mainSkillName);
       }
       if (allSkillNames.length > 0) {
