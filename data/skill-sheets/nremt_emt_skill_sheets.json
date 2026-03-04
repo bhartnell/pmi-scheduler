@@ -1,0 +1,1388 @@
+[
+  {
+    "skill_name": "Patient assessment and management — trauma",
+    "program": "emt",
+    "source": "nremt",
+    "source_priority": 1,
+    "version": "2016",
+    "equipment": [
+      "Gloves (multiple pairs)",
+      "Eye protection (safety glasses or face shield)",
+      "Stethoscope",
+      "Blood pressure cuff (adult sizes)",
+      "Penlight",
+      "Pulse oximeter",
+      "Oxygen delivery equipment (NRB mask, nasal cannula)",
+      "BVM with reservoir connected to O2 at 15 L/min",
+      "Oropharyngeal airways (assorted sizes)",
+      "Nasopharyngeal airways (assorted sizes) with water-soluble lubricant",
+      "Cervical collar (assorted sizes)",
+      "Suction unit with rigid catheter",
+      "Trauma dressings and bandages",
+      "Blanket for heat conservation",
+      "GCS reference card"
+    ],
+    "overview": "Systematic trauma patient assessment covering scene size-up, primary survey with resuscitation of life threats, history taking, detailed secondary head-to-toe exam, and reassessment. This is the NREMT comprehensive trauma evaluation station — 10-minute time limit for initiation of transport decision.",
+    "steps": [
+      {
+        "step_number": 1,
+        "phase": "preparation",
+        "instruction": "Take or verbalize appropriate PPE precautions — gloves and eye protection at minimum.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion: failure to take or verbalize PPE is an automatic fail."
+      },
+      {
+        "step_number": 2,
+        "phase": "preparation",
+        "instruction": "Determine the scene/situation is safe.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion: failure to determine scene safety is an automatic fail."
+      },
+      {
+        "step_number": 3,
+        "phase": "preparation",
+        "instruction": "Determine the mechanism of injury/nature of illness.",
+        "is_critical": false,
+        "detail_notes": null
+      },
+      {
+        "step_number": 4,
+        "phase": "preparation",
+        "instruction": "Determine the number of patients.",
+        "is_critical": false,
+        "detail_notes": null
+      },
+      {
+        "step_number": 5,
+        "phase": "preparation",
+        "instruction": "Request additional EMS assistance if necessary.",
+        "is_critical": false,
+        "detail_notes": null
+      },
+      {
+        "step_number": 6,
+        "phase": "preparation",
+        "instruction": "Consider stabilization of the spine based on mechanism of injury.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion: failure to assess for and provide spinal protection when indicated."
+      },
+      {
+        "step_number": 7,
+        "phase": "assessment",
+        "instruction": "Verbalize general impression of the patient.",
+        "is_critical": false,
+        "detail_notes": null
+      },
+      {
+        "step_number": 8,
+        "phase": "assessment",
+        "instruction": "Determine responsiveness and level of consciousness.",
+        "is_critical": false,
+        "detail_notes": null
+      },
+      {
+        "step_number": 9,
+        "phase": "assessment",
+        "instruction": "Determine chief complaint and identify apparent life threats.",
+        "is_critical": false,
+        "detail_notes": null
+      },
+      {
+        "step_number": 10,
+        "phase": "assessment",
+        "instruction": "Open and assess airway. Insert appropriate adjunct (OPA or NPA) as indicated.",
+        "is_critical": true,
+        "detail_notes": "2 possible points. NREMT critical criterion: failure to find or manage airway problems."
+      },
+      {
+        "step_number": 11,
+        "phase": "assessment",
+        "instruction": "Assess breathing — rate, quality, adequacy. Assure adequate ventilation. Initiate appropriate oxygen therapy. Manage any injury that may compromise breathing or ventilation.",
+        "is_critical": true,
+        "detail_notes": "4 possible points. NREMT critical criteria: failure to provide adequate ventilation; failure to provide high-concentration oxygen."
+      },
+      {
+        "step_number": 12,
+        "phase": "assessment",
+        "instruction": "Check pulse. Assess skin color, temperature, or condition. Assess for and control major bleeding if present. Initiate shock management — position patient appropriately and conserve body heat.",
+        "is_critical": true,
+        "detail_notes": "4 possible points. NREMT critical criterion: failure to manage hemorrhage or shock."
+      },
+      {
+        "step_number": 13,
+        "phase": "assessment",
+        "instruction": "Identify patient priority and make treatment/transport decision based on calculated GCS.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion: failure to differentiate need for immediate transport versus continued scene assessment."
+      },
+      {
+        "step_number": 14,
+        "phase": "assessment",
+        "instruction": "Obtain baseline vital signs — must include blood pressure, pulse, and respirations.",
+        "is_critical": false,
+        "detail_notes": null
+      },
+      {
+        "step_number": 15,
+        "phase": "assessment",
+        "instruction": "Attempt to obtain SAMPLE history (Signs/symptoms, Allergies, Medications, Past medical history, Last oral intake, Events leading to illness/injury).",
+        "is_critical": false,
+        "detail_notes": null
+      },
+      {
+        "step_number": 16,
+        "phase": "assessment",
+        "instruction": "Perform secondary assessment of the head — inspect and palpate scalp and ears, assess eyes, inspect mouth, nose, and facial area.",
+        "is_critical": false,
+        "detail_notes": "3 possible points. Items marked ** on source may be integrated into primary survey sequence."
+      },
+      {
+        "step_number": 17,
+        "phase": "assessment",
+        "instruction": "Assess the neck — check tracheal position, check jugular veins, palpate cervical spine.",
+        "is_critical": false,
+        "detail_notes": "3 possible points. May be integrated into primary survey."
+      },
+      {
+        "step_number": 18,
+        "phase": "assessment",
+        "instruction": "Assess the chest — inspect, palpate, and auscultate.",
+        "is_critical": false,
+        "detail_notes": "3 possible points. May be integrated into primary survey."
+      },
+      {
+        "step_number": 19,
+        "phase": "assessment",
+        "instruction": "Assess abdomen and pelvis — inspect and palpate abdomen, assess pelvis for stability, verbalize assessment of genitalia/perineum as needed.",
+        "is_critical": false,
+        "detail_notes": "3 possible points. May be integrated into primary survey."
+      },
+      {
+        "step_number": 20,
+        "phase": "assessment",
+        "instruction": "Assess lower extremities — inspect, palpate, and assess motor, sensory, and distal circulatory function in each leg.",
+        "is_critical": false,
+        "detail_notes": "1 point per leg, 2 total. May be integrated into primary survey."
+      },
+      {
+        "step_number": 21,
+        "phase": "assessment",
+        "instruction": "Assess upper extremities — inspect, palpate, and assess motor, sensory, and distal circulatory function in each arm.",
+        "is_critical": false,
+        "detail_notes": "1 point per arm, 2 total."
+      },
+      {
+        "step_number": 22,
+        "phase": "assessment",
+        "instruction": "Assess posterior thorax, lumbar, and buttocks — inspect and palpate posterior thorax, inspect and palpate lumbar and buttocks areas.",
+        "is_critical": false,
+        "detail_notes": "2 possible points. May be integrated into primary survey."
+      },
+      {
+        "step_number": 23,
+        "phase": "packaging",
+        "instruction": "Manage secondary injuries and wounds appropriately.",
+        "is_critical": false,
+        "detail_notes": null
+      },
+      {
+        "step_number": 24,
+        "phase": "packaging",
+        "instruction": "Demonstrate how and when to reassess the patient for changes in condition.",
+        "is_critical": false,
+        "detail_notes": "Reassessment timing: unstable patients every 5 minutes, stable patients every 15 minutes."
+      }
+    ],
+    "critical_criteria": [
+      "Took or verbalized appropriate PPE precautions",
+      "Determined scene safety",
+      "Assessed for and provided spinal protection when indicated",
+      "Provided high-concentration oxygen",
+      "Assessed and provided adequate ventilation",
+      "Found and appropriately managed airway, breathing, hemorrhage, and shock problems",
+      "Differentiated patient need for immediate transport versus continued scene assessment",
+      "Performed primary survey before secondary assessment"
+    ],
+    "critical_failures": [
+      "Did not initiate or call for transport within 10-minute time limit",
+      "Did not take or verbalize appropriate PPE precautions",
+      "Did not determine scene safety",
+      "Did not assess for and provide spinal protection when indicated",
+      "Did not voice and ultimately provide high-concentration oxygen",
+      "Did not assess or provide adequate ventilation",
+      "Did not find or appropriately manage problems with airway, breathing, hemorrhage, or shock",
+      "Did not differentiate patient need for immediate transport versus continued scene assessment",
+      "Performed secondary assessment before addressing threats to airway, breathing, and circulation",
+      "Did not manage the patient as a competent EMT",
+      "Exhibited unacceptable affect with patient or other personnel",
+      "Used or ordered a dangerous or inappropriate intervention"
+    ],
+    "notes": "NREMT psychomotor exam station. 42 possible points. 10-minute time limit to initiate or call for transport. Areas marked ** on source sheet may be integrated within the primary survey/resuscitation sequence at candidate's discretion. GCS calculation required for transport priority decision. Form reference: e201/10-16."
+  },
+  {
+    "skill_name": "Patient assessment and management — medical",
+    "program": "emt",
+    "source": "nremt",
+    "source_priority": 1,
+    "version": "2016",
+    "equipment": [
+      "Gloves (multiple pairs)",
+      "Eye protection (safety glasses or face shield)",
+      "Stethoscope",
+      "Blood pressure cuff (adult sizes)",
+      "Penlight",
+      "Pulse oximeter",
+      "Oxygen delivery equipment (NRB mask, nasal cannula)",
+      "BVM with reservoir connected to O2 at 15 L/min",
+      "Oropharyngeal airways (assorted sizes)",
+      "Nasopharyngeal airways (assorted sizes) with water-soluble lubricant",
+      "Suction unit with rigid catheter",
+      "Glucometer",
+      "Blanket for heat conservation"
+    ],
+    "overview": "Systematic medical patient assessment covering scene size-up, primary survey with resuscitation of life threats, thorough OPQRST and SAMPLE history, focused secondary assessment of affected body systems, vital signs, field impression, intervention planning, and reassessment with verbal handoff report. 15-minute time limit.",
+    "steps": [
+      {
+        "step_number": 1,
+        "phase": "preparation",
+        "instruction": "Take or verbalize appropriate PPE precautions — gloves and eye protection at minimum.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion."
+      },
+      {
+        "step_number": 2,
+        "phase": "preparation",
+        "instruction": "Determine the scene/situation is safe.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion: failure to determine scene safety before approaching patient."
+      },
+      {
+        "step_number": 3,
+        "phase": "preparation",
+        "instruction": "Determine the mechanism of injury/nature of illness.",
+        "is_critical": false,
+        "detail_notes": null
+      },
+      {
+        "step_number": 4,
+        "phase": "preparation",
+        "instruction": "Determine the number of patients.",
+        "is_critical": false,
+        "detail_notes": null
+      },
+      {
+        "step_number": 5,
+        "phase": "preparation",
+        "instruction": "Request additional EMS assistance if necessary.",
+        "is_critical": false,
+        "detail_notes": null
+      },
+      {
+        "step_number": 6,
+        "phase": "preparation",
+        "instruction": "Consider stabilization of the spine.",
+        "is_critical": false,
+        "detail_notes": "Even on medical calls, spinal precautions may be indicated (e.g., fall with altered LOC, unknown mechanism)."
+      },
+      {
+        "step_number": 7,
+        "phase": "assessment",
+        "instruction": "Verbalize general impression of the patient.",
+        "is_critical": false,
+        "detail_notes": null
+      },
+      {
+        "step_number": 8,
+        "phase": "assessment",
+        "instruction": "Determine responsiveness and level of consciousness using AVPU scale.",
+        "is_critical": false,
+        "detail_notes": null
+      },
+      {
+        "step_number": 9,
+        "phase": "assessment",
+        "instruction": "Determine chief complaint and identify apparent life threats.",
+        "is_critical": false,
+        "detail_notes": null
+      },
+      {
+        "step_number": 10,
+        "phase": "assessment",
+        "instruction": "Assess airway and breathing — perform assessment, assure adequate ventilation, initiate appropriate oxygen therapy.",
+        "is_critical": true,
+        "detail_notes": "3 possible points. NREMT critical criteria: failure to provide appropriate oxygen therapy; failure to assess/provide adequate ventilation."
+      },
+      {
+        "step_number": 11,
+        "phase": "assessment",
+        "instruction": "Assess circulation — assess and control major bleeding, check pulse, assess skin color, temperature, or condition.",
+        "is_critical": true,
+        "detail_notes": "3 possible points. NREMT critical criterion: failure to manage hemorrhage or shock."
+      },
+      {
+        "step_number": 12,
+        "phase": "assessment",
+        "instruction": "Identify patient priority and make treatment/transport decision.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion: failure to differentiate need for immediate transport versus continued assessment."
+      },
+      {
+        "step_number": 13,
+        "phase": "assessment",
+        "instruction": "Obtain history of present illness using OPQRST — Onset, Provocation, Quality, Radiation, Severity, Time. Ask at least two clarifying questions related to associated signs and symptoms.",
+        "is_critical": false,
+        "detail_notes": "8 possible points. 1 point each for OPQRST components, 2 points for clarifying questions."
+      },
+      {
+        "step_number": 14,
+        "phase": "assessment",
+        "instruction": "Obtain past medical history using SAMPLE — Signs/symptoms (covered in OPQRST), Allergies, Medications, Past pertinent history, Last oral intake, Events leading to present illness.",
+        "is_critical": false,
+        "detail_notes": "5 possible points."
+      },
+      {
+        "step_number": 15,
+        "phase": "assessment",
+        "instruction": "Perform secondary assessment of the affected body part or system. Relevant systems include: cardiovascular, pulmonary, neurological, musculoskeletal, integumentary, GI/GU, reproductive, and psychological/social.",
+        "is_critical": false,
+        "detail_notes": "5 possible points. Focus the exam on systems relevant to the chief complaint — a focused exam, not a full head-to-toe."
+      },
+      {
+        "step_number": 16,
+        "phase": "assessment",
+        "instruction": "Obtain vital signs — blood pressure, pulse, respiratory rate and quality.",
+        "is_critical": false,
+        "detail_notes": "4 possible points. Rate and quality of respirations scored separately."
+      },
+      {
+        "step_number": 17,
+        "phase": "assessment",
+        "instruction": "State field impression of patient.",
+        "is_critical": false,
+        "detail_notes": "Verbalize your working diagnosis based on assessment findings."
+      },
+      {
+        "step_number": 18,
+        "phase": "procedure",
+        "instruction": "Verbalize proper interventions and treatment based on field impression.",
+        "is_critical": false,
+        "detail_notes": null
+      },
+      {
+        "step_number": 19,
+        "phase": "packaging",
+        "instruction": "Demonstrate how and when to reassess the patient to determine changes in condition.",
+        "is_critical": false,
+        "detail_notes": "Unstable: every 5 minutes. Stable: every 15 minutes."
+      },
+      {
+        "step_number": 20,
+        "phase": "packaging",
+        "instruction": "Provide accurate verbal report to arriving EMS unit.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion: failure to provide accurate report to arriving EMS unit."
+      }
+    ],
+    "critical_criteria": [
+      "Took or verbalized appropriate PPE precautions",
+      "Determined scene safety before approaching patient",
+      "Provided appropriate oxygen therapy",
+      "Assessed and provided adequate ventilation",
+      "Found and appropriately managed airway, breathing, hemorrhage, and shock problems",
+      "Differentiated patient need for immediate transport versus continued assessment",
+      "Performed primary survey before secondary assessment",
+      "Provided accurate verbal report to arriving EMS unit"
+    ],
+    "critical_failures": [
+      "Did not initiate or call for transport within 15-minute time limit",
+      "Did not take or verbalize appropriate PPE precautions",
+      "Did not determine scene safety before approaching patient",
+      "Did not voice and ultimately provide appropriate oxygen therapy",
+      "Did not assess or provide adequate ventilation",
+      "Did not find or appropriately manage problems with airway, breathing, hemorrhage, or shock",
+      "Did not differentiate patient need for immediate transport versus continued assessment at scene",
+      "Performed secondary examination before assessing and treating threats to airway, breathing, and circulation",
+      "Ordered a dangerous or inappropriate intervention",
+      "Did not provide accurate report to arriving EMS unit",
+      "Did not manage the patient as a competent EMT",
+      "Exhibited unacceptable affect with patient or other personnel",
+      "Used or ordered a dangerous or inappropriate intervention"
+    ],
+    "notes": "NREMT psychomotor exam station. 42 possible points. 15-minute time limit (5 minutes longer than trauma station due to history-taking emphasis). Medical assessment emphasizes thorough OPQRST and SAMPLE over head-to-toe secondary — focused assessment of affected systems only. Verbal handoff report is a scored and critical component unique to this station. Form reference: e202/10-16."
+  },
+  {
+    "skill_name": "BVM ventilation of an apneic adult patient",
+    "program": "emt",
+    "source": "nremt",
+    "source_priority": 1,
+    "version": "2016",
+    "equipment": [
+      "Gloves",
+      "Eye protection (safety glasses or face shield)",
+      "Bag-valve-mask (adult) with reservoir bag",
+      "Oxygen source connected to BVM at 15 L/min",
+      "Oropharyngeal airway (assorted adult sizes)",
+      "Rigid suction catheter (Yankauer)",
+      "Suction unit (powered or manual)",
+      "Pulse oximeter"
+    ],
+    "overview": "Single-rescuer BVM ventilation of an unresponsive, apneic adult patient with a pulse. Covers assessment of responsiveness, suctioning of the airway, OPA insertion, and delivery of ventilations at the correct rate and volume with supplemental high-flow oxygen.",
+    "steps": [
+      {
+        "step_number": 1,
+        "phase": "preparation",
+        "instruction": "Take or verbalize appropriate PPE precautions — gloves and eye protection.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion."
+      },
+      {
+        "step_number": 2,
+        "phase": "preparation",
+        "instruction": "Check patient responsiveness.",
+        "is_critical": true,
+        "detail_notes": "Part of the mandated assessment sequence — must check responsiveness first."
+      },
+      {
+        "step_number": 3,
+        "phase": "preparation",
+        "instruction": "Request additional EMS assistance.",
+        "is_critical": false,
+        "detail_notes": null
+      },
+      {
+        "step_number": 4,
+        "phase": "assessment",
+        "instruction": "Check breathing and pulse simultaneously for no more than 10 seconds.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion: must check responsiveness first, then breathing and pulse simultaneously for no more than 10 seconds. Examiner then states patient is unresponsive, apneic, with a weak pulse of 60."
+      },
+      {
+        "step_number": 5,
+        "phase": "procedure",
+        "instruction": "Open the airway using a manual technique (head-tilt/chin-lift or jaw-thrust if spinal injury suspected).",
+        "is_critical": false,
+        "detail_notes": "Examiner then states the mouth is full of secretions and vomitus."
+      },
+      {
+        "step_number": 6,
+        "phase": "procedure",
+        "instruction": "Prepare rigid suction catheter (Yankauer).",
+        "is_critical": false,
+        "detail_notes": null
+      },
+      {
+        "step_number": 7,
+        "phase": "procedure",
+        "instruction": "Turn on power to suction device or retrieve manual suction device.",
+        "is_critical": false,
+        "detail_notes": null
+      },
+      {
+        "step_number": 8,
+        "phase": "procedure",
+        "instruction": "Insert rigid suction catheter without applying suction during insertion.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion: insertion or use of any adjunct in a dangerous manner."
+      },
+      {
+        "step_number": 9,
+        "phase": "procedure",
+        "instruction": "Suction the mouth and oropharynx. Do not suction for an excessive or prolonged time.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criteria: must suction before ventilating; must not suction for excessive/prolonged time. Examiner then states the airway is clear."
+      },
+      {
+        "step_number": 10,
+        "phase": "procedure",
+        "instruction": "Open the airway manually.",
+        "is_critical": false,
+        "detail_notes": null
+      },
+      {
+        "step_number": 11,
+        "phase": "procedure",
+        "instruction": "Insert oropharyngeal airway (OPA) — size from corner of mouth to earlobe or angle of jaw.",
+        "is_critical": false,
+        "detail_notes": "Examiner then states no gag reflex is present and the patient accepts the adjunct."
+      },
+      {
+        "step_number": 12,
+        "phase": "procedure",
+        "instruction": "Ventilate the patient immediately using BVM. May use BVM unattached to oxygen initially — first ventilation must be delivered within 30 seconds of completing suction.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion: after suctioning, failure to initiate ventilations within 30 seconds is an automatic fail. Credit also given if candidate goes directly to BVM with reservoir and oxygen, provided first ventilation is within 30 seconds."
+      },
+      {
+        "step_number": 13,
+        "phase": "assessment",
+        "instruction": "Re-check pulse for no more than 10 seconds.",
+        "is_critical": false,
+        "detail_notes": "Confirms patient still has a pulse — this is ventilation-only management, not CPR."
+      },
+      {
+        "step_number": 14,
+        "phase": "procedure",
+        "instruction": "Attach BVM assembly (mask, bag, reservoir) to oxygen source at 15 L/min.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion: must ultimately provide high oxygen concentration (at least 85%)."
+      },
+      {
+        "step_number": 15,
+        "phase": "procedure",
+        "instruction": "Ventilate the patient with adequate volume to produce visible chest rise at a rate of 10–12 ventilations per minute (one ventilation every 5–6 seconds).",
+        "is_critical": true,
+        "detail_notes": "2 possible points (volume and rate scored separately). NREMT critical criteria: failure to ventilate at 10–12/min; failure to provide adequate volumes (max 2 errors/minute permissible)."
+      }
+    ],
+    "critical_criteria": [
+      "Initiated ventilations within 30 seconds after suctioning and did not interrupt ventilations for more than 30 seconds at any time",
+      "Took or verbalized appropriate PPE precautions",
+      "Suctioned airway before ventilating",
+      "Did not suction for excessive or prolonged time",
+      "Checked responsiveness first, then checked breathing and pulse simultaneously for no more than 10 seconds",
+      "Ultimately provided high oxygen concentration (at least 85%)",
+      "Ventilated at a rate of 10–12 per minute",
+      "Provided adequate volume per breath (max 2 errors/minute permissible)",
+      "Did not insert or use any adjunct in a manner dangerous to the patient"
+    ],
+    "critical_failures": [
+      "After suctioning, did not initiate ventilations within 30 seconds or interrupted ventilations for more than 30 seconds",
+      "Did not take or verbalize appropriate PPE precautions",
+      "Did not suction airway before ventilating the patient",
+      "Suctioned the patient for excessive and prolonged time",
+      "Did not check responsiveness then breathing and pulse simultaneously for no more than 10 seconds",
+      "Did not voice and ultimately provide high oxygen concentration (at least 85%)",
+      "Did not ventilate at a rate of 10–12 per minute (one every 5–6 seconds)",
+      "Did not provide adequate volumes per breath (more than 2 errors/minute)",
+      "Inserted or used any adjunct in a manner dangerous to the patient",
+      "Did not manage the patient as a competent EMT",
+      "Exhibited unacceptable affect with patient or other personnel",
+      "Used or ordered a dangerous or inappropriate intervention"
+    ],
+    "notes": "NREMT psychomotor exam station. 16 possible points. Examiner provides scripted prompts at specific points during the skill. Key teaching point: students often fail by delaying initial ventilation while setting up oxygen — the sheet explicitly allows initial BVM ventilation without oxygen as long as the first breath is within 30 seconds. The final examiner question ('How would you know if you are delivering appropriate volumes?') is asked but not scored — expected answer: visible chest rise with each ventilation. Form reference: e203/10-16."
+  },
+  {
+    "skill_name": "Oxygen administration by non-rebreather mask",
+    "program": "emt",
+    "source": "nremt",
+    "source_priority": 1,
+    "version": "2016",
+    "equipment": [
+      "Gloves",
+      "Eye protection",
+      "Portable oxygen cylinder (D or E size)",
+      "Oxygen regulator with flowmeter",
+      "Non-rebreather mask (adult)",
+      "Oxygen connecting tubing (if not integrated into NRB mask)",
+      "Cylinder wrench or key (if required by tank type)"
+    ],
+    "overview": "Assembly and operation of an oxygen delivery system using a portable tank, regulator, and non-rebreather mask. Covers safe tank handling, leak testing, reservoir pre-fill, flow rate adjustment, and proper mask application to the patient.",
+    "steps": [
+      {
+        "step_number": 1,
+        "phase": "preparation",
+        "instruction": "Take or verbalize appropriate PPE precautions.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion."
+      },
+      {
+        "step_number": 2,
+        "phase": "preparation",
+        "instruction": "Gather appropriate equipment — oxygen cylinder, regulator, non-rebreather mask.",
+        "is_critical": false,
+        "detail_notes": null
+      },
+      {
+        "step_number": 3,
+        "phase": "preparation",
+        "instruction": "Crack the valve on the oxygen tank briefly to clear dust and debris from the port.",
+        "is_critical": false,
+        "detail_notes": "Brief burst — open and close quickly. Point port away from self and others."
+      },
+      {
+        "step_number": 4,
+        "phase": "preparation",
+        "instruction": "Assemble the regulator to the oxygen tank — align pins, hand-tighten securely.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion: failure to assemble without leaks."
+      },
+      {
+        "step_number": 5,
+        "phase": "procedure",
+        "instruction": "Open the oxygen tank valve.",
+        "is_critical": false,
+        "detail_notes": null
+      },
+      {
+        "step_number": 6,
+        "phase": "procedure",
+        "instruction": "Check the oxygen tank pressure on the regulator gauge.",
+        "is_critical": false,
+        "detail_notes": "Full D cylinder: approximately 350 psi. Full E cylinder: approximately 1800 psi. Replace if below safe operating pressure per local protocol."
+      },
+      {
+        "step_number": 7,
+        "phase": "procedure",
+        "instruction": "Check for leaks — listen and feel around the regulator-to-tank connection.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion: failure to assemble without leaks."
+      },
+      {
+        "step_number": 8,
+        "phase": "procedure",
+        "instruction": "Attach non-rebreather mask to the correct port on the regulator.",
+        "is_critical": false,
+        "detail_notes": null
+      },
+      {
+        "step_number": 9,
+        "phase": "procedure",
+        "instruction": "Turn on oxygen flow to prefill the reservoir bag completely before placing on the patient.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion: failure to prefill the reservoir bag. Bag must be fully inflated before applying mask."
+      },
+      {
+        "step_number": 10,
+        "phase": "procedure",
+        "instruction": "Adjust the regulator to assure an oxygen flow rate of at least 10 L/min.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion: failure to adjust flow to at least 10 L/min. Standard NRB flow is 10–15 L/min."
+      },
+      {
+        "step_number": 11,
+        "phase": "procedure",
+        "instruction": "Attach the mask to the patient's face and adjust to fit snugly over the nose and mouth.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion: failure to ensure a tight mask seal. Pinch the metal nose clip to conform, adjust elastic strap."
+      }
+    ],
+    "critical_criteria": [
+      "Took or verbalized appropriate PPE precautions",
+      "Assembled oxygen tank and regulator without leaks",
+      "Prefilled the reservoir bag before applying to patient",
+      "Adjusted oxygen flow rate to at least 10 L/min",
+      "Ensured a tight mask seal to the patient's face"
+    ],
+    "critical_failures": [
+      "Did not take or verbalize appropriate PPE precautions",
+      "Did not assemble the oxygen tank and regulator without leaks",
+      "Did not prefill the reservoir bag",
+      "Did not adjust oxygen flow rate to at least 10 L/min",
+      "Did not ensure a tight mask seal to the patient's face",
+      "Did not manage the patient as a competent EMT",
+      "Exhibited unacceptable affect with patient or other personnel",
+      "Used or ordered a dangerous or inappropriate intervention"
+    ],
+    "notes": "NREMT psychomotor exam station. 11 possible points. This is the most straightforward station — pure equipment assembly and application. Common student errors: forgetting to crack the tank valve before assembly, not prefilling the reservoir bag, and setting flow below 10 L/min. Form reference: e204/10-16."
+  },
+  {
+    "skill_name": "Spinal immobilization — seated patient",
+    "program": "emt",
+    "source": "nremt",
+    "source_priority": 1,
+    "version": "2016",
+    "equipment": [
+      "Gloves",
+      "Eye protection",
+      "Cervical collar (assorted sizes — measure before application)",
+      "Short spinal immobilization device (KED or equivalent)",
+      "Long backboard",
+      "Head immobilization device (foam blocks, towel rolls, or commercial CID)",
+      "Straps (for torso, head, and extremity securing)",
+      "Padding (towels, blankets for void spaces behind head and torso)",
+      "Tape (for additional head securing if needed)"
+    ],
+    "overview": "Spinal immobilization of a seated patient using a short board or KED-type extrication device. Covers manual in-line stabilization, cervical collar application, device placement and torso fixation, head securing, transfer verbalization to long backboard, and post-immobilization neurovascular reassessment. Requires an assistant.",
+    "steps": [
+      {
+        "step_number": 1,
+        "phase": "preparation",
+        "instruction": "Take or verbalize appropriate PPE precautions.",
+        "is_critical": false,
+        "detail_notes": null
+      },
+      {
+        "step_number": 2,
+        "phase": "preparation",
+        "instruction": "Direct assistant to place and maintain the patient's head in the neutral, in-line position.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion: failure to immediately direct or take manual stabilization of the head."
+      },
+      {
+        "step_number": 3,
+        "phase": "preparation",
+        "instruction": "Direct assistant to maintain continuous manual stabilization of the head.",
+        "is_critical": true,
+        "detail_notes": "Manual stabilization must not be released until mechanical stabilization is achieved."
+      },
+      {
+        "step_number": 4,
+        "phase": "assessment",
+        "instruction": "Reassess motor, sensory, and circulatory function in each extremity prior to device application.",
+        "is_critical": true,
+        "detail_notes": "Baseline neurovascular check — must be done before AND after immobilization."
+      },
+      {
+        "step_number": 5,
+        "phase": "procedure",
+        "instruction": "Apply an appropriately sized extrication collar. Measure and size the collar before application.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion: collar must be properly applied before ordering release of manual stabilization."
+      },
+      {
+        "step_number": 6,
+        "phase": "procedure",
+        "instruction": "Position the immobilization device (KED or short board) behind the patient.",
+        "is_critical": false,
+        "detail_notes": null
+      },
+      {
+        "step_number": 7,
+        "phase": "procedure",
+        "instruction": "Secure the device to the patient's torso using straps. Tighten middle strap first, then lower, then upper.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criteria: torso must be secured before head; torso fixation must not inhibit chest rise; device must not move excessively on torso."
+      },
+      {
+        "step_number": 8,
+        "phase": "procedure",
+        "instruction": "Evaluate torso fixation and adjust straps as necessary to ensure a snug fit without excessive movement.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion: device moves excessively up, down, left, or right on the patient's torso."
+      },
+      {
+        "step_number": 9,
+        "phase": "procedure",
+        "instruction": "Evaluate and pad behind the patient's head as necessary to maintain neutral in-line position.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion: upon completion, head must be in neutral in-line position. Padding compensates for the device thickness behind the torso."
+      },
+      {
+        "step_number": 10,
+        "phase": "procedure",
+        "instruction": "Secure the patient's head to the device using straps, tape, or commercial head immobilization device.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criteria: head must not be immobilized before torso is secured; head immobilization must not allow excessive movement."
+      },
+      {
+        "step_number": 11,
+        "phase": "packaging",
+        "instruction": "Verbalize moving the patient to a long backboard for transport.",
+        "is_critical": false,
+        "detail_notes": null
+      },
+      {
+        "step_number": 12,
+        "phase": "packaging",
+        "instruction": "Reassess motor, sensory, and circulatory function in each extremity after voicing immobilization to long backboard.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion: must reassess neurovascular status after immobilization is complete."
+      }
+    ],
+    "critical_criteria": [
+      "Immediately directed or took manual stabilization of the head",
+      "Applied appropriately sized cervical collar before release of manual stabilization",
+      "Did not release manual stabilization before mechanical stabilization achieved",
+      "Did not manipulate or move patient excessively causing potential spinal compromise",
+      "Secured device to torso before immobilizing head",
+      "Device does not move excessively on patient's torso",
+      "Head immobilization does not allow excessive movement",
+      "Torso fixation does not inhibit chest rise",
+      "Head is in neutral in-line position upon completion",
+      "Reassessed motor, sensory, and circulatory function after immobilization"
+    ],
+    "critical_failures": [
+      "Did not immediately direct or take manual stabilization of the head",
+      "Did not properly apply appropriately sized cervical collar before ordering release of manual stabilization",
+      "Released or ordered release of manual stabilization before it was maintained mechanically",
+      "Manipulated or moved patient excessively causing potential spinal compromise",
+      "Immobilized head to the device before device was sufficiently secured to the torso",
+      "Device moves excessively up, down, left, or right on the patient's torso",
+      "Head immobilization allows for excessive movement",
+      "Torso fixation inhibits chest rise resulting in respiratory compromise",
+      "Upon completion of immobilization, head is not in a neutral in-line position",
+      "Did not reassess motor, sensory, and circulatory functions in each extremity after voicing immobilization to the long backboard",
+      "Did not manage the patient as a competent EMT",
+      "Exhibited unacceptable affect with patient or other personnel",
+      "Used or ordered a dangerous or inappropriate intervention"
+    ],
+    "notes": "NREMT psychomotor exam station. 12 possible points. Requires an assistant for manual stabilization. Key sequence rule: torso MUST be secured before head is immobilized to the device — reversing this order is an automatic fail. Common errors: not padding behind the head, applying collar before directing manual stabilization, and strapping too tight over the chest. Form reference: e211/10-16."
+  },
+  {
+    "skill_name": "Spinal immobilization — supine patient",
+    "program": "emt",
+    "source": "nremt",
+    "source_priority": 1,
+    "version": "2016",
+    "equipment": [
+      "Gloves",
+      "Eye protection",
+      "Cervical collar (assorted sizes — measure before application)",
+      "Long backboard (or equivalent full-body immobilization device)",
+      "Head immobilization device (foam blocks, towel rolls, or commercial CID)",
+      "Straps (minimum 3 for torso/pelvis, plus head and extremity straps)",
+      "Padding (towels, blankets for void spaces behind head and along torso)",
+      "Tape (for additional head securing if needed)"
+    ],
+    "overview": "Spinal immobilization of a supine patient onto a long backboard. Covers manual in-line stabilization, cervical collar application, log-roll or lift onto device, torso/extremity/head securing, padding, and post-immobilization neurovascular reassessment. Requires assistant(s).",
+    "steps": [
+      {
+        "step_number": 1,
+        "phase": "preparation",
+        "instruction": "Take or verbalize appropriate PPE precautions.",
+        "is_critical": false,
+        "detail_notes": null
+      },
+      {
+        "step_number": 2,
+        "phase": "preparation",
+        "instruction": "Direct assistant to place and maintain the head in the neutral, in-line position.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion: failure to immediately direct or take manual stabilization of the head."
+      },
+      {
+        "step_number": 3,
+        "phase": "preparation",
+        "instruction": "Direct assistant to maintain continuous manual stabilization of the head.",
+        "is_critical": true,
+        "detail_notes": "Must not be released until mechanical stabilization is achieved."
+      },
+      {
+        "step_number": 4,
+        "phase": "assessment",
+        "instruction": "Reassess motor, sensory, and circulatory function in each extremity.",
+        "is_critical": true,
+        "detail_notes": "Baseline neurovascular check before immobilization."
+      },
+      {
+        "step_number": 5,
+        "phase": "procedure",
+        "instruction": "Apply an appropriately sized extrication collar.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion: collar must be applied before release of manual stabilization."
+      },
+      {
+        "step_number": 6,
+        "phase": "procedure",
+        "instruction": "Position the long backboard appropriately next to the patient.",
+        "is_critical": false,
+        "detail_notes": null
+      },
+      {
+        "step_number": 7,
+        "phase": "procedure",
+        "instruction": "Direct movement of the patient onto the device without compromising the integrity of the spine — log-roll or coordinated lift.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion: manipulated or moved the patient excessively causing potential spinal compromise."
+      },
+      {
+        "step_number": 8,
+        "phase": "procedure",
+        "instruction": "Apply padding to voids between the torso and the device as necessary.",
+        "is_critical": false,
+        "detail_notes": null
+      },
+      {
+        "step_number": 9,
+        "phase": "procedure",
+        "instruction": "Immobilize the patient's torso to the device using straps across the chest, pelvis, and/or abdomen.",
+        "is_critical": true,
+        "detail_notes": "Torso must be secured before head. NREMT critical criterion: head immobilized to device before device sufficiently secured to the torso."
+      },
+      {
+        "step_number": 10,
+        "phase": "procedure",
+        "instruction": "Evaluate and pad behind the patient's head as necessary to maintain neutral in-line position.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion: head must be in neutral in-line position upon completion."
+      },
+      {
+        "step_number": 11,
+        "phase": "procedure",
+        "instruction": "Immobilize the patient's head to the device using lateral head support and straps or tape across the forehead and cervical collar.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criteria: head must not be immobilized before torso; head immobilization must not allow excessive movement."
+      },
+      {
+        "step_number": 12,
+        "phase": "procedure",
+        "instruction": "Secure the patient's legs to the device.",
+        "is_critical": false,
+        "detail_notes": null
+      },
+      {
+        "step_number": 13,
+        "phase": "procedure",
+        "instruction": "Secure the patient's arms to the device.",
+        "is_critical": false,
+        "detail_notes": null
+      },
+      {
+        "step_number": 14,
+        "phase": "packaging",
+        "instruction": "Reassess motor, sensory, and circulatory function in each extremity after completing immobilization.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion: must reassess neurovascular status after immobilization."
+      }
+    ],
+    "critical_criteria": [
+      "Immediately directed or took manual stabilization of the head",
+      "Applied appropriately sized cervical collar before release of manual stabilization",
+      "Did not release manual stabilization before mechanical stabilization achieved",
+      "Did not manipulate or move patient excessively causing potential spinal compromise",
+      "Secured torso to device before immobilizing head",
+      "Patient does not move excessively on the device",
+      "Head immobilization does not allow excessive movement",
+      "Head is in neutral in-line position upon completion",
+      "Reassessed motor, sensory, and circulatory function after immobilization"
+    ],
+    "critical_failures": [
+      "Did not immediately direct or take manual stabilization of the head",
+      "Did not properly apply appropriately sized cervical collar before ordering release of manual stabilization",
+      "Released or ordered release of manual stabilization before it was maintained mechanically",
+      "Manipulated or moved the patient excessively causing potential spinal compromise",
+      "Immobilized head to the device before device was sufficiently secured to the torso",
+      "Patient moves excessively up, down, left, or right on the device",
+      "Head immobilization allows for excessive movement",
+      "Upon completion of immobilization, head is not in a neutral in-line position",
+      "Did not reassess motor, sensory, and circulatory functions in each extremity after immobilizing patient to the device",
+      "Did not manage the patient as a competent EMT",
+      "Exhibited unacceptable affect with patient or other personnel",
+      "Used or ordered a dangerous or inappropriate intervention"
+    ],
+    "notes": "NREMT psychomotor exam station. 14 possible points. Requires assistant(s). Same torso-before-head rule as seated immobilization. Additional steps compared to seated: patient must be moved onto the device (log-roll), extremities must be individually secured. Note the supine sheet does NOT include a respiratory compromise criterion for torso straps (unlike the seated sheet), but over-tightening should still be avoided. Form reference: e212/10-16."
+  },
+  {
+    "skill_name": "Bleeding control and shock management",
+    "program": "emt",
+    "source": "nremt",
+    "source_priority": 1,
+    "version": "2016",
+    "equipment": [
+      "Gloves (multiple pairs)",
+      "Eye protection (safety glasses or face shield)",
+      "Trauma dressings (gauze pads, roller gauze, ABD pads)",
+      "Commercial tourniquet (CAT, SOFT-T, or equivalent)",
+      "Oxygen cylinder with regulator",
+      "Non-rebreather mask (adult)",
+      "Blanket for heat conservation"
+    ],
+    "overview": "Management of uncontrolled external hemorrhage progressing to tourniquet application, followed by shock management. Scenario is examiner-driven — the wound continues to bleed after direct pressure, prompting tourniquet use, then the patient develops signs of hypoperfusion requiring shock treatment.",
+    "steps": [
+      {
+        "step_number": 1,
+        "phase": "preparation",
+        "instruction": "Take or verbalize appropriate PPE precautions — gloves and eye protection.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion."
+      },
+      {
+        "step_number": 2,
+        "phase": "procedure",
+        "instruction": "Apply direct pressure to the wound using appropriate dressing material.",
+        "is_critical": true,
+        "detail_notes": "First-line hemorrhage control. Examiner then states the wound continues to bleed."
+      },
+      {
+        "step_number": 3,
+        "phase": "procedure",
+        "instruction": "Apply a tourniquet proximal to the wound. Tighten until bleeding is controlled. Note the time of application.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion: failure to control hemorrhage using correct procedures in a timely manner. Examiner then states the patient is showing signs and symptoms of hypoperfusion."
+      },
+      {
+        "step_number": 4,
+        "phase": "procedure",
+        "instruction": "Properly position the patient — supine with legs elevated (Trendelenburg or shock position) if no contraindication.",
+        "is_critical": false,
+        "detail_notes": "Contraindications to leg elevation: suspected spinal injury, lower extremity fractures, abdominal evisceration."
+      },
+      {
+        "step_number": 5,
+        "phase": "procedure",
+        "instruction": "Administer high-concentration oxygen via non-rebreather mask at 15 L/min.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion: failure to administer high-concentration oxygen."
+      },
+      {
+        "step_number": 6,
+        "phase": "packaging",
+        "instruction": "Initiate steps to prevent heat loss from the patient — cover with blanket, minimize exposure.",
+        "is_critical": false,
+        "detail_notes": "Hypothermia worsens coagulopathy in hemorrhagic shock."
+      },
+      {
+        "step_number": 7,
+        "phase": "packaging",
+        "instruction": "Indicate the need for immediate transportation.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion: failure to indicate the need for immediate transportation."
+      }
+    ],
+    "critical_criteria": [
+      "Took or verbalized appropriate PPE precautions",
+      "Administered high-concentration oxygen",
+      "Controlled hemorrhage using correct procedures in a timely manner",
+      "Indicated the need for immediate transportation"
+    ],
+    "critical_failures": [
+      "Did not take or verbalize appropriate PPE precautions",
+      "Did not administer high-concentration oxygen",
+      "Did not control hemorrhage using correct procedures in a timely manner",
+      "Did not indicate the need for immediate transportation",
+      "Did not manage the patient as a competent EMT",
+      "Exhibited unacceptable affect with patient or other personnel",
+      "Used or ordered a dangerous or inappropriate intervention"
+    ],
+    "notes": "NREMT psychomotor exam station. 7 possible points — the shortest NREMT station. Examiner-driven scenario with two scripted prompts: wound continues to bleed (triggers tourniquet), patient shows hypoperfusion signs (triggers shock management). The 2016 update added tourniquet as the expected escalation from direct pressure — wound packing is not explicitly listed but is clinically acceptable. SNHD protocol: tourniquet application is within EMT scope; document time of application on the tourniquet itself. Form reference: e213/10-16."
+  },
+  {
+    "skill_name": "Cardiac arrest management with AED",
+    "program": "emt",
+    "source": "nremt",
+    "source_priority": 1,
+    "version": "2017",
+    "equipment": [
+      "Gloves",
+      "Eye protection (safety glasses or face shield)",
+      "Automated external defibrillator (AED) with pads",
+      "BVM with reservoir connected to O2 at 15 L/min",
+      "Oropharyngeal airway (assorted adult sizes)",
+      "Pocket mask or barrier device (backup)",
+      "Oxygen cylinder with regulator",
+      "Towel or razor (for chest hair removal if needed)"
+    ],
+    "overview": "Single-rescuer recognition and management of adult cardiac arrest including high-quality CPR and AED operation. Covers initial assessment, 2 minutes of 1-rescuer CPR (30:2), transition to AED analysis and shock delivery, and immediate resumption of compressions post-shock. Second rescuer arrives after the initial 2-minute CPR cycle.",
+    "steps": [
+      {
+        "step_number": 1,
+        "phase": "preparation",
+        "instruction": "Take or verbalize appropriate PPE precautions.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion."
+      },
+      {
+        "step_number": 2,
+        "phase": "preparation",
+        "instruction": "Determine the scene/situation is safe.",
+        "is_critical": false,
+        "detail_notes": null
+      },
+      {
+        "step_number": 3,
+        "phase": "assessment",
+        "instruction": "Check patient responsiveness — tap and shout.",
+        "is_critical": true,
+        "detail_notes": "Must check responsiveness first in the mandated sequence."
+      },
+      {
+        "step_number": 4,
+        "phase": "preparation",
+        "instruction": "Direct assistant to retrieve AED.",
+        "is_critical": false,
+        "detail_notes": null
+      },
+      {
+        "step_number": 5,
+        "phase": "preparation",
+        "instruction": "Request additional EMS assistance (call 911 or activate EMS system).",
+        "is_critical": false,
+        "detail_notes": null
+      },
+      {
+        "step_number": 6,
+        "phase": "assessment",
+        "instruction": "Check breathing and pulse simultaneously for no more than 10 seconds.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion: must check responsiveness then breathing and pulse simultaneously for no more than 10 seconds. Examiner then states: patient is unresponsive, apneic, and pulseless."
+      },
+      {
+        "step_number": 7,
+        "phase": "procedure",
+        "instruction": "Immediately begin chest compressions — adequate depth (at least 2 inches for adult), adequate rate (100–120/min), allow complete chest recoil.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion: failure to immediately begin compressions as soon as pulselessness is confirmed."
+      },
+      {
+        "step_number": 8,
+        "phase": "procedure",
+        "instruction": "Perform 2 minutes (5 cycles) of high-quality 1-rescuer adult CPR: adequate depth and rate, correct 30:2 compression-to-ventilation ratio, allow complete chest recoil, deliver adequate volumes for each breath, minimize interruptions to no more than 10 seconds throughout.",
+        "is_critical": true,
+        "detail_notes": "5 possible points (1 each for depth/rate, ratio, recoil, breath volume, minimal interruptions). NREMT critical criteria: failure to demonstrate acceptable high-quality CPR; interrupting CPR for more than 10 seconds at any point."
+      },
+      {
+        "step_number": 9,
+        "phase": "procedure",
+        "instruction": "After 2 minutes, assess the patient. Second rescuer resumes compressions while candidate operates the AED.",
+        "is_critical": false,
+        "detail_notes": "Examiner prompts this transition after 5 cycles."
+      },
+      {
+        "step_number": 10,
+        "phase": "procedure",
+        "instruction": "Turn on power to the AED.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion: failure to operate the AED properly."
+      },
+      {
+        "step_number": 11,
+        "phase": "procedure",
+        "instruction": "Follow AED voice prompts and correctly attach pads to the patient — one pad to upper right chest below clavicle, one pad to left lateral chest below the axilla.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion: failure to correctly attach the AED to the patient."
+      },
+      {
+        "step_number": 12,
+        "phase": "procedure",
+        "instruction": "Stop CPR. Ensure all individuals are clear of the patient during rhythm analysis. Verbalize 'all clear' and visually confirm.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion: failure to ensure all individuals are clear during rhythm analysis and before delivering shock."
+      },
+      {
+        "step_number": 13,
+        "phase": "procedure",
+        "instruction": "Ensure all individuals are clear of the patient. Deliver shock from the AED.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion: failure to deliver shock in a timely manner."
+      },
+      {
+        "step_number": 14,
+        "phase": "procedure",
+        "instruction": "Immediately direct the second rescuer to resume chest compressions after the shock is delivered.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion: failure to immediately resume compressions after shock delivered. Do not pause to re-check pulse — resume CPR immediately post-shock."
+      }
+    ],
+    "critical_criteria": [
+      "Took or verbalized appropriate PPE precautions",
+      "Checked responsiveness then breathing and pulse simultaneously for no more than 10 seconds",
+      "Immediately began chest compressions as soon as pulselessness was confirmed",
+      "Demonstrated acceptable high-quality 1-rescuer adult CPR",
+      "Did not interrupt CPR for more than 10 seconds at any point",
+      "Correctly attached the AED to the patient",
+      "Operated the AED properly",
+      "Delivered shock in a timely manner",
+      "Ensured all individuals were clear during rhythm analysis and before shock delivery",
+      "Immediately resumed compressions after shock delivered"
+    ],
+    "critical_failures": [
+      "Did not take or verbalize appropriate PPE precautions",
+      "Did not check responsiveness then breathing and pulse simultaneously for no more than 10 seconds",
+      "Did not immediately begin chest compressions as soon as pulselessness was confirmed",
+      "Did not demonstrate acceptable high-quality 1-rescuer adult CPR",
+      "Interrupted CPR for more than 10 seconds at any point",
+      "Did not correctly attach the AED to the patient",
+      "Did not operate the AED properly",
+      "Did not deliver shock in a timely manner",
+      "Did not ensure all individuals were clear of patient during rhythm analysis and before delivering shock",
+      "Did not immediately resume compressions after shock delivered",
+      "Did not manage the patient as a competent EMT",
+      "Exhibited unacceptable affect with patient or other personnel",
+      "Used or ordered a dangerous or inappropriate intervention"
+    ],
+    "notes": "NREMT psychomotor exam station. 17 possible points. Version 2017 (updated from 2016 for other stations). This station has the most critical failure criteria of any NREMT EMT skill (13 items). CPR quality is assessed in real-time — the 30:2 ratio, rate, depth, recoil, and minimal interruptions are each scored independently. The 'all clear' verbalization AND visual confirmation are both required before analysis and shock. Form reference: e215/07-17."
+  },
+  {
+    "skill_name": "Joint immobilization",
+    "program": "emt",
+    "source": "nremt",
+    "source_priority": 1,
+    "version": "2016",
+    "equipment": [
+      "Gloves",
+      "Eye protection",
+      "Splinting material appropriate to the joint (rigid splint, SAM splint, pillow splint, sling and swathe, or ladder splint)",
+      "Roller gauze or cravats for securing",
+      "Padding material (gauze, towels)",
+      "Tape or clips"
+    ],
+    "overview": "Immobilization of an injured joint (shoulder, elbow, wrist, knee, ankle) using appropriate splinting material. Key principle: immobilize the joint in the position found, and secure the bone above and the bone below the injured joint. Includes pre- and post-splinting neurovascular assessment.",
+    "steps": [
+      {
+        "step_number": 1,
+        "phase": "preparation",
+        "instruction": "Take or verbalize appropriate PPE precautions.",
+        "is_critical": false,
+        "detail_notes": null
+      },
+      {
+        "step_number": 2,
+        "phase": "preparation",
+        "instruction": "Direct application of manual stabilization of the injured joint — support above and below the injury, immobilize in the position found.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion: failure to immediately stabilize the extremity manually."
+      },
+      {
+        "step_number": 3,
+        "phase": "assessment",
+        "instruction": "Assess distal motor, sensory, and circulatory function in the injured extremity — check pulse, sensation, and movement distal to the injury.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion: must assess neurovascular status before AND after splinting. Examiner acknowledges functions are present and normal."
+      },
+      {
+        "step_number": 4,
+        "phase": "procedure",
+        "instruction": "Select the proper splinting material based on the joint injured and the position of the extremity.",
+        "is_critical": false,
+        "detail_notes": "Material should be appropriate to the joint — rigid, semi-rigid, or soft splint depending on presentation."
+      },
+      {
+        "step_number": 5,
+        "phase": "procedure",
+        "instruction": "Immobilize the site of the injury — apply the splint to stabilize the joint itself.",
+        "is_critical": false,
+        "detail_notes": null
+      },
+      {
+        "step_number": 6,
+        "phase": "procedure",
+        "instruction": "Immobilize the bone above the injury site.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion: failure to immobilize bone above and below the injury site."
+      },
+      {
+        "step_number": 7,
+        "phase": "procedure",
+        "instruction": "Immobilize the bone below the injury site.",
+        "is_critical": true,
+        "detail_notes": "Both the bone above AND below must be immobilized for joint injuries."
+      },
+      {
+        "step_number": 8,
+        "phase": "procedure",
+        "instruction": "Secure the entire injured extremity — ensure the splint is snug but does not compromise circulation.",
+        "is_critical": false,
+        "detail_notes": null
+      },
+      {
+        "step_number": 9,
+        "phase": "assessment",
+        "instruction": "Reassess distal motor, sensory, and circulatory function in the injured extremity after splinting.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion: must reassess before AND after splinting. Examiner acknowledges functions are present and normal."
+      }
+    ],
+    "critical_criteria": [
+      "Immediately stabilized the extremity manually",
+      "Did not grossly move the injured extremity",
+      "Immobilized the bone above and the bone below the injury site",
+      "Reassessed distal motor, sensory, and circulatory function before and after splinting"
+    ],
+    "critical_failures": [
+      "Did not immediately stabilize the extremity manually",
+      "Grossly moved the injured extremity",
+      "Did not immobilize the bone above and below the injury site",
+      "Did not reassess distal motor, sensory, and circulatory functions before and after splinting",
+      "Did not manage the patient as a competent EMT",
+      "Exhibited unacceptable affect with patient or other personnel",
+      "Used or ordered a dangerous or inappropriate intervention"
+    ],
+    "notes": "NREMT psychomotor exam station. 9 possible points. Key distinction from long bone immobilization: joint injuries require immobilization of the BONES above and below the joint. Long bone injuries require immobilization of the JOINTS above and below the fracture. Students often confuse these — the mnemonic is 'joint injury = secure the bones; bone injury = secure the joints.' Do not attempt to straighten or reposition a joint injury. Form reference: e216/10-16."
+  },
+  {
+    "skill_name": "Long bone immobilization",
+    "program": "emt",
+    "source": "nremt",
+    "source_priority": 1,
+    "version": "2016",
+    "equipment": [
+      "Gloves",
+      "Eye protection",
+      "Splinting material appropriate to the long bone (rigid splint, traction splint for femur, cardboard splint, SAM splint, or ladder splint)",
+      "Roller gauze or cravats for securing",
+      "Padding material (gauze, towels)",
+      "Tape or clips"
+    ],
+    "overview": "Immobilization of a long bone fracture (humerus, radius/ulna, femur, tibia/fibula) using appropriate splinting material. Key principle: immobilize the joint above and the joint below the fracture site, and secure the hand or foot in the position of function. Includes pre- and post-splinting neurovascular assessment.",
+    "steps": [
+      {
+        "step_number": 1,
+        "phase": "preparation",
+        "instruction": "Take or verbalize appropriate PPE precautions.",
+        "is_critical": false,
+        "detail_notes": null
+      },
+      {
+        "step_number": 2,
+        "phase": "preparation",
+        "instruction": "Direct application of manual stabilization of the injury — support above and below the fracture site.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion: failure to immediately stabilize the extremity manually."
+      },
+      {
+        "step_number": 3,
+        "phase": "assessment",
+        "instruction": "Assess distal motor, sensory, and circulatory function in the injured extremity — check pulse, sensation, and movement distal to the injury.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion: must assess before AND after splinting. Examiner acknowledges functions are present and normal."
+      },
+      {
+        "step_number": 4,
+        "phase": "procedure",
+        "instruction": "Measure the splint against the uninjured extremity or the injured extremity without moving it.",
+        "is_critical": false,
+        "detail_notes": "Splint should extend beyond the joints above and below the fracture site."
+      },
+      {
+        "step_number": 5,
+        "phase": "procedure",
+        "instruction": "Apply the splint to the injured extremity.",
+        "is_critical": false,
+        "detail_notes": null
+      },
+      {
+        "step_number": 6,
+        "phase": "procedure",
+        "instruction": "Immobilize the joint above the injury site.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion: failure to immobilize joint above and joint below the injury site."
+      },
+      {
+        "step_number": 7,
+        "phase": "procedure",
+        "instruction": "Immobilize the joint below the injury site.",
+        "is_critical": true,
+        "detail_notes": "Both the joint above AND below must be immobilized for long bone fractures."
+      },
+      {
+        "step_number": 8,
+        "phase": "procedure",
+        "instruction": "Secure the entire injured extremity.",
+        "is_critical": false,
+        "detail_notes": null
+      },
+      {
+        "step_number": 9,
+        "phase": "procedure",
+        "instruction": "Immobilize the hand or foot in the position of function.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion: failure to immobilize the hand or foot in position of function. Position of function: slight wrist extension with fingers loosely curled (hand); foot at 90 degrees to the leg (foot)."
+      },
+      {
+        "step_number": 10,
+        "phase": "assessment",
+        "instruction": "Reassess distal motor, sensory, and circulatory function in the injured extremity after splinting.",
+        "is_critical": true,
+        "detail_notes": "NREMT critical criterion: must reassess before AND after splinting. Examiner acknowledges functions are present and normal."
+      }
+    ],
+    "critical_criteria": [
+      "Immediately stabilized the extremity manually",
+      "Did not grossly move the injured extremity",
+      "Immobilized the joint above and the joint below the injury site",
+      "Immobilized the hand or foot in the position of function",
+      "Reassessed distal motor, sensory, and circulatory function before and after splinting"
+    ],
+    "critical_failures": [
+      "Did not immediately stabilize the extremity manually",
+      "Grossly moved the injured extremity",
+      "Did not immobilize the joint above and the joint below the injury site",
+      "Did not immobilize the hand or foot in a position of function",
+      "Did not reassess distal motor, sensory, and circulatory functions before and after splinting",
+      "Did not manage the patient as a competent EMT",
+      "Exhibited unacceptable affect with patient or other personnel",
+      "Used or ordered a dangerous or inappropriate intervention"
+    ],
+    "notes": "NREMT psychomotor exam station. 10 possible points. Key distinction from joint immobilization: long bone fractures require immobilization of the JOINTS above and below the fracture. Joint injuries require immobilization of the BONES above and below the joint. Additional requirement unique to this station: hand/foot must be immobilized in the position of function — this is not required on the joint immobilization sheet. Common error: forgetting to measure the splint before application. Form reference: e217/10-16."
+  }
+]
