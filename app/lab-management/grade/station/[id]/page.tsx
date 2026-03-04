@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import TimerBanner from '@/components/TimerBanner';
 import StudentPicker from '@/components/StudentPicker';
+import SkillSheetPanel from '@/components/SkillSheetPanel';
 
 // Helper function to safely handle array/string fields
 const toArray = (value: any): string[] => {
@@ -294,6 +295,9 @@ export default function GradeStationPage() {
 
   // Skill sheet lookup state (maps skill name -> skill_sheet id)
   const [skillSheetIds, setSkillSheetIds] = useState<Record<string, string>>({});
+
+  // Skill sheet panel state
+  const [panelSheetId, setPanelSheetId] = useState<string | null>(null);
 
   // Computed values
   const selectedGroup = labGroups.find(g => g.id === selectedGroupId);
@@ -824,13 +828,13 @@ export default function GradeStationPage() {
             {(station.skill_name || station.custom_title) && (
               <div className="mb-3">
                 {skillSheetIds[station.skill_name || station.custom_title || ''] ? (
-                  <Link
-                    href={`/skill-sheets/${skillSheetIds[station.skill_name || station.custom_title || '']}`}
+                  <button
+                    onClick={() => setPanelSheetId(skillSheetIds[station.skill_name || station.custom_title || ''])}
                     className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded hover:bg-emerald-100 dark:hover:bg-emerald-900/50"
                   >
                     <ClipboardCheck className="w-3 h-3" />
                     View Skill Sheet
-                  </Link>
+                  </button>
                 ) : (
                   <span className="text-xs text-gray-400 dark:text-gray-500 italic">No skill sheet available</span>
                 )}
@@ -856,13 +860,13 @@ export default function GradeStationPage() {
                         {ss.skill.name}
                       </span>
                       {skillSheetIds[ss.skill.name] ? (
-                        <Link
-                          href={`/skill-sheets/${skillSheetIds[ss.skill.name]}`}
+                        <button
+                          onClick={() => setPanelSheetId(skillSheetIds[ss.skill.name])}
                           className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded hover:bg-emerald-100 dark:hover:bg-emerald-900/50"
                         >
                           <ClipboardCheck className="w-3 h-3" />
                           View Skill Sheet
-                        </Link>
+                        </button>
                       ) : (
                         <span className="text-xs text-gray-400 dark:text-gray-500 italic">No skill sheet</span>
                       )}
@@ -874,13 +878,13 @@ export default function GradeStationPage() {
                         {cs.name} <span className="text-xs opacity-70">(custom)</span>
                       </span>
                       {skillSheetIds[cs.name] ? (
-                        <Link
-                          href={`/skill-sheets/${skillSheetIds[cs.name]}`}
+                        <button
+                          onClick={() => setPanelSheetId(skillSheetIds[cs.name])}
                           className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded hover:bg-emerald-100 dark:hover:bg-emerald-900/50"
                         >
                           <ClipboardCheck className="w-3 h-3" />
                           View Skill Sheet
-                        </Link>
+                        </button>
                       ) : (
                         <span className="text-xs text-gray-400 dark:text-gray-500 italic">No skill sheet</span>
                       )}
@@ -2097,6 +2101,24 @@ export default function GradeStationPage() {
           )}
         </div>
       </main>
+
+      {/* Skill Sheet Slide-Out Panel */}
+      {panelSheetId && (
+        <SkillSheetPanel
+          sheetId={panelSheetId}
+          onClose={() => setPanelSheetId(null)}
+          studentId={selectedStudentId || undefined}
+          studentName={
+            selectedStudentId
+              ? (() => {
+                  const s = allStudents.find(s => s.id === selectedStudentId);
+                  return s ? `${s.first_name} ${s.last_name}` : undefined;
+                })()
+              : undefined
+          }
+          labDayId={station?.lab_day?.id}
+        />
+      )}
     </div>
   );
 }
