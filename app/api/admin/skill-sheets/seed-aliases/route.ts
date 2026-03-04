@@ -249,6 +249,27 @@ const ALIASES: AliasMapping[] = [
     ],
   },
   {
+    stationName: 'Helmet Removal',
+    programs: ['emt', 'aemt', 'paramedic'],
+    targets: [
+      { skillName: 'Removing a Helmet', source: 'publisher' },
+    ],
+  },
+  {
+    stationName: 'Football Helmet Removal',
+    programs: ['emt', 'aemt', 'paramedic'],
+    targets: [
+      { skillName: 'Removing a Helmet', source: 'publisher' },
+    ],
+  },
+  {
+    stationName: 'Helmet Remove',
+    programs: ['emt', 'aemt', 'paramedic'],
+    targets: [
+      { skillName: 'Removing a Helmet', source: 'publisher' },
+    ],
+  },
+  {
     stationName: 'Splinting',
     programs: ['emt', 'aemt', 'paramedic'],
     targets: [
