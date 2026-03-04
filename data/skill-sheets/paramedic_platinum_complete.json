@@ -1,0 +1,4095 @@
+[
+  {
+    "title": "Administer IM injection",
+    "index": 1,
+    "sections": {
+      "assessment_steps": [
+        {
+          "text": "Asks patient for known allergies",
+          "section": null
+        },
+        {
+          "text": "Clearly explains procedure to the patient",
+          "section": null
+        },
+        {
+          "text": "Medication",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Appropriate syringe and needle(s)",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Sharps Container",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Alcohol swabs",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Adhesive bandage or sterile gauze dressing and tape",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Selects correct medication by identifying: Right Patient",
+          "section": "Administers Medication"
+        },
+        {
+          "text": "Selects correct medication by identifying: Right Medication",
+          "section": "Administers Medication"
+        },
+        {
+          "text": "Selects correct medication by identifying: Right dosage/concentration",
+          "section": "Administers Medication"
+        },
+        {
+          "text": "Selects correct medication by identifying: Right Time",
+          "section": "Administers Medication"
+        },
+        {
+          "text": "Selects correct medication by identifying: Right Route",
+          "section": "Administers Medication"
+        },
+        {
+          "text": "Also checks medication for: Clarity",
+          "section": "Administers Medication"
+        },
+        {
+          "text": "Also checks medication for: Expiration Date",
+          "section": "Administers Medication"
+        },
+        {
+          "text": "Assembles syringe and needle",
+          "section": "Administers Medication"
+        },
+        {
+          "text": "Draws appropriate amount of medication into syringe and dispels air while maintaining sterility",
+          "section": "Administers Medication"
+        },
+        {
+          "text": "Reconfirms medication",
+          "section": "Administers Medication"
+        },
+        {
+          "text": "Takes or verbalizes appropriate PPE precautions",
+          "section": "Administers Medication"
+        },
+        {
+          "text": "Identifies and cleanses appropriate injection site",
+          "section": "Administers Medication"
+        },
+        {
+          "text": "Stretches skin, warns patient and inserts needle at proper angle while maintaining sterility",
+          "section": "Administers Medication"
+        },
+        {
+          "text": "Aspirates syringe while observing for blood return before injecting medication",
+          "section": "Administers Medication"
+        },
+        {
+          "text": "Administers correct dose at proper push rate",
+          "section": "Administers Medication"
+        },
+        {
+          "text": "Removes needle and disposes/verbalizes proper disposal of syringe and needle in proper container",
+          "section": "Administers Medication"
+        },
+        {
+          "text": "Applies direct pressure to site",
+          "section": "Administers Medication"
+        },
+        {
+          "text": "Covers puncture site",
+          "section": "Administers Medication"
+        },
+        {
+          "text": "Verbalizes need to observe patient for desired effect and adverse side effects",
+          "section": "Administers Medication"
+        }
+      ],
+      "equipment": [],
+      "procedure_steps": [],
+      "affective": [
+        "Accepts evaluation and criticism professionally",
+        "Shows willingness to learn",
+        "Interacts with simulated patient and other personnel in professional manner"
+      ],
+      "critical_criteria": [
+        "Failure to take or verbalize appropriate PPE precautions",
+        "Failure to identify acceptable injection site",
+        "Contaminates equipment or site without appropriately correcting situation",
+        "Failure to adequately dispel air resulting in the potential for air embolism",
+        "Failure to aspirate for blood prior to injecting medication",
+        "Injects improper medication or dosage (wrong medication, incorrect amount, administers at an inappropriate rate)",
+        "Recaps needle or failure to dispose/verbalize disposal of syringe and needle in proper container",
+        "Failure to observe the patient for desired effect and adverse side effects after administering medication",
+        "Failure to manage the patient as a competent EMT",
+        "Exhibits unacceptable affect with patient or other personnel",
+        "Uses or orders a dangerous or inappropriate intervention",
+        "Administer IV bolus medication"
+      ],
+      "section_headers": [
+        "Selects, checks, assembles equipment",
+        "Administers Medication"
+      ],
+      "points_info": null
+    }
+  },
+  {
+    "title": "Administer IV bolus medication",
+    "index": 2,
+    "sections": {
+      "assessment_steps": [
+        {
+          "text": "Clearly explains procedure to the patient",
+          "section": null
+        },
+        {
+          "text": "IV Medication",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Sharps Container",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Alcohol swabs",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Confirms medication order",
+          "section": "Administers Medication"
+        },
+        {
+          "text": "Asks patient for known allergies",
+          "section": "Administers Medication"
+        },
+        {
+          "text": "Selects correct medication by identifying: Right Patient",
+          "section": "Explains procedure to patient"
+        },
+        {
+          "text": "Selects correct medication by identifying: Right Medication",
+          "section": "Explains procedure to patient"
+        },
+        {
+          "text": "Selects correct medication by identifying: Right dosage/concentration",
+          "section": "Explains procedure to patient"
+        },
+        {
+          "text": "Selects correct medication by identifying: Right Time",
+          "section": "Explains procedure to patient"
+        },
+        {
+          "text": "Selects correct medication by identifying: Right Route",
+          "section": "Explains procedure to patient"
+        },
+        {
+          "text": "Assembles prefilled syringe correctly and dispels air",
+          "section": "Explains procedure to patient"
+        },
+        {
+          "text": "Takes or verbalizes appropriate PPE precautions",
+          "section": "Explains procedure to patient"
+        },
+        {
+          "text": "Identifies and cleanses most proximal injection site (Y-port or hub)",
+          "section": "Explains procedure to patient"
+        },
+        {
+          "text": "Reconfirms medication",
+          "section": "Explains procedure to patient"
+        },
+        {
+          "text": "Stops IV flow",
+          "section": "Explains procedure to patient"
+        },
+        {
+          "text": "Administers correct dose at proper push rate",
+          "section": "Explains procedure to patient"
+        },
+        {
+          "text": "Disposes/verbalizes proper disposal of syringe and other material in proper container",
+          "section": "Explains procedure to patient"
+        },
+        {
+          "text": "Turns IV on and adjusts drip rate to TKO/KVO",
+          "section": "Explains procedure to patient"
+        },
+        {
+          "text": "Verbalizes need to observe patient for desired effect and adverse side effects",
+          "section": "Explains procedure to patient"
+        }
+      ],
+      "equipment": [],
+      "procedure_steps": [],
+      "affective": [
+        "Accepts evaluation and criticism professionally",
+        "Shows willingness to learn",
+        "Interacts with simulated patient and other personnel in professional manner"
+      ],
+      "critical_criteria": [
+        "Failure to take or verbalize appropriate PPE precautions",
+        "Contaminates equipment or site without appropriately correcting situation",
+        "Failure to adequately dispel air resulting in the potential for air embolism",
+        "Injects improper medication or dosage (wrong medication, incorrect amount, administers at an inappropriate rate)",
+        "Recaps needle or failure to dispose/verbalize disposal of syringe and other material in proper container",
+        "Failure to turn on IV after administering medication",
+        "Failure to manage the patient as a competent EMT",
+        "Exhibits unacceptable affect with patient or other personnel",
+        "Uses or orders a dangerous or inappropriate intervention",
+        "Administer IV infusion medication (piggyback)"
+      ],
+      "section_headers": [
+        "Selects, checks, assembles equipment",
+        "Administers Medication",
+        "Explains procedure to patient"
+      ],
+      "points_info": null
+    }
+  },
+  {
+    "title": "Administer IV Infusion Medication",
+    "index": 3,
+    "sections": {
+      "assessment_steps": [
+        {
+          "text": "Clearly explains procedure to the patient",
+          "section": null
+        },
+        {
+          "text": "Assures that patent primary IV line is established",
+          "section": null
+        },
+        {
+          "text": "Medication",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "IV Solution",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Administration set",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Needle (if needleless set is not available)",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Sharps Container",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Alcohol swabs",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Tape",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Medication label",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Confirms medication order",
+          "section": "Adds medication to secondary IV solution and spikes bag"
+        },
+        {
+          "text": "Asks patient for known allergies",
+          "section": "Adds medication to secondary IV solution and spikes bag"
+        },
+        {
+          "text": "Selects correct medication by identifying: Right Patient",
+          "section": "Explains procedure to patient"
+        },
+        {
+          "text": "Selects correct medication by identifying: Right Medication",
+          "section": "Explains procedure to patient"
+        },
+        {
+          "text": "Selects correct medication by identifying: Right dosage/concentration",
+          "section": "Explains procedure to patient"
+        },
+        {
+          "text": "Selects correct medication by identifying: Right Time",
+          "section": "Explains procedure to patient"
+        },
+        {
+          "text": "Selects correct medication by identifying: Right Route",
+          "section": "Explains procedure to patient"
+        },
+        {
+          "text": "Check medication for: Clarity",
+          "section": "Explains procedure to patient"
+        },
+        {
+          "text": "Check medication for: Expiration Date",
+          "section": "Explains procedure to patient"
+        },
+        {
+          "text": "Assembles prefilled syringe correctly and dispels air while maintaining sterility",
+          "section": "Explains procedure to patient"
+        },
+        {
+          "text": "Checks IV solution for: Proper solution",
+          "section": "Explains procedure to patient"
+        },
+        {
+          "text": "Checks IV solution for: Clarity or particulate matter",
+          "section": "Explains procedure to patient"
+        },
+        {
+          "text": "Checks IV solution for: Expiration date",
+          "section": "Explains procedure to patient"
+        },
+        {
+          "text": "Checks IV solution for: Protective covers on tail ports",
+          "section": "Explains procedure to patient"
+        },
+        {
+          "text": "Checks administration set for: Drip rating",
+          "section": "Explains procedure to patient"
+        },
+        {
+          "text": "Checks administration set for: Tangled tubing",
+          "section": "Explains procedure to patient"
+        },
+        {
+          "text": "Checks administration set for: Protective covers on both ends",
+          "section": "Explains procedure to patient"
+        },
+        {
+          "text": "Checks administration set for: Flow clamp up almost to drip chamber and closed",
+          "section": "Explains procedure to patient"
+        },
+        {
+          "text": "Removes protective cover on secondary IV bag medication port and cleanses while maintaining sterility",
+          "section": "Explains procedure to patient"
+        },
+        {
+          "text": "Reconfirms medication",
+          "section": "Explains procedure to patient"
+        },
+        {
+          "text": "Injects medication into secondary IV bag while maintaining sterility",
+          "section": "Explains procedure to patient"
+        },
+        {
+          "text": "Disposes/verbalizes proper disposal of syringe in proper container",
+          "section": "Explains procedure to patient"
+        },
+        {
+          "text": "Gently agitates secondary bag to mix medication",
+          "section": "Explains procedure to patient"
+        },
+        {
+          "text": "Removes protective cover on drip chamber while maintaining sterility",
+          "section": "Explains procedure to patient"
+        },
+        {
+          "text": "Removes protective cover on secondary IV bag tail port while maintaining sterility",
+          "section": "Explains procedure to patient"
+        },
+        {
+          "text": "Inserts IV tubing spike into secondary IV bag tail port by twisting and pushing until inner seal is punctured while maintaining sterility",
+          "section": "Explains procedure to patient"
+        },
+        {
+          "text": "Turns secondary IV solution bag upright",
+          "section": "Explains procedure to patient"
+        },
+        {
+          "text": "Squeezes drip chamber and fills half-way",
+          "section": "Explains procedure to patient"
+        },
+        {
+          "text": "Turns on flow of secondary line and bleeds line of all air while maintaining sterility with minimal loss of fluid",
+          "section": "Explains procedure to patient"
+        },
+        {
+          "text": "Shuts flow off after assuring that all large air bubbles have been purged from secondary line",
+          "section": "Explains procedure to patient"
+        },
+        {
+          "text": "Attaches needle to adapter end of secondary line administration set while maintaining sterility (if needleless set is not available)",
+          "section": "Infuses medication"
+        },
+        {
+          "text": "Takes or verbalizes appropriate PPE precautions",
+          "section": "Infuses medication"
+        },
+        {
+          "text": "Reconfirms medication",
+          "section": "Infuses medication"
+        },
+        {
+          "text": "Identifies and cleanses most proximal injection site of primary line (Y-port or hub if needleless set is not available)",
+          "section": "Infuses medication"
+        },
+        {
+          "text": "Inserts needle into port of primary line while maintaining sterility",
+          "section": "Infuses medication"
+        },
+        {
+          "text": "Turns on flow, calculates and adjusts flow rate of secondary line as necessary",
+          "section": "Infuses medication"
+        },
+        {
+          "text": "Stops flow of primary line",
+          "section": "Infuses medication"
+        },
+        {
+          "text": "Securely tapes needle to injection port of secondary line while maintaining sterility (if needleless set is not available)",
+          "section": "Infuses medication"
+        },
+        {
+          "text": "Checks and adjusts flow rate of secondary line",
+          "section": "Infuses medication"
+        },
+        {
+          "text": "Labels medication fluid bag (date, time, medication, concentration, dosage, initials)",
+          "section": "Infuses medication"
+        },
+        {
+          "text": "Verbalizes need to observe patient for desired effect and adverse side effects",
+          "section": "Infuses medication"
+        }
+      ],
+      "equipment": [],
+      "procedure_steps": [],
+      "affective": [
+        "Accepts evaluation and criticism professionally",
+        "Shows willingness to learn",
+        "Interacts with simulated patient and other personnel in professional manner"
+      ],
+      "critical_criteria": [
+        "Failure to take or verbalize appropriate PPE precautions",
+        "Failure to dispose of any blood-contaminated sharp immediately at the point of use",
+        "Contaminates equipment or site without appropriately correcting situation",
+        "Injects improper medication or dosage (wrong medication, incorrect amount, administers at an inappropriate rate)",
+        "Performs any improper technique resulting in the potential for air embolism (failure to flush tubing of secondary line, etc.)",
+        "Recaps needle or failure to dispose/verbalize disposal of syringe and other material in proper container",
+        "Failure to manage the patient as a competent EMT",
+        "Exhibits unacceptable affect with patient or other personnel",
+        "Uses or orders a dangerous or inappropriate intervention",
+        "Administer Oxygen by Non-Rebreather Mask"
+      ],
+      "section_headers": [
+        "Selects, checks, assembles equipment",
+        "Adds medication to secondary IV solution and spikes bag",
+        "Explains procedure to patient",
+        "Infuses medication",
+        "NA01"
+      ],
+      "points_info": null
+    }
+  },
+  {
+    "title": "Administer Oxygen by Face Mask",
+    "index": 4,
+    "sections": {
+      "assessment_steps": [
+        {
+          "text": "Utilize appropriate universal precautions",
+          "section": null
+        },
+        {
+          "text": "Explains procedure to patient if appropriate",
+          "section": null
+        },
+        {
+          "text": "Selects appropriate tank",
+          "section": null
+        },
+        {
+          "text": "Removes dust cap without losing O ring",
+          "section": null
+        },
+        {
+          "text": "Blows air to clear debris",
+          "section": null
+        },
+        {
+          "text": "Places O ring gasket in proper position and attach/tighten regulator",
+          "section": null
+        },
+        {
+          "text": "Charges regulator and checks for leaks",
+          "section": null
+        },
+        {
+          "text": "Checks for adequate pressure",
+          "section": null
+        },
+        {
+          "text": "Selects non-rebreather and remove from sterile bag checking expiration date",
+          "section": null
+        },
+        {
+          "text": "Attaches non-rebreather to the regulator and blows oxygen through on high while closing one way valve to fill bag",
+          "section": null
+        },
+        {
+          "text": "Sets desired liter flow on non-rebreather",
+          "section": null
+        },
+        {
+          "text": "Places non-rebreather on patient properly",
+          "section": null
+        },
+        {
+          "text": "Reassesses",
+          "section": null
+        },
+        {
+          "text": "Continues talking to the patient",
+          "section": "Transition"
+        },
+        {
+          "text": "Continues to monitor the patient",
+          "section": "Transition"
+        },
+        {
+          "text": "Watch for increased signs of perfusion (pulse ox, color, etc.)",
+          "section": "Integration"
+        },
+        {
+          "text": "Monitors for failures in the system",
+          "section": "Integration"
+        },
+        {
+          "text": "What precautions are required when administering oxygen?",
+          "section": "Questions"
+        },
+        {
+          "text": "How much oxygen do you need to apply through a non-rebreather?",
+          "section": "Questions"
+        }
+      ],
+      "equipment": [],
+      "procedure_steps": [],
+      "affective": [],
+      "critical_criteria": [
+        "Did not take (or verbalize) standard precautions",
+        "Mishandled the cylinder",
+        "Improperly set the liter flow",
+        "Failed to deliver oxygen properly to the patient or caused harm",
+        "Overall Attempt: *",
+        "UnsuccessfulSuccessful",
+        "Administer Oxygen by Nasal Cannula"
+      ],
+      "section_headers": [
+        "Transition",
+        "Integration",
+        "Questions"
+      ],
+      "points_info": "Total Points Possible: 19"
+    }
+  },
+  {
+    "title": "Administer Oxygen by Nasal Cannula",
+    "index": 5,
+    "sections": {
+      "assessment_steps": [
+        {
+          "text": "Utilizes appropriate universal precautions",
+          "section": null
+        },
+        {
+          "text": "Explains procedure to patient if appropriate",
+          "section": null
+        },
+        {
+          "text": "Selects appropriate tank",
+          "section": null
+        },
+        {
+          "text": "Removes dust cap without losing O ring",
+          "section": null
+        },
+        {
+          "text": "Blows air to clear debris",
+          "section": null
+        },
+        {
+          "text": "Places O ring gasket in proper position and attach/tighten regulator",
+          "section": null
+        },
+        {
+          "text": "Charges regulator and checks for leaks",
+          "section": null
+        },
+        {
+          "text": "Checks for adequate pressure",
+          "section": null
+        },
+        {
+          "text": "Selects nasal cannula and remove from sterile bag checking expiration date",
+          "section": null
+        },
+        {
+          "text": "Attaches nasal cannula to the regulator and blows oxygen though on high",
+          "section": null
+        },
+        {
+          "text": "Sets desired liter flow on cannula",
+          "section": null
+        },
+        {
+          "text": "Places cannula on patient properly",
+          "section": null
+        },
+        {
+          "text": "Reassesses",
+          "section": null
+        },
+        {
+          "text": "Continues talking to the patient",
+          "section": "Transition"
+        },
+        {
+          "text": "Continues to monitor the patient",
+          "section": "Transition"
+        },
+        {
+          "text": "Watch for increased signs of perfusion (pulse ox, color, etc.)",
+          "section": "Integration"
+        },
+        {
+          "text": "Monitor for failures in the system",
+          "section": "Integration"
+        },
+        {
+          "text": "What precautions are required when administering oxygen?",
+          "section": "Questions"
+        },
+        {
+          "text": "At 2 lpm what oxygen concentration is being administered?",
+          "section": "Questions"
+        }
+      ],
+      "equipment": [],
+      "procedure_steps": [],
+      "affective": [],
+      "critical_criteria": [
+        "Did not take (or verbalize) standard precautions",
+        "Mishandled the cylinder",
+        "Improperly set the liter flow",
+        "Failed to deliver oxygen properly to the patient or caused harm",
+        "Overall Attempt: *",
+        "UnsuccessfulSuccessful",
+        "Totals points Possible: 19",
+        "Apply a Cervical Collar"
+      ],
+      "section_headers": [
+        "Transition",
+        "Integration",
+        "Questions"
+      ],
+      "points_info": null
+    }
+  },
+  {
+    "title": "Apply a Cervical Collar",
+    "index": 6,
+    "sections": {
+      "assessment_steps": [
+        {
+          "text": "Utilize appropriate universal precautions",
+          "section": null
+        },
+        {
+          "text": "Explains procedure to patient if appropriate",
+          "section": null
+        },
+        {
+          "text": "Ensures manual stabilization of the cervical spine",
+          "section": null
+        },
+        {
+          "text": "Places the head in neutral alignment if possible",
+          "section": null
+        },
+        {
+          "text": "Assesses the distal pulse, motor, and sensory in all extremities",
+          "section": null
+        },
+        {
+          "text": "Measures for the appropriately sized cervical collar",
+          "section": null
+        },
+        {
+          "text": "Applies collar without causing movement or discomfort",
+          "section": null
+        },
+        {
+          "text": "Reassesses distal pulse, motor, and sensory function",
+          "section": null
+        },
+        {
+          "text": "Maintains manual stabilization until transfer to a mechanical immobilization device",
+          "section": null
+        },
+        {
+          "text": "Has next immobilization device selected and ready",
+          "section": "Transition"
+        },
+        {
+          "text": "Prepared to modify mechanical cervical immobilization if necessary",
+          "section": "Transition"
+        },
+        {
+          "text": "Recognizes why the cervical collar needs to be correctly sized",
+          "section": "Integration"
+        },
+        {
+          "text": "Prioritizes cervical collar placement appropriately",
+          "section": "Integration"
+        },
+        {
+          "text": "Explains why bradycardia and increased ICP can occur with a collar that is too tight",
+          "section": "Questions"
+        },
+        {
+          "text": "Explains the difference between stabilization/motion restriction/ immobilization",
+          "section": "Questions"
+        },
+        {
+          "text": "Gives at least one alternative to using a commercial c-collar",
+          "section": "Questions"
+        }
+      ],
+      "equipment": [],
+      "procedure_steps": [],
+      "affective": [],
+      "critical_criteria": [
+        "Did not take (or verbalize) standard precautions",
+        "Inappropriately moved the head/neck",
+        "Cervical collar too tight or loose",
+        "Failed to check distal PMS before and after collar application",
+        "Overall Attempt: *",
+        "UnsuccessfulSuccessful",
+        "Apply a Tourniquet"
+      ],
+      "section_headers": [
+        "Transition",
+        "Integration",
+        "Questions"
+      ],
+      "points_info": "Total Points Possible: 16"
+    }
+  },
+  {
+    "title": "Apply a Tourniquet",
+    "index": 7,
+    "sections": {
+      "assessment_steps": [
+        {
+          "text": "Utilizes appropriate universal precautions",
+          "section": null
+        },
+        {
+          "text": "Explains procedure to patient if appropriate",
+          "section": null
+        },
+        {
+          "text": "Initially attempts to stop bleeding through direct pressure",
+          "section": null
+        },
+        {
+          "text": "Selects appropriate tourniquet device",
+          "section": "Told \"bleeding continues\""
+        },
+        {
+          "text": "Applies tourniquet in the proper location",
+          "section": "Told \"bleeding continues\""
+        },
+        {
+          "text": "Tightens tourniquet with sufficient force to stop the bleeding",
+          "section": "Told \"bleeding continues\""
+        },
+        {
+          "text": "Monitors for bleeding control and quality of distal circulation (if any)",
+          "section": "Told \"bleeding continues\""
+        },
+        {
+          "text": "Recognizes need for tourniquet and potential impact of application",
+          "section": "Transition"
+        },
+        {
+          "text": "Monitors and treats for shock as well to include supplemental oxygen and body temperature support",
+          "section": "Integration"
+        },
+        {
+          "text": "Can state why a tourniquet is needed instead of pressure point or elevation",
+          "section": "Questions"
+        },
+        {
+          "text": "Can state what requirements constitutes an acceptable tourniquet",
+          "section": "Questions"
+        }
+      ],
+      "equipment": [],
+      "procedure_steps": [],
+      "affective": [],
+      "critical_criteria": [
+        "Did not take (or verbalize) standard precautions",
+        "Tourniquet applied incorrectly/ineffectively",
+        "Delays application of tourniquet",
+        "Overall Attempt: *",
+        "UnsuccessfulSuccessful",
+        "Apply an Occlusive Dressing to an Open Wound to the Thorax"
+      ],
+      "section_headers": [
+        "Told \"bleeding continues\"",
+        "Transition",
+        "Integration",
+        "Questions"
+      ],
+      "points_info": "Total Points: 11"
+    }
+  },
+  {
+    "title": "Apply an Occlusive Dressing to an Open Wound to the Thorax",
+    "index": 8,
+    "sections": {
+      "assessment_steps": [
+        {
+          "text": "Apply appropriate PPE",
+          "section": null
+        },
+        {
+          "text": "Determine if spinal immobilization is required",
+          "section": null
+        },
+        {
+          "text": "Identify the location and severity of the wound",
+          "section": null
+        },
+        {
+          "text": "Place a sterile gauze over the wound and apply gentle pressure",
+          "section": null
+        },
+        {
+          "text": "Apply and occlusive dressing over the wound and secure all side",
+          "section": null
+        },
+        {
+          "text": "Ensure the seal remains airtight and does not shift during movement",
+          "section": null
+        },
+        {
+          "text": "Continuously monitor the patients breathing and signs of distress",
+          "section": null
+        },
+        {
+          "text": "Overall Attempt:",
+          "section": null
+        }
+      ],
+      "equipment": [],
+      "procedure_steps": [],
+      "affective": [],
+      "critical_criteria": [],
+      "section_headers": [
+        "UnsuccessfulSuccessful",
+        "Assess Vital Signs"
+      ],
+      "points_info": "Total Points Possible: 7"
+    }
+  },
+  {
+    "title": "Assess Vital Signs",
+    "index": 9,
+    "sections": {
+      "assessment_steps": [
+        {
+          "text": "Takes or verbalizes appropriate PPE precautions",
+          "section": null
+        },
+        {
+          "text": "Blood Pressure: Selects appropriately sized BP cuff",
+          "section": null
+        },
+        {
+          "text": "Applies the cuff snugly",
+          "section": null
+        },
+        {
+          "text": "Palpates the brachial artery",
+          "section": null
+        },
+        {
+          "text": "Places the stethoscope over the brachial artery and grasps the ball-pump and turn-valve",
+          "section": null
+        },
+        {
+          "text": "Closes valve and pumps to 20 mmHg above the point at which they stop hearing pulse sounds.",
+          "section": null
+        },
+        {
+          "text": "Notes the systolic and diastolic pressures as air slowly escapes",
+          "section": null
+        },
+        {
+          "text": "If palpating the BP, fingertips must be placed on the radial artery",
+          "section": null
+        },
+        {
+          "text": "Pulse: Palpates appropriate artery",
+          "section": null
+        },
+        {
+          "text": "Feels pulse for 15, 30, or 60 seconds",
+          "section": null
+        },
+        {
+          "text": "Accurately records pulse rate, rhythm",
+          "section": null
+        },
+        {
+          "text": "Respirations: Observes patient\u2019s chest rise and fall for 15, 30, or 60 seconds",
+          "section": null
+        },
+        {
+          "text": "Accurately records respiratory rate, rhythm",
+          "section": null
+        }
+      ],
+      "equipment": [],
+      "procedure_steps": [],
+      "affective": [],
+      "critical_criteria": [
+        "Failure to take or verbalize PPE",
+        "Failure to apply cuff appropriately",
+        "Misinterprets accurate blood pressure",
+        "Overall Attempt: *",
+        "UnsuccessfulSuccessful",
+        "Dress and Bandage a Soft Tissue Injury"
+      ],
+      "section_headers": [],
+      "points_info": "Total Points Possible: 13"
+    }
+  },
+  {
+    "title": "Dress and Bandage a Soft Tissue Injury",
+    "index": 10,
+    "sections": {
+      "assessment_steps": [
+        {
+          "text": "Apply appropriate PPE",
+          "section": null
+        },
+        {
+          "text": "Covers wound with sterile dressing",
+          "section": null
+        },
+        {
+          "text": "Secure the bandage with several wraps overlaying the dressing",
+          "section": null
+        },
+        {
+          "text": "Overlap the bandage properly, ensuring that it is snug",
+          "section": null
+        },
+        {
+          "text": "Secure the bandage in place",
+          "section": "UnsuccessfulSuccessful"
+        },
+        {
+          "text": "Overall Attempt:",
+          "section": "UnsuccessfulSuccessful"
+        }
+      ],
+      "equipment": [],
+      "procedure_steps": [],
+      "affective": [],
+      "critical_criteria": [],
+      "section_headers": [
+        "UnsuccessfulSuccessful",
+        "UnsuccessfulSuccessful",
+        "Establish IO access"
+      ],
+      "points_info": "Total Points Possible: 4"
+    }
+  },
+  {
+    "title": "Establish IO access",
+    "index": 11,
+    "sections": {
+      "assessment_steps": [
+        {
+          "text": "Clearly explains procedure to the patient",
+          "section": null
+        },
+        {
+          "text": "Solution",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Administration set",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "IO needle and insertion device",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Sharps container",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Antiseptic swabs, gauze pads, bulky dressing, syringe, etc.",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Checks solution for: Proper solution",
+          "section": "Spikes Bag (if applicable)"
+        },
+        {
+          "text": "Checks solution for: Clarity and particulate matter",
+          "section": "Spikes Bag (if applicable)"
+        },
+        {
+          "text": "Checks solution for: Expiration date",
+          "section": "Spikes Bag (if applicable)"
+        },
+        {
+          "text": "Checks solution for: Protective cover on tail ports",
+          "section": "Spikes Bag (if applicable)"
+        },
+        {
+          "text": "Checks administration set for: Drip rating",
+          "section": "Spikes Bag (if applicable)"
+        },
+        {
+          "text": "Checks administration set for: Tangled tubing",
+          "section": "Spikes Bag (if applicable)"
+        },
+        {
+          "text": "Checks administration set for: Protective covers on both ends",
+          "section": "Spikes Bag (if applicable)"
+        },
+        {
+          "text": "Checks administration set for: Flow clamp up almost to drip chamber and closed",
+          "section": "Spikes Bag (if applicable)"
+        },
+        {
+          "text": "Removes protective cover on drip chamber while maintaining sterility",
+          "section": "Spikes Bag (if applicable)"
+        },
+        {
+          "text": "Removes protective cover on solution bag tail port while maintaining sterility",
+          "section": "Spikes Bag (if applicable)"
+        },
+        {
+          "text": "Inserts IV tubing spike into solution bag tail port by twisting and pushing until inner seal is punctured while maintaining sterility",
+          "section": "Spikes Bag (if applicable)"
+        },
+        {
+          "text": "Turns solution bag upright",
+          "section": "Spikes Bag (if applicable)"
+        },
+        {
+          "text": "Squeezes drip chamber and fills half-way",
+          "section": "Spikes Bag (if applicable)"
+        },
+        {
+          "text": "Turns on by sliding flow clamp and bleeds line of all air while maintaining sterility",
+          "section": "Spikes Bag (if applicable)"
+        },
+        {
+          "text": "Shuts flow off after assuring that all large air bubbles have been purged",
+          "section": "Spikes Bag (if applicable)"
+        },
+        {
+          "text": "Tears sufficient tape to secure IO",
+          "section": "Performs Intraosseous Puncture"
+        },
+        {
+          "text": "Opens antiseptic swabs, gauze pads",
+          "section": "Performs Intraosseous Puncture"
+        },
+        {
+          "text": "Takes appropriate PPE precautions",
+          "section": "Performs Intraosseous Puncture"
+        },
+        {
+          "text": "Identifies appropriate anatomical site for IO puncture",
+          "section": "Performs Intraosseous Puncture"
+        },
+        {
+          "text": "Cleanses site, starting from the center and moving outward in a circular motion",
+          "section": "Performs Intraosseous Puncture"
+        },
+        {
+          "text": "Prepares IO needle and insertion device while maintaining sterility",
+          "section": "Performs Intraosseous Puncture"
+        },
+        {
+          "text": "Inspects IO device for burrs",
+          "section": "Performs Intraosseous Puncture"
+        },
+        {
+          "text": "Stabilizes the site in a safe manner (if using the tibia, does not hold the leg in palm of hand and perform IO puncture directly above hand)",
+          "section": "Performs Intraosseous Puncture"
+        },
+        {
+          "text": "Inserts needle at proper angle and direction (away from joint, epipheseal plate, etc.)",
+          "section": "Performs Intraosseous Puncture"
+        },
+        {
+          "text": "Recognizes that needle has entered intermedullary canal (feels \u201cpop\u201d or notices less resistance)",
+          "section": "Performs Intraosseous Puncture"
+        },
+        {
+          "text": "Removes stylette and immediately disposes in proper container",
+          "section": "Performs Intraosseous Puncture"
+        },
+        {
+          "text": "Attaches administration set to IO needle",
+          "section": "Performs Intraosseous Puncture"
+        },
+        {
+          "text": "Slowly injects solution while observing for signs of infiltration or aspirates to verify proper needle placement",
+          "section": "Performs Intraosseous Puncture"
+        },
+        {
+          "text": "Adjusts flow rate as appropriate",
+          "section": "Performs Intraosseous Puncture"
+        },
+        {
+          "text": "Secures needle and supports with bulky dressing",
+          "section": "Performs Intraosseous Puncture"
+        },
+        {
+          "text": "Assesses site for signs of infiltration, irritation",
+          "section": "Performs Intraosseous Puncture"
+        },
+        {
+          "text": "Assesses patient for therapeutic response or signs of untoward reactions",
+          "section": "Performs Intraosseous Puncture"
+        }
+      ],
+      "equipment": [],
+      "procedure_steps": [],
+      "affective": [
+        "Accepts evaluation and criticism professionally",
+        "Shows willingness to learn",
+        "Interacts with simulated patient and other personnel in professional manner"
+      ],
+      "critical_criteria": [
+        "Failure to take or verbalize appropriate PPE precautions",
+        "Failure to dispose of blood-contaminated sharps immediately at the point of use",
+        "Contaminates equipment or site without appropriately correcting situation",
+        "Performs any improper technique resulting in the potential for air embolism",
+        "Failure to assure correct needle placement",
+        "Performs IO puncture in an unacceptable or unsafe manner (improper site, incorrect needle angle, holds leg in palm and performs IO puncture directly above hand, etc.)",
+        "Failure to manage the patient as a competent EMT",
+        "Exhibits unacceptable affect with patient or other personnel",
+        "Uses or orders a dangerous or inappropriate intervention",
+        "Establish IV access"
+      ],
+      "section_headers": [
+        "Selects, checks, assembles equipment",
+        "Spikes Bag (if applicable)",
+        "Performs Intraosseous Puncture"
+      ],
+      "points_info": null
+    }
+  },
+  {
+    "title": "Establish IV access",
+    "index": 12,
+    "sections": {
+      "assessment_steps": [
+        {
+          "text": "Clearly explains procedure to the patient",
+          "section": null
+        },
+        {
+          "text": "IV Solution (or flush for lock)",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Administration set (or lock with tubing)",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Catheter",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Sharps Container",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Universal start kit (antiseptic swabs, gauze pads, venous tourniquet, occlusive bandage, antibiotic gel, syringe,",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Checks IV solution for: Proper solution",
+          "section": "Spikes Bag (if applicable)"
+        },
+        {
+          "text": "Checks IV solution for: Clarity or particulate matter",
+          "section": "Spikes Bag (if applicable)"
+        },
+        {
+          "text": "Checks IV solution for: Expiration date",
+          "section": "Spikes Bag (if applicable)"
+        },
+        {
+          "text": "Checks IV solution for: Protective covers on tail ports",
+          "section": "Spikes Bag (if applicable)"
+        },
+        {
+          "text": "Checks administration set for: Drip rating",
+          "section": "Spikes Bag (if applicable)"
+        },
+        {
+          "text": "Checks administration set for: Tangled tubing",
+          "section": "Spikes Bag (if applicable)"
+        },
+        {
+          "text": "Checks administration set for: Protective covers on both ends",
+          "section": "Spikes Bag (if applicable)"
+        },
+        {
+          "text": "Checks administration set for: Flow clamp up almost to drip chamber and closed",
+          "section": "Spikes Bag (if applicable)"
+        },
+        {
+          "text": "Removes protective cover on drip chamber while maintaining sterility",
+          "section": "Spikes Bag (if applicable)"
+        },
+        {
+          "text": "Removes protective cover on IV bag tail port while maintaining sterility",
+          "section": "Spikes Bag (if applicable)"
+        },
+        {
+          "text": "Inserts IV tubing spike into IV solution bag tail port by twisting and pushing until inner seal is punctured while maintaining sterility",
+          "section": "Spikes Bag (if applicable)"
+        },
+        {
+          "text": "Turns IV bag upright",
+          "section": "Spikes Bag (if applicable)"
+        },
+        {
+          "text": "Squeezes drip chamber and fills half-way",
+          "section": "Spikes Bag (if applicable)"
+        },
+        {
+          "text": "Turns on flow and bleeds line of all air while maintaining sterility",
+          "section": "Spikes Bag (if applicable)"
+        },
+        {
+          "text": "Shuts flow off after assuring that all large air bubbles have been purged",
+          "section": "Spikes Bag (if applicable)"
+        },
+        {
+          "text": "Tears sufficient tape to secure IV",
+          "section": "Performs Venipuncture"
+        },
+        {
+          "text": "Opens antiseptic swabs, gauze pads, occlusive dressing",
+          "section": "Performs Venipuncture"
+        },
+        {
+          "text": "Takes appropriate PPE precautions",
+          "section": "Performs Venipuncture"
+        },
+        {
+          "text": "Identifies appropriate potential site for cannulation",
+          "section": "Performs Venipuncture"
+        },
+        {
+          "text": "Applies tourniquet properly",
+          "section": "Performs Venipuncture"
+        },
+        {
+          "text": "Palpates and identifies suitable vein",
+          "section": "Performs Venipuncture"
+        },
+        {
+          "text": "Cleanses site, starting from the center and moving outward in a circular motion",
+          "section": "Performs Venipuncture"
+        },
+        {
+          "text": "Removes IV needle and catheter from package and while maintaining sterility",
+          "section": "Performs Venipuncture"
+        },
+        {
+          "text": "Inspects for burrs",
+          "section": "Performs Venipuncture"
+        },
+        {
+          "text": "Loosens catheter hub with twisting motion",
+          "section": "Performs Venipuncture"
+        },
+        {
+          "text": "Stabilizes the vein and extremity by grasping and stretching skin while maintaining sterility",
+          "section": "Performs Venipuncture"
+        },
+        {
+          "text": "Warns patient to expect to feel the needle stick",
+          "section": "Performs Venipuncture"
+        },
+        {
+          "text": "Inserts stylette with bevel up at appropriate angle (35 \u2013 45\u00b0) while maintaining sterility",
+          "section": "Performs Venipuncture"
+        },
+        {
+          "text": "Feels \u201cpop\u201d as stylette enters vein and observes dark, red blood in flash chamber",
+          "section": "Performs Venipuncture"
+        },
+        {
+          "text": "Lowers stylette and inserts an additional 1/8 \u2013 1/4\"",
+          "section": "Performs Venipuncture"
+        },
+        {
+          "text": "Stabilizes stylette and slides catheter off of stylette until hub touches skin",
+          "section": "Performs Venipuncture"
+        },
+        {
+          "text": "Palpates skin just distal to tip of catheter and applies pressure to occlude vein",
+          "section": "NA01"
+        },
+        {
+          "text": "Removes stylette and immediately disposes in sharps container",
+          "section": "NA01"
+        },
+        {
+          "text": "Attaches syringe and draws venous blood sample if ordered while maintaining sterility",
+          "section": "NA01"
+        },
+        {
+          "text": "Removes protective cap from IV tubing and attaches to hub of catheter while maintaining sterility",
+          "section": "NA01"
+        },
+        {
+          "text": "Releases tourniquet",
+          "section": "NA01"
+        },
+        {
+          "text": "Opens flow clamp and runs for a brief period to assure a patent line (or flushes line for saline lock)",
+          "section": "NA01"
+        },
+        {
+          "text": "Secures catheter and IV tubing to patient",
+          "section": "NA01"
+        },
+        {
+          "text": "Adjusts flow rate (if applicable)",
+          "section": "NA01"
+        },
+        {
+          "text": "Assesses site for signs of infiltration, irritation",
+          "section": "NA01"
+        },
+        {
+          "text": "Assesses patient for therapeutic response or signs of untoward reactions",
+          "section": "NA01"
+        }
+      ],
+      "equipment": [],
+      "procedure_steps": [],
+      "affective": [
+        "Accepts evaluation and criticism professionally",
+        "Shows willingness to learn",
+        "Interacts with simulated patient and other personnel in professional manner"
+      ],
+      "critical_criteria": [
+        "Failure to take or verbalize appropriate PPE precautions",
+        "Failure to dispose of any blood-contaminated sharp immediately at the point of use",
+        "Contaminates equipment or site without appropriately correcting situation",
+        "Performs any improper technique resulting in the potential for uncontrolled hemorrhage, catheter shear or air embolism",
+        "Failure to manage the patient as a competent EMT",
+        "Exhibits unacceptable affect with patient or other personnel",
+        "Uses or orders a dangerous or inappropriate intervention",
+        "Inserting an NPA"
+      ],
+      "section_headers": [
+        "Selects, checks, assembles equipment",
+        "Spikes Bag (if applicable)",
+        "Performs Venipuncture",
+        "NA01"
+      ],
+      "points_info": null
+    }
+  },
+  {
+    "title": "Insert NPA",
+    "index": 13,
+    "sections": {
+      "assessment_steps": [
+        {
+          "text": "Apply appropriate PPE",
+          "section": null
+        },
+        {
+          "text": "Select appropriately sized airway",
+          "section": null
+        },
+        {
+          "text": "Measure airway",
+          "section": null
+        },
+        {
+          "text": "Verbalize lubrication of the nasal airway",
+          "section": null
+        },
+        {
+          "text": "Fully insert the airway with the bevel facing the septum",
+          "section": null
+        },
+        {
+          "text": "Overall Atttempt:",
+          "section": null
+        }
+      ],
+      "equipment": [],
+      "procedure_steps": [],
+      "affective": [],
+      "critical_criteria": [],
+      "section_headers": [
+        "UnsuccessfulSuccessful",
+        "Inserting an OPA"
+      ],
+      "points_info": "Total Points Possible: 5"
+    }
+  },
+  {
+    "title": "Insert OPA",
+    "index": 14,
+    "sections": {
+      "assessment_steps": [
+        {
+          "text": "Apply appropriate PPE",
+          "section": null
+        },
+        {
+          "text": "Select appropriately sized airway",
+          "section": null
+        },
+        {
+          "text": "Measure airway",
+          "section": null
+        },
+        {
+          "text": "Insert the airway without pushing the tongue posteriorly",
+          "section": null
+        },
+        {
+          "text": "Remove the oropharyngeal airway",
+          "section": "Evaluator advises \u201cthe patient is gagging and becoming conscious\u201d"
+        },
+        {
+          "text": "Overall Atttempt:",
+          "section": "Evaluator advises \u201cthe patient is gagging and becoming conscious\u201d"
+        }
+      ],
+      "equipment": [],
+      "procedure_steps": [],
+      "affective": [],
+      "critical_criteria": [],
+      "section_headers": [
+        "Evaluator advises \u201cthe patient is gagging and becoming conscious\u201d",
+        "UnsuccessfulSuccessful",
+        "Inserting an OPA"
+      ],
+      "points_info": "Total Points Possible: 5"
+    }
+  },
+  {
+    "title": "Insert supraglottic airway",
+    "sections": {
+      "assessment_steps": [
+        {
+          "text": "BVM with mask and reservoir",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Oxygen",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Airway adjuncts",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Suction unit with appropriate catheters",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Supraglottic airway device",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Capnography/capnometry",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Takes appropriate PPE precautions",
+          "section": "Prepares Patient"
+        },
+        {
+          "text": "Manually opens airway",
+          "section": "Prepares Patient"
+        },
+        {
+          "text": "Inserts adjunct (oropharyngeal or nasopharyngeal airway)",
+          "section": "Prepares Patient"
+        },
+        {
+          "text": "Ventilates patient at proper rate and volume",
+          "section": "Prepares Patient"
+        },
+        {
+          "text": "Attaches pulse oximeter and notes SpO2",
+          "section": "Prepares Patient"
+        },
+        {
+          "text": "Preoxygenates patient",
+          "section": "Prepares Patient"
+        },
+        {
+          "text": "Lubricates distal tip of the device",
+          "section": "Performs insertion of supraglottic airway device"
+        },
+        {
+          "text": "Positions head properly",
+          "section": "Performs insertion of supraglottic airway device"
+        },
+        {
+          "text": "Performs a tongue-jaw lift",
+          "section": "Performs insertion of supraglottic airway device"
+        },
+        {
+          "text": "Inserts device to proper depth",
+          "section": "Performs insertion of supraglottic airway device"
+        },
+        {
+          "text": "Ventilates patient and confirms proper ventilation",
+          "section": "Performs insertion of supraglottic airway device"
+        },
+        {
+          "text": "Adjusts ventilation as necessary",
+          "section": "Performs insertion of supraglottic airway device"
+        },
+        {
+          "text": "Verifies proper tube placement by secondary confirmation such as capnography, capnometry, EDD or colorimetric device",
+          "section": "Performs insertion of supraglottic airway device"
+        },
+        {
+          "text": "Properly secures device",
+          "section": "Performs insertion of supraglottic airway device"
+        }
+      ],
+      "equipment": [],
+      "procedure_steps": [],
+      "affective": [
+        "Accepts evaluation and criticism professionally",
+        "Shows willingness to learn",
+        "Interacts with simulated patient and other personnel in professional manner"
+      ],
+      "critical_criteria": [
+        "Failure to initiate ventilations within 30 seconds after taking PPE precautions or interrupts ventilations when SpO2 is less than 90% at any time",
+        "Failure to take or verbalize appropriate PPE precautions",
+        "If used, suctions the patient for more than 10 seconds",
+        "Failure to preoxygenate the patient prior to insertion of the supraglottic airway device",
+        "Failure to disconnect syringe immediately after inflating any cuff",
+        "Failure to properly secure device in patient (cuff inflation or strap placement not acceptable)",
+        "Failure to assure proper tube placement by auscultation bilaterally and over the epigastrium",
+        "Failure to voice and ultimately provide high oxygen concentration [at least 85%]",
+        "Failure to ventilate the patient at a rate of at least 10/minute and no more than 12/minute",
+        "Failure to provide adequate volumes per breath [maximum 2 errors/minute permissible]",
+        "Insertion or use of any adjunct in a manner dangerous to the patient",
+        "Exhibits unacceptable affect with patient or other personnel",
+        "Failure to demonstrate the ability to manage the patient as a minimally competent EMT",
+        "Uses or orders a dangerous or inappropriate intervention"
+      ],
+      "section_headers": [],
+      "points_info": null
+    },
+    "index": 15
+  },
+  {
+    "title": "Lift and Transfer a Patient to the Stretcher",
+    "index": 16,
+    "sections": {
+      "assessment_steps": [
+        {
+          "text": "Apply appropriate PPE",
+          "section": null
+        },
+        {
+          "text": "Position the stretcher and lower to the proper height of the transfer",
+          "section": null
+        },
+        {
+          "text": "Ensure the stretcher is stable and wheels are locked",
+          "section": null
+        },
+        {
+          "text": "Obtain appropriate tools to assist with lift and transfer",
+          "section": null
+        },
+        {
+          "text": "Communicate lifting plan with other personnel to ensure smooth movements",
+          "section": null
+        },
+        {
+          "text": "Ensure that patient is supported appropriately",
+          "section": null
+        },
+        {
+          "text": "Using proper lifting techniques, lift the patient onto the stretcher",
+          "section": null
+        },
+        {
+          "text": "Ensure the patients head is at the top and feet at the bottom of the stretcher",
+          "section": null
+        },
+        {
+          "text": "Secure the patient to the stretcher using patient straps, ensuring they are snug but not too tight",
+          "section": null
+        },
+        {
+          "text": "Check patient\u2019s comfort and stability adjusting when necessary",
+          "section": null
+        },
+        {
+          "text": "Overall Attempt:",
+          "section": null
+        }
+      ],
+      "equipment": [],
+      "procedure_steps": [],
+      "affective": [],
+      "critical_criteria": [],
+      "section_headers": [
+        "UnsuccessfulSuccessful",
+        "Perform a Comprehensive Physical Assessment"
+      ],
+      "points_info": "Total Points Possible: 10"
+    }
+  },
+  {
+    "title": "Perform a Comprehensive Physical Assessment",
+    "index": 17,
+    "sections": {
+      "assessment_steps": [
+        {
+          "text": "Speaks when approached",
+          "section": "Appearance"
+        },
+        {
+          "text": "Facial expressions",
+          "section": "Appearance"
+        },
+        {
+          "text": "Skin color",
+          "section": "Appearance"
+        },
+        {
+          "text": "Eye contact",
+          "section": "Appearance"
+        },
+        {
+          "text": "Weight-estimated/translated to kg",
+          "section": "Appearance"
+        },
+        {
+          "text": "Work of breathing",
+          "section": "Appearance"
+        },
+        {
+          "text": "Posture, ease of movement",
+          "section": "Appearance"
+        },
+        {
+          "text": "Odors of body or breath",
+          "section": "Appearance"
+        },
+        {
+          "text": "Dress, hygiene, grooming",
+          "section": "Appearance"
+        },
+        {
+          "text": "Speech-Quantity",
+          "section": "Level of consciousness/mental status"
+        },
+        {
+          "text": "Speech-Rate",
+          "section": "Level of consciousness/mental status"
+        },
+        {
+          "text": "Speech-Volume",
+          "section": "Level of consciousness/mental status"
+        },
+        {
+          "text": "Speech-Articulation of words",
+          "section": "Level of consciousness/mental status"
+        },
+        {
+          "text": "Speech-Fluency",
+          "section": "Level of consciousness/mental status"
+        },
+        {
+          "text": "Mood",
+          "section": "Level of consciousness/mental status"
+        },
+        {
+          "text": "Orientation-Time",
+          "section": "Level of consciousness/mental status"
+        },
+        {
+          "text": "Orientation-Place",
+          "section": "Level of consciousness/mental status"
+        },
+        {
+          "text": "Orientation-Person",
+          "section": "Level of consciousness/mental status"
+        },
+        {
+          "text": "Memory-Recent",
+          "section": "Level of consciousness/mental status"
+        },
+        {
+          "text": "Memory-Long Term",
+          "section": "Level of consciousness/mental status"
+        },
+        {
+          "text": "Blood pressure",
+          "section": "Assess baseline vital signs"
+        },
+        {
+          "text": "Pulses-Radial, Carotid-Rate",
+          "section": "Assess baseline vital signs"
+        },
+        {
+          "text": "Pulses-Radial, Carotid-Amplification",
+          "section": "Assess baseline vital signs"
+        },
+        {
+          "text": "Respirations-Respiratory rate",
+          "section": "Assess baseline vital signs"
+        },
+        {
+          "text": "Respirations-Tidal volume",
+          "section": "Assess baseline vital signs"
+        },
+        {
+          "text": "Temperature-oral, tympanic, rectal",
+          "section": "Assess baseline vital signs"
+        },
+        {
+          "text": "SpO2",
+          "section": "Assess baseline vital signs"
+        },
+        {
+          "text": "Skin Colors-flushed, jaundiced, pallor, cyanotic",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Skin Moisture-dryness, sweating, oiliness",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Skin Temperature-hot or cool to touch",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Skin Turgor",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Skin Lesions-types, location, arrangement",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Skin Nails-condition, cleanliness, growth",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Head and neck-Hair",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Head and neck-Scalp",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Head and neck-Skull",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Head and neck-Face",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Eyes Acuity-vision is clear and free of disturbance",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Eyes Appearance-Color, iris clear",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Eyes Pupils-Size, reaction to light",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Eyes Extraocular movements-Up down, both sides",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Ears-External ear",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Ear Canal-Drainage, clear",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Ear Hearing-Present/absent",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Nose-Deformity",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Nose-Air movement",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Mouth-Opens willingly",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Mouth-Jaw tension",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Mouth-Mucosal color",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Mouth-Moisture",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Mouth-Upper airway patent",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Neck-Trachea midline",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Neck-Jugular veins appearance with patient position",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Chest Wall Movement-Expansion",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Chest-Skin color, closed wounds",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Chest Integrity-Open wounds",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Chest Integrity-Rib stability",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Chest Integrity-Presence/absence of pain",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Chest-Lower Airway-Auscultation-Anterior Posterior-Normal sounds and location-Tracheal",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Chest-Lower Airway-Auscultation-Anterior Posterior-Normal sounds and location-Bronchial",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Chest-Lower Airway-Auscultation-Anterior Posterior-Normal sounds and location-Bronchovesicular",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Chest-Lower Airway-Auscultation-Anterior Posterior-Normal sounds and location-Vesicular",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Heart and blood vessels-Apical pulse",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Heart and blood vessels-Sounds S1",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Heart and blood vessels-Sounds S2",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Heart and blood vessels-Arterial pulses located with each body area examined",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Abdomen Color-closed wounds",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Abdomen-Open wounds",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Abdomen-Size, symmetry, shape",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Abdomen-Scars",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Abdomen-Distension",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Abdomen-Auscultation",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Abdomen-Palpation - quadrant, masses, tenderness, rigidity",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Back Color-Closed wounds",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Back-Open wounds",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Back-Size, shape, symmetry",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Back-Scars",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Back-Palpation-tenderness, rigidity, masses",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Pelvis-Stability",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Male genitalia-inquires about wounds, rashes, external lesions",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Male genitalia-inquires about drainage",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Female genitalia-inquires about wounds, rashes, external lesions",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Female genitalia-inquires about drainage",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Female genitalia-inquires about bleeding or discharge",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Musculoskeletal-Legs and Feet-Symmetry",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Musculoskeletal-Legs and Feet-Range of motion",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Musculoskeletal-Legs and Feet-Deformity",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Musculoskeletal-Legs and Feet-Skin Color",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Musculoskeletal-Legs and Feet-Skin-Closed wounds",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Musculoskeletal-Legs and Feet-Skin-Open wounds",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Musculoskeletal-Legs and Feet-Pulses Femoral",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Musculoskeletal-Legs and Feet-Pulses Popliteal",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Musculoskeletal-Legs and Feet-Pulses Dorsalis pedis",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Musculoskeletal-Arms and hands-Symmetry",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Musculoskeletal-Arms and hands-Range of motion",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Musculoskeletal-Arms and hands-Deformity",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Musculoskeletal-Arms and hands-Skin Color",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Musculoskeletal-Arms and hands-Skin closed wounds",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Musculoskeletal-Arms and hands-Skin open wounds",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Musculoskeletal-Arms and hands-Pulses brachial",
+          "section": "Secondary Physical Examination"
+        },
+        {
+          "text": "Musculoskeletal-Arms and hands-Pulses radial",
+          "section": "Secondary Physical Examination"
+        }
+      ],
+      "equipment": [],
+      "procedure_steps": [],
+      "affective": [
+        "Accepts evaluation and criticism professionally",
+        "Shows willingness to learn",
+        "Interacts with simulated patient and other personnel in professional manner, i.e. uses appropriate name, explains procedures, maintains modesty"
+      ],
+      "critical_criteria": [
+        "Failure to take or verbalize appropriate PPE precautions",
+        "Failure to adequately assess airway, breathing or circulation",
+        "Performs assessment in a disorganized manner",
+        "Failure to assess the patient as a competent EMT",
+        "Exhibits unacceptable affect with patient or other personnel",
+        "Performs assessment inappropriately resulting in potential injury to the patient",
+        "Failure to receive a total score of 160 or greater",
+        "Perform chest compressions"
+      ],
+      "section_headers": [
+        "Appearance",
+        "Level of consciousness/mental status",
+        "Assess baseline vital signs",
+        "Secondary Physical Examination"
+      ],
+      "points_info": null
+    }
+  },
+  {
+    "title": "Perform chest compressions",
+    "index": 18,
+    "sections": {
+      "assessment_steps": [
+        {
+          "text": "\u201cScene is safe and standard precautions\u201d",
+          "section": null
+        },
+        {
+          "text": "Briefly questions the witnesses about arrest events.",
+          "section": null
+        },
+        {
+          "text": "Asks if there is an AED available or carry one into the scenario",
+          "section": null
+        },
+        {
+          "text": "Checks responsiveness and overall signs of life (moving, noises, etc)",
+          "section": null
+        },
+        {
+          "text": "Checks pulse (no longer than 10 seconds)",
+          "section": null
+        },
+        {
+          "text": "Immediately begins chest compressions",
+          "section": null
+        },
+        {
+          "text": "Consistently compresses at the appropriate rate for the patient (adult, child or infant)",
+          "section": null
+        },
+        {
+          "text": "Consistently compresses to the appropriate depth",
+          "section": null
+        },
+        {
+          "text": "Manually opens the airway and provides two rescue breaths",
+          "section": null
+        },
+        {
+          "text": "Confirms effectiveness of CPR (ventilation and compressions)",
+          "section": null
+        },
+        {
+          "text": "Knows that when there are two rescuers they should switch responsibilities after every 2 minutes (switch compressions and ventilations)",
+          "section": null
+        },
+        {
+          "text": "Assures high concentration of oxygen is delivered to the patient",
+          "section": null
+        },
+        {
+          "text": "Assures adequate CPR continues without unnecessary interruption",
+          "section": null
+        }
+      ],
+      "equipment": [],
+      "procedure_steps": [],
+      "affective": [],
+      "critical_criteria": [
+        "Did not take (or verbalize) standard precautions",
+        "Did not ask about the availability of an AED",
+        "Compressions at improper rate or depth",
+        "Did not start effective compression within 30 seconds.",
+        "Poor technique or unnecessary interruption of compressions",
+        "Perform CPR: Adult"
+      ],
+      "section_headers": [],
+      "points_info": null
+    }
+  },
+  {
+    "title": "Perform CPR - Adult",
+    "index": 19,
+    "sections": {
+      "assessment_steps": [
+        {
+          "text": "Apply appropriate PPE",
+          "section": null
+        },
+        {
+          "text": "Check responsiveness",
+          "section": null
+        },
+        {
+          "text": "Request ALS unit",
+          "section": "Evaluator advises, \u201cpatient is not moving and does not respond\u201d"
+        },
+        {
+          "text": "Perform visual survey while opening the airway",
+          "section": "Evaluator advises, \u201cpatient is not moving and does not respond\u201d"
+        },
+        {
+          "text": "Simultaneously check for a breathing and a pulse for at least 5 seconds and no more than 10 seconds",
+          "section": "Evaluator advises, \u201cpatient is not moving and does not respond\u201d"
+        },
+        {
+          "text": "Request an AED",
+          "section": "Evaluator advises, \u201cpatient is pulseless and apneic\u201d"
+        },
+        {
+          "text": "If applicable, move the patient to a firm, flat surface",
+          "section": "Evaluator advises, \u201cpatient is pulseless and apneic\u201d"
+        },
+        {
+          "text": "Immediately begin chest compressions at 30:2, ensure proper hand placement and body position",
+          "section": "Evaluator advises, \u201cpatient is pulseless and apneic\u201d"
+        },
+        {
+          "text": "Compress the chest to a depth of at least 2 inches (5cm) at a rate of 100 to 120 compressions per minute",
+          "section": "Evaluator advises, \u201cpatient is pulseless and apneic\u201d"
+        },
+        {
+          "text": "Allow the chest to fully recoil after each compression",
+          "section": "Evaluator advises, \u201cpatient is pulseless and apneic\u201d"
+        },
+        {
+          "text": "Direct partner to provide two ventilations with a BVM",
+          "section": "Evaluator advises, \u201cpatient is pulseless and apneic\u201d"
+        },
+        {
+          "text": "Resume compressions at 30:2 ratio for 5 cycles",
+          "section": "Evaluator advises, \u201cpatient is pulseless and apneic\u201d"
+        },
+        {
+          "text": "Recheck pulse for at least 5 seconds and no more than 10 seconds",
+          "section": "Evaluator advises, \u201cpatient is pulseless and apneic\u201d"
+        },
+        {
+          "text": "Evaluator asks:",
+          "section": "Evaluator advises, \u201cpatient is pulseless and apneic\u201d"
+        },
+        {
+          "text": "Over Attempt:",
+          "section": "\u2022\tWhen should the AED be placed on the patient?"
+        }
+      ],
+      "equipment": [],
+      "procedure_steps": [],
+      "affective": [],
+      "critical_criteria": [],
+      "section_headers": [
+        "Evaluator advises, \u201cpatient is not moving and does not respond\u201d",
+        "Evaluator advises, \u201cpatient is pulseless and apneic\u201d",
+        "UnsuccessfulSuccessful",
+        "\u2022\tWhen should rescuers \u201cswitch\u201d place?",
+        "\u2022\tWhen should CPR discontinue?",
+        "\u2022\tWhen should the AED be placed on the patient?",
+        "UnsuccessfulSuccessful",
+        "Perform CPR: Neonate"
+      ],
+      "points_info": "Total Points Possible: 13"
+    }
+  },
+  {
+    "title": "Perform CPR - Neonate",
+    "index": 20,
+    "sections": {
+      "assessment_steps": [
+        {
+          "text": "Determine scene safety",
+          "section": null
+        },
+        {
+          "text": "Apply appropriate PPE",
+          "section": null
+        },
+        {
+          "text": "Briefly questions bystanders/family about event",
+          "section": null
+        },
+        {
+          "text": "Determine level of consciousness",
+          "section": "Evaluator advises, \u201cneonate was delivered 3 minutes prior to EMS arrival.\u201d"
+        },
+        {
+          "text": "Request ALS unit if not previously done",
+          "section": "Evaluator advises, \u201cneonate is unresponsive\u201d"
+        },
+        {
+          "text": "Simultaneously check for a breathing and a pulse for at least 5 seconds and no more than 10 seconds",
+          "section": "Evaluator advises, \u201cneonate is unresponsive\u201d"
+        },
+        {
+          "text": "Initiate CPR with chest compressions at 3:1 ratio",
+          "section": "Evaluator advises, \u201cneonate pulse is 40 beats per minute.\u201d"
+        },
+        {
+          "text": "Pad shoulders to assist with opening the airway",
+          "section": "Evaluator advises, \u201cneonate pulse is 40 beats per minute.\u201d"
+        },
+        {
+          "text": "Ventilation administered with infant BVM",
+          "section": "Evaluator advises, \u201cneonate pulse is 40 beats per minute.\u201d"
+        },
+        {
+          "text": "Attach oxygen at 15 LPM",
+          "section": "Evaluator advises, \u201cneonate pulse is 40 beats per minute.\u201d"
+        },
+        {
+          "text": "Continue until ALS Unit arrives",
+          "section": "Evaluator advises, \u201cneonate pulse is 40 beats per minute.\u201d"
+        },
+        {
+          "text": "Overall Attempt:",
+          "section": "Evaluator advises, \u201cneonate pulse is 40 beats per minute.\u201d"
+        }
+      ],
+      "equipment": [],
+      "procedure_steps": [],
+      "affective": [],
+      "critical_criteria": [],
+      "section_headers": [
+        "Evaluator advises, \u201cneonate was delivered 3 minutes prior to EMS arrival.\u201d",
+        "Evaluator advises, \u201cneonate is unresponsive\u201d",
+        "Evaluator advises, \u201cneonate pulse is 40 beats per minute.\u201d",
+        "UnsuccessfulSuccessful",
+        "Perform CPR: Pediatric"
+      ],
+      "points_info": "Total Points Possible: 11"
+    }
+  },
+  {
+    "title": "Perform CPR - Pediatric",
+    "index": 21,
+    "sections": {
+      "assessment_steps": [
+        {
+          "text": "Determine scene safety",
+          "section": null
+        },
+        {
+          "text": "Apply appropriate PPE",
+          "section": null
+        },
+        {
+          "text": "Briefly questions bystanders/family about event",
+          "section": null
+        },
+        {
+          "text": "Determine level of consciousness",
+          "section": null
+        },
+        {
+          "text": "Request ALS unit if not previously done",
+          "section": "Evaluator advises, \u201cchild is unresponsive\u201d"
+        },
+        {
+          "text": "Simultaneously check for a breathing and a pulse for at least 5 seconds and no more than 10 seconds",
+          "section": "Evaluator advises, \u201cchild is unresponsive\u201d"
+        },
+        {
+          "text": "Request an AED",
+          "section": "Evaluator advises, \u201cchild is pulseless and apneic\u201d"
+        },
+        {
+          "text": "Immediately begin chest compressions at 30:2, ensure proper hand placement and body position",
+          "section": "Evaluator advises, \u201cchild is pulseless and apneic\u201d"
+        },
+        {
+          "text": "Compress the chest to a proper depth and rate",
+          "section": "Evaluator advises, \u201cchild is pulseless and apneic\u201d"
+        },
+        {
+          "text": "Allow the chest to fully recoil after each compression",
+          "section": "Evaluator advises, \u201cchild is pulseless and apneic\u201d"
+        },
+        {
+          "text": "Direct partner to provide two ventilations with a BVM",
+          "section": "Evaluator advises, \u201cchild is pulseless and apneic\u201d"
+        },
+        {
+          "text": "Attach AED follow prompts",
+          "section": "Evaluator advises, \u201cchild is pulseless and apneic\u201d"
+        },
+        {
+          "text": "Resume compressions at 15:2 ratio",
+          "section": "Evaluator advises, \u201cchild is pulseless and apneic\u201d"
+        },
+        {
+          "text": "Confirm effectiveness of compressions and switch roles every 2 minutes with AED analysis",
+          "section": "Evaluator advises, \u201cchild is pulseless and apneic\u201d"
+        },
+        {
+          "text": "Deliver report to arriving ALS Unit",
+          "section": "Evaluator advises, \u201cchild is pulseless and apneic\u201d"
+        },
+        {
+          "text": "Overall Attempt:",
+          "section": "Evaluator advises, \u201cchild is pulseless and apneic\u201d"
+        }
+      ],
+      "equipment": [],
+      "procedure_steps": [],
+      "affective": [],
+      "critical_criteria": [],
+      "section_headers": [
+        "Evaluator advises, \u201cchild is unresponsive\u201d",
+        "Evaluator advises, \u201cchild is pulseless and apneic\u201d",
+        "UnsuccessfulSuccessful",
+        "Perform cricothyrotomy"
+      ],
+      "points_info": "Total Points Possible: 15"
+    }
+  },
+  {
+    "title": "Perform cricothyrotomy",
+    "index": 22,
+    "sections": {
+      "assessment_steps": [
+        {
+          "text": "Oxygen source capable of 50 psi",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Oxygen tubing",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Manual jet ventilator device (Y-connector or push button device)",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Bag-valve-mask device",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Large bore IV catheter",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "10 \u2013 20 mL syringe",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "3.0 mm ET adapter",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Takes appropriate PPE precautions",
+          "section": "Prepares Patient"
+        },
+        {
+          "text": "Places the patient supine and hyperextends the head/neck (neutral position if cervical spine injury is suspected), manages the patient\u2019s airway with basic maneuvers and supplemental oxygen",
+          "section": "Prepares Patient"
+        },
+        {
+          "text": "Palpates neck locating the cricothyroid membrane (between the thyroid and cricoid cartilages)",
+          "section": "Prepares Patient"
+        },
+        {
+          "text": "Cleanse the insertion site with appropriate solution",
+          "section": "Performs needle cricithyrotomy"
+        },
+        {
+          "text": "Stabilizes site and inserts needle through cricothyroid membrane at midline directing at a 45\u00b0 angle caudally",
+          "section": "Performs needle cricithyrotomy"
+        },
+        {
+          "text": "Aspirates syringe to confirm proper placement in trachea",
+          "section": "Performs needle cricithyrotomy"
+        },
+        {
+          "text": "Advances catheter while stabilizing needle",
+          "section": "Performs needle cricithyrotomy"
+        },
+        {
+          "text": "Removes needle and immediately disposes in sharps container",
+          "section": "Performs needle cricithyrotomy"
+        },
+        {
+          "text": "Attaches ventilation device and begins ventilation (1 second for inflation, 2 seconds for exhalation using jet ventilator, BVM)",
+          "section": "Performs needle cricithyrotomy"
+        },
+        {
+          "text": "Secures catheter",
+          "section": "Performs needle cricithyrotomy"
+        },
+        {
+          "text": "Observes chest rise and auscultates lungs to assess adequacy of ventilation",
+          "section": "Performs needle cricithyrotomy"
+        },
+        {
+          "text": "Continues ventilation while observing for possible complications (subcutaneous emphysema, hemorrhage, hypoventilation, equipment failure, catheter kink, false placement)",
+          "section": "Performs needle cricithyrotomy"
+        }
+      ],
+      "equipment": [],
+      "procedure_steps": [],
+      "affective": [
+        "Accepts evaluation and criticism professionally",
+        "Shows willingness to learn",
+        "Interacts with simulated patient and other personnel in professional manner"
+      ],
+      "critical_criteria": [
+        "Failure to take or verbalize appropriate PPE precautions",
+        "Recaps contaminated needle or failure to dispose of syringe and needle in proper container",
+        "Inability to assemble necessary equipment to perform procedure",
+        "Failure to correctly locate the cricothyroid membrane",
+        "Failure to properly cleanse site prior to needle insertion",
+        "Incorrect insertion technique (directing the needle in a cephalad direction)",
+        "Failure to assess adequacy of ventilation and for possible complications",
+        "Perform defibrillation"
+      ],
+      "section_headers": [
+        "Selects, checks, assembles equipment",
+        "Prepares Patient",
+        "Performs needle cricithyrotomy"
+      ],
+      "points_info": null
+    }
+  },
+  {
+    "title": "Perform defibrillation",
+    "index": 23,
+    "sections": {
+      "assessment_steps": [
+        {
+          "text": "Monitor/defibrillator with defibrillation pads",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Oxygen with appropriate administration device",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Takes or verbalizes appropriate PPE precautions",
+          "section": "Performs Defibrillation"
+        },
+        {
+          "text": "Determines the scene/situation is safe",
+          "section": "Performs Defibrillation"
+        },
+        {
+          "text": "Attempts to question bystanders about arrest events",
+          "section": "Performs Defibrillation"
+        },
+        {
+          "text": "Checks responsiveness",
+          "section": "Performs Defibrillation"
+        },
+        {
+          "text": "Requests additional assistance",
+          "section": "Performs Defibrillation"
+        },
+        {
+          "text": "Checks carotid pulse (no more than 10 seconds)",
+          "section": "Performs Defibrillation"
+        },
+        {
+          "text": "Immediately begins chest compressions",
+          "section": "Performs Defibrillation"
+        },
+        {
+          "text": "Chest compressions are of adequate depth and rate",
+          "section": "N/A012"
+        },
+        {
+          "text": "Correct compression-to-ventilation ratio",
+          "section": "N/A012"
+        },
+        {
+          "text": "Allows the chest to recoil completely",
+          "section": "N/A012"
+        },
+        {
+          "text": "Minimal interruptions of less than 10 seconds throughout",
+          "section": "N/A012"
+        },
+        {
+          "text": "Adequate volumes for each breath",
+          "section": "N/A012"
+        },
+        {
+          "text": "Attaches defibrillator",
+          "section": "N/A012"
+        },
+        {
+          "text": "Assures safe environment \u2013 evaluates the risk of sparks, combustibles, oxygen-enriched atmosphere",
+          "section": "N/A012"
+        },
+        {
+          "text": "Stops CPR and observes rhythm",
+          "section": "N/A012"
+        },
+        {
+          "text": "Verbalizes \u201cAll clear\u201d and visually ensures that all individuals are clear of the patient",
+          "section": "N/A012"
+        },
+        {
+          "text": "Delivers shock",
+          "section": "N/A012"
+        },
+        {
+          "text": "Immediately resumes chest compressions",
+          "section": "N/A012"
+        }
+      ],
+      "equipment": [],
+      "procedure_steps": [],
+      "affective": [
+        "Accepts evaluation and criticism professionally",
+        "Shows willingness to learn",
+        "Interacts with simulated patient and other personnel in professional manner"
+      ],
+      "critical_criteria": [
+        "Failure to initiate CPR without delay",
+        "Interrupts CPR for more than 10 seconds",
+        "Failure to take or verbalize appropriate PPE precautions",
+        "Failure to deliver shock in a timely manner",
+        "Failure to demonstrate acceptable high quality adult CPR",
+        "Failure to operate the defibrillator properly",
+        "Failure to correctly attach the defibrillator to the patient",
+        "Failure to verify rhythm before delivering a shock",
+        "Failure to demonstrate acceptable shock sequence",
+        "Failure to assure that all individuals were clear of patient during rhythm interpretation and before delivering shock (verbalizes \u201cAll clear\u201d and observes)",
+        "Failure to ensure a safe environment before delivering shock (sparks, combustibles, oxygen-enriched atmosphere)",
+        "Failure to immediately resume chest compressions after shock delivered",
+        "Failure to resume ventilation with oxygen at the proper time",
+        "Failure to demonstrate the ability to manage the patient as a minimally competent EMT",
+        "Exhibits unacceptable affect with patient or other personnel",
+        "Uses or orders a dangerous or inappropriate intervention",
+        "Perform endotracheal suctioning"
+      ],
+      "section_headers": [
+        "Selects, checks, assembles equipment",
+        "Performs Defibrillation",
+        "N/A012"
+      ],
+      "points_info": null
+    }
+  },
+  {
+    "title": "Perform endotracheal suctioning",
+    "index": 24,
+    "sections": {
+      "assessment_steps": [
+        {
+          "text": "Utilizes appropriate universal precautions",
+          "section": null
+        },
+        {
+          "text": "Explains procedure to patient, if appropriate",
+          "section": null
+        },
+        {
+          "text": "Sets up the suction equipment",
+          "section": null
+        },
+        {
+          "text": "Obtains sterile water",
+          "section": null
+        },
+        {
+          "text": "Assembles equipment and determines functionality using sterile techniques",
+          "section": null
+        },
+        {
+          "text": "Has assistant pre-oxygenate the patient",
+          "section": null
+        },
+        {
+          "text": "Measures suction catheter properly",
+          "section": null
+        },
+        {
+          "text": "Lubricates catheter with sterile lubricant",
+          "section": null
+        },
+        {
+          "text": "Inserts catheter into the endotracheal tube",
+          "section": null
+        },
+        {
+          "text": "Stops at measured stop on catheter or when coughing or vagal response observed",
+          "section": null
+        },
+        {
+          "text": "Applies suction on the way out no longer than 15 seconds",
+          "section": null
+        },
+        {
+          "text": "Monitors effectiveness of suction",
+          "section": null
+        },
+        {
+          "text": "Demonstrates how to clear catheter with water",
+          "section": null
+        },
+        {
+          "text": "Prepared for coughing, vagal response, or dysrhythmias",
+          "section": null
+        },
+        {
+          "text": "Prepared for bradycardia and responds appropriately",
+          "section": null
+        },
+        {
+          "text": "Patient condition monitored throughout the procedure",
+          "section": null
+        },
+        {
+          "text": "Recognizes excessive suctioning can significantly decrease PO2",
+          "section": "Questions"
+        }
+      ],
+      "equipment": [],
+      "procedure_steps": [],
+      "affective": [],
+      "critical_criteria": [
+        "Did not take (or verbalize) standard precautions",
+        "Procedure done in a manner causing harm to the patient",
+        "Failed to maintain a sterile procedure",
+        "Applies suction prior to withdrawing the catheter",
+        "Performing Oral Suctioning"
+      ],
+      "section_headers": [
+        "Questions"
+      ],
+      "points_info": null
+    }
+  },
+  {
+    "title": "Perform FBAO - Adult",
+    "sections": {
+      "assessment_steps": [
+        {
+          "text": "Scene is safe and standard precautions",
+          "section": null
+        },
+        {
+          "text": "Briefly questions the rescuer about events",
+          "section": null
+        },
+        {
+          "text": "Asks patient if they can talk",
+          "section": null
+        },
+        {
+          "text": "Advises witnesses they are going to help by performing the Heimlich maneuver",
+          "section": null
+        },
+        {
+          "text": "Performs abd. thrusts until the object is expelled or the patient becomes unconsciousness",
+          "section": null
+        },
+        {
+          "text": "Assures ALS is en route and asks for ETA",
+          "section": "Transition"
+        },
+        {
+          "text": "Able to answer questions regarding current BLS guidelines",
+          "section": "Questions"
+        }
+      ],
+      "equipment": [],
+      "procedure_steps": [],
+      "affective": [],
+      "critical_criteria": [
+        "Did not take (or verbalize) standard precautions",
+        "Did not evaluate the need for abdominal thrusts",
+        "Did not control patient when there was a loss of consciousness",
+        "Poor technique or unreasonable delays"
+      ],
+      "section_headers": [],
+      "points_info": null
+    },
+    "index": 25
+  },
+  {
+    "title": "Perform FBAO - Infant",
+    "sections": {
+      "assessment_steps": [
+        {
+          "text": "Scene is safe and standard precautions",
+          "section": null
+        },
+        {
+          "text": "Briefly questions the rescuer about events",
+          "section": null
+        },
+        {
+          "text": "Determines if patient is conscious or unconscious",
+          "section": null
+        },
+        {
+          "text": "Performs 5 back blows followed by 5 chest thrusts",
+          "section": null
+        },
+        {
+          "text": "Repeats steps until the object is expelled or the patient becomes unconscious",
+          "section": null
+        },
+        {
+          "text": "Assures ALS is en route and asks for ETA",
+          "section": "Transition"
+        },
+        {
+          "text": "Able to answer questions regarding current BLS guidelines",
+          "section": "Questions"
+        }
+      ],
+      "equipment": [],
+      "procedure_steps": [],
+      "affective": [],
+      "critical_criteria": [
+        "Did not take (or verbalize) standard precautions",
+        "Did not evaluate the need for back blows and chest thrusts",
+        "Did not control patient when there was a loss of consciousness",
+        "Poor technique or unreasonable delays"
+      ],
+      "section_headers": [],
+      "points_info": null
+    },
+    "index": 26
+  },
+  {
+    "title": "Perform FBAO removal using Magill forceps",
+    "sections": {
+      "assessment_steps": [
+        {
+          "text": "Takes appropriate PPE precautions",
+          "section": null
+        },
+        {
+          "text": "Briefly questions the witness about choking events.",
+          "section": null
+        },
+        {
+          "text": "Asks if basic airway procedures have been attempted",
+          "section": null
+        },
+        {
+          "text": "Checks responsiveness and overall signs of life",
+          "section": null
+        },
+        {
+          "text": "Acquires the appropriate equipment and size (Laryngoscope and Magill Forceps)",
+          "section": null
+        },
+        {
+          "text": "Checks laryngoscope for light",
+          "section": null
+        },
+        {
+          "text": "Ensures suction is available and ready",
+          "section": null
+        },
+        {
+          "text": "Inserts laryngoscope properly to visualize obstructions",
+          "section": null
+        },
+        {
+          "text": "Carefully removes obstruction with Magills",
+          "section": null
+        },
+        {
+          "text": "Prepared for vomiting",
+          "section": null
+        },
+        {
+          "text": "Prepared to assit ventilations",
+          "section": null
+        },
+        {
+          "text": "Prepared to support other vital signs",
+          "section": null
+        },
+        {
+          "text": "Directs the team to support the airway",
+          "section": null
+        },
+        {
+          "text": "Directs the team to monitor other vital signs",
+          "section": null
+        },
+        {
+          "text": "Able to describe indications for this procedure",
+          "section": "Questions"
+        },
+        {
+          "text": "Able to describe differences between adult and pediatric procedures",
+          "section": "Questions"
+        }
+      ],
+      "equipment": [],
+      "procedure_steps": [],
+      "affective": [],
+      "critical_criteria": [
+        "Did not take (or verbalize) standard precautions",
+        "Used laryngoscope as a fulcrum",
+        "Technique forced the obstruction further down the airway",
+        "Failed to prepare for vomiting",
+        "Failed to prepare to assist ventilations"
+      ],
+      "section_headers": [],
+      "points_info": null
+    },
+    "index": 27
+  },
+  {
+    "title": "Perform needle decompression of the chest",
+    "sections": {
+      "assessment_steps": [
+        {
+          "text": "Manages the patient's airway with basic maneuvers and supplemental oxygen; intubates as necessary",
+          "section": null
+        },
+        {
+          "text": "Appropriately recognizes signs of tension pneumothorax",
+          "section": null
+        },
+        {
+          "text": "14 \u2013 16 ga. X 2 inch over-the-needle catheter (adult) or 16 \u2013 18 ga. X 1\u00bd \u2013 2 inch over-the-needle catheter (pediatric)",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "10 mL syringe",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "4x4s",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Antiseptic solution",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Tape",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Takes or verbalizes appropriate PPE precautions",
+          "section": "Prepares Patient"
+        },
+        {
+          "text": "Palpates the chest locating the second or third intercostal space on the midclavicular line (the second rib joins the sternum at the angle of Louis, the second intercostal space is located between 2nd & 3rd ribs while the third intercostal space is between 3rd & 4th ribs)",
+          "section": "Prepares Patient"
+        },
+        {
+          "text": "Properly cleanses the insertion site with appropriate solution",
+          "section": "Prepares Patient"
+        },
+        {
+          "text": "Reconfirms the site of insertion and directs the needle over the top of the rib on the midclavicular line",
+          "section": "Performs Needle Thoracostomy"
+        },
+        {
+          "text": "Listens for a rush of air or watches for plunger in syringe to withdraw and aspirates air",
+          "section": "Performs Needle Thoracostomy"
+        },
+        {
+          "text": "Removes needle/syringe leaving only the catheter in place",
+          "section": "Performs Needle Thoracostomy"
+        },
+        {
+          "text": "Disposes of the needle in proper container",
+          "section": "Performs Needle Thoracostomy"
+        },
+        {
+          "text": "Stabilizes the catheter hub with 4x4s and tape",
+          "section": "Performs Needle Thoracostomy"
+        },
+        {
+          "text": "Reassesses adequacy of ventilation, lung sounds, blood pressure and pulse for improvement in patient condition",
+          "section": "Performs Needle Thoracostomy"
+        }
+      ],
+      "equipment": [],
+      "procedure_steps": [],
+      "affective": [
+        "Accepts evaluation and criticism professionally",
+        "Shows willingness to learn",
+        "Interacts with simulated patient and other personnel in professional manner"
+      ],
+      "critical_criteria": [
+        "Failure to take or verbalize appropriate PPE precautions",
+        "Failure to dispose of the needle in proper container",
+        "Failure to correctly locate the site for insertion",
+        "Failure to properly cleanse site prior to needle insertion",
+        "Incorrect procedure relating to needle insertion (inserting below the rib, incorrect anatomical location, etc.)",
+        "Failure to assess the need for needle decompression (diminished or absent breath sounds, signs of hemodynamic compromise, etc.)",
+        "Failure to reassess patient condition following procedure"
+      ],
+      "section_headers": [],
+      "points_info": null
+    },
+    "index": 28
+  },
+  {
+    "title": "Perform oral endotracheal intubation",
+    "sections": {
+      "assessment_steps": [
+        {
+          "text": "BVM with mask and reservoir",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Oxygen",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Airway adjuncts",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Suction unit with appropriate catheters",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Laryngoscope and blades",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "ET tube and stylette",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Capnography/capnometry",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Takes appropriate PPE precautions",
+          "section": "Prepares Patient"
+        },
+        {
+          "text": "Manually opens airway",
+          "section": "Prepares Patient"
+        },
+        {
+          "text": "Inserts adjunct (oropharyngeal or nasopharyngeal airway)",
+          "section": "Prepares Patient"
+        },
+        {
+          "text": "Ventilates patient at appropriate rate",
+          "section": "Prepares Patient"
+        },
+        {
+          "text": "Ventilates patient with appropriate volume (adequate chest rise)",
+          "section": "Prepares Patient"
+        },
+        {
+          "text": "Attaches pulse oximeter and evaluates SpO2 reading",
+          "section": "Prepares Patient"
+        },
+        {
+          "text": "Preoxygenates patient",
+          "section": "Prepares Patient"
+        },
+        {
+          "text": "Positions head properly",
+          "section": "Performs Intubation"
+        },
+        {
+          "text": "Inserts laryngoscope blade and displaces tongue",
+          "section": "Performs Intubation"
+        },
+        {
+          "text": "Elevates mandible with laryngoscope",
+          "section": "Performs Intubation"
+        },
+        {
+          "text": "Inserts ET tube and advances to proper depth",
+          "section": "Performs Intubation"
+        },
+        {
+          "text": "Inflates cuff to proper pressure and immediately removes syringe, if applicable",
+          "section": "Performs Intubation"
+        },
+        {
+          "text": "Ventilates patient and confirms proper tube placement by auscultation bilaterally over lungs and over epigastrium",
+          "section": "Performs Intubation"
+        },
+        {
+          "text": "Verifies proper tube placement by secondary confirmation such as capnography, capnometry, EDD or colorimetric device",
+          "section": "Performs Intubation"
+        },
+        {
+          "text": "Assesses for hypoxia during intubation attempt",
+          "section": "Performs Intubation"
+        },
+        {
+          "text": "Secures ET tube",
+          "section": "Performs Intubation"
+        },
+        {
+          "text": "Ventilates patient at proper rate and volume while observing capnography/capnometry and pulse oximeter",
+          "section": "Performs Intubation"
+        },
+        {
+          "text": "Recognizes need to suction",
+          "section": "Suctions secretions from tube"
+        },
+        {
+          "text": "Identifies/selects flexible suction catheter",
+          "section": "Suctions secretions from tube"
+        },
+        {
+          "text": "Inserts catheter into ET tube without suction",
+          "section": "Suctions secretions from tube"
+        },
+        {
+          "text": "At proper insertion depth, covers catheter port and applies suction while withdrawing catheter",
+          "section": "Suctions secretions from tube"
+        },
+        {
+          "text": "Ventilates/directs ventilation of patient as catheter is flushed with sterile water",
+          "section": "Suctions secretions from tube"
+        },
+        {
+          "text": "Reaffirms proper tube placement",
+          "section": "Suctions secretions from tube"
+        },
+        {
+          "text": "Ventilates patient at proper rate and volume while observing capnography/capnometry and pulse oximeter",
+          "section": "Suctions secretions from tube"
+        }
+      ],
+      "equipment": [],
+      "procedure_steps": [],
+      "affective": [
+        "Accepts evaluation and criticism professionally",
+        "Shows willingness to learn",
+        "Interacts with simulated patient and other personnel in professional manner"
+      ],
+      "critical_criteria": [
+        "Failure to initiate ventilations within 30 seconds after taking PPE precautions or interrupts ventilations when SpO2 is less than 90% at any time",
+        "Failure to take or verbalize appropriate PPE precautions",
+        "Suctions the patient for an excessive amount of time",
+        "Failure to preoxygenate patient prior to intubation",
+        "If used, stylette extends beyond end of ET tube",
+        "Failure to disconnect syringe immediately after inflating cuff of ET tube (only if cuffed tube is used)",
+        "Uses teeth as a fulcrum",
+        "Failure to assure proper tube placement by auscultation bilaterally and over the epigastrium",
+        "Failure to provide oxygen",
+        "Failure to ventilate the patient at the proper rate",
+        "Failure to provide adequate volumes per breath",
+        "Insertion or use of any adjunct in a manner dangerous to the patient",
+        "Exhibits unacceptable affect with patient or other personnel",
+        "Failure to demonstrate the ability to manage the patient as a minimally competent EMT",
+        "Uses or orders a dangerous or inappropriate intervention"
+      ],
+      "section_headers": [],
+      "points_info": null
+    },
+    "index": 29
+  },
+  {
+    "title": "Perform Oral Suctioning",
+    "index": 30,
+    "sections": {
+      "assessment_steps": [
+        {
+          "text": "Apply appropriate PPE",
+          "section": null
+        },
+        {
+          "text": "Turn on/prepare suction device",
+          "section": null
+        },
+        {
+          "text": "Ensure presence of mechanical suction",
+          "section": null
+        },
+        {
+          "text": "Insert the suction tip without suction",
+          "section": null
+        },
+        {
+          "text": "Apply appropriate suction to the oropharynx while withdrawing the suction tip",
+          "section": null
+        },
+        {
+          "text": "Ensure that suction is only applied to the areas visible to the provider",
+          "section": null
+        },
+        {
+          "text": "Overall Attempt:",
+          "section": null
+        },
+        {
+          "text": "Takes or verbalizes appropriate body substance isolation precautions",
+          "section": "Perform PPV with BVM"
+        },
+        {
+          "text": "Checks responsiveness",
+          "section": "Start timer at zero \"0\" seconds"
+        },
+        {
+          "text": "Checks breathing and pulse simultaneously",
+          "section": "01"
+        },
+        {
+          "text": "Opens airway properly",
+          "section": "01"
+        },
+        {
+          "text": "Properly clears the airway of secretions and/or foreign objects, if necessary",
+          "section": "01"
+        },
+        {
+          "text": "Inserts airway adjunct, if necessary",
+          "section": "Restart timer at zero \"0\" seconds after suctioning"
+        },
+        {
+          "text": "End time (in seconds):",
+          "section": "Restart timer at zero \"0\" seconds after suctioning"
+        },
+        {
+          "text": "Ventilates patient within 30 seconds after suctioning (if applicable) or after applying PPE",
+          "section": "Restart timer at zero \"0\" seconds after suctioning"
+        },
+        {
+          "text": "Re-checks pulse for no more than 10 seconds",
+          "section": "01"
+        },
+        {
+          "text": "Attaches the BVM to oxygen at 15 lpm (award if already attached with first ventilation)",
+          "section": "01"
+        },
+        {
+          "text": "Ventilates the patient adequately - Proper volume to cause visible chest rise (1 point) - Proper rate [10 \u2013 12/minute (1 ventilation every 5 \u2013 6 seconds)] (1 point)",
+          "section": "01"
+        }
+      ],
+      "equipment": [],
+      "procedure_steps": [],
+      "affective": [],
+      "critical_criteria": [
+        "After suctioning the patient, failure to initiate ventilations within 30 seconds or interrupts ventilations for greater than 30 seconds at any time",
+        "Failure to take or verbalize appropriate PPE precautions",
+        "Failure to assess the airway for secretions or foreign objects BEFORE ventilating the patient",
+        "Suctions the patient for an excessive and prolonged time",
+        "Failure to check responsiveness, then check breathing and pulse simultaneously for no more than 10 seconds",
+        "Failure to provide oxygen",
+        "Failure to ventilate the patient at a rate of 10 \u2013 12/minute (1 ventilation every 5 \u2013 6 seconds)",
+        "Failure to provide adequate volumes per breath",
+        "Insertion or use of any adjunct in a manner dangerous to the patient",
+        "Failure to manage the patient as a competent EMR",
+        "Exhibits unacceptable affect with patient or other personnel",
+        "Uses or orders a dangerous or inappropriate intervention",
+        "Perform Spinal Motion Restriction"
+      ],
+      "section_headers": [
+        "UnsuccessfulSuccessful",
+        "Perform PPV with BVM",
+        "01",
+        "Start timer",
+        "Start timer at zero \"0\" seconds",
+        "01",
+        "01",
+        "01",
+        "Restart timer after suctioning, if appicable",
+        "Restart timer at zero \"0\" seconds after suctioning",
+        "01",
+        "01",
+        "01",
+        "012"
+      ],
+      "points_info": "Total Points Possible: 6"
+    }
+  },
+  {
+    "title": "Perform PPV with BVM",
+    "sections": {
+      "assessment_steps": [
+        {
+          "text": "Takes or verbalizes appropriate body substance isolation precautions",
+          "section": null
+        },
+        {
+          "text": "Checks responsiveness",
+          "section": null
+        },
+        {
+          "text": "Checks breathing and pulse simultaneously",
+          "section": null
+        },
+        {
+          "text": "Opens airway properly",
+          "section": null
+        },
+        {
+          "text": "Properly clears the airway of secretions and/or foreign objects, if necessary",
+          "section": null
+        },
+        {
+          "text": "Inserts airway adjunct, if necessary",
+          "section": null
+        },
+        {
+          "text": "Ventilates patient within 30 seconds after suctioning (if applicable) or after applying PPE",
+          "section": null
+        },
+        {
+          "text": "Re-checks pulse for no more than 10 seconds",
+          "section": null
+        },
+        {
+          "text": "Attaches the BVM to oxygen at 15 lpm (award if already attached with first ventilation)",
+          "section": null
+        },
+        {
+          "text": "Ventilates the patient adequately - Proper volume to cause visible chest rise (1 point) - Proper rate [10 \u2013 12/minute (1 ventilation every 5 \u2013 6 seconds)] (1 point)",
+          "section": null
+        }
+      ],
+      "equipment": [],
+      "procedure_steps": [],
+      "affective": [],
+      "critical_criteria": [
+        "After suctioning the patient, failure to initiate ventilations within 30 seconds or interrupts ventilations for greater than 30 seconds at any time",
+        "Failure to take or verbalize appropriate PPE precautions",
+        "Failure to assess the airway for secretions or foreign objects BEFORE ventilating the patient",
+        "Suctions the patient for an excessive and prolonged time",
+        "Failure to check responsiveness, then check breathing and pulse simultaneously for no more than 10 seconds",
+        "Failure to provide oxygen",
+        "Failure to ventilate the patient at a rate of 10 \u2013 12/minute (1 ventilation every 5 \u2013 6 seconds)",
+        "Failure to provide adequate volumes per breath",
+        "Insertion or use of any adjunct in a manner dangerous to the patient",
+        "Failure to manage the patient as a competent EMR",
+        "Exhibits unacceptable affect with patient or other personnel",
+        "Uses or orders a dangerous or inappropriate intervention"
+      ],
+      "section_headers": [],
+      "points_info": null
+    },
+    "index": 31
+  },
+  {
+    "title": "Perform Spine Motion Restriction",
+    "index": 32,
+    "sections": {
+      "assessment_steps": [
+        {
+          "text": "Takes or verbalizes appropriate PPE precautions",
+          "section": null
+        },
+        {
+          "text": "Performs a Spinal Injury Assessment",
+          "section": null
+        },
+        {
+          "text": "Directs spinal precautions",
+          "section": null
+        },
+        {
+          "text": "Assesses pulse, motor, and sensory functions in all extremities",
+          "section": null
+        },
+        {
+          "text": "Extricates patient to long backboard (or equivalent) and secures",
+          "section": "NOTE: The examiner acknowledges, \u201cMotor, sensory, and circulatory functions are present and normal.\u201d"
+        },
+        {
+          "text": "Reassesses pulse, motor, and sensory functions in all extremities",
+          "section": "NOTE: The examiner acknowledges, \u201cMotor, sensory, and circulatory functions are present and normal.\u201d"
+        },
+        {
+          "text": "Log rolls patient to stretcher and secures with 5-point harness for transport",
+          "section": "NOTE: The examiner acknowledges, \u201cMotor, sensory, and circulatory functions are present and normal.\u201d"
+        },
+        {
+          "text": "Reassesses pulse, motor, and sensory functions in all extremities",
+          "section": "NOTE: The examiner acknowledges, \u201cMotor, sensory, and circulatory functions are present and normal.\u201d"
+        }
+      ],
+      "equipment": [],
+      "procedure_steps": [],
+      "affective": [],
+      "critical_criteria": [
+        "Failure to take or verbalize PPE",
+        "Failure to extricate with minimum patient movement",
+        "Failure to assess and reassess PMS",
+        "Failure to secure to stretcher for transport",
+        "Exhibits unprofessional behavior",
+        "Overall Attempt: *",
+        "UnsuccessfulSuccessful",
+        "Perform synchronized cardioversion"
+      ],
+      "section_headers": [
+        "NOTE: The examiner acknowledges, \u201cMotor, sensory, and circulatory functions are present and normal.\u201d"
+      ],
+      "points_info": "Total Points Possible: 8"
+    }
+  },
+  {
+    "title": "Perform synchronized cardioversion",
+    "index": 33,
+    "sections": {
+      "assessment_steps": [
+        {
+          "text": "Monitor/defibrillator with pacing pads",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Medication to sedate patient (if necessary)",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Oxygen with appropriate administration device",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Assures adequate oxygenation and patent IV established",
+          "section": "Performs synchronized cardioversion"
+        },
+        {
+          "text": "Correctly identifies arrhythmia and condition that requires synchronized cardioversion",
+          "section": "Performs synchronized cardioversion"
+        },
+        {
+          "text": "Takes or verbalizes appropriate PPE precautions",
+          "section": "Performs synchronized cardioversion"
+        },
+        {
+          "text": "Assesses patient condition to include pulse and BP",
+          "section": "Performs synchronized cardioversion"
+        },
+        {
+          "text": "Asks patient or determines known allergies",
+          "section": "Performs synchronized cardioversion"
+        },
+        {
+          "text": "Considers appropriate medication to sedate patient",
+          "section": "Performs synchronized cardioversion"
+        },
+        {
+          "text": "Attaches defibrillation pads",
+          "section": "Performs synchronized cardioversion"
+        },
+        {
+          "text": "Assures safe environment \u2013 evaluates the risk of sparks, combustibles, oxygen-enriched atmosphere",
+          "section": "Performs synchronized cardioversion"
+        },
+        {
+          "text": "Sets cardioverter to appropriate energy setting",
+          "section": "Performs synchronized cardioversion"
+        },
+        {
+          "text": "Activates synchronizer mode",
+          "section": "Performs synchronized cardioversion"
+        },
+        {
+          "text": "Notes marker on ECG screen and adjusts amplitude until machine appropriately reads QRS complexes",
+          "section": "Performs synchronized cardioversion"
+        },
+        {
+          "text": "Verbalizes \u201cAll clear\u201d and visually ensures that all individuals are clear of the patient",
+          "section": "Performs synchronized cardioversion"
+        },
+        {
+          "text": "Delivers shock",
+          "section": "Performs synchronized cardioversion"
+        },
+        {
+          "text": "Reassesses rhythm",
+          "section": "Performs synchronized cardioversion"
+        },
+        {
+          "text": "Reassesses patient condition to include pulse and BP",
+          "section": "Performs synchronized cardioversion"
+        },
+        {
+          "text": "Verbalizes need to observe patient for desired effect and adverse side effects",
+          "section": "Performs synchronized cardioversion"
+        }
+      ],
+      "equipment": [],
+      "procedure_steps": [],
+      "affective": [
+        "Accepts evaluation and criticism professionally",
+        "Shows willingness to learn",
+        "Interacts with simulated patient and other personnel in professional manner"
+      ],
+      "critical_criteria": [
+        "Failure to take or verbalize appropriate PPE precautions",
+        "Failure to assess the patient\u2019s hemodynamic status before and after delivering the shock",
+        "Failure to verify rhythm before delivering a shock",
+        "Failure to ensure the safety of self and others (verbalizes \u201cAll clear\u201d and observes)",
+        "Failure to ensure a safe environment before delivering a shock (sparks, combustibles, oxygenenriched atmosphere)",
+        "Failure to resume oxygen therapy at the proper time",
+        "Inability to deliver a synchronized shock (does not use machine properly)",
+        "Failure to set the appropriate energy level before engaging the synchronized mode of operation",
+        "Failure to demonstrate acceptable shock sequence",
+        "Failure to observe the patient for desired effect and adverse side effects",
+        "Failure to manage the patient as a competent EMT",
+        "Exhibits unacceptable affect with patient or other personnel",
+        "Uses or orders a dangerous or inappropriate intervention",
+        "Perform transcutaneous pacing"
+      ],
+      "section_headers": [
+        "Selects, checks, assembles equipment",
+        "Performs synchronized cardioversion"
+      ],
+      "points_info": null
+    }
+  },
+  {
+    "title": "Perform transcutaneous pacing",
+    "index": 34,
+    "sections": {
+      "assessment_steps": [
+        {
+          "text": "Monitor/defibrillator with pacing pads",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Medication to reduce pain or sedate patient (if necessary)",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Oxygen with appropriate administration device",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Assures adequate oxygenation and patent IV established",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Identifies arrhythmia and condition that requires transcutaneous pacing",
+          "section": "Performs transcutaneous pacing"
+        },
+        {
+          "text": "Takes or verbalizes appropriate PPE precautions",
+          "section": "Performs transcutaneous pacing"
+        },
+        {
+          "text": "Assesses patient condition to include pulse and BP",
+          "section": "Performs transcutaneous pacing"
+        },
+        {
+          "text": "Administers appropriate oxygen therapy",
+          "section": "Performs transcutaneous pacing"
+        },
+        {
+          "text": "Attaches pacing pads",
+          "section": "Performs transcutaneous pacing"
+        },
+        {
+          "text": "Assures safe environment \u2013 evaluates the risk of sparks, combustibles, oxygen-enriched atmosphere",
+          "section": "Performs transcutaneous pacing"
+        },
+        {
+          "text": "Activates pacemaker function of device",
+          "section": "Performs transcutaneous pacing"
+        },
+        {
+          "text": "Notes marker on ECG screen and adjusts amplitude until machine appropriately reads QRS complexes",
+          "section": "Performs transcutaneous pacing"
+        },
+        {
+          "text": "Sets appropriate pacer rate",
+          "section": "Performs transcutaneous pacing"
+        },
+        {
+          "text": "Sets current to be delivered to the minimum setting",
+          "section": "Performs transcutaneous pacing"
+        },
+        {
+          "text": "Gradually increase delivered current until capture is achieved (observes pacer spikes followed by wide QRS complexes at tall \u201cT\u201d waves)",
+          "section": "Performs transcutaneous pacing"
+        },
+        {
+          "text": "Reassesses patient condition to include pulse and BP",
+          "section": "Performs transcutaneous pacing"
+        },
+        {
+          "text": "Asks patient or determines known allergies (if considering medication administration)",
+          "section": "Performs transcutaneous pacing"
+        },
+        {
+          "text": "Administers appropriate medication to reduce pain or sedate patient (if necessary)",
+          "section": "Performs transcutaneous pacing"
+        },
+        {
+          "text": "Verbalizes need to continuously monitor the patient\u2019s condition",
+          "section": "Performs transcutaneous pacing"
+        }
+      ],
+      "equipment": [],
+      "procedure_steps": [],
+      "affective": [
+        "Accepts evaluation and criticism professionally",
+        "Shows willingness to learn",
+        "Interacts with simulated patient and other personnel in professional manner"
+      ],
+      "critical_criteria": [
+        "Failure to take or verbalize appropriate PPE precautions",
+        "Failure to assess the patient\u2019s hemodynamic status before and after administering transcutaneous pacing",
+        "Failure to document rhythm before administering transcutaneous pacing",
+        "Failure to ensure the safety of self and others",
+        "Failure to ensure a safe environment before pacing initiated (sparks, combustibles, oxygen-enriched atmosphere)",
+        "Inability to deliver transcutaneous pacing (does not use machine properly)",
+        "Failure to demonstrate acceptable electrical capture",
+        "Failure to observe the patient for desired effect and adverse side effects",
+        "Failure to manage the patient as a competent EMT",
+        "Exhibits unacceptable affect with patient or other personnel",
+        "Uses or orders a dangerous or inappropriate intervention",
+        "Performing Uncomplicated Delivery"
+      ],
+      "section_headers": [
+        "Selects, checks, assembles equipment",
+        "Performs transcutaneous pacing"
+      ],
+      "points_info": null
+    }
+  },
+  {
+    "title": "Perform Uncomplicated Delivery",
+    "index": 35,
+    "sections": {
+      "assessment_steps": [
+        {
+          "text": "Try to ensure patient privacy from bystanders",
+          "section": null
+        },
+        {
+          "text": "Determine patient\u2019s medical/childbirth history while visually assessing for crowning",
+          "section": null
+        },
+        {
+          "text": "Encourage and calms patient",
+          "section": "Evaluator advises, \u201cbirth is imminent\u201d"
+        },
+        {
+          "text": "Properly drape patient with sterile sheets",
+          "section": "Evaluator advises, \u201cbirth is imminent\u201d"
+        },
+        {
+          "text": "Place gloved hand on baby\u2019s head and apply gentle pressure to prevent explosive birth",
+          "section": "Evaluator advises, \u201cbirth is imminent\u201d"
+        },
+        {
+          "text": "Rupture amniotic sac with fingers, if necessary",
+          "section": "Evaluator advises, \u201cbirth is imminent\u201d"
+        },
+        {
+          "text": "Support baby\u2019s head as it delivers, avoiding pressing on fontanel",
+          "section": "Evaluator advises, \u201cbirth is imminent\u201d"
+        },
+        {
+          "text": "Ensure that umbilical cord is not around baby\u2019s neck",
+          "section": "Evaluator advises, \u201cbirth is imminent\u201d"
+        },
+        {
+          "text": "Clear baby\u2019s mouth and nose with bulb syringe, depressing the bulb prior to insertion, if necessary",
+          "section": "Evaluator advises, \u201cbirth is imminent\u201d"
+        },
+        {
+          "text": "Support head and shoulders as delivery continue",
+          "section": "Evaluator advises, \u201cbirth is imminent\u201d"
+        },
+        {
+          "text": "Properly warm, dry, stimulate, and position newborn",
+          "section": "Evaluator advises, \u201cbirth is imminent\u201d"
+        },
+        {
+          "text": "Cut umbilical cord",
+          "section": "Evaluator advises, \u201cbirth is imminent\u201d"
+        },
+        {
+          "text": "Deliver placenta",
+          "section": "Evaluator advises, \u201cbirth is imminent\u201d"
+        },
+        {
+          "text": "Document time of baby and placenta delivery",
+          "section": "Evaluator advises, \u201cbirth is imminent\u201d"
+        },
+        {
+          "text": "Transport mother, baby, and entire placenta",
+          "section": "Evaluator advises, \u201cbirth is imminent\u201d"
+        },
+        {
+          "text": "Overall Attempt:",
+          "section": "Evaluator advises, \u201cbirth is imminent\u201d"
+        }
+      ],
+      "equipment": [],
+      "procedure_steps": [],
+      "affective": [],
+      "critical_criteria": [],
+      "section_headers": [
+        "Evaluator advises, \u201cbirth is imminent\u201d",
+        "UnsuccessfulSuccessful",
+        "Splint a Suspected Joint Injury"
+      ],
+      "points_info": "Total Points Possible: 15"
+    }
+  },
+  {
+    "title": "Splint a Suspected Joint Injury",
+    "index": 36,
+    "sections": {
+      "assessment_steps": [
+        {
+          "text": "Apply appropriate PPE",
+          "section": null
+        },
+        {
+          "text": "Direct manual stabilization of the injury",
+          "section": null
+        },
+        {
+          "text": "Assess distal pulse and motor and sensory function",
+          "section": null
+        },
+        {
+          "text": "Measure a splint",
+          "section": "Evaluator advises, \u201cthe motor, sensory, and circulatory function are present and normal\u201d"
+        },
+        {
+          "text": "Apply a splint",
+          "section": "Evaluator advises, \u201cthe motor, sensory, and circulatory function are present and normal\u201d"
+        },
+        {
+          "text": "Immobilize the joint above the injury site",
+          "section": "Evaluator advises, \u201cthe motor, sensory, and circulatory function are present and normal\u201d"
+        },
+        {
+          "text": "Immobilize the joint below the injury site",
+          "section": "Evaluator advises, \u201cthe motor, sensory, and circulatory function are present and normal\u201d"
+        },
+        {
+          "text": "Secure the entire injured extremity",
+          "section": "Evaluator advises, \u201cthe motor, sensory, and circulatory function are present and normal\u201d"
+        },
+        {
+          "text": "Immobilize the hand/foot in the position of function",
+          "section": "Evaluator advises, \u201cthe motor, sensory, and circulatory function are present and normal\u201d"
+        },
+        {
+          "text": "Reassess distal pulse and motor and sensory function",
+          "section": "Evaluator advises, \u201cthe motor, sensory, and circulatory function are present and normal\u201d"
+        },
+        {
+          "text": "Overall Attempt:",
+          "section": "Evaluator advises, \u201cthe motor, sensory, and circulatory function are present and normal\u201d"
+        }
+      ],
+      "equipment": [],
+      "procedure_steps": [],
+      "affective": [],
+      "critical_criteria": [],
+      "section_headers": [
+        "Evaluator advises, \u201cthe motor, sensory, and circulatory function are present and normal\u201d",
+        "Evaluator advises, \u201cthe motor, sensory, and circulatory function are present and normal\u201d",
+        "UnsuccessfulSuccessful",
+        "Splint a Suspected Lone Bone Injury"
+      ],
+      "points_info": "Total Points Possible: 10"
+    }
+  },
+  {
+    "title": "Splint a Suspected Long Bone Injury",
+    "index": 37,
+    "sections": {
+      "assessment_steps": [
+        {
+          "text": "Apply appropriate PPE",
+          "section": null
+        },
+        {
+          "text": "Direct manual stabilization of the injury",
+          "section": null
+        },
+        {
+          "text": "Assess distal pulse and motor and sensory function",
+          "section": null
+        },
+        {
+          "text": "Measure a splint",
+          "section": "Evaluator advises, \u201cthe motor, sensory, and circulatory function are present and normal\u201d"
+        },
+        {
+          "text": "Apply a splint",
+          "section": "Evaluator advises, \u201cthe motor, sensory, and circulatory function are present and normal\u201d"
+        },
+        {
+          "text": "Immobilize the joint above the injury site",
+          "section": "Evaluator advises, \u201cthe motor, sensory, and circulatory function are present and normal\u201d"
+        },
+        {
+          "text": "Immobilize the joint below the injury site",
+          "section": "Evaluator advises, \u201cthe motor, sensory, and circulatory function are present and normal\u201d"
+        },
+        {
+          "text": "Secure the entire injured extremity",
+          "section": "Evaluator advises, \u201cthe motor, sensory, and circulatory function are present and normal\u201d"
+        },
+        {
+          "text": "Immobilize the hand/foot in the position of function",
+          "section": "Evaluator advises, \u201cthe motor, sensory, and circulatory function are present and normal\u201d"
+        },
+        {
+          "text": "Reassess distal pulse and motor and sensory function",
+          "section": "Evaluator advises, \u201cthe motor, sensory, and circulatory function are present and normal\u201d"
+        },
+        {
+          "text": "Overall Attempt:",
+          "section": "Evaluator advises, \u201cthe motor, sensory, and circulatory function are present and normal\u201d"
+        }
+      ],
+      "equipment": [],
+      "procedure_steps": [],
+      "affective": [],
+      "critical_criteria": [],
+      "section_headers": [
+        "Evaluator advises, \u201cthe motor, sensory, and circulatory function are present and normal\u201d",
+        "Evaluator advises, \u201cthe motor, sensory, and circulatory function are present and normal\u201d",
+        "UnsuccessfulSuccessful",
+        "Ventilating a Neonate Patient with a BVM"
+      ],
+      "points_info": "Total Points Possible: 10"
+    }
+  },
+  {
+    "title": "Stabilize an Impaled Object",
+    "sections": {
+      "assessment_steps": [
+        {
+          "text": "Apply appropriate PPE",
+          "section": null
+        },
+        {
+          "text": "Cut clothing away to expose injury site",
+          "section": null
+        },
+        {
+          "text": "Place stabilizing material around impaled object",
+          "section": null
+        },
+        {
+          "text": "Securely bandage the object and the stabilizing material",
+          "section": null
+        }
+      ],
+      "equipment": [],
+      "procedure_steps": [],
+      "affective": [],
+      "critical_criteria": [],
+      "section_headers": [],
+      "points_info": "Total Points Possible:  4"
+    },
+    "index": 38
+  },
+  {
+    "title": "Ventilate a Neonate Patient with a BVM",
+    "index": 39,
+    "sections": {
+      "assessment_steps": [
+        {
+          "text": "Apply appropriate PPE",
+          "section": null
+        },
+        {
+          "text": "Assess ventilatory status",
+          "section": null
+        },
+        {
+          "text": "Pad under the shoulders for a neutral position",
+          "section": null
+        },
+        {
+          "text": "Manually open the airway",
+          "section": null
+        },
+        {
+          "text": "Inspect mouth for foreign material",
+          "section": null
+        },
+        {
+          "text": "Properly insert basic airway adjunct",
+          "section": null
+        },
+        {
+          "text": "Fit appropriately sized mask to appropriately sized BVM",
+          "section": null
+        },
+        {
+          "text": "Create a tight mask to face seal without closing the airway",
+          "section": null
+        },
+        {
+          "text": "Obtain adequate ventilation within 30 seconds",
+          "section": null
+        },
+        {
+          "text": "Observe for chest rise/fall and evaluate compliance",
+          "section": null
+        },
+        {
+          "text": "Connect oxygen at appropriate rate to fill reservoir",
+          "section": null
+        },
+        {
+          "text": "Provide ventilations with adequate minute and tidal volume",
+          "section": null
+        },
+        {
+          "text": "Assess lung sounds",
+          "section": null
+        },
+        {
+          "text": "Reassess and monitors patient\u2019s response to ventilations",
+          "section": null
+        },
+        {
+          "text": "Overall Attempt:",
+          "section": null
+        }
+      ],
+      "equipment": [],
+      "procedure_steps": [],
+      "affective": [],
+      "critical_criteria": [],
+      "section_headers": [
+        "UnsuccessfulSuccessful",
+        "Ventilating a Pediatric Patient with a BVM"
+      ],
+      "points_info": "Total Points Possible: 14"
+    }
+  },
+  {
+    "title": "Ventilate a Pediatric Patient with a BVM",
+    "index": 40,
+    "sections": {
+      "assessment_steps": [
+        {
+          "text": "Apply appropriate PPE",
+          "section": null
+        },
+        {
+          "text": "Assess ventilatory status",
+          "section": null
+        },
+        {
+          "text": "Pad under the shoulders for a neutral position",
+          "section": null
+        },
+        {
+          "text": "Manually open the airway",
+          "section": null
+        },
+        {
+          "text": "Inspect mouth for foreign material",
+          "section": null
+        },
+        {
+          "text": "Properly insert basic airway adjunct",
+          "section": null
+        },
+        {
+          "text": "Fit appropriately sized mask to appropriately sized BVM",
+          "section": null
+        },
+        {
+          "text": "Create a tight mask to face seal without closing the airway",
+          "section": null
+        },
+        {
+          "text": "Obtain adequate ventilation within 30 seconds",
+          "section": null
+        },
+        {
+          "text": "Observe for chest rise/fall and evaluate compliance",
+          "section": null
+        },
+        {
+          "text": "Connect oxygen at appropriate rate to fill reservoir",
+          "section": null
+        },
+        {
+          "text": "Provide ventilations with adequate minute and tidal volume",
+          "section": null
+        },
+        {
+          "text": "Assess lung sounds",
+          "section": null
+        },
+        {
+          "text": "Reassess and monitors patient\u2019s response to ventilations",
+          "section": null
+        },
+        {
+          "text": "Overall Attempt:",
+          "section": null
+        }
+      ],
+      "equipment": [],
+      "procedure_steps": [],
+      "affective": [],
+      "critical_criteria": [],
+      "section_headers": [
+        "UnsuccessfulSuccessful",
+        "Ventilating an Adult Patient with BVM"
+      ],
+      "points_info": "Total Points Possible:  14"
+    }
+  },
+  {
+    "title": "Ventilate an Adult Patient with a BVM",
+    "index": 41,
+    "sections": {
+      "assessment_steps": [
+        {
+          "text": "Apply appropriate PPE",
+          "section": null
+        },
+        {
+          "text": "Assess ventilatory status",
+          "section": null
+        },
+        {
+          "text": "Manually open the airway",
+          "section": null
+        },
+        {
+          "text": "Inspect mouth for foreign material",
+          "section": "UnsuccessfulSuccessful"
+        },
+        {
+          "text": "Properly insert basic airway adjunct",
+          "section": "UnsuccessfulSuccessful"
+        },
+        {
+          "text": "Fit appropriately sized mask to appropriately sized BVM",
+          "section": "UnsuccessfulSuccessful"
+        },
+        {
+          "text": "Create a tight mask to face seal without closing the airway",
+          "section": "UnsuccessfulSuccessful"
+        },
+        {
+          "text": "Obtain adequate ventilation within 30 seconds",
+          "section": "UnsuccessfulSuccessful"
+        },
+        {
+          "text": "Observe for chest rise/fall and evaluate compliance",
+          "section": "UnsuccessfulSuccessful"
+        },
+        {
+          "text": "Connect oxygen at appropriate rate to fill reservoir",
+          "section": "UnsuccessfulSuccessful"
+        },
+        {
+          "text": "Provide ventilations with adequate minute and tidal volume",
+          "section": "UnsuccessfulSuccessful"
+        },
+        {
+          "text": "Assess lung sounds",
+          "section": "UnsuccessfulSuccessful"
+        },
+        {
+          "text": "Reassess and monitors patient\u2019s response to ventilations",
+          "section": "UnsuccessfulSuccessful"
+        },
+        {
+          "text": "Overall Attempt:",
+          "section": "UnsuccessfulSuccessful"
+        }
+      ],
+      "equipment": [],
+      "procedure_steps": [],
+      "affective": [],
+      "critical_criteria": [],
+      "section_headers": [
+        "UnsuccessfulSuccessful",
+        "UnsuccessfulSuccessful"
+      ],
+      "points_info": "Total Points Possible: 12"
+    }
+  }
+]
