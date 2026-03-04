@@ -370,6 +370,13 @@ const canonicalSkills = [
     scope_notes: "EMT: NREMT e216. All levels: immobilize as found, padded splint. Assess PMS before and after.",
     paramedic_only: false
   },
+  {
+    canonical_name: "Helmet Removal",
+    skill_category: "immobilization",
+    programs: ["emt", "aemt", "paramedic"],
+    scope_notes: "Same technique at all levels. Two-person technique — one maintains inline stabilization while the other removes helmet.",
+    paramedic_only: false
+  },
 
   // ── OBSTETRICS ──
   {

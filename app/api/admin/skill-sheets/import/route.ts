@@ -206,7 +206,7 @@ const PUBLISHER_TO_CANONICAL: Record<string, string> = {
   'Application of a Cervical Collar': 'Cervical Collar Application',
   'Performing S R M': 'Spinal Immobilization — Supine',
   'Performing Immobilization': 'Spinal Immobilization — Seated',
-  'Removing a Helmet': 'Spinal Immobilization — Supine',
+  'Removing a Helmet': 'Helmet Removal',
   'Assessing Neurovascular Status': 'Long Bone Immobilization',
   'Applying a Hare Traction Splint': 'Long Bone Immobilization',
   'Applying a Sager Traction Splint': 'Long Bone Immobilization',
