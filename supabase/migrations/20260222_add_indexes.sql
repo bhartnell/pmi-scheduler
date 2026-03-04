@@ -87,14 +87,22 @@ CREATE INDEX IF NOT EXISTS idx_team_lead_log_student ON team_lead_log(student_id
 CREATE INDEX IF NOT EXISTS idx_submissions_poll_id ON submissions(poll_id);
 
 -- ============================================================================
--- clinical_hours - Clinical tracking queries
+-- clinical_hours - Clinical tracking queries (table may not exist yet)
 -- Query: .eq('student_id', id).eq('cohort_id', id)
 -- ============================================================================
-CREATE INDEX IF NOT EXISTS idx_clinical_hours_student ON clinical_hours(student_id);
-CREATE INDEX IF NOT EXISTS idx_clinical_hours_cohort ON clinical_hours(cohort_id);
+DO $$ BEGIN
+  CREATE INDEX IF NOT EXISTS idx_clinical_hours_student ON clinical_hours(student_id);
+EXCEPTION WHEN undefined_table THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  CREATE INDEX IF NOT EXISTS idx_clinical_hours_cohort ON clinical_hours(cohort_id);
+EXCEPTION WHEN undefined_table THEN NULL;
+END $$;
 
 -- ============================================================================
 -- ANALYZE tables to update statistics for query planner
+-- (wrap clinical_hours in exception block since it may not exist)
 -- ============================================================================
 ANALYZE lab_users;
 ANALYZE user_notifications;
@@ -105,4 +113,8 @@ ANALYZE students;
 ANALYZE scenarios;
 ANALYZE audit_log;
 ANALYZE team_lead_log;
-ANALYZE clinical_hours;
+
+DO $$ BEGIN
+  ANALYZE clinical_hours;
+EXCEPTION WHEN undefined_table THEN NULL;
+END $$;

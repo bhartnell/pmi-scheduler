@@ -3,7 +3,7 @@
 -- Must be run in Supabase SQL Editor
 
 -- 1. is_superadmin
-DROP FUNCTION IF EXISTS public.is_superadmin();
+DROP FUNCTION IF EXISTS public.is_superadmin() CASCADE;
 CREATE FUNCTION public.is_superadmin()
 RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path = 'public'
 AS $$ BEGIN
@@ -15,7 +15,7 @@ AS $$ BEGIN
 END; $$;
 
 -- 2. has_pmi_ops_role
-DROP FUNCTION IF EXISTS public.has_pmi_ops_role(TEXT);
+DROP FUNCTION IF EXISTS public.has_pmi_ops_role(TEXT) CASCADE;
 CREATE FUNCTION public.has_pmi_ops_role(role_name TEXT)
 RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path = 'public'
 AS $$ BEGIN
@@ -29,25 +29,25 @@ AS $$ BEGIN
 END; $$;
 
 -- 3. is_access_admin
-DROP FUNCTION IF EXISTS public.is_access_admin();
+DROP FUNCTION IF EXISTS public.is_access_admin() CASCADE;
 CREATE FUNCTION public.is_access_admin()
 RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path = 'public'
 AS $$ BEGIN RETURN has_pmi_ops_role('access_admin'); END; $$;
 
 -- 4. is_inventory_admin
-DROP FUNCTION IF EXISTS public.is_inventory_admin();
+DROP FUNCTION IF EXISTS public.is_inventory_admin() CASCADE;
 CREATE FUNCTION public.is_inventory_admin()
 RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path = 'public'
 AS $$ BEGIN RETURN has_pmi_ops_role('inventory_admin'); END; $$;
 
 -- 5. is_print_operator
-DROP FUNCTION IF EXISTS public.is_print_operator();
+DROP FUNCTION IF EXISTS public.is_print_operator() CASCADE;
 CREATE FUNCTION public.is_print_operator()
 RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path = 'public'
 AS $$ BEGIN RETURN has_pmi_ops_role('operator'); END; $$;
 
 -- 6. has_ops_access
-DROP FUNCTION IF EXISTS public.has_ops_access();
+DROP FUNCTION IF EXISTS public.has_ops_access() CASCADE;
 CREATE FUNCTION public.has_ops_access()
 RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path = 'public'
 AS $$ BEGIN

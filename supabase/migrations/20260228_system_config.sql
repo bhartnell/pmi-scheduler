@@ -3,26 +3,33 @@
 
 CREATE TABLE IF NOT EXISTS system_config (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  config_key TEXT NOT NULL UNIQUE,
-  config_value JSONB NOT NULL,
-  category TEXT NOT NULL CHECK (category IN ('email', 'notifications', 'security', 'features', 'branding', 'legal')),
+  key TEXT NOT NULL UNIQUE,
+  value JSONB NOT NULL,
+  category TEXT,
   description TEXT,
   updated_by TEXT,
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_system_config_key ON system_config(config_key);
+-- Ensure columns exist (table may have been created with partial schema)
+ALTER TABLE system_config ADD COLUMN IF NOT EXISTS category TEXT;
+ALTER TABLE system_config ADD COLUMN IF NOT EXISTS description TEXT;
+ALTER TABLE system_config ADD COLUMN IF NOT EXISTS updated_by TEXT;
+ALTER TABLE system_config ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT now();
+
+CREATE INDEX IF NOT EXISTS idx_system_config_key ON system_config(key);
 CREATE INDEX IF NOT EXISTS idx_system_config_category ON system_config(category);
 
 -- Enable RLS
 ALTER TABLE system_config ENABLE ROW LEVEL SECURITY;
 
 -- Only service role can read/write (all access goes through API)
-CREATE POLICY IF NOT EXISTS "Service role full access" ON system_config
+DROP POLICY IF EXISTS "Service role full access" ON system_config;
+CREATE POLICY "Service role full access" ON system_config
   FOR ALL USING (true);
 
 -- Seed default configurations
-INSERT INTO system_config (config_key, config_value, category, description) VALUES
+INSERT INTO system_config (key, value, category, description) VALUES
   ('email_from_address', '"noreply@pmi.edu"', 'email', 'Default from address for system emails'),
   ('email_from_name', '"PMI EMS Scheduler"', 'email', 'Default from name for system emails'),
   ('email_reply_to', '"noreply@pmi.edu"', 'email', 'Reply-to address for system emails'),
@@ -44,6 +51,6 @@ INSERT INTO system_config (config_key, config_value, category, description) VALU
   ('terms_url', '""', 'legal', 'Terms of Service URL'),
   ('privacy_url', '""', 'legal', 'Privacy Policy URL'),
   ('cookie_policy_url', '""', 'legal', 'Cookie Policy URL')
-ON CONFLICT (config_key) DO NOTHING;
+ON CONFLICT (key) DO NOTHING;
 
 NOTIFY pgrst, 'reload schema';

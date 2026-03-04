@@ -17,7 +17,8 @@ CREATE INDEX IF NOT EXISTS idx_skill_competencies_skill ON skill_competencies(sk
 ALTER TABLE skill_competencies ENABLE ROW LEVEL SECURITY;
 
 -- Service role has full access (used by API routes)
-CREATE POLICY IF NOT EXISTS "Service role full access on skill_competencies"
+DROP POLICY IF EXISTS "Service role full access on skill_competencies" ON skill_competencies;
+CREATE POLICY "Service role full access on skill_competencies"
   ON skill_competencies
   FOR ALL
   TO service_role

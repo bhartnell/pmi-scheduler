@@ -55,23 +55,27 @@ ALTER TABLE compliance_document_types ENABLE ROW LEVEL SECURITY;
 ALTER TABLE student_compliance_records ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for compliance_document_types
-CREATE POLICY IF NOT EXISTS "Allow authenticated read of doc types"
+DROP POLICY IF EXISTS "Allow authenticated read of doc types" ON compliance_document_types;
+CREATE POLICY "Allow authenticated read of doc types"
   ON compliance_document_types FOR SELECT
   TO authenticated
   USING (true);
 
 -- RLS Policies for student_compliance_records
-CREATE POLICY IF NOT EXISTS "Allow authenticated read of compliance records"
+DROP POLICY IF EXISTS "Allow authenticated read of compliance records" ON student_compliance_records;
+CREATE POLICY "Allow authenticated read of compliance records"
   ON student_compliance_records FOR SELECT
   TO authenticated
   USING (true);
 
-CREATE POLICY IF NOT EXISTS "Allow authenticated insert of compliance records"
+DROP POLICY IF EXISTS "Allow authenticated insert of compliance records" ON student_compliance_records;
+CREATE POLICY "Allow authenticated insert of compliance records"
   ON student_compliance_records FOR INSERT
   TO authenticated
   WITH CHECK (true);
 
-CREATE POLICY IF NOT EXISTS "Allow authenticated update of compliance records"
+DROP POLICY IF EXISTS "Allow authenticated update of compliance records" ON student_compliance_records;
+CREATE POLICY "Allow authenticated update of compliance records"
   ON student_compliance_records FOR UPDATE
   TO authenticated
   USING (true);
