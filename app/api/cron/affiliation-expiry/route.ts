@@ -104,8 +104,7 @@ export async function GET(request: NextRequest) {
     const { data: todayNotifs } = await supabase
       .from('affiliation_notifications_log')
       .select('affiliation_id, notification_type')
-      .gte('sent_at', todayStr + 'T00:00:00Z')
-      .lte('sent_at', todayStr + 'T23:59:59Z');
+      .eq('sent_date', todayStr);
 
     const sentToday = new Set(
       (todayNotifs || []).map(
@@ -195,6 +194,7 @@ export async function GET(request: NextRequest) {
           await supabase.from('affiliation_notifications_log').insert({
             affiliation_id: aff.id,
             notification_type: notifType,
+            sent_date: todayStr,
             recipients,
           });
           notificationsSent++;
