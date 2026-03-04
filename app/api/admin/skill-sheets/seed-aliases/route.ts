@@ -214,6 +214,41 @@ const ALIASES: AliasMapping[] = [
     ],
   },
   {
+    stationName: 'KED',
+    programs: ['emt', 'aemt', 'paramedic'],
+    targets: [
+      { skillName: 'Spinal immobilization — seated patient', source: 'nremt' },
+    ],
+  },
+  {
+    stationName: 'Short Board',
+    programs: ['emt', 'aemt', 'paramedic'],
+    targets: [
+      { skillName: 'Spinal immobilization — seated patient', source: 'nremt' },
+    ],
+  },
+  {
+    stationName: 'KED / Short Board',
+    programs: ['emt', 'aemt', 'paramedic'],
+    targets: [
+      { skillName: 'Spinal immobilization — seated patient', source: 'nremt' },
+    ],
+  },
+  {
+    stationName: 'Seated Spinal',
+    programs: ['emt', 'aemt', 'paramedic'],
+    targets: [
+      { skillName: 'Spinal immobilization — seated patient', source: 'nremt' },
+    ],
+  },
+  {
+    stationName: 'Seated Immobilization',
+    programs: ['emt', 'aemt', 'paramedic'],
+    targets: [
+      { skillName: 'Spinal immobilization — seated patient', source: 'nremt' },
+    ],
+  },
+  {
     stationName: 'Splinting',
     programs: ['emt', 'aemt', 'paramedic'],
     targets: [
