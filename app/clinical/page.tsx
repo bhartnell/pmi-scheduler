@@ -23,8 +23,9 @@ import {
   Shield,
   BookOpen,
   Shuffle,
+  ScrollText,
 } from 'lucide-react';
-import { canAccessClinical, type Role } from '@/lib/permissions';
+import { canAccessClinical, canAccessAffiliations, type Role } from '@/lib/permissions';
 
 interface DashboardStats {
   activePreceptors: number;
@@ -74,7 +75,7 @@ export default function ClinicalDashboardPage() {
         setUserRole(userData.user.role);
 
         // Check permission
-        if (!canAccessClinical(userData.user.role)) {
+        if (!canAccessClinical(userData.user.role) && !canAccessAffiliations(userData.user.role)) {
           router.push('/');
           return;
         }
@@ -594,6 +595,30 @@ export default function ClinicalDashboardPage() {
               </div>
             </div>
           </Link>
+
+          {/* Affiliation Agreements */}
+          {userRole && canAccessAffiliations(userRole) && (
+            <Link
+              href="/clinical/affiliations"
+              className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
+            >
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-xl group-hover:bg-amber-200 dark:group-hover:bg-amber-900/50 transition-colors">
+                  <ScrollText className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Affiliations</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                    Track clinical site affiliation agreements and expiration dates
+                  </p>
+                  <div className="flex items-center text-amber-600 dark:text-amber-400 text-sm font-medium">
+                    View agreements
+                    <ChevronRight className="w-4 h-4 ml-1" />
+                  </div>
+                </div>
+              </div>
+            </Link>
+          )}
 
         </div>
       </main>
