@@ -20,12 +20,29 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'stationId is required' }, { status: 400 });
     }
 
-    const { data, error } = await supabase
+    // Try full select first; fall back to basic columns if user_name doesn't exist yet
+    let data, error;
+    const result = await supabase
       .from('station_instructors')
-      .select('*')
+      .select('id, station_id, user_id, user_email, user_name, is_primary, created_at')
       .eq('station_id', stationId)
       .order('is_primary', { ascending: false })
       .order('created_at', { ascending: true });
+
+    if (result.error?.code === '42703' || result.error?.message?.includes('does not exist')) {
+      // user_name column missing — query without it
+      const fallback = await supabase
+        .from('station_instructors')
+        .select('id, station_id, user_id, user_email, is_primary, created_at')
+        .eq('station_id', stationId)
+        .order('is_primary', { ascending: false })
+        .order('created_at', { ascending: true });
+      data = fallback.data;
+      error = fallback.error;
+    } else {
+      data = result.data;
+      error = result.error;
+    }
 
     if (error) throw error;
 
@@ -80,8 +97,8 @@ export async function POST(request: NextRequest) {
     let error;
 
     if (existing) {
-      // Update existing record
-      const result = await supabase
+      // Update existing record — try with user_name, fall back without
+      let result = await supabase
         .from('station_instructors')
         .update({
           user_id: userId || null,
@@ -91,11 +108,20 @@ export async function POST(request: NextRequest) {
         .eq('id', existing.id)
         .select()
         .single();
+
+      if (result.error?.code === '42703') {
+        result = await supabase
+          .from('station_instructors')
+          .update({ user_id: userId || null, is_primary: isPrimary || false })
+          .eq('id', existing.id)
+          .select()
+          .single();
+      }
       data = result.data;
       error = result.error;
     } else {
-      // Insert new record
-      const result = await supabase
+      // Insert new record — try with user_name, fall back without
+      let result = await supabase
         .from('station_instructors')
         .insert({
           station_id: stationId,
@@ -106,6 +132,19 @@ export async function POST(request: NextRequest) {
         })
         .select()
         .single();
+
+      if (result.error?.code === '42703') {
+        result = await supabase
+          .from('station_instructors')
+          .insert({
+            station_id: stationId,
+            user_id: userId || null,
+            user_email: userEmail,
+            is_primary: isPrimary || false
+          })
+          .select()
+          .single();
+      }
       data = result.data;
       error = result.error;
     }

@@ -269,6 +269,77 @@ const ALIASES: AliasMapping[] = [
       { skillName: 'Removing a Helmet', source: 'publisher' },
     ],
   },
+  // ── SPINAL MOTION RESTRICTION (seated → NREMT seated, supine → NREMT supine) ──
+  {
+    stationName: 'Short Board Spinal Motion Restriction',
+    programs: ['emt', 'aemt', 'paramedic'],
+    targets: [
+      { skillName: 'Spinal immobilization — seated patient', source: 'nremt' },
+    ],
+  },
+  {
+    stationName: 'Short Board SMR',
+    programs: ['emt', 'aemt', 'paramedic'],
+    targets: [
+      { skillName: 'Spinal immobilization — seated patient', source: 'nremt' },
+    ],
+  },
+  {
+    stationName: 'Spinal Motion Restriction',
+    programs: ['emt', 'aemt', 'paramedic'],
+    targets: [
+      { skillName: 'Spinal immobilization — seated patient', source: 'nremt' },
+    ],
+  },
+  {
+    stationName: 'SMR',
+    programs: ['emt', 'aemt', 'paramedic'],
+    targets: [
+      { skillName: 'Spinal immobilization — seated patient', source: 'nremt' },
+    ],
+  },
+  {
+    stationName: 'Spinal Motion Restriction — Seated',
+    programs: ['emt', 'aemt', 'paramedic'],
+    targets: [
+      { skillName: 'Spinal immobilization — seated patient', source: 'nremt' },
+    ],
+  },
+  {
+    stationName: 'SMR Seated',
+    programs: ['emt', 'aemt', 'paramedic'],
+    targets: [
+      { skillName: 'Spinal immobilization — seated patient', source: 'nremt' },
+    ],
+  },
+  {
+    stationName: 'Spinal Motion Restriction — Supine',
+    programs: ['emt', 'aemt', 'paramedic'],
+    targets: [
+      { skillName: 'Spinal immobilization — supine patient', source: 'nremt' },
+    ],
+  },
+  {
+    stationName: 'SMR Supine',
+    programs: ['emt', 'aemt', 'paramedic'],
+    targets: [
+      { skillName: 'Spinal immobilization — supine patient', source: 'nremt' },
+    ],
+  },
+  {
+    stationName: 'Long Board',
+    programs: ['emt', 'aemt', 'paramedic'],
+    targets: [
+      { skillName: 'Spinal immobilization — supine patient', source: 'nremt' },
+    ],
+  },
+  {
+    stationName: 'Long Board SMR',
+    programs: ['emt', 'aemt', 'paramedic'],
+    targets: [
+      { skillName: 'Spinal immobilization — supine patient', source: 'nremt' },
+    ],
+  },
   {
     stationName: 'Splinting',
     programs: ['emt', 'aemt', 'paramedic'],
