@@ -310,6 +310,11 @@ export default function LabDayPage() {
   const [loading, setLoading] = useState(true);
   const [showTimer, setShowTimer] = useState(openTimerParam);
   const [labDayRoles, setLabDayRoles] = useState<LabDayRole[]>([]);
+  const [showRoleAssignForm, setShowRoleAssignForm] = useState(false);
+  const [roleAssignRole, setRoleAssignRole] = useState<'lab_lead' | 'roamer' | 'observer'>('roamer');
+  const [roleAssignInstructorId, setRoleAssignInstructorId] = useState('');
+  const [addingRole, setAddingRole] = useState(false);
+  const [removingRoleId, setRemovingRoleId] = useState<string | null>(null);
   const [stationSkillDocs, setStationSkillDocs] = useState<Record<string, SkillDocument[]>>({});
 
   // Role logging state
@@ -492,6 +497,56 @@ export default function LabDayPage() {
       fetchCohortStudents();
     }
   }, [labDay?.cohort?.id]);
+
+  // --- Lab Day Role (Roamer/Lead/Observer) inline assignment handlers ---
+  const handleAddLabDayRole = async () => {
+    if (!roleAssignInstructorId || !roleAssignRole) return;
+    setAddingRole(true);
+    try {
+      const res = await fetch('/api/lab-management/lab-day-roles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lab_day_id: labDayId,
+          instructor_id: roleAssignInstructorId,
+          role: roleAssignRole,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setLabDayRoles(prev => [...prev, data.role]);
+        setRoleAssignInstructorId('');
+        setShowRoleAssignForm(false);
+        toast?.addToast('success', 'Role assigned successfully');
+      } else {
+        toast?.addToast('error', data.error || 'Failed to assign role');
+      }
+    } catch (error) {
+      console.error('Error adding lab day role:', error);
+      toast?.addToast('error', 'Failed to assign role');
+    }
+    setAddingRole(false);
+  };
+
+  const handleRemoveLabDayRole = async (roleId: string) => {
+    setRemovingRoleId(roleId);
+    try {
+      const res = await fetch(`/api/lab-management/lab-day-roles?id=${roleId}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (data.success) {
+        setLabDayRoles(prev => prev.filter(r => r.id !== roleId));
+        toast?.addToast('success', 'Role removed');
+      } else {
+        toast?.addToast('error', data.error || 'Failed to remove role');
+      }
+    } catch (error) {
+      console.error('Error removing lab day role:', error);
+      toast?.addToast('error', 'Failed to remove role');
+    }
+    setRemovingRoleId(null);
+  };
 
   const fetchChecklistItems = async () => {
     setChecklistLoading(true);
@@ -2659,24 +2714,81 @@ export default function LabDayPage() {
               <Users className="w-5 h-5 text-amber-600 dark:text-amber-400" />
               Lab Leads &amp; Roamers
             </h3>
-            <Link
-              href={`/lab-management/schedule/${labDayId}/edit`}
-              className="text-xs text-blue-600 dark:text-blue-400 hover:underline print:hidden flex items-center gap-1"
-            >
-              <Edit2 className="w-3 h-3" />
-              Assign
-            </Link>
+            {userRole && canAccessAdmin(userRole) && (
+              <button
+                onClick={() => setShowRoleAssignForm(!showRoleAssignForm)}
+                className="text-xs text-blue-600 dark:text-blue-400 hover:underline print:hidden flex items-center gap-1"
+              >
+                <Plus className="w-3 h-3" />
+                {showRoleAssignForm ? 'Cancel' : 'Add'}
+              </button>
+            )}
           </div>
-          {labDayRoles.length === 0 ? (
+
+          {/* Inline Add Role Form */}
+          {showRoleAssignForm && userRole && canAccessAdmin(userRole) && (
+            <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600 print:hidden">
+              <div className="flex flex-wrap gap-2 items-end">
+                <div className="flex-1 min-w-[140px]">
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Role</label>
+                  <select
+                    value={roleAssignRole}
+                    onChange={(e) => setRoleAssignRole(e.target.value as 'lab_lead' | 'roamer' | 'observer')}
+                    className="w-full px-2.5 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="lab_lead">Lab Lead</option>
+                    <option value="roamer">Roamer</option>
+                    <option value="observer">Observer</option>
+                  </select>
+                </div>
+                <div className="flex-[2] min-w-[200px]">
+                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Instructor</label>
+                  <select
+                    value={roleAssignInstructorId}
+                    onChange={(e) => setRoleAssignInstructorId(e.target.value)}
+                    className="w-full px-2.5 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">Select instructor...</option>
+                    {instructors
+                      .filter(inst => !labDayRoles.some(r => r.instructor_id === inst.id && r.role === roleAssignRole))
+                      .map(inst => (
+                        <option key={inst.id} value={inst.id}>{inst.name}</option>
+                      ))
+                    }
+                  </select>
+                </div>
+                <button
+                  onClick={handleAddLabDayRole}
+                  disabled={addingRole || !roleAssignInstructorId}
+                  className="px-3 py-1.5 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                >
+                  {addingRole ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Plus className="w-3.5 h-3.5" />
+                  )}
+                  Assign
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                Lab Leads oversee the lab and run the timer. Roamers float between stations and grab supplies. Observers shadow or train.
+              </p>
+            </div>
+          )}
+
+          {labDayRoles.length === 0 && !showRoleAssignForm ? (
             <p className="text-sm text-gray-400 dark:text-gray-500 italic print:hidden">
               No roles assigned.{' '}
-              <Link
-                href={`/lab-management/schedule/${labDayId}/edit`}
-                className="text-blue-600 dark:text-blue-400 hover:underline not-italic"
-              >
-                Assign Lab Leads &amp; Roamers
-              </Link>{' '}
-              for this lab day.
+              {userRole && canAccessAdmin(userRole) ? (
+                <button
+                  onClick={() => setShowRoleAssignForm(true)}
+                  className="text-blue-600 dark:text-blue-400 hover:underline not-italic"
+                >
+                  Assign Lab Leads &amp; Roamers
+                </button>
+              ) : (
+                <span>Lab leads and roamers have not been assigned for this lab day.</span>
+              )}
             </p>
           ) : (
             <div className="flex flex-wrap gap-6">
@@ -2691,10 +2803,24 @@ export default function LabDayPage() {
                     {labDayRoles.filter(r => r.role === 'lab_lead').map(role => (
                       <span
                         key={role.id}
-                        className="inline-flex items-center gap-1 px-3 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 print:bg-amber-100 print:text-amber-800 rounded-full text-sm font-medium"
+                        className="inline-flex items-center gap-1 px-3 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 print:bg-amber-100 print:text-amber-800 rounded-full text-sm font-medium group"
                       >
                         <Shield className="w-3 h-3" />
                         {role.instructor?.name || 'Unknown'}
+                        {userRole && canAccessAdmin(userRole) && (
+                          <button
+                            onClick={() => handleRemoveLabDayRole(role.id)}
+                            disabled={removingRoleId === role.id}
+                            className="ml-0.5 text-amber-600 dark:text-amber-400 hover:text-red-600 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity print:hidden"
+                            title="Remove"
+                          >
+                            {removingRoleId === role.id ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <X className="w-3 h-3" />
+                            )}
+                          </button>
+                        )}
                       </span>
                     ))}
                   </div>
@@ -2712,10 +2838,24 @@ export default function LabDayPage() {
                     {labDayRoles.filter(r => r.role === 'roamer').map(role => (
                       <span
                         key={role.id}
-                        className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 print:bg-blue-100 print:text-blue-800 rounded-full text-sm font-medium"
+                        className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 print:bg-blue-100 print:text-blue-800 rounded-full text-sm font-medium group"
                       >
                         <RotateCcw className="w-3 h-3" />
                         {role.instructor?.name || 'Unknown'}
+                        {userRole && canAccessAdmin(userRole) && (
+                          <button
+                            onClick={() => handleRemoveLabDayRole(role.id)}
+                            disabled={removingRoleId === role.id}
+                            className="ml-0.5 text-blue-600 dark:text-blue-400 hover:text-red-600 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity print:hidden"
+                            title="Remove"
+                          >
+                            {removingRoleId === role.id ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <X className="w-3 h-3" />
+                            )}
+                          </button>
+                        )}
                       </span>
                     ))}
                   </div>
@@ -2733,9 +2873,23 @@ export default function LabDayPage() {
                     {labDayRoles.filter(r => r.role === 'observer').map(role => (
                       <span
                         key={role.id}
-                        className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 print:bg-purple-100 print:text-purple-800 rounded-full text-sm font-medium"
+                        className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 print:bg-purple-100 print:text-purple-800 rounded-full text-sm font-medium group"
                       >
                         {role.instructor?.name || 'Unknown'}
+                        {userRole && canAccessAdmin(userRole) && (
+                          <button
+                            onClick={() => handleRemoveLabDayRole(role.id)}
+                            disabled={removingRoleId === role.id}
+                            className="ml-0.5 text-purple-600 dark:text-purple-400 hover:text-red-600 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity print:hidden"
+                            title="Remove"
+                          >
+                            {removingRoleId === role.id ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <X className="w-3 h-3" />
+                            )}
+                          </button>
+                        )}
                       </span>
                     ))}
                   </div>

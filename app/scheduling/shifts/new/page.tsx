@@ -56,6 +56,16 @@ function formatDateDisplay(dateStr: string) {
   });
 }
 
+/** Returns a YYYY-MM-DD string offset by `weeks` weeks from `dateStr`. */
+function addWeeks(dateStr: string, weeks: number): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const base = new Date(y, m - 1, d, 12, 0, 0);
+  base.setDate(base.getDate() + weeks * 7);
+  return base.toISOString().split('T')[0];
+}
+
+const MAX_REPEAT_WEEKS = 26; // 6-month safety cap
+
 function generateRecurringDates(
   startDate: string,
   frequency: 'weekly' | 'biweekly' | 'monthly',
@@ -190,6 +200,14 @@ function CreateShiftPageInner() {
     fetchScheduleData();
   }, []);
 
+  // Auto-default the "until" date to 4 weeks from the shift date when repeat is
+  // enabled and the user hasn't manually set an until date yet.
+  useEffect(() => {
+    if (repeatEnabled && formData.date && !repeatUntil) {
+      setRepeatUntil(addWeeks(formData.date, 4));
+    }
+  }, [repeatEnabled, formData.date]);
+
   // Regenerate preview dates whenever repeat settings change
   useEffect(() => {
     if (repeatEnabled && formData.date && repeatUntil) {
@@ -269,6 +287,10 @@ function CreateShiftPageInner() {
 
   const handleToggleRepeat = (enabled: boolean) => {
     setRepeatEnabled(enabled);
+    if (enabled && formData.date && !repeatUntil) {
+      // Default to 4 weeks from the shift date
+      setRepeatUntil(addWeeks(formData.date, 4));
+    }
     if (!enabled) {
       setRepeatUntil('');
       setPreviewDates([]);
@@ -308,6 +330,14 @@ function CreateShiftPageInner() {
     if (repeatEnabled && !repeatUntil) {
       setFormErrors(prev => ({ ...prev, repeat_until: 'Please select an end date for recurring shifts' }));
       return;
+    }
+
+    if (repeatEnabled && repeatUntil && formData.date) {
+      const maxDate = addWeeks(formData.date, MAX_REPEAT_WEEKS);
+      if (repeatUntil > maxDate) {
+        setFormErrors(prev => ({ ...prev, repeat_until: `End date cannot be more than ${MAX_REPEAT_WEEKS} weeks from the start date` }));
+        return;
+      }
     }
 
     if (repeatEnabled && previewDates.length === 0) {
@@ -762,6 +792,7 @@ function CreateShiftPageInner() {
                           });
                         }}
                         min={formData.date || new Date().toISOString().split('T')[0]}
+                        max={formData.date ? addWeeks(formData.date, MAX_REPEAT_WEEKS) : undefined}
                         aria-invalid={!!formErrors.repeat_until}
                         className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white ${
                           formErrors.repeat_until
@@ -770,6 +801,9 @@ function CreateShiftPageInner() {
                         }`}
                         aria-required={repeatEnabled}
                       />
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Maximum {MAX_REPEAT_WEEKS} weeks ({Math.round(MAX_REPEAT_WEEKS / 4.33)} months) from the start date
+                      </p>
                     </FormField>
                   </div>
 

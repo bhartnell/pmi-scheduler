@@ -162,14 +162,37 @@ function ShiftsPageContent() {
   // Auto-open shift detail modal when shiftId query param is present
   useEffect(() => {
     const shiftId = searchParams.get('shiftId');
-    if (shiftId && shifts.length > 0) {
-      const shift = shifts.find(s => s.id === shiftId);
-      if (shift) {
-        setDetailShift(shift);
-        setShowDetailModal(true);
-      }
+    if (!shiftId || !currentUser) return;
+
+    // Already showing this shift — skip
+    if (detailShift?.id === shiftId && showDetailModal) return;
+
+    // First try to find it in the already-loaded shifts list
+    const shift = shifts.find(s => s.id === shiftId);
+    if (shift) {
+      setDetailShift(shift);
+      setShowDetailModal(true);
+      return;
     }
-  }, [shifts, searchParams]);
+
+    // If shifts have loaded but the target shift isn't in the list
+    // (e.g. it's filled, in the past, or filtered out), fetch it directly
+    if (shifts.length > 0 || !loading) {
+      const fetchLinkedShift = async () => {
+        try {
+          const res = await fetch(`/api/scheduling/shifts/${shiftId}`);
+          const data = await res.json();
+          if (data.success && data.shift) {
+            setDetailShift(data.shift as OpenShift);
+            setShowDetailModal(true);
+          }
+        } catch (error) {
+          console.error('Error fetching linked shift:', error);
+        }
+      };
+      fetchLinkedShift();
+    }
+  }, [shifts, searchParams, currentUser, loading]);
 
   // Auto-switch to trades tab if query param says so
   useEffect(() => {

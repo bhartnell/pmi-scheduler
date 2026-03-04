@@ -20,6 +20,7 @@ export interface User {
   email: string;
   role: Role;
   is_active: boolean;
+  is_part_time: boolean;
   approved_at: string | null;
   approved_by: string | null;
   created_at: string;

@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
     const supabase = getSupabaseAdmin();
     let query = supabase
       .from('lab_users')
-      .select('id, name, email, role, photo_url, created_at, last_login, is_active', { count: 'exact' })
+      .select('id, name, email, role, photo_url, created_at, last_login, is_active, is_part_time', { count: 'exact' })
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
@@ -134,7 +134,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { userId, role, is_active } = body;
+    const { userId, role, is_active, is_part_time } = body;
 
     if (!userId) {
       return NextResponse.json({ success: false, error: 'User ID is required' }, { status: 400 });
@@ -184,6 +184,10 @@ export async function PATCH(request: NextRequest) {
 
     if (is_active !== undefined) {
       updates.is_active = is_active;
+    }
+
+    if (is_part_time !== undefined) {
+      updates.is_part_time = is_part_time;
     }
 
     const { data, error } = await supabase
