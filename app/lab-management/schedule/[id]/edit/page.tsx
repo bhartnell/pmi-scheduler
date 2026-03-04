@@ -326,6 +326,11 @@ export default function EditLabDayPage() {
 
     setSaving(true);
     try {
+      // Parse rotation duration from input value as safety net
+      // (onChange should keep rotationDuration in sync, but just in case)
+      const parsedDuration = parseInt(durationInputValue);
+      const safeDuration = isNaN(parsedDuration) || parsedDuration < 1 ? 30 : Math.min(parsedDuration, 120);
+
       // Save lab day details
       const res = await fetch(`/api/lab-management/lab-days/${labDayId}`, {
         method: 'PATCH',
@@ -335,7 +340,7 @@ export default function EditLabDayPage() {
           week_number: weekNumber || null,
           day_number: dayNumber || null,
           num_rotations: numRotations,
-          rotation_duration: rotationDuration,
+          rotation_duration: safeDuration,
           notes: notes || null,
           assigned_timer_id: fixedTimer ? null : (assignedTimerId || null),
           needs_coverage: needsCoverage,
@@ -650,14 +655,19 @@ export default function EditLabDayPage() {
                 <input
                   type="number"
                   min="1"
-                  max="999"
+                  max="120"
                   value={durationInputValue}
                   onChange={(e) => {
                     setDurationInputValue(e.target.value);
+                    // Also update the numeric state immediately for any valid integer
+                    const val = parseInt(e.target.value);
+                    if (!isNaN(val) && val >= 1 && val <= 120) {
+                      setRotationDuration(val);
+                    }
                   }}
                   onBlur={(e) => {
                     const val = parseInt(e.target.value);
-                    const clamped = isNaN(val) || val < 1 ? 30 : Math.min(val, 999);
+                    const clamped = isNaN(val) || val < 1 ? 30 : Math.min(val, 120);
                     setDurationInputValue(clamped.toString());
                     setRotationDuration(clamped);
                   }}
