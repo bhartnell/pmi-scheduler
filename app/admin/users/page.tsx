@@ -148,6 +148,27 @@ export default function UserManagementPage() {
     }
   };
 
+  const handleTogglePartTime = async (userId: string, currentlyPartTime: boolean) => {
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, is_part_time: !currentlyPartTime })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setUsers(users.map(u => u.id === userId ? data.user : u));
+        showToast(`User marked as ${!currentlyPartTime ? 'part-time' : 'full-time'}`, 'success');
+      } else {
+        showToast(data.error || 'Failed to update user', 'error');
+      }
+    } catch (error) {
+      console.error('Error updating user:', error);
+      showToast('Failed to update user', 'error');
+    }
+  };
+
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
@@ -355,6 +376,14 @@ export default function UserManagementPage() {
                                 <Shield className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                               </span>
                             )}
+                            {user.is_part_time && (
+                              <span
+                                title="Part-Time"
+                                className="px-1.5 py-0.5 rounded text-xs font-medium bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300"
+                              >
+                                PT
+                              </span>
+                            )}
                           </div>
                           <div className="text-sm text-gray-500 dark:text-gray-400">{user.email}</div>
                         </div>
@@ -398,18 +427,33 @@ export default function UserManagementPage() {
                         }
                       </td>
                       <td className="px-6 py-4">
-                        {canModify && !isProtected && (
-                          <button
-                            onClick={() => handleToggleActive(user.id, user.is_active)}
-                            className={`text-sm px-3 py-1 rounded ${
-                              user.is_active
-                                ? 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30'
-                                : 'text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30'
-                            }`}
-                          >
-                            {user.is_active ? 'Deactivate' : 'Activate'}
-                          </button>
-                        )}
+                        <div className="flex items-center gap-2">
+                          {canModify && !isProtected && (
+                            <>
+                              <button
+                                onClick={() => handleToggleActive(user.id, user.is_active)}
+                                className={`text-sm px-3 py-1 rounded ${
+                                  user.is_active
+                                    ? 'text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30'
+                                    : 'text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30'
+                                }`}
+                              >
+                                {user.is_active ? 'Deactivate' : 'Activate'}
+                              </button>
+                              <button
+                                onClick={() => handleTogglePartTime(user.id, user.is_part_time)}
+                                className={`text-sm px-3 py-1 rounded ${
+                                  user.is_part_time
+                                    ? 'text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/30'
+                                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
+                                }`}
+                                title={user.is_part_time ? 'Remove part-time flag' : 'Mark as part-time'}
+                              >
+                                {user.is_part_time ? 'Full-Time' : 'Part-Time'}
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );

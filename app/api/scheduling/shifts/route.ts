@@ -194,6 +194,28 @@ export async function POST(request: NextRequest) {
         ? calculateRecurringDates(date, repeat, repeat_until)
         : [date];
 
+    // Safety limit: max 26 weeks worth of shifts
+    const MAX_REPEAT_WEEKS = 26;
+    if (shiftDates.length > MAX_REPEAT_WEEKS + 1) {
+      return NextResponse.json(
+        { success: false, error: `Cannot create more than ${MAX_REPEAT_WEEKS + 1} shifts at once (${MAX_REPEAT_WEEKS} weeks)` },
+        { status: 400 }
+      );
+    }
+
+    // Validate that the date span doesn't exceed 26 weeks
+    if (shiftDates.length > 1) {
+      const firstDate = new Date(shiftDates[0] + 'T12:00:00');
+      const lastDate = new Date(shiftDates[shiftDates.length - 1] + 'T12:00:00');
+      const daySpan = (lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24);
+      if (daySpan > MAX_REPEAT_WEEKS * 7) {
+        return NextResponse.json(
+          { success: false, error: `Date range cannot exceed ${MAX_REPEAT_WEEKS} weeks (${Math.round(MAX_REPEAT_WEEKS / 4.33)} months)` },
+          { status: 400 }
+        );
+      }
+    }
+
     // Create shift records for all dates
     const shiftRecords = shiftDates.map(shiftDate => ({
       title,
