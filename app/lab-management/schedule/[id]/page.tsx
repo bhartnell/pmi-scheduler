@@ -406,6 +406,12 @@ export default function LabDayPage() {
     equipment_issues: '',
   });
 
+  // Skill sheet lookup state (maps station.id -> skill_sheet.id)
+  const [stationSkillSheetIds, setStationSkillSheetIds] = useState<Record<string, string>>({});
+
+  // Evaluation concerns from skill sheet evaluations (for debrief section)
+  const [evaluationConcerns, setEvaluationConcerns] = useState<any[]>([]);
+
   // Student ratings state
   const [studentRatings, setStudentRatings] = useState<StudentRating[]>([]);
   const [ratingsCollapsed, setRatingsCollapsed] = useState(false);
@@ -484,6 +490,7 @@ export default function LabDayPage() {
       fetchEquipmentItems();
       fetchCostItems();
       fetchDebriefs();
+      fetchEvaluationConcerns();
       fetchStudentRatings();
       fetchCurrentUserRole();
       fetchSignoffs();
@@ -879,6 +886,36 @@ export default function LabDayPage() {
       console.error('Error fetching debriefs:', error);
     }
     setDebriefLoading(false);
+  };
+
+  // Look up skill sheets for each station by name + program
+  const lookupSkillSheets = async (stations: any[], program: string) => {
+    const results: Record<string, string> = {};
+    for (const station of stations) {
+      const skillName = station.skill_name || station.scenario?.title || station.custom_title;
+      if (!skillName) continue;
+      try {
+        const res = await fetch(`/api/skill-sheets/by-skill-name?name=${encodeURIComponent(skillName)}&program=${encodeURIComponent(program.toLowerCase())}`);
+        const data = await res.json();
+        if (data.success && data.sheets && data.sheets.length > 0) {
+          results[station.id] = data.sheets[0].id;
+        }
+      } catch { /* ignore - skill sheets feature may not be available */ }
+    }
+    setStationSkillSheetIds(results);
+  };
+
+  // Fetch evaluation concerns for debrief section
+  const fetchEvaluationConcerns = async () => {
+    try {
+      const res = await fetch(`/api/skill-sheets/evaluations-by-lab-day?lab_day_id=${labDayId}`);
+      const data = await res.json();
+      if (data.success) {
+        setEvaluationConcerns(
+          (data.evaluations || []).filter((e: any) => e.flagged_items && e.flagged_items.length > 0)
+        );
+      }
+    } catch { /* ignore - feature may not be available yet */ }
   };
 
   const handleSubmitDebrief = async () => {
@@ -1329,6 +1366,14 @@ export default function LabDayPage() {
           }
 
           setStationSkillDocs(skillDocsMap);
+        }
+
+        // Look up skill sheets for station cards
+        if (labDayData.labDay.cohort?.program?.abbreviation) {
+          lookupSkillSheets(
+            labDayData.labDay.stations,
+            labDayData.labDay.cohort.program.abbreviation
+          );
         }
       }
     } catch (error) {
@@ -3011,6 +3056,23 @@ export default function LabDayPage() {
                     </div>
                   )}
 
+                  {/* View Skill Sheet (from skill_sheets table lookup) */}
+                  {stationSkillSheetIds[station.id] ? (
+                    <div className="mb-3 print:hidden">
+                      <Link
+                        href={`/skill-sheets/${stationSkillSheetIds[station.id]}`}
+                        className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded hover:bg-emerald-100 dark:hover:bg-emerald-900/50"
+                      >
+                        <ClipboardCheck className="w-3 h-3" />
+                        View Skill Sheet
+                      </Link>
+                    </div>
+                  ) : (station.skill_name || station.scenario?.title) ? (
+                    <div className="mb-3 print:hidden">
+                      <span className="text-xs text-gray-400 dark:text-gray-500 italic">No skill sheet available</span>
+                    </div>
+                  ) : null}
+
                   {/* Template Guide (from applied template metadata) */}
                   {station.metadata && Object.keys(station.metadata).length > 0 && (
                     <div className="mb-3">
@@ -4259,6 +4321,49 @@ export default function LabDayPage() {
                     </div>
                   ) : (
                     <>
+                      {/* Student Concerns from Evaluations */}
+                      {evaluationConcerns.length > 0 && (
+                        <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800 p-4 mb-4">
+                          <h4 className="font-medium text-amber-800 dark:text-amber-300 flex items-center gap-2 mb-3">
+                            <AlertTriangle className="w-4 h-4" />
+                            Student Concerns from Evaluations
+                          </h4>
+                          <div className="space-y-2">
+                            {evaluationConcerns.map((evalItem: any, i: number) => (
+                              <div key={evalItem.id || i} className="bg-white dark:bg-gray-800 rounded border border-amber-100 dark:border-amber-900/50 p-3">
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-sm font-medium text-gray-900 dark:text-white">
+                                    {evalItem.student?.first_name} {evalItem.student?.last_name}
+                                  </span>
+                                  <span className={`text-xs px-2 py-0.5 rounded-full ${
+                                    evalItem.result === 'fail'
+                                      ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+                                      : evalItem.result === 'remediation'
+                                        ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'
+                                        : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                                  }`}>
+                                    {evalItem.result}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                                  {evalItem.skill_sheet?.skill_name} &mdash; evaluated by {evalItem.evaluator?.name || 'Unknown'}
+                                </p>
+                                <div className="flex flex-wrap gap-1">
+                                  {(evalItem.flagged_items || []).map((item: string, j: number) => (
+                                    <span
+                                      key={j}
+                                      className="text-xs bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded"
+                                    >
+                                      {item}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
                       {/* Submit / edit form — shown if current user hasn&apos;t submitted yet, or is editing their entry */}
                       {(!currentUserDebrief || editingDebriefId === currentUserDebrief?.id) && (
                         <div className="bg-white dark:bg-gray-800 rounded-lg border border-indigo-100 dark:border-indigo-800/50 p-4 space-y-4">

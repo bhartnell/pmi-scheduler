@@ -22,6 +22,9 @@ import {
   ChevronDown,
   ChevronRight,
   LineChart,
+  XCircle,
+  AlertTriangle,
+  User,
 } from 'lucide-react';
 import { parseDateSafe } from '@/lib/utils';
 
@@ -618,6 +621,9 @@ export default function StudentProgressPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sortScenarios, setSortScenarios] = useState<'date' | 'grade'>('date');
+  const [skillEvaluations, setSkillEvaluations] = useState<any[]>([]);
+  const [evalLoading, setEvalLoading] = useState(false);
+  const [expandedSkill, setExpandedSkill] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -644,9 +650,29 @@ export default function StudentProgressPage() {
     }
   }, [session, studentId]);
 
+  const fetchSkillEvaluations = useCallback(async () => {
+    if (!session || !studentId) return;
+    setEvalLoading(true);
+    try {
+      const res = await fetch(`/api/students/${studentId}/skill-evaluations`);
+      const json = await res.json();
+      if (json.success) {
+        setSkillEvaluations(json.groups || []);
+      }
+    } catch {
+      // Skill evaluations are supplementary; silently ignore errors
+    } finally {
+      setEvalLoading(false);
+    }
+  }, [session, studentId]);
+
   useEffect(() => {
     fetchProgress();
   }, [fetchProgress]);
+
+  useEffect(() => {
+    fetchSkillEvaluations();
+  }, [fetchSkillEvaluations]);
 
   if (status === 'loading' || (loading && !data)) {
     return (
@@ -1043,6 +1069,167 @@ export default function StudentProgressPage() {
               </div>
             ) : (
               recentActivity.map((a, i) => <ActivityItem key={i} activity={a} />)
+            )}
+          </div>
+        </div>
+
+        {/* ---- SKILL COMPETENCIES ---- */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl border dark:border-gray-700 shadow-sm print:break-inside-avoid">
+          <div className="p-4 border-b dark:border-gray-700 flex items-center justify-between">
+            <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <ClipboardCheck className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+              Skill Competencies
+              {skillEvaluations.length > 0 && (
+                <span className="ml-1 px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400">
+                  {skillEvaluations.length}
+                </span>
+              )}
+            </h2>
+          </div>
+          <div className="p-4">
+            {evalLoading ? (
+              <div className="space-y-3 animate-pulse">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="h-12 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+                ))}
+              </div>
+            ) : skillEvaluations.length === 0 ? (
+              <div className="text-center py-8 text-gray-400 dark:text-gray-500">
+                <ClipboardCheck className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                <p className="text-sm">No skill evaluations recorded yet</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {skillEvaluations.map((group: any, idx: number) => {
+                  const groupKey = group.canonical_skill?.id || `fallback-${idx}`;
+                  const skillName = group.canonical_skill?.canonical_name || group.skill_sheet_fallback?.skill_name || 'Unknown Skill';
+                  const category = group.canonical_skill?.skill_category || null;
+                  const latestEval = group.evaluations[0];
+                  const latestResult = latestEval?.result || 'unknown';
+                  const isExpanded = expandedSkill === groupKey;
+
+                  const resultBadgeClass =
+                    latestResult === 'pass'
+                      ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                      : latestResult === 'fail'
+                      ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                      : latestResult === 'remediation'
+                      ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400'
+                      : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400';
+
+                  const resultIcon =
+                    latestResult === 'pass' ? <CheckCircle className="w-3.5 h-3.5" /> :
+                    latestResult === 'fail' ? <XCircle className="w-3.5 h-3.5" /> :
+                    <AlertTriangle className="w-3.5 h-3.5" />;
+
+                  return (
+                    <div key={groupKey} className="border dark:border-gray-700 rounded-lg overflow-hidden">
+                      <button
+                        onClick={() => setExpandedSkill(isExpanded ? null : groupKey)}
+                        className="w-full flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-750 text-left"
+                      >
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <div className="text-gray-400 dark:text-gray-500">
+                            {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-medium text-gray-900 dark:text-white text-sm truncate">
+                                {skillName}
+                              </span>
+                              {category && (
+                                <span className="px-1.5 py-0.5 rounded text-xs bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 capitalize">
+                                  {category.replace('_', ' ')}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-3 mt-1 text-xs text-gray-500 dark:text-gray-400">
+                              {latestEval?.created_at && (
+                                <span className="flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  {formatDate(latestEval.created_at)}
+                                </span>
+                              )}
+                              {latestEval?.evaluator?.name && (
+                                <span className="flex items-center gap-1">
+                                  <User className="w-3 h-3" />
+                                  {latestEval.evaluator.name}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <span className={`flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium whitespace-nowrap ${resultBadgeClass}`}>
+                          {resultIcon}
+                          {latestResult.charAt(0).toUpperCase() + latestResult.slice(1)}
+                        </span>
+                      </button>
+
+                      {isExpanded && group.evaluations.length > 0 && (
+                        <div className="border-t dark:border-gray-700 divide-y dark:divide-gray-700 bg-gray-50 dark:bg-gray-750">
+                          {group.evaluations.map((evalItem: any) => {
+                            const evalResultClass =
+                              evalItem.result === 'pass'
+                                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                                : evalItem.result === 'fail'
+                                ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                                : 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400';
+
+                            const evalIcon =
+                              evalItem.result === 'pass' ? <CheckCircle className="w-3 h-3" /> :
+                              evalItem.result === 'fail' ? <XCircle className="w-3 h-3" /> :
+                              <AlertTriangle className="w-3 h-3" />;
+
+                            const flaggedItems = evalItem.flagged_items
+                              ? (Array.isArray(evalItem.flagged_items) ? evalItem.flagged_items : [])
+                              : [];
+
+                            return (
+                              <div key={evalItem.id} className="px-4 py-3">
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="flex items-center gap-3 text-sm">
+                                    <span className="text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                                      {formatDate(evalItem.created_at)}
+                                    </span>
+                                    <span className="px-1.5 py-0.5 rounded text-xs bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400 capitalize">
+                                      {evalItem.evaluation_type === 'final_competency' ? 'Final' : 'Formative'}
+                                    </span>
+                                    <span className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-xs font-medium ${evalResultClass}`}>
+                                      {evalIcon}
+                                      {evalItem.result.charAt(0).toUpperCase() + evalItem.result.slice(1)}
+                                    </span>
+                                  </div>
+                                  {evalItem.evaluator?.name && (
+                                    <span className="text-xs text-gray-400 dark:text-gray-500 flex items-center gap-1">
+                                      <User className="w-3 h-3" />
+                                      {evalItem.evaluator.name}
+                                    </span>
+                                  )}
+                                </div>
+                                {evalItem.notes && (
+                                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1.5 line-clamp-2">
+                                    {evalItem.notes}
+                                  </p>
+                                )}
+                                {flaggedItems.length > 0 && (
+                                  <div className="mt-1.5 space-y-0.5">
+                                    {flaggedItems.map((flag: string, fi: number) => (
+                                      <div key={fi} className="flex items-start gap-1.5 text-xs text-amber-700 dark:text-amber-400">
+                                        <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                                        <span>{flag}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
         </div>

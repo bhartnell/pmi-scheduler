@@ -173,13 +173,22 @@ export default function SkillSheetsImportPage() {
         </nav>
 
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Skill Sheets Import
-          </h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Seed canonical skills and import skill sheets from NREMT, Platinum, and Publisher sources.
-          </p>
+        <div className="mb-8 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              Skill Sheets Import
+            </h1>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Seed canonical skills and import skill sheets from NREMT, Platinum, and Publisher sources.
+            </p>
+          </div>
+          <Link
+            href="/skill-sheets"
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors flex-shrink-0"
+          >
+            <FileText className="w-4 h-4" />
+            Browse Skill Sheets
+          </Link>
         </div>
 
         {/* Database Status */}
