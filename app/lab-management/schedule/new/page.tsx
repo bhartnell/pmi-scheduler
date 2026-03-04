@@ -908,6 +908,10 @@ function NewLabDayPageContent() {
   const handleSave = async () => {
     setSaving(true);
     try {
+      // Parse rotation duration from input value as safety net
+      const parsedDuration = parseInt(durationInputValueLabDay);
+      const safeDuration = isNaN(parsedDuration) || parsedDuration < 1 ? 30 : Math.min(parsedDuration, 120);
+
       // Create lab day
       const labDayRes = await fetch('/api/lab-management/lab-days', {
         method: 'POST',
@@ -923,7 +927,7 @@ function NewLabDayPageContent() {
           week_number: weekNumber ? parseInt(weekNumber) : null,
           day_number: dayNumber ? parseInt(dayNumber) : null,
           num_rotations: numRotationsLabDay,
-          rotation_duration: rotationDurationLabDay,
+          rotation_duration: safeDuration,
           needs_coverage: needsCoverage,
           coverage_needed: needsCoverage ? coverageNeeded : 0,
           coverage_note: needsCoverage ? (coverageNote || null) : null
@@ -1415,8 +1419,13 @@ function NewLabDayPageContent() {
                   max="120"
                   value={durationInputValueLabDay}
                   onChange={(e) => {
-                    // Allow free typing - just update display value
+                    // Allow free typing - update display value
                     setDurationInputValueLabDay(e.target.value);
+                    // Also update numeric state immediately for valid integers
+                    const val = parseInt(e.target.value);
+                    if (!isNaN(val) && val >= 1 && val <= 120) {
+                      setRotationDurationLabDay(val);
+                    }
                   }}
                   onBlur={(e) => {
                     // Validate and clamp only when user leaves the field
@@ -2439,11 +2448,16 @@ function NewLabDayPageContent() {
                             max="120"
                             value={durationInputValues[station.id] ?? station.rotation_minutes}
                             onChange={(e) => {
-                              // Allow free typing - just update display value
+                              // Allow free typing - update display value
                               setDurationInputValues(prev => ({
                                 ...prev,
                                 [station.id]: e.target.value
                               }));
+                              // Also update station immediately for valid integers
+                              const val = parseInt(e.target.value);
+                              if (!isNaN(val) && val >= 1 && val <= 120) {
+                                updateStation(index, { rotation_minutes: val });
+                              }
                             }}
                             onBlur={(e) => {
                               // Validate and clamp only when user leaves the field
