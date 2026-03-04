@@ -130,6 +130,25 @@ export default function SkillSheetsImportPage() {
     }
   };
 
+  const seedAliases = async () => {
+    setLoading('aliases');
+    try {
+      const res = await fetch('/api/admin/skill-sheets/seed-aliases', {
+        method: 'POST',
+      });
+      const data = await res.json();
+      setResults(prev => ({ ...prev, aliases: data }));
+      fetchCounts();
+    } catch (err) {
+      setResults(prev => ({
+        ...prev,
+        aliases: { success: false, error: String(err) },
+      }));
+    } finally {
+      setLoading(null);
+    }
+  };
+
   const importSource = async (source: 'nremt' | 'platinum' | 'publisher') => {
     setLoading(source);
     try {
@@ -289,6 +308,19 @@ export default function SkillSheetsImportPage() {
             disabled={loading !== null}
             onClick={() => importSource('platinum')}
             result={results.platinum}
+          />
+
+          {/* Seed Station Aliases */}
+          <ActionCard
+            icon={RefreshCw}
+            iconColor="bg-teal-500"
+            title="5. Seed Station Name Aliases"
+            description="Insert common station skill-name aliases into skill_sheet_assignments so that lab-day grading pages can look up the correct skill sheet regardless of how the station name is worded."
+            buttonLabel="Seed Station Aliases"
+            loading={loading === 'aliases'}
+            disabled={loading !== null}
+            onClick={seedAliases}
+            result={results.aliases}
           />
         </div>
       </div>
