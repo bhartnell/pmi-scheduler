@@ -102,12 +102,12 @@ export async function GET(request: NextRequest) {
     }
 
     // -----------------------------------------------
-    // Step 2: Try match via skill_sheet_assignments
+    // Step 2: Try match via skill_sheet_assignments (case-insensitive)
     // -----------------------------------------------
     let assignmentQuery = supabase
       .from('skill_sheet_assignments')
       .select('skill_sheet_id')
-      .eq('skill_name', name);
+      .ilike('skill_name', name);
 
     if (program) {
       assignmentQuery = assignmentQuery.or(`program.eq.${program},program.eq.all`);
@@ -151,14 +151,24 @@ export async function GET(request: NextRequest) {
     }
 
     // -----------------------------------------------
-    // Step 4: Fuzzy match via ILIKE on canonical_skills.canonical_name
-    // This handles cases like "Medical Assessment" matching
-    // a canonical skill "Patient Assessment — Medical"
+    // Step 4: Word-based fuzzy match on canonical_skills.canonical_name
+    // Split search term into words and require ALL words to appear
+    // (any order). "Medical Assessment" matches "Patient Assessment — Medical"
+    // because both "Medical" and "Assessment" appear in the canonical name.
     // -----------------------------------------------
-    const { data: canonicalMatches, error: canonicalError } = await supabase
-      .from('canonical_skills')
-      .select('id')
-      .ilike('canonical_name', `%${name}%`);
+    const searchWords = name
+      .split(/[\s—\-–]+/)
+      .map((w: string) => w.trim())
+      .filter((w: string) => w.length >= 2);
+
+    let canonicalQuery = supabase.from('canonical_skills').select('id');
+
+    // Chain ILIKE for each word: canonical_name must contain ALL words
+    for (const word of searchWords) {
+      canonicalQuery = canonicalQuery.ilike('canonical_name', `%${word}%`);
+    }
+
+    const { data: canonicalMatches, error: canonicalError } = await canonicalQuery;
 
     if (canonicalError && !canonicalError.message?.includes('does not exist')) {
       throw canonicalError;
