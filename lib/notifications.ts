@@ -136,6 +136,7 @@ export type NotificationType =
   | 'shift_confirmed'
   | 'clinical_hours'
   | 'compliance_due'
+  | 'affiliation_expiry'
   | 'general';
 
 export type NotificationCategory = 'tasks' | 'labs' | 'scheduling' | 'feedback' | 'clinical' | 'system';
@@ -153,6 +154,7 @@ export const TYPE_TO_CATEGORY: Record<NotificationType, NotificationCategory> = 
   feedback_resolved: 'feedback',
   clinical_hours: 'clinical',
   compliance_due: 'clinical',
+  affiliation_expiry: 'clinical',
   role_approved: 'system',
   general: 'system',
 };
@@ -613,6 +615,7 @@ function getRoleLabelForNotification(role: string): string {
     admin: 'Admin',
     lead_instructor: 'Lead Instructor',
     instructor: 'Instructor',
+    program_director: 'Program Director',
     guest: 'Guest',
     pending: 'Pending',
   };

@@ -1,6 +1,6 @@
 // Role-based permission system for PMI Tools
 
-export type Role = 'superadmin' | 'admin' | 'lead_instructor' | 'instructor' | 'volunteer_instructor' | 'student' | 'guest' | 'pending';
+export type Role = 'superadmin' | 'admin' | 'lead_instructor' | 'instructor' | 'volunteer_instructor' | 'program_director' | 'student' | 'guest' | 'pending';
 
 export const ROLE_LEVELS: Record<Role, number> = {
   superadmin: 5,
@@ -8,6 +8,7 @@ export const ROLE_LEVELS: Record<Role, number> = {
   lead_instructor: 3,
   instructor: 2,
   volunteer_instructor: 1.5, // Can access scheduling and lab schedule (read-only), no student data
+  program_director: 1.75,    // Affiliations access only — non-instructor campus staff
   student: 1,                // Student portal access only
   guest: 1,                  // Guest access (same level as student)
   pending: 0,                // Minimal access - new users awaiting approval
@@ -19,6 +20,7 @@ export const ROLE_LABELS: Record<Role, string> = {
   lead_instructor: 'Lead Instructor',
   instructor: 'Instructor',
   volunteer_instructor: 'Volunteer Instructor',
+  program_director: 'Program Director',
   student: 'Student',
   guest: 'Guest',
   pending: 'Pending Approval',
@@ -30,6 +32,7 @@ export const ROLE_COLORS: Record<Role, string> = {
   lead_instructor: 'bg-blue-600 text-white',
   instructor: 'bg-green-600 text-white',
   volunteer_instructor: 'bg-teal-600 text-white',
+  program_director: 'bg-amber-600 text-white',
   student: 'bg-cyan-600 text-white',
   guest: 'bg-gray-500 text-white',
   pending: 'bg-yellow-500 text-white',
@@ -144,11 +147,11 @@ export function isProtectedSuperadmin(email: string): boolean {
 
 export function getAssignableRoles(currentRole: Role | string): Role[] {
   if (currentRole === 'superadmin') {
-    return ['superadmin', 'admin', 'lead_instructor', 'instructor', 'volunteer_instructor', 'student', 'guest', 'pending'];
+    return ['superadmin', 'admin', 'lead_instructor', 'instructor', 'volunteer_instructor', 'program_director', 'student', 'guest', 'pending'];
   }
   if (currentRole === 'admin') {
     // Admins can't create/modify superadmins
-    return ['admin', 'lead_instructor', 'instructor', 'volunteer_instructor', 'student', 'guest', 'pending'];
+    return ['admin', 'lead_instructor', 'instructor', 'volunteer_instructor', 'program_director', 'student', 'guest', 'pending'];
   }
   return [];
 }
@@ -188,7 +191,7 @@ export function canAccessApp(role: Role | string): boolean {
  * Available to instructors, volunteer instructors, and above
  */
 export function canAccessScheduling(role: Role | string): boolean {
-  return getRoleLevel(role) >= ROLE_LEVELS.volunteer_instructor && role !== 'student';
+  return getRoleLevel(role) >= ROLE_LEVELS.volunteer_instructor && role !== 'student' && role !== 'program_director';
 }
 
 /**
@@ -196,7 +199,7 @@ export function canAccessScheduling(role: Role | string): boolean {
  * Volunteer instructors can view but not modify
  */
 export function canViewLabSchedule(role: Role | string): boolean {
-  return getRoleLevel(role) >= ROLE_LEVELS.volunteer_instructor && role !== 'student';
+  return getRoleLevel(role) >= ROLE_LEVELS.volunteer_instructor && role !== 'student' && role !== 'program_director';
 }
 
 /**
@@ -205,6 +208,22 @@ export function canViewLabSchedule(role: Role | string): boolean {
  */
 export function canModifyLabSchedule(role: Role | string): boolean {
   return getRoleLevel(role) >= ROLE_LEVELS.instructor;
+}
+
+/**
+ * Check if user can view the affiliations page
+ * Program directors get access, plus lead_instructor and above
+ */
+export function canAccessAffiliations(role: Role | string): boolean {
+  return role === 'program_director' || hasMinRole(role, 'lead_instructor');
+}
+
+/**
+ * Check if user can create/edit/delete affiliations
+ * Program directors get full CRUD, plus admin and above
+ */
+export function canEditAffiliations(role: Role | string): boolean {
+  return role === 'program_director' || hasMinRole(role, 'admin');
 }
 
 // ============================================
