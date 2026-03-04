@@ -2604,6 +2604,7 @@ export default function LabDayPage() {
               <InlineTimerWidget
                 labDayId={labDayId}
                 onOpenFullTimer={() => setShowTimer(true)}
+                paused={showTimer}
               />
               <div className="flex gap-2">
               <button

@@ -20,9 +20,11 @@ interface TimerState {
 interface InlineTimerWidgetProps {
   labDayId: string;
   onOpenFullTimer: () => void;
+  /** When true, pauses all polling (e.g. when LabTimer modal is open) */
+  paused?: boolean;
 }
 
-export default function InlineTimerWidget({ labDayId, onOpenFullTimer }: InlineTimerWidgetProps) {
+export default function InlineTimerWidget({ labDayId, onOpenFullTimer, paused = false }: InlineTimerWidgetProps) {
   const [timerState, setTimerState] = useState<TimerState | null>(null);
   const [displaySeconds, setDisplaySeconds] = useState(0);
   const [serverTimeOffset, setServerTimeOffset] = useState(0);
@@ -45,8 +47,11 @@ export default function InlineTimerWidget({ labDayId, onOpenFullTimer }: InlineT
     }
   }, [labDayId]);
 
-  // Poll every 5 seconds to keep widget in sync
-  useVisibilityPolling(fetchTimerState, 5000);
+  // Dynamic poll interval: 5s when timer active, 30s when idle, null when paused
+  const pollInterval = paused
+    ? null
+    : (timerState && timerState.status !== 'stopped' ? 5000 : 30000);
+  useVisibilityPolling(fetchTimerState, pollInterval);
 
   // Calculate display time
   useEffect(() => {
