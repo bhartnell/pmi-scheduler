@@ -13,6 +13,10 @@ CREATE TABLE IF NOT EXISTS lab_day_attendance (
   UNIQUE(lab_day_id, student_id)
 );
 
+-- Ensure columns exist if table was created with a different schema
+ALTER TABLE lab_day_attendance ADD COLUMN IF NOT EXISTS marked_by TEXT;
+ALTER TABLE lab_day_attendance ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'present';
+
 CREATE INDEX IF NOT EXISTS idx_lab_day_attendance_lab_day ON lab_day_attendance(lab_day_id);
 CREATE INDEX IF NOT EXISTS idx_lab_day_attendance_student ON lab_day_attendance(student_id);
 CREATE INDEX IF NOT EXISTS idx_lab_day_attendance_status ON lab_day_attendance(status);
@@ -20,6 +24,7 @@ CREATE INDEX IF NOT EXISTS idx_lab_day_attendance_status ON lab_day_attendance(s
 -- RLS
 ALTER TABLE lab_day_attendance ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Instructors can manage attendance" ON lab_day_attendance;
 CREATE POLICY "Instructors can manage attendance" ON lab_day_attendance
   FOR ALL USING (true) WITH CHECK (true);
 

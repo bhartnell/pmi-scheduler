@@ -37,10 +37,12 @@ ALTER TABLE document_requests ENABLE ROW LEVEL SECURITY;
 
 -- RLS policies: service role bypasses RLS; anon users have no access
 -- API routes use service role key so these are permissive no-ops for service role.
-CREATE POLICY IF NOT EXISTS "student_documents_service_role" ON student_documents
+DROP POLICY IF EXISTS "student_documents_service_role" ON student_documents;
+CREATE POLICY "student_documents_service_role" ON student_documents
   FOR ALL USING (true);
 
-CREATE POLICY IF NOT EXISTS "document_requests_service_role" ON document_requests
+DROP POLICY IF EXISTS "document_requests_service_role" ON document_requests;
+CREATE POLICY "document_requests_service_role" ON document_requests
   FOR ALL USING (true);
 
 NOTIFY pgrst, 'reload schema';

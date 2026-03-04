@@ -4,6 +4,24 @@
 -- Drop the old constraint
 ALTER TABLE user_notifications DROP CONSTRAINT IF EXISTS user_notifications_type_check;
 
+-- Update any existing rows that don't match the new constraint values to 'general'
+UPDATE user_notifications SET type = 'general'
+WHERE type NOT IN (
+  'lab_assignment',
+  'lab_reminder',
+  'feedback_new',
+  'feedback_resolved',
+  'task_assigned',
+  'task_completed',
+  'task_comment',
+  'role_approved',
+  'shift_available',
+  'shift_confirmed',
+  'clinical_hours',
+  'compliance_due',
+  'general'
+);
+
 -- Add the updated constraint with all notification types
 ALTER TABLE user_notifications ADD CONSTRAINT user_notifications_type_check
 CHECK (type IN (

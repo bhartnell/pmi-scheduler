@@ -19,6 +19,22 @@ CREATE TABLE IF NOT EXISTS alumni (
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
+-- Ensure columns exist (table may have been created with partial schema)
+ALTER TABLE alumni ADD COLUMN IF NOT EXISTS student_id UUID REFERENCES students(id) ON DELETE SET NULL;
+ALTER TABLE alumni ADD COLUMN IF NOT EXISTS first_name TEXT;
+ALTER TABLE alumni ADD COLUMN IF NOT EXISTS last_name TEXT;
+ALTER TABLE alumni ADD COLUMN IF NOT EXISTS email TEXT;
+ALTER TABLE alumni ADD COLUMN IF NOT EXISTS phone TEXT;
+ALTER TABLE alumni ADD COLUMN IF NOT EXISTS graduation_date DATE;
+ALTER TABLE alumni ADD COLUMN IF NOT EXISTS cohort_id UUID REFERENCES cohorts(id) ON DELETE SET NULL;
+ALTER TABLE alumni ADD COLUMN IF NOT EXISTS employment_status TEXT DEFAULT 'unknown';
+ALTER TABLE alumni ADD COLUMN IF NOT EXISTS employer TEXT;
+ALTER TABLE alumni ADD COLUMN IF NOT EXISTS job_title TEXT;
+ALTER TABLE alumni ADD COLUMN IF NOT EXISTS continuing_education TEXT;
+ALTER TABLE alumni ADD COLUMN IF NOT EXISTS notes TEXT;
+ALTER TABLE alumni ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT now();
+ALTER TABLE alumni ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT now();
+
 CREATE INDEX IF NOT EXISTS idx_alumni_student ON alumni(student_id);
 CREATE INDEX IF NOT EXISTS idx_alumni_cohort ON alumni(cohort_id);
 CREATE INDEX IF NOT EXISTS idx_alumni_status ON alumni(employment_status);
@@ -27,7 +43,8 @@ CREATE INDEX IF NOT EXISTS idx_alumni_status ON alumni(employment_status);
 ALTER TABLE alumni ENABLE ROW LEVEL SECURITY;
 
 -- Admins can do anything
-CREATE POLICY IF NOT EXISTS "admin_all_alumni"
+DROP POLICY IF EXISTS "admin_all_alumni" ON alumni;
+CREATE POLICY "admin_all_alumni"
   ON alumni
   FOR ALL
   TO authenticated

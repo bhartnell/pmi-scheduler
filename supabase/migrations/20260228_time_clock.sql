@@ -20,25 +20,29 @@ ALTER TABLE instructor_time_entries ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies
 -- Instructors can read their own entries
-CREATE POLICY IF NOT EXISTS "instructors_read_own_time_entries"
+DROP POLICY IF EXISTS "instructors_read_own_time_entries" ON instructor_time_entries;
+CREATE POLICY "instructors_read_own_time_entries"
   ON instructor_time_entries
   FOR SELECT
   USING (true);
 
 -- Instructors can insert their own entries
-CREATE POLICY IF NOT EXISTS "instructors_insert_own_time_entries"
+DROP POLICY IF EXISTS "instructors_insert_own_time_entries" ON instructor_time_entries;
+CREATE POLICY "instructors_insert_own_time_entries"
   ON instructor_time_entries
   FOR INSERT
   WITH CHECK (true);
 
 -- Instructors can update their own entries (for clock-out)
-CREATE POLICY IF NOT EXISTS "instructors_update_own_time_entries"
+DROP POLICY IF EXISTS "instructors_update_own_time_entries" ON instructor_time_entries;
+CREATE POLICY "instructors_update_own_time_entries"
   ON instructor_time_entries
   FOR UPDATE
   USING (true);
 
 -- Instructors can delete their own entries
-CREATE POLICY IF NOT EXISTS "instructors_delete_time_entries"
+DROP POLICY IF EXISTS "instructors_delete_time_entries" ON instructor_time_entries;
+CREATE POLICY "instructors_delete_time_entries"
   ON instructor_time_entries
   FOR DELETE
   USING (true);

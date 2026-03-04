@@ -21,6 +21,11 @@ CREATE TABLE IF NOT EXISTS scenario_participation (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Ensure columns exist if table was created with a different schema
+ALTER TABLE scenario_participation ADD COLUMN IF NOT EXISTS date DATE DEFAULT CURRENT_DATE;
+ALTER TABLE scenario_participation ADD COLUMN IF NOT EXISTS role TEXT;
+ALTER TABLE scenario_participation ADD COLUMN IF NOT EXISTS scenario_id UUID;
+
 -- Indexes for scenario_participation
 CREATE INDEX IF NOT EXISTS idx_scenario_participation_student ON scenario_participation(student_id);
 CREATE INDEX IF NOT EXISTS idx_scenario_participation_role ON scenario_participation(role);
@@ -76,15 +81,19 @@ CREATE INDEX IF NOT EXISTS idx_protocol_completions_category ON protocol_complet
 -- ============================================
 ALTER TABLE scenario_participation ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "scenario_participation_select_policy" ON scenario_participation;
 CREATE POLICY "scenario_participation_select_policy" ON scenario_participation
   FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "scenario_participation_insert_policy" ON scenario_participation;
 CREATE POLICY "scenario_participation_insert_policy" ON scenario_participation
   FOR INSERT WITH CHECK (true);
 
+DROP POLICY IF EXISTS "scenario_participation_update_policy" ON scenario_participation;
 CREATE POLICY "scenario_participation_update_policy" ON scenario_participation
   FOR UPDATE USING (true);
 
+DROP POLICY IF EXISTS "scenario_participation_delete_policy" ON scenario_participation;
 CREATE POLICY "scenario_participation_delete_policy" ON scenario_participation
   FOR DELETE USING (true);
 
@@ -93,15 +102,19 @@ CREATE POLICY "scenario_participation_delete_policy" ON scenario_participation
 -- ============================================
 ALTER TABLE ekg_warmup_scores ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "ekg_scores_select_policy" ON ekg_warmup_scores;
 CREATE POLICY "ekg_scores_select_policy" ON ekg_warmup_scores
   FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "ekg_scores_insert_policy" ON ekg_warmup_scores;
 CREATE POLICY "ekg_scores_insert_policy" ON ekg_warmup_scores
   FOR INSERT WITH CHECK (true);
 
+DROP POLICY IF EXISTS "ekg_scores_update_policy" ON ekg_warmup_scores;
 CREATE POLICY "ekg_scores_update_policy" ON ekg_warmup_scores
   FOR UPDATE USING (true);
 
+DROP POLICY IF EXISTS "ekg_scores_delete_policy" ON ekg_warmup_scores;
 CREATE POLICY "ekg_scores_delete_policy" ON ekg_warmup_scores
   FOR DELETE USING (true);
 
@@ -110,15 +123,19 @@ CREATE POLICY "ekg_scores_delete_policy" ON ekg_warmup_scores
 -- ============================================
 ALTER TABLE protocol_completions ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "protocol_completions_select_policy" ON protocol_completions;
 CREATE POLICY "protocol_completions_select_policy" ON protocol_completions
   FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "protocol_completions_insert_policy" ON protocol_completions;
 CREATE POLICY "protocol_completions_insert_policy" ON protocol_completions
   FOR INSERT WITH CHECK (true);
 
+DROP POLICY IF EXISTS "protocol_completions_update_policy" ON protocol_completions;
 CREATE POLICY "protocol_completions_update_policy" ON protocol_completions
   FOR UPDATE USING (true);
 
+DROP POLICY IF EXISTS "protocol_completions_delete_policy" ON protocol_completions;
 CREATE POLICY "protocol_completions_delete_policy" ON protocol_completions
   FOR DELETE USING (true);
 

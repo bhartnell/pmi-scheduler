@@ -14,6 +14,10 @@ CREATE TABLE IF NOT EXISTS report_templates (
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
+-- Ensure columns exist if table was created with a different schema
+ALTER TABLE report_templates ADD COLUMN IF NOT EXISTS is_shared BOOLEAN DEFAULT false;
+ALTER TABLE report_templates ADD COLUMN IF NOT EXISTS created_by TEXT;
+
 ALTER TABLE report_templates ENABLE ROW LEVEL SECURITY;
 
 CREATE INDEX IF NOT EXISTS idx_report_templates_creator ON report_templates(created_by);

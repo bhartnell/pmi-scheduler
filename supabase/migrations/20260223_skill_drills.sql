@@ -15,15 +15,22 @@ CREATE TABLE IF NOT EXISTS skill_drills (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Ensure columns exist if table was created with a different schema
+ALTER TABLE skill_drills ADD COLUMN IF NOT EXISTS estimated_duration INTEGER DEFAULT 15;
+ALTER TABLE skill_drills ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'general';
+ALTER TABLE skill_drills ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+
 CREATE INDEX IF NOT EXISTS idx_skill_drills_category ON skill_drills(category);
 CREATE INDEX IF NOT EXISTS idx_skill_drills_active ON skill_drills(is_active) WHERE is_active = true;
 CREATE INDEX IF NOT EXISTS idx_skill_drills_created_by ON skill_drills(created_by);
 
 ALTER TABLE skill_drills ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Authenticated users can view skill drills" ON skill_drills;
 CREATE POLICY "Authenticated users can view skill drills"
   ON skill_drills FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Instructors can manage skill drills" ON skill_drills;
 CREATE POLICY "Instructors can manage skill drills"
   ON skill_drills FOR ALL USING (true);
 

@@ -24,7 +24,8 @@ CREATE INDEX IF NOT EXISTS idx_incidents_date ON incidents(incident_date);
 ALTER TABLE incidents ENABLE ROW LEVEL SECURITY;
 
 -- Service role bypasses RLS; all access via API routes using service role key
-CREATE POLICY IF NOT EXISTS "Service role full access to incidents"
+DROP POLICY IF EXISTS "Service role full access to incidents" ON incidents;
+CREATE POLICY "Service role full access to incidents"
   ON incidents
   USING (true)
   WITH CHECK (true);

@@ -15,6 +15,11 @@ CREATE TABLE IF NOT EXISTS scheduled_exports (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Ensure columns exist if table was created with a different schema
+ALTER TABLE scheduled_exports ADD COLUMN IF NOT EXISTS next_run_at TIMESTAMPTZ;
+ALTER TABLE scheduled_exports ADD COLUMN IF NOT EXISTS last_run_at TIMESTAMPTZ;
+ALTER TABLE scheduled_exports ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+
 -- Indexes for common query patterns
 CREATE INDEX IF NOT EXISTS idx_scheduled_exports_active ON scheduled_exports(is_active);
 CREATE INDEX IF NOT EXISTS idx_scheduled_exports_next_run ON scheduled_exports(next_run_at);
@@ -24,6 +29,7 @@ CREATE INDEX IF NOT EXISTS idx_scheduled_exports_created_by ON scheduled_exports
 ALTER TABLE scheduled_exports ENABLE ROW LEVEL SECURITY;
 
 -- All API access goes through service role key, so a permissive policy is safe here.
+DROP POLICY IF EXISTS "Admins can manage scheduled exports" ON scheduled_exports;
 CREATE POLICY "Admins can manage scheduled exports" ON scheduled_exports
   FOR ALL USING (true);
 
@@ -36,6 +42,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trg_scheduled_exports_updated_at ON scheduled_exports;
 CREATE TRIGGER trg_scheduled_exports_updated_at
   BEFORE UPDATE ON scheduled_exports
   FOR EACH ROW EXECUTE FUNCTION update_scheduled_exports_updated_at();

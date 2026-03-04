@@ -12,6 +12,11 @@ CREATE TABLE IF NOT EXISTS program_outcomes (
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- Ensure columns exist if table was created with a different schema
+ALTER TABLE program_outcomes ADD COLUMN IF NOT EXISTS year INTEGER;
+ALTER TABLE program_outcomes ADD COLUMN IF NOT EXISTS cohort_id UUID;
+
 CREATE INDEX IF NOT EXISTS idx_program_outcomes_year ON program_outcomes(year);
 CREATE INDEX IF NOT EXISTS idx_program_outcomes_cohort ON program_outcomes(cohort_id);
 NOTIFY pgrst, 'reload schema';
