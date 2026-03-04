@@ -555,6 +555,58 @@ export async function notifyAdminsNewPendingUser(
   }
 }
 
+/**
+ * Get eligible recipients for shift signup notifications.
+ *
+ * Only includes users who are:
+ *   - Active (is_active = true)
+ *   - Part-time (is_part_time = true) OR volunteer instructors (role = 'volunteer_instructor')
+ *   - NOT generic/shared accounts (emails containing 'timer', 'shared', 'generic', 'test', 'noreply')
+ *
+ * @param excludeEmail - Optional email to exclude (e.g., the shift creator)
+ * @returns Array of { email, name } for eligible recipients
+ */
+export async function getEligibleShiftRecipients(
+  excludeEmail?: string
+): Promise<{ email: string; name: string }[]> {
+  try {
+    const supabase = getSupabaseAdmin();
+
+    const { data: users, error } = await supabase
+      .from('lab_users')
+      .select('email, name')
+      .eq('is_active', true)
+      .or('is_part_time.eq.true,role.eq.volunteer_instructor');
+
+    if (error || !users) {
+      console.error('[SHIFT RECIPIENTS] Error fetching eligible users:', error);
+      return [];
+    }
+
+    // Exclude generic/shared accounts and optionally the specified email
+    const EXCLUDED_EMAIL_PATTERNS = ['timer', 'shared', 'generic', 'test', 'noreply', 'no-reply'];
+
+    return users.filter(user => {
+      const emailLower = user.email.toLowerCase();
+
+      // Exclude shared/generic accounts
+      if (EXCLUDED_EMAIL_PATTERNS.some(pattern => emailLower.includes(pattern))) {
+        return false;
+      }
+
+      // Exclude the specified email (e.g., shift creator)
+      if (excludeEmail && emailLower === excludeEmail.toLowerCase()) {
+        return false;
+      }
+
+      return true;
+    });
+  } catch (err) {
+    console.error('[SHIFT RECIPIENTS] Exception:', err);
+    return [];
+  }
+}
+
 function getRoleLabelForNotification(role: string): string {
   const labels: Record<string, string> = {
     superadmin: 'Super Admin',

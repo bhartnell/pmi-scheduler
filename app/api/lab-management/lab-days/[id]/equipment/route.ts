@@ -35,10 +35,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   try {
     const { data, error } = await supabase
       .from('lab_day_equipment')
-      .select(`
-        *,
-        station:lab_stations(id, station_number, custom_title, skill_name, station_type)
-      `)
+      .select('*')
       .eq('lab_day_id', labDayId)
       .order('created_at', { ascending: true });
 
@@ -95,10 +92,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
         notes: notes?.trim() || null,
         checked_out_by: user.id,
       })
-      .select(`
-        *,
-        station:lab_stations(id, station_number, custom_title, skill_name, station_type)
-      `)
+      .select('*')
       .single();
 
     if (error) throw error;
@@ -164,10 +158,7 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
       .update(updates)
       .eq('id', item_id)
       .eq('lab_day_id', labDayId)
-      .select(`
-        *,
-        station:lab_stations(id, station_number, custom_title, skill_name, station_type)
-      `)
+      .select('*')
       .single();
 
     if (error) throw error;

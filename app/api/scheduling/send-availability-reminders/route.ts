@@ -158,11 +158,18 @@ export async function POST(request: NextRequest) {
       instructorQuery = instructorQuery.in('email', instructor_emails);
     }
 
-    const { data: targetInstructors, error: instructorError } = await instructorQuery;
+    const { data: targetInstructorsRaw, error: instructorError } = await instructorQuery;
 
     if (instructorError) {
       throw instructorError;
     }
+
+    // Exclude generic/shared accounts (e.g. lab timer, test accounts)
+    const EXCLUDED_EMAIL_PATTERNS = ['timer', 'shared', 'generic', 'test', 'noreply', 'no-reply'];
+    const targetInstructors = (targetInstructorsRaw || []).filter((user: { email: string }) => {
+      const emailLower = user.email.toLowerCase();
+      return !EXCLUDED_EMAIL_PATTERNS.some(pattern => emailLower.includes(pattern));
+    });
 
     if (!targetInstructors || targetInstructors.length === 0) {
       return NextResponse.json({

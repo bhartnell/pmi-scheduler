@@ -127,14 +127,14 @@ export async function POST(request: NextRequest) {
     // Validate required columns (headers are lowercased by parseCSV)
     const firstRow = rows[0];
     const columnNames = Object.keys(firstRow);
-    if (!columnNames.includes('id')) {
-      return NextResponse.json({ success: false, error: 'CSV must have an "id" column' }, { status: 400 });
-    }
     if (!columnNames.includes('status')) {
       return NextResponse.json({ success: false, error: `CSV must have a "status" column. Found columns: ${columnNames.join(', ')}` }, { status: 400 });
     }
+    // Track whether CSV has an id column (rows without a valid id will be inserted as new)
+    const hasIdCol = columnNames.includes('id');
 
     const results = {
+      inserted: 0,
       updated: 0,
       skipped: 0,
       errors: [] as string[],
@@ -148,12 +148,9 @@ export async function POST(request: NextRequest) {
       const rawType = row['type']?.trim();
       const rawPriority = row['priority']?.trim();
       const resolutionNotes = row['resolution notes'] || row['resolution_notes'] || '';
-
-      // Validate UUID
-      if (!id || !UUID_REGEX.test(id)) {
-        results.errors.push(`Row ${rowNum}: Invalid or missing ID "${id}"`);
-        continue;
-      }
+      const description = row['description']?.trim() || '';
+      const reporter = row['reporter']?.trim() || '';
+      const page = row['page']?.trim() || '';
 
       // Normalize and validate type (if present in CSV)
       let newType: string | null = null;
@@ -182,7 +179,51 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Fetch current report
+      // --- INSERT path: row has no id (or id column missing) → insert new record ---
+      const hasValidId = hasIdCol && id && UUID_REGEX.test(id);
+
+      if (!hasValidId) {
+        // For new rows, description is required
+        if (!description) {
+          results.errors.push(`Row ${rowNum}: New feedback row requires a "description" column with a value`);
+          continue;
+        }
+
+        const insertData: Record<string, any> = {
+          description,
+          status: newStatus,
+          report_type: newType || 'other',
+          priority: newPriority || 'medium',
+          user_email: reporter || session.user.email,
+          page_url: page || null,
+          created_at: new Date().toISOString(),
+        };
+
+        if (resolutionNotes.trim()) {
+          insertData.resolution_notes = resolutionNotes.trim();
+        }
+
+        if (newStatus === 'resolved') {
+          insertData.resolved_at = new Date().toISOString();
+          insertData.resolved_by = session.user.email;
+        }
+
+        const { error: insertError } = await supabase
+          .from('feedback_reports')
+          .insert(insertData);
+
+        if (insertError) {
+          results.errors.push(`Row ${rowNum}: Failed to insert — ${insertError.message}`);
+          continue;
+        }
+
+        results.inserted++;
+        continue;
+      }
+
+      // --- UPSERT/UPDATE path: row has a valid id → update existing or insert with that id ---
+
+      // Fetch current report to check if it exists
       const { data: current, error: fetchError } = await supabase
         .from('feedback_reports')
         .select('id, status, report_type, priority, user_email, page_url, description')
@@ -190,11 +231,46 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (fetchError || !current) {
-        results.errors.push(`Row ${rowNum}: Feedback report not found for ID "${id}"`);
+        // Record with this id doesn't exist — upsert as new with the given id
+        if (!description) {
+          results.errors.push(`Row ${rowNum}: Feedback report not found for ID "${id}" and no description provided for insert`);
+          continue;
+        }
+
+        const upsertData: Record<string, any> = {
+          id,
+          description,
+          status: newStatus,
+          report_type: newType || 'other',
+          priority: newPriority || 'medium',
+          user_email: reporter || session.user.email,
+          page_url: page || null,
+          created_at: new Date().toISOString(),
+        };
+
+        if (resolutionNotes.trim()) {
+          upsertData.resolution_notes = resolutionNotes.trim();
+        }
+
+        if (newStatus === 'resolved') {
+          upsertData.resolved_at = new Date().toISOString();
+          upsertData.resolved_by = session.user.email;
+        }
+
+        const { error: upsertError } = await supabase
+          .from('feedback_reports')
+          .upsert(upsertData, { onConflict: 'id' });
+
+        if (upsertError) {
+          results.errors.push(`Row ${rowNum}: Failed to insert — ${upsertError.message}`);
+          continue;
+        }
+
+        results.inserted++;
         continue;
       }
 
-      // Determine what changed
+      // Record exists — determine what changed and update
       const statusChanged = current.status !== newStatus;
       const typeChanged = newType && current.report_type !== newType;
       const priorityChanged = newPriority && current.priority !== newPriority;
