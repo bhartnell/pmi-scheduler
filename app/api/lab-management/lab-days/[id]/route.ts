@@ -158,6 +158,15 @@ export async function PATCH(
     if (body.status !== undefined) allowedFields.status = body.status;
     if (body.start_time !== undefined) allowedFields.start_time = body.start_time;
     if (body.end_time !== undefined) allowedFields.end_time = body.end_time;
+    if (body.num_rotations !== undefined) allowedFields.num_rotations = body.num_rotations;
+    if (body.rotation_duration !== undefined) allowedFields.rotation_duration = body.rotation_duration;
+    if (body.week_number !== undefined) allowedFields.week_number = body.week_number;
+    if (body.day_number !== undefined) allowedFields.day_number = body.day_number;
+    if (body.assigned_timer_id !== undefined) allowedFields.assigned_timer_id = body.assigned_timer_id;
+    if (body.needs_coverage !== undefined) allowedFields.needs_coverage = body.needs_coverage;
+    if (body.coverage_needed !== undefined) allowedFields.coverage_needed = body.coverage_needed;
+    if (body.coverage_note !== undefined) allowedFields.coverage_note = body.coverage_note;
+    if (body.room !== undefined) allowedFields.room = body.room;
 
     if (Object.keys(allowedFields).length === 0) {
       return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
