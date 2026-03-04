@@ -62,13 +62,14 @@ CREATE TABLE IF NOT EXISTS affiliation_notifications_log (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   affiliation_id UUID NOT NULL REFERENCES clinical_affiliations(id) ON DELETE CASCADE,
   notification_type TEXT NOT NULL,
+  sent_date DATE NOT NULL DEFAULT CURRENT_DATE,
   sent_at TIMESTAMPTZ DEFAULT NOW(),
   recipients TEXT[]
 );
 
 -- Prevent duplicate notifications on the same day for same affiliation + type
 CREATE UNIQUE INDEX IF NOT EXISTS idx_affiliation_notif_dedup
-  ON affiliation_notifications_log(affiliation_id, notification_type, (sent_at::date));
+  ON affiliation_notifications_log(affiliation_id, notification_type, sent_date);
 
 ALTER TABLE affiliation_notifications_log ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Authenticated users view notification logs"
