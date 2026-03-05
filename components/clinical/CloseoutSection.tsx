@@ -147,6 +147,9 @@ export default function CloseoutSection({
   // Summary generation state
   const [generatingSummary, setGeneratingSummary] = useState(false);
 
+  // Packet generation state
+  const [generatingPacket, setGeneratingPacket] = useState(false);
+
   // Survey state
   const [surveys, setSurveys] = useState<CloseoutSurvey[]>([]);
   const [surveysLoading, setSurveysLoading] = useState(true);
@@ -723,6 +726,610 @@ export default function CloseoutSection({
     setGeneratingSummary(false);
   };
 
+  // --- Closeout Packet Generation ---
+
+  interface PacketPreceptor {
+    name: string;
+    role: string;
+    is_active: boolean;
+    agency: string | null;
+    station: string | null;
+    credentials: string | null;
+  }
+
+  interface HoursRow {
+    department: string;
+    hours: number;
+    shifts: number;
+  }
+
+  interface PacketData {
+    student_name: string;
+    student_email: string | null;
+    program: string;
+    program_abbreviation: string;
+    cohort_number: string | null;
+    agency_name: string | null;
+    agency_abbreviation: string | null;
+    shift_type: string;
+    current_phase: string;
+    status: string;
+    internship_start_date: string | null;
+    expected_end_date: string | null;
+    actual_end_date: string | null;
+    orientation_date: string | null;
+    orientation_completed: boolean;
+    phase_1_start_date: string | null;
+    phase_1_end_date: string | null;
+    phase_1_eval_scheduled: string | null;
+    phase_1_eval_completed: boolean;
+    phase_2_start_date: string | null;
+    phase_2_end_date: string | null;
+    phase_2_eval_scheduled: string | null;
+    phase_2_eval_completed: boolean;
+    is_extended: boolean;
+    extension_reason: string | null;
+    extension_date: string | null;
+    original_expected_end_date: string | null;
+    hours_breakdown: HoursRow[];
+    total_hours: number;
+    total_shifts: number;
+    required_hours: number;
+    completed_shift_count: number;
+    hours_met: boolean;
+    preceptors: PacketPreceptor[];
+    written_exam_date: string | null;
+    written_exam_passed: boolean;
+    psychomotor_exam_date: string | null;
+    psychomotor_exam_passed: boolean;
+    snhd_field_docs_submitted_at: string | null;
+    snhd_course_completion_submitted_at: string | null;
+    cleared_for_nremt: boolean;
+    nremt_clearance_date: string | null;
+    closeout_meeting_date: string | null;
+    closeout_completed: boolean;
+    internship_completion_date: string | null;
+    completed_at: string | null;
+    completed_by: string | null;
+    hospital_survey_completed: boolean;
+    hospital_survey_date: string | null;
+    field_survey_completed: boolean;
+    field_survey_date: string | null;
+    employment_verified: boolean;
+    employment_company: string | null;
+    employment_title: string | null;
+    employment_date: string | null;
+  }
+
+  const renderPacketHTML = (data: PacketData): string => {
+    const fmtDate = (d: string | null) => {
+      if (!d) return '<span class="empty">N/A</span>';
+      return parseDateSafe(d).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+    };
+
+    const check = (val: boolean) =>
+      val
+        ? '<span style="color:#16a34a; font-weight:600;">&#10003; Yes</span>'
+        : '<span style="color:#dc2626; font-weight:600;">&#10007; No</span>';
+
+    const statusBadge = (val: boolean) =>
+      val
+        ? '<span style="display:inline-block; padding:2px 8px; background:#dcfce7; color:#15803d; border-radius:4px; font-size:11px; font-weight:600;">COMPLETE</span>'
+        : '<span style="display:inline-block; padding:2px 8px; background:#fef2f2; color:#991b1b; border-radius:4px; font-size:11px; font-weight:600;">PENDING</span>';
+
+    // Hours breakdown table rows (only show departments with hours)
+    const hoursRows = data.hours_breakdown
+      .filter(row => row.hours > 0 || row.shifts > 0)
+      .map(row => `
+        <tr>
+          <td style="padding:5px 10px; border-bottom:1px solid #e5e7eb;">${row.department}</td>
+          <td style="padding:5px 10px; border-bottom:1px solid #e5e7eb; text-align:center;">${row.hours}</td>
+          <td style="padding:5px 10px; border-bottom:1px solid #e5e7eb; text-align:center;">${row.shifts}</td>
+        </tr>
+      `)
+      .join('');
+
+    // Preceptor rows
+    const preceptorRows = data.preceptors.length > 0
+      ? data.preceptors.map(p => `
+          <tr>
+            <td style="padding:5px 10px; border-bottom:1px solid #e5e7eb;">
+              ${p.name}${p.credentials ? ', ' + p.credentials : ''}
+            </td>
+            <td style="padding:5px 10px; border-bottom:1px solid #e5e7eb; text-transform:capitalize;">${p.role}</td>
+            <td style="padding:5px 10px; border-bottom:1px solid #e5e7eb;">
+              ${p.is_active
+                ? '<span style="color:#16a34a;">Active</span>'
+                : '<span style="color:#6b7280;">Inactive</span>'}
+            </td>
+            <td style="padding:5px 10px; border-bottom:1px solid #e5e7eb;">${p.agency || ''}</td>
+            <td style="padding:5px 10px; border-bottom:1px solid #e5e7eb;">${p.station || ''}</td>
+          </tr>
+        `)
+        .join('')
+      : '<tr><td colspan="5" style="padding:8px 10px; color:#9ca3af; font-style:italic;">No preceptors assigned</td></tr>';
+
+    // Extension section (only if extended)
+    const extensionSection = data.is_extended
+      ? `
+      <div class="section">
+        <div class="section-header" style="background:#fef3c7; color:#92400e;">Extension Information</div>
+        <div class="info-grid">
+          <div class="info-cell">
+            <div class="info-label">Extension Date</div>
+            <div class="info-value">${fmtDate(data.extension_date)}</div>
+          </div>
+          <div class="info-cell">
+            <div class="info-label">Original Expected End</div>
+            <div class="info-value">${fmtDate(data.original_expected_end_date)}</div>
+          </div>
+          <div class="info-cell" style="grid-column: span 2;">
+            <div class="info-label">Reason</div>
+            <div class="info-value">${data.extension_reason || '<span class="empty">Not recorded</span>'}</div>
+          </div>
+        </div>
+      </div>`
+      : '';
+
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Closeout Packet - ${data.student_name}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      color: #111827;
+      background: #fff;
+      padding: 32px;
+      max-width: 800px;
+      margin: 0 auto;
+      line-height: 1.5;
+    }
+    .header {
+      text-align: center;
+      border-bottom: 3px solid #1d4ed8;
+      padding-bottom: 20px;
+      margin-bottom: 24px;
+    }
+    .header .logo-text {
+      font-size: 22px;
+      font-weight: 700;
+      color: #1d4ed8;
+      letter-spacing: 0.5px;
+    }
+    .header .sub-title {
+      font-size: 14px;
+      color: #6b7280;
+      margin-top: 2px;
+    }
+    .header .doc-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #111827;
+      margin-top: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .section {
+      margin-bottom: 18px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      overflow: hidden;
+      page-break-inside: avoid;
+    }
+    .section-header {
+      background: #f3f4f6;
+      padding: 8px 12px;
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #374151;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+    }
+    .info-cell {
+      padding: 8px 12px;
+      border-bottom: 1px solid #f3f4f6;
+    }
+    .info-cell:nth-child(odd) {
+      border-right: 1px solid #f3f4f6;
+    }
+    .info-label {
+      font-size: 10px;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      margin-bottom: 1px;
+    }
+    .info-value {
+      font-size: 13px;
+      font-weight: 500;
+      color: #111827;
+    }
+    .empty {
+      color: #9ca3af;
+      font-style: italic;
+      font-weight: 400;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    th {
+      background: #f9fafb;
+      padding: 6px 10px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      color: #374151;
+      border-bottom: 2px solid #e5e7eb;
+    }
+    th.center { text-align: center; }
+    .totals-row td {
+      font-weight: 700;
+      background: #f0f9ff;
+      border-top: 2px solid #1d4ed8;
+    }
+    .completion-status {
+      text-align: center;
+      margin: 16px 0;
+      padding: 12px;
+      border-radius: 8px;
+    }
+    .completion-status.complete {
+      background: #f0fdf4;
+      border: 2px solid #16a34a;
+    }
+    .completion-status.incomplete {
+      background: #fffbeb;
+      border: 2px solid #d97706;
+    }
+    .stamp-text {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .stamp-date {
+      font-size: 12px;
+      margin-top: 2px;
+    }
+    .footer {
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: #6b7280;
+    }
+    .signature-line {
+      margin-top: 40px;
+      padding-top: 8px;
+      border-top: 1px solid #111827;
+      font-size: 12px;
+      color: #374151;
+      width: 300px;
+      text-align: center;
+    }
+    .signatures {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 32px;
+      page-break-inside: avoid;
+    }
+    .no-print {
+      display: block;
+    }
+    .print-btn {
+      display: inline-block;
+      margin: 0 8px 24px;
+      padding: 10px 28px;
+      background: #1d4ed8;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      letter-spacing: 0.3px;
+    }
+    .print-btn:hover { background: #1e40af; }
+    .print-btn.secondary {
+      background: #6b7280;
+    }
+    .print-btn.secondary:hover { background: #4b5563; }
+    @page { margin: 0.5in 0.6in; }
+    @media print {
+      body { padding: 0; max-width: 100%; color: #111827; background: #fff; font-size: 11px; }
+      .no-print { display: none !important; }
+      .section { margin-bottom: 12px; }
+      .info-cell { padding: 6px 10px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="no-print" style="text-align:center; margin-bottom:20px;">
+    <button class="print-btn" onclick="window.print()">Print / Save as PDF</button>
+    <button class="print-btn secondary" onclick="window.close()">Close</button>
+  </div>
+
+  <div class="header">
+    <div class="logo-text">PIMA MEDICAL INSTITUTE</div>
+    <div class="sub-title">${data.program}</div>
+    <div class="doc-title">Closeout Packet</div>
+  </div>
+
+  ${data.completed_at
+    ? `<div class="completion-status complete">
+        <div class="stamp-text" style="color:#15803d;">Officially Completed</div>
+        <div class="stamp-date" style="color:#166534;">${fmtDate(data.completed_at)}${data.completed_by ? ' &mdash; Verified by: ' + data.completed_by : ''}</div>
+      </div>`
+    : `<div class="completion-status incomplete">
+        <div class="stamp-text" style="color:#92400e;">In Progress</div>
+        <div class="stamp-date" style="color:#92400e;">Status: ${data.status} &mdash; Phase: ${data.current_phase}</div>
+      </div>`
+  }
+
+  <!-- Student Information -->
+  <div class="section">
+    <div class="section-header">Student Information</div>
+    <div class="info-grid">
+      <div class="info-cell">
+        <div class="info-label">Student Name</div>
+        <div class="info-value">${data.student_name}</div>
+      </div>
+      <div class="info-cell">
+        <div class="info-label">Email</div>
+        <div class="info-value">${data.student_email || '<span class="empty">N/A</span>'}</div>
+      </div>
+      <div class="info-cell">
+        <div class="info-label">Program</div>
+        <div class="info-value">${data.program} (${data.program_abbreviation})</div>
+      </div>
+      <div class="info-cell">
+        <div class="info-label">Cohort</div>
+        <div class="info-value">${data.cohort_number ? 'Cohort ' + data.cohort_number : '<span class="empty">Not assigned</span>'}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Internship Details -->
+  <div class="section">
+    <div class="section-header">Internship Details</div>
+    <div class="info-grid">
+      <div class="info-cell">
+        <div class="info-label">Agency</div>
+        <div class="info-value">${data.agency_name || '<span class="empty">Not assigned</span>'}${data.agency_abbreviation ? ' (' + data.agency_abbreviation + ')' : ''}</div>
+      </div>
+      <div class="info-cell">
+        <div class="info-label">Shift Type</div>
+        <div class="info-value">${data.shift_type}</div>
+      </div>
+      <div class="info-cell">
+        <div class="info-label">Start Date</div>
+        <div class="info-value">${fmtDate(data.internship_start_date)}</div>
+      </div>
+      <div class="info-cell">
+        <div class="info-label">Expected End Date</div>
+        <div class="info-value">${fmtDate(data.expected_end_date)}</div>
+      </div>
+      <div class="info-cell">
+        <div class="info-label">Actual End Date</div>
+        <div class="info-value">${fmtDate(data.actual_end_date)}</div>
+      </div>
+      <div class="info-cell">
+        <div class="info-label">Orientation</div>
+        <div class="info-value">${data.orientation_completed ? fmtDate(data.orientation_date) + ' &#10003;' : (data.orientation_date ? fmtDate(data.orientation_date) + ' (scheduled)' : '<span class="empty">Not scheduled</span>')}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Phase Progress -->
+  <div class="section">
+    <div class="section-header">Phase Progress</div>
+    <div class="info-grid">
+      <div class="info-cell">
+        <div class="info-label">Phase 1 Start</div>
+        <div class="info-value">${fmtDate(data.phase_1_start_date)}</div>
+      </div>
+      <div class="info-cell">
+        <div class="info-label">Phase 1 Eval</div>
+        <div class="info-value">${fmtDate(data.phase_1_eval_scheduled)} ${statusBadge(data.phase_1_eval_completed)}</div>
+      </div>
+      <div class="info-cell">
+        <div class="info-label">Phase 2 Start</div>
+        <div class="info-value">${fmtDate(data.phase_2_start_date)}</div>
+      </div>
+      <div class="info-cell">
+        <div class="info-label">Phase 2 Eval</div>
+        <div class="info-value">${fmtDate(data.phase_2_eval_scheduled)} ${statusBadge(data.phase_2_eval_completed)}</div>
+      </div>
+    </div>
+  </div>
+
+  ${extensionSection}
+
+  <!-- Preceptor Assignments -->
+  <div class="section">
+    <div class="section-header">Preceptor Assignments</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Role</th>
+          <th>Status</th>
+          <th>Agency</th>
+          <th>Station</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${preceptorRows}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Clinical Hours Breakdown -->
+  <div class="section">
+    <div class="section-header">Clinical Hours by Rotation Type</div>
+    ${hoursRows
+      ? `<table>
+          <thead>
+            <tr>
+              <th>Department / Rotation</th>
+              <th class="center">Hours</th>
+              <th class="center">Shifts</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${hoursRows}
+            <tr class="totals-row">
+              <td style="padding:6px 10px; font-weight:700;">TOTAL</td>
+              <td style="padding:6px 10px; text-align:center; font-weight:700;">${data.total_hours}</td>
+              <td style="padding:6px 10px; text-align:center; font-weight:700;">${data.total_shifts}</td>
+            </tr>
+          </tbody>
+        </table>
+        <div style="padding:8px 12px; font-size:12px; background:#f9fafb; border-top:1px solid #e5e7eb;">
+          <strong>Required Hours:</strong> ${data.required_hours} &nbsp;&nbsp;|&nbsp;&nbsp;
+          <strong>Completed:</strong> ${data.total_hours} &nbsp;&nbsp;|&nbsp;&nbsp;
+          <strong>Status:</strong> ${data.hours_met
+            ? '<span style="color:#16a34a; font-weight:600;">Hours Requirement Met &#10003;</span>'
+            : '<span style="color:#dc2626; font-weight:600;">Hours Requirement Not Met (' + (data.required_hours - data.total_hours) + ' remaining)</span>'}
+        </div>`
+      : '<div style="padding:12px; color:#9ca3af; font-style:italic;">No clinical hours recorded</div>'
+    }
+  </div>
+
+  <!-- Exams -->
+  <div class="section">
+    <div class="section-header">Examination Results</div>
+    <div class="info-grid">
+      <div class="info-cell">
+        <div class="info-label">Written Exam Date</div>
+        <div class="info-value">${fmtDate(data.written_exam_date)}</div>
+      </div>
+      <div class="info-cell">
+        <div class="info-label">Written Exam Result</div>
+        <div class="info-value">${data.written_exam_date ? check(data.written_exam_passed) : '<span class="empty">Not taken</span>'}</div>
+      </div>
+      <div class="info-cell">
+        <div class="info-label">Psychomotor Exam Date</div>
+        <div class="info-value">${fmtDate(data.psychomotor_exam_date)}</div>
+      </div>
+      <div class="info-cell">
+        <div class="info-label">Psychomotor Exam Result</div>
+        <div class="info-value">${data.psychomotor_exam_date ? check(data.psychomotor_exam_passed) : '<span class="empty">Not taken</span>'}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SNHD & NREMT -->
+  <div class="section">
+    <div class="section-header">SNHD Submissions & NREMT Clearance</div>
+    <div class="info-grid">
+      <div class="info-cell">
+        <div class="info-label">Field Docs Submitted</div>
+        <div class="info-value">${data.snhd_field_docs_submitted_at ? fmtDate(data.snhd_field_docs_submitted_at) + ' &#10003;' : '<span class="empty">Not submitted</span>'}</div>
+      </div>
+      <div class="info-cell">
+        <div class="info-label">Course Completion Submitted</div>
+        <div class="info-value">${data.snhd_course_completion_submitted_at ? fmtDate(data.snhd_course_completion_submitted_at) + ' &#10003;' : '<span class="empty">Not submitted</span>'}</div>
+      </div>
+      <div class="info-cell">
+        <div class="info-label">NREMT Clearance</div>
+        <div class="info-value">${check(data.cleared_for_nremt)}</div>
+      </div>
+      <div class="info-cell">
+        <div class="info-label">NREMT Clearance Date</div>
+        <div class="info-value">${fmtDate(data.nremt_clearance_date)}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Closeout Status -->
+  <div class="section">
+    <div class="section-header">Closeout Status</div>
+    <div class="info-grid">
+      <div class="info-cell">
+        <div class="info-label">Internship Completion Date</div>
+        <div class="info-value">${fmtDate(data.internship_completion_date)}</div>
+      </div>
+      <div class="info-cell">
+        <div class="info-label">Closeout Meeting</div>
+        <div class="info-value">${data.closeout_completed ? fmtDate(data.closeout_meeting_date) + ' &#10003;' : (data.closeout_meeting_date ? fmtDate(data.closeout_meeting_date) + ' (scheduled)' : '<span class="empty">Not scheduled</span>')}</div>
+      </div>
+      <div class="info-cell">
+        <div class="info-label">Hospital Preceptor Survey</div>
+        <div class="info-value">${data.hospital_survey_completed ? (data.hospital_survey_date ? fmtDate(data.hospital_survey_date) : 'Completed') + ' &#10003;' : '<span class="empty">Pending</span>'}</div>
+      </div>
+      <div class="info-cell">
+        <div class="info-label">Field Preceptor Survey</div>
+        <div class="info-value">${data.field_survey_completed ? (data.field_survey_date ? fmtDate(data.field_survey_date) : 'Completed') + ' &#10003;' : '<span class="empty">Pending</span>'}</div>
+      </div>
+      <div class="info-cell" style="grid-column: span 2;">
+        <div class="info-label">Employment Verification</div>
+        <div class="info-value">${data.employment_verified
+          ? (data.employment_company ? data.employment_company : '') + (data.employment_title ? ' &mdash; ' + data.employment_title : '') + ' &#10003;'
+          : '<span class="empty">Not recorded</span>'
+        }</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Signature Lines -->
+  <div class="signatures">
+    <div class="signature-line">Program Director / Lead Instructor</div>
+    <div class="signature-line">Date</div>
+  </div>
+
+  <div class="footer">
+    <div>Generated: ${new Date().toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'short' })}</div>
+    <div>PMI ${data.program} &mdash; Closeout Packet</div>
+  </div>
+</body>
+</html>`;
+  };
+
+  const generatePacket = async () => {
+    setGeneratingPacket(true);
+    try {
+      const res = await fetch(`/api/clinical/internships/${internshipId}/closeout/packet`);
+      const data = await res.json();
+      if (!data.success) {
+        showToastMessage(data.error || 'Failed to generate closeout packet', 'error');
+        return;
+      }
+      const html = renderPacketHTML(data.packet);
+      const win = window.open('', '_blank');
+      if (win) {
+        win.document.write(html);
+        win.document.close();
+      } else {
+        showToastMessage('Popup was blocked. Please allow popups for this site.', 'error');
+      }
+    } catch (error) {
+      console.error('Error generating closeout packet:', error);
+      showToastMessage('Failed to generate closeout packet', 'error');
+    }
+    setGeneratingPacket(false);
+  };
+
   if (loading) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
@@ -1261,6 +1868,27 @@ export default function CloseoutSection({
               )}
               Generate Completion Summary
             </button>
+          </div>
+        )}
+
+        {/* Generate Closeout Packet Button */}
+        {isAdmin && (
+          <div className={`pt-3 ${completedAt ? '' : 'border-t border-gray-200 dark:border-gray-700'}`}>
+            <button
+              onClick={generatePacket}
+              disabled={generatingPacket}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-medium bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-60 transition-colors"
+            >
+              {generatingPacket ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <ClipboardList className="w-5 h-5" />
+              )}
+              Generate Closeout Packet
+            </button>
+            <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-1">
+              Comprehensive printable record with hours, exams, preceptors & SNHD status
+            </p>
           </div>
         )}
 
