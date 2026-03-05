@@ -25,6 +25,9 @@ import {
   GripVertical,
 } from 'lucide-react';
 
+import { hasMinRole } from '@/lib/permissions';
+import { useEffectiveRole } from '@/hooks/useEffectiveRole';
+
 // ─────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────
@@ -130,12 +133,32 @@ export default function ReportBuilderPage() {
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
 
+  // Role state for guard
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const effectiveRole = useEffectiveRole(userRole);
+
   // ── Auth guard ──────────────────────────────────
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/signin');
     }
   }, [status, router]);
+
+  // Role guard: instructor+ only
+  useEffect(() => {
+    if (effectiveRole && !hasMinRole(effectiveRole, 'instructor')) {
+      router.push('/');
+    }
+  }, [effectiveRole, router]);
+
+  // Fetch user role for guard
+  useEffect(() => {
+    if (!session?.user?.email) return;
+    fetch('/api/instructor/me')
+      .then(res => res.json())
+      .then(data => { if (data.success && data.user?.role) setUserRole(data.user.role); })
+      .catch(() => {});
+  }, [session]);
 
   // ── Load schema ──────────────────────────────────
   useEffect(() => {

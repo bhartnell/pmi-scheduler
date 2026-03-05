@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Plus, Settings, BarChart3, Users } from 'lucide-react';
 import LabHeader from '@/components/LabHeader';
-import { canManageContent } from '@/lib/permissions';
+import { canManageContent, hasMinRole, canAccessScheduling } from '@/lib/permissions';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import CustomizeModal from '@/components/dashboard/CustomizeModal';
 import {
@@ -44,6 +44,16 @@ export default function LabManagementDashboard() {
       router.push('/');
     }
   }, [status, router]);
+
+  // Role guard: vol_instructor → schedule, others without access → home
+  useEffect(() => {
+    if (!effectiveRole) return;
+    if (effectiveRole === 'volunteer_instructor') {
+      router.push('/lab-management/schedule');
+    } else if (!hasMinRole(effectiveRole, 'instructor') && !canAccessScheduling(effectiveRole)) {
+      router.push('/');
+    }
+  }, [effectiveRole, router]);
 
   useEffect(() => {
     if (session?.user?.email) {

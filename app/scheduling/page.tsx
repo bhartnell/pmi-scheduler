@@ -19,7 +19,7 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import NotificationBell from '@/components/NotificationBell';
 import { PageLoader } from '@/components/ui';
 import { isDirector } from '@/lib/endorsements';
-import { hasMinRole } from '@/lib/permissions';
+import { hasMinRole, canAccessScheduling } from '@/lib/permissions';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import type { CurrentUser } from '@/types';
 
@@ -38,6 +38,13 @@ export default function SchedulingPage() {
       router.push('/');
     }
   }, [status, router]);
+
+  // Role guard: only scheduling-enabled roles
+  useEffect(() => {
+    if (effectiveRole && !canAccessScheduling(effectiveRole)) {
+      router.push('/');
+    }
+  }, [effectiveRole, router]);
 
   useEffect(() => {
     if (session?.user?.email) {

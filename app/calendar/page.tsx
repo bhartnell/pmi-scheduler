@@ -20,6 +20,8 @@ import {
 import { downloadICS, parseLocalDate } from '@/lib/ics-export';
 import { useToast } from '@/components/Toast';
 import HelpTooltip from '@/components/HelpTooltip';
+import { canAccessScheduling } from '@/lib/permissions';
+import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 
 interface Cohort {
   id: string;
@@ -86,6 +88,7 @@ export default function CalendarPage() {
   const toast = useToast();
 
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const effectiveRole = useEffectiveRole(currentUser?.role ?? null);
   const [labDays, setLabDays] = useState<LabDay[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [loading, setLoading] = useState(true);
@@ -103,6 +106,13 @@ export default function CalendarPage() {
       router.push('/auth/signin');
     }
   }, [status, router]);
+
+  // Role guard: scheduling-enabled roles only
+  useEffect(() => {
+    if (effectiveRole && !canAccessScheduling(effectiveRole)) {
+      router.push('/');
+    }
+  }, [effectiveRole, router]);
 
   useEffect(() => {
     if (session?.user?.email) {

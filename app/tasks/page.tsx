@@ -30,6 +30,8 @@ import NotificationBell from '@/components/NotificationBell';
 import TaskKanban from '@/components/TaskKanban';
 import EmptyState from '@/components/EmptyState';
 import { useToast } from '@/components/Toast';
+import { hasMinRole } from '@/lib/permissions';
+import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { PageLoader, SkeletonCard } from '@/components/ui';
 import { PageErrorBoundary } from '@/components/PageErrorBoundary';
 import { useKeyboardShortcuts, KeyboardShortcut } from '@/hooks/useKeyboardShortcuts';
@@ -74,6 +76,7 @@ function TasksPageContent() {
   const [tasks, setTasks] = useState<ExtendedTask[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<LabUser | null>(null);
+  const effectiveRole = useEffectiveRole((currentUser as any)?.role ?? null);
   const [instructors, setInstructors] = useState<LabUser[]>([]);
 
   // Filter state
@@ -114,6 +117,13 @@ function TasksPageContent() {
       router.push('/');
     }
   }, [status, router]);
+
+  // Role guard: instructor+ only
+  useEffect(() => {
+    if (effectiveRole && !hasMinRole(effectiveRole, 'instructor')) {
+      router.push('/');
+    }
+  }, [effectiveRole, router]);
 
   useEffect(() => {
     if (session?.user?.email) {

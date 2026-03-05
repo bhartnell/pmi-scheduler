@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { Calendar, LogOut, Plus, ExternalLink, Eye, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { hasMinRole } from '@/lib/permissions';
+import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import Link from 'next/link';
 
 export default function SchedulerHome() {
@@ -13,6 +15,8 @@ export default function SchedulerHome() {
   const [polls, setPolls] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const effectiveRole = useEffectiveRole(userRole);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -20,8 +24,20 @@ export default function SchedulerHome() {
     }
   }, [status, router]);
 
+  // Role guard: instructor+ only
+  useEffect(() => {
+    if (effectiveRole && !hasMinRole(effectiveRole, 'instructor')) {
+      router.push('/');
+    }
+  }, [effectiveRole, router]);
+
   useEffect(() => {
     if (session?.user?.email) {
+      // Fetch role for guard
+      fetch('/api/instructor/me')
+        .then(res => res.json())
+        .then(data => { if (data.success && data.user?.role) setUserRole(data.user.role); })
+        .catch(() => {});
       fetchPolls();
     }
   }, [session]);
