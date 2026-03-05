@@ -1,17 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { createClient } from '@supabase/supabase-js';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { requireAuth } from '@/lib/api-auth';
 
 // GET - List endorsements (optionally filtered by user)
 export async function GET(request: NextRequest) {
   try {
-    const supabase = getSupabaseAdmin();
+    const auth = await requireAuth('admin');
+    if (auth instanceof NextResponse) return auth;
 
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const supabase = getSupabaseAdmin();
 
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
