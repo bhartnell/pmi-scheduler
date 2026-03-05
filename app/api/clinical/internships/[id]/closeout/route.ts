@@ -71,14 +71,16 @@ export async function GET(
 
     // Fetch clinical hours from student_clinical_hours (if available)
     let totalHours = 0;
+    let hasHoursRecord = false;
     if (internship.student_id) {
       const { data: hoursRecord } = await supabase
         .from('student_clinical_hours')
         .select('total_hours')
         .eq('student_id', internship.student_id)
         .maybeSingle();
-      if (hoursRecord?.total_hours) {
-        totalHours = hoursRecord.total_hours;
+      if (hoursRecord) {
+        hasHoursRecord = true;
+        totalHours = hoursRecord.total_hours || 0;
       }
     }
 
@@ -103,7 +105,9 @@ export async function GET(
         label: 'All required shifts completed',
         auto_checked: totalHours >= requiredHours,
         manual_override: !!savedOverrides['shifts_completed'],
-        details: `${totalHours}/${requiredHours} hours`,
+        details: hasHoursRecord
+          ? `${totalHours}/${requiredHours} hours`
+          : `0/${requiredHours} hours — no clinical hours data imported yet`,
       },
       {
         key: 'final_eval_submitted',
@@ -130,7 +134,9 @@ export async function GET(
         label: 'Clinical hours verified',
         auto_checked: totalHours >= requiredHours,
         manual_override: !!savedOverrides['hours_verified'],
-        details: `${totalHours} total hours logged`,
+        details: hasHoursRecord
+          ? `${totalHours} total hours logged`
+          : 'No clinical hours data imported yet',
       },
       {
         key: 'snhd_field_docs',
@@ -211,20 +217,27 @@ export async function PATCH(
 
     const now = new Date().toISOString();
 
-    const { error } = await supabase
+    const { data: updated, error } = await supabase
       .from('student_internships')
       .update({
         closeout_overrides: overrides,
         updated_at: now,
       })
-      .eq('id', id);
+      .eq('id', id)
+      .select('id, closeout_overrides')
+      .single();
 
     if (error) {
-      console.error('Error saving closeout overrides:', error.message);
+      console.error('Error saving closeout overrides:', error.code, error.message, error.details);
       return NextResponse.json({ success: false, error: 'Failed to save overrides' }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true });
+    if (!updated) {
+      console.error('Closeout overrides PATCH: no row returned after update for id:', id);
+      return NextResponse.json({ success: false, error: 'Internship not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true, overrides: updated.closeout_overrides });
   } catch (error) {
     console.error('Error in closeout PATCH:', error);
     return NextResponse.json({ success: false, error: 'Failed to save overrides' }, { status: 500 });
