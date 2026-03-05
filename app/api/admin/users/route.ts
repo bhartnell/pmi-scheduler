@@ -5,11 +5,13 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 import {
   canAccessAdmin,
   canModifyUser,
+  canAssignRole,
   canDeleteUsers,
   isProtectedSuperadmin,
   type Role
 } from '@/lib/permissions';
 import { notifyRoleApproved } from '@/lib/notifications';
+import { logAuditEvent } from '@/lib/audit';
 
 // Helper to get current user with role
 async function getCurrentUser(email: string) {
@@ -58,6 +60,14 @@ export async function GET(request: NextRequest) {
     const { data, error, count } = await query;
 
     if (error) throw error;
+
+    // One-time audit: log users with admin role when superadmin views list
+    if (currentUser.role === 'superadmin' && data) {
+      const adminUsers = data.filter((u: any) => u.role === 'admin');
+      if (adminUsers.length > 0) {
+        console.log('[Admin Audit] Current admin-role users:', adminUsers.map((u: any) => u.email));
+      }
+    }
 
     return NextResponse.json({ success: true, users: data, pagination: { limit, offset, total: count || 0 } });
   } catch (error) {
@@ -174,6 +184,13 @@ export async function PATCH(request: NextRequest) {
     const isUpgradeFromPending = targetUser.role === 'pending' && role && role !== 'pending';
 
     if (role !== undefined) {
+      // Validate the requesting user can assign this specific role
+      if (!canAssignRole(currentUser.role as Role, role as Role)) {
+        return NextResponse.json(
+          { success: false, error: 'Insufficient permissions to assign this role' },
+          { status: 403 }
+        );
+      }
       updates.role = role;
       // Set approval info when assigning a real role
       if (role !== 'pending' && !targetUser.approved_at) {
@@ -198,6 +215,18 @@ export async function PATCH(request: NextRequest) {
       .single();
 
     if (error) throw error;
+
+    // Audit log role changes
+    if (role !== undefined && role !== targetUser.role) {
+      logAuditEvent({
+        user: { id: currentUser.id, email: currentUser.email, role: currentUser.role },
+        action: 'update',
+        resourceType: 'user',
+        resourceId: userId,
+        resourceDescription: `Role change for ${targetUser.email}`,
+        metadata: { oldRole: targetUser.role, newRole: role, changedBy: currentUser.email },
+      }).catch(() => {}); // fire and forget
+    }
 
     // Notify user when their role is upgraded from pending
     if (isUpgradeFromPending && data) {

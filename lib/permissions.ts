@@ -150,8 +150,8 @@ export function getAssignableRoles(currentRole: Role | string): Role[] {
     return ['superadmin', 'admin', 'lead_instructor', 'instructor', 'volunteer_instructor', 'program_director', 'student', 'guest', 'pending'];
   }
   if (currentRole === 'admin') {
-    // Admins can't create/modify superadmins
-    return ['admin', 'lead_instructor', 'instructor', 'volunteer_instructor', 'program_director', 'student', 'guest', 'pending'];
+    // Admins can assign up to lead_instructor — NOT admin or superadmin
+    return ['lead_instructor', 'instructor', 'volunteer_instructor', 'program_director', 'student', 'guest', 'pending'];
   }
   return [];
 }
