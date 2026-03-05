@@ -77,7 +77,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   try {
     const body = await request.json();
 
-    // Auto-generate from stations
+    // Auto-generate from stations using checklist templates
     if (body.action === 'auto-generate') {
       // Fetch lab day with stations and scenarios
       const { data: labDay, error: labDayError } = await supabase
@@ -107,51 +107,100 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
         .eq('lab_day_id', labDayId)
         .eq('is_auto_generated', true);
 
+      // Fetch default templates for all station types + common
+      const stations = (labDay.stations as any[]) || [];
+      const stationTypes = [...new Set(stations.map((s: any) => s.station_type as string))];
+      const templateTypes = [...stationTypes, '_common'];
+
+      let templates: any[] = [];
+      try {
+        const { data: tmplData } = await supabase
+          .from('lab_checklist_templates')
+          .select('*')
+          .in('station_type', templateTypes)
+          .eq('is_default', true);
+        templates = tmplData || [];
+      } catch {
+        // Templates table may not exist yet; fall back to hard-coded items
+      }
+
+      // Build a map of station_type → template items
+      const templateMap: Record<string, { title: string; sort_order: number }[]> = {};
+      for (const tmpl of templates) {
+        templateMap[tmpl.station_type] = tmpl.items || [];
+      }
+
       // Build items list
       const items: { lab_day_id: string; title: string; is_auto_generated: boolean; sort_order: number }[] = [];
       let sortOrder = 0;
 
-      const stations = (labDay.stations as any[]) || [];
-
-      // Per-station items
+      // Per-station items: use template if available, otherwise fallback
       for (const station of stations) {
         const stationLabel = station.custom_title
           || (station.scenario as any)?.title
           || station.skill_name
           || `Station ${station.station_number}`;
 
-        items.push({
-          lab_day_id: labDayId,
-          title: `Set up Station ${station.station_number}: ${stationLabel}`,
-          is_auto_generated: true,
-          sort_order: sortOrder++,
-        });
+        const stationType = station.station_type as string;
+        const templateItems = templateMap[stationType];
 
-        if ((station.station_type === 'scenario') && (station.scenario as any)?.title) {
+        if (templateItems && templateItems.length > 0) {
+          // Use template items, prefixed with station number
+          for (const tmplItem of templateItems) {
+            items.push({
+              lab_day_id: labDayId,
+              title: `Stn ${station.station_number} — ${tmplItem.title}`,
+              is_auto_generated: true,
+              sort_order: sortOrder++,
+            });
+          }
+        } else {
+          // Fallback: basic setup item
           items.push({
             lab_day_id: labDayId,
-            title: `Equipment ready for: ${(station.scenario as any).title}`,
+            title: `Set up Station ${station.station_number}: ${stationLabel}`,
+            is_auto_generated: true,
+            sort_order: sortOrder++,
+          });
+
+          if ((stationType === 'scenario') && (station.scenario as any)?.title) {
+            items.push({
+              lab_day_id: labDayId,
+              title: `Equipment ready for: ${(station.scenario as any).title}`,
+              is_auto_generated: true,
+              sort_order: sortOrder++,
+            });
+          }
+        }
+      }
+
+      // Common prep items: use _common template if available, otherwise fallback
+      const commonTemplate = templateMap['_common'];
+      if (commonTemplate && commonTemplate.length > 0) {
+        for (const item of commonTemplate) {
+          items.push({
+            lab_day_id: labDayId,
+            title: item.title,
             is_auto_generated: true,
             sort_order: sortOrder++,
           });
         }
-      }
-
-      // Common prep items always added
-      const commonItems = [
-        'Check supplies inventory',
-        'Print station cards',
-        'Set up timer display',
-        'Confirm instructor assignments',
-        'Review student roster',
-      ];
-      for (const title of commonItems) {
-        items.push({
-          lab_day_id: labDayId,
-          title,
-          is_auto_generated: true,
-          sort_order: sortOrder++,
-        });
+      } else {
+        const fallbackCommon = [
+          'Check supplies inventory',
+          'Print station cards',
+          'Set up timer display',
+          'Confirm instructor assignments',
+          'Review student roster',
+        ];
+        for (const title of fallbackCommon) {
+          items.push({
+            lab_day_id: labDayId,
+            title,
+            is_auto_generated: true,
+            sort_order: sortOrder++,
+          });
+        }
       }
 
       if (items.length === 0) {
