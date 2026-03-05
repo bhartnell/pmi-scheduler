@@ -402,9 +402,14 @@ export default function UserManagementPage() {
                             ))}
                           </select>
                         ) : (
-                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${getRoleBadgeClasses(user.role)}`}>
-                            {getRoleLabel(user.role)}
-                          </span>
+                          <div>
+                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${getRoleBadgeClasses(user.role)}`}>
+                              {getRoleLabel(user.role)}
+                            </span>
+                            {!isSuperadmin(currentUser.role) && (user.role === 'admin' || user.role === 'superadmin') && (
+                              <div className="text-xs text-gray-400 dark:text-gray-500 mt-1 ml-1">Only superadmin can modify this role</div>
+                            )}
+                          </div>
                         )}
                       </td>
                       <td className="px-6 py-4">
