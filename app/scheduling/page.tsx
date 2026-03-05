@@ -20,6 +20,7 @@ import NotificationBell from '@/components/NotificationBell';
 import { PageLoader } from '@/components/ui';
 import { isDirector } from '@/lib/endorsements';
 import { hasMinRole } from '@/lib/permissions';
+import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import type { CurrentUser } from '@/types';
 
 export default function SchedulingPage() {
@@ -30,6 +31,7 @@ export default function SchedulingPage() {
   const [loading, setLoading] = useState(true);
   const [pendingCount, setPendingCount] = useState(0);
   const [pendingSubCount, setPendingSubCount] = useState(0);
+  const effectiveRole = useEffectiveRole(currentUser?.role ?? null);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -91,7 +93,7 @@ export default function SchedulingPage() {
 
   if (!session || !currentUser) return null;
 
-  const isAdmin = currentUser.role === 'admin' || currentUser.role === 'superadmin';
+  const isAdmin = effectiveRole === 'admin' || effectiveRole === 'superadmin';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">

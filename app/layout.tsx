@@ -12,6 +12,8 @@ import { OfflineProvider } from '@/components/OfflineProvider';
 import ServiceWorkerRegistration from '@/components/ServiceWorkerRegistration';
 import WhatsNewWrapper from '@/components/WhatsNewWrapper';
 import AppBanner from '@/components/AppBanner';
+import RolePreviewBanner from '@/components/RolePreviewBanner';
+import RolePreviewSelector from '@/components/RolePreviewSelector';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -40,6 +42,7 @@ export default function RootLayout({
         </a>
         <Providers>
           <OfflineProvider>
+            <RolePreviewBanner />
             <AppBanner />
             <GlobalTimerBanner />
             {children}
@@ -48,6 +51,7 @@ export default function RootLayout({
             <WhatsNewWrapper />
             <FeedbackButton />
             <QuickActionsMenu />
+            <RolePreviewSelector />
             <CommandPalette />
             <ServiceWorkerRegistration />
           </OfflineProvider>

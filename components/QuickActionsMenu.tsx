@@ -5,6 +5,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { Plus, X, CheckSquare, CalendarDays, FileText, Clock } from 'lucide-react';
 import { hasMinRole } from '@/lib/permissions';
+import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 
 interface QuickAction {
   id: string;
@@ -53,6 +54,7 @@ export default function QuickActionsMenu() {
   const [isOpen, setIsOpen] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const effectiveRole = useEffectiveRole(userRole);
 
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -135,7 +137,7 @@ export default function QuickActionsMenu() {
   if (!mounted || pathname.startsWith('/auth')) return null;
 
   // Only show for instructor and above
-  if (!userRole || !hasMinRole(userRole, 'instructor')) return null;
+  if (!effectiveRole || !hasMinRole(effectiveRole, 'instructor')) return null;
 
   return (
     <div ref={menuRef} className="fixed bottom-20 right-6 z-40 flex flex-col items-end gap-3 print:hidden">

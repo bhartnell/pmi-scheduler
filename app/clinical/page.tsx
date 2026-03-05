@@ -26,6 +26,7 @@ import {
   ScrollText,
 } from 'lucide-react';
 import { canAccessClinical, canAccessAffiliations, type Role } from '@/lib/permissions';
+import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 
 interface DashboardStats {
   activePreceptors: number;
@@ -43,6 +44,7 @@ export default function ClinicalDashboardPage() {
 
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<Role | null>(null);
+  const effectiveRole = useEffectiveRole(userRole);
   const [stats, setStats] = useState<DashboardStats>({
     activePreceptors: 0,
     totalClinicalSites: 0,
@@ -58,6 +60,13 @@ export default function ClinicalDashboardPage() {
       router.push('/auth/signin');
     }
   }, [status, router]);
+
+  // Redirect when preview role lacks clinical/affiliations access
+  useEffect(() => {
+    if (effectiveRole && !canAccessClinical(effectiveRole) && !canAccessAffiliations(effectiveRole)) {
+      router.push('/');
+    }
+  }, [effectiveRole, router]);
 
   useEffect(() => {
     if (session) {
@@ -597,7 +606,7 @@ export default function ClinicalDashboardPage() {
           </Link>
 
           {/* Affiliation Agreements */}
-          {userRole && canAccessAffiliations(userRole) && (
+          {effectiveRole && canAccessAffiliations(effectiveRole) && (
             <Link
               href="/clinical/affiliations"
               className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"

@@ -29,6 +29,7 @@ import {
   Check,
 } from 'lucide-react';
 import { canAccessAdmin, canAccessClinical, getRoleLabel, getRoleBadgeClasses } from '@/lib/permissions';
+import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import NotificationBell from '@/components/NotificationBell';
 import CustomizeModal from '@/components/dashboard/CustomizeModal';
@@ -75,6 +76,7 @@ export default function HomePage() {
   const [hasOnboarding, setHasOnboarding] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const effectiveRole = useEffectiveRole(currentUser?.role ?? null);
   // Edit mode state — local widget order until "Done" is clicked
   const [editMode, setEditMode] = useState(false);
   const [editWidgets, setEditWidgets] = useState<string[]>([]);
@@ -597,7 +599,7 @@ export default function HomePage() {
         )}
 
         {/* Quick Action - Site Visit Check-In (for clinical users) */}
-        {currentUser && canAccessClinical(currentUser.role) && (
+        {currentUser && effectiveRole && canAccessClinical(effectiveRole) && (
           <div className="mb-8 max-w-7xl mx-auto">
             <Link
               href="/clinical/site-visits"
@@ -627,7 +629,7 @@ export default function HomePage() {
         <nav aria-label="Main navigation">
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 max-w-7xl mx-auto">
           {/* Lab Management Card - Not for volunteer instructors */}
-          {currentUser && currentUser.role !== 'volunteer_instructor' && (
+          {currentUser && effectiveRole !== 'volunteer_instructor' && (
             <Link
               href="/lab-management"
               className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
@@ -650,7 +652,7 @@ export default function HomePage() {
           )}
 
           {/* Lab Schedule (Read-Only) Card - For volunteer instructors only */}
-          {currentUser && currentUser.role === 'volunteer_instructor' && (
+          {currentUser && effectiveRole === 'volunteer_instructor' && (
             <Link
               href="/lab-management/schedule"
               className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
@@ -672,7 +674,7 @@ export default function HomePage() {
           )}
 
           {/* Instructor Portal Card - Not for volunteer instructors */}
-          {currentUser && currentUser.role !== 'volunteer_instructor' && (
+          {currentUser && effectiveRole !== 'volunteer_instructor' && (
             <Link
               href="/instructor"
               className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
@@ -789,7 +791,7 @@ export default function HomePage() {
                 </div>
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Onboarding</h3>
                 <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-                  {currentUser && canAccessAdmin(currentUser.role)
+                  {currentUser && effectiveRole && canAccessAdmin(effectiveRole)
                     ? 'Manage instructor onboarding assignments and progress.'
                     : 'Track your onboarding progress and complete required tasks.'}
                 </p>
@@ -803,7 +805,7 @@ export default function HomePage() {
           )}
 
           {/* Clinical & Internship Card - Only for lead_instructor+ */}
-          {currentUser && canAccessClinical(currentUser.role) && (
+          {currentUser && effectiveRole && canAccessClinical(effectiveRole) && (
             <Link
               href="/clinical"
               className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group border-2 border-teal-200 dark:border-teal-800"
@@ -826,7 +828,7 @@ export default function HomePage() {
           )}
 
           {/* Admin Card - Only for admin+ */}
-          {currentUser && canAccessAdmin(currentUser.role) && (
+          {currentUser && effectiveRole && canAccessAdmin(effectiveRole) && (
             <Link
               href="/admin"
               className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group border-2 border-red-200 dark:border-red-800"
