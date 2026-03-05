@@ -17,10 +17,10 @@ export async function GET(request: NextRequest) {
   const offset = parseInt(searchParams.get('offset') || '0');
   const detail = searchParams.get('detail') === 'true';
 
-  // Station select: include instructor info for list view, full details for print/detail view
+  // Station select: list view gets display-essential fields; detail view gets everything
   const stationSelect = detail
     ? `id, station_number, station_type, skill_name, custom_title, instructor_name, instructor_email, room, notes, station_notes, rotation_minutes, num_rotations, scenario:scenarios(id, title, category, difficulty)`
-    : `id, instructor_name, instructor_email`;
+    : `id, station_number, station_type, custom_title, skill_name, instructor_name, instructor_email, rotation_minutes, scenario:scenarios(id, title)`;
 
   try {
     const supabase = getSupabaseAdmin();
