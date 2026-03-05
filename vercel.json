@@ -47,6 +47,10 @@
     {
       "path": "/api/cron/affiliation-expiry",
       "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/cron/site-visit-reminders",
+      "schedule": "0 15 * * *"
     }
   ]
 }
