@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { canAccessAdmin } from '@/lib/permissions';
+import { canAccessAdmin, isSuperadmin } from '@/lib/permissions';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { logAuditEvent } from '@/lib/audit';
 
 // Helper to get current user with role
 async function getCurrentUser(email: string) {
@@ -111,8 +112,8 @@ export async function PATCH(request: NextRequest) {
     }
 
     const currentUser = await getCurrentUser(session.user.email);
-    if (!currentUser || !canAccessAdmin(currentUser.role)) {
-      return NextResponse.json({ success: false, error: 'Access denied' }, { status: 403 });
+    if (!currentUser || !isSuperadmin(currentUser.role)) {
+      return NextResponse.json({ success: false, error: 'Only superadmin can approve or deny deletion requests' }, { status: 403 });
     }
 
     const body = await request.json();
@@ -167,10 +168,19 @@ export async function PATCH(request: NextRequest) {
 
         if (deleteError) {
           console.error('Error deleting item:', deleteError);
-          // Don't fail the request, the approval is still recorded
         }
       }
     }
+
+    // Audit log the deletion request action
+    logAuditEvent({
+      user: { id: currentUser.id, email: currentUser.email, role: currentUser.role },
+      action: action === 'approve' ? 'delete' : 'update',
+      resourceType: 'user',
+      resourceId: deletionRequest.item_id,
+      resourceDescription: `Deletion request ${action}: ${deletionRequest.item_type} "${deletionRequest.item_name}"`,
+      metadata: { deletionRequestId: requestId, itemType: deletionRequest.item_type, decision: action },
+    }).catch(() => {});
 
     return NextResponse.json({ success: true });
   } catch (error) {

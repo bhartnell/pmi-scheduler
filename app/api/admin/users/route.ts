@@ -168,13 +168,10 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Cannot modify users at or above your role level' }, { status: 403 });
     }
 
-    // Protect superadmin accounts
+    // Protect superadmin accounts — only the account holder can modify their own protected status
     if (isProtectedSuperadmin(targetUser.email)) {
-      if (role && role !== 'superadmin') {
-        return NextResponse.json({ success: false, error: 'Protected superadmin accounts cannot be demoted' }, { status: 403 });
-      }
-      if (is_active === false) {
-        return NextResponse.json({ success: false, error: 'Protected superadmin accounts cannot be deactivated' }, { status: 403 });
+      if (currentUser.email.toLowerCase() !== targetUser.email.toLowerCase()) {
+        return NextResponse.json({ success: false, error: 'Protected superadmin accounts can only be modified by the account holder' }, { status: 403 });
       }
     }
 
