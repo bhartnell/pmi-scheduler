@@ -265,11 +265,21 @@ export default function CloseoutSection({
       });
       const data = await res.json();
       if (!data.success) {
+        console.error('Override save failed:', data.error);
         // Revert on failure
         setChecklist(prev =>
           prev.map(item => (item.key === key ? { ...item, manual_override: !checked } : item))
         );
-        showToastMessage('Failed to save override', 'error');
+        showToastMessage(data.error || 'Failed to save override', 'error');
+      } else {
+        // Verify the server persisted the correct overrides
+        const savedOverrides = data.overrides || {};
+        setChecklist(prev =>
+          prev.map(item => ({
+            ...item,
+            manual_override: !!savedOverrides[item.key],
+          }))
+        );
       }
     } catch (error) {
       console.error('Error saving override:', error);
