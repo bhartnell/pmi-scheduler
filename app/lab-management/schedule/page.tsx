@@ -84,6 +84,13 @@ interface PrintLabDay {
   stations: PrintStation[];
 }
 
+interface LabDayRole {
+  id: string;
+  role: 'lab_lead' | 'roamer' | 'observer';
+  instructor_name: string | null;
+  instructor_email: string | null;
+}
+
 interface LabDay {
   id: string;
   date: string;
@@ -100,6 +107,7 @@ interface LabDay {
     };
   };
   stations: any[];
+  roles: LabDayRole[];
 }
 
 interface DailyNote {
@@ -1094,6 +1102,26 @@ function SchedulePageContent() {
                           Start Timer
                         </Link>
                       </div>
+                      {/* Lab Day Roles (Lab Lead, Roamer) */}
+                      {labDay.roles && labDay.roles.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {labDay.roles.map((r: LabDayRole) => (
+                            <span
+                              key={r.id}
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                                r.role === 'lab_lead'
+                                  ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300'
+                                  : r.role === 'roamer'
+                                  ? 'bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300'
+                                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+                              }`}
+                            >
+                              {r.role === 'lab_lead' ? 'Lead' : r.role === 'roamer' ? 'Roamer' : 'Observer'}:
+                              {' '}{r.instructor_name || r.instructor_email?.split('@')[0] || '?'}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                       {labDay.stations.length > 0 && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mt-3">
                           {labDay.stations.map((station: any) => (
@@ -1258,9 +1286,21 @@ function SchedulePageContent() {
                     {dayLabDays.map(labDay => {
                       const stationCount = labDay.stations.length;
                       // Coverage: a station is "covered" if it has an instructor assigned
-                      const coveredCount = labDay.stations.filter((s: any) => s.instructor_name || s.instructor_id).length;
+                      const coveredCount = labDay.stations.filter((s: any) => s.instructor_name || s.instructor_email).length;
                       const needsCoverage = stationCount > 0 && coveredCount < stationCount;
                       const fullyStaffed = stationCount > 0 && coveredCount === stationCount;
+
+                      // Collect unique station instructor names
+                      const stationInstructors = Array.from(new Set(
+                        labDay.stations
+                          .filter((s: any) => s.instructor_name)
+                          .map((s: any) => s.instructor_name as string)
+                      ));
+
+                      // Lab day roles (Lab Lead, Roamer, Observer)
+                      const roles = labDay.roles || [];
+                      const labLeads = roles.filter(r => r.role === 'lab_lead');
+                      const roamers = roles.filter(r => r.role === 'roamer');
 
                       return (
                         <Link
@@ -1302,6 +1342,31 @@ function SchedulePageContent() {
                                 <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-medium bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
                                   {coveredCount}/{stationCount}
                                 </span>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Instructors: Lab Lead, Roamer, Station assignments */}
+                          {(labLeads.length > 0 || roamers.length > 0 || stationInstructors.length > 0) && (
+                            <div className="mt-1.5 space-y-0.5">
+                              {labLeads.map(r => (
+                                <div key={r.id} className="flex items-center gap-1 text-[10px] leading-tight">
+                                  <span className="flex-shrink-0 px-1 py-px rounded bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 font-semibold">Lead</span>
+                                  <span className="text-gray-700 dark:text-gray-300 truncate">{r.instructor_name || r.instructor_email?.split('@')[0] || '?'}</span>
+                                </div>
+                              ))}
+                              {roamers.map(r => (
+                                <div key={r.id} className="flex items-center gap-1 text-[10px] leading-tight">
+                                  <span className="flex-shrink-0 px-1 py-px rounded bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300 font-semibold">Roam</span>
+                                  <span className="text-gray-700 dark:text-gray-300 truncate">{r.instructor_name || r.instructor_email?.split('@')[0] || '?'}</span>
+                                </div>
+                              ))}
+                              {stationInstructors.length > 0 && (
+                                <div className="text-[10px] text-gray-500 dark:text-gray-400 truncate leading-tight" title={stationInstructors.join(', ')}>
+                                  <Users className="w-3 h-3 inline mr-0.5 -mt-px" />
+                                  {stationInstructors.slice(0, 3).join(', ')}
+                                  {stationInstructors.length > 3 && ` +${stationInstructors.length - 3}`}
+                                </div>
                               )}
                             </div>
                           )}
@@ -1535,7 +1600,7 @@ function SchedulePageContent() {
                           {labDate.toLocaleDateString('en-US', { month: 'short' })}
                         </div>
                       </div>
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
                         <div className="font-medium text-gray-900 dark:text-white">
                           {labDay.cohort.program.abbreviation} Group {labDay.cohort.cohort_number}
                         </div>
@@ -1549,13 +1614,37 @@ function SchedulePageContent() {
                             : ''}
                           {labDay.stations.length} station{labDay.stations.length !== 1 ? 's' : ''}
                         </div>
+                        {/* Instructor roles & station assignments */}
+                        {(() => {
+                          const roles = labDay.roles || [];
+                          const leads = roles.filter(r => r.role === 'lab_lead');
+                          const roams = roles.filter(r => r.role === 'roamer');
+                          const stnInstructors = Array.from(new Set(
+                            labDay.stations
+                              .filter((s: any) => s.instructor_name)
+                              .map((s: any) => s.instructor_name as string)
+                          ));
+                          if (leads.length === 0 && roams.length === 0 && stnInstructors.length === 0) return null;
+                          const parts: string[] = [];
+                          leads.forEach(r => parts.push(`Lead: ${r.instructor_name || r.instructor_email?.split('@')[0] || '?'}`));
+                          roams.forEach(r => parts.push(`Roamer: ${r.instructor_name || r.instructor_email?.split('@')[0] || '?'}`));
+                          if (stnInstructors.length > 0) {
+                            parts.push(stnInstructors.slice(0, 3).join(', ') + (stnInstructors.length > 3 ? ` +${stnInstructors.length - 3}` : ''));
+                          }
+                          return (
+                            <div className="flex items-center gap-1 mt-0.5 text-xs text-gray-500 dark:text-gray-400 truncate">
+                              <Users className="w-3.5 h-3.5 flex-shrink-0" />
+                              <span className="truncate">{parts.join(' • ')}</span>
+                            </div>
+                          );
+                        })()}
                       </div>
                       {isLabToday && (
-                        <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-xs font-medium rounded">
+                        <span className="px-2 py-1 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-xs font-medium rounded flex-shrink-0">
                           Today
                         </span>
                       )}
-                      <ChevronRight className="w-5 h-5 text-gray-400 dark:text-gray-500" />
+                      <ChevronRight className="w-5 h-5 text-gray-400 dark:text-gray-500 flex-shrink-0" />
                     </Link>
                   );
                 })

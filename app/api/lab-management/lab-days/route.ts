@@ -17,10 +17,10 @@ export async function GET(request: NextRequest) {
   const offset = parseInt(searchParams.get('offset') || '0');
   const detail = searchParams.get('detail') === 'true';
 
-  // Station select: minimal (id only) for list view, full details for print/detail view
+  // Station select: include instructor info for list view, full details for print/detail view
   const stationSelect = detail
     ? `id, station_number, station_type, skill_name, custom_title, instructor_name, instructor_email, room, notes, station_notes, rotation_minutes, num_rotations, scenario:scenarios(id, title, category, difficulty)`
-    : `id`;
+    : `id, instructor_name, instructor_email`;
 
   try {
     const supabase = getSupabaseAdmin();
@@ -61,6 +61,39 @@ export async function GET(request: NextRequest) {
           ld.stations.sort((a: any, b: any) => (a.station_number || 0) - (b.station_number || 0));
         }
       });
+    }
+
+    // Fetch lab_day_roles (Lab Lead, Roamer, Observer) with instructor info
+    if (data && data.length > 0) {
+      const labDayIds = data.map((ld: any) => ld.id);
+      const { data: roles } = await supabase
+        .from('lab_day_roles')
+        .select(`
+          id, lab_day_id, role, notes,
+          instructor:lab_users!lab_day_roles_instructor_id_fkey(id, name, email)
+        `)
+        .in('lab_day_id', labDayIds);
+
+      // Attach roles to each lab day
+      if (roles) {
+        const rolesByLabDay: Record<string, any[]> = {};
+        roles.forEach((r: any) => {
+          if (!rolesByLabDay[r.lab_day_id]) rolesByLabDay[r.lab_day_id] = [];
+          rolesByLabDay[r.lab_day_id].push({
+            id: r.id,
+            role: r.role,
+            instructor_name: r.instructor?.name || null,
+            instructor_email: r.instructor?.email || null,
+          });
+        });
+        data.forEach((ld: any) => {
+          ld.roles = rolesByLabDay[ld.id] || [];
+        });
+      } else {
+        data.forEach((ld: any) => {
+          ld.roles = [];
+        });
+      }
     }
 
     return NextResponse.json({ success: true, labDays: data, pagination: { limit, offset, total: count || 0 } });
