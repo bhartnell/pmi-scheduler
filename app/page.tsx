@@ -125,10 +125,9 @@ export default function HomePage() {
           }
 
           setCurrentUser(user);
-          // Show onboarding card for admins or users with active assignments
-          const isAdminRole = user.role === 'admin' || user.role === 'superadmin';
+          // Show onboarding card/widget ONLY if user has an active onboarding assignment
           const hasActiveOnboarding = onboardingData?.success && onboardingData?.hasActiveAssignment;
-          setHasOnboarding(isAdminRole || !!hasActiveOnboarding);
+          setHasOnboarding(!!hasActiveOnboarding);
         } else if (userData.success === false) {
           // Could not find or create a user - redirect non-PMI users to request access
           const email = session?.user?.email || '';
@@ -243,11 +242,13 @@ export default function HomePage() {
 
   // Compute widgets NOT currently displayed (available to add)
   // Filter by role whitelist so users only see widgets they're allowed to have
+  // Also hide 'onboarding' widget unless user has an active onboarding assignment
   const roleWhitelist = getWidgetWhitelist(effectiveRole || 'guest');
-  const allWidgetIds = Object.keys(WIDGET_DEFINITIONS).filter(id => roleWhitelist.includes(id));
+  const isWidgetAllowed = (id: string) => roleWhitelist.includes(id) && (id !== 'onboarding' || hasOnboarding);
+  const allWidgetIds = Object.keys(WIDGET_DEFINITIONS).filter(isWidgetAllowed);
   const activeWidgets = editMode
-    ? editWidgets.filter(id => roleWhitelist.includes(id))
-    : filterWidgetsByRole(preferences?.dashboard_widgets ?? [], effectiveRole || 'guest');
+    ? editWidgets.filter(isWidgetAllowed)
+    : filterWidgetsByRole(preferences?.dashboard_widgets ?? [], effectiveRole || 'guest').filter(isWidgetAllowed);
   const availableWidgets = allWidgetIds.filter(id => !activeWidgets.includes(id));
 
   // Render a widget by ID, wrapped in ResizableWidget
