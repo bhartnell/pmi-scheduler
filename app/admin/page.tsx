@@ -52,6 +52,7 @@ import {
   getRoleLabel,
   getRoleBadgeClasses,
 } from '@/lib/permissions';
+import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { PageLoader } from '@/components/ui';
 import type { CurrentUser } from '@/types';
@@ -559,6 +560,7 @@ export default function AdminPage() {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [pendingAccessRequests, setPendingAccessRequests] = useState(0);
+  const effectiveRole = useEffectiveRole(currentUser?.role ?? null);
   const [filterQuery, setFilterQuery] = useState('');
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
 
@@ -573,6 +575,13 @@ export default function AdminPage() {
       fetchCurrentUser();
     }
   }, [session]);
+
+  // Redirect when preview role lacks admin access
+  useEffect(() => {
+    if (effectiveRole && !canAccessAdmin(effectiveRole)) {
+      router.push('/');
+    }
+  }, [effectiveRole, router]);
 
   // Load persisted expanded state from localStorage
   useEffect(() => {
@@ -617,7 +626,7 @@ export default function AdminPage() {
     [pendingAccessRequests],
   );
 
-  const isSuperAdmin = currentUser ? isSuperadmin(currentUser.role) : false;
+  const isSuperAdmin = effectiveRole ? isSuperadmin(effectiveRole) : false;
 
   const visibleSections = useMemo(
     () => sections.filter((s) => !s.superadminOnly || isSuperAdmin),
@@ -672,8 +681,8 @@ export default function AdminPage() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <span className={`px-3 py-1 rounded-full text-sm font-medium ${getRoleBadgeClasses(currentUser.role)}`}>
-                {getRoleLabel(currentUser.role)}
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${getRoleBadgeClasses(effectiveRole || currentUser.role)}`}>
+                {getRoleLabel(effectiveRole || currentUser.role)}
               </span>
               <ThemeToggle />
             </div>
@@ -690,7 +699,7 @@ export default function AdminPage() {
               <h2 className="font-semibold text-blue-900 dark:text-blue-100">Admin Access</h2>
               <p className="text-sm text-blue-800 dark:text-blue-200">
                 You are logged in as <strong>{currentUser.name}</strong> with{' '}
-                <strong>{getRoleLabel(currentUser.role)}</strong> privileges.
+                <strong>{getRoleLabel(effectiveRole || currentUser.role)}</strong> privileges.
                 {isSuperAdmin && ' You have full system access.'}
               </p>
             </div>

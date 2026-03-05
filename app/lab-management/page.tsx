@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { Plus, Settings, BarChart3, Users } from 'lucide-react';
 import LabHeader from '@/components/LabHeader';
 import { canManageContent } from '@/lib/permissions';
+import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import CustomizeModal from '@/components/dashboard/CustomizeModal';
 import {
   NotificationsWidget,
@@ -36,6 +37,7 @@ export default function LabManagementDashboard() {
   const [preferences, setPreferences] = useState<DashboardPreferences | null>(null);
   const [loading, setLoading] = useState(true);
   const [showCustomize, setShowCustomize] = useState(false);
+  const effectiveRole = useEffectiveRole(currentUser?.role ?? null);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -124,7 +126,7 @@ export default function LabManagementDashboard() {
 
   if (!session) return null;
 
-  const canManage = currentUser && canManageContent(currentUser.role);
+  const canManage = currentUser && effectiveRole && canManageContent(effectiveRole);
   const widgets = preferences?.dashboard_widgets || ['notifications', 'my_labs', 'quick_links'];
   const quickLinks = preferences?.quick_links || ['scenarios', 'students', 'schedule'];
 
