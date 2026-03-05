@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { hasMinRole } from '@/lib/permissions';
+import { hasMinRole, isSuperadmin } from '@/lib/permissions';
 
 async function getCallerRole(email: string): Promise<string | null> {
   const supabase = getSupabaseAdmin();
@@ -292,8 +292,8 @@ export async function DELETE(
     }
 
     const callerRole = await getCallerRole(session.user.email);
-    if (!callerRole || !hasMinRole(callerRole, 'lead_instructor')) {
-      return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
+    if (!callerRole || !isSuperadmin(callerRole)) {
+      return NextResponse.json({ success: false, error: 'Internship deletion requires superadmin approval via deletion requests' }, { status: 403 });
     }
 
     const { id } = await params;

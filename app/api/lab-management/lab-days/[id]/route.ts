@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { hasMinRole } from '@/lib/permissions';
+import { hasMinRole, isSuperadmin } from '@/lib/permissions';
 
 export async function GET(
   request: NextRequest,
@@ -215,8 +215,8 @@ export async function DELETE(
       .ilike('email', session.user.email)
       .single();
 
-    if (!callerUser || !hasMinRole(callerUser.role, 'instructor')) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (!callerUser || !isSuperadmin(callerUser.role)) {
+      return NextResponse.json({ error: 'Lab day deletion requires superadmin approval via deletion requests' }, { status: 403 });
     }
 
     const { error } = await supabase

@@ -2,6 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { isSuperadmin } from '@/lib/permissions';
+
+async function getCallerRole(email: string): Promise<string | null> {
+  const supabase = getSupabaseAdmin();
+  const { data } = await supabase
+    .from('lab_users')
+    .select('role')
+    .ilike('email', email)
+    .single();
+  return data?.role ?? null;
+}
 
 // Use service role key for server-side operations to bypass RLS
 export async function GET(
@@ -150,6 +161,11 @@ export async function DELETE(
     const session = await getServerSession();
     if (!session?.user?.email) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const callerRole = await getCallerRole(session.user.email);
+    if (!callerRole || !isSuperadmin(callerRole)) {
+      return NextResponse.json({ success: false, error: 'Scenario deletion requires superadmin approval via deletion requests' }, { status: 403 });
     }
 
     // Check if scenario is used in any lab stations
