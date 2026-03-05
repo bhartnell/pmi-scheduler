@@ -159,7 +159,8 @@ export default function ClinicalDashboardPage() {
       </div>
 
       <main className="max-w-7xl mx-auto px-4 py-8">
-        {/* Quick Stats */}
+        {/* Quick Stats — lead_instructor+ only */}
+        {effectiveRole && canAccessClinical(effectiveRole) && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-4">
             <div className="flex items-center gap-3">
@@ -209,8 +210,10 @@ export default function ClinicalDashboardPage() {
             </div>
           </div>
         </div>
+        )}
 
-        {/* Sites & Agencies Section */}
+        {/* Sites & Agencies Section — lead_instructor+ only */}
+        {effectiveRole && canAccessClinical(effectiveRole) && (
         <div className="mb-8">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
             <Building2 className="w-5 h-5 text-gray-600 dark:text-gray-400" />
@@ -272,10 +275,12 @@ export default function ClinicalDashboardPage() {
             </Link>
           </div>
         </div>
+        )}
 
         {/* Navigation Cards */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Overview Dashboard - Primary */}
+          {/* Overview Dashboard - Primary — lead_instructor+ only */}
+          {effectiveRole && canAccessClinical(effectiveRole) && (
           <Link
             href="/clinical/overview"
             className="bg-gradient-to-br from-teal-500 to-cyan-600 dark:from-teal-600 dark:to-cyan-700 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group md:col-span-2 lg:col-span-1"
@@ -296,8 +301,10 @@ export default function ClinicalDashboardPage() {
               </div>
             </div>
           </Link>
+          )}
 
-          {/* Cohort Manager - Secondary Prominent */}
+          {/* Cohort Manager - Secondary Prominent — lead_instructor+ only */}
+          {effectiveRole && canAccessClinical(effectiveRole) && (
           <Link
             href="/lab-management/admin/cohorts"
             className="bg-gradient-to-br from-purple-500 to-indigo-600 dark:from-purple-600 dark:to-indigo-700 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
@@ -318,8 +325,10 @@ export default function ClinicalDashboardPage() {
               </div>
             </div>
           </Link>
+          )}
 
-          {/* Preceptors */}
+          {/* Preceptors — lead_instructor+ only */}
+          {effectiveRole && canAccessClinical(effectiveRole) && (
           <Link
             href="/clinical/preceptors"
             className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
@@ -340,8 +349,10 @@ export default function ClinicalDashboardPage() {
               </div>
             </div>
           </Link>
+          )}
 
-          {/* Internship Tracker */}
+          {/* Internship Tracker — lead_instructor+ only */}
+          {effectiveRole && canAccessClinical(effectiveRole) && (
           <Link
             href="/clinical/internships"
             className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
@@ -362,8 +373,10 @@ export default function ClinicalDashboardPage() {
               </div>
             </div>
           </Link>
+          )}
 
-          {/* Compliance Docs Tracker */}
+          {/* Compliance Docs Tracker — lead_instructor+ only */}
+          {effectiveRole && canAccessClinical(effectiveRole) && (
           <Link
             href="/clinical/compliance"
             className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
@@ -384,8 +397,10 @@ export default function ClinicalDashboardPage() {
               </div>
             </div>
           </Link>
+          )}
 
-          {/* Clinical Hours Tracker */}
+          {/* Clinical Hours Tracker — lead_instructor+ only */}
+          {effectiveRole && canAccessClinical(effectiveRole) && (
           <Link
             href="/clinical/hours"
             className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
@@ -406,8 +421,10 @@ export default function ClinicalDashboardPage() {
               </div>
             </div>
           </Link>
+          )}
 
-          {/* EMT Tracking */}
+          {/* EMT Tracking — lead_instructor+ only */}
+          {effectiveRole && canAccessClinical(effectiveRole) && (
           <Link
             href="/clinical/emt-tracking"
             className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
@@ -428,8 +445,10 @@ export default function ClinicalDashboardPage() {
               </div>
             </div>
           </Link>
+          )}
 
-          {/* AEMT Tracking */}
+          {/* AEMT Tracking — lead_instructor+ only */}
+          {effectiveRole && canAccessClinical(effectiveRole) && (
           <Link
             href="/clinical/aemt-tracking"
             className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
@@ -450,8 +469,10 @@ export default function ClinicalDashboardPage() {
               </div>
             </div>
           </Link>
+          )}
 
-          {/* Summative Evaluations */}
+          {/* Summative Evaluations — lead_instructor+ only */}
+          {effectiveRole && canAccessClinical(effectiveRole) && (
           <Link
             href="/clinical/summative-evaluations"
             className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
@@ -472,8 +493,10 @@ export default function ClinicalDashboardPage() {
               </div>
             </div>
           </Link>
+          )}
 
-          {/* Site Visits */}
+          {/* Site Visits — lead_instructor+ only */}
+          {effectiveRole && canAccessClinical(effectiveRole) && (
           <Link
             href="/clinical/site-visits"
             className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
@@ -494,8 +517,10 @@ export default function ClinicalDashboardPage() {
               </div>
             </div>
           </Link>
+          )}
 
-          {/* Planning Calendar */}
+          {/* Planning Calendar — lead_instructor+ only */}
+          {effectiveRole && canAccessClinical(effectiveRole) && (
           <Link
             href="/clinical/planning-calendar"
             className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
@@ -516,8 +541,10 @@ export default function ClinicalDashboardPage() {
               </div>
             </div>
           </Link>
+          )}
 
-          {/* Site Capacity */}
+          {/* Site Capacity — lead_instructor+ only */}
+          {effectiveRole && canAccessClinical(effectiveRole) && (
           <Link
             href="/clinical/capacity"
             className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
@@ -538,8 +565,10 @@ export default function ClinicalDashboardPage() {
               </div>
             </div>
           </Link>
+          )}
 
-          {/* Compliance Tracker */}
+          {/* Compliance Tracker — lead_instructor+ only */}
+          {effectiveRole && canAccessClinical(effectiveRole) && (
           <Link
             href="/clinical/compliance-tracker"
             className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
@@ -560,8 +589,10 @@ export default function ClinicalDashboardPage() {
               </div>
             </div>
           </Link>
+          )}
 
-          {/* Rotation Scheduler */}
+          {/* Rotation Scheduler — lead_instructor+ only */}
+          {effectiveRole && canAccessClinical(effectiveRole) && (
           <Link
             href="/clinical/rotation-scheduler"
             className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
@@ -582,8 +613,10 @@ export default function ClinicalDashboardPage() {
               </div>
             </div>
           </Link>
+          )}
 
-          {/* MCE Tracker */}
+          {/* MCE Tracker — lead_instructor+ only */}
+          {effectiveRole && canAccessClinical(effectiveRole) && (
           <Link
             href="/clinical/mce"
             className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
@@ -604,6 +637,7 @@ export default function ClinicalDashboardPage() {
               </div>
             </div>
           </Link>
+          )}
 
           {/* Affiliation Agreements */}
           {effectiveRole && canAccessAffiliations(effectiveRole) && (
