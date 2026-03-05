@@ -53,6 +53,9 @@ import {
   AtRiskStudentsWidget,
   ROLE_DEFAULTS,
   WIDGET_DEFINITIONS,
+  filterWidgetsByRole,
+  getWidgetWhitelist,
+  QUICK_LINK_WHITELIST,
 } from '@/components/dashboard/widgets';
 import AnnouncementBanner from '@/components/dashboard/AnnouncementBanner';
 import ResizableWidget, { useWidgetSizes } from '@/components/dashboard/ResizableWidget';
@@ -239,8 +242,12 @@ export default function HomePage() {
   };
 
   // Compute widgets NOT currently displayed (available to add)
-  const allWidgetIds = Object.keys(WIDGET_DEFINITIONS);
-  const activeWidgets = editMode ? editWidgets : (preferences?.dashboard_widgets ?? []);
+  // Filter by role whitelist so users only see widgets they're allowed to have
+  const roleWhitelist = getWidgetWhitelist(effectiveRole || 'guest');
+  const allWidgetIds = Object.keys(WIDGET_DEFINITIONS).filter(id => roleWhitelist.includes(id));
+  const activeWidgets = editMode
+    ? editWidgets.filter(id => roleWhitelist.includes(id))
+    : filterWidgetsByRole(preferences?.dashboard_widgets ?? [], effectiveRole || 'guest');
   const availableWidgets = allWidgetIds.filter(id => !activeWidgets.includes(id));
 
   // Render a widget by ID, wrapped in ResizableWidget
@@ -422,6 +429,64 @@ export default function HomePage() {
             </button>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  // Guest users — minimal dashboard with Help only
+  if (currentUser?.role === 'guest') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+        <header className="bg-white dark:bg-gray-800 shadow-sm">
+          <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
+                <Stethoscope className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <p className="font-bold text-gray-900 dark:text-white">PMI Paramedic Tools</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400">Pima Paramedic Institute</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-gray-600 dark:text-gray-400 hidden sm:block">{session.user?.email}</span>
+              <ThemeToggle />
+              <button onClick={() => signOut()} className="flex items-center gap-2 px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                <LogOut className="w-4 h-4" />
+                <span className="hidden sm:inline">Sign Out</span>
+              </button>
+            </div>
+          </div>
+        </header>
+        <main className="max-w-7xl mx-auto px-4 py-12">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Welcome, {session.user?.name?.split(' ')[0] || 'Guest'}!</h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-2">You have guest-level access.</p>
+          </div>
+          <div className="max-w-md mx-auto mb-8 bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 text-center">
+            <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Users className="w-8 h-8 text-gray-400" />
+            </div>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Limited Access</h2>
+            <p className="text-gray-600 dark:text-gray-400 text-sm">
+              Contact an administrator if you need additional access to PMI Paramedic Tools.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 max-w-md mx-auto gap-4">
+            <Link href="/help" className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group">
+              <div className="flex flex-col items-center text-center">
+                <div className="w-16 h-16 bg-sky-100 dark:bg-sky-900/30 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-sky-200 dark:group-hover:bg-sky-900/50 transition-colors">
+                  <HelpCircle className="w-8 h-8 text-sky-600 dark:text-sky-400" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Help Center</h3>
+                <p className="text-gray-600 dark:text-gray-400 text-sm">Documentation, guides, and FAQs.</p>
+              </div>
+            </Link>
+          </div>
+        </main>
+        <footer className="mt-12 py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+          <p>PMI Paramedic Tools © {new Date().getFullYear()}</p>
+        </footer>
       </div>
     );
   }
@@ -911,10 +976,11 @@ export default function HomePage() {
       <CustomizeModal
         isOpen={showCustomize}
         onClose={() => setShowCustomize(false)}
-        widgets={preferences?.dashboard_widgets || []}
+        widgets={activeWidgets}
         quickLinks={preferences?.quick_links || []}
         onSave={handleSavePreferences}
         onReset={handleResetPreferences}
+        role={effectiveRole || undefined}
       />
 
       {/* Footer */}

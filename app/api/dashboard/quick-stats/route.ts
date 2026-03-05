@@ -1,26 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { requireAuth } from '@/lib/api-auth';
+import { hasMinRole, type Role } from '@/lib/permissions';
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
+    // Require at least instructor role to see quick stats
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
     const supabase = getSupabaseAdmin();
-
-    // Get current user info
-    const { data: currentUser } = await supabase
-      .from('lab_users')
-      .select('id, role')
-      .ilike('email', session.user.email)
-      .single();
-
-    if (!currentUser) {
-      return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
-    }
+    const currentUser = { id: user.id, role: user.role };
 
     // Date helpers
     const now = new Date();
@@ -79,10 +70,13 @@ export async function GET(request: NextRequest) {
       ? Math.round((completedThisMonth / totalThisMonth) * 100)
       : 0;
 
+    // Only lead_instructor+ can see program-wide student counts
+    const canSeeStudentCount = hasMinRole(currentUser.role as Role, 'lead_instructor');
+
     return NextResponse.json({
       success: true,
       stats: {
-        activeStudents,
+        activeStudents: canSeeStudentCount ? activeStudents : undefined,
         labsThisMonth,
         openTasks,
         completionRate,

@@ -104,6 +104,52 @@ export const WIDGET_DEFINITIONS = {
 
 export type WidgetId = keyof typeof WIDGET_DEFINITIONS;
 
+// ============================================
+// Role-based widget whitelists
+// Only widgets in this list can be enabled for each role.
+// Guest/pending have NO customizable widgets.
+// ============================================
+export const WIDGET_WHITELIST: Record<string, string[]> = {
+  superadmin: Object.keys(WIDGET_DEFINITIONS), // all widgets
+  admin: Object.keys(WIDGET_DEFINITIONS),
+  lead_instructor: Object.keys(WIDGET_DEFINITIONS),
+  instructor: ['my_labs', 'my_tasks', 'notifications', 'overdue_tasks', 'quick_links', 'open_stations', 'cert_expiry', 'onboarding', 'quick_stats'],
+  volunteer_instructor: ['my_labs', 'notifications'],
+  program_director: ['notifications'],
+  student: ['my_labs', 'my_tasks'],
+  guest: [],
+  pending: [],
+};
+
+/**
+ * Get the widget whitelist for a given role.
+ * Returns empty array for unknown roles.
+ */
+export function getWidgetWhitelist(role: string): string[] {
+  return WIDGET_WHITELIST[role] || [];
+}
+
+/**
+ * Filter a widget list to only include widgets allowed for the given role.
+ */
+export function filterWidgetsByRole(widgets: string[], role: string): string[] {
+  const whitelist = getWidgetWhitelist(role);
+  return widgets.filter(w => whitelist.includes(w));
+}
+
+// Quick link whitelists per role
+export const QUICK_LINK_WHITELIST: Record<string, string[]> = {
+  superadmin: ['scenarios', 'students', 'schedule', 'emt_tracker', 'aemt_tracker', 'clinical', 'internships', 'admin', 'feedback', 'my_certs', 'learning_styles', 'cohorts', 'lab_days', 'skill_sheets', 'reports', 'onboarding', 'todays_labs', 'tasks', 'ekg_warmup'],
+  admin: ['scenarios', 'students', 'schedule', 'emt_tracker', 'aemt_tracker', 'clinical', 'internships', 'admin', 'feedback', 'my_certs', 'learning_styles', 'cohorts', 'lab_days', 'skill_sheets', 'reports', 'onboarding', 'todays_labs', 'tasks', 'ekg_warmup'],
+  lead_instructor: ['scenarios', 'students', 'schedule', 'emt_tracker', 'aemt_tracker', 'clinical', 'internships', 'my_certs', 'learning_styles', 'cohorts', 'lab_days', 'skill_sheets', 'reports', 'onboarding', 'todays_labs', 'tasks', 'ekg_warmup'],
+  instructor: ['scenarios', 'students', 'schedule', 'my_certs', 'onboarding', 'todays_labs', 'tasks', 'skill_sheets', 'ekg_warmup'],
+  volunteer_instructor: ['schedule', 'todays_labs'],
+  program_director: ['clinical'],
+  student: [],
+  guest: [],
+  pending: [],
+};
+
 // Role-based default configurations
 export const ROLE_DEFAULTS: Record<string, { widgets: string[]; quickLinks: string[] }> = {
   superadmin: {
@@ -119,11 +165,27 @@ export const ROLE_DEFAULTS: Record<string, { widgets: string[]; quickLinks: stri
     quickLinks: ['scenarios', 'students', 'schedule', 'emt_tracker', 'clinical'],
   },
   instructor: {
-    widgets: ['my_tasks', 'my_labs', 'notifications', 'quick_stats', 'open_stations', 'overdue_tasks', 'cert_expiry', 'quick_links'],
+    widgets: ['my_tasks', 'my_labs', 'notifications', 'overdue_tasks', 'open_stations', 'cert_expiry', 'quick_links'],
     quickLinks: ['scenarios', 'students', 'schedule', 'my_certs', 'onboarding'],
   },
+  volunteer_instructor: {
+    widgets: ['my_labs', 'notifications'],
+    quickLinks: ['schedule', 'todays_labs'],
+  },
+  program_director: {
+    widgets: ['notifications'],
+    quickLinks: ['clinical'],
+  },
+  student: {
+    widgets: ['my_labs', 'my_tasks'],
+    quickLinks: [],
+  },
   guest: {
-    widgets: ['notifications', 'quick_links'],
-    quickLinks: ['scenarios', 'students'],
+    widgets: [],
+    quickLinks: [],
+  },
+  pending: {
+    widgets: [],
+    quickLinks: [],
   },
 };

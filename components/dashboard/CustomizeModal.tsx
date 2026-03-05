@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { X, GripVertical, RotateCcw } from 'lucide-react';
-import { WIDGET_DEFINITIONS, QUICK_LINK_DEFINITIONS } from './widgets';
+import { WIDGET_DEFINITIONS, QUICK_LINK_DEFINITIONS, getWidgetWhitelist, QUICK_LINK_WHITELIST } from './widgets';
 
 interface CustomizeModalProps {
   isOpen: boolean;
@@ -11,6 +11,7 @@ interface CustomizeModalProps {
   quickLinks: string[];
   onSave: (widgets: string[], quickLinks: string[]) => void;
   onReset: () => void;
+  role?: string;
 }
 
 export default function CustomizeModal({
@@ -20,6 +21,7 @@ export default function CustomizeModal({
   quickLinks: initialQuickLinks,
   onSave,
   onReset,
+  role,
 }: CustomizeModalProps) {
   const [widgets, setWidgets] = useState<string[]>(initialWidgets);
   const [quickLinks, setQuickLinks] = useState<string[]>(initialQuickLinks);
@@ -46,8 +48,15 @@ export default function CustomizeModal({
 
   if (!isOpen) return null;
 
-  const allWidgetIds = Object.keys(WIDGET_DEFINITIONS);
-  const allQuickLinkIds = Object.keys(QUICK_LINK_DEFINITIONS);
+  // Filter available widgets and quick links by role whitelist
+  const roleWidgetWhitelist = role ? getWidgetWhitelist(role) : null;
+  const roleQuickLinkWhitelist = role ? (QUICK_LINK_WHITELIST[role] || []) : null;
+  const allWidgetIds = roleWidgetWhitelist
+    ? Object.keys(WIDGET_DEFINITIONS).filter(id => roleWidgetWhitelist.includes(id))
+    : Object.keys(WIDGET_DEFINITIONS);
+  const allQuickLinkIds = roleQuickLinkWhitelist
+    ? Object.keys(QUICK_LINK_DEFINITIONS).filter(id => roleQuickLinkWhitelist.includes(id))
+    : Object.keys(QUICK_LINK_DEFINITIONS);
 
   const toggleWidget = (widgetId: string) => {
     setWidgets(prev =>
