@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { hasMinRole } from '@/lib/permissions';
+import { requireAuth } from '@/lib/api-auth';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -45,24 +43,10 @@ function computeConsecutiveMisses(statuses: string[]): number {
 // ---------------------------------------------------------------------------
 
 export async function GET(request: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireAuth('instructor');
+  if (auth instanceof NextResponse) return auth;
 
   const supabase = getSupabaseAdmin();
-
-  // Verify role
-  const { data: requestingUser } = await supabase
-    .from('lab_users')
-    .select('role')
-    .ilike('email', session.user.email)
-    .single();
-
-  const userRole = requestingUser?.role || 'guest';
-  if (!hasMinRole(userRole, 'instructor')) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
 
   const { searchParams } = new URL(request.url);
   const cohortIdFilter = searchParams.get('cohort_id');

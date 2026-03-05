@@ -64,6 +64,18 @@ export default function StudentsPage() {
     }
   }, [status, router]);
 
+  // Role guard: require instructor+
+  useEffect(() => {
+    if (!session?.user?.email) return;
+    fetch('/api/instructor/me').then(r => r.json()).then(data => {
+      if (data.success && data.user) {
+        const levels: Record<string, number> = { superadmin: 5, admin: 4, lead_instructor: 3, instructor: 2 };
+        const level = levels[data.user.role as string] || 0;
+        if (level < 2) router.push('/');
+      }
+    });
+  }, [session, router]);
+
   useEffect(() => {
     if (session) {
       fetchCohorts();

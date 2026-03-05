@@ -1,27 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { hasMinRole } from '@/lib/permissions';
+import { requireAuth } from '@/lib/api-auth';
 
 // ─── GET: Check if a specific assignment would exceed capacity ────────────────
 // Query params: ?site_id=X&source=agency|clinical_site&date=YYYY-MM-DD&student_count=N
 export async function GET(request: NextRequest) {
   try {
+    const auth = await requireAuth('lead_instructor');
+    if (auth instanceof NextResponse) return auth;
+
     const supabase = getSupabaseAdmin();
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const { data: callerUser } = await supabase
-      .from('lab_users')
-      .select('role')
-      .ilike('email', session.user.email)
-      .single();
-
-    if (!callerUser || !hasMinRole(callerUser.role, 'lead_instructor')) {
-      return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
-    }
 
     const searchParams = request.nextUrl.searchParams;
     const siteId = searchParams.get('site_id');

@@ -178,11 +178,28 @@ function SchedulePageContent() {
   const [savingNote, setSavingNote] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  const [userRole, setUserRole] = useState<string | null>(null);
+
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/signin');
     }
   }, [status, router]);
+
+  // Role guard: require volunteer_instructor+ (canAccessScheduling)
+  useEffect(() => {
+    if (!session?.user?.email) return;
+    fetch('/api/instructor/me').then(r => r.json()).then(data => {
+      if (data.success && data.user) {
+        setUserRole(data.user.role);
+        const role = data.user.role as string;
+        // Allow volunteer_instructor, instructor, lead_instructor, admin, superadmin
+        const levels: Record<string, number> = { superadmin: 5, admin: 4, lead_instructor: 3, instructor: 2, volunteer_instructor: 1.5 };
+        const level = levels[role] || 0;
+        if (level < 1.5) router.push('/');
+      }
+    });
+  }, [session, router]);
 
   useEffect(() => {
     if (session) {

@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { hasMinRole, type Role } from '@/lib/permissions';
 
-// GET /api/access-requests/status - Check the access request status for the current signed-in user
-// Used by the /request-access page to show current status (pending/denied/none)
+// GET /api/access-requests/status - Check the access request status for a user
+// Non-admin users can only check their own email. Admin+ can query any email via ?email= param.
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession();
@@ -11,8 +12,29 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    const email = session.user.email;
     const supabase = getSupabaseAdmin();
+    const searchParams = request.nextUrl.searchParams;
+    const requestedEmail = searchParams.get('email');
+
+    // Determine the email to query - default to the session user's own email
+    let email = session.user.email;
+
+    // If a different email was requested, verify the caller is admin+
+    if (requestedEmail && requestedEmail.toLowerCase() !== session.user.email.toLowerCase()) {
+      const { data: caller } = await supabase
+        .from('lab_users')
+        .select('role')
+        .ilike('email', session.user.email)
+        .single();
+
+      if (!caller || !hasMinRole(caller.role as Role, 'admin')) {
+        return NextResponse.json(
+          { success: false, error: 'You can only check your own access request status' },
+          { status: 403 }
+        );
+      }
+      email = requestedEmail;
+    }
 
     // Check if user is already in lab_users
     const { data: existingUser } = await supabase

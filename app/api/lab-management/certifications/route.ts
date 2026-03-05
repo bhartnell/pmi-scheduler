@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { requireAuth } from '@/lib/api-auth';
 
 // Helper to get current user's lab_users record
 async function getCurrentUser(email: string) {
@@ -14,6 +15,9 @@ async function getCurrentUser(email: string) {
 }
 
 export async function GET(request: NextRequest) {
+  const auth = await requireAuth('admin');
+  if (auth instanceof NextResponse) return auth;
+
   const searchParams = request.nextUrl.searchParams;
   const instructorId = searchParams.get('instructorId');
   const includeExpired = searchParams.get('includeExpired') === 'true';
