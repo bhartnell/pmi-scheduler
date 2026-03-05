@@ -65,6 +65,20 @@ PMI EMS Scheduler is a comprehensive scheduling and management system for the Pi
 - Preview branches cause deployment confusion and delays
 - Single developer workflow doesn't need PR review gates
 
+## Database Migrations
+
+Run migrations against Supabase production using the migration runner script:
+
+```bash
+node scripts/run-migration.js supabase/migrations/<filename>.sql
+```
+
+- Connection is configured via `SUPABASE_DB_URL` in `.env.local`
+- Uses the `pg` npm package with the Supabase session pooler (us-west-2)
+- Add `--dry-run` to preview SQL without executing
+- Always run migrations after committing code that creates new tables
+- Migration files use `IF NOT EXISTS` for idempotency
+
 ## Conventions
 
 - API routes: NextRequest/NextResponse, getServerSession for auth, createClient for Supabase
