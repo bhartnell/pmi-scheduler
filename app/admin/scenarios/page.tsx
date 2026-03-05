@@ -11,6 +11,7 @@ import {
   FileText,
   Search,
   Wand2,
+  Upload,
   ArrowLeft,
 } from 'lucide-react';
 import { canAccessAdmin } from '@/lib/permissions';
@@ -76,6 +77,14 @@ export default function ScenariosHubPage() {
       color: 'bg-purple-600',
       badge: null,
     },
+    {
+      href: '/admin/scenarios/bulk-import',
+      icon: Upload,
+      title: 'Bulk Import Tool',
+      description: 'Import multiple BLS scenarios from a JSON or CSV file. Preview and validate all scenarios before committing. Supports full phase-based format with vitals and SAMPLE history.',
+      color: 'bg-emerald-600',
+      badge: null,
+    },
   ];
 
   return (
@@ -129,7 +138,7 @@ export default function ScenariosHubPage() {
         </div>
 
         {/* Tool Cards */}
-        <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4">
           {tools.map((tool) => {
             const Icon = tool.icon;
             return (
