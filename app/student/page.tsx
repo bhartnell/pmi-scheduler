@@ -8,8 +8,11 @@
  */
 
 import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { canAccessAdmin } from '@/lib/permissions';
+import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import {
   CheckSquare,
   Activity,
@@ -114,7 +117,9 @@ interface EKGData {
 
 export default function StudentDashboard() {
   const { data: session } = useSession();
+  const router = useRouter();
   const [user, setUser] = useState<StudentUser | null>(null);
+  const effectiveRole = useEffectiveRole(user?.role ?? null);
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [ekgData, setEkgData] = useState<EKGData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -124,6 +129,13 @@ export default function StudentDashboard() {
       fetchUserData();
     }
   }, [session]);
+
+  // Role guard: students and admins only
+  useEffect(() => {
+    if (effectiveRole && effectiveRole !== 'student' && !canAccessAdmin(effectiveRole)) {
+      router.push('/');
+    }
+  }, [effectiveRole, router]);
 
   const fetchUserData = async () => {
     try {

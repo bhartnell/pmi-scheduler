@@ -20,7 +20,8 @@ import {
   BarChart3,
   Timer,
 } from 'lucide-react';
-import { canAccessAdmin, canManageContent } from '@/lib/permissions';
+import { canAccessAdmin, canManageContent, hasMinRole } from '@/lib/permissions';
+import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import type { CurrentUser } from '@/types';
 
@@ -90,6 +91,7 @@ export default function InstructorDashboard() {
   const router = useRouter();
 
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const effectiveRole = useEffectiveRole(currentUser?.role ?? null);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [certifications, setCertifications] = useState<Certification[]>([]);
   const [upcomingLabs, setUpcomingLabs] = useState<UpcomingLab[]>([]);
@@ -100,6 +102,13 @@ export default function InstructorDashboard() {
       router.push('/');
     }
   }, [status, router]);
+
+  // Role guard: instructor+ only
+  useEffect(() => {
+    if (effectiveRole && !hasMinRole(effectiveRole, 'instructor')) {
+      router.push('/');
+    }
+  }, [effectiveRole, router]);
 
   useEffect(() => {
     if (session?.user?.email) {

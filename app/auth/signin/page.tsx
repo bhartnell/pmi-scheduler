@@ -1,9 +1,26 @@
 'use client';
 
+import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 import { signIn } from 'next-auth/react';
-import { Calendar } from 'lucide-react';
+import { Calendar, AlertCircle } from 'lucide-react';
 
-export default function SignIn() {
+const SIGNIN_ERRORS: Record<string, string> = {
+  OAuthSignin: 'Could not start sign-in. Please try again.',
+  OAuthCallback: 'Authentication failed. Please try again.',
+  OAuthAccountNotLinked: 'This email is linked to a different sign-in method.',
+  AccessDenied: 'Access denied. Only authorized accounts can sign in.',
+  Verification: 'Verification link expired. Please try again.',
+  Default: 'An error occurred. Please try again.',
+};
+
+function SignInContent() {
+  const searchParams = useSearchParams();
+  const errorCode = searchParams.get('error');
+  const errorMessage = errorCode
+    ? SIGNIN_ERRORS[errorCode] || SIGNIN_ERRORS.Default
+    : null;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-6">
       <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8">
@@ -12,6 +29,13 @@ export default function SignIn() {
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">PMI EMS Scheduler</h1>
           <p className="text-gray-600 dark:text-gray-400">Sign in with your PMI.edu Google account</p>
         </div>
+
+        {errorMessage && (
+          <div className="mb-6 flex items-start gap-3 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+            <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-red-700 dark:text-red-300">{errorMessage}</p>
+          </div>
+        )}
 
         <button
           onClick={() => signIn('google', { callbackUrl: '/' })}
@@ -31,5 +55,19 @@ export default function SignIn() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function SignIn() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        </div>
+      }
+    >
+      <SignInContent />
+    </Suspense>
   );
 }

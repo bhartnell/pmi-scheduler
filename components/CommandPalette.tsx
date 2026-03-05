@@ -25,7 +25,10 @@ import {
   X,
   BookOpen,
 } from 'lucide-react';
+import { useSession } from 'next-auth/react';
 import { parseDateSafe } from '@/lib/utils';
+import { hasMinRole, canAccessClinical, canAccessAffiliations, canAccessScheduling } from '@/lib/permissions';
+import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -241,11 +244,26 @@ function formatDate(dateStr: string): string {
 
 export default function CommandPalette() {
   const router = useRouter();
+  const { data: session } = useSession();
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
+
+  // Role-based command filtering
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const effectiveRole = useEffectiveRole(userRole);
+
+  useEffect(() => {
+    if (!session?.user?.email) return;
+    fetch('/api/instructor/me')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.user?.role) setUserRole(data.user.role);
+      })
+      .catch(() => {});
+  }, [session?.user?.email]);
 
   // Search state
   const [searchResults, setSearchResults] = useState<SearchResultItem[]>([]);
@@ -414,8 +432,31 @@ export default function CommandPalette() {
         action: () => router.push('/tasks?tab=assigned&filter=overdue'),
         keywords: ['late', 'past due'],
       },
-    ],
-    [router]
+    ].filter(cmd => {
+      if (!effectiveRole) return true; // show all before role loads
+      switch (cmd.id) {
+        case 'nav-labs':
+        case 'nav-students':
+        case 'nav-scenarios':
+        case 'nav-reports':
+        case 'nav-cohorts':
+        case 'nav-workload':
+        case 'nav-tasks':
+        case 'action-new-task':
+        case 'filter-my-tasks':
+        case 'filter-overdue':
+          return hasMinRole(effectiveRole, 'instructor');
+        case 'nav-clinical':
+        case 'action-site-visits':
+          return canAccessClinical(effectiveRole) || canAccessAffiliations(effectiveRole);
+        case 'nav-calendar':
+        case 'nav-schedule':
+          return canAccessScheduling(effectiveRole);
+        default:
+          return true;
+      }
+    }),
+    [router, effectiveRole]
   );
 
   // ── Search API call (debounced) ────────────────────────────────────────────
