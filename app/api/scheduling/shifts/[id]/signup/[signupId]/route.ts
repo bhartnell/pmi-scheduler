@@ -100,6 +100,28 @@ export async function POST(
 
     if (error) throw error;
 
+    // Fire-and-forget: sync Google Calendar event on confirmation
+    if (action === 'confirm') {
+      try {
+        const { syncShiftSignup } = await import('@/lib/google-calendar');
+        const instructor = Array.isArray(signup.instructor) ? signup.instructor[0] : signup.instructor;
+        const shift = Array.isArray(signup.shift) ? signup.shift[0] : signup.shift;
+        if (instructor?.email && shift) {
+          syncShiftSignup({
+            userEmail: instructor.email,
+            signupId,
+            shiftId,
+            shiftTitle: shift.title || 'Shift',
+            shiftDate: shift.date,
+            startTime: shift.start_time || undefined,
+            endTime: shift.end_time || undefined,
+          }).catch(() => {}); // Fire-and-forget
+        }
+      } catch {
+        // Calendar sync is best-effort
+      }
+    }
+
     // TODO: Notify instructor of confirmation/decline
 
     return NextResponse.json({ success: true, signup: updated });

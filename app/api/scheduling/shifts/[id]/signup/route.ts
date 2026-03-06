@@ -184,6 +184,17 @@ export async function DELETE(
 
     if (error) throw error;
 
+    // Fire-and-forget: remove Google Calendar event on withdrawal
+    try {
+      const { removeShiftSignup } = await import('@/lib/google-calendar');
+      removeShiftSignup({
+        userEmail: currentUser.email,
+        signupId: signup.id,
+      }).catch(() => {}); // Fire-and-forget
+    } catch {
+      // Calendar sync is best-effort
+    }
+
     // TODO: Notify shift creator if was confirmed
 
     return NextResponse.json({ success: true });

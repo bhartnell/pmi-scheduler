@@ -137,6 +137,34 @@ export async function PUT(
 
     if (error) throw error;
 
+    // Fire-and-forget: update linked Google Calendar events if date/time changed
+    if (updateData.date || updateData.start_time || updateData.end_time || updateData.title) {
+      try {
+        const { getEventMappingsByShift, getAccessTokenForUser, updateGoogleEvent } = await import('@/lib/google-calendar');
+        const mappings = await getEventMappingsByShift(id);
+        for (const mapping of mappings) {
+          try {
+            const accessToken = await getAccessTokenForUser(mapping.user_email);
+            if (!accessToken) continue;
+            const patchParams: Record<string, unknown> = {};
+            if (updateData.title) patchParams.summary = `PMI Shift: ${updateData.title}`;
+            if (updateData.date || updateData.start_time || updateData.end_time) {
+              const d = (updateData.date || shift?.date) as string;
+              const st = (updateData.start_time || shift?.start_time || '08:00') as string;
+              const et = (updateData.end_time || shift?.end_time || '17:00') as string;
+              patchParams.startDateTime = `${d}T${st}:00`;
+              patchParams.endDateTime = `${d}T${et}:00`;
+            }
+            updateGoogleEvent(accessToken, mapping.google_event_id, patchParams as any).catch(() => {});
+          } catch {
+            // Per-mapping errors are non-fatal
+          }
+        }
+      } catch {
+        // Calendar sync is best-effort
+      }
+    }
+
     return NextResponse.json({ success: true, shift });
   } catch (error) {
     console.error('Error updating shift:', error);
@@ -186,6 +214,14 @@ export async function DELETE(
       .single();
 
     if (error) throw error;
+
+    // Fire-and-forget: cancel all Google Calendar events for this shift
+    try {
+      const { cancelShiftEvents } = await import('@/lib/google-calendar');
+      cancelShiftEvents(id).catch(() => {});
+    } catch {
+      // Calendar sync is best-effort
+    }
 
     // TODO: Notify all signed up instructors that shift is cancelled
 
