@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth } from '@/lib/api-auth';
 
-// GET - Get any active (running) timer across all lab days
+// GET - Get any active (running or paused) timer across all lab days
 export async function GET() {
   const auth = await requireAuth('instructor');
 
@@ -13,11 +13,11 @@ export async function GET() {
   try {
     const supabase = getSupabaseAdmin();
 
-    // Find any timer that is currently running (not paused or stopped)
+    // Find any timer that is currently running or paused (not stopped)
     const { data: timer, error: timerError } = await supabase
       .from('lab_timer_state')
       .select('*')
-      .eq('status', 'running')
+      .in('status', ['running', 'paused'])
       .order('updated_at', { ascending: false })
       .limit(1)
       .maybeSingle();

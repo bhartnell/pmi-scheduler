@@ -35,10 +35,10 @@ export default function GlobalTimerBanner() {
   const [isDismissed, setIsDismissed] = useState(false);
   const [lastRotation, setLastRotation] = useState<number | null>(null);
 
-  // Only show timer banner on relevant pages
-  const isTimerRelevantPage = pathname === '/' ||
-    pathname.startsWith('/lab-management') ||
-    pathname.startsWith('/calendar');
+  // Show timer banner on all authenticated pages (not on login/auth pages)
+  const isTimerRelevantPage = !pathname.startsWith('/auth') &&
+    !pathname.startsWith('/api') &&
+    !pathname.startsWith('/timer-display');
 
   // Fetch active timer
   const fetchActiveTimer = useCallback(async () => {
@@ -72,15 +72,18 @@ export default function GlobalTimerBanner() {
 
   // Poll for active timer - optimized interval based on state
   // Uses visibility-aware polling to pause when tab is hidden
-  const pollInterval = !isTimerRelevantPage
-    ? null
-    : hasOwnTimerComponent
-      ? 60000 // 60s on pages with their own timer component
-      : (timer?.status === 'running' ? 10000 : 60000); // 10s when running, 60s when idle
+  const getPollInterval = () => {
+    if (!isTimerRelevantPage) return null;
+    if (hasOwnTimerComponent) return 60000; // 60s on pages with their own timer component
+    if (timer?.status === 'running') return 5000; // 5s when running
+    if (timer?.status === 'paused') return 10000; // 10s when paused (catch resume)
+    return 30000; // 30s when idle/no timer
+  };
+  const pollInterval = getPollInterval();
   useVisibilityPolling(fetchActiveTimer, pollInterval);
 
   // Add/remove body class and padding when banner is visible
-  const isActive = timer && labDay && !isDismissed;
+  const isActive = timer && labDay && !isDismissed && timer.status !== 'stopped';
   useEffect(() => {
     if (isActive) {
       document.body.classList.add('has-timer-banner');
@@ -153,6 +156,7 @@ export default function GlobalTimerBanner() {
     if (!timer) {
       return 'bg-green-600';
     }
+    if (timer.status === 'paused') return 'bg-blue-600';
     const remaining = timer.mode === 'countdown'
       ? displaySeconds
       : (timer.duration_seconds - displaySeconds);
@@ -170,17 +174,18 @@ export default function GlobalTimerBanner() {
     return null;
   }
 
-  // Don't render if no active timer, user dismissed, timer is not running, or time is up
-  if (!timer || !labDay || isDismissed || timer.status !== 'running' || isTimeUp) {
+  // Don't render if no active timer, user dismissed, timer is stopped, or time is up
+  if (!timer || !labDay || isDismissed || timer.status === 'stopped' || isTimeUp) {
     return null;
   }
 
   const isRunning = timer.status === 'running';
+  const isPaused = timer.status === 'paused';
 
   return (
     <div
       role="status"
-      aria-label={`Lab timer: Rotation ${timer.rotation_number}, ${formatTime(displaySeconds)} ${timer.mode === 'countdown' ? 'remaining' : 'elapsed'}`}
+      aria-label={`Lab timer: Rotation ${timer.rotation_number}, ${formatTime(displaySeconds)} ${isPaused ? 'paused' : timer.mode === 'countdown' ? 'remaining' : 'elapsed'}`}
       className={`fixed top-0 left-0 right-0 z-[100] ${getBannerColor()} text-white shadow-lg transition-colors duration-300 print:hidden`}
       style={{ height: `${BANNER_HEIGHT}px` }}
     >
@@ -199,12 +204,16 @@ export default function GlobalTimerBanner() {
 
           {/* Center: Time display */}
           <div className="flex items-center gap-2" aria-hidden="true">
-            <Play className="w-4 h-4" aria-hidden="true" />
+            {isPaused ? (
+              <Pause className="w-4 h-4" aria-hidden="true" />
+            ) : (
+              <Play className="w-4 h-4" aria-hidden="true" />
+            )}
             <span className="font-mono font-bold text-lg sm:text-xl">
               {formatTime(displaySeconds)}
             </span>
             <span className="text-sm text-white/70 hidden sm:inline">
-              {timer.mode === 'countdown' ? 'remaining' : 'elapsed'}
+              {isPaused ? 'paused' : timer.mode === 'countdown' ? 'remaining' : 'elapsed'}
             </span>
           </div>
 
