@@ -375,6 +375,112 @@ export async function GET() {
     // Sort issues by severity (most issues first)
     issues.sort((a, b) => b.issues.length - a.issues.length);
 
+    // --- Completeness scoring per scenario ---
+    const completenessFields = [
+      { key: 'chief_complaint', label: 'Chief Complaint' },
+      { key: 'patient_age', label: 'Patient Age' },
+      { key: 'category', label: 'Category' },
+      { key: 'difficulty', label: 'Difficulty' },
+      { key: 'dispatch_location', label: 'Dispatch Location' },
+      { key: 'patient_name', label: 'Patient Name' },
+      { key: 'patient_sex', label: 'Patient Sex' },
+      { key: 'allergies', label: 'Allergies' },
+      { key: 'medications', label: 'Medications' },
+      { key: 'medical_history', label: 'Medical History' },
+      { key: 'learning_objectives', label: 'Learning Objectives' },
+      { key: 'equipment_needed', label: 'Equipment Needed' },
+      { key: 'instructor_notes', label: 'Instructor Notes' },
+    ];
+
+    // Check structured / nested fields separately
+    interface CompletenessEntry {
+      id: string;
+      title: string;
+      category: string | null;
+      missing: string[];
+      present: number;
+      total: number;
+      percent_complete: number;
+    }
+
+    const completenessReport: CompletenessEntry[] = [];
+
+    for (const s of scenarios) {
+      const missing: string[] = [];
+      let presentCount = 0;
+      const totalFieldCount = completenessFields.length + 5; // +5 for structured checks
+
+      // Check simple fields
+      for (const f of completenessFields) {
+        const val = s[f.key];
+        const isEmpty = val === null || val === undefined
+          || (typeof val === 'string' && val.trim() === '')
+          || (Array.isArray(val) && val.length === 0)
+          || (typeof val === 'object' && !Array.isArray(val) && Object.keys(val as Record<string, unknown>).length === 0);
+        if (isEmpty) {
+          missing.push(f.label);
+        } else {
+          presentCount++;
+        }
+      }
+
+      // Check phases
+      const phases = s.phases;
+      if (!Array.isArray(phases) || phases.length === 0) {
+        missing.push('Phases');
+      } else {
+        presentCount++;
+        // Check if phases have vitals
+        const hasPhaseVitals = phases.some((p: Record<string, unknown>) =>
+          p && typeof p === 'object' && p.vitals && typeof p.vitals === 'object' && Object.keys(p.vitals as object).length > 0
+        );
+        if (!hasPhaseVitals) {
+          missing.push('Phase Vitals');
+        } else {
+          presentCount++;
+        }
+      }
+
+      // Check initial_vitals
+      if (!s.initial_vitals || (typeof s.initial_vitals === 'object' && Object.keys(s.initial_vitals).length === 0)) {
+        missing.push('Initial Vitals');
+      } else {
+        presentCount++;
+      }
+
+      // Check critical_actions
+      const ca = s.critical_actions;
+      if (!ca || (Array.isArray(ca) && ca.length === 0)) {
+        missing.push('Critical Actions');
+      } else {
+        presentCount++;
+      }
+
+      // Check debrief_points
+      if (!s.debrief_points || (Array.isArray(s.debrief_points) && s.debrief_points.length === 0)) {
+        missing.push('Debrief Points');
+      } else {
+        presentCount++;
+      }
+
+      const percentComplete = Math.round((presentCount / totalFieldCount) * 100);
+
+      completenessReport.push({
+        id: s.id,
+        title: s.title || '(untitled)',
+        category: s.category || null,
+        missing,
+        present: presentCount,
+        total: totalFieldCount,
+        percent_complete: percentComplete,
+      });
+    }
+
+    // Sort by completeness (worst first)
+    completenessReport.sort((a, b) => a.percent_complete - b.percent_complete);
+
+    const fullyComplete = completenessReport.filter(c => c.missing.length === 0).length;
+
     // --- Issue frequency ---
     const issueFrequency: Record<string, number> = {};
     for (const iss of issues) {
@@ -430,6 +536,12 @@ export async function GET() {
         problematic_scenarios: issues.length,
         clean_scenarios: scenarios.length - issues.length,
         issues: issues.slice(0, 50), // First 50 most problematic
+
+        completeness: {
+          fully_complete: fullyComplete,
+          total: scenarios.length,
+          report: completenessReport,
+        },
 
         raw_samples: rawSamples,
       },

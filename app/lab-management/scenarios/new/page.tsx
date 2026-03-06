@@ -24,7 +24,14 @@ import {
   MessageSquare,
   Clock,
   Check,
-  ArrowRight
+  ArrowRight,
+  ArrowLeft,
+  Shield,
+  Stethoscope,
+  ClipboardList,
+  Syringe,
+  BookOpen,
+  UserCircle,
 } from 'lucide-react';
 import { canManageContent, type Role } from '@/lib/permissions';
 import { SKIN_OPTIONS } from '@/lib/constants';
@@ -33,6 +40,7 @@ import FormField from '@/components/FormField';
 import { validators } from '@/lib/validation';
 import { PageLoader } from '@/components/ui';
 import { Loader2 } from 'lucide-react';
+import Breadcrumbs from '@/components/Breadcrumbs';
 
 // Types
 interface VitalSigns {
@@ -81,6 +89,43 @@ interface EvaluationCriteria {
   description: string;
 }
 
+interface SampleHistory {
+  signs_symptoms: string;
+  allergies: string;
+  medications: string;
+  past_history: string;
+  last_oral_intake: string;
+  events_leading: string;
+}
+
+interface Opqrst {
+  onset: string;
+  provocation: string;
+  quality: string;
+  radiation: string;
+  severity: string;
+  time_onset: string;
+}
+
+interface SecondarySurvey {
+  head: string;
+  neck: string;
+  chest: string;
+  abdomen: string;
+  pelvis: string;
+  extremities: string;
+  posterior: string;
+}
+
+interface EkgFindings {
+  rhythm: string;
+  rate: string;
+  intervals: string;
+  axis: string;
+  st_changes: string;
+  interpretation: string;
+}
+
 interface Scenario {
   id?: string;
   title: string;
@@ -89,17 +134,17 @@ interface Scenario {
   subcategory: string;
   difficulty: string;
   estimated_duration: number | null;
-  
+
   // Quick Reference
   instructor_summary: string;
   key_decision_points: string[];
-  
+
   // Dispatch
   dispatch_time: string;
   dispatch_location: string;
   chief_complaint: string;
   dispatch_notes: string;
-  
+
   // Patient Info
   patient_name: string;
   patient_age: string;
@@ -108,14 +153,36 @@ interface Scenario {
   medical_history: string[];
   medications: string[];
   allergies: string;
-  
+
+  // Primary Assessment (XABCDE)
+  assessment_x: string;
+  assessment_a: string;
+  assessment_b: string;
+  assessment_c: string;
+  assessment_d: string;
+  assessment_e: string;
+
+  // History
+  sample_history: SampleHistory;
+  opqrst: Opqrst;
+
+  // Secondary Survey
+  secondary_survey: SecondarySurvey;
+
+  // EKG Findings
+  ekg_findings: EkgFindings;
+
   // Phases
   phases: Phase[];
-  
-  // Grading
+
+  // Grading / Educational
   critical_actions: CriticalAction[];
   evaluation_criteria: EvaluationCriteria[];
   debrief_points: string[];
+
+  // Equipment & Medications
+  equipment_needed: string[];
+  medications_to_administer: string[];
 }
 
 // Constants
@@ -628,10 +695,22 @@ function ScenarioEditorContent() {
     medical_history: [],
     medications: [],
     allergies: '',
+    assessment_x: '',
+    assessment_a: '',
+    assessment_b: '',
+    assessment_c: '',
+    assessment_d: '',
+    assessment_e: '',
+    sample_history: { signs_symptoms: '', allergies: '', medications: '', past_history: '', last_oral_intake: '', events_leading: '' },
+    opqrst: { onset: '', provocation: '', quality: '', radiation: '', severity: '', time_onset: '' },
+    secondary_survey: { head: '', neck: '', chest: '', abdomen: '', pelvis: '', extremities: '', posterior: '' },
+    ekg_findings: { rhythm: '', rate: '', intervals: '', axis: '', st_changes: '', interpretation: '' },
     phases: [createEmptyPhase(0)],
     critical_actions: [],
     evaluation_criteria: DEFAULT_EVALUATION_CRITERIA,
-    debrief_points: []
+    debrief_points: [],
+    equipment_needed: [],
+    medications_to_administer: [],
   });
 
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -642,6 +721,8 @@ function ScenarioEditorContent() {
   const [newMedication, setNewMedication] = useState('');
   const [newCriticalAction, setNewCriticalAction] = useState('');
   const [newDebriefPoint, setNewDebriefPoint] = useState('');
+  const [newEquipment, setNewEquipment] = useState('');
+  const [newMedToAdmin, setNewMedToAdmin] = useState('');
 
   // Toast notification state
   const [toast, setToast] = useState<{ show: boolean; message: string }>({ show: false, message: '' });
@@ -674,16 +755,30 @@ function ScenarioEditorContent() {
       medical_history: [],
       medications: [],
       allergies: '',
+      assessment_x: '',
+      assessment_a: '',
+      assessment_b: '',
+      assessment_c: '',
+      assessment_d: '',
+      assessment_e: '',
+      sample_history: { signs_symptoms: '', allergies: '', medications: '', past_history: '', last_oral_intake: '', events_leading: '' },
+      opqrst: { onset: '', provocation: '', quality: '', radiation: '', severity: '', time_onset: '' },
+      secondary_survey: { head: '', neck: '', chest: '', abdomen: '', pelvis: '', extremities: '', posterior: '' },
+      ekg_findings: { rhythm: '', rate: '', intervals: '', axis: '', st_changes: '', interpretation: '' },
       phases: [createEmptyPhase(0)],
       critical_actions: [],
       evaluation_criteria: DEFAULT_EVALUATION_CRITERIA,
-      debrief_points: []
+      debrief_points: [],
+      equipment_needed: [],
+      medications_to_administer: [],
     });
     setNewDecisionPoint('');
     setNewHistory('');
     setNewMedication('');
     setNewCriticalAction('');
     setNewDebriefPoint('');
+    setNewEquipment('');
+    setNewMedToAdmin('');
   };
 
   useEffect(() => {
@@ -723,6 +818,11 @@ function ScenarioEditorContent() {
       if (data.success && data.scenario) {
         // Map the database fields to our state
         const s = data.scenario;
+        const sampleHist = s.sample_history || {};
+        const opqrstData = s.opqrst || {};
+        const secSurvey = s.secondary_survey || {};
+        const ekgFind = s.ekg_findings || {};
+
         setScenario({
           id: s.id,
           title: s.title || '',
@@ -744,10 +844,51 @@ function ScenarioEditorContent() {
           medical_history: s.medical_history || [],
           medications: s.medications || [],
           allergies: s.allergies || '',
+          assessment_x: s.assessment_x || '',
+          assessment_a: s.assessment_a || '',
+          assessment_b: s.assessment_b || '',
+          assessment_c: s.assessment_c || '',
+          assessment_d: s.assessment_d || '',
+          assessment_e: s.assessment_e || '',
+          sample_history: {
+            signs_symptoms: sampleHist.signs_symptoms || '',
+            allergies: sampleHist.allergies || '',
+            medications: sampleHist.medications || '',
+            past_history: sampleHist.past_history || '',
+            last_oral_intake: sampleHist.last_oral_intake || '',
+            events_leading: sampleHist.events_leading || '',
+          },
+          opqrst: {
+            onset: opqrstData.onset || '',
+            provocation: opqrstData.provocation || '',
+            quality: opqrstData.quality || '',
+            radiation: opqrstData.radiation || '',
+            severity: opqrstData.severity || '',
+            time_onset: opqrstData.time_onset || '',
+          },
+          secondary_survey: {
+            head: secSurvey.head || '',
+            neck: secSurvey.neck || '',
+            chest: secSurvey.chest || '',
+            abdomen: secSurvey.abdomen || '',
+            pelvis: secSurvey.pelvis || '',
+            extremities: secSurvey.extremities || '',
+            posterior: secSurvey.posterior || '',
+          },
+          ekg_findings: {
+            rhythm: ekgFind.rhythm || '',
+            rate: ekgFind.rate || '',
+            intervals: ekgFind.intervals || '',
+            axis: ekgFind.axis || '',
+            st_changes: ekgFind.st_changes || '',
+            interpretation: ekgFind.interpretation || '',
+          },
           phases: s.phases?.length > 0 ? s.phases : [createEmptyPhase(0)],
           critical_actions: s.critical_actions?.map((a: string, i: number) => ({ id: `ca-${i}`, description: a })) || [],
           evaluation_criteria: DEFAULT_EVALUATION_CRITERIA,
-          debrief_points: s.debrief_points || []
+          debrief_points: s.debrief_points || [],
+          equipment_needed: s.equipment_needed || [],
+          medications_to_administer: s.medications_to_administer || [],
         });
       }
     } catch (error) {
@@ -826,9 +967,21 @@ function ScenarioEditorContent() {
         medical_history: scenario.medical_history,
         medications: scenario.medications,
         allergies: scenario.allergies,
+        assessment_x: scenario.assessment_x,
+        assessment_a: scenario.assessment_a,
+        assessment_b: scenario.assessment_b,
+        assessment_c: scenario.assessment_c,
+        assessment_d: scenario.assessment_d,
+        assessment_e: scenario.assessment_e,
+        sample_history: scenario.sample_history,
+        opqrst: scenario.opqrst,
+        secondary_survey: scenario.secondary_survey,
+        ekg_findings: scenario.ekg_findings,
         phases: scenario.phases,
         critical_actions: scenario.critical_actions.map(a => a.description),
-        debrief_points: scenario.debrief_points
+        debrief_points: scenario.debrief_points,
+        equipment_needed: scenario.equipment_needed,
+        medications_to_administer: scenario.medications_to_administer,
       };
 
       const url = isEditing
@@ -923,19 +1076,22 @@ function ScenarioEditorContent() {
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
-            <Link href="/" className="hover:text-blue-600">Home</Link>
-            <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management" className="hover:text-blue-600">Lab Management</Link>
-            <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management/scenarios" className="hover:text-blue-600">Scenarios</Link>
-            <ChevronRight className="w-4 h-4" />
-            <span>{isEditing ? 'Edit' : 'New'}</span>
-          </div>
+          <Breadcrumbs
+            customSegments={{ 'new': isEditing ? 'Edit' : 'New' }}
+            className="mb-2"
+          />
           <div className="flex items-center justify-between">
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-              {isEditing ? 'Edit Scenario' : 'Create Scenario'}
-            </h1>
+            <div className="flex items-center gap-3">
+              <Link
+                href="/lab-management/scenarios"
+                className="flex items-center gap-1 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </Link>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+                {isEditing ? 'Edit Scenario' : 'Create Scenario'}
+              </h1>
+            </div>
             <div className="flex items-center gap-2">
               {!isEditing && (
                 <button
@@ -1190,8 +1346,8 @@ function ScenarioEditorContent() {
           </div>
         </Section>
 
-        {/* Patient Info */}
-        <Section title="Patient Information" icon={Activity}>
+        {/* Patient Demographics */}
+        <Section title="Patient Demographics" icon={UserCircle}>
           <div className="space-y-4 pt-3">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div>
@@ -1237,80 +1393,399 @@ function ScenarioEditorContent() {
                 />
               </div>
             </div>
+          </div>
+        </Section>
 
+        {/* Primary Assessment (XABCDE) */}
+        <Section title="Primary Assessment (XABCDE)" icon={Shield}>
+          <div className="space-y-4 pt-3">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Document the expected findings for each step of the XABCDE primary survey.
+            </p>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Medical History</label>
-              <div className="flex flex-wrap gap-2 mb-2">
-                {scenario.medical_history.map((item, index) => (
-                  <span key={index} className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded text-sm">
-                    {item}
-                    <button type="button" onClick={() => removeFromArray('medical_history', index)} className="text-gray-500 hover:text-red-500">
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={newHistory}
-                  onChange={(e) => setNewHistory(e.target.value)}
-                  placeholder="Add condition..."
-                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
-                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('medical_history', newHistory, setNewHistory))}
-                />
-                <button type="button" onClick={() => addToArray('medical_history', newHistory, setNewHistory)} className="px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-gray-700 dark:text-gray-300">
-                  <Plus className="w-4 h-4" />
-                </button>
-              </div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <span className="inline-flex items-center justify-center w-5 h-5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded text-xs font-bold mr-1">X</span>
+                Hemorrhage Control
+              </label>
+              <textarea
+                value={scenario.assessment_x}
+                onChange={(e) => setScenario({ ...scenario, assessment_x: e.target.value })}
+                rows={2}
+                placeholder="e.g., No major hemorrhage noted, controlled bleeding from laceration..."
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+              />
             </div>
-
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Medications</label>
-              <div className="flex flex-wrap gap-2 mb-2">
-                {scenario.medications.map((item, index) => (
-                  <span key={index} className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded text-sm">
-                    {item}
-                    <button type="button" onClick={() => removeFromArray('medications', index)} className="text-blue-500 hover:text-red-500">
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={newMedication}
-                  onChange={(e) => setNewMedication(e.target.value)}
-                  placeholder="Add medication..."
-                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
-                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('medications', newMedication, setNewMedication))}
-                />
-                <button type="button" onClick={() => addToArray('medications', newMedication, setNewMedication)} className="px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-gray-700 dark:text-gray-300">
-                  <Plus className="w-4 h-4" />
-                </button>
-              </div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <span className="inline-flex items-center justify-center w-5 h-5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded text-xs font-bold mr-1">A</span>
+                Airway
+              </label>
+              <textarea
+                value={scenario.assessment_a}
+                onChange={(e) => setScenario({ ...scenario, assessment_a: e.target.value })}
+                rows={2}
+                placeholder="e.g., Patent and self-maintaining, snoring respirations requiring jaw thrust..."
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+              />
             </div>
-
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Allergies</label>
-              <input
-                type="text"
-                value={scenario.allergies}
-                onChange={(e) => setScenario({ ...scenario, allergies: e.target.value })}
-                placeholder="NKDA or list allergies"
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <span className="inline-flex items-center justify-center w-5 h-5 bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300 rounded text-xs font-bold mr-1">B</span>
+                Breathing
+              </label>
+              <textarea
+                value={scenario.assessment_b}
+                onChange={(e) => setScenario({ ...scenario, assessment_b: e.target.value })}
+                rows={2}
+                placeholder="e.g., Labored, tachypneic at 28/min, accessory muscle use..."
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <span className="inline-flex items-center justify-center w-5 h-5 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded text-xs font-bold mr-1">C</span>
+                Circulation
+              </label>
+              <textarea
+                value={scenario.assessment_c}
+                onChange={(e) => setScenario({ ...scenario, assessment_c: e.target.value })}
+                rows={2}
+                placeholder="e.g., Tachycardic, radial pulse weak, skin pale/cool/diaphoretic..."
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <span className="inline-flex items-center justify-center w-5 h-5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-xs font-bold mr-1">D</span>
+                Disability
+              </label>
+              <textarea
+                value={scenario.assessment_d}
+                onChange={(e) => setScenario({ ...scenario, assessment_d: e.target.value })}
+                rows={2}
+                placeholder="e.g., GCS 14 (E4V4M6), PERRL 4mm, glucose 95..."
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <span className="inline-flex items-center justify-center w-5 h-5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded text-xs font-bold mr-1">E</span>
+                Expose/Environment
+              </label>
+              <textarea
+                value={scenario.assessment_e}
+                onChange={(e) => setScenario({ ...scenario, assessment_e: e.target.value })}
+                rows={2}
+                placeholder="e.g., No additional injuries found, maintain body temp..."
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
               />
             </div>
           </div>
         </Section>
 
-        {/* Scenario Phases */}
+        {/* History (SAMPLE + OPQRST) */}
+        <Section title="History (SAMPLE + OPQRST)" icon={ClipboardList}>
+          <div className="space-y-6 pt-3">
+            {/* SAMPLE */}
+            <div>
+              <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-1">
+                <Stethoscope className="w-4 h-4 text-blue-500" /> SAMPLE History
+              </h4>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <span className="font-bold text-blue-600 dark:text-blue-400 mr-1">S</span> - Signs & Symptoms
+                  </label>
+                  <textarea
+                    value={scenario.sample_history.signs_symptoms}
+                    onChange={(e) => setScenario({ ...scenario, sample_history: { ...scenario.sample_history, signs_symptoms: e.target.value } })}
+                    rows={2}
+                    placeholder="Current signs and symptoms..."
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <span className="font-bold text-blue-600 dark:text-blue-400 mr-1">A</span> - Allergies
+                  </label>
+                  <input
+                    type="text"
+                    value={scenario.allergies}
+                    onChange={(e) => setScenario({ ...scenario, allergies: e.target.value })}
+                    placeholder="NKDA or list allergies"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <span className="font-bold text-blue-600 dark:text-blue-400 mr-1">M</span> - Medications
+                  </label>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {scenario.medications.map((item, index) => (
+                      <span key={index} className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded text-sm">
+                        {item}
+                        <button type="button" onClick={() => removeFromArray('medications', index)} className="text-blue-500 hover:text-red-500">
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newMedication}
+                      onChange={(e) => setNewMedication(e.target.value)}
+                      placeholder="Add medication..."
+                      className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('medications', newMedication, setNewMedication))}
+                    />
+                    <button type="button" onClick={() => addToArray('medications', newMedication, setNewMedication)} className="px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-gray-700 dark:text-gray-300">
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <span className="font-bold text-blue-600 dark:text-blue-400 mr-1">P</span> - Past Medical History
+                  </label>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {scenario.medical_history.map((item, index) => (
+                      <span key={index} className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded text-sm">
+                        {item}
+                        <button type="button" onClick={() => removeFromArray('medical_history', index)} className="text-gray-500 hover:text-red-500">
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newHistory}
+                      onChange={(e) => setNewHistory(e.target.value)}
+                      placeholder="Add condition..."
+                      className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('medical_history', newHistory, setNewHistory))}
+                    />
+                    <button type="button" onClick={() => addToArray('medical_history', newHistory, setNewHistory)} className="px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-gray-700 dark:text-gray-300">
+                      <Plus className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <span className="font-bold text-blue-600 dark:text-blue-400 mr-1">L</span> - Last Oral Intake
+                  </label>
+                  <input
+                    type="text"
+                    value={scenario.sample_history.last_oral_intake}
+                    onChange={(e) => setScenario({ ...scenario, sample_history: { ...scenario.sample_history, last_oral_intake: e.target.value } })}
+                    placeholder="e.g., Lunch at 1200, ate a sandwich and water"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <span className="font-bold text-blue-600 dark:text-blue-400 mr-1">E</span> - Events Leading
+                  </label>
+                  <textarea
+                    value={scenario.sample_history.events_leading}
+                    onChange={(e) => setScenario({ ...scenario, sample_history: { ...scenario.sample_history, events_leading: e.target.value } })}
+                    rows={2}
+                    placeholder="Events leading up to this incident..."
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* OPQRST */}
+            <div>
+              <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-1">
+                <Activity className="w-4 h-4 text-orange-500" /> OPQRST Pain Assessment
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <span className="font-bold text-orange-600 dark:text-orange-400 mr-1">O</span> - Onset
+                  </label>
+                  <input
+                    type="text"
+                    value={scenario.opqrst.onset}
+                    onChange={(e) => setScenario({ ...scenario, opqrst: { ...scenario.opqrst, onset: e.target.value } })}
+                    placeholder="When did it start?"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <span className="font-bold text-orange-600 dark:text-orange-400 mr-1">P</span> - Provocation/Palliation
+                  </label>
+                  <input
+                    type="text"
+                    value={scenario.opqrst.provocation}
+                    onChange={(e) => setScenario({ ...scenario, opqrst: { ...scenario.opqrst, provocation: e.target.value } })}
+                    placeholder="What makes it better/worse?"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <span className="font-bold text-orange-600 dark:text-orange-400 mr-1">Q</span> - Quality
+                  </label>
+                  <input
+                    type="text"
+                    value={scenario.opqrst.quality}
+                    onChange={(e) => setScenario({ ...scenario, opqrst: { ...scenario.opqrst, quality: e.target.value } })}
+                    placeholder="Sharp, dull, crushing, tearing..."
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <span className="font-bold text-orange-600 dark:text-orange-400 mr-1">R</span> - Radiation
+                  </label>
+                  <input
+                    type="text"
+                    value={scenario.opqrst.radiation}
+                    onChange={(e) => setScenario({ ...scenario, opqrst: { ...scenario.opqrst, radiation: e.target.value } })}
+                    placeholder="Does it radiate anywhere?"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <span className="font-bold text-orange-600 dark:text-orange-400 mr-1">S</span> - Severity (0-10)
+                  </label>
+                  <input
+                    type="text"
+                    value={scenario.opqrst.severity}
+                    onChange={(e) => setScenario({ ...scenario, opqrst: { ...scenario.opqrst, severity: e.target.value } })}
+                    placeholder="0-10 scale"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <span className="font-bold text-orange-600 dark:text-orange-400 mr-1">T</span> - Time of Onset
+                  </label>
+                  <input
+                    type="text"
+                    value={scenario.opqrst.time_onset}
+                    onChange={(e) => setScenario({ ...scenario, opqrst: { ...scenario.opqrst, time_onset: e.target.value } })}
+                    placeholder="How long ago? Constant or intermittent?"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </Section>
+
+        {/* Secondary Survey & EKG Findings */}
+        <Section title="Secondary Survey & EKG Findings" icon={Stethoscope}>
+          <div className="space-y-6 pt-3">
+            {/* Secondary Survey */}
+            <div>
+              <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">
+                Head-to-Toe Secondary Survey
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {(['head', 'neck', 'chest', 'abdomen', 'pelvis', 'extremities', 'posterior'] as const).map(region => (
+                  <div key={region}>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 capitalize">{region}</label>
+                    <input
+                      type="text"
+                      value={scenario.secondary_survey[region]}
+                      onChange={(e) => setScenario({
+                        ...scenario,
+                        secondary_survey: { ...scenario.secondary_survey, [region]: e.target.value }
+                      })}
+                      placeholder={`Findings for ${region}...`}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* EKG Findings */}
+            <div>
+              <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-1">
+                <Heart className="w-4 h-4 text-red-500" /> Detailed EKG Findings
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Rhythm</label>
+                  <input
+                    type="text"
+                    value={scenario.ekg_findings.rhythm}
+                    onChange={(e) => setScenario({ ...scenario, ekg_findings: { ...scenario.ekg_findings, rhythm: e.target.value } })}
+                    placeholder="e.g., Normal Sinus Rhythm"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Rate</label>
+                  <input
+                    type="text"
+                    value={scenario.ekg_findings.rate}
+                    onChange={(e) => setScenario({ ...scenario, ekg_findings: { ...scenario.ekg_findings, rate: e.target.value } })}
+                    placeholder="e.g., 78 bpm"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Intervals</label>
+                  <input
+                    type="text"
+                    value={scenario.ekg_findings.intervals}
+                    onChange={(e) => setScenario({ ...scenario, ekg_findings: { ...scenario.ekg_findings, intervals: e.target.value } })}
+                    placeholder="PR, QRS, QT intervals..."
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Axis</label>
+                  <input
+                    type="text"
+                    value={scenario.ekg_findings.axis}
+                    onChange={(e) => setScenario({ ...scenario, ekg_findings: { ...scenario.ekg_findings, axis: e.target.value } })}
+                    placeholder="Normal, LAD, RAD..."
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ST Changes</label>
+                  <input
+                    type="text"
+                    value={scenario.ekg_findings.st_changes}
+                    onChange={(e) => setScenario({ ...scenario, ekg_findings: { ...scenario.ekg_findings, st_changes: e.target.value } })}
+                    placeholder="ST elevation in leads II, III, aVF..."
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Interpretation</label>
+                  <input
+                    type="text"
+                    value={scenario.ekg_findings.interpretation}
+                    onChange={(e) => setScenario({ ...scenario, ekg_findings: { ...scenario.ekg_findings, interpretation: e.target.value } })}
+                    placeholder="Overall EKG interpretation..."
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </Section>
+
+        {/* Vitals & Phases */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
           <div className="px-4 py-3 flex items-center justify-between border-b dark:border-gray-700">
             <div className="flex items-center gap-2">
               <Activity className="w-5 h-5 text-blue-600" />
-              <span className="font-semibold text-gray-900 dark:text-white">Scenario Phases</span>
+              <span className="font-semibold text-gray-900 dark:text-white">Vitals & Phases</span>
               <span className="text-sm text-gray-500 dark:text-gray-400">({scenario.phases.length})</span>
             </div>
             <button
@@ -1388,8 +1863,8 @@ function ScenarioEditorContent() {
           </div>
         </div>
 
-        {/* Grading Criteria */}
-        <Section title="Grading Criteria" icon={CheckSquare}>
+        {/* Educational */}
+        <Section title="Educational (Grading & Objectives)" icon={BookOpen}>
           <div className="space-y-6 pt-3">
             {/* Critical Actions */}
             <div>
@@ -1511,6 +1986,79 @@ function ScenarioEditorContent() {
                     <Plus className="w-4 h-4" />
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        </Section>
+
+        {/* Equipment & Medications */}
+        <Section title="Equipment & Medications" icon={Syringe}>
+          <div className="space-y-6 pt-3">
+            {/* Equipment Needed */}
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+                <ClipboardList className="w-4 h-4 text-gray-500" />
+                Equipment Needed
+              </h4>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                List all equipment, supplies, and manikin features required for this scenario.
+              </p>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {scenario.equipment_needed.map((item, index) => (
+                  <span key={index} className="inline-flex items-center gap-1 px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded text-sm">
+                    {item}
+                    <button type="button" onClick={() => removeFromArray('equipment_needed', index)} className="text-gray-500 hover:text-red-500">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newEquipment}
+                  onChange={(e) => setNewEquipment(e.target.value)}
+                  placeholder="Add equipment item..."
+                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('equipment_needed', newEquipment, setNewEquipment))}
+                />
+                <button type="button" onClick={() => addToArray('equipment_needed', newEquipment, setNewEquipment)} className="px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-gray-700 dark:text-gray-300">
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Medications to Administer */}
+            <div>
+              <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+                <Syringe className="w-4 h-4 text-green-500" />
+                Medications to Administer
+              </h4>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                List expected medications with dose/route that should be administered during this scenario.
+              </p>
+              <div className="flex flex-wrap gap-2 mb-2">
+                {scenario.medications_to_administer.map((item, index) => (
+                  <span key={index} className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded text-sm">
+                    {item}
+                    <button type="button" onClick={() => removeFromArray('medications_to_administer', index)} className="text-green-500 hover:text-red-500">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newMedToAdmin}
+                  onChange={(e) => setNewMedToAdmin(e.target.value)}
+                  placeholder="e.g., Epinephrine 1:10,000 1mg IV push"
+                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addToArray('medications_to_administer', newMedToAdmin, setNewMedToAdmin))}
+                />
+                <button type="button" onClick={() => addToArray('medications_to_administer', newMedToAdmin, setNewMedToAdmin)} className="px-3 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-gray-700 dark:text-gray-300">
+                  <Plus className="w-4 h-4" />
+                </button>
               </div>
             </div>
           </div>

@@ -107,15 +107,22 @@ export async function POST(request: NextRequest) {
       // Phases with vitals (stored as JSONB)
       phases: body.phases || [],
 
-      // Grading
-      critical_actions: body.critical_actions || [],
-      debrief_points: body.debrief_points || [],
+      // Primary Assessment (XABCDE)
+      assessment_x: body.assessment_x || null,
+      assessment_a: body.assessment_a || null,
+      assessment_b: body.assessment_b || null,
+      assessment_c: body.assessment_c || null,
+      assessment_d: body.assessment_d || null,
+      assessment_e: body.assessment_e || null,
 
-      // Legacy fields (keep for compatibility)
-      initial_vitals: body.phases?.[0]?.vitals || null,
-      general_impression: body.phases?.[0]?.presentation_notes || null,
-      // Sync ekg_findings column from phase vitals
-      ekg_findings: (() => {
+      // SAMPLE History & OPQRST
+      sample_history: body.sample_history || { signs_symptoms: '', last_oral_intake: '', events_leading: '' },
+      opqrst: body.opqrst || { onset: '', provocation: '', quality: '', radiation: '', severity: '', time_onset: '' },
+
+      // Secondary Survey & EKG Findings
+      secondary_survey: body.secondary_survey || {},
+      ekg_findings: body.ekg_findings || (() => {
+        // Fallback: sync from phase vitals for backward compatibility
         const phaseVitals = body.phases?.[0]?.vitals;
         if (phaseVitals && (phaseVitals.ekg_rhythm || phaseVitals.twelve_lead_notes)) {
           return {
@@ -125,6 +132,18 @@ export async function POST(request: NextRequest) {
         }
         return null;
       })(),
+
+      // Grading
+      critical_actions: body.critical_actions || [],
+      debrief_points: body.debrief_points || [],
+
+      // Equipment & Medications
+      equipment_needed: body.equipment_needed || [],
+      medications_to_administer: body.medications_to_administer || [],
+
+      // Legacy fields (keep for compatibility)
+      initial_vitals: body.phases?.[0]?.vitals || null,
+      general_impression: body.phases?.[0]?.presentation_notes || null,
     };
 
     const { data, error } = await supabase

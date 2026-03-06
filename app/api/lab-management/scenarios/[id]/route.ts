@@ -80,6 +80,9 @@ export async function PATCH(
     // Primary Assessment - XABCDE
     if (body.assessment_x !== undefined) updateData.assessment_x = body.assessment_x;
     if (body.assessment_a !== undefined) updateData.assessment_a = body.assessment_a;
+    if (body.assessment_b !== undefined) updateData.assessment_b = body.assessment_b;
+    if (body.assessment_c !== undefined) updateData.assessment_c = body.assessment_c;
+    if (body.assessment_d !== undefined) updateData.assessment_d = body.assessment_d;
     if (body.assessment_e !== undefined) updateData.assessment_e = body.assessment_e;
     if (body.general_impression !== undefined) updateData.general_impression = body.general_impression;
 
@@ -89,20 +92,32 @@ export async function PATCH(
     // OPQRST (scenario-level)
     if (body.opqrst !== undefined) updateData.opqrst = body.opqrst;
 
+    // Secondary Survey
+    if (body.secondary_survey !== undefined) updateData.secondary_survey = body.secondary_survey;
+
+    // EKG Findings (direct - not from phase vitals)
+    if (body.ekg_findings !== undefined) updateData.ekg_findings = body.ekg_findings;
+
+    // Equipment & Medications
+    if (body.equipment_needed !== undefined) updateData.equipment_needed = body.equipment_needed;
+    if (body.medications_to_administer !== undefined) updateData.medications_to_administer = body.medications_to_administer;
+
     // Phases
     if (body.phases !== undefined) {
       updateData.phases = body.phases;
-      // Also update legacy initial_vitals and ekg_findings for compatibility
+      // Also update legacy initial_vitals for compatibility
       if (body.phases.length > 0) {
         updateData.initial_vitals = body.phases[0].vitals || null;
         updateData.general_impression = body.phases[0].presentation_notes || null;
-        // Sync ekg_findings column from phase vitals
-        const phaseVitals = body.phases[0].vitals;
-        if (phaseVitals && (phaseVitals.ekg_rhythm || phaseVitals.twelve_lead_notes)) {
-          updateData.ekg_findings = {
-            rhythm: phaseVitals.ekg_rhythm || null,
-            twelve_lead: phaseVitals.twelve_lead_notes || null,
-          };
+        // Only sync ekg_findings from phase vitals if not explicitly provided
+        if (body.ekg_findings === undefined) {
+          const phaseVitals = body.phases[0].vitals;
+          if (phaseVitals && (phaseVitals.ekg_rhythm || phaseVitals.twelve_lead_notes)) {
+            updateData.ekg_findings = {
+              rhythm: phaseVitals.ekg_rhythm || null,
+              twelve_lead: phaseVitals.twelve_lead_notes || null,
+            };
+          }
         }
       }
     }

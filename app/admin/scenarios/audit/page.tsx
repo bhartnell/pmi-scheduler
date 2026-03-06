@@ -20,6 +20,7 @@ import {
   Shield,
   Search,
   Wand2,
+  ClipboardList,
 } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
@@ -49,6 +50,22 @@ interface IssueFrequency {
   issue: string;
   count: number;
   percent: number;
+}
+
+interface CompletenessEntry {
+  id: string;
+  title: string;
+  category: string | null;
+  missing: string[];
+  present: number;
+  total: number;
+  percent_complete: number;
+}
+
+interface CompletenessData {
+  fully_complete: number;
+  total: number;
+  report: CompletenessEntry[];
 }
 
 interface AuditData {
@@ -95,6 +112,8 @@ interface AuditData {
   problematic_scenarios: number;
   clean_scenarios: number;
   issues: ScenarioIssue[];
+
+  completeness?: CompletenessData;
 
   raw_samples: unknown[];
 }
@@ -147,9 +166,11 @@ export default function ScenarioAuditPage() {
   const [loading, setLoading] = useState(true);
   const [audit, setAudit] = useState<AuditData | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['overview', 'issues']));
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['overview', 'quality', 'issues']));
   const [expandedScenario, setExpandedScenario] = useState<string | null>(null);
+  const [expandedCompletenessId, setExpandedCompletenessId] = useState<string | null>(null);
   const [issueFilter, setIssueFilter] = useState('');
+  const [qualityFilter, setQualityFilter] = useState<'all' | 'incomplete' | 'complete'>('incomplete');
 
   const toggleSection = (key: string) => {
     setExpandedSections(prev => {
@@ -251,6 +272,156 @@ export default function ScenarioAuditPage() {
               </div>
             )}
           </section>
+
+          {/* Data Quality / Completeness */}
+          {audit.completeness && (
+            <section>
+              <button
+                onClick={() => toggleSection('quality')}
+                className="w-full flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white mb-3"
+              >
+                {expandedSections.has('quality') ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
+                <ClipboardList className="h-5 w-5 text-emerald-500" />
+                Data Quality ({audit.completeness.fully_complete} of {audit.completeness.total} scenarios fully complete)
+              </button>
+              {expandedSections.has('quality') && (
+                <div className="space-y-4">
+                  {/* Summary bar */}
+                  <div className="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700 p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Overall Completeness
+                      </span>
+                      <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                        {audit.completeness.fully_complete} / {audit.completeness.total} fully complete
+                      </span>
+                    </div>
+                    <div className="w-full h-4 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-emerald-500 transition-all"
+                        style={{ width: `${audit.completeness.total > 0 ? Math.round((audit.completeness.fully_complete / audit.completeness.total) * 100) : 0}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      <span>{audit.completeness.total - audit.completeness.fully_complete} need attention</span>
+                      <span>{audit.completeness.total > 0 ? Math.round((audit.completeness.fully_complete / audit.completeness.total) * 100) : 0}%</span>
+                    </div>
+                  </div>
+
+                  {/* Filter tabs */}
+                  <div className="flex gap-2">
+                    {([['all', 'All'], ['incomplete', 'Incomplete'], ['complete', 'Complete']] as const).map(([key, label]) => (
+                      <button
+                        key={key}
+                        onClick={() => setQualityFilter(key)}
+                        className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                          qualityFilter === key
+                            ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 font-medium'
+                            : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                        }`}
+                      >
+                        {label}
+                        {key === 'incomplete' && (
+                          <span className="ml-1 text-xs">({audit.completeness!.total - audit.completeness!.fully_complete})</span>
+                        )}
+                        {key === 'complete' && (
+                          <span className="ml-1 text-xs">({audit.completeness!.fully_complete})</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Completeness list */}
+                  <div className="space-y-2">
+                    {audit.completeness.report
+                      .filter(entry => {
+                        if (qualityFilter === 'incomplete') return entry.missing.length > 0;
+                        if (qualityFilter === 'complete') return entry.missing.length === 0;
+                        return true;
+                      })
+                      .map((entry) => {
+                        const pctColor = entry.percent_complete === 100
+                          ? 'text-emerald-600 dark:text-emerald-400'
+                          : entry.percent_complete >= 75
+                            ? 'text-blue-600 dark:text-blue-400'
+                            : entry.percent_complete >= 50
+                              ? 'text-yellow-600 dark:text-yellow-400'
+                              : 'text-red-600 dark:text-red-400';
+
+                        const barColor = entry.percent_complete === 100
+                          ? 'bg-emerald-500'
+                          : entry.percent_complete >= 75
+                            ? 'bg-blue-500'
+                            : entry.percent_complete >= 50
+                              ? 'bg-yellow-500'
+                              : 'bg-red-500';
+
+                        return (
+                          <div key={entry.id} className="bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700">
+                            <button
+                              onClick={() => setExpandedCompletenessId(expandedCompletenessId === entry.id ? null : entry.id)}
+                              className="w-full flex items-center gap-3 p-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
+                            >
+                              {expandedCompletenessId === entry.id ? (
+                                <ChevronDown className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                              ) : (
+                                <ChevronRight className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                                    {entry.title}
+                                  </span>
+                                  {entry.missing.length === 0 && (
+                                    <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                  <span>{entry.category || 'No category'}</span>
+                                  <span>{entry.present}/{entry.total} fields</span>
+                                  {entry.missing.length > 0 && (
+                                    <span className="text-red-500 dark:text-red-400">{entry.missing.length} missing</span>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                <div className="w-24 h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                                  <div className={`h-full ${barColor} transition-all`} style={{ width: `${entry.percent_complete}%` }} />
+                                </div>
+                                <span className={`text-sm font-mono font-medium w-10 text-right ${pctColor}`}>
+                                  {entry.percent_complete}%
+                                </span>
+                              </div>
+                              <Link
+                                href={`/lab-management/scenarios/${entry.id}`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 flex-shrink-0"
+                                title="Open in editor"
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                              </Link>
+                            </button>
+
+                            {expandedCompletenessId === entry.id && entry.missing.length > 0 && (
+                              <div className="px-4 pb-3 border-t dark:border-gray-700 pt-2">
+                                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Missing fields:</p>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {entry.missing.map((field, i) => (
+                                    <span key={i} className="px-2 py-0.5 text-xs bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 rounded-full border border-red-200 dark:border-red-800">
+                                      {field}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+              )}
+            </section>
+          )}
 
           {/* Category & Difficulty Breakdown */}
           <section>
