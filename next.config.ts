@@ -45,7 +45,7 @@ const nextConfig: NextConfig = {
       },
       {
         source: '/admin/create',
-        destination: '/scheduler',
+        destination: '/scheduler/create',
         permanent: true,
       },
       {
