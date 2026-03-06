@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { canAccessAdmin } from '@/lib/permissions';
-import { requireAuth } from '@/lib/api-auth';
 
 // ---------------------------------------------------------------------------
 // Helper – resolve current user from session email
@@ -29,8 +28,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const currentUser = await getCurrentUser(user.email);
-    if (!currentUser || !canAccessAdmin(user.role)) {
+    const currentUser = await getCurrentUser(session.user.email);
+    if (!currentUser || !canAccessAdmin(currentUser.role)) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
@@ -63,8 +62,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const currentUser = await getCurrentUser(user.email);
-    if (!currentUser || !canAccessAdmin(user.role)) {
+    const currentUser = await getCurrentUser(session.user.email);
+    if (!currentUser || !canAccessAdmin(currentUser.role)) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
@@ -123,7 +122,7 @@ export async function POST(request: NextRequest) {
       .insert({
         equipment_id,
         lab_day_id: lab_day_id ?? null,
-        checked_out_by: user.email,
+        checked_out_by: currentUser.email,
         quantity,
         notes: notes ?? null,
       })
@@ -163,8 +162,8 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const currentUser = await getCurrentUser(user.email);
-    if (!currentUser || !canAccessAdmin(user.role)) {
+    const currentUser = await getCurrentUser(session.user.email);
+    if (!currentUser || !canAccessAdmin(currentUser.role)) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
@@ -202,7 +201,7 @@ export async function PUT(request: NextRequest) {
       .from('equipment_checkouts')
       .update({
         checked_in_at: now,
-        checked_in_by: user.email,
+        checked_in_by: currentUser.email,
         condition_on_return: condition_on_return ?? null,
       })
       .eq('id', checkout_id)

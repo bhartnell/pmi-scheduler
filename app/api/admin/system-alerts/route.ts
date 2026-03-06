@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { canAccessAdmin } from '@/lib/permissions';
-import { requireAuth } from '@/lib/api-auth';
 
 // ---------------------------------------------------------------------------
 // Helper – resolve current user from session email
@@ -35,8 +34,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const currentUser = await getCurrentUser(user.email);
-    if (!currentUser || !canAccessAdmin(user.role)) {
+    const currentUser = await getCurrentUser(session.user.email);
+    if (!currentUser || !canAccessAdmin(currentUser.role)) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
@@ -111,8 +110,8 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const currentUser = await getCurrentUser(user.email);
-    if (!currentUser || !canAccessAdmin(user.role)) {
+    const currentUser = await getCurrentUser(session.user.email);
+    if (!currentUser || !canAccessAdmin(currentUser.role)) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
@@ -132,7 +131,7 @@ export async function PATCH(request: NextRequest) {
       .update({
         is_resolved: resolved,
         resolved_at: resolved ? new Date().toISOString() : null,
-        resolved_by: resolved ? user.email : null,
+        resolved_by: resolved ? session.user.email : null,
       })
       .eq('id', id)
       .select()

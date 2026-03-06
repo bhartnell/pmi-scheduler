@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { canAccessAdmin } from '@/lib/permissions';
-import { requireAuth } from '@/lib/api-auth';
 
 /**
  * GET /api/admin/document-requests
@@ -30,8 +29,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    const currentUser = await getCurrentUser(user.email);
-    if (!currentUser || !canAccessAdmin(user.role)) {
+    const currentUser = await getCurrentUser(session.user.email);
+    if (!currentUser || !canAccessAdmin(currentUser.role)) {
       return NextResponse.json({ success: false, error: 'Admin access required' }, { status: 403 });
     }
 
@@ -83,8 +82,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    const currentUser = await getCurrentUser(user.email);
-    if (!currentUser || !canAccessAdmin(user.role)) {
+    const currentUser = await getCurrentUser(session.user.email);
+    if (!currentUser || !canAccessAdmin(currentUser.role)) {
       return NextResponse.json({ success: false, error: 'Admin access required' }, { status: 403 });
     }
 
@@ -127,7 +126,7 @@ export async function POST(request: NextRequest) {
         description: description?.trim() || null,
         due_date: due_date || null,
         status: 'pending',
-        requested_by: user.email,
+        requested_by: currentUser.email,
       })
       .select()
       .single();

@@ -3,7 +3,6 @@ import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { canAccessAdmin } from '@/lib/permissions';
 import { logAuditEvent } from '@/lib/audit';
-import { requireAuth } from '@/lib/api-auth';
 
 // ---------------------------------------------------------------------------
 // Helper: get current user
@@ -34,8 +33,8 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const currentUser = await getCurrentUser(user.email);
-    if (!currentUser || !canAccessAdmin(user.role)) {
+    const currentUser = await getCurrentUser(session.user.email);
+    if (!currentUser || !canAccessAdmin(currentUser.role)) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
@@ -116,12 +115,12 @@ export async function POST(
       changes: { original_operation_id: id, success_count: successCount, fail_count: failCount },
       is_dry_run: false,
       rollback_data: null,
-      executed_by: user.email,
+      executed_by: currentUser.email,
     });
 
     // Audit log
     await logAuditEvent({
-      user: { id: user.id, email: user.email, role: user.role },
+      user: { id: currentUser.id, email: currentUser.email, role: currentUser.role },
       action: 'update',
       resourceType: 'student_list',
       resourceDescription: `Rolled back bulk operation ${id} on ${table}: ${successCount} records restored`,

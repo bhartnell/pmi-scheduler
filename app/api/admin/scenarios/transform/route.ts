@@ -3,7 +3,6 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { canAccessAdmin } from '@/lib/permissions';
-import { requireAuth } from '@/lib/api-auth';
 
 // ---------------------------------------------------------------------------
 // Helper – resolve current user from session email
@@ -373,8 +372,8 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const currentUser = await getCurrentUser(user.email);
-    if (!currentUser || !canAccessAdmin(user.role)) {
+    const currentUser = await getCurrentUser(session.user.email);
+    if (!currentUser || !canAccessAdmin(currentUser.role)) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
@@ -450,8 +449,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const currentUser = await getCurrentUser(user.email);
-    if (!currentUser || !canAccessAdmin(user.role)) {
+    const currentUser = await getCurrentUser(session.user.email);
+    if (!currentUser || !canAccessAdmin(currentUser.role)) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
@@ -518,7 +517,7 @@ export async function POST(request: NextRequest) {
 
       try {
         const { newPhases, newInitialVitals, newCriticalActions, legacyData, changes } =
-          transformScenario(scenarioRecord, user.email);
+          transformScenario(scenarioRecord, currentUser.email);
 
         if (dryRun) {
           // Dry run - report what would change without saving

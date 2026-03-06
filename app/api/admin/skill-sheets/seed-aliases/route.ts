@@ -3,7 +3,6 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { canAccessAdmin } from '@/lib/permissions';
-import { requireAuth } from '@/lib/api-auth';
 
 // ---------------------------------------------------------------------------
 // Common station skill name aliases → skill_sheet_assignments
@@ -611,10 +610,10 @@ export async function POST() {
   const { data: currentUser } = await supabase
     .from('lab_users')
     .select('id, role')
-    .ilike('email', user.email)
+    .ilike('email', session.user.email)
     .single();
 
-  if (!currentUser || !canAccessAdmin(user.role)) {
+  if (!currentUser || !canAccessAdmin(currentUser.role)) {
     return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
   }
 

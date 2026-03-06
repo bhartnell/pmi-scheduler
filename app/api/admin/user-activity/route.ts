@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { canAccessAdmin } from '@/lib/permissions';
-import { requireAuth } from '@/lib/api-auth';
 
 export async function GET(request: NextRequest) {
   try {
@@ -17,10 +16,10 @@ export async function GET(request: NextRequest) {
     const { data: currentUser } = await supabase
       .from('lab_users')
       .select('id, role')
-      .ilike('email', user.email)
+      .ilike('email', session.user.email)
       .single();
 
-    if (!currentUser || !canAccessAdmin(user.role)) {
+    if (!currentUser || !canAccessAdmin(currentUser.role)) {
       return NextResponse.json({ success: false, error: 'Access denied' }, { status: 403 });
     }
 

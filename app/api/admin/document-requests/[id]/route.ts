@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { canAccessAdmin } from '@/lib/permissions';
-import { requireAuth } from '@/lib/api-auth';
 
 /**
  * PUT /api/admin/document-requests/[id]
@@ -35,8 +34,8 @@ export async function PUT(
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    const currentUser = await getCurrentUser(user.email);
-    if (!currentUser || !canAccessAdmin(user.role)) {
+    const currentUser = await getCurrentUser(session.user.email);
+    if (!currentUser || !canAccessAdmin(currentUser.role)) {
       return NextResponse.json({ success: false, error: 'Admin access required' }, { status: 403 });
     }
 
@@ -79,7 +78,7 @@ export async function PUT(
       .from('student_documents')
       .update({
         status: newStatus,
-        reviewed_by: user.email,
+        reviewed_by: currentUser.email,
         reviewed_at: new Date().toISOString(),
         review_notes: review_notes?.trim() || null,
       })

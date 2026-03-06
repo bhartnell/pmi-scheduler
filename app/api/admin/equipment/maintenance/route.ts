@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { canAccessAdmin } from '@/lib/permissions';
-import { requireAuth } from '@/lib/api-auth';
 
 // ---------------------------------------------------------------------------
 // Helper – resolve current user from session email
@@ -34,8 +33,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const currentUser = await getCurrentUser(user.email);
-    if (!currentUser || !canAccessAdmin(user.role)) {
+    const currentUser = await getCurrentUser(session.user.email);
+    if (!currentUser || !canAccessAdmin(currentUser.role)) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
@@ -127,8 +126,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const currentUser = await getCurrentUser(user.email);
-    if (!currentUser || !canAccessAdmin(user.role)) {
+    const currentUser = await getCurrentUser(session.user.email);
+    if (!currentUser || !canAccessAdmin(currentUser.role)) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
@@ -173,7 +172,7 @@ export async function POST(request: NextRequest) {
       description: body.description ?? null,
       scheduled_date: body.scheduled_date ?? null,
       completed_date: body.completed_date ?? null,
-      completed_by: body.completed_by ?? (body.status === 'completed' ? user.email : null),
+      completed_by: body.completed_by ?? (body.status === 'completed' ? currentUser.email : null),
       next_due_date: body.next_due_date ?? null,
       cost: body.cost ?? null,
       status: body.status ?? 'scheduled',

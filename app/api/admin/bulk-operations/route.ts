@@ -3,7 +3,6 @@ import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { canAccessAdmin } from '@/lib/permissions';
 import { logAuditEvent } from '@/lib/audit';
-import { requireAuth } from '@/lib/api-auth';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -147,8 +146,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const currentUser = await getCurrentUser(user.email);
-    if (!currentUser || !canAccessAdmin(user.role)) {
+    const currentUser = await getCurrentUser(session.user.email);
+    if (!currentUser || !canAccessAdmin(currentUser.role)) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
@@ -181,8 +180,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const currentUser = await getCurrentUser(user.email);
-    if (!currentUser || !canAccessAdmin(user.role)) {
+    const currentUser = await getCurrentUser(session.user.email);
+    if (!currentUser || !canAccessAdmin(currentUser.role)) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
@@ -323,7 +322,7 @@ export async function POST(request: NextRequest) {
           {
             export_type: `bulk_${table}`,
             exported_at: new Date().toISOString(),
-            exported_by: user.email,
+            exported_by: currentUser.email,
             record_count: affectedCount,
             filters,
             data: records,
@@ -350,7 +349,7 @@ export async function POST(request: NextRequest) {
         changes: parameters,
         is_dry_run: false,
         rollback_data: rollbackData,
-        executed_by: user.email,
+        executed_by: currentUser.email,
       })
       .select('id')
       .single();
@@ -364,7 +363,7 @@ export async function POST(request: NextRequest) {
 
     // Audit log
     await logAuditEvent({
-      user: { id: user.id, email: user.email, role: user.role },
+      user: { id: currentUser.id, email: currentUser.email, role: currentUser.role },
       action: operation === 'delete_records' ? 'delete' : operation === 'export_records' ? 'export' : 'update',
       resourceType: 'student_list',
       resourceDescription: `Bulk ${operation} on ${table}: ${affectedCount} records`,
