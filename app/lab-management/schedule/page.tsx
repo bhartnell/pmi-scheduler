@@ -30,6 +30,8 @@ import { useKeyboardShortcuts, KeyboardShortcut } from '@/hooks/useKeyboardShort
 import KeyboardShortcutsHelp from '@/components/KeyboardShortcutsHelp';
 import { downloadICS, parseLocalDate } from '@/lib/ics-export';
 import { PageLoader, SkeletonTable, ContentLoader } from '@/components/ui';
+import CalendarAvailabilityDot from '@/components/CalendarAvailabilityDot';
+import { useCalendarAvailability } from '@/hooks/useCalendarAvailability';
 
 interface Cohort {
   id: string;
@@ -187,6 +189,28 @@ function SchedulePageContent() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const [userRole, setUserRole] = useState<string | null>(null);
+
+  // Calendar availability for today's labs and list/week view
+  const todayStr = new Date().toISOString().split('T')[0];
+  const todayInstructorEmails = (() => {
+    const emails = new Set<string>();
+    labDays
+      .filter(ld => ld.date === todayStr)
+      .forEach(ld => {
+        ld.stations.forEach((s: any) => {
+          if (s.instructor_email) emails.add(s.instructor_email.toLowerCase());
+        });
+        ld.roles?.forEach((r: LabDayRole) => {
+          if (r.instructor_email) emails.add(r.instructor_email.toLowerCase());
+        });
+      });
+    return Array.from(emails);
+  })();
+
+  const { availability: todayAvailability } = useCalendarAvailability(
+    showTodayOnly ? todayStr : null,
+    todayInstructorEmails
+  );
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -1118,6 +1142,12 @@ function SchedulePageContent() {
                             >
                               {r.role === 'lab_lead' ? 'Lead' : r.role === 'roamer' ? 'Roamer' : 'Observer'}:
                               {' '}{r.instructor_name || r.instructor_email?.split('@')[0] || '?'}
+                              {r.instructor_email && todayAvailability.has(r.instructor_email.toLowerCase()) && (
+                                <CalendarAvailabilityDot
+                                  status={todayAvailability.get(r.instructor_email.toLowerCase())!.status}
+                                  size="sm"
+                                />
+                              )}
                             </span>
                           ))}
                         </div>
@@ -1138,8 +1168,14 @@ function SchedulePageContent() {
                                   {station.custom_title || station.scenario?.title || `Station ${station.station_number}`}
                                 </p>
                                 {station.instructor_name && (
-                                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate flex items-center gap-1">
                                     {station.instructor_name}
+                                    {station.instructor_email && todayAvailability.has(station.instructor_email.toLowerCase()) && (
+                                      <CalendarAvailabilityDot
+                                        status={todayAvailability.get(station.instructor_email.toLowerCase())!.status}
+                                        size="sm"
+                                      />
+                                    )}
                                   </p>
                                 )}
                               </div>

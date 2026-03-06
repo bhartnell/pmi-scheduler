@@ -65,6 +65,8 @@ import HelpTooltip from '@/components/HelpTooltip';
 import TemplateGuideSection from '@/components/TemplateGuideSection';
 import type { StationMetadata } from '@/components/TemplateGuideSection';
 import TemplateDiffModal from '@/components/TemplateDiffModal';
+import CalendarAvailabilityDot from '@/components/CalendarAvailabilityDot';
+import { useCalendarAvailability } from '@/hooks/useCalendarAvailability';
 
 interface LabDay {
   id: string;
@@ -504,6 +506,31 @@ export default function LabDayPage() {
       fetchCohortStudents();
     }
   }, [labDay?.cohort?.id]);
+
+  // Collect all instructor emails for calendar availability lookup
+  const allInstructorEmails = (() => {
+    const emails = new Set<string>();
+    // Station instructors
+    labDay?.stations?.forEach(s => {
+      if (s.instructor_email) emails.add(s.instructor_email.toLowerCase());
+    });
+    // Lab day roles (lead, roamer, observer)
+    labDayRoles.forEach(r => {
+      if (r.instructor?.email) emails.add(r.instructor.email.toLowerCase());
+    });
+    // All available instructors for the picker
+    instructors.forEach(i => {
+      if (i.email) emails.add(i.email.toLowerCase());
+    });
+    return Array.from(emails);
+  })();
+
+  const { availability: calendarAvailability, loading: calendarLoading, summary: calendarSummary } = useCalendarAvailability(
+    labDay?.date || null,
+    allInstructorEmails,
+    labDay?.start_time?.substring(0, 5) || '08:00',
+    labDay?.end_time?.substring(0, 5) || '17:00'
+  );
 
   // --- Lab Day Role (Roamer/Lead/Observer) inline assignment handlers ---
   const handleAddLabDayRole = async () => {
@@ -2797,9 +2824,18 @@ export default function LabDayPage() {
                     <option value="">Select instructor...</option>
                     {instructors
                       .filter(inst => !labDayRoles.some(r => r.instructor_id === inst.id && r.role === roleAssignRole))
-                      .map(inst => (
-                        <option key={inst.id} value={inst.id}>{inst.name}</option>
-                      ))
+                      .map(inst => {
+                        const avail = inst.email ? calendarAvailability.get(inst.email.toLowerCase()) : undefined;
+                        const dot = avail
+                          ? avail.status === 'free' ? '\u{1F7E2} '
+                          : avail.status === 'partial' ? '\u{1F7E1} '
+                          : avail.status === 'busy' ? '\u{1F534} '
+                          : '\u26AA '
+                          : '';
+                        return (
+                          <option key={inst.id} value={inst.id}>{dot}{inst.name}</option>
+                        );
+                      })
                     }
                   </select>
                 </div>
@@ -2853,6 +2889,13 @@ export default function LabDayPage() {
                       >
                         <Shield className="w-3 h-3" />
                         {role.instructor?.name || 'Unknown'}
+                        {role.instructor?.email && calendarAvailability.has(role.instructor.email.toLowerCase()) && (
+                          <CalendarAvailabilityDot
+                            status={calendarAvailability.get(role.instructor.email.toLowerCase())!.status}
+                            events={calendarAvailability.get(role.instructor.email.toLowerCase())!.events}
+                            size="sm"
+                          />
+                        )}
                         {userRole && canAccessAdmin(userRole) && (
                           <button
                             onClick={() => handleRemoveLabDayRole(role.id)}
@@ -2888,6 +2931,13 @@ export default function LabDayPage() {
                       >
                         <RotateCcw className="w-3 h-3" />
                         {role.instructor?.name || 'Unknown'}
+                        {role.instructor?.email && calendarAvailability.has(role.instructor.email.toLowerCase()) && (
+                          <CalendarAvailabilityDot
+                            status={calendarAvailability.get(role.instructor.email.toLowerCase())!.status}
+                            events={calendarAvailability.get(role.instructor.email.toLowerCase())!.events}
+                            size="sm"
+                          />
+                        )}
                         {userRole && canAccessAdmin(userRole) && (
                           <button
                             onClick={() => handleRemoveLabDayRole(role.id)}
@@ -2922,6 +2972,13 @@ export default function LabDayPage() {
                         className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 print:bg-purple-100 print:text-purple-800 rounded-full text-sm font-medium group"
                       >
                         {role.instructor?.name || 'Unknown'}
+                        {role.instructor?.email && calendarAvailability.has(role.instructor.email.toLowerCase()) && (
+                          <CalendarAvailabilityDot
+                            status={calendarAvailability.get(role.instructor.email.toLowerCase())!.status}
+                            events={calendarAvailability.get(role.instructor.email.toLowerCase())!.events}
+                            size="sm"
+                          />
+                        )}
                         {userRole && canAccessAdmin(userRole) && (
                           <button
                             onClick={() => handleRemoveLabDayRole(role.id)}
@@ -2944,6 +3001,27 @@ export default function LabDayPage() {
             </div>
           )}
         </div>
+
+        {/* Calendar Availability Summary */}
+        {calendarSummary.total > 0 && !calendarLoading && (
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-3 print:hidden">
+            <Calendar className="w-4 h-4" />
+            <span>
+              {calendarSummary.free} of {calendarSummary.total} instructor{calendarSummary.total !== 1 ? 's' : ''} {calendarSummary.free === 1 ? 'has a' : 'have'} free calendar{calendarSummary.free !== 1 ? 's' : ''} for this date
+            </span>
+            {calendarSummary.free < calendarSummary.total && (
+              <span className="text-amber-600 dark:text-amber-400 text-xs font-medium">
+                ({calendarSummary.total - calendarSummary.free} busy or disconnected)
+              </span>
+            )}
+          </div>
+        )}
+        {calendarLoading && (
+          <div className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500 mb-3 print:hidden">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span>Checking calendar availability...</span>
+          </div>
+        )}
 
         {/* Stations Grid */}
         {labDay.stations.length === 0 ? (
@@ -2998,6 +3076,13 @@ export default function LabDayPage() {
                       <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                         <Users className="w-4 h-4" />
                         <span>{station.instructor_name || station.instructor?.name}</span>
+                        {station.instructor_email && calendarAvailability.has(station.instructor_email.toLowerCase()) && (
+                          <CalendarAvailabilityDot
+                            status={calendarAvailability.get(station.instructor_email.toLowerCase())!.status}
+                            events={calendarAvailability.get(station.instructor_email.toLowerCase())!.events}
+                            size="sm"
+                          />
+                        )}
                       </div>
                     )}
                     {(station.room || station.location) && (
@@ -5023,6 +5108,13 @@ export default function LabDayPage() {
                         <div className="flex items-center gap-2">
                           <Users className="w-4 h-4 text-gray-400" />
                           <span className="font-medium text-gray-900 dark:text-white">{instructor.user_name}</span>
+                          {instructor.user_email && calendarAvailability.has(instructor.user_email.toLowerCase()) && (
+                            <CalendarAvailabilityDot
+                              status={calendarAvailability.get(instructor.user_email.toLowerCase())!.status}
+                              events={calendarAvailability.get(instructor.user_email.toLowerCase())!.events}
+                              size="md"
+                            />
+                          )}
                           {instructor.is_primary && (
                             <span className="text-xs px-2 py-0.5 bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-200 rounded">
                               Primary
@@ -5064,11 +5156,20 @@ export default function LabDayPage() {
                     <option value="">Add instructor...</option>
                     {instructors
                       .filter(i => !stationInstructors.some(si => si.user_email === i.email))
-                      .map((instructor) => (
-                        <option key={instructor.id} value={`${instructor.name}|${instructor.email}`}>
-                          {instructor.name}
-                        </option>
-                      ))}
+                      .map((instructor) => {
+                        const avail = instructor.email ? calendarAvailability.get(instructor.email.toLowerCase()) : undefined;
+                        const dot = avail
+                          ? avail.status === 'free' ? '\u{1F7E2} '
+                          : avail.status === 'partial' ? '\u{1F7E1} '
+                          : avail.status === 'busy' ? '\u{1F534} '
+                          : '\u26AA '
+                          : '';
+                        return (
+                          <option key={instructor.id} value={`${instructor.name}|${instructor.email}`}>
+                            {dot}{instructor.name}
+                          </option>
+                        );
+                      })}
                     <option value="custom">+ Custom name...</option>
                   </select>
                   {selectedInstructor && selectedInstructor !== 'custom' && (
