@@ -16,6 +16,7 @@ interface TimeBlock {
 
 export default function OsceEvaluatorSignup() {
   const [blocks, setBlocks] = useState<TimeBlock[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedBlocks, setSelectedBlocks] = useState<Set<string>>(new Set());
   const [agencyPref, setAgencyPref] = useState(false);
   const [status, setStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -23,12 +24,16 @@ export default function OsceEvaluatorSignup() {
   const [formData, setFormData] = useState({
     name: '', title: '', agency: '', email: '', phone: '', role: '', agency_preference_note: ''
   });
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const [triedSubmit, setTriedSubmit] = useState(false);
 
   const fetchBlocks = () => {
+    setLoading(true);
     fetch('/api/osce/time-blocks')
       .then(r => r.json())
       .then(data => setBlocks(data.blocks || []))
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setLoading(false));
   };
 
   useEffect(() => { fetchBlocks(); }, []);
@@ -49,9 +54,30 @@ export default function OsceEvaluatorSignup() {
     return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
   };
 
+  // Validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const fieldErrors: Record<string, string> = {};
+  if (!formData.name.trim()) fieldErrors.name = 'Full name is required';
+  if (!formData.title.trim()) fieldErrors.title = 'Title / rank is required';
+  if (!formData.agency.trim()) fieldErrors.agency = 'Agency is required';
+  if (!formData.email.trim()) fieldErrors.email = 'Email is required';
+  else if (!emailRegex.test(formData.email.trim())) fieldErrors.email = 'Please enter a valid email address';
+
+  const allBlocksFull = blocks.length > 0 && blocks.every(b => b.observer_count >= b.max_observers);
+  const isFormValid = Object.keys(fieldErrors).length === 0 && selectedBlocks.size > 0 && !allBlocksFull;
+
+  const showError = (field: string) => (touched[field] || triedSubmit) && fieldErrors[field];
+  const markTouched = (field: string) => setTouched(prev => ({ ...prev, [field]: true }));
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatus(null);
+    setTriedSubmit(true);
+
+    if (Object.keys(fieldErrors).length > 0) {
+      setStatus({ type: 'error', message: 'Please fill in all required fields.' });
+      return;
+    }
     if (selectedBlocks.size === 0) {
       setStatus({ type: 'error', message: 'Please select at least one time block.' });
       return;
@@ -74,6 +100,8 @@ export default function OsceEvaluatorSignup() {
         setFormData({ name: '', title: '', agency: '', email: '', phone: '', role: '', agency_preference_note: '' });
         setSelectedBlocks(new Set());
         setAgencyPref(false);
+        setTouched({});
+        setTriedSubmit(false);
         fetchBlocks();
       } else if (res.status === 409) {
         setStatus({ type: 'error', message: data.error || "You're already registered. Contact bhartnell@pmi.edu to update your registration." });
@@ -159,6 +187,14 @@ export default function OsceEvaluatorSignup() {
         .osce-footer { max-width: 720px; margin: 0 auto; padding: 1.5rem 2rem 2.5rem; text-align: center; font-size: 0.78rem; color: #8A8A8A; line-height: 1.5; }
         .osce-footer a { color: #263D66; text-decoration: none; }
         .osce-footer a:hover { color: #C9A84C; }
+        .osce-field-error { font-size: 0.72rem; color: #C62828; margin-top: 0.25rem; line-height: 1.3; }
+        .osce-form-group input.osce-input-error, .osce-form-group select.osce-input-error { border-color: #C62828; }
+        .osce-form-group input.osce-input-error:focus, .osce-form-group select.osce-input-error:focus { border-color: #C62828; box-shadow: 0 0 0 3px rgba(198,40,40,0.15); }
+        .osce-spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #FFFFFF; border-radius: 50%; animation: osceSpin 0.6s linear infinite; margin-right: 0.5rem; vertical-align: middle; }
+        @keyframes osceSpin { to { transform: rotate(360deg); } }
+        .osce-all-full-banner { padding: 1.25rem; border-radius: 8px; background: #FFEBEE; color: #C62828; border: 1px solid rgba(198,40,40,0.2); text-align: center; margin-bottom: 1.5rem; font-size: 0.9rem; line-height: 1.5; }
+        .osce-loading-blocks { display: flex; align-items: center; justify-content: center; padding: 2rem; color: #8A8A8A; font-size: 0.9rem; gap: 0.5rem; }
+        .osce-loading-spinner { width: 20px; height: 20px; border: 2px solid #E0DDD6; border-top-color: #0F1F3D; border-radius: 50%; animation: osceSpin 0.6s linear infinite; }
         @keyframes osceSlideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
         @media (max-width: 640px) {
           .osce-hero { padding: 2.5rem 1.5rem 3rem; }
@@ -204,26 +240,35 @@ export default function OsceEvaluatorSignup() {
           </p>
 
           <div className="osce-form-container">
-            <form onSubmit={handleSubmit}>
+            {allBlocksFull && (
+              <div className="osce-all-full-banner">
+                All time blocks are currently full. Please contact <a href="mailto:bhartnell@pmi.edu" style={{ color: '#C62828', fontWeight: 600 }}>bhartnell@pmi.edu</a> to be added to a waitlist.
+              </div>
+            )}
+            <form onSubmit={handleSubmit} noValidate>
               <div className="osce-form-row">
                 <div className="osce-form-group">
                   <label>Full Name</label>
-                  <input type="text" required placeholder="e.g., John Smith" value={formData.name} onChange={e => setFormData(p => ({ ...p, name: e.target.value }))} />
+                  <input type="text" required placeholder="e.g., John Smith" className={showError('name') ? 'osce-input-error' : ''} value={formData.name} onBlur={() => markTouched('name')} onChange={e => setFormData(p => ({ ...p, name: e.target.value }))} />
+                  {showError('name') && <span className="osce-field-error">{fieldErrors.name}</span>}
                 </div>
                 <div className="osce-form-group">
                   <label>Title / Rank</label>
-                  <input type="text" required placeholder="e.g., Battalion Chief, EMS Educator" value={formData.title} onChange={e => setFormData(p => ({ ...p, title: e.target.value }))} />
+                  <input type="text" required placeholder="e.g., Battalion Chief, EMS Educator" className={showError('title') ? 'osce-input-error' : ''} value={formData.title} onBlur={() => markTouched('title')} onChange={e => setFormData(p => ({ ...p, title: e.target.value }))} />
+                  {showError('title') && <span className="osce-field-error">{fieldErrors.title}</span>}
                 </div>
               </div>
 
               <div className="osce-form-row">
                 <div className="osce-form-group">
                   <label>Agency / Organization</label>
-                  <input type="text" required placeholder="e.g., Clark County Fire Department" value={formData.agency} onChange={e => setFormData(p => ({ ...p, agency: e.target.value }))} />
+                  <input type="text" required placeholder="e.g., Clark County Fire Department" className={showError('agency') ? 'osce-input-error' : ''} value={formData.agency} onBlur={() => markTouched('agency')} onChange={e => setFormData(p => ({ ...p, agency: e.target.value }))} />
+                  {showError('agency') && <span className="osce-field-error">{fieldErrors.agency}</span>}
                 </div>
                 <div className="osce-form-group">
                   <label>Email</label>
-                  <input type="email" required placeholder="you@agency.gov" value={formData.email} onChange={e => setFormData(p => ({ ...p, email: e.target.value }))} />
+                  <input type="email" required placeholder="you@agency.gov" className={showError('email') ? 'osce-input-error' : ''} value={formData.email} onBlur={() => markTouched('email')} onChange={e => setFormData(p => ({ ...p, email: e.target.value }))} />
+                  {showError('email') && <span className="osce-field-error">{fieldErrors.email}</span>}
                 </div>
               </div>
 
@@ -249,6 +294,12 @@ export default function OsceEvaluatorSignup() {
               <div className="osce-avail-group">
                 <label className="osce-avail-label">When can you attend? <span className="osce-optional">(select all that work)</span></label>
                 <p className="osce-avail-hint">Each time block is capped at {blocks[0]?.max_observers || 4} outside evaluators. Full blocks are locked.</p>
+                {loading ? (
+                  <div className="osce-loading-blocks">
+                    <span className="osce-loading-spinner" />
+                    Loading available time blocks...
+                  </div>
+                ) : (
                 <div className="osce-block-list">
                   {blocks.map(block => {
                     const full = block.observer_count >= block.max_observers;
@@ -272,6 +323,10 @@ export default function OsceEvaluatorSignup() {
                     );
                   })}
                 </div>
+                )}
+                {triedSubmit && selectedBlocks.size === 0 && !allBlocksFull && !loading && (
+                  <span className="osce-field-error" style={{ marginTop: '0.5rem', display: 'block' }}>Please select at least one time block</span>
+                )}
               </div>
 
               <div className={`osce-agency-item${agencyPref ? ' osce-checked' : ''}`} onClick={() => setAgencyPref(!agencyPref)}>
@@ -293,7 +348,10 @@ export default function OsceEvaluatorSignup() {
 
               <div className="osce-submit-row">
                 <p className="osce-submit-note">We&apos;ll follow up with evaluator materials and a detailed schedule within 48 hours of your registration.</p>
-                <button type="submit" className="osce-submit-btn" disabled={submitting}>{submitting ? 'Submitting\u2026' : 'Register'}</button>
+                <button type="submit" className="osce-submit-btn" disabled={submitting || allBlocksFull}>
+                  {submitting && <span className="osce-spinner" />}
+                  {submitting ? 'Submitting\u2026' : allBlocksFull ? 'All Blocks Full' : 'Register'}
+                </button>
               </div>
 
               {status && (
