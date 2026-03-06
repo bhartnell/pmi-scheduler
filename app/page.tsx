@@ -302,7 +302,7 @@ export default function HomePage() {
         return null;
     }
     return (
-      <ResizableWidget key={widgetId} widgetId={widgetId}>
+      <ResizableWidget key={widgetId} widgetId={widgetId} editMode={editMode}>
         {content}
       </ResizableWidget>
     );

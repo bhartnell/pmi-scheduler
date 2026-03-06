@@ -20,7 +20,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
 
   try {
     const { data, error } = await supabase
-      .from('lab_day_checklists')
+      .from('lab_day_checklist_items')
       .select('*')
       .eq('lab_day_id', labDayId)
       .order('sort_order', { ascending: true })
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
       // Delete existing auto-generated items first
       await supabase
-        .from('lab_day_checklists')
+        .from('lab_day_checklist_items')
         .delete()
         .eq('lab_day_id', labDayId)
         .eq('is_auto_generated', true);
@@ -192,7 +192,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       }
 
       const { data: inserted, error: insertError } = await supabase
-        .from('lab_day_checklists')
+        .from('lab_day_checklist_items')
         .insert(items)
         .select();
 
@@ -209,7 +209,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
     // Get current max sort_order for this lab day
     const { data: existing } = await supabase
-      .from('lab_day_checklists')
+      .from('lab_day_checklist_items')
       .select('sort_order')
       .eq('lab_day_id', labDayId)
       .order('sort_order', { ascending: false })
@@ -218,7 +218,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     const maxSortOrder = existing && existing.length > 0 ? (existing[0].sort_order ?? 0) : -1;
 
     const { data, error } = await supabase
-      .from('lab_day_checklists')
+      .from('lab_day_checklist_items')
       .insert({
         lab_day_id: labDayId,
         title: title.trim(),
@@ -285,7 +285,7 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
     }
 
     const { data, error } = await supabase
-      .from('lab_day_checklists')
+      .from('lab_day_checklist_items')
       .update(updates)
       .eq('id', item_id)
       .eq('lab_day_id', labDayId)
@@ -328,7 +328,7 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
 
   try {
     const { error } = await supabase
-      .from('lab_day_checklists')
+      .from('lab_day_checklist_items')
       .delete()
       .eq('id', itemId)
       .eq('lab_day_id', labDayId);

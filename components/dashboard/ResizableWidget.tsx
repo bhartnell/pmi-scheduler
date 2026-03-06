@@ -97,12 +97,14 @@ function SizeIcon({ size }: { size: WidgetSize; active: boolean }) {
 interface ResizableWidgetProps {
   widgetId: string;
   defaultSize?: WidgetSize;
+  editMode?: boolean;
   children: React.ReactNode;
 }
 
 export default function ResizableWidget({
   widgetId,
   defaultSize = 'md',
+  editMode = false,
   children,
 }: ResizableWidgetProps) {
   const [size, setSize] = useState<WidgetSize>(defaultSize);
@@ -127,31 +129,31 @@ export default function ResizableWidget({
 
   return (
     <div
-      className={`${colSpanClass} col-span-full transition-all duration-300 ease-in-out group/resizable relative`}
+      className={`${colSpanClass} col-span-full transition-all duration-300 ease-in-out ${editMode ? 'group/resizable' : ''} relative`}
       data-widget-id={widgetId}
       data-widget-size={size}
     >
-      {/* Size controls overlay — injected before the widget's own DOM so
-          they float above the widget header. We use absolute positioning
-          anchored to the top-right of the wrapper so we don't need to
-          modify the underlying widget components. */}
-      <div
-        className="
-          absolute top-0 right-0 z-10
-          flex items-center gap-1
-          px-2 py-1.5
-          opacity-0 group-hover/resizable:opacity-100 focus-within:opacity-100
-          transition-opacity duration-150
-          print:hidden
-        "
-        aria-hidden="false"
-      >
-        <SizeButtons
-          widgetId={widgetId}
-          currentSize={size}
-          onChange={handleSizeChange}
-        />
-      </div>
+      {/* Size controls overlay — only rendered in edit mode to prevent
+          hover overlays from intercepting clicks on underlying links */}
+      {editMode && (
+        <div
+          className="
+            absolute top-0 right-0 z-10
+            flex items-center gap-1
+            px-2 py-1.5
+            opacity-0 group-hover/resizable:opacity-100 focus-within:opacity-100
+            transition-opacity duration-150
+            print:hidden
+          "
+          aria-hidden="false"
+        >
+          <SizeButtons
+            widgetId={widgetId}
+            currentSize={size}
+            onChange={handleSizeChange}
+          />
+        </div>
+      )}
 
       {/* The actual widget content — untouched */}
       {children}
