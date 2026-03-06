@@ -1,28 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { canAccessAdmin } from '@/lib/permissions';
+import { requireAuth } from '@/lib/api-auth';
 
 // GET /api/admin/broadcast/history
 // Returns paginated list of past broadcasts.
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireAuth('admin');
+    if (auth instanceof NextResponse) return auth;
 
     const supabase = getSupabaseAdmin();
-
-    const { data: currentUser } = await supabase
-      .from('lab_users')
-      .select('role')
-      .ilike('email', session.user.email)
-      .single();
-
-    if (!currentUser || !canAccessAdmin(currentUser.role)) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
 
     const searchParams = request.nextUrl.searchParams;
     const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 100);
