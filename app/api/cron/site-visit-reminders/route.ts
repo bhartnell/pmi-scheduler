@@ -13,6 +13,9 @@ interface ClinicalSite {
   abbreviation: string;
   system: string | null;
   is_active: boolean;
+  visit_monitoring_enabled: boolean;
+  visit_alert_days: number;
+  visit_urgent_days: number;
 }
 
 interface LastVisitRow {
@@ -30,9 +33,9 @@ const ALERT_RECIPIENTS = [
   'rniedfeldt@pmi.edu',
 ];
 
-// Thresholds in days since last visit
-const WARNING_THRESHOLD_DAYS = 14;
-const URGENT_THRESHOLD_DAYS = 28;
+// Default thresholds in days since last visit (used as fallback)
+const DEFAULT_WARNING_THRESHOLD_DAYS = 14;
+const DEFAULT_URGENT_THRESHOLD_DAYS = 28;
 
 // Dedup window: don't re-notify for the same site/threshold within this many days
 const DEDUP_WINDOW_DAYS = 7;
@@ -56,12 +59,16 @@ function formatDate(dateStr: string): string {
 }
 
 /**
- * Determine the alert level based on days since last visit.
- * Returns 'urgent' (>= 28 days), 'warning' (>= 14 days), or null.
+ * Determine the alert level based on days since last visit and per-site thresholds.
+ * Returns 'urgent' (>= urgent_days), 'warning' (>= alert_days), or null.
  */
-function getAlertLevel(daysSinceVisit: number): 'urgent' | 'warning' | null {
-  if (daysSinceVisit >= URGENT_THRESHOLD_DAYS) return 'urgent';
-  if (daysSinceVisit >= WARNING_THRESHOLD_DAYS) return 'warning';
+function getAlertLevel(
+  daysSinceVisit: number,
+  alertDays: number = DEFAULT_WARNING_THRESHOLD_DAYS,
+  urgentDays: number = DEFAULT_URGENT_THRESHOLD_DAYS,
+): 'urgent' | 'warning' | null {
+  if (daysSinceVisit >= urgentDays) return 'urgent';
+  if (daysSinceVisit >= alertDays) return 'warning';
   return null;
 }
 
@@ -95,11 +102,12 @@ export async function GET(request: NextRequest) {
   let emailsSent = 0;
   const errors: string[] = [];
 
-  // 1. Fetch all active clinical sites
+  // 1. Fetch all active clinical sites with visit monitoring enabled
   const { data: sites, error: sitesError } = await supabase
     .from('clinical_sites')
-    .select('id, name, abbreviation, system, is_active')
+    .select('id, name, abbreviation, system, is_active, visit_monitoring_enabled, visit_alert_days, visit_urgent_days')
     .eq('is_active', true)
+    .eq('visit_monitoring_enabled', true)
     .order('name');
 
   if (sitesError) {
@@ -188,9 +196,13 @@ export async function GET(request: NextRequest) {
     let daysSinceVisit: number;
     let lastVisitStr: string;
 
+    // Use per-site thresholds, falling back to defaults
+    const siteAlertDays = site.visit_alert_days ?? DEFAULT_WARNING_THRESHOLD_DAYS;
+    const siteUrgentDays = site.visit_urgent_days ?? DEFAULT_URGENT_THRESHOLD_DAYS;
+
     if (!lastVisitDate) {
       // No visit on record - flag as needing attention
-      daysSinceVisit = URGENT_THRESHOLD_DAYS; // Treat as urgent
+      daysSinceVisit = siteUrgentDays; // Treat as urgent
       lastVisitStr = 'Never visited';
     } else {
       const visitDate = new Date(lastVisitDate + 'T12:00:00');
@@ -198,7 +210,7 @@ export async function GET(request: NextRequest) {
       lastVisitStr = formatDate(lastVisitDate);
     }
 
-    const alertLevel = getAlertLevel(daysSinceVisit);
+    const alertLevel = getAlertLevel(daysSinceVisit, siteAlertDays, siteUrgentDays);
     if (!alertLevel) continue;
 
     const referenceType = alertLevel === 'urgent' ? 'site_visit_urgent' : 'site_visit_warning';

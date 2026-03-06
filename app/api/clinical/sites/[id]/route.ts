@@ -54,6 +54,9 @@ export async function PUT(
     if (body.address !== undefined) updateData.address = body.address?.trim() || null;
     if (body.phone !== undefined) updateData.phone = body.phone?.trim() || null;
     if (body.is_active !== undefined) updateData.is_active = body.is_active;
+    if (body.visit_monitoring_enabled !== undefined) updateData.visit_monitoring_enabled = body.visit_monitoring_enabled;
+    if (body.visit_alert_days !== undefined) updateData.visit_alert_days = body.visit_alert_days;
+    if (body.visit_urgent_days !== undefined) updateData.visit_urgent_days = body.visit_urgent_days;
 
     const { data, error } = await supabase
       .from('clinical_sites')
