@@ -12,6 +12,7 @@ export async function GET(request: NextRequest) {
 
   const searchParams = request.nextUrl.searchParams;
   const labDayId = searchParams.get('labDayId');
+  const clientVersion = searchParams.get('version');
 
   if (!labDayId) {
     return NextResponse.json({ success: false, error: 'labDayId is required' }, { status: 400 });
@@ -34,6 +35,17 @@ export async function GET(request: NextRequest) {
       throw error;
     }
 
+    // Version-based conditional response: if client sends version and it matches,
+    // return not_modified so the client can skip processing unchanged state
+    if (clientVersion && data && String(data.version ?? 0) === clientVersion) {
+      return NextResponse.json({
+        success: true,
+        not_modified: true,
+        version: data.version ?? 0,
+        serverTime: new Date().toISOString()
+      });
+    }
+
     // Check if timer is stale (lab day date is in the past)
     let isStale = false;
     if (data?.lab_day?.date) {
@@ -47,6 +59,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       timer: data || null,
+      version: data?.version ?? 0,
       isStale,
       serverTime: new Date().toISOString() // Include server time for sync
     });
@@ -57,6 +70,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         success: true,
         timer: null,
+        version: 0,
         tableExists: false,
         error: 'Timer table not yet created - run migration'
       });
@@ -89,6 +103,44 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
+    // Single active timer enforcement: stop ALL other running/paused timers
+    // before starting a new one
+    let stoppedTimerTitle: string | null = null;
+    const { data: otherTimers, error: otherTimersError } = await supabase
+      .from('lab_timer_state')
+      .select('lab_day_id, lab_day:lab_days(id, title)')
+      .in('status', ['running', 'paused'])
+      .neq('lab_day_id', labDayId);
+
+    if (!otherTimersError && otherTimers && otherTimers.length > 0) {
+      // Capture the title of the first stopped timer for user notification
+      const firstOther = otherTimers[0] as any;
+      stoppedTimerTitle = firstOther?.lab_day?.title || null;
+
+      // Stop all other running/paused timers and increment their version
+      const otherLabDayIds = otherTimers.map((t: any) => t.lab_day_id);
+      try {
+        await supabase.rpc('increment_version_batch', { lab_day_ids: otherLabDayIds });
+      } catch {
+        // If RPC doesn't exist, fall back — the version bump is best-effort
+      }
+
+      const { error: stopError } = await supabase
+        .from('lab_timer_state')
+        .update({
+          status: 'stopped',
+          started_at: null,
+          paused_at: null,
+          elapsed_when_paused: 0
+        })
+        .in('status', ['running', 'paused'])
+        .neq('lab_day_id', labDayId);
+
+      if (stopError) {
+        console.warn('Error stopping other timers:', stopError);
+      }
+    }
+
     // Upsert timer state
     const { data, error } = await supabase
       .from('lab_timer_state')
@@ -102,7 +154,8 @@ export async function POST(request: NextRequest) {
         duration_seconds: durationSeconds,
         debrief_seconds: debriefSeconds || 300,
         mode: mode || 'countdown',
-        rotation_acknowledged: true  // Start acknowledged
+        rotation_acknowledged: true,  // Start acknowledged
+        version: 0
       }, {
         onConflict: 'lab_day_id'
       })
@@ -114,7 +167,12 @@ export async function POST(request: NextRequest) {
       throw error;
     }
 
-    return NextResponse.json({ success: true, timer: data });
+    return NextResponse.json({
+      success: true,
+      timer: data,
+      version: data?.version ?? 0,
+      stoppedTimerTitle
+    });
   } catch (error: any) {
     console.error('Error creating timer state:', error);
     return NextResponse.json({
@@ -200,6 +258,9 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Timer not found' }, { status: 404 });
     }
 
+    // Increment version on every state change
+    const nextVersion = (currentState.version ?? 0) + 1;
+
     let updateData: any = {};
 
     switch (action) {
@@ -212,7 +273,8 @@ export async function PATCH(request: NextRequest) {
           updateData = {
             status: 'running',
             started_at: newStartTime.toISOString(),
-            paused_at: null
+            paused_at: null,
+            version: nextVersion
           };
         } else {
           // Fresh start
@@ -220,7 +282,8 @@ export async function PATCH(request: NextRequest) {
             status: 'running',
             started_at: new Date().toISOString(),
             paused_at: null,
-            elapsed_when_paused: 0
+            elapsed_when_paused: 0,
+            version: nextVersion
           };
         }
         break;
@@ -231,7 +294,8 @@ export async function PATCH(request: NextRequest) {
           updateData = {
             status: 'paused',
             paused_at: new Date().toISOString(),
-            elapsed_when_paused: elapsed
+            elapsed_when_paused: elapsed,
+            version: nextVersion
           };
         }
         break;
@@ -241,7 +305,8 @@ export async function PATCH(request: NextRequest) {
           status: 'stopped',
           started_at: null,
           paused_at: null,
-          elapsed_when_paused: 0
+          elapsed_when_paused: 0,
+          version: nextVersion
         };
         break;
 
@@ -254,7 +319,8 @@ export async function PATCH(request: NextRequest) {
           started_at: null,
           paused_at: null,
           elapsed_when_paused: 0,
-          rotation_acknowledged: true  // Set true when manually advancing - ROTATE shows only when timer hits 0
+          rotation_acknowledged: true,  // Set true when manually advancing - ROTATE shows only when timer hits 0
+          version: nextVersion
         };
         // Reset all ready statuses for this lab day when rotation advances
         await supabase
@@ -269,7 +335,8 @@ export async function PATCH(request: NextRequest) {
           status: 'stopped',
           started_at: null,
           paused_at: null,
-          elapsed_when_paused: 0
+          elapsed_when_paused: 0,
+          version: nextVersion
         };
         break;
 
@@ -281,10 +348,14 @@ export async function PATCH(request: NextRequest) {
             ...updates,
             started_at: null,
             paused_at: null,
-            elapsed_when_paused: 0
+            elapsed_when_paused: 0,
+            version: nextVersion
           };
         } else {
-          updateData = updates;
+          updateData = {
+            ...updates,
+            version: nextVersion
+          };
         }
         break;
 
@@ -304,6 +375,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({
       success: true,
       timer: data,
+      version: data?.version ?? nextVersion,
       serverTime: new Date().toISOString()
     });
   } catch (error) {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Clock, ChevronRight, Pause, Play } from 'lucide-react';
@@ -34,19 +34,30 @@ export default function GlobalTimerBanner() {
   const [displaySeconds, setDisplaySeconds] = useState(0);
   const [isDismissed, setIsDismissed] = useState(false);
   const [lastRotation, setLastRotation] = useState<number | null>(null);
+  const versionRef = useRef<number>(0);
 
   // Show timer banner on all authenticated pages (not on login/auth pages)
   const isTimerRelevantPage = !pathname.startsWith('/auth') &&
     !pathname.startsWith('/api') &&
     !pathname.startsWith('/timer-display');
 
-  // Fetch active timer
+  // Fetch active timer with version tracking
   const fetchActiveTimer = useCallback(async () => {
     try {
-      const res = await fetch('/api/lab-management/timer/active');
+      const url = versionRef.current > 0
+        ? `/api/lab-management/timer/active?version=${versionRef.current}`
+        : '/api/lab-management/timer/active';
+      const res = await fetch(url);
       const data = await res.json();
 
+      // If not modified, skip state update to save re-renders
+      if (data.not_modified) return;
+
       if (data.success && data.timer) {
+        // Update version ref
+        if (data.version !== undefined) {
+          versionRef.current = data.version;
+        }
         // Un-dismiss when rotation changes
         if (lastRotation !== null && data.timer.rotation_number !== lastRotation) {
           setIsDismissed(false);
@@ -55,6 +66,7 @@ export default function GlobalTimerBanner() {
         setTimer(data.timer);
         setLabDay(data.labDay);
       } else {
+        versionRef.current = 0;
         setTimer(null);
         setLabDay(null);
         setLastRotation(null);

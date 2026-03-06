@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Timer, Pause, Play, ExternalLink } from 'lucide-react';
 import { useVisibilityPolling } from '@/hooks/useVisibilityPolling';
 
@@ -29,13 +29,24 @@ export default function InlineTimerWidget({ labDayId, onOpenFullTimer, paused = 
   const [displaySeconds, setDisplaySeconds] = useState(0);
   const [serverTimeOffset, setServerTimeOffset] = useState(0);
   const [actionLoading, setActionLoading] = useState(false);
+  const versionRef = useRef<number>(0);
 
-  // Fetch timer state for this lab day
+  // Fetch timer state for this lab day with version tracking
   const fetchTimerState = useCallback(async () => {
     try {
-      const res = await fetch(`/api/lab-management/timer?labDayId=${labDayId}`);
+      const url = versionRef.current > 0
+        ? `/api/lab-management/timer?labDayId=${labDayId}&version=${versionRef.current}`
+        : `/api/lab-management/timer?labDayId=${labDayId}`;
+      const res = await fetch(url);
       const data = await res.json();
+
+      // If not modified, skip state update to save re-renders
+      if (data.not_modified) return;
+
       if (data.success) {
+        if (data.version !== undefined) {
+          versionRef.current = data.version;
+        }
         setTimerState(data.timer || null);
         if (data.serverTime) {
           const serverTime = new Date(data.serverTime).getTime();

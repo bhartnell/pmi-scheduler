@@ -48,6 +48,7 @@ export default function TimerBanner({
   const [connectionError, setConnectionError] = useState<string | null>(null);
 
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const versionRef = useRef<number>(0);
 
   // Load audio settings from localStorage
   const [audioSettings, setAudioSettings] = useState<Partial<TimerAudioSettings>>(() =>
@@ -82,15 +83,28 @@ export default function TimerBanner({
     playBeeps(count);
   }, [playBeeps]);
 
-  // Fetch timer state from server
+  // Fetch timer state from server with version tracking
   const fetchTimerState = useCallback(async () => {
     try {
-      const res = await fetch(`/api/lab-management/timer?labDayId=${labDayId}`);
+      const url = versionRef.current > 0
+        ? `/api/lab-management/timer?labDayId=${labDayId}&version=${versionRef.current}`
+        : `/api/lab-management/timer?labDayId=${labDayId}`;
+      const res = await fetch(url);
       const data = await res.json();
+
+      // If not modified, skip state update to save re-renders
+      if (data.not_modified) {
+        setIsConnected(true);
+        setConnectionError(null);
+        return;
+      }
 
       if (data.success) {
         setIsConnected(true);
         setConnectionError(null);
+        if (data.version !== undefined) {
+          versionRef.current = data.version;
+        }
         if (data.timer) {
           setTimerState(data.timer);
         } else {

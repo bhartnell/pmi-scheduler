@@ -96,6 +96,8 @@ export default function LabTimer({
   const [showStaleWarning, setShowStaleWarning] = useState(false);
   const [showEndLabConfirm, setShowEndLabConfirm] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [showConflictDialog, setShowConflictDialog] = useState(false);
+  const [conflictTimerTitle, setConflictTimerTitle] = useState<string>('');
 
   const ROTATE_ALERT_TIMEOUT = 30000; // 30 seconds auto-dismiss
 
@@ -209,6 +211,26 @@ export default function LabTimer({
     // Reset all instructors to NOT READY for next rotation
     await resetReadyStatuses();
   }, [resetReadyStatuses]);
+
+  // Check for active timer conflict on a different lab day
+  const checkActiveTimerConflict = useCallback(async (): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/lab-management/timer/active');
+      const data = await res.json();
+
+      if (data.success && data.timer && data.timer.lab_day_id !== labDayId && data.timer.status !== 'stopped') {
+        // There's an active timer on a different lab day
+        const title = data.labDay?.displayName || data.labDay?.date || 'another lab day';
+        setConflictTimerTitle(title);
+        setShowConflictDialog(true);
+        return true; // conflict found
+      }
+      return false; // no conflict
+    } catch (error) {
+      console.error('Error checking active timer:', error);
+      return false;
+    }
+  }, [labDayId]);
 
   // Initialize timer
   const initializeTimer = useCallback(async () => {
@@ -481,7 +503,7 @@ export default function LabTimer({
   const allReady = totalStations > 0 && readyCount === totalStations;
 
   // Control handlers
-  const handlePlayPause = useCallback(() => {
+  const handlePlayPause = useCallback(async () => {
     if (!timerState) return;
     if (showRotateAlert) setShowRotateAlert(false);
 
@@ -495,9 +517,14 @@ export default function LabTimer({
         );
         if (!confirmStart) return;
       }
+      // Check for active timer on a different lab day before starting
+      if (timerState.status === 'stopped') {
+        const hasConflict = await checkActiveTimerConflict();
+        if (hasConflict) return; // Dialog will handle the rest
+      }
       sendAction('start');
     }
-  }, [timerState, showRotateAlert, sendAction, totalStations, allReady, readyCount]);
+  }, [timerState, showRotateAlert, sendAction, totalStations, allReady, readyCount, checkActiveTimerConflict]);
 
   const handleStop = useCallback(() => sendAction('stop'), [sendAction]);
   const handleReset = useCallback(() => sendAction('reset'), [sendAction]);
@@ -1020,6 +1047,38 @@ export default function LabTimer({
               </button>
               <button
                 onClick={() => setShowEndLabConfirm(false)}
+                className="flex-1 px-4 py-3 bg-gray-600 hover:bg-gray-500 rounded-lg font-medium transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Active Timer Conflict Dialog */}
+      {showConflictDialog && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-20">
+          <div className="bg-gray-800 rounded-lg p-6 max-w-md mx-4 shadow-xl border border-yellow-500">
+            <div className="flex items-center gap-3 text-yellow-500 mb-4">
+              <AlertTriangle className="w-8 h-8" />
+              <h3 className="text-xl font-bold">Timer Already Running</h3>
+            </div>
+            <p className="text-gray-300 mb-6">
+              A timer is currently running for <span className="font-semibold text-white">{conflictTimerTitle}</span>. Stop it and start a new timer?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowConflictDialog(false);
+                  sendAction('start');
+                }}
+                className="flex-1 px-4 py-3 bg-yellow-600 hover:bg-yellow-500 rounded-lg font-medium transition-colors"
+              >
+                Stop Other & Start
+              </button>
+              <button
+                onClick={() => setShowConflictDialog(false)}
                 className="flex-1 px-4 py-3 bg-gray-600 hover:bg-gray-500 rounded-lg font-medium transition-colors"
               >
                 Cancel
