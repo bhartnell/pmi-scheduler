@@ -22,7 +22,8 @@ import {
   Keyboard,
   LayoutGrid,
   CalendarDays,
-  Download
+  Download,
+  UserCheck
 } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import { PageErrorBoundary } from '@/components/PageErrorBoundary';
@@ -32,6 +33,7 @@ import { downloadICS, parseLocalDate } from '@/lib/ics-export';
 import { PageLoader, SkeletonTable, ContentLoader } from '@/components/ui';
 import CalendarAvailabilityDot from '@/components/CalendarAvailabilityDot';
 import { useCalendarAvailability } from '@/hooks/useCalendarAvailability';
+import Breadcrumbs from '@/components/Breadcrumbs';
 
 interface Cohort {
   id: string;
@@ -93,6 +95,11 @@ interface LabDayRole {
   instructor_email: string | null;
 }
 
+interface ShiftSignupInfo {
+  confirmed: { name: string; email: string }[];
+  pending_count: number;
+}
+
 interface LabDay {
   id: string;
   date: string;
@@ -110,6 +117,7 @@ interface LabDay {
   };
   stations: any[];
   roles: LabDayRole[];
+  shift_signups?: ShiftSignupInfo;
 }
 
 interface DailyNote {
@@ -904,11 +912,7 @@ function SchedulePageContent() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1">
-                <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
-                <ChevronRight className="w-4 h-4" />
-                <span>Schedule</span>
-              </div>
+              <Breadcrumbs className="mb-1" />
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Lab Schedule</h1>
             </div>
             <div className="flex items-center gap-2">
@@ -1150,6 +1154,25 @@ function SchedulePageContent() {
                               )}
                             </span>
                           ))}
+                        </div>
+                      )}
+                      {/* Shift Signups (Part-Timer Coverage) */}
+                      {labDay.shift_signups && (labDay.shift_signups.confirmed.length > 0 || labDay.shift_signups.pending_count > 0) && (
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {labDay.shift_signups.confirmed.map((signup, idx) => (
+                            <span
+                              key={`signup-${idx}`}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300"
+                            >
+                              <UserCheck className="w-3 h-3" />
+                              PT: {signup.name}
+                            </span>
+                          ))}
+                          {labDay.shift_signups.pending_count > 0 && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">
+                              ({labDay.shift_signups.pending_count} pending)
+                            </span>
+                          )}
                         </div>
                       )}
                       {labDay.stations.length > 0 && (
@@ -1402,6 +1425,23 @@ function SchedulePageContent() {
                                   <Users className="w-3 h-3 inline mr-0.5 -mt-px" />
                                   {stationInstructors.slice(0, 3).join(', ')}
                                   {stationInstructors.length > 3 && ` +${stationInstructors.length - 3}`}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Shift Signups */}
+                          {labDay.shift_signups && (labDay.shift_signups.confirmed.length > 0 || labDay.shift_signups.pending_count > 0) && (
+                            <div className="mt-1 space-y-0.5">
+                              {labDay.shift_signups.confirmed.map((signup, idx) => (
+                                <div key={`pt-${idx}`} className="flex items-center gap-1 text-[10px] leading-tight">
+                                  <span className="flex-shrink-0 px-1 py-px rounded bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300 font-semibold">PT</span>
+                                  <span className="text-gray-700 dark:text-gray-300 truncate">{signup.name}</span>
+                                </div>
+                              ))}
+                              {labDay.shift_signups.pending_count > 0 && (
+                                <div className="text-[10px] text-amber-600 dark:text-amber-400 leading-tight">
+                                  ({labDay.shift_signups.pending_count} pending)
                                 </div>
                               )}
                             </div>
@@ -1660,17 +1700,25 @@ function SchedulePageContent() {
                               .filter((s: any) => s.instructor_name)
                               .map((s: any) => s.instructor_name as string)
                           ));
-                          if (leads.length === 0 && roams.length === 0 && stnInstructors.length === 0) return null;
-                          const parts: string[] = [];
-                          leads.forEach(r => parts.push(`Lead: ${r.instructor_name || r.instructor_email?.split('@')[0] || '?'}`));
-                          roams.forEach(r => parts.push(`Roamer: ${r.instructor_name || r.instructor_email?.split('@')[0] || '?'}`));
+                          // Include shift signups in the instructor summary
+                          const shiftSignups = labDay.shift_signups;
+                          if (leads.length === 0 && roams.length === 0 && stnInstructors.length === 0 && (!shiftSignups || shiftSignups.confirmed.length === 0)) return null;
+                          const mainParts: string[] = [];
+                          leads.forEach(r => mainParts.push(`Lead: ${r.instructor_name || r.instructor_email?.split('@')[0] || '?'}`));
+                          roams.forEach(r => mainParts.push(`Roamer: ${r.instructor_name || r.instructor_email?.split('@')[0] || '?'}`));
                           if (stnInstructors.length > 0) {
-                            parts.push(stnInstructors.slice(0, 3).join(', ') + (stnInstructors.length > 3 ? ` +${stnInstructors.length - 3}` : ''));
+                            mainParts.push(stnInstructors.slice(0, 3).join(', ') + (stnInstructors.length > 3 ? ` +${stnInstructors.length - 3}` : ''));
+                          }
+                          if (shiftSignups && shiftSignups.confirmed.length > 0) {
+                            shiftSignups.confirmed.forEach(s => mainParts.push(`PT: ${s.name}`));
                           }
                           return (
                             <div className="flex items-center gap-1 mt-0.5 text-xs text-gray-500 dark:text-gray-400 truncate">
                               <Users className="w-3.5 h-3.5 flex-shrink-0" />
-                              <span className="truncate">{parts.join(' • ')}</span>
+                              <span className="truncate">{mainParts.join(' \u2022 ')}</span>
+                              {shiftSignups && shiftSignups.pending_count > 0 && (
+                                <span className="flex-shrink-0 text-amber-600 dark:text-amber-400">({shiftSignups.pending_count} pending)</span>
+                              )}
                             </div>
                           );
                         })()}

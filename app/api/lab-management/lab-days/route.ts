@@ -94,6 +94,49 @@ export async function GET(request: NextRequest) {
           ld.roles = [];
         });
       }
+
+      // Fetch shift signups for lab day dates (open_shifts matched by date)
+      const uniqueDates = [...new Set(data.map((ld: any) => ld.date))];
+      if (uniqueDates.length > 0) {
+        const { data: shifts } = await supabase
+          .from('open_shifts')
+          .select(`
+            id, date, title, start_time, end_time,
+            signups:shift_signups(
+              id, status,
+              instructor:instructor_id(id, name, email)
+            )
+          `)
+          .in('date', uniqueDates)
+          .eq('is_cancelled', false);
+
+        if (shifts && shifts.length > 0) {
+          // Build a map of date -> shift signup info
+          const shiftsByDate: Record<string, { confirmed: { name: string; email: string }[]; pending_count: number }> = {};
+          shifts.forEach((shift: any) => {
+            const d = shift.date;
+            if (!shiftsByDate[d]) shiftsByDate[d] = { confirmed: [], pending_count: 0 };
+            (shift.signups || []).forEach((signup: any) => {
+              if (signup.status === 'confirmed') {
+                shiftsByDate[d].confirmed.push({
+                  name: signup.instructor?.name || signup.instructor?.email?.split('@')[0] || 'Unknown',
+                  email: signup.instructor?.email || '',
+                });
+              } else if (signup.status === 'pending') {
+                shiftsByDate[d].pending_count += 1;
+              }
+            });
+          });
+
+          data.forEach((ld: any) => {
+            ld.shift_signups = shiftsByDate[ld.date] || { confirmed: [], pending_count: 0 };
+          });
+        } else {
+          data.forEach((ld: any) => {
+            ld.shift_signups = { confirmed: [], pending_count: 0 };
+          });
+        }
+      }
     }
 
     return NextResponse.json({ success: true, labDays: data, pagination: { limit, offset, total: count || 0 } });

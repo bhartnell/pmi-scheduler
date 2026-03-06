@@ -67,6 +67,8 @@ import type { StationMetadata } from '@/components/TemplateGuideSection';
 import TemplateDiffModal from '@/components/TemplateDiffModal';
 import CalendarAvailabilityDot from '@/components/CalendarAvailabilityDot';
 import { useCalendarAvailability } from '@/hooks/useCalendarAvailability';
+import Breadcrumbs from '@/components/Breadcrumbs';
+import { ArrowLeft } from 'lucide-react';
 
 interface LabDay {
   id: string;
@@ -478,6 +480,29 @@ export default function LabDayPage() {
     notes: ''
   });
 
+  // Coverage section state (shift signups for this lab day)
+  interface ShiftCoverage {
+    id: string;
+    title: string;
+    date: string;
+    start_time: string;
+    end_time: string;
+    signups: {
+      id: string;
+      status: string;
+      instructor: { id: string; name: string; email: string } | null;
+    }[];
+  }
+  const [coverageShifts, setCoverageShifts] = useState<ShiftCoverage[]>([]);
+  const [coverageLoading, setCoverageLoading] = useState(false);
+  const [coverageCollapsed, setCoverageCollapsed] = useState(false);
+
+  // Quick Add Station state
+  const [showQuickAddStation, setShowQuickAddStation] = useState(false);
+  const [quickAddType, setQuickAddType] = useState('scenario');
+  const [quickAddTitle, setQuickAddTitle] = useState('');
+  const [quickAddSaving, setQuickAddSaving] = useState(false);
+
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/signin');
@@ -497,6 +522,7 @@ export default function LabDayPage() {
       fetchCurrentUserRole();
       fetchSignoffs();
       fetchSkillsForSignoffs();
+      fetchCoverageShifts();
     }
   }, [session, labDayId]);
 
@@ -1407,6 +1433,115 @@ export default function LabDayPage() {
       console.error('Error fetching lab day:', error);
     }
     setLoading(false);
+  };
+
+  const fetchCoverageShifts = async () => {
+    setCoverageLoading(true);
+    try {
+      // We need the lab day date - fetch it from state or wait for lab day to load
+      // This will be called after fetchLabDay populates labDay state, or use the URL param
+      const labDayRes = await fetch(`/api/lab-management/lab-days/${labDayId}`);
+      const labDayData = await labDayRes.json();
+      const labDate = labDayData?.labDay?.date;
+      if (!labDate) {
+        setCoverageLoading(false);
+        return;
+      }
+
+      const res = await fetch(`/api/scheduling/shifts?start_date=${labDate}&end_date=${labDate}&include_filled=true`);
+      const data = await res.json();
+      if (data.success) {
+        setCoverageShifts(
+          (data.shifts || []).map((s: any) => ({
+            id: s.id,
+            title: s.title,
+            date: s.date,
+            start_time: s.start_time,
+            end_time: s.end_time,
+            signups: (s.signups || []).map((su: any) => ({
+              id: su.id,
+              status: su.status,
+              instructor: su.instructor || null,
+            })),
+          }))
+        );
+      }
+    } catch (error) {
+      console.error('Error fetching coverage shifts:', error);
+    }
+    setCoverageLoading(false);
+  };
+
+  const handleQuickAddStation = async () => {
+    if (!quickAddTitle.trim()) return;
+    setQuickAddSaving(true);
+    try {
+      const nextNumber = labDay ? Math.max(...labDay.stations.map((s: Station) => s.station_number), 0) + 1 : 1;
+      const res = await fetch('/api/lab-management/stations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lab_day_id: labDayId,
+          station_number: nextNumber,
+          station_type: quickAddType,
+          custom_title: quickAddTitle.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast?.addToast('success', 'Station added');
+        setShowQuickAddStation(false);
+        setQuickAddTitle('');
+        setQuickAddType('scenario');
+        fetchLabDay(); // Refresh
+      } else {
+        toast?.addToast('error', data.error || 'Failed to add station');
+      }
+    } catch (error) {
+      console.error('Error adding station:', error);
+      toast?.addToast('error', 'Failed to add station');
+    }
+    setQuickAddSaving(false);
+  };
+
+  const handleAcceptSignup = async (shiftId: string, signupId: string) => {
+    try {
+      const res = await fetch(`/api/scheduling/shifts/${shiftId}/signup/${signupId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'confirm' }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast?.addToast('success', 'Signup confirmed');
+        fetchCoverageShifts();
+      } else {
+        toast?.addToast('error', data.error || 'Failed to confirm signup');
+      }
+    } catch (error) {
+      console.error('Error confirming signup:', error);
+      toast?.addToast('error', 'Failed to confirm signup');
+    }
+  };
+
+  const handleDeclineSignup = async (shiftId: string, signupId: string) => {
+    try {
+      const res = await fetch(`/api/scheduling/shifts/${shiftId}/signup/${signupId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'decline', reason: 'Declined by admin' }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast?.addToast('success', 'Signup declined');
+        fetchCoverageShifts();
+      } else {
+        toast?.addToast('error', data.error || 'Failed to decline signup');
+      }
+    } catch (error) {
+      console.error('Error declining signup:', error);
+      toast?.addToast('error', 'Failed to decline signup');
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -2358,6 +2493,20 @@ export default function LabDayPage() {
 
   return (
     <div id="lab-day-printable" className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 print:bg-white">
+      {/* Print CSS */}
+      <style>{`
+        @media print {
+          @page { margin: 0.5in; size: letter portrait; }
+          nav, aside, header, footer,
+          [data-radix-popper-content-wrapper],
+          [role="dialog"],
+          .toast-container { display: none !important; }
+          html, body { background: white !important; color: black !important; font-size: 10pt !important; }
+          * { box-shadow: none !important; text-shadow: none !important; }
+          a { color: inherit !important; text-decoration: none !important; }
+        }
+      `}</style>
+
       {/* Success Toast */}
       {justGraded && (
         <div className="fixed top-4 right-4 z-50 bg-green-500 text-white px-4 py-3 rounded-lg shadow-lg flex items-center gap-2 animate-fade-in print:hidden">
@@ -2386,6 +2535,9 @@ export default function LabDayPage() {
             )}
           </div>
           <div className="text-right">
+            {labDay.title && (
+              <p className="font-semibold text-base">{labDay.title}</p>
+            )}
             {labDay.week_number && labDay.day_number && (
               <p><strong>Week {labDay.week_number}, Day {labDay.day_number}</strong></p>
             )}
@@ -2414,6 +2566,147 @@ export default function LabDayPage() {
             )}
           </div>
         )}
+
+        {/* Print: Stations Table */}
+        {labDay.stations.length > 0 && (
+          <div className="mt-4 pt-3 border-t border-gray-300">
+            <h2 className="text-sm font-bold uppercase tracking-wide text-gray-700 mb-2">Stations</h2>
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="border-b-2 border-gray-400">
+                  <th className="text-left py-1 pr-2 font-semibold text-gray-600 w-8">#</th>
+                  <th className="text-left py-1 pr-2 font-semibold text-gray-600">Type</th>
+                  <th className="text-left py-1 pr-2 font-semibold text-gray-600">Station / Scenario</th>
+                  <th className="text-left py-1 pr-2 font-semibold text-gray-600">Instructor</th>
+                  <th className="text-left py-1 font-semibold text-gray-600">Room</th>
+                </tr>
+              </thead>
+              <tbody>
+                {labDay.stations.map((station: Station) => (
+                  <tr key={station.id} className="border-b border-gray-200">
+                    <td className="py-1.5 pr-2 text-gray-500">{station.station_number}</td>
+                    <td className="py-1.5 pr-2 capitalize text-gray-600 text-xs">{station.station_type.replace('_', ' ')}</td>
+                    <td className="py-1.5 pr-2">
+                      <span className="font-medium text-gray-900">
+                        {station.custom_title || station.scenario?.title || station.skill_name || `Station ${station.station_number}`}
+                      </span>
+                      {station.station_notes && (
+                        <p className="text-xs text-gray-500 mt-0.5">{station.station_notes}</p>
+                      )}
+                    </td>
+                    <td className="py-1.5 pr-2 text-gray-700">
+                      {station.instructor_name || <span className="text-gray-300 italic">TBD</span>}
+                    </td>
+                    <td className="py-1.5 text-gray-700">{station.room || ''}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* Print: Rotation Schedule */}
+        {labDay.start_time && labDay.rotation_duration > 0 && labDay.num_rotations > 0 && (
+          <div className="mt-4 pt-3 border-t border-gray-300">
+            <h2 className="text-sm font-bold uppercase tracking-wide text-gray-700 mb-2">Rotation Schedule</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-sm">
+              {Array.from({ length: labDay.num_rotations }, (_, i) => {
+                const startParts = labDay.start_time!.split(':');
+                const startMinutes = parseInt(startParts[0]) * 60 + parseInt(startParts[1]);
+                const rotStart = startMinutes + (i * labDay.rotation_duration);
+                const rotEnd = rotStart + labDay.rotation_duration;
+                const fmtTime = (mins: number) => {
+                  const h = Math.floor(mins / 60) % 12 || 12;
+                  const m = String(mins % 60).padStart(2, '0');
+                  const ampm = Math.floor(mins / 60) >= 12 ? 'PM' : 'AM';
+                  return `${h}:${m} ${ampm}`;
+                };
+                return (
+                  <div key={i} className="border border-gray-200 rounded px-2 py-1">
+                    <span className="font-semibold text-gray-700">R{i + 1}:</span>{' '}
+                    <span className="text-gray-600">{fmtTime(rotStart)} - {fmtTime(rotEnd)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Print: Checklist */}
+        {checklistItems.length > 0 && (
+          <div className="mt-4 pt-3 border-t border-gray-300">
+            <h2 className="text-sm font-bold uppercase tracking-wide text-gray-700 mb-2">
+              Prep Checklist ({checklistItems.filter(i => i.is_completed).length}/{checklistItems.length})
+            </h2>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-sm">
+              {checklistItems.map(item => (
+                <div key={item.id} className="flex items-center gap-1.5">
+                  <span className={`text-xs ${item.is_completed ? 'text-green-600' : 'text-gray-400'}`}>
+                    {item.is_completed ? '\u2713' : '\u25CB'}
+                  </span>
+                  <span className={item.is_completed ? 'text-gray-500 line-through' : 'text-gray-800'}>
+                    {item.title}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Print: Coverage / Shift Signups */}
+        {coverageShifts.length > 0 && (
+          <div className="mt-4 pt-3 border-t border-gray-300">
+            <h2 className="text-sm font-bold uppercase tracking-wide text-gray-700 mb-2">Shift Coverage</h2>
+            {coverageShifts.map(shift => {
+              const confirmed = shift.signups.filter(s => s.status === 'confirmed');
+              return (
+                <div key={shift.id} className="text-sm mb-1">
+                  <strong>{shift.title}</strong>
+                  {confirmed.length > 0 && (
+                    <span className="ml-2 text-gray-600">
+                      {confirmed.map(s => s.instructor?.name || 'Unknown').join(', ')}
+                    </span>
+                  )}
+                  {confirmed.length === 0 && (
+                    <span className="ml-2 text-gray-400 italic">No confirmed signups</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Print: Notes */}
+        {labDay.notes && (
+          <div className="mt-4 pt-3 border-t border-gray-300">
+            <h2 className="text-sm font-bold uppercase tracking-wide text-gray-700 mb-1">Notes</h2>
+            <p className="text-sm text-gray-600">{labDay.notes}</p>
+          </div>
+        )}
+
+        {/* Print: Student Roster */}
+        {cohortStudents.length > 0 && (
+          <div className="mt-4 pt-3 border-t border-gray-300">
+            <h2 className="text-sm font-bold uppercase tracking-wide text-gray-700 mb-2">
+              Student Roster ({cohortStudents.length})
+            </h2>
+            <div className="grid grid-cols-3 gap-x-4 gap-y-0.5 text-sm">
+              {cohortStudents
+                .sort((a, b) => a.last_name.localeCompare(b.last_name))
+                .map((student, idx) => (
+                  <span key={student.id} className="text-gray-800">
+                    {idx + 1}. {student.last_name}, {student.first_name}
+                  </span>
+                ))
+              }
+            </div>
+          </div>
+        )}
+
+        <div className="mt-4 pt-2 border-t border-gray-300 text-xs text-gray-400 flex justify-between">
+          <span>PMI EMS Scheduler</span>
+          <span>Printed {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+        </div>
       </div>
 
       {/* Roster Print View - Only visible when printing roster */}
@@ -2598,13 +2891,17 @@ export default function LabDayPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1">
-                <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
-                <ChevronRight className="w-4 h-4" />
-                <Link href="/lab-management/schedule" className="hover:text-blue-600 dark:hover:text-blue-400">Schedule</Link>
-                <ChevronRight className="w-4 h-4" />
-                <span>{labDay.cohort.program.abbreviation} Group {labDay.cohort.cohort_number}</span>
-              </div>
+              <Breadcrumbs
+                entityTitle={labDay.title || `${labDay.cohort.program.abbreviation} Group ${labDay.cohort.cohort_number}`}
+                className="mb-1"
+              />
+              <Link
+                href="/lab-management/schedule"
+                className="inline-flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 mb-1"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back to Schedule
+              </Link>
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
                 {formatDate(labDay.date)}
               </h1>
@@ -3022,6 +3319,165 @@ export default function LabDayPage() {
             <span>Checking calendar availability...</span>
           </div>
         )}
+
+        {/* Shift Coverage Section */}
+        {coverageShifts.length > 0 && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6 print:shadow-none print:border print:border-gray-300">
+            <button
+              onClick={() => setCoverageCollapsed(!coverageCollapsed)}
+              className="flex items-center justify-between w-full mb-3"
+            >
+              <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <UserCheck className="w-5 h-5 text-teal-600 dark:text-teal-400" />
+                Coverage &mdash; Shift Signups
+              </h3>
+              {coverageCollapsed ? (
+                <ChevronRight className="w-4 h-4 text-gray-400" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-gray-400" />
+              )}
+            </button>
+            {!coverageCollapsed && (
+              <div className="space-y-3">
+                {coverageShifts.map(shift => {
+                  const confirmed = shift.signups.filter(s => s.status === 'confirmed');
+                  const pending = shift.signups.filter(s => s.status === 'pending');
+                  return (
+                    <div key={shift.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <div>
+                          <span className="text-sm font-medium text-gray-900 dark:text-white">{shift.title}</span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
+                            {shift.start_time?.substring(0, 5)} - {shift.end_time?.substring(0, 5)}
+                          </span>
+                        </div>
+                      </div>
+                      {/* Confirmed signups */}
+                      {confirmed.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-2">
+                          {confirmed.map(signup => (
+                            <span
+                              key={signup.id}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300"
+                            >
+                              <CheckCircle className="w-3 h-3" />
+                              {signup.instructor?.name || signup.instructor?.email?.split('@')[0] || 'Unknown'}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {/* Pending signups with accept/decline */}
+                      {pending.length > 0 && (
+                        <div className="space-y-1.5">
+                          <p className="text-xs font-medium text-amber-700 dark:text-amber-400">Pending ({pending.length})</p>
+                          {pending.map(signup => (
+                            <div key={signup.id} className="flex items-center justify-between gap-2 px-2 py-1.5 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                              <span className="text-sm text-gray-900 dark:text-white">
+                                {signup.instructor?.name || signup.instructor?.email?.split('@')[0] || 'Unknown'}
+                              </span>
+                              {userRole && (userRole === 'admin' || userRole === 'superadmin' || userRole === 'lead_instructor') && (
+                                <div className="flex items-center gap-1.5">
+                                  <button
+                                    onClick={() => handleAcceptSignup(shift.id, signup.id)}
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 rounded hover:bg-green-200 dark:hover:bg-green-900/60"
+                                    title="Accept signup"
+                                  >
+                                    <Check className="w-3 h-3" />
+                                    Accept
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeclineSignup(shift.id, signup.id)}
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 rounded hover:bg-red-200 dark:hover:bg-red-900/60"
+                                    title="Decline signup"
+                                  >
+                                    <X className="w-3 h-3" />
+                                    Decline
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {confirmed.length === 0 && pending.length === 0 && (
+                        <p className="text-xs text-gray-400 dark:text-gray-500 italic">No signups yet</p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Quick Add Station */}
+        {showQuickAddStation && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6 border-2 border-blue-200 dark:border-blue-800 print:hidden">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <Plus className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                Quick Add Station
+              </h3>
+              <button
+                onClick={() => setShowQuickAddStation(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-3 items-end">
+              <div className="flex-1 min-w-[120px]">
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Station Type</label>
+                <select
+                  value={quickAddType}
+                  onChange={(e) => setQuickAddType(e.target.value)}
+                  className="w-full px-2.5 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="scenario">Scenario</option>
+                  <option value="skills">Skills</option>
+                  <option value="skill_drill">Skill Drill</option>
+                  <option value="documentation">Documentation</option>
+                </select>
+              </div>
+              <div className="flex-[2] min-w-[200px]">
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Title</label>
+                <input
+                  type="text"
+                  value={quickAddTitle}
+                  onChange={(e) => setQuickAddTitle(e.target.value)}
+                  placeholder="Enter station title..."
+                  className="w-full px-2.5 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500"
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleQuickAddStation(); }}
+                />
+              </div>
+              <button
+                onClick={handleQuickAddStation}
+                disabled={quickAddSaving || !quickAddTitle.trim()}
+                className="px-4 py-1.5 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+              >
+                {quickAddSaving ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Plus className="w-3.5 h-3.5" />
+                )}
+                Add
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Quick Actions Bar */}
+        <div className="flex items-center gap-2 mb-4 print:hidden">
+          {!showQuickAddStation && (
+            <button
+              onClick={() => setShowQuickAddStation(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 border border-blue-200 dark:border-blue-800"
+            >
+              <Plus className="w-4 h-4" />
+              Quick Add Station
+            </button>
+          )}
+        </div>
 
         {/* Stations Grid */}
         {labDay.stations.length === 0 ? (
