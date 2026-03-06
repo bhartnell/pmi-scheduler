@@ -45,10 +45,14 @@ const ROUTE_LABELS: Record<string, string> = {
   'admin/osce-events': 'OSCE Events',
   'admin/osce-observers': 'OSCE Observers',
   'admin/settings': 'Settings',
+  'admin/scenarios': 'Scenarios',
+  'admin/scenarios/bulk-import': 'Bulk Import',
   'instructor': 'Instructor Portal',
   'calendar': 'Calendar',
   'settings': 'Settings',
   'notifications': 'Notifications',
+  'resources': 'Resources',
+  'clinical/site-visit-settings': 'Alert Settings',
 };
 
 /** Check if a segment looks like a UUID or dynamic ID */

@@ -13,7 +13,6 @@ import {
   CheckCircle2,
   XCircle,
   AlertCircle,
-  Home,
   ArrowLeft,
   TrendingUp,
   AlertTriangle,
@@ -21,6 +20,7 @@ import {
 import { ThemeToggle } from '@/components/ThemeToggle';
 import NotificationBell from '@/components/NotificationBell';
 import { PageLoader } from '@/components/ui';
+import Breadcrumbs from '@/components/Breadcrumbs';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -307,19 +307,7 @@ export default function SchedulerReportsPage() {
             </div>
           </div>
 
-          {/* Breadcrumbs */}
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mt-4 mb-2">
-            <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1">
-              <Home className="w-3 h-3" />
-              <span className="hidden sm:inline">Home</span>
-            </Link>
-            <span className="text-gray-400">/</span>
-            <Link href="/scheduling" className="hover:text-blue-600 dark:hover:text-blue-400">
-              Scheduling
-            </Link>
-            <span className="text-gray-400">/</span>
-            <span className="text-gray-900 dark:text-white">Reports</span>
-          </div>
+          <Breadcrumbs className="mt-4 mb-2" />
 
           {/* Title */}
           <div className="flex items-center gap-3">

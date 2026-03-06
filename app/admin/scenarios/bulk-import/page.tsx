@@ -5,7 +5,6 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
-  ChevronRight,
   Upload,
   FileText,
   FileJson,
@@ -26,6 +25,7 @@ import {
 import { canAccessAdmin } from '@/lib/permissions';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { PageLoader } from '@/components/ui';
+import Breadcrumbs from '@/components/Breadcrumbs';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -445,15 +445,7 @@ export default function BulkImportPage() {
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
-            <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400">Home</Link>
-            <ChevronRight className="w-4 h-4" />
-            <Link href="/admin" className="hover:text-blue-600 dark:hover:text-blue-400">Admin</Link>
-            <ChevronRight className="w-4 h-4" />
-            <Link href="/admin/scenarios" className="hover:text-blue-600 dark:hover:text-blue-400">Scenarios</Link>
-            <ChevronRight className="w-4 h-4" />
-            <span className="text-gray-900 dark:text-white">Bulk Import</span>
-          </div>
+          <Breadcrumbs className="mb-2" />
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">

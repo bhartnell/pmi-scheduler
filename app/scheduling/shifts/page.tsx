@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, useMemo, Suspense } from 'react';
 import Link from 'next/link';
 import {
   Calendar,
@@ -11,8 +11,8 @@ import {
   Users,
   Plus,
   Filter,
+  ChevronLeft,
   ChevronRight,
-  Home,
   CheckCircle2,
   XCircle,
   AlertCircle,
@@ -29,6 +29,7 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import NotificationBell from '@/components/NotificationBell';
 import { downloadICS, parseLocalDate } from '@/lib/ics-export';
 import EmptyState from '@/components/EmptyState';
+import Breadcrumbs from '@/components/Breadcrumbs';
 import { useToast } from '@/components/Toast';
 import { PageLoader, SkeletonTable, ContentLoader } from '@/components/ui';
 import {
@@ -131,6 +132,14 @@ function ShiftsPageContent() {
   const [savingEdit, setSavingEdit] = useState(false);
   const [deletingShift, setDeletingShift] = useState(false);
 
+  // Calendar view state
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+  const [calViewYear, setCalViewYear] = useState(today.getFullYear());
+  const [calViewMonth, setCalViewMonth] = useState(today.getMonth()); // 0-indexed
+  const [selectedCalDate, setSelectedCalDate] = useState<string | null>(null);
+  const [allShiftsForCal, setAllShiftsForCal] = useState<OpenShift[]>([]);
+
   // Trade request state
   const [activeTab, setActiveTab] = useState<'shifts' | 'trades'>('shifts');
   const [trades, setTrades] = useState<ShiftTradeRequest[]>([]);
@@ -158,6 +167,93 @@ function ShiftsPageContent() {
       fetchShifts();
     }
   }, [currentUser, filterMine, filterDepartment, includeFilled]);
+
+  // Fetch all shifts for the calendar view (full month including filled)
+  useEffect(() => {
+    if (!currentUser) return;
+    const fetchCalendarShifts = async () => {
+      const monthStart = `${calViewYear}-${String(calViewMonth + 1).padStart(2, '0')}-01`;
+      const daysInMonth = new Date(calViewYear, calViewMonth + 1, 0).getDate();
+      const monthEnd = `${calViewYear}-${String(calViewMonth + 1).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`;
+      try {
+        const res = await fetch(`/api/scheduling/shifts?start_date=${monthStart}&end_date=${monthEnd}&include_filled=true`);
+        const data = await res.json();
+        if (data.success) {
+          setAllShiftsForCal(data.shifts || []);
+        }
+      } catch (err) {
+        console.error('Error fetching calendar shifts:', err);
+      }
+    };
+    fetchCalendarShifts();
+  }, [currentUser, calViewYear, calViewMonth]);
+
+  // Calendar grid computation
+  const calendarDays = useMemo(() => {
+    const firstDay = new Date(calViewYear, calViewMonth, 1).getDay();
+    const daysInMonth = new Date(calViewYear, calViewMonth + 1, 0).getDate();
+    const cells: (number | null)[] = [];
+    for (let i = 0; i < firstDay; i++) cells.push(null);
+    for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+    while (cells.length % 7 !== 0) cells.push(null);
+    return cells;
+  }, [calViewYear, calViewMonth]);
+
+  // Shifts grouped by date for calendar
+  const shiftsByDate = useMemo(() => {
+    const map: Record<string, OpenShift[]> = {};
+    for (const s of allShiftsForCal) {
+      if (!map[s.date]) map[s.date] = [];
+      map[s.date].push(s);
+    }
+    return map;
+  }, [allShiftsForCal]);
+
+  const DAYS_OF_WEEK = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+  const MONTH_NAMES = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  const calPrevMonth = () => {
+    if (calViewMonth === 0) {
+      setCalViewMonth(11);
+      setCalViewYear(y => y - 1);
+    } else {
+      setCalViewMonth(m => m - 1);
+    }
+  };
+  const calNextMonth = () => {
+    if (calViewMonth === 11) {
+      setCalViewMonth(0);
+      setCalViewYear(y => y + 1);
+    } else {
+      setCalViewMonth(m => m + 1);
+    }
+  };
+
+  // Current week date range for default list filtering
+  const currentWeekStart = useMemo(() => {
+    const d = new Date();
+    const day = d.getDay(); // 0=Sun
+    d.setDate(d.getDate() - day);
+    return d.toISOString().split('T')[0];
+  }, []);
+  const currentWeekEnd = useMemo(() => {
+    const d = new Date();
+    const day = d.getDay();
+    d.setDate(d.getDate() + (6 - day));
+    return d.toISOString().split('T')[0];
+  }, []);
+
+  // Filter displayed shifts by selected calendar date
+  const displayedShifts = useMemo(() => {
+    if (selectedCalDate) {
+      return shifts.filter(s => s.date === selectedCalDate);
+    }
+    // Default: show current week
+    return shifts.filter(s => s.date >= currentWeekStart && s.date <= currentWeekEnd);
+  }, [shifts, selectedCalDate, currentWeekStart, currentWeekEnd]);
 
   // Auto-open shift detail modal when shiftId query param is present
   useEffect(() => {
@@ -569,19 +665,7 @@ function ShiftsPageContent() {
             </div>
           </div>
 
-          {/* Breadcrumbs */}
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mt-4 mb-2">
-            <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1">
-              <Home className="w-3 h-3" />
-              Home
-            </Link>
-            <span className="text-gray-400">/</span>
-            <Link href="/scheduling" className="hover:text-blue-600 dark:hover:text-blue-400">
-              Scheduling
-            </Link>
-            <span className="text-gray-400">/</span>
-            <span className="text-gray-900 dark:text-white">{filterMine ? 'My Shifts' : 'Open Shifts'}</span>
-          </div>
+          <Breadcrumbs className="mt-4 mb-2" />
 
           {/* Title and Actions */}
           <div className="flex items-center justify-between">
@@ -687,22 +771,196 @@ function ShiftsPageContent() {
           </div>
         </div>
 
+        {/* Monthly Calendar View */}
+        {activeTab === 'shifts' && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm mb-6 overflow-hidden">
+            {/* Calendar Header */}
+            <div className="px-4 py-3 border-b dark:border-gray-700 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                  Shift Calendar
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                {/* Legend */}
+                <div className="flex items-center gap-3 mr-2">
+                  <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                    <span className="w-2 h-2 rounded-full bg-green-500 inline-block"></span>
+                    All filled
+                  </span>
+                  <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                    <span className="w-2 h-2 rounded-full bg-yellow-500 inline-block"></span>
+                    Partial
+                  </span>
+                  <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                    <span className="w-2 h-2 rounded-full bg-red-500 inline-block"></span>
+                    Unfilled
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={calPrevMonth}
+                  className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400"
+                  aria-label="Previous month"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 w-32 text-center">
+                  {MONTH_NAMES[calViewMonth]} {calViewYear}
+                </span>
+                <button
+                  type="button"
+                  onClick={calNextMonth}
+                  className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400"
+                  aria-label="Next month"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Calendar Grid */}
+            <div className="p-3">
+              {/* Day-of-week headers */}
+              <div className="grid grid-cols-7 mb-1">
+                {DAYS_OF_WEEK.map(d => (
+                  <div key={d} className="text-center text-xs font-medium text-gray-400 dark:text-gray-500 py-1">
+                    {d}
+                  </div>
+                ))}
+              </div>
+
+              {/* Day cells */}
+              <div className="grid grid-cols-7 gap-y-0.5">
+                {calendarDays.map((day, idx) => {
+                  if (day === null) {
+                    return <div key={`empty-${idx}`} className="h-14" />;
+                  }
+
+                  const pad = String(day).padStart(2, '0');
+                  const monthPad = String(calViewMonth + 1).padStart(2, '0');
+                  const dateStr = `${calViewYear}-${monthPad}-${pad}`;
+
+                  const dayShifts = shiftsByDate[dateStr] || [];
+                  const totalShifts = dayShifts.length;
+                  const filledShifts = dayShifts.filter(s => {
+                    const confirmed = s.confirmed_count || 0;
+                    return s.max_instructors ? confirmed >= s.max_instructors : false;
+                  }).length;
+                  const openShifts = totalShifts - filledShifts;
+
+                  // Color coding: green=all filled, yellow=partial, red=all unfilled
+                  let statusColor = '';
+                  if (totalShifts > 0) {
+                    if (filledShifts === totalShifts) {
+                      statusColor = 'bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-700';
+                    } else if (filledShifts > 0) {
+                      statusColor = 'bg-yellow-100 dark:bg-yellow-900/30 border-yellow-300 dark:border-yellow-700';
+                    } else {
+                      statusColor = 'bg-red-100 dark:bg-red-900/30 border-red-300 dark:border-red-700';
+                    }
+                  }
+
+                  const isToday = dateStr === todayStr;
+                  const isSelected = dateStr === selectedCalDate;
+
+                  return (
+                    <button
+                      key={dateStr}
+                      type="button"
+                      onClick={() => setSelectedCalDate(isSelected ? null : dateStr)}
+                      className={`
+                        relative flex flex-col items-center justify-start pt-1 h-14 rounded-lg
+                        transition-colors select-none cursor-pointer
+                        ${isSelected
+                          ? 'bg-blue-600 dark:bg-blue-500 text-white'
+                          : totalShifts > 0
+                            ? `border ${statusColor} hover:ring-1 hover:ring-blue-400`
+                            : 'hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                        }
+                        ${isToday && !isSelected ? 'ring-1 ring-blue-400 dark:ring-blue-500' : ''}
+                      `}
+                    >
+                      <span className={`text-xs font-medium leading-none ${
+                        isSelected
+                          ? 'text-white'
+                          : isToday
+                            ? 'text-blue-600 dark:text-blue-400 font-bold'
+                            : 'text-gray-700 dark:text-gray-300'
+                      }`}>
+                        {day}
+                      </span>
+
+                      {totalShifts > 0 && (
+                        <div className="mt-1 text-center">
+                          <span className={`text-[10px] leading-none font-medium ${
+                            isSelected
+                              ? 'text-white/90'
+                              : openShifts > 0
+                                ? 'text-red-600 dark:text-red-400'
+                                : 'text-green-600 dark:text-green-400'
+                          }`}>
+                            {openShifts > 0 ? `${openShifts} open` : 'filled'}
+                          </span>
+                          <span className={`block text-[9px] leading-none mt-0.5 ${
+                            isSelected ? 'text-white/70' : 'text-gray-400 dark:text-gray-500'
+                          }`}>
+                            {filledShifts}/{totalShifts}
+                          </span>
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Selected date indicator */}
+            {selectedCalDate && (
+              <div className="px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border-t dark:border-gray-700 flex items-center justify-between">
+                <p className="text-sm text-blue-800 dark:text-blue-300">
+                  Showing shifts for{' '}
+                  <strong>
+                    {new Date(selectedCalDate + 'T12:00:00').toLocaleDateString('en-US', {
+                      weekday: 'long', month: 'long', day: 'numeric'
+                    })}
+                  </strong>
+                </p>
+                <button
+                  onClick={() => setSelectedCalDate(null)}
+                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  Show all (this week)
+                </button>
+              </div>
+            )}
+            {!selectedCalDate && (
+              <div className="px-4 py-2 bg-gray-50 dark:bg-gray-700/30 border-t dark:border-gray-700">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Showing current week shifts. Click a date to filter by that day.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Shifts List or Trades List */}
         {activeTab === 'shifts' ? (
           <>
-            {shifts.length === 0 ? (
+            {displayedShifts.length === 0 ? (
               <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm">
                 <EmptyState
                   icon={Calendar}
-                  title={filterMine ? 'No confirmed shifts' : 'No shifts found'}
-                  message={filterMine ? 'You have no confirmed shifts at this time.' : 'No open shifts are available. Check back later or contact your administrator.'}
+                  title={filterMine ? 'No confirmed shifts' : selectedCalDate ? 'No shifts on this date' : 'No shifts this week'}
+                  message={filterMine ? 'You have no confirmed shifts at this time.' : selectedCalDate ? 'No shifts are scheduled for this date. Try selecting another day.' : 'No open shifts are available this week. Check the calendar above or try another week.'}
                   actionLabel="Create Shift"
                   actionHref="/scheduling/shifts/new"
                 />
               </div>
             ) : (
               <div className="space-y-4">
-                {shifts.map((shift) => {
+                {displayedShifts.map((shift) => {
                   const isFull = isShiftFull(shift);
                   const hasSignedUp = !!shift.user_signup;
                   const isConfirmed = shift.user_signup?.status === 'confirmed';

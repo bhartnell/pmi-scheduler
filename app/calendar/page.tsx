@@ -22,6 +22,7 @@ import { useToast } from '@/components/Toast';
 import HelpTooltip from '@/components/HelpTooltip';
 import { canAccessScheduling } from '@/lib/permissions';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
+import Breadcrumbs from '@/components/Breadcrumbs';
 
 interface Cohort {
   id: string;
@@ -326,11 +327,7 @@ export default function CalendarPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1 overflow-x-auto whitespace-nowrap">
-                <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400">Home</Link>
-                <ChevronRight className="w-4 h-4" />
-                <span>Calendar</span>
-              </div>
+              <Breadcrumbs className="mb-1" />
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 Calendar
                 <HelpTooltip text="Coordinate clinical site scheduling across programs and cohorts. View lab days, open shifts, and coverage needs in one place." />

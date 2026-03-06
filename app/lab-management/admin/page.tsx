@@ -10,7 +10,6 @@ import {
   Settings,
   UserCog,
   FolderKanban,
-  Home,
   Award,
   Brain,
   Layout,
@@ -20,6 +19,7 @@ import {
 } from 'lucide-react';
 import { canManageContent, canAccessAdmin } from '@/lib/permissions';
 import type { CurrentUserMinimal } from '@/types';
+import Breadcrumbs from '@/components/Breadcrumbs';
 
 export default function AdminPage() {
   const { data: session, status } = useSession();
@@ -138,16 +138,7 @@ export default function AdminPage() {
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
-            <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1">
-              <Home className="w-3 h-3" />
-              Home
-            </Link>
-            <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
-            <ChevronRight className="w-4 h-4" />
-            <span className="dark:text-gray-300">Admin</span>
-          </div>
+          <Breadcrumbs className="mb-2" />
           <div className="flex items-center gap-3">
             <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
               <Settings className="w-6 h-6 text-gray-600 dark:text-gray-300" />

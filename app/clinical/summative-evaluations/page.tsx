@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import {
-  Home,
   ChevronRight,
   ClipboardList,
   Plus,
@@ -25,6 +24,7 @@ import {
 } from 'lucide-react';
 import { canAccessClinical, type Role } from '@/lib/permissions';
 import { parseDateSafe } from '@/lib/utils';
+import Breadcrumbs from '@/components/Breadcrumbs';
 
 interface Scenario {
   id: string;
@@ -346,18 +346,7 @@ export default function SummativeEvaluationsPage() {
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
-            <Link href="/" className="hover:text-orange-600 dark:hover:text-orange-400 flex items-center gap-1">
-              <Home className="w-3 h-3" />
-              Home
-            </Link>
-            <ChevronRight className="w-4 h-4" />
-            <Link href="/clinical" className="hover:text-orange-600 dark:hover:text-orange-400">
-              Clinical
-            </Link>
-            <ChevronRight className="w-4 h-4" />
-            <span>Summative Evaluations</span>
-          </div>
+          <Breadcrumbs className="mb-2" />
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">

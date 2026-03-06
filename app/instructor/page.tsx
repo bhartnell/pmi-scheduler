@@ -15,7 +15,6 @@ import {
   Plus,
   FileText,
   Users,
-  Home,
   History,
   BarChart3,
   Timer,
@@ -24,6 +23,7 @@ import { canAccessAdmin, canManageContent, hasMinRole } from '@/lib/permissions'
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import type { CurrentUser } from '@/types';
+import Breadcrumbs from '@/components/Breadcrumbs';
 
 interface DashboardStats {
   total_certs: number;
@@ -188,11 +188,9 @@ export default function InstructorDashboard() {
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-4">
+          <Breadcrumbs className="mb-2" />
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Link href="/" className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
-                <Home className="w-5 h-5" />
-              </Link>
               <div>
                 <h1 className="text-xl font-bold text-gray-900 dark:text-white">Instructor Portal</h1>
                 <p className="text-sm text-gray-600 dark:text-gray-400">

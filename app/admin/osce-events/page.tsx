@@ -16,6 +16,7 @@ import {
   X,
   Loader2,
 } from 'lucide-react';
+import Breadcrumbs from '@/components/Breadcrumbs';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -253,6 +254,8 @@ export default function OsceEventsListPage() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
+      <Breadcrumbs className="mb-2" />
+
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">

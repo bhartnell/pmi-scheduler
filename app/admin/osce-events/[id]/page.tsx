@@ -32,6 +32,7 @@ import {
   AlertTriangle,
   Save,
 } from 'lucide-react';
+import Breadcrumbs from '@/components/Breadcrumbs';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -202,15 +203,10 @@ export default function OsceEventDetailPage({ params }: { params: Promise<{ id: 
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
+      <Breadcrumbs entityTitle={event.title} className="mb-2" />
+
       {/* Header */}
       <div className="mb-6">
-        <button
-          onClick={() => router.push('/admin/osce-events')}
-          className="inline-flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 mb-3"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Events
-        </button>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div>
