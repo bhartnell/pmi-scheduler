@@ -76,6 +76,7 @@ export async function GET(request: NextRequest) {
         google_refresh_token: tokens.refresh_token,
         google_token_expires_at: expiresAt,
         google_calendar_connected: true,
+        google_calendar_scope: 'events',
       })
       .ilike('email', session.user.email);
 

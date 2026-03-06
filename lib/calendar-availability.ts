@@ -12,7 +12,7 @@ function getCacheKey(email: string, date: string, startTime: string, endTime: st
 /**
  * Refresh a Google access token using a stored refresh token.
  */
-async function refreshAccessToken(refreshToken: string): Promise<string | null> {
+export async function refreshAccessToken(refreshToken: string): Promise<string | null> {
   try {
     const response = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',

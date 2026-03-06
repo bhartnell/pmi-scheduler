@@ -13,12 +13,18 @@ export async function GET() {
   const supabase = getSupabaseAdmin();
   const { data: user } = await supabase
     .from('lab_users')
-    .select('google_calendar_connected')
+    .select('google_calendar_connected, google_calendar_scope')
     .ilike('email', auth.user.email)
     .single();
 
+  const connected = user?.google_calendar_connected ?? false;
+  const scope = user?.google_calendar_scope ?? 'freebusy';
+  const needsReauth = connected && scope !== 'events';
+
   return NextResponse.json({
     success: true,
-    connected: user?.google_calendar_connected ?? false,
+    connected,
+    scope,
+    needs_reauth: needsReauth,
   });
 }

@@ -24,7 +24,7 @@ export async function GET() {
     client_id: clientId,
     redirect_uri: redirectUri,
     response_type: 'code',
-    scope: 'https://www.googleapis.com/auth/calendar.freebusy.read',
+    scope: 'https://www.googleapis.com/auth/calendar.events',
     access_type: 'offline',
     prompt: 'consent',
     state: auth.user.email, // pass email in state for callback verification
@@ -50,6 +50,7 @@ export async function DELETE() {
       google_refresh_token: null,
       google_token_expires_at: null,
       google_calendar_connected: false,
+      google_calendar_scope: 'freebusy',
     })
     .ilike('email', auth.user.email);
 
