@@ -14,6 +14,8 @@ import {
   ChevronRight,
   ClipboardList,
   Building2,
+  UserCheck,
+  Filter,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import NotificationBell from '@/components/NotificationBell';
@@ -33,6 +35,30 @@ export default function SchedulingPage() {
   const [pendingCount, setPendingCount] = useState(0);
   const [pendingSubCount, setPendingSubCount] = useState(0);
   const effectiveRole = useEffectiveRole(currentUser?.role ?? null);
+
+  // Part-Timer Status state
+  interface PartTimerInfo {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+    availableThisWeek: number;
+    availabilityDates: string[];
+    confirmedShifts: number;
+    pendingShifts: number;
+    monthlyHours: number;
+    lastShiftDate: string | null;
+  }
+  interface PartTimerSummary {
+    totalPartTimers: number;
+    availableThisWeek: number;
+    unfilledShifts: number;
+    pendingSignups: number;
+  }
+  const [partTimers, setPartTimers] = useState<PartTimerInfo[]>([]);
+  const [ptSummary, setPtSummary] = useState<PartTimerSummary | null>(null);
+  const [ptLoading, setPtLoading] = useState(false);
+  const [ptFilter, setPtFilter] = useState<'all' | 'available'>('all');
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -94,6 +120,28 @@ export default function SchedulingPage() {
     }
     setLoading(false);
   };
+
+  // Fetch part-timer status when director/admin and user loaded
+  useEffect(() => {
+    if (!currentUser) return;
+    const isAdmin = currentUser.role === 'admin' || currentUser.role === 'superadmin';
+    if (!isAdmin && !userIsDirector) return;
+    const fetchPartTimerStatus = async () => {
+      setPtLoading(true);
+      try {
+        const res = await fetch('/api/scheduling/part-timer-status');
+        const data = await res.json();
+        if (data.success) {
+          setPartTimers(data.partTimers || []);
+          setPtSummary(data.summary || null);
+        }
+      } catch (err) {
+        console.error('Error fetching part-timer status:', err);
+      }
+      setPtLoading(false);
+    };
+    fetchPartTimerStatus();
+  }, [currentUser, userIsDirector]);
 
   if (status === 'loading' || loading) {
     return <PageLoader />;
@@ -360,6 +408,150 @@ export default function SchedulingPage() {
             </>
           )}
         </div>
+
+        {/* Part-Timer Status Section — Director/Admin only */}
+        {(userIsDirector || isAdmin) && (
+          <div className="mt-8">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden border-2 border-amber-200 dark:border-amber-800">
+              {/* Section Header */}
+              <div className="px-6 py-4 border-b dark:border-gray-700 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-amber-100 dark:bg-amber-900/30 rounded-xl flex items-center justify-center">
+                    <UserCheck className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Part-Timer Status</h2>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Coordination overview</p>
+                  </div>
+                  <span className="text-xs px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded">Director</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Filter className="w-4 h-4 text-gray-400" />
+                  <select
+                    value={ptFilter}
+                    onChange={(e) => setPtFilter(e.target.value as 'all' | 'available')}
+                    className="text-sm px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  >
+                    <option value="all">All Part-Timers</option>
+                    <option value="available">Available This Week</option>
+                  </select>
+                </div>
+              </div>
+
+              {ptLoading ? (
+                <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+                  <div className="animate-spin w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full mx-auto mb-2"></div>
+                  Loading part-timer status...
+                </div>
+              ) : ptSummary && ptSummary.totalPartTimers > 0 ? (
+                <>
+                  {/* Summary Stats */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-amber-50 dark:bg-amber-900/10">
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-amber-700 dark:text-amber-400">{ptSummary.availableThisWeek}</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">Available This Week</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-red-600 dark:text-red-400">{ptSummary.unfilledShifts}</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">Unfilled Shifts</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">{ptSummary.pendingSignups}</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">Pending Signups</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-2xl font-bold text-gray-700 dark:text-gray-300">{ptSummary.totalPartTimers}</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">Total Part-Timers</p>
+                    </div>
+                  </div>
+
+                  {/* Part-Timer Table */}
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50 dark:bg-gray-700/50">
+                        <tr>
+                          <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Name</th>
+                          <th className="text-center px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Available This Week</th>
+                          <th className="text-center px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Confirmed</th>
+                          <th className="text-center px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Pending</th>
+                          <th className="text-center px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Monthly Hours</th>
+                          <th className="text-center px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Last Shift</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                        {partTimers
+                          .filter(pt => ptFilter === 'all' || pt.availableThisWeek > 0)
+                          .map(pt => (
+                          <tr key={pt.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                            <td className="px-4 py-3">
+                              <div className="font-medium text-gray-900 dark:text-white">{pt.name}</div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400">{pt.email}</div>
+                            </td>
+                            <td className="text-center px-4 py-3">
+                              {pt.availableThisWeek > 0 ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded text-xs font-medium">
+                                  {pt.availableThisWeek} day{pt.availableThisWeek !== 1 ? 's' : ''}
+                                </span>
+                              ) : (
+                                <span className="text-gray-400 dark:text-gray-500">--</span>
+                              )}
+                            </td>
+                            <td className="text-center px-4 py-3">
+                              {pt.confirmedShifts > 0 ? (
+                                <span className="font-medium text-blue-600 dark:text-blue-400">{pt.confirmedShifts}</span>
+                              ) : (
+                                <span className="text-gray-400 dark:text-gray-500">0</span>
+                              )}
+                            </td>
+                            <td className="text-center px-4 py-3">
+                              {pt.pendingShifts > 0 ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded text-xs font-medium">
+                                  {pt.pendingShifts}
+                                </span>
+                              ) : (
+                                <span className="text-gray-400 dark:text-gray-500">0</span>
+                              )}
+                            </td>
+                            <td className="text-center px-4 py-3">
+                              <span className={pt.monthlyHours > 0 ? 'font-medium text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'}>
+                                {pt.monthlyHours > 0 ? `${pt.monthlyHours}h` : '--'}
+                              </span>
+                            </td>
+                            <td className="text-center px-4 py-3">
+                              {pt.lastShiftDate ? (
+                                <span className="text-xs text-gray-600 dark:text-gray-400">
+                                  {new Date(pt.lastShiftDate + 'T12:00:00').toLocaleDateString('en-US', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                  })}
+                                </span>
+                              ) : (
+                                <span className="text-gray-400 dark:text-gray-500">--</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+
+                    {partTimers.filter(pt => ptFilter === 'all' || pt.availableThisWeek > 0).length === 0 && (
+                      <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+                        <Users className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                        <p>No part-timers {ptFilter === 'available' ? 'available this week' : 'found'}</p>
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+                  <Users className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                  <p>No part-time instructors configured</p>
+                  <p className="text-xs mt-1">Mark instructors as part-time in the Admin Users page</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

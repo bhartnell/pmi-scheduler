@@ -14,7 +14,10 @@ import {
   FileText,
   Repeat,
   X,
-  ChevronDown
+  ChevronDown,
+  Star,
+  UserCheck,
+  AlertCircle
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import NotificationBell from '@/components/NotificationBell';
@@ -136,6 +139,16 @@ function CreateShiftPageInner() {
   const [calendarFilledFrom, setCalendarFilledFrom] = useState<string | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
+  // Part-timer availability context
+  interface PartTimerAvail {
+    id: string;
+    name: string;
+    email: string;
+    dates: string[];  // dates they are available (YYYY-MM-DD)
+  }
+  const [partTimerAvailability, setPartTimerAvailability] = useState<PartTimerAvail[]>([]);
+  const [ptAvailLoading, setPtAvailLoading] = useState(false);
+
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/');
@@ -199,6 +212,89 @@ function CreateShiftPageInner() {
 
     fetchScheduleData();
   }, []);
+
+  // Fetch part-timer availability for the next 90 days
+  useEffect(() => {
+    const fetchPartTimerAvailability = async () => {
+      setPtAvailLoading(true);
+      const today = new Date().toISOString().split('T')[0];
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + 90);
+      const endDate = futureDate.toISOString().split('T')[0];
+
+      try {
+        // Get all availability entries (view_all returns all instructors)
+        const availRes = await fetch(
+          `/api/scheduling/availability?view_all=true&start_date=${today}&end_date=${endDate}`
+        );
+        const availData = await availRes.json();
+        const availEntries: { instructor_id: string; date: string; instructor?: { id: string; name: string; email: string } }[] =
+          availData.success ? (availData.availability || []) : [];
+
+        // Build per-user availability from all availability entries
+        // (The instructor join gives us name/email)
+        const ptMap: Record<string, PartTimerAvail> = {};
+        for (const av of availEntries) {
+          if (av.instructor) {
+            if (!ptMap[av.instructor_id]) {
+              ptMap[av.instructor_id] = {
+                id: av.instructor_id,
+                name: av.instructor.name,
+                email: av.instructor.email,
+                dates: [],
+              };
+            }
+            ptMap[av.instructor_id].dates.push(av.date);
+          }
+        }
+
+        setPartTimerAvailability(Object.values(ptMap));
+      } catch (err) {
+        console.error('Error fetching part-timer availability:', err);
+      }
+      setPtAvailLoading(false);
+    };
+
+    fetchPartTimerAvailability();
+  }, []);
+
+  // Part-timers available on the selected date
+  const availableOnSelectedDate = formData.date
+    ? partTimerAvailability.filter(pt => pt.dates.includes(formData.date))
+    : [];
+
+  // Existing shifts on the selected date
+  const shiftsOnSelectedDate = formData.date
+    ? existingShifts.filter(s => s.date === formData.date)
+    : [];
+
+  // "Best date" suggestion: the upcoming date with maximum part-timer availability
+  const bestDateSuggestion = (() => {
+    if (partTimerAvailability.length === 0) return null;
+
+    // Gather all dates and count part-timers available
+    const dateCounts: Record<string, number> = {};
+    const todayStr = new Date().toISOString().split('T')[0];
+    for (const pt of partTimerAvailability) {
+      for (const d of pt.dates) {
+        if (d >= todayStr) {
+          dateCounts[d] = (dateCounts[d] || 0) + 1;
+        }
+      }
+    }
+
+    // Find the date with the most part-timers available
+    let bestDate: string | null = null;
+    let maxCount = 0;
+    for (const [date, count] of Object.entries(dateCounts)) {
+      if (count > maxCount) {
+        maxCount = count;
+        bestDate = date;
+      }
+    }
+
+    return bestDate ? { date: bestDate, count: maxCount } : null;
+  })();
 
   // Auto-default the "until" date to 4 weeks from the shift date when repeat is
   // enabled and the user hasn't manually set an until date yet.
@@ -891,15 +987,168 @@ function CreateShiftPageInner() {
         </form>
         </div>{/* end LEFT column */}
 
-        {/* ---- RIGHT: Lab Calendar Panel (sticky) ---- */}
+        {/* ---- RIGHT: Lab Calendar Panel + Context (sticky) ---- */}
         <div className="w-full lg:w-80 xl:w-96 flex-shrink-0">
-          <div className="sticky top-6">
+          <div className="sticky top-6 space-y-4">
             <LabCalendarPanel
               labDays={upcomingLabDays}
               existingShifts={existingShifts}
               selectedDate={formData.date}
               onSelectDate={handleCalendarSelect}
             />
+
+            {/* Best Date Suggestion */}
+            {bestDateSuggestion && !formData.date && (
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden border border-green-200 dark:border-green-800">
+                <div className="px-4 py-3 flex items-start gap-3">
+                  <Star className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">Suggested Best Date</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
+                      <strong>
+                        {new Date(bestDateSuggestion.date + 'T12:00:00').toLocaleDateString('en-US', {
+                          weekday: 'short', month: 'short', day: 'numeric'
+                        })}
+                      </strong>
+                      {' '}&mdash; {bestDateSuggestion.count} part-timer{bestDateSuggestion.count !== 1 ? 's' : ''} available
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormData(prev => ({ ...prev, date: bestDateSuggestion.date }));
+                        setCalendarFilledFrom(null);
+                      }}
+                      className="mt-2 text-xs text-green-600 dark:text-green-400 hover:underline font-medium"
+                    >
+                      Use this date
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Existing Shifts on Selected Date */}
+            {formData.date && shiftsOnSelectedDate.length > 0 && (
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
+                <div className="px-4 py-3 border-b dark:border-gray-700 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-500" />
+                  <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                    Existing Shifts on This Date
+                  </span>
+                  <span className="text-xs px-1.5 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded ml-auto">
+                    {shiftsOnSelectedDate.length}
+                  </span>
+                </div>
+                <div className="p-3 space-y-2">
+                  {shiftsOnSelectedDate.map(shift => (
+                    <div
+                      key={shift.id}
+                      className="p-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800"
+                    >
+                      <p className="text-xs font-medium text-gray-900 dark:text-white truncate">{shift.title}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 mt-0.5">
+                        <Clock className="w-3 h-3" />
+                        {(() => {
+                          const [h, m] = shift.start_time.split(':');
+                          const hour = parseInt(h, 10);
+                          return `${hour % 12 || 12}:${m} ${hour >= 12 ? 'PM' : 'AM'}`;
+                        })()}
+                        {' - '}
+                        {(() => {
+                          const [h, m] = shift.end_time.split(':');
+                          const hour = parseInt(h, 10);
+                          return `${hour % 12 || 12}:${m} ${hour >= 12 ? 'PM' : 'AM'}`;
+                        })()}
+                      </p>
+                      {shift.department && (
+                        <span className="inline-block mt-1 text-xs px-1.5 py-0.5 bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300 rounded">
+                          {shift.department}
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                    Check for overlapping times before creating a new shift.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Part-Timers Available on Selected Date */}
+            {formData.date && (
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden">
+                <div className="px-4 py-3 border-b dark:border-gray-700 flex items-center gap-2">
+                  <UserCheck className="w-4 h-4 text-green-600 dark:text-green-400" />
+                  <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                    Available Part-Timers
+                  </span>
+                  <span className={`text-xs px-1.5 py-0.5 rounded ml-auto ${
+                    availableOnSelectedDate.length > 0
+                      ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+                  }`}>
+                    {availableOnSelectedDate.length}
+                  </span>
+                </div>
+                <div className="p-3">
+                  {ptAvailLoading ? (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 text-center py-2">Loading...</p>
+                  ) : availableOnSelectedDate.length > 0 ? (
+                    <div className="space-y-1.5">
+                      {availableOnSelectedDate.map(pt => (
+                        <div
+                          key={pt.id}
+                          className="flex items-center gap-2 p-2 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800"
+                        >
+                          <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0"></span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium text-gray-900 dark:text-white truncate">{pt.name}</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{pt.email}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-3">
+                      <Users className="w-5 h-5 text-gray-400 mx-auto mb-1" />
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        No part-timers are available on this date
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Best date suggestion when current date has few/no part-timers */}
+                  {bestDateSuggestion && formData.date && availableOnSelectedDate.length < (bestDateSuggestion.count || 0) && bestDateSuggestion.date !== formData.date && (
+                    <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                      <div className="flex items-start gap-2">
+                        <Star className="w-3.5 h-3.5 text-green-500 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-xs text-gray-600 dark:text-gray-400">
+                            Better date:{' '}
+                            <strong>
+                              {new Date(bestDateSuggestion.date + 'T12:00:00').toLocaleDateString('en-US', {
+                                weekday: 'short', month: 'short', day: 'numeric'
+                              })}
+                            </strong>
+                            {' '} ({bestDateSuggestion.count} available)
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFormData(prev => ({ ...prev, date: bestDateSuggestion.date }));
+                              setCalendarFilledFrom(null);
+                            }}
+                            className="text-xs text-green-600 dark:text-green-400 hover:underline font-medium mt-1"
+                          >
+                            Switch to this date
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
