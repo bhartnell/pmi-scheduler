@@ -26,10 +26,18 @@ CREATE INDEX IF NOT EXISTS idx_gcal_events_source ON google_calendar_events(sour
 -- RLS (auth enforced at API layer, permissive for service role)
 ALTER TABLE google_calendar_events ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY IF NOT EXISTS "Allow service role full access to google_calendar_events"
-  ON google_calendar_events FOR ALL
-  USING (true)
-  WITH CHECK (true);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE policyname = 'Allow service role full access to google_calendar_events'
+  ) THEN
+    CREATE POLICY "Allow service role full access to google_calendar_events"
+      ON google_calendar_events FOR ALL
+      USING (true)
+      WITH CHECK (true);
+  END IF;
+END
+$$;
 
 -- Add google_calendar_scope column to lab_users
 ALTER TABLE lab_users ADD COLUMN IF NOT EXISTS google_calendar_scope TEXT DEFAULT 'freebusy';
