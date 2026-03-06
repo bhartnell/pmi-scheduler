@@ -128,22 +128,13 @@ export default function LabGroupsPage() {
       const students = studentsData.students || [];
       setAllStudents(students);
 
-      // Fetch groups
-      const groupsRes = await fetch(`/api/lab-management/groups?cohortId=${cohortId}`);
+      // Fetch groups with members included in a single request
+      const groupsRes = await fetch(`/api/lab-management/groups?cohortId=${cohortId}&include=members`);
       const groupsData = await groupsRes.json();
-      const fetchedGroups = groupsData.groups || [];
-
-      // Fetch members for each group
-      const groupsWithMembers: Group[] = await Promise.all(
-        fetchedGroups.map(async (group: any) => {
-          const membersRes = await fetch(`/api/lab-management/groups/${group.id}/members`);
-          const membersData = await membersRes.json();
-          return {
-            ...group,
-            members: membersData.members || [],
-          };
-        })
-      );
+      const groupsWithMembers: Group[] = (groupsData.groups || []).map((group: any) => ({
+        ...group,
+        members: group.members || [],
+      }));
 
       setGroups(groupsWithMembers);
 

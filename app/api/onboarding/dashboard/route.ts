@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { createClient } from '@supabase/supabase-js';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
 // GET - Fetch onboarding dashboard for current instructor or specified instructor (for admin/mentor)
@@ -82,66 +81,107 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Get assignment summary from view
-    const { data: summary, error: summaryError } = await supabase
-      .from('onboarding_assignment_summary')
-      .select('*')
-      .eq('assignment_id', assignment.id)
-      .single();
+    // Run all independent queries in parallel after getting the assignment
+    // Collect emails for a single bulk user lookup
+    const emailsToLookup: string[] = [];
+    if (assignment.mentor_email) emailsToLookup.push(assignment.mentor_email);
+    if (assignment.assigned_by && assignment.assigned_by !== assignment.mentor_email) {
+      emailsToLookup.push(assignment.assigned_by);
+    }
 
+    const [
+      summaryResult,
+      phasesResult,
+      taskProgressResult,
+      dependenciesResult,
+      laneProgressResult,
+      userNamesResult,
+    ] = await Promise.all([
+      // 1. Assignment summary
+      supabase
+        .from('onboarding_assignment_summary')
+        .select('*')
+        .eq('assignment_id', assignment.id)
+        .single(),
+      // 2. Phases for this template
+      supabase
+        .from('onboarding_phases')
+        .select('id, name, description, sort_order, target_days_start, target_days_end')
+        .eq('template_id', assignment.template_id)
+        .order('sort_order'),
+      // 3. Task progress with phase_id included to avoid a separate allTasks query
+      supabase
+        .from('onboarding_task_progress')
+        .select(`
+          id,
+          task_id,
+          status,
+          started_at,
+          completed_at,
+          time_spent_minutes,
+          notes,
+          task:onboarding_tasks(
+            id,
+            phase_id,
+            title,
+            description,
+            task_type,
+            resource_url,
+            sort_order,
+            is_required,
+            estimated_minutes,
+            requires_sign_off,
+            sign_off_role,
+            lane,
+            requires_evidence,
+            applicable_types,
+            requires_director
+          )
+        `)
+        .eq('assignment_id', assignment.id),
+      // 4. All dependencies
+      supabase
+        .from('onboarding_task_dependencies')
+        .select('task_id, depends_on_task_id, gate_type'),
+      // 5. Lane progress
+      supabase
+        .from('onboarding_lane_progress')
+        .select('*')
+        .eq('assignment_id', assignment.id),
+      // 6. Mentor and assignedBy names in a single query
+      emailsToLookup.length > 0
+        ? supabase
+            .from('lab_users')
+            .select('email, name')
+            .in('email', emailsToLookup)
+        : Promise.resolve({ data: [], error: null }),
+    ]);
+
+    // Destructure and validate results
+    const { data: summary, error: summaryError } = summaryResult;
     if (summaryError && summaryError.code !== 'PGRST116') throw summaryError;
 
-    // Get phases with tasks for this assignment
-    const { data: phasesData, error: phasesError } = await supabase
-      .from('onboarding_phases')
-      .select('id, name, description, sort_order, target_days_start, target_days_end')
-      .eq('template_id', assignment.template_id)
-      .order('sort_order');
-
+    const { data: phasesData, error: phasesError } = phasesResult;
     if (phasesError) throw phasesError;
 
-    // Get all task progress for this assignment
-    const { data: taskProgress, error: progressError } = await supabase
-      .from('onboarding_task_progress')
-      .select(`
-        id,
-        task_id,
-        status,
-        started_at,
-        completed_at,
-        time_spent_minutes,
-        notes,
-        task:onboarding_tasks(
-          id,
-          title,
-          description,
-          task_type,
-          resource_url,
-          sort_order,
-          is_required,
-          estimated_minutes,
-          requires_sign_off,
-          sign_off_role,
-          lane,
-          requires_evidence,
-          applicable_types,
-          requires_director
-        )
-      `)
-      .eq('assignment_id', assignment.id);
-
+    const { data: taskProgress, error: progressError } = taskProgressResult;
     if (progressError) throw progressError;
 
-    // Get dependency info for blocked task detection
-    const { data: dependencies, error: depsError } = await supabase
-      .from('onboarding_task_dependencies')
-      .select(`
-        task_id,
-        depends_on_task_id,
-        gate_type
-      `);
-
+    const { data: dependencies, error: depsError } = dependenciesResult;
     if (depsError) throw depsError;
+
+    const { data: laneProgress, error: laneError } = laneProgressResult;
+    if (laneError && laneError.code !== 'PGRST116') throw laneError;
+
+    const { data: userNames } = userNamesResult;
+
+    // Build user name lookup map
+    const userNameMap = new Map<string, string>();
+    for (const u of (userNames || [])) {
+      userNameMap.set(u.email, u.name);
+    }
+    const mentorName = assignment.mentor_email ? userNameMap.get(assignment.mentor_email) || null : null;
+    const assignedByName = assignment.assigned_by ? userNameMap.get(assignment.assigned_by) || null : null;
 
     // Build a map of task_id -> dependency info
     const dependencyMap = new Map<string, { dependsOnTaskId: string; gateType: string }[]>();
@@ -161,78 +201,14 @@ export async function GET(request: NextRequest) {
       taskStatusMap.set(tp.task_id, tp.status);
     }
 
-    // Organize tasks by phase
-    const phases = (phasesData || []).map(phase => {
+    // Organize phases with tasks using phase_id from the joined task data
+    // (no separate allTasks query needed since phase_id is included in the task join)
+    const organizedPhases = (phasesData || []).map(phase => {
       const phaseTasks = (taskProgress || [])
         .filter(tp => {
           const taskData = Array.isArray(tp.task) ? tp.task[0] : tp.task;
-          // Find tasks for this phase (we need to query this differently)
-          return taskData !== null;
+          return taskData !== null && taskData.phase_id === phase.id;
         })
-        .map(tp => {
-          const taskData = Array.isArray(tp.task) ? tp.task[0] : tp.task;
-
-          // Check if blocked by dependencies
-          const deps = dependencyMap.get(tp.task_id) || [];
-          let isBlocked = false;
-          let blockedBy: string | null = null;
-          let gateType: string | null = null;
-
-          for (const dep of deps) {
-            const depStatus = taskStatusMap.get(dep.dependsOnTaskId);
-            if (dep.gateType === 'hard' && depStatus !== 'completed' && depStatus !== 'waived') {
-              isBlocked = true;
-              blockedBy = dep.dependsOnTaskId;
-              gateType = 'hard';
-              break;
-            }
-          }
-
-          return {
-            progressId: tp.id,
-            taskId: tp.task_id,
-            status: tp.status,
-            startedAt: tp.started_at,
-            completedAt: tp.completed_at,
-            timeSpentMinutes: tp.time_spent_minutes,
-            notes: tp.notes,
-            isBlocked,
-            blockedBy,
-            gateType,
-            ...taskData
-          };
-        })
-        .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
-
-      const completed = phaseTasks.filter(t => t.status === 'completed' || t.status === 'waived').length;
-      const total = phaseTasks.length;
-
-      return {
-        ...phase,
-        tasks: phaseTasks,
-        completedCount: completed,
-        totalCount: total,
-        progressPercent: total > 0 ? Math.round((completed / total) * 100) : 0
-      };
-    });
-
-    // We need to re-query to get tasks with their phase_id
-    const phaseIds = (phasesData || []).map(p => p.id);
-    const { data: allTasks, error: allTasksError } = await supabase
-      .from('onboarding_tasks')
-      .select('id, phase_id')
-      .in('phase_id', phaseIds.length > 0 ? phaseIds : ['00000000-0000-0000-0000-000000000000']);
-
-    // Create task to phase mapping
-    const taskPhaseMap = new Map<string, string>();
-    for (const task of (allTasks || [])) {
-      taskPhaseMap.set(task.id, task.phase_id);
-    }
-
-    // Re-organize phases with correct task assignment
-    const organizedPhases = (phasesData || []).map(phase => {
-      const phaseTasks = (taskProgress || [])
-        .filter(tp => taskPhaseMap.get(tp.task_id) === phase.id)
         .map(tp => {
           const taskData = Array.isArray(tp.task) ? tp.task[0] : tp.task;
 
@@ -293,36 +269,6 @@ export async function GET(request: NextRequest) {
         }
       }
       if (nextTask) break;
-    }
-
-    // Get lane progress from view
-    const { data: laneProgress, error: laneError } = await supabase
-      .from('onboarding_lane_progress')
-      .select('*')
-      .eq('assignment_id', assignment.id);
-
-    if (laneError && laneError.code !== 'PGRST116') throw laneError;
-
-    // Get mentor and assigned_by names
-    let mentorName = null;
-    let assignedByName = null;
-
-    if (assignment.mentor_email) {
-      const { data: mentor } = await supabase
-        .from('lab_users')
-        .select('name')
-        .eq('email', assignment.mentor_email)
-        .single();
-      mentorName = mentor?.name;
-    }
-
-    if (assignment.assigned_by) {
-      const { data: assignedBy } = await supabase
-        .from('lab_users')
-        .select('name')
-        .eq('email', assignment.assigned_by)
-        .single();
-      assignedByName = assignedBy?.name;
     }
 
     return NextResponse.json({

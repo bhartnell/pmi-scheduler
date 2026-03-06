@@ -407,47 +407,55 @@ export default function GradeStationPage() {
     setLoading(false);
   };
 
-  // Look up skill sheets for each skill name via the by-skill-name API
+  // Look up skill sheets for all skill names in a single bulk request
   const lookupSkillSheets = async (skillNames: string[], program: string) => {
-    const results: Record<string, string> = {};
-    for (const skillName of skillNames) {
-      try {
-        const res = await fetch(`/api/skill-sheets/by-skill-name?name=${encodeURIComponent(skillName)}&program=${encodeURIComponent(program.toLowerCase())}`);
-        const data = await res.json();
-        if (data.success && data.sheets && data.sheets.length > 0) {
-          results[skillName] = data.sheets[0].id;
-        }
-      } catch { /* ignore - skill sheets feature may not be available */ }
+    try {
+      const res = await fetch(`/api/skill-sheets/by-skill-name/bulk`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ names: skillNames, program: program.toLowerCase() }),
+      });
+      const data = await res.json();
+      if (data.success && data.results) {
+        setSkillSheetIds(data.results);
+      }
+    } catch {
+      // Fallback to individual lookups if bulk endpoint not available
+      const results: Record<string, string> = {};
+      await Promise.all(
+        skillNames.map(async (skillName) => {
+          try {
+            const res = await fetch(`/api/skill-sheets/by-skill-name?name=${encodeURIComponent(skillName)}&program=${encodeURIComponent(program.toLowerCase())}`);
+            const data = await res.json();
+            if (data.success && data.sheets && data.sheets.length > 0) {
+              results[skillName] = data.sheets[0].id;
+            }
+          } catch { /* ignore */ }
+        })
+      );
+      setSkillSheetIds(results);
     }
-    setSkillSheetIds(results);
   };
 
   const fetchLabGroups = async (cohortId: string) => {
     try {
-      // Fetch groups from student_groups (created in Cohort Manager)
-      const res = await fetch(`/api/lab-management/groups?cohortId=${cohortId}`);
+      // Fetch groups with members included in a single request
+      const res = await fetch(`/api/lab-management/groups?cohortId=${cohortId}&include=members`);
       const data = await res.json();
       if (data.success && data.groups) {
-        // Fetch members for each group
-        const groupsWithMembers = await Promise.all(
-          data.groups.map(async (group: any) => {
-            const membersRes = await fetch(`/api/lab-management/groups/${group.id}/members`);
-            const membersData = await membersRes.json();
-            return {
-              id: group.id,
-              name: group.name,
-              members: (membersData.members || []).map((m: any) => ({
-                id: m.id,
-                student: {
-                  id: m.id,
-                  first_name: m.first_name,
-                  last_name: m.last_name,
-                  photo_url: m.photo_url
-                }
-              }))
-            };
-          })
-        );
+        const groupsWithMembers = data.groups.map((group: any) => ({
+          id: group.id,
+          name: group.name,
+          members: (group.members || []).map((m: any) => ({
+            id: m.id,
+            student: {
+              id: m.id,
+              first_name: m.first_name,
+              last_name: m.last_name,
+              photo_url: m.photo_url
+            }
+          }))
+        }));
         setLabGroups(groupsWithMembers);
       }
     } catch (error) {

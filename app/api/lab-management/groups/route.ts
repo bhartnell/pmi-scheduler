@@ -6,6 +6,7 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const cohortId = searchParams.get('cohortId');
   const includeHistory = searchParams.get('includeHistory') === 'true';
+  const includeMembers = searchParams.get('include') === 'members';
 
   try {
     const auth = await requireAuth('instructor');
@@ -32,6 +33,45 @@ export async function GET(request: NextRequest) {
 
     if (error) throw error;
 
+    // Optionally include members for all groups in a single bulk query
+    let groupsResult = data || [];
+    if (includeMembers && groupsResult.length > 0) {
+      const groupIds = groupsResult.map((g: any) => g.id);
+      const { data: allAssignments, error: membersError } = await supabase
+        .from('student_group_assignments')
+        .select(`
+          group_id,
+          student:students(
+            id,
+            first_name,
+            last_name,
+            agency,
+            photo_url
+          )
+        `)
+        .in('group_id', groupIds);
+
+      if (membersError) throw membersError;
+
+      // Build a map of group_id -> members
+      const membersByGroup = new Map<string, any[]>();
+      for (const assignment of (allAssignments || [])) {
+        const gid = assignment.group_id;
+        if (!membersByGroup.has(gid)) {
+          membersByGroup.set(gid, []);
+        }
+        if (assignment.student) {
+          membersByGroup.get(gid)!.push(assignment.student);
+        }
+      }
+
+      // Attach members to each group
+      groupsResult = groupsResult.map((g: any) => ({
+        ...g,
+        members: membersByGroup.get(g.id) || [],
+      }));
+    }
+
     let history: any[] = [];
     if (includeHistory && cohortId) {
       const groupIds = (data || []).map((g: any) => g.id);
@@ -51,7 +91,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ success: true, groups: data, history });
+    return NextResponse.json({ success: true, groups: groupsResult, history });
   } catch (error) {
     console.error('Error fetching groups:', error);
     return NextResponse.json({ success: false, error: 'Failed to fetch groups' }, { status: 500 });
