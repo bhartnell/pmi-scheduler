@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { useKeyboardShortcuts, KeyboardShortcut } from '@/hooks/useKeyboardShortcuts';
 import KeyboardShortcutsHelp from '@/components/KeyboardShortcutsHelp';
+import Breadcrumbs from '@/components/Breadcrumbs';
 
 interface Scenario {
   id: string;
@@ -317,11 +318,7 @@ export default function ScenariosPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1">
-                <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
-                <ChevronRight className="w-4 h-4" />
-                <span>Scenarios</span>
-              </div>
+              <Breadcrumbs className="mb-1" />
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Scenario Library</h1>
             </div>
             <button

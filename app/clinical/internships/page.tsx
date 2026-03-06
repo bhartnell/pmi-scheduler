@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { canEditClinical, isSuperadmin, type Role } from '@/lib/permissions';
 import { parseDateSafe } from '@/lib/utils';
+import Breadcrumbs from '@/components/Breadcrumbs';
 
 interface Student {
   id: string;
@@ -788,16 +789,7 @@ export default function InternshipTrackerPage() {
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
-            <Link href="/" className="hover:text-teal-600 dark:hover:text-teal-400 flex items-center gap-1">
-              <Home className="w-3 h-3" />
-              Home
-            </Link>
-            <ChevronRight className="w-4 h-4" />
-            <Link href="/clinical" className="hover:text-teal-600 dark:hover:text-teal-400">Clinical & Internship</Link>
-            <ChevronRight className="w-4 h-4" />
-            <span>Internship Tracker</span>
-          </div>
+          <Breadcrumbs className="mb-2" />
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">

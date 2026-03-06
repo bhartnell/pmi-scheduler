@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import NotificationBell from '@/components/NotificationBell';
+import Breadcrumbs from '@/components/Breadcrumbs';
 
 interface DrillDocument {
   id: string;
@@ -624,18 +625,7 @@ export default function SkillDrillsPage() {
           </div>
 
           {/* Breadcrumbs */}
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mt-4 mb-2">
-            <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1">
-              <Home className="w-3 h-3" />
-              Home
-            </Link>
-            <ChevronRight className="w-4 h-4 text-gray-400" />
-            <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">
-              Lab Management
-            </Link>
-            <ChevronRight className="w-4 h-4 text-gray-400" />
-            <span className="text-gray-900 dark:text-white">Skill Drills</span>
-          </div>
+          <Breadcrumbs className="mt-4 mb-2" />
 
           {/* Title + Add button */}
           <div className="flex items-center justify-between">

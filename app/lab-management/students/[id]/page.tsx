@@ -38,10 +38,12 @@ import {
   Phone,
 } from 'lucide-react';
 import Barcode from 'react-barcode';
+import { ArrowLeft } from 'lucide-react';
 import { canManageStudentRoster, hasMinRole, type Role } from '@/lib/permissions';
 import StudentCommunications from '@/components/StudentCommunications';
 import AttendanceAlertBanner from '@/components/AttendanceAlertBanner';
 import LearningPlanBanner from '@/components/LearningPlanBanner';
+import Breadcrumbs from '@/components/Breadcrumbs';
 
 interface Student {
   id: string;
@@ -866,13 +868,17 @@ export default function StudentDetailPage() {
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1">
-            <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
-            <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management/students" className="hover:text-blue-600 dark:hover:text-blue-400">Students</Link>
-            <ChevronRight className="w-4 h-4" />
-            <span className="dark:text-gray-300">{student.first_name} {student.last_name}</span>
-          </div>
+          <Breadcrumbs
+            entityTitle={`${student.first_name} ${student.last_name}`}
+            className="mb-1"
+          />
+          <Link
+            href="/lab-management/students"
+            className="inline-flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 mt-1"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Students
+          </Link>
         </div>
       </div>
 

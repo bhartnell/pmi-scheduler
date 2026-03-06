@@ -32,6 +32,7 @@ import {
 import { canAccessClinical, canEditClinical, hasMinRole, type Role } from '@/lib/permissions';
 import { parseDateSafe } from '@/lib/utils';
 import SummativeEvaluationsSection from '@/components/clinical/SummativeEvaluationsSection';
+import Breadcrumbs from '@/components/Breadcrumbs';
 import PreceptorsSection from '@/components/clinical/PreceptorsSection';
 import CloseoutSection from '@/components/clinical/CloseoutSection';
 
@@ -701,26 +702,19 @@ export default function InternshipDetailPage() {
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
-            <Link href="/" className="hover:text-teal-600 dark:hover:text-teal-400 flex items-center gap-1">
-              <Home className="w-3 h-3" />
-              Home
-            </Link>
-            <ChevronRight className="w-4 h-4" />
-            <Link href="/clinical" className="hover:text-teal-600 dark:hover:text-teal-400">Clinical</Link>
-            <ChevronRight className="w-4 h-4" />
-            <Link href="/clinical/internships" className="hover:text-teal-600 dark:hover:text-teal-400">Internships</Link>
-            <ChevronRight className="w-4 h-4" />
-            <span>{student?.first_name} {student?.last_name}</span>
-          </div>
+          <Breadcrumbs
+            entityTitle={student ? `${student.first_name} ${student.last_name}` : 'Detail'}
+            className="mb-2"
+          />
 
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Link
                 href="/clinical/internships"
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                className="flex items-center gap-1 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-sm text-gray-600 dark:text-gray-400"
               >
-                <ArrowLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                <ArrowLeft className="w-5 h-5" />
+                <span className="hidden sm:inline">Back to Internships</span>
               </Link>
 
               <div className="w-14 h-14 bg-teal-100 dark:bg-teal-900/30 rounded-full flex items-center justify-center">

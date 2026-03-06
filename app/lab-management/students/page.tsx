@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import ExportDropdown from '@/components/ExportDropdown';
 import type { ExportConfig } from '@/lib/export-utils';
+import Breadcrumbs from '@/components/Breadcrumbs';
 
 interface Student {
   id: string;
@@ -186,11 +187,7 @@ export default function StudentsPage() {
       {/* Header */}
       <div className="bg-white shadow-sm dark:bg-gray-800">
         <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1">
-            <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
-            <ChevronRight className="w-4 h-4" />
-            <span>Students</span>
-          </div>
+          <Breadcrumbs className="mb-1" />
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Student Roster</h1>
             <div className="flex gap-2">

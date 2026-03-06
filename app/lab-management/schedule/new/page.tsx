@@ -33,8 +33,10 @@ import {
   ChevronDown,
   ChevronUp,
   Copy,
-  AlertTriangle
+  AlertTriangle,
+  ArrowLeft,
 } from 'lucide-react';
+import Breadcrumbs from '@/components/Breadcrumbs';
 
 interface LabDayTemplate {
   id: string;
@@ -1113,20 +1115,20 @@ function NewLabDayPageContent() {
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
-            <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1">
-              <Home className="w-3 h-3" />
-              Home
-            </Link>
-            <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
-            <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management/schedule" className="hover:text-blue-600 dark:hover:text-blue-400">Schedule</Link>
-            <ChevronRight className="w-4 h-4" />
-            <span className="dark:text-gray-300">New Lab Day</span>
-          </div>
+          <Breadcrumbs
+            customSegments={{ 'new': 'New Lab Day' }}
+            className="mb-2"
+          />
           <div className="flex items-center justify-between">
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white">Schedule New Lab Day</h1>
+            <div className="flex items-center gap-3">
+              <Link
+                href="/lab-management/schedule"
+                className="flex items-center gap-1 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </Link>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Schedule New Lab Day</h1>
+            </div>
             <button
               onClick={handleSaveWithConflictCheck}
               disabled={saving}

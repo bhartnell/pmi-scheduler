@@ -33,6 +33,7 @@ import {
   Wand2
 } from 'lucide-react';
 import { SKIN_OPTIONS } from '@/lib/constants';
+import Breadcrumbs from '@/components/Breadcrumbs';
 
 // Helper to safely convert DB values to arrays (handles string, array, null)
 const toArray = (value: any): string[] => {
@@ -1125,15 +1126,10 @@ export default function ScenarioEditorPage() {
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-10 print:hidden">
         <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
-            <Link href="/" className="hover:text-blue-600">Home</Link>
-            <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management" className="hover:text-blue-600">Lab Management</Link>
-            <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management/scenarios" className="hover:text-blue-600">Scenarios</Link>
-            <ChevronRight className="w-4 h-4" />
-            <span>{isEditing ? 'Edit' : 'New'}</span>
-          </div>
+          <Breadcrumbs
+            entityTitle={isEditing ? (scenario.title || 'Edit Scenario') : 'New'}
+            className="mb-2"
+          />
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Link
@@ -1141,6 +1137,7 @@ export default function ScenarioEditorPage() {
                 className="flex items-center gap-1 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white print:hidden"
               >
                 <ArrowLeft className="w-5 h-5" />
+                <span className="text-sm">Back to Scenarios</span>
               </Link>
               <h1 className="text-xl font-bold text-gray-900 dark:text-white">
                 {isEditing ? 'Edit Scenario' : 'Create Scenario'}

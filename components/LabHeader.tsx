@@ -2,17 +2,20 @@
 
 import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
-import { LogOut, Home } from 'lucide-react';
+import { LogOut } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import NotificationBell from '@/components/NotificationBell';
+import Breadcrumbs from '@/components/Breadcrumbs';
 
 interface LabHeaderProps {
   breadcrumbs?: { label: string; href?: string }[];
   title: string;
   actions?: React.ReactNode;
+  /** Display name for a dynamic entity (e.g., lab day title, scenario name) */
+  entityTitle?: string;
 }
 
-export default function LabHeader({ breadcrumbs = [], title, actions }: LabHeaderProps) {
+export default function LabHeader({ breadcrumbs, title, actions, entityTitle }: LabHeaderProps) {
   const { data: session } = useSession();
 
   return (
@@ -57,36 +60,8 @@ export default function LabHeader({ breadcrumbs = [], title, actions }: LabHeade
 
         {/* Bottom row - Breadcrumbs and Title */}
         <div>
-          {/* Breadcrumbs */}
-          <nav aria-label="Breadcrumb">
-            <ol className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1 list-none p-0 m-0">
-              <li>
-                <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1">
-                  <Home className="w-3 h-3" aria-hidden="true" />
-                  <span className="hidden sm:inline">Home</span>
-                  <span className="sr-only sm:hidden">Home</span>
-                </Link>
-              </li>
-              <li aria-hidden="true"><span className="text-gray-400 dark:text-gray-500">/</span></li>
-              <li>
-                <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">
-                  Lab Management
-                </Link>
-              </li>
-              {breadcrumbs.map((crumb, index) => (
-                <li key={index} className="flex items-center gap-2">
-                  <span className="text-gray-400 dark:text-gray-500" aria-hidden="true">/</span>
-                  {crumb.href ? (
-                    <Link href={crumb.href} className="hover:text-blue-600 dark:hover:text-blue-400">
-                      {crumb.label}
-                    </Link>
-                  ) : (
-                    <span className="text-gray-900 dark:text-white" aria-current="page">{crumb.label}</span>
-                  )}
-                </li>
-              ))}
-            </ol>
-          </nav>
+          {/* Breadcrumbs - use universal component */}
+          <Breadcrumbs entityTitle={entityTitle} className="mb-1" />
 
           {/* Title and Actions */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
