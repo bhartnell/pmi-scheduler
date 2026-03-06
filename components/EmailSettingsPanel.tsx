@@ -12,7 +12,7 @@ import {
 
 interface EmailPreferences {
   enabled: boolean;
-  mode: 'immediate' | 'daily_digest' | 'off';
+  mode: 'immediate' | 'daily_digest' | 'weekly_digest' | 'off';
   digest_time: string;
   categories: {
     tasks: boolean;
@@ -240,6 +240,26 @@ export default function EmailSettingsPanel({ compact = false }: EmailSettingsPan
                       />
                     </div>
                   )}
+                </label>
+
+                <label className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                  prefs.mode === 'weekly_digest'
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                    : 'border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+                }`}>
+                  <input
+                    type="radio"
+                    name="mode"
+                    checked={prefs.mode === 'weekly_digest'}
+                    onChange={() => handleChange({ mode: 'weekly_digest' })}
+                    className="w-4 h-4 text-blue-600"
+                  />
+                  <div>
+                    <div className="font-medium text-gray-900 dark:text-white">Weekly summary</div>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                      Receive one summary email every Sunday morning
+                    </div>
+                  </div>
                 </label>
 
                 <label className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${

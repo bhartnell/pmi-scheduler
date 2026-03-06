@@ -74,6 +74,13 @@ export const TEMPLATE_DEFINITIONS = [
     description: 'Daily summary of unread notifications',
     variables: ['{{recipientName}}', '{{date}}', '{{notificationGroups}}'],
   },
+  {
+    key: 'weekly_digest',
+    name: 'Weekly Summary',
+    category: 'System',
+    description: 'Weekly summary of unread notifications (sent Sunday mornings)',
+    variables: ['{{recipientName}}', '{{date}}', '{{notificationGroups}}'],
+  },
 ];
 
 // Default subject lines for each template key
@@ -87,6 +94,7 @@ function getDefaultSubject(key: string): string {
     case 'shift_confirmed': return '[PMI] Shift confirmed: {{shiftDate}}';
     case 'site_visit_due':  return '[PMI] Clinical site visit overdue – {{siteName}}';
     case 'daily_digest':    return '[PMI] Your daily digest for {{date}}';
+    case 'weekly_digest':   return '[PMI] Your weekly summary for {{date}}';
     default:                return '[PMI] Notification';
   }
 }
@@ -178,6 +186,13 @@ function getDefaultBody(key: string): string {
       return `
         ${emailHeading('Your Daily Digest')}
         ${emailParagraph('Here is a summary of your notifications for {{date}}:')}
+        <div style="margin:16px 0;">{{notificationGroups}}</div>
+        ${emailButton('View All Notifications', `${APP_URL}/settings?tab=notifications`)}
+      `;
+    case 'weekly_digest':
+      return `
+        ${emailHeading('Your Weekly Summary')}
+        ${emailParagraph('Here is a summary of your notifications from the past week ({{date}}):')}
         <div style="margin:16px 0;">{{notificationGroups}}</div>
         ${emailButton('View All Notifications', `${APP_URL}/settings?tab=notifications`)}
       `;

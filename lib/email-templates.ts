@@ -2,7 +2,8 @@
  * Email Templates Module
  *
  * Centralized email templates for the PMI EMS Scheduler.
- * Uses inline styles for email client compatibility.
+ * Uses inline styles and table-based layout for Gmail/Outlook compatibility.
+ * Mobile-responsive with single-column layout.
  */
 
 const APP_URL = process.env.NEXTAUTH_URL || 'https://pmiparamedic.tools';
@@ -32,6 +33,7 @@ export const EMAIL_COLORS = {
 
 /**
  * Reusable button component for email CTAs
+ * Uses table-based layout for maximum email client compatibility
  */
 export function emailButton(
   text: string,
@@ -101,7 +103,14 @@ export function emailDetail(label: string, value: string): string {
 // ==============================================
 
 /**
- * Wraps email content in the base template with header/footer
+ * Wraps email content in the base template with header/footer.
+ *
+ * Features:
+ * - PMI branding header with program name
+ * - Mobile-responsive single-column layout (max 600px, 100% on mobile)
+ * - Table-based layout for Gmail/Outlook compatibility
+ * - Manage preferences and unsubscribe links in footer
+ * - Consistent padding and typography
  */
 export function wrapInEmailTemplate(content: string, preferencesUrl?: string): string {
   const settingsUrl = preferencesUrl || `${APP_URL}/settings?tab=notifications`;
@@ -112,46 +121,90 @@ export function wrapInEmailTemplate(content: string, preferencesUrl?: string): s
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="x-apple-disable-message-reformatting">
+  <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
   <title>PMI Paramedic Tools</title>
+  <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <![endif]-->
+  <style type="text/css">
+    /* Reset */
+    body, table, td, p, a, li, blockquote { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; }
+
+    /* Mobile responsive */
+    @media only screen and (max-width: 620px) {
+      .email-container { width: 100% !important; max-width: 100% !important; }
+      .email-content { padding: 24px 16px !important; }
+      .email-header { padding: 20px 16px !important; }
+      .email-footer { padding: 20px 16px !important; }
+    }
+  </style>
 </head>
-<body style="margin: 0; padding: 0; background-color: ${EMAIL_COLORS.gray[100]}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: ${EMAIL_COLORS.gray[100]}; padding: 20px 0;">
+<body style="margin: 0; padding: 0; background-color: ${EMAIL_COLORS.gray[100]}; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
+  <!-- Preheader text (hidden) -->
+  <div style="display: none; max-height: 0; overflow: hidden; mso-hide: all;">
+    PMI Paramedic Tools Notification
+  </div>
+
+  <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background-color: ${EMAIL_COLORS.gray[100]}; padding: 20px 0;">
     <tr>
-      <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+      <td align="center" style="padding: 0 12px;">
+        <table class="email-container" width="600" cellpadding="0" cellspacing="0" role="presentation" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); max-width: 600px;">
           <!-- Header -->
           <tr>
-            <td style="background-color: ${EMAIL_COLORS.primary}; padding: 24px; text-align: center;">
-              <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: bold;">
-                PMI Paramedic Tools
-              </h1>
+            <td class="email-header" style="background-color: ${EMAIL_COLORS.primary}; padding: 24px; text-align: center;">
+              <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
+                <tr>
+                  <td style="text-align: center;">
+                    <h1 style="color: #ffffff; margin: 0; font-size: 22px; font-weight: bold; letter-spacing: 0.5px;">
+                      PMI Paramedic Tools
+                    </h1>
+                    <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0 0; font-size: 12px; font-weight: 400;">
+                      Pima Medical Institute &mdash; Paramedic Program
+                    </p>
+                  </td>
+                </tr>
+              </table>
             </td>
           </tr>
 
           <!-- Content -->
           <tr>
-            <td style="padding: 32px 24px;">
+            <td class="email-content" style="padding: 32px 24px;">
               ${content}
             </td>
           </tr>
 
           <!-- Footer -->
           <tr>
-            <td style="background-color: ${EMAIL_COLORS.gray[50]}; padding: 24px; border-top: 1px solid ${EMAIL_COLORS.gray[200]};">
-              <table width="100%" cellpadding="0" cellspacing="0">
+            <td class="email-footer" style="background-color: ${EMAIL_COLORS.gray[50]}; padding: 24px; border-top: 1px solid ${EMAIL_COLORS.gray[200]};">
+              <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
                 <tr>
-                  <td style="color: ${EMAIL_COLORS.gray[500]}; font-size: 12px; text-align: center;">
+                  <td style="color: ${EMAIL_COLORS.gray[500]}; font-size: 12px; text-align: center; line-height: 1.6;">
                     <p style="margin: 0 0 8px 0;">
-                      Pima Medical Institute - Paramedic Program
+                      Pima Medical Institute &mdash; Paramedic Program
                     </p>
-                    <p style="margin: 0;">
+                    <p style="margin: 0 0 8px 0;">
                       <a href="${settingsUrl}" style="color: ${EMAIL_COLORS.accent}; text-decoration: none;">
-                        Manage email preferences
+                        Manage your notification preferences
                       </a>
-                      &nbsp;|&nbsp;
+                      &nbsp;&bull;&nbsp;
                       <a href="${APP_URL}" style="color: ${EMAIL_COLORS.accent}; text-decoration: none;">
                         Open PMI Tools
                       </a>
+                    </p>
+                    <p style="margin: 0; color: ${EMAIL_COLORS.gray[500]}; font-size: 11px;">
+                      You received this email because you have notifications enabled
+                      for your PMI Paramedic Tools account. To stop receiving emails,
+                      <a href="${settingsUrl}" style="color: ${EMAIL_COLORS.gray[500]}; text-decoration: underline;">update your preferences</a>.
                     </p>
                   </td>
                 </tr>
@@ -216,7 +269,7 @@ export const taskTemplates = {
     assigneeName: string;
     completionNotes?: string;
   }) => `
-    ${emailHeading('Task Completed ✓')}
+    ${emailHeading('Task Completed')}
     ${emailParagraph(`<strong>${data.assigneeName}</strong> has completed the task:`)}
     ${emailContentBox(`
       <h3 style="color: ${EMAIL_COLORS.gray[900]}; margin: 0; font-size: 18px;">
@@ -261,7 +314,7 @@ export const schedulingTemplates = {
     endTime: string;
     location?: string;
   }) => `
-    ${emailHeading('Shift Signup Confirmed ✓')}
+    ${emailHeading('Shift Signup Confirmed')}
     ${emailParagraph('Your signup for the following shift has been confirmed:')}
     ${emailContentBox(`
       <h3 style="color: ${EMAIL_COLORS.gray[900]}; margin: 0 0 8px 0; font-size: 18px;">

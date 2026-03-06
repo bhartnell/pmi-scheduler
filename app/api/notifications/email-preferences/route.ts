@@ -4,7 +4,7 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 
 interface EmailPreferences {
   enabled: boolean;
-  mode: 'immediate' | 'daily_digest' | 'off';
+  mode: 'immediate' | 'daily_digest' | 'weekly_digest' | 'off';
   digest_time: string;
   categories: {
     tasks: boolean;
@@ -78,7 +78,7 @@ export async function PUT(request: NextRequest) {
     // Validate and build preferences object
     const preferences: EmailPreferences = {
       enabled: typeof body.enabled === 'boolean' ? body.enabled : DEFAULT_EMAIL_PREFS.enabled,
-      mode: ['immediate', 'daily_digest', 'off'].includes(body.mode)
+      mode: ['immediate', 'daily_digest', 'weekly_digest', 'off'].includes(body.mode)
         ? body.mode
         : DEFAULT_EMAIL_PREFS.mode,
       digest_time: typeof body.digest_time === 'string' ? body.digest_time : DEFAULT_EMAIL_PREFS.digest_time,

@@ -1,29 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { sendEmail } from '@/lib/email';
 import { wrapInEmailTemplate, EMAIL_COLORS } from '@/lib/email-templates';
 import { NotificationCategory } from '@/lib/notifications';
 
 const APP_URL = process.env.NEXTAUTH_URL || 'https://pmiparamedic.tools';
 
-// Category display metadata
+// Category display metadata with enhanced descriptions
 const CATEGORY_META: Record<
   NotificationCategory,
-  { label: string; icon: string; color: string; bgColor: string; borderColor: string }
+  { label: string; icon: string; color: string; bgColor: string; borderColor: string; description: string }
 > = {
+  labs: {
+    label: 'Lab Assignments',
+    icon: '&#129514;',
+    color: EMAIL_COLORS.warning,
+    bgColor: '#fef3c7',
+    borderColor: EMAIL_COLORS.warning,
+    description: 'New assignments and upcoming labs',
+  },
   tasks: {
     label: 'Tasks',
     icon: '&#128203;',
     color: EMAIL_COLORS.accent,
     bgColor: '#eff6ff',
     borderColor: EMAIL_COLORS.accent,
-  },
-  labs: {
-    label: 'Labs',
-    icon: '&#129514;',
-    color: EMAIL_COLORS.warning,
-    bgColor: '#fef3c7',
-    borderColor: EMAIL_COLORS.warning,
+    description: 'New tasks assigned and tasks due soon',
   },
   scheduling: {
     label: 'Scheduling',
@@ -31,6 +32,7 @@ const CATEGORY_META: Record<
     color: EMAIL_COLORS.success,
     bgColor: '#ecfdf5',
     borderColor: EMAIL_COLORS.success,
+    description: 'New shifts available and signup confirmations',
   },
   feedback: {
     label: 'Feedback',
@@ -38,6 +40,7 @@ const CATEGORY_META: Record<
     color: '#8b5cf6',
     bgColor: '#f5f3ff',
     borderColor: '#8b5cf6',
+    description: 'New reports and status changes',
   },
   clinical: {
     label: 'Clinical',
@@ -45,6 +48,7 @@ const CATEGORY_META: Record<
     color: EMAIL_COLORS.error,
     bgColor: '#fef2f2',
     borderColor: EMAIL_COLORS.error,
+    description: 'Hours updates, compliance due dates, and site visit reminders',
   },
   system: {
     label: 'System',
@@ -52,8 +56,19 @@ const CATEGORY_META: Record<
     color: EMAIL_COLORS.gray[500],
     bgColor: EMAIL_COLORS.gray[50],
     borderColor: EMAIL_COLORS.gray[200],
+    description: 'Account and system updates',
   },
 };
+
+// Canonical ordering for categories in digest emails
+const CATEGORY_ORDER: NotificationCategory[] = [
+  'labs',
+  'tasks',
+  'scheduling',
+  'feedback',
+  'clinical',
+  'system',
+];
 
 interface DigestNotification {
   id: string;
@@ -66,7 +81,7 @@ interface DigestNotification {
 
 interface EmailPreferences {
   enabled: boolean;
-  mode: 'immediate' | 'daily_digest' | 'off';
+  mode: 'immediate' | 'daily_digest' | 'weekly_digest' | 'off';
   digest_time: string;
   categories: Record<NotificationCategory, boolean>;
 }
@@ -75,6 +90,8 @@ interface DigestUser {
   user_email: string;
   email_preferences: EmailPreferences;
 }
+
+type DigestMode = 'daily' | 'weekly';
 
 /**
  * Build a section of the digest email for one category.
@@ -114,6 +131,9 @@ function buildCategorySection(
           ${meta.icon}&nbsp; ${meta.label}
           <span style="font-size: 13px; font-weight: normal; color: ${EMAIL_COLORS.gray[500]}; margin-left: 6px;">(${count} new)</span>
         </h3>
+        <p style="margin: 4px 0 0 0; font-size: 12px; color: ${EMAIL_COLORS.gray[500]};">
+          ${meta.description}
+        </p>
       </div>
       <table width="100%" cellpadding="0" cellspacing="0">
         <tbody>
@@ -128,9 +148,9 @@ function buildCategorySection(
  * Generate the full digest email HTML content (before wrapping in base template).
  */
 function generateDigestHtml(
-  userEmail: string,
   notifications: DigestNotification[],
-  enabledCategories: NotificationCategory[]
+  enabledCategories: NotificationCategory[],
+  mode: DigestMode
 ): string {
   const date = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -138,6 +158,10 @@ function generateDigestHtml(
     month: 'long',
     day: 'numeric',
   });
+
+  const isWeekly = mode === 'weekly';
+  const periodLabel = isWeekly ? 'the past week' : 'the last 24 hours';
+  const titleText = isWeekly ? 'Your Weekly Summary' : 'Your Daily Digest';
 
   // Group notifications by category, only including enabled categories
   const grouped: Partial<Record<NotificationCategory, DigestNotification[]>> = {};
@@ -148,7 +172,8 @@ function generateDigestHtml(
     grouped[cat]!.push(n);
   }
 
-  const categoriesWithContent = (Object.keys(grouped) as NotificationCategory[]).filter(
+  // Use canonical ordering, filtering to only categories with content
+  const categoriesWithContent = CATEGORY_ORDER.filter(
     (cat) => grouped[cat] && grouped[cat]!.length > 0
   );
 
@@ -167,7 +192,7 @@ function generateDigestHtml(
 
   return `
     <h2 style="color: ${EMAIL_COLORS.gray[900]}; margin: 0 0 8px 0; font-size: 22px; font-weight: bold;">
-      Your Daily Digest
+      ${titleText}
     </h2>
     <p style="color: ${EMAIL_COLORS.gray[500]}; margin: 0 0 24px 0; font-size: 14px;">
       ${date}
@@ -175,7 +200,7 @@ function generateDigestHtml(
     <p style="color: ${EMAIL_COLORS.gray[700]}; margin: 0 0 24px 0; font-size: 15px; line-height: 1.5;">
       Here's a summary of
       <strong>${totalCount} notification${totalCount !== 1 ? 's' : ''}</strong>
-      from the last 24 hours:
+      from ${periodLabel}:
     </p>
 
     ${sections}
@@ -185,13 +210,21 @@ function generateDigestHtml(
     <table width="100%" cellpadding="0" cellspacing="0">
       <tr>
         <td style="text-align: center; padding: 8px 0;">
-          <a href="${APP_URL}/notifications" style="color: ${EMAIL_COLORS.accent}; text-decoration: none; font-size: 14px; margin-right: 16px;">
+          <a href="${APP_URL}/notifications" style="color: ${EMAIL_COLORS.accent}; text-decoration: none; font-size: 14px;">
             View all notifications
           </a>
-          &nbsp;&bull;&nbsp;
-          <a href="${APP_URL}/settings?tab=notifications" style="color: ${EMAIL_COLORS.accent}; text-decoration: none; font-size: 14px; margin-left: 16px;">
-            Update preferences
-          </a>
+        </td>
+      </tr>
+    </table>
+
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-top: 16px;">
+      <tr>
+        <td style="text-align: center; padding: 12px 0; background-color: ${EMAIL_COLORS.gray[50]}; border-radius: 6px;">
+          <p style="margin: 0; font-size: 13px; color: ${EMAIL_COLORS.gray[500]};">
+            <a href="${APP_URL}/settings?tab=notifications" style="color: ${EMAIL_COLORS.accent}; text-decoration: none;">
+              Manage your notification preferences
+            </a>
+          </p>
         </td>
       </tr>
     </table>
@@ -215,7 +248,8 @@ function escapeHtml(str: string): string {
  */
 async function processUserDigest(
   supabase: ReturnType<typeof getSupabaseAdmin>,
-  user: DigestUser
+  user: DigestUser,
+  mode: DigestMode
 ): Promise<'sent' | 'skipped'> {
   const { user_email, email_preferences: prefs } = user;
 
@@ -228,9 +262,11 @@ async function processUserDigest(
     return 'skipped';
   }
 
-  // Fetch unread notifications from the last 24 hours that haven't been digest-sent
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  // Determine lookback period based on mode
+  const lookbackHours = mode === 'weekly' ? 7 * 24 : 24;
+  const since = new Date(Date.now() - lookbackHours * 60 * 60 * 1000).toISOString();
 
+  // Fetch unread notifications from the lookback period that haven't been digest-sent
   const { data: notifications, error } = await supabase
     .from('user_notifications')
     .select('id, title, message, link_url, category, created_at')
@@ -250,9 +286,9 @@ async function processUserDigest(
 
   // Generate digest HTML content
   const digestContent = generateDigestHtml(
-    user_email,
     notifications as DigestNotification[],
-    enabledCategories
+    enabledCategories,
+    mode
   );
 
   // After category filtering, there may be nothing left
@@ -269,7 +305,11 @@ async function processUserDigest(
 
   const FROM_EMAIL =
     process.env.EMAIL_FROM || 'PMI Paramedic Tools <notifications@pmiparamedic.tools>';
-  const subject = `[PMI] Daily Digest - ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+
+  const dateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const subject = mode === 'weekly'
+    ? `[PMI] Weekly Summary - ${dateStr}`
+    : `[PMI] Daily Digest - ${dateStr}`;
 
   if (resend) {
     const { error: sendError } = await resend.emails.send({
@@ -299,10 +339,11 @@ async function processUserDigest(
   }
 
   // Log to email_log table
+  const templateName = mode === 'weekly' ? 'weekly_digest' : 'daily_digest';
   await supabase.from('email_log').insert({
     to_email: user_email,
     subject,
-    template: 'daily_digest',
+    template: templateName,
     status: 'sent',
     sent_at: now,
   });
@@ -311,47 +352,50 @@ async function processUserDigest(
 }
 
 /**
- * GET /api/cron/daily-digest
- *
- * Vercel cron endpoint. Runs at 2pm UTC (8am MST / Arizona).
- * Sends batched digest emails to users with mode = 'daily_digest'.
- *
- * Auth: Bearer token via CRON_SECRET env var (standard Vercel cron pattern).
+ * Core digest processing logic shared by daily and weekly endpoints.
  */
-export async function GET(request: NextRequest) {
+async function processDigest(
+  request: NextRequest,
+  mode: DigestMode
+): Promise<NextResponse> {
   // Verify cron secret
   const authHeader = request.headers.get('authorization');
   const cronSecret = process.env.CRON_SECRET;
 
   if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-    console.warn('[DIGEST] Unauthorized cron request');
+    console.warn(`[DIGEST] Unauthorized ${mode} cron request`);
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   const startTime = Date.now();
-  console.log('[DIGEST] Daily digest cron started at', new Date().toISOString());
+  const modeLabel = mode === 'weekly' ? 'Weekly' : 'Daily';
+  console.log(`[DIGEST] ${modeLabel} digest cron started at`, new Date().toISOString());
 
   const supabase = getSupabaseAdmin();
 
-  // 1. Find all users with daily_digest mode enabled
+  // Determine which mode(s) to query for
+  const digestMode = mode === 'weekly' ? 'weekly_digest' : 'daily_digest';
+
+  // Find all users with this digest mode enabled
   const { data: digestUsers, error: usersError } = await supabase
     .from('user_preferences')
     .select('user_email, email_preferences')
-    .eq('email_preferences->>mode', 'daily_digest')
+    .eq('email_preferences->>mode', digestMode)
     .eq('email_preferences->>enabled', 'true');
 
   if (usersError) {
-    console.error('[DIGEST] Failed to query digest users:', usersError.message);
+    console.error(`[DIGEST] Failed to query ${mode} digest users:`, usersError.message);
     return NextResponse.json(
-      { error: 'Failed to query digest users', detail: usersError.message },
+      { error: `Failed to query ${mode} digest users`, detail: usersError.message },
       { status: 500 }
     );
   }
 
   if (!digestUsers || digestUsers.length === 0) {
-    console.log('[DIGEST] No users with daily_digest mode found');
+    console.log(`[DIGEST] No users with ${digestMode} mode found`);
     return NextResponse.json({
       success: true,
+      mode,
       processed: 0,
       sent: 0,
       skipped: 0,
@@ -360,14 +404,14 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  console.log(`[DIGEST] Processing ${digestUsers.length} digest user(s)`);
+  console.log(`[DIGEST] Processing ${digestUsers.length} ${mode} digest user(s)`);
 
-  // 2. Process each user in parallel, tolerating individual failures
+  // Process each user in parallel, tolerating individual failures
   const results = await Promise.allSettled(
-    (digestUsers as DigestUser[]).map((user) => processUserDigest(supabase, user))
+    (digestUsers as DigestUser[]).map((user) => processUserDigest(supabase, user, mode))
   );
 
-  // 3. Tally results
+  // Tally results
   let sent = 0;
   let skipped = 0;
   const errors: string[] = [];
@@ -389,6 +433,7 @@ export async function GET(request: NextRequest) {
 
   const summary = {
     success: true,
+    mode,
     processed: digestUsers.length,
     sent,
     skipped,
@@ -396,6 +441,22 @@ export async function GET(request: NextRequest) {
     duration_ms: Date.now() - startTime,
   };
 
-  console.log('[DIGEST] Completed:', summary);
+  console.log(`[DIGEST] ${modeLabel} completed:`, summary);
   return NextResponse.json(summary);
 }
+
+/**
+ * GET /api/cron/daily-digest
+ *
+ * Vercel cron endpoint. Runs at 2pm UTC (8am MST / Arizona).
+ * Sends batched digest emails to users with mode = 'daily_digest'.
+ *
+ * Auth: Bearer token via CRON_SECRET env var (standard Vercel cron pattern).
+ */
+export async function GET(request: NextRequest) {
+  return processDigest(request, 'daily');
+}
+
+// Export the shared function for the weekly digest route to use
+export { processDigest, generateDigestHtml, buildCategorySection, escapeHtml, CATEGORY_META, CATEGORY_ORDER };
+export type { DigestNotification, DigestUser, DigestMode };

@@ -2,6 +2,7 @@
 // npm install resend
 
 import { Resend } from 'resend';
+import { wrapInEmailTemplate } from '@/lib/email-templates';
 
 // Lazy initialization to avoid build errors when env vars aren't set
 let resendClient: Resend | null = null;
@@ -39,74 +40,6 @@ interface EmailData {
   subject: string;
   template: EmailTemplate;
   data: Record<string, string | number | boolean | undefined>;
-}
-
-/**
- * Wrap email content in the standard PMI email template with header and footer.
- * @param content - HTML content to wrap
- * @param preferencesUrl - URL for email preferences link
- * @returns Complete HTML email template
- */
-function wrapInTemplate(content: string, preferencesUrl: string): string {
-  return `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PMI Paramedic Tools</title>
-</head>
-<body style="margin: 0; padding: 0; background-color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f3f4f6; padding: 20px 0;">
-    <tr>
-      <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-          <!-- Header -->
-          <tr>
-            <td style="background-color: #1e3a5f; padding: 24px; text-align: center;">
-              <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: bold;">
-                PMI Paramedic Tools
-              </h1>
-            </td>
-          </tr>
-
-          <!-- Content -->
-          <tr>
-            <td style="padding: 32px 24px;">
-              ${content}
-            </td>
-          </tr>
-
-          <!-- Footer -->
-          <tr>
-            <td style="background-color: #f9fafb; padding: 24px; border-top: 1px solid #e5e7eb;">
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td style="color: #6b7280; font-size: 12px; text-align: center;">
-                    <p style="margin: 0 0 8px 0;">
-                      Pima Medical Institute - Paramedic Program
-                    </p>
-                    <p style="margin: 0;">
-                      <a href="${preferencesUrl}" style="color: #2563eb; text-decoration: none;">
-                        Manage email preferences
-                      </a>
-                      &nbsp;|&nbsp;
-                      <a href="${APP_URL}" style="color: #2563eb; text-decoration: none;">
-                        Open PMI Tools
-                      </a>
-                    </p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-`;
 }
 
 /**
@@ -156,7 +89,7 @@ const templates: Record<EmailTemplate, (data: Record<string, unknown>) => { subj
     subject: `[PMI] Task completed: ${data.title}`,
     html: `
       <h2 style="color: #111827; margin: 0 0 16px 0; font-size: 20px;">
-        Task Completed ✓
+        Task Completed
       </h2>
       <p style="color: #374151; margin: 0 0 16px 0; font-size: 16px; line-height: 1.5;">
         <strong>${data.assigneeName}</strong> has completed the task:
@@ -198,7 +131,7 @@ const templates: Record<EmailTemplate, (data: Record<string, unknown>) => { subj
     subject: `[PMI] Shift confirmed: ${data.date}`,
     html: `
       <h2 style="color: #111827; margin: 0 0 16px 0; font-size: 20px;">
-        Shift Signup Confirmed ✓
+        Shift Signup Confirmed
       </h2>
       <p style="color: #374151; margin: 0 0 16px 0; font-size: 16px; line-height: 1.5;">
         Your signup for the following shift has been confirmed:
@@ -279,6 +212,7 @@ const templates: Record<EmailTemplate, (data: Record<string, unknown>) => { subj
 
 /**
  * Send an email using the Resend API.
+ * Uses the centralized wrapInEmailTemplate for consistent branding.
  * @param emailData - Email data including recipient, template, and template data
  * @returns Result object with success status, optional error message, and email ID
  */
@@ -293,7 +227,7 @@ export async function sendEmail(emailData: EmailData): Promise<{ success: boolea
     const template = templates[emailData.template];
     const { subject, html } = template(emailData.data);
     const preferencesUrl = `${APP_URL}/settings?tab=notifications`;
-    const fullHtml = wrapInTemplate(html, preferencesUrl);
+    const fullHtml = wrapInEmailTemplate(html, preferencesUrl);
 
     const { data, error } = await resend.emails.send({
       from: FROM_EMAIL,

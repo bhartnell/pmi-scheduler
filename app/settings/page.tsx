@@ -55,11 +55,12 @@ import { APP_VERSION, VERSION_DATE } from '@/lib/version';
 import WhatsNewModal from '@/components/WhatsNewModal';
 import TwoFactorPanel from '@/components/TwoFactorPanel';
 import { ShieldCheck } from 'lucide-react';
+import Breadcrumbs from '@/components/Breadcrumbs';
 
 // ---- Types ----
 
 type CategoryKey = 'tasks' | 'labs' | 'scheduling' | 'feedback' | 'clinical' | 'system';
-type EmailMode = 'immediate' | 'daily_digest' | 'off';
+type EmailMode = 'immediate' | 'daily_digest' | 'weekly_digest' | 'off';
 
 interface CategoryPrefs {
   tasks: boolean;
@@ -531,6 +532,40 @@ function NotificationPreferencesPanel() {
               )}
             </label>
 
+            {/* Weekly summary */}
+            <label className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+              emailPrefs.mode === 'weekly_digest'
+                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                : 'border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+            }`}>
+              <input
+                type="radio"
+                name="email-mode"
+                checked={emailPrefs.mode === 'weekly_digest'}
+                onChange={() => handleFrequencyChange({ mode: 'weekly_digest' })}
+                disabled={savingFrequency}
+                className="w-4 h-4 text-blue-600"
+              />
+              <div className="flex-1">
+                <div className="font-medium text-gray-900 dark:text-white text-sm">Weekly summary</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  Receive one summary email every Sunday morning
+                </div>
+              </div>
+              {emailPrefs.mode === 'weekly_digest' && (
+                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    onClick={handlePreviewDigest}
+                    aria-label="Preview weekly summary email"
+                    className="flex items-center gap-1 px-2 py-1 text-xs text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors whitespace-nowrap"
+                  >
+                    <Eye className="w-3 h-3" aria-hidden="true" />
+                    Preview
+                  </button>
+                </div>
+              )}
+            </label>
+
             {/* Off */}
             <label className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
               emailPrefs.mode === 'off'
@@ -578,7 +613,7 @@ function NotificationPreferencesPanel() {
                     Digest Email Preview
                   </h3>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                    This is what your daily digest will look like
+                    This is what your {emailPrefs.mode === 'weekly_digest' ? 'weekly summary' : 'daily digest'} will look like
                   </p>
                 </div>
               </div>
@@ -1690,14 +1725,7 @@ function SettingsPageContent() {
           </div>
 
           {/* Breadcrumbs */}
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mt-4 mb-2">
-            <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1">
-              <Home className="w-3 h-3" />
-              <span className="hidden sm:inline">Home</span>
-            </Link>
-            <ChevronRight className="w-4 h-4" />
-            <span className="text-gray-900 dark:text-white">Settings</span>
-          </div>
+          <Breadcrumbs className="mt-4 mb-2" />
 
           {/* Title */}
           <div className="flex items-center gap-3">
