@@ -6,13 +6,12 @@ import {
   sendShiftConfirmedEmail,
   sendLabAssignedEmail,
   sendLabReminderEmail,
-  EmailTemplate
 } from './email';
 
 // Email preferences interface
 interface EmailPreferences {
   enabled: boolean;
-  mode: 'immediate' | 'daily_digest' | 'off';
+  mode: 'immediate' | 'daily_digest' | 'weekly_digest' | 'off';
   digest_time: string;
   categories: {
     tasks: boolean;
@@ -82,7 +81,7 @@ async function shouldSendEmail(
     return false;
   }
 
-  if (prefs.mode === 'daily_digest') {
+  if (prefs.mode === 'daily_digest' || prefs.mode === 'weekly_digest') {
     return false;
   }
 
@@ -620,4 +619,173 @@ function getRoleLabelForNotification(role: string): string {
     pending: 'Pending',
   };
   return labels[role] || role;
+}
+
+// ── Role-Based Default Notification Preferences ──
+
+/**
+ * Default notification category preferences by role.
+ * Used when a new user is created or when a pending user is approved.
+ */
+const ROLE_DEFAULT_CATEGORY_PREFERENCES: Record<string, Record<string, boolean>> = {
+  superadmin: { tasks: true, labs: true, scheduling: true, feedback: true, clinical: true, system: true },
+  admin: { tasks: true, labs: true, scheduling: true, feedback: true, clinical: true, system: true },
+  lead_instructor: { tasks: true, labs: true, scheduling: true, feedback: true, clinical: true, system: true },
+  instructor: { tasks: true, labs: true, scheduling: true, feedback: false, clinical: false, system: true },
+  volunteer_instructor: { tasks: false, labs: false, scheduling: true, feedback: false, clinical: false, system: true },
+  program_director: { tasks: false, labs: false, scheduling: false, feedback: false, clinical: true, system: true },
+  student: { tasks: true, labs: true, scheduling: false, feedback: false, clinical: false, system: true },
+  guest: { tasks: false, labs: true, scheduling: false, feedback: false, clinical: false, system: true },
+  pending: { tasks: false, labs: false, scheduling: false, feedback: false, clinical: false, system: true },
+};
+
+/**
+ * Default email preferences by role.
+ * superadmin, admin, lead_instructor get immediate mode.
+ * Others get immediate mode with only their relevant categories enabled.
+ */
+const ROLE_DEFAULT_EMAIL_MODE: Record<string, 'immediate' | 'daily_digest' | 'weekly_digest' | 'off'> = {
+  superadmin: 'immediate',
+  admin: 'immediate',
+  lead_instructor: 'immediate',
+  instructor: 'immediate',
+  volunteer_instructor: 'immediate',
+  program_director: 'immediate',
+  student: 'immediate',
+  guest: 'off',
+  pending: 'off',
+};
+
+/**
+ * Insert default notification preferences for a new user based on their role.
+ * This is called when a user is first created (signIn callback) or when their
+ * role is upgraded from pending (admin approval).
+ *
+ * Uses upsert to be idempotent -- safe to call multiple times.
+ */
+export async function insertDefaultNotificationPreferences(
+  userEmail: string,
+  role: string
+): Promise<void> {
+  try {
+    const supabase = getSupabaseAdmin();
+
+    const categoryPrefs = ROLE_DEFAULT_CATEGORY_PREFERENCES[role] || ROLE_DEFAULT_CATEGORY_PREFERENCES.guest;
+    const emailMode = ROLE_DEFAULT_EMAIL_MODE[role] || 'immediate';
+
+    const notificationSettings = {
+      category_preferences: categoryPrefs,
+      email_lab_assignments: categoryPrefs.labs ?? true,
+      email_lab_reminders: categoryPrefs.labs ?? true,
+      email_feedback_updates: categoryPrefs.feedback ?? false,
+      show_desktop_notifications: false,
+      notification_sound: false,
+    };
+
+    const emailPreferences = {
+      enabled: emailMode !== 'off',
+      mode: emailMode,
+      digest_time: '08:00',
+      categories: categoryPrefs,
+    };
+
+    // Check if user already has preferences (don't overwrite existing user choices)
+    const { data: existing } = await supabase
+      .from('user_preferences')
+      .select('user_email')
+      .eq('user_email', userEmail)
+      .single();
+
+    if (existing) {
+      // User already has preferences set -- don't overwrite
+      return;
+    }
+
+    // Insert new default preferences
+    const { error } = await supabase
+      .from('user_preferences')
+      .insert({
+        user_email: userEmail,
+        notification_settings: notificationSettings,
+        email_preferences: emailPreferences,
+        updated_at: new Date().toISOString(),
+      });
+
+    if (error) {
+      // Unique constraint violation means preferences already exist (race condition)
+      if (error.code === '23505') {
+        return;
+      }
+      console.error('[DEFAULT PREFS] Error inserting default preferences:', error);
+    }
+  } catch (err) {
+    console.error('[DEFAULT PREFS] Exception inserting default preferences:', err);
+  }
+}
+
+/**
+ * Update notification preferences when a user's role changes.
+ * Only updates if the user still has the default preferences (never customized).
+ * Called when a pending user is approved with a new role.
+ */
+export async function updatePreferencesForRoleChange(
+  userEmail: string,
+  newRole: string
+): Promise<void> {
+  try {
+    const supabase = getSupabaseAdmin();
+
+    const categoryPrefs = ROLE_DEFAULT_CATEGORY_PREFERENCES[newRole] || ROLE_DEFAULT_CATEGORY_PREFERENCES.guest;
+    const emailMode = ROLE_DEFAULT_EMAIL_MODE[newRole] || 'immediate';
+
+    const { data: existing } = await supabase
+      .from('user_preferences')
+      .select('notification_settings, email_preferences')
+      .eq('user_email', userEmail)
+      .single();
+
+    // If no preferences exist, insert defaults for the new role
+    if (!existing) {
+      await insertDefaultNotificationPreferences(userEmail, newRole);
+      return;
+    }
+
+    // Check if the user has the "pending" defaults (meaning they never customized)
+    const currentCatPrefs = existing.notification_settings?.category_preferences;
+    const pendingDefaults = ROLE_DEFAULT_CATEGORY_PREFERENCES.pending;
+
+    // Only update if the current prefs match the pending defaults
+    // (indicating the user never customized their preferences)
+    const hasDefaultPrefs = !currentCatPrefs || (
+      JSON.stringify(currentCatPrefs) === JSON.stringify(pendingDefaults)
+    );
+
+    if (hasDefaultPrefs) {
+      const notificationSettings = {
+        ...(existing.notification_settings || {}),
+        category_preferences: categoryPrefs,
+        email_lab_assignments: categoryPrefs.labs ?? true,
+        email_lab_reminders: categoryPrefs.labs ?? true,
+        email_feedback_updates: categoryPrefs.feedback ?? false,
+      };
+
+      const emailPreferences = {
+        enabled: emailMode !== 'off',
+        mode: emailMode,
+        digest_time: '08:00',
+        categories: categoryPrefs,
+      };
+
+      await supabase
+        .from('user_preferences')
+        .update({
+          notification_settings: notificationSettings,
+          email_preferences: emailPreferences,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_email', userEmail);
+    }
+  } catch (err) {
+    console.error('[DEFAULT PREFS] Exception updating preferences for role change:', err);
+  }
 }

@@ -1,7 +1,7 @@
 import { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { notifyAdminsNewPendingUser } from '@/lib/notifications';
+import { notifyAdminsNewPendingUser, insertDefaultNotificationPreferences } from '@/lib/notifications';
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -91,9 +91,13 @@ export const authOptions: NextAuthOptions = {
           if (insertError) {
             console.error('Error creating lab_user:', insertError);
             // Still allow sign in - we can try again later
-          } else {
+          } else if (newUser) {
+            // Insert default notification preferences based on role
+            insertDefaultNotificationPreferences(newUser.email, newUser.role)
+              .catch(err => console.error('Failed to insert default notification prefs:', err));
+
             // Only notify admins about new pending instructor users (not students)
-            if (newUser && !isStudent) {
+            if (!isStudent) {
               notifyAdminsNewPendingUser({
                 userId: newUser.id,
                 name: newUser.name,

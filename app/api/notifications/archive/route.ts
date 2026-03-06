@@ -13,16 +13,41 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { notification_ids, action } = body;
+    const { notification_ids, all, action } = body;
+
+    const isArchiving = action !== 'unarchive';
+
+    if (all) {
+      // Archive/unarchive ALL notifications for this user
+      let query = supabase
+        .from('user_notifications')
+        .update({ is_archived: isArchiving })
+        .eq('user_email', session.user.email);
+
+      // When archiving all, only target non-archived; when unarchiving, only target archived
+      if (isArchiving) {
+        query = query.eq('is_archived', false);
+      } else {
+        query = query.eq('is_archived', true);
+      }
+
+      const { data, error } = await query.select('id');
+
+      if (error) throw error;
+
+      return NextResponse.json({
+        success: true,
+        updated: data?.length || 0,
+        action: isArchiving ? 'archived' : 'unarchived',
+      });
+    }
 
     if (!notification_ids || !Array.isArray(notification_ids) || notification_ids.length === 0) {
       return NextResponse.json(
-        { error: 'notification_ids array is required' },
+        { error: 'notification_ids array or all:true is required' },
         { status: 400 }
       );
     }
-
-    const isArchiving = action !== 'unarchive';
 
     const { data, error } = await supabase
       .from('user_notifications')

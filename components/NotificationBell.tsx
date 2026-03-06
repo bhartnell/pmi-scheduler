@@ -2,7 +2,13 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
-import { Bell, CheckCheck, ExternalLink, Settings, X, Mail } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import {
+  Bell, CheckCheck, ExternalLink, Settings, X, Mail,
+  ClipboardList, AlarmClock, FileText, CheckCircle, Pin,
+  CheckSquare, MessageSquare, Calendar, Hospital, AlertTriangle,
+  PartyPopper, Info,
+} from 'lucide-react';
 import Link from 'next/link';
 import { useVisibilityPolling } from '@/hooks/useVisibilityPolling';
 import { formatTimeAgo } from '@/lib/utils';
@@ -36,7 +42,7 @@ interface Notification {
   id: string;
   title: string;
   message: string;
-  type: 'lab_assignment' | 'lab_reminder' | 'feedback_new' | 'feedback_resolved' | 'task_assigned' | 'general';
+  type: 'lab_assignment' | 'lab_reminder' | 'feedback_new' | 'feedback_resolved' | 'task_assigned' | 'task_completed' | 'task_comment' | 'shift_available' | 'shift_confirmed' | 'clinical_hours' | 'compliance_due' | 'role_approved' | 'general';
   category?: 'tasks' | 'labs' | 'scheduling' | 'feedback' | 'clinical' | 'system';
   link_url: string | null;
   is_read: boolean;
@@ -52,33 +58,74 @@ interface CategoryPreferences {
   system: boolean;
 }
 
-const TYPE_ICONS: Record<string, string> = {
-  lab_assignment: '📋',
-  lab_reminder: '⏰',
-  feedback_new: '📝',
-  feedback_resolved: '✅',
-  task_assigned: '📌',
-  task_completed: '✔️',
-  task_comment: '💬',
-  shift_available: '📅',
-  shift_confirmed: '✅',
-  clinical_hours: '🏥',
-  compliance_due: '⚠️',
-  role_approved: '🎉',
-  general: 'ℹ️',
+// Lucide icon components mapped to notification categories
+const CATEGORY_ICON_COMPONENTS: Record<string, React.ComponentType<{ className?: string }>> = {
+  tasks: Pin,
+  labs: ClipboardList,
+  scheduling: Calendar,
+  feedback: FileText,
+  clinical: Hospital,
+  system: Info,
+};
+
+// Lucide icon components mapped to notification types (more specific than category)
+const TYPE_ICON_COMPONENTS: Record<string, React.ComponentType<{ className?: string }>> = {
+  lab_assignment: ClipboardList,
+  lab_reminder: AlarmClock,
+  feedback_new: FileText,
+  feedback_resolved: CheckCircle,
+  task_assigned: Pin,
+  task_completed: CheckSquare,
+  task_comment: MessageSquare,
+  shift_available: Calendar,
+  shift_confirmed: CheckCircle,
+  clinical_hours: Hospital,
+  compliance_due: AlertTriangle,
+  role_approved: PartyPopper,
+  general: Info,
+};
+
+// Colors per category for the icon
+const CATEGORY_ICON_COLORS: Record<string, string> = {
+  tasks: 'text-blue-500',
+  labs: 'text-amber-500',
+  scheduling: 'text-green-500',
+  feedback: 'text-purple-500',
+  clinical: 'text-red-500',
+  system: 'text-gray-500',
 };
 
 const CATEGORY_LABELS: Record<string, { label: string; emoji: string }> = {
-  tasks: { label: 'Tasks', emoji: '📌' },
-  labs: { label: 'Labs & Schedule', emoji: '📋' },
-  scheduling: { label: 'Shift Scheduling', emoji: '📅' },
-  feedback: { label: 'Feedback & Bugs', emoji: '📝' },
-  clinical: { label: 'Clinical', emoji: '🏥' },
-  system: { label: 'System', emoji: 'ℹ️' },
+  tasks: { label: 'Tasks', emoji: '\uD83D\uDCCC' },
+  labs: { label: 'Labs & Schedule', emoji: '\uD83D\uDCCB' },
+  scheduling: { label: 'Shift Scheduling', emoji: '\uD83D\uDCC5' },
+  feedback: { label: 'Feedback & Bugs', emoji: '\uD83D\uDCDD' },
+  clinical: { label: 'Clinical', emoji: '\uD83C\uDFE5' },
+  system: { label: 'System', emoji: '\u2139\uFE0F' },
 };
+
+// Map type to category for icon color lookup
+const TYPE_TO_CATEGORY: Record<string, string> = {
+  task_assigned: 'tasks',
+  task_completed: 'tasks',
+  task_comment: 'tasks',
+  lab_assignment: 'labs',
+  lab_reminder: 'labs',
+  shift_available: 'scheduling',
+  shift_confirmed: 'scheduling',
+  feedback_new: 'feedback',
+  feedback_resolved: 'feedback',
+  clinical_hours: 'clinical',
+  compliance_due: 'clinical',
+  role_approved: 'system',
+  general: 'system',
+};
+
+const DROPDOWN_NOTIFICATION_LIMIT = 10;
 
 export default function NotificationBell() {
   const { data: session } = useSession();
+  const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
@@ -90,7 +137,7 @@ export default function NotificationBell() {
   });
   const [savingPrefs, setSavingPrefs] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  // Sound preference — loaded from user preferences, defaults to false (opt-in)
+  // Sound preference -- loaded from user preferences, defaults to false (opt-in)
   const [notificationSound, setNotificationSound] = useState(false);
   // Track previous unread count to detect new notifications during polling
   const prevUnreadCountRef = useRef<number | null>(null);
@@ -108,7 +155,7 @@ export default function NotificationBell() {
     };
   }, []);
 
-  // Fetch notifications — plays a chime when new unread notifications arrive during polling
+  // Fetch notifications -- plays a chime when new unread notifications arrive during polling
   const fetchNotifications = useCallback(async () => {
     if (!session?.user?.email) return;
 
@@ -235,10 +282,16 @@ export default function NotificationBell() {
   };
 
   const handleNotificationClick = (notification: Notification) => {
+    // Mark as read
     if (!notification.is_read) {
       markAsRead(notification.id);
     }
+    // Close dropdown
     setIsOpen(false);
+    // Navigate to link_url if present
+    if (notification.link_url) {
+      router.push(notification.link_url);
+    }
   };
 
   const saveCategoryPrefs = async (newPrefs: CategoryPreferences) => {
@@ -349,25 +402,29 @@ export default function NotificationBell() {
                 </button>
               </div>
               <div className="space-y-1">
-                {Object.entries(CATEGORY_LABELS).map(([key, { label, emoji }]) => (
-                  <label
-                    key={key}
-                    className="flex items-center gap-2 py-1 cursor-pointer"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={categoryPrefs[key as keyof CategoryPreferences]}
-                      onChange={() => toggleCategory(key as keyof CategoryPreferences)}
-                      disabled={savingPrefs}
-                      className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                    />
-                    <span className="text-sm">{emoji}</span>
-                    <span className="text-sm text-gray-700 dark:text-gray-300">{label}</span>
-                    {!categoryPrefs[key as keyof CategoryPreferences] && (
-                      <span className="text-xs text-gray-400 dark:text-gray-500 ml-auto">muted</span>
-                    )}
-                  </label>
-                ))}
+                {Object.entries(CATEGORY_LABELS).map(([key, { label }]) => {
+                  const IconComponent = CATEGORY_ICON_COMPONENTS[key] || Info;
+                  const iconColor = CATEGORY_ICON_COLORS[key] || 'text-gray-500';
+                  return (
+                    <label
+                      key={key}
+                      className="flex items-center gap-2 py-1 cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={categoryPrefs[key as keyof CategoryPreferences]}
+                        onChange={() => toggleCategory(key as keyof CategoryPreferences)}
+                        disabled={savingPrefs}
+                        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <IconComponent className={`w-4 h-4 ${iconColor}`} />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">{label}</span>
+                      {!categoryPrefs[key as keyof CategoryPreferences] && (
+                        <span className="text-xs text-gray-400 dark:text-gray-500 ml-auto">muted</span>
+                      )}
+                    </label>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -384,25 +441,29 @@ export default function NotificationBell() {
             >
               All
             </button>
-            {Object.entries(CATEGORY_LABELS).map(([key, { label, emoji }]) => (
-              categoryPrefs[key as keyof CategoryPreferences] && (
-                <button
-                  key={key}
-                  onClick={() => setCategoryFilter(key)}
-                  className={`px-2 py-1 text-xs rounded-full whitespace-nowrap transition-colors ${
-                    categoryFilter === key
-                      ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300'
-                      : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
-                  }`}
-                >
-                  {emoji} {label.split(' ')[0]}
-                </button>
-              )
-            ))}
+            {Object.entries(CATEGORY_LABELS).map(([key, { label }]) => {
+              const IconComponent = CATEGORY_ICON_COMPONENTS[key] || Info;
+              return (
+                categoryPrefs[key as keyof CategoryPreferences] && (
+                  <button
+                    key={key}
+                    onClick={() => setCategoryFilter(key)}
+                    className={`flex items-center gap-1 px-2 py-1 text-xs rounded-full whitespace-nowrap transition-colors ${
+                      categoryFilter === key
+                        ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300'
+                        : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    <IconComponent className="w-3 h-3" />
+                    {label.split(' ')[0]}
+                  </button>
+                )
+              );
+            })}
           </div>
 
-          {/* Notifications List */}
-          <div className="max-h-80 overflow-y-auto">
+          {/* Notifications List -- now shows 10 notifications */}
+          <div className="max-h-[28rem] overflow-y-auto">
             {loading ? (
               <div className="p-4 text-center text-gray-500 dark:text-gray-400">
                 Loading...
@@ -413,29 +474,27 @@ export default function NotificationBell() {
                 <p>{categoryFilter === 'all' ? 'No notifications yet' : `No ${CATEGORY_LABELS[categoryFilter]?.label || categoryFilter} notifications`}</p>
               </div>
             ) : (
-              filteredNotifications.slice(0, 5).map(notification => (
+              filteredNotifications.slice(0, DROPDOWN_NOTIFICATION_LIMIT).map(notification => (
                 <div
                   key={notification.id}
                   className={`border-b border-gray-100 dark:border-gray-700 last:border-0 ${
                     !notification.is_read ? 'bg-blue-50 dark:bg-blue-900/20' : ''
                   }`}
                 >
-                  {notification.link_url ? (
-                    <Link
-                      href={notification.link_url}
-                      onClick={() => handleNotificationClick(notification)}
-                      className="block px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-                    >
-                      <NotificationContent notification={notification} />
-                    </Link>
-                  ) : (
-                    <div
-                      onClick={() => !notification.is_read && markAsRead(notification.id)}
-                      className={`px-4 py-3 ${!notification.is_read ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50' : ''}`}
-                    >
-                      <NotificationContent notification={notification} />
-                    </div>
-                  )}
+                  <div
+                    onClick={() => handleNotificationClick(notification)}
+                    className="block px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer"
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleNotificationClick(notification);
+                      }
+                    }}
+                  >
+                    <NotificationContent notification={notification} />
+                  </div>
                 </div>
               ))
             )}
@@ -443,19 +502,22 @@ export default function NotificationBell() {
 
           {/* Footer */}
           <div className="border-t border-gray-200 dark:border-gray-700">
-            {notifications.length > 0 && (
-              <Link
-                href="/notifications"
-                onClick={() => setIsOpen(false)}
-                className="block px-4 py-2 text-center text-sm text-blue-600 dark:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors border-b border-gray-100 dark:border-gray-700"
-              >
-                View All Notifications
-              </Link>
-            )}
+            <Link
+              href="/notifications"
+              onClick={() => setIsOpen(false)}
+              className="block px-4 py-2.5 text-center text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+            >
+              View All Notifications
+              {notifications.length > DROPDOWN_NOTIFICATION_LIMIT && (
+                <span className="ml-1 text-gray-400 dark:text-gray-500 font-normal">
+                  ({notifications.length - DROPDOWN_NOTIFICATION_LIMIT}+ more)
+                </span>
+              )}
+            </Link>
             <Link
               href="/settings"
               onClick={() => setIsOpen(false)}
-              className="flex items-center justify-center gap-2 px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+              className="flex items-center justify-center gap-2 px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors border-t border-gray-100 dark:border-gray-700"
             >
               <Mail className="w-4 h-4" />
               Email & Notification Settings
@@ -468,6 +530,11 @@ export default function NotificationBell() {
 }
 
 function NotificationContent({ notification }: { notification: Notification }) {
+  // Get the Lucide icon component for this notification type
+  const IconComponent = TYPE_ICON_COMPONENTS[notification.type] || TYPE_ICON_COMPONENTS.general;
+  const category = notification.category || TYPE_TO_CATEGORY[notification.type] || 'system';
+  const iconColor = CATEGORY_ICON_COLORS[category] || 'text-gray-500';
+
   return (
     <div className="flex gap-3">
       {/* Read indicator */}
@@ -482,7 +549,10 @@ function NotificationContent({ notification }: { notification: Notification }) {
       {/* Content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-start gap-2">
-          <span className="text-base flex-shrink-0">{TYPE_ICONS[notification.type] || TYPE_ICONS.general}</span>
+          {/* Category icon (Lucide) */}
+          <div className={`flex-shrink-0 mt-0.5 ${iconColor}`}>
+            <IconComponent className="w-4 h-4" aria-hidden="true" />
+          </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
               {notification.title}
@@ -499,7 +569,7 @@ function NotificationContent({ notification }: { notification: Notification }) {
 
       {/* Link indicator */}
       {notification.link_url && (
-        <ExternalLink className="w-4 h-4 text-gray-400 flex-shrink-0" aria-hidden="true" />
+        <ExternalLink className="w-4 h-4 text-gray-400 flex-shrink-0 mt-1" aria-hidden="true" />
       )}
     </div>
   );

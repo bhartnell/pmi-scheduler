@@ -8,7 +8,7 @@ import {
   isProtectedSuperadmin,
   type Role
 } from '@/lib/permissions';
-import { notifyRoleApproved } from '@/lib/notifications';
+import { notifyRoleApproved, updatePreferencesForRoleChange } from '@/lib/notifications';
 import { logAuditEvent } from '@/lib/audit';
 
 export async function GET(request: NextRequest) {
@@ -194,6 +194,10 @@ export async function PATCH(request: NextRequest) {
         newRole: data.role,
         approverName: user.name || user.email,
       }).catch(err => console.error('Failed to send role approval notification:', err));
+
+      // Update notification preferences to match their new role
+      updatePreferencesForRoleChange(data.email, data.role)
+        .catch(err => console.error('Failed to update notification prefs for role change:', err));
     }
 
     return NextResponse.json({ success: true, user: data });

@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   Bell, Check, CheckCheck, ExternalLink, ArrowLeft, Trash2, Settings,
-  Keyboard, Archive, ArchiveRestore, Search, X,
+  Keyboard, Archive, ArchiveRestore, Search, X, ChevronDown, ChevronUp,
 } from 'lucide-react';
 import LabHeader from '@/components/LabHeader';
 import { useToast } from '@/components/Toast';
@@ -31,6 +31,13 @@ const TYPE_ICONS: Record<string, string> = {
   feedback_new: '\uD83D\uDCDD',
   feedback_resolved: '\u2705',
   task_assigned: '\uD83D\uDCCC',
+  task_completed: '\u2714\uFE0F',
+  task_comment: '\uD83D\uDCAC',
+  shift_available: '\uD83D\uDCC5',
+  shift_confirmed: '\u2705',
+  clinical_hours: '\uD83C\uDFE5',
+  compliance_due: '\u26A0\uFE0F',
+  role_approved: '\uD83C\uDF89',
   general: '\u2139\uFE0F',
 };
 
@@ -40,6 +47,13 @@ const TYPE_LABELS: Record<string, string> = {
   feedback_new: 'New Feedback',
   feedback_resolved: 'Feedback Resolved',
   task_assigned: 'Task Assigned',
+  task_completed: 'Task Completed',
+  task_comment: 'Task Comment',
+  shift_available: 'Shift Available',
+  shift_confirmed: 'Shift Confirmed',
+  clinical_hours: 'Clinical Hours',
+  compliance_due: 'Compliance Due',
+  role_approved: 'Role Approved',
   general: 'General',
 };
 
@@ -57,6 +71,7 @@ const CATEGORY_PILLS = [
   { value: 'tasks', label: 'Tasks' },
   { value: 'labs', label: 'Labs' },
   { value: 'scheduling', label: 'Shifts' },
+  { value: 'feedback', label: 'Feedback' },
   { value: 'clinical', label: 'Clinical' },
   { value: 'system', label: 'System' },
 ];
@@ -85,6 +100,73 @@ interface NotificationSettings {
   show_desktop_notifications: boolean;
 }
 
+// ── Smart Grouping Types ──
+interface NotificationGroup {
+  key: string;
+  type: string;
+  category: string;
+  notifications: Notification[];
+  isGroup: true;
+}
+
+interface SingleNotification {
+  notification: Notification;
+  isGroup: false;
+}
+
+type DisplayItem = NotificationGroup | SingleNotification;
+
+/**
+ * Group notifications of the same type that arrived close together (within 2 hours).
+ * Groups are only formed when 3+ notifications of the same type cluster together.
+ * Returns a mixed array of groups and singles for rendering.
+ */
+function groupNotifications(notifications: Notification[]): DisplayItem[] {
+  if (notifications.length === 0) return [];
+
+  const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
+  const items: DisplayItem[] = [];
+
+  // Cluster consecutive notifications of the same type that are close in time
+  let i = 0;
+  while (i < notifications.length) {
+    const current = notifications[i];
+    const cluster: Notification[] = [current];
+
+    let j = i + 1;
+    while (j < notifications.length) {
+      const next = notifications[j];
+      const prev = cluster[cluster.length - 1];
+      const timeDiff = Math.abs(new Date(prev.created_at).getTime() - new Date(next.created_at).getTime());
+
+      if (next.type === current.type && timeDiff <= TWO_HOURS_MS) {
+        cluster.push(next);
+        j++;
+      } else {
+        break;
+      }
+    }
+
+    if (cluster.length >= 3) {
+      items.push({
+        key: `group-${current.type}-${i}`,
+        type: current.type,
+        category: current.category,
+        notifications: cluster,
+        isGroup: true,
+      });
+    } else {
+      for (const n of cluster) {
+        items.push({ notification: n, isGroup: false });
+      }
+    }
+
+    i = j;
+  }
+
+  return items;
+}
+
 const PAGE_SIZE = 25;
 
 export default function NotificationsPage() {
@@ -108,6 +190,9 @@ export default function NotificationsPage() {
   // Bulk selection
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
+  // Expanded groups (for smart grouping)
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+
   // Settings
   const [showSettings, setShowSettings] = useState(false);
   const [settings, setSettings] = useState<NotificationSettings>({
@@ -118,8 +203,10 @@ export default function NotificationsPage() {
   });
   const [savingSettings, setSavingSettings] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [showDismissAllConfirm, setShowDismissAllConfirm] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [archiving, setArchiving] = useState(false);
+  const [markingSelectedRead, setMarkingSelectedRead] = useState(false);
 
   // Keyboard shortcuts state
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
@@ -226,8 +313,47 @@ export default function NotificationsPage() {
       });
       setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
       setTotalUnread(0);
+      toast.success('All notifications marked as read');
     } catch (error) {
       console.error('Failed to mark all as read:', error);
+      toast.error('Failed to mark all as read');
+    }
+  };
+
+  const markSelectedAsRead = async () => {
+    const ids = Array.from(selectedIds);
+    const unreadIds = ids.filter(id => {
+      const n = notifications.find(n => n.id === id);
+      return n && !n.is_read;
+    });
+    if (unreadIds.length === 0) {
+      toast.success('Selected notifications are already read');
+      return;
+    }
+
+    setMarkingSelectedRead(true);
+    try {
+      const res = await fetch('/api/notifications/read', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: unreadIds }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setNotifications(prev =>
+          prev.map(n => (unreadIds.includes(n.id) ? { ...n, is_read: true } : n))
+        );
+        setTotalUnread(prev => Math.max(0, prev - (data.updated || 0)));
+        setSelectedIds(new Set());
+        toast.success(`${data.updated} notification(s) marked as read`);
+      } else {
+        toast.error('Failed to mark selected as read');
+      }
+    } catch (error) {
+      console.error('Failed to mark selected as read:', error);
+      toast.error('Failed to mark selected as read');
+    } finally {
+      setMarkingSelectedRead(false);
     }
   };
 
@@ -255,6 +381,33 @@ export default function NotificationsPage() {
       toast.error('Failed to clear notifications');
     } finally {
       setClearing(false);
+    }
+  };
+
+  const dismissAllNotifications = async () => {
+    setArchiving(true);
+    try {
+      const res = await fetch('/api/notifications/archive', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ all: true, action: 'archive' }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setNotifications([]);
+        setTotal(0);
+        setTotalUnread(0);
+        setShowDismissAllConfirm(false);
+        setSelectedIds(new Set());
+        toast.success(`${data.updated} notification(s) dismissed`);
+      } else {
+        toast.error('Failed to dismiss notifications');
+      }
+    } catch (error) {
+      console.error('Failed to dismiss all notifications:', error);
+      toast.error('Failed to dismiss notifications');
+    } finally {
+      setArchiving(false);
     }
   };
 
@@ -302,11 +455,34 @@ export default function NotificationsPage() {
     return true;
   });
 
+  // Smart grouping (Part B)
+  const displayItems = useMemo(() => groupNotifications(filteredNotifications), [filteredNotifications]);
+
+  const toggleGroupExpanded = (key: string) => {
+    setExpandedGroups(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
+
   const unreadCount = activeTab === 'active' ? totalUnread : 0;
 
   // Bulk selection helpers
   const allSelected = filteredNotifications.length > 0 && filteredNotifications.every(n => selectedIds.has(n.id));
   const someSelected = selectedIds.size > 0;
+
+  // Count how many selected are unread
+  const selectedUnreadCount = useMemo(() => {
+    return Array.from(selectedIds).filter(id => {
+      const n = notifications.find(n => n.id === id);
+      return n && !n.is_read;
+    }).length;
+  }, [selectedIds, notifications]);
 
   const toggleSelectAll = () => {
     if (allSelected) {
@@ -337,6 +513,7 @@ export default function NotificationsPage() {
   useEffect(() => {
     setSelectedIndex(-1);
     setSelectedIds(new Set());
+    setExpandedGroups(new Set());
     setPage(1);
   }, [activeTab, readFilter, categoryFilter]);
 
@@ -414,7 +591,7 @@ export default function NotificationsPage() {
     },
   ];
 
-  useKeyboardShortcuts(shortcuts, !showClearConfirm);
+  useKeyboardShortcuts(shortcuts, !showClearConfirm && !showDismissAllConfirm);
 
   if (status === 'loading' || loading) {
     return (
@@ -426,26 +603,129 @@ export default function NotificationsPage() {
 
   if (!session) return null;
 
+  // Helper to render a single notification row
+  const renderNotificationRow = (notification: Notification, index: number) => {
+    const isKeyboardSelected = index === selectedIndex;
+    const isChecked = selectedIds.has(notification.id);
+    return (
+      <div
+        key={notification.id}
+        className={`p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group ${
+          !notification.is_read && activeTab === 'active' ? 'bg-blue-50 dark:bg-blue-900/20' : ''
+        } ${isKeyboardSelected ? 'ring-2 ring-inset ring-blue-500 dark:ring-blue-400' : ''}`}
+      >
+        <div className="flex items-start gap-3">
+          {/* Checkbox */}
+          <div className="flex-shrink-0 pt-1">
+            <input
+              type="checkbox"
+              checked={isChecked}
+              onChange={() => toggleSelect(notification.id)}
+              className="w-4 h-4 rounded border-gray-300 dark:border-gray-500 text-blue-600 focus:ring-blue-500 cursor-pointer"
+            />
+          </div>
+
+          {/* Read indicator */}
+          <div className="flex-shrink-0 pt-2.5">
+            {notification.is_read || activeTab === 'archived' ? (
+              <span className="block w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600" />
+            ) : (
+              <span className="block w-2 h-2 rounded-full bg-blue-500" />
+            )}
+          </div>
+
+          {/* Icon */}
+          <div className="flex-shrink-0 text-2xl">
+            {TYPE_ICONS[notification.type] || TYPE_ICONS.general}
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <p className={`font-medium ${!notification.is_read && activeTab === 'active' ? 'text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}>
+                  {notification.title}
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  {notification.message}
+                </p>
+                <div className="flex items-center gap-3 mt-2 text-xs text-gray-500 dark:text-gray-400">
+                  <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">
+                    {notification.category
+                      ? CATEGORY_LABELS[notification.category] || notification.category
+                      : TYPE_LABELS[notification.type] || 'General'}
+                  </span>
+                  <span>{formatDate(notification.created_at)}</span>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                {notification.link_url && (
+                  <Link
+                    href={notification.link_url}
+                    onClick={() => !notification.is_read && markAsRead(notification.id)}
+                    className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                    title="Open link"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                  </Link>
+                )}
+                {!notification.is_read && activeTab === 'active' && (
+                  <button
+                    onClick={() => markAsRead(notification.id)}
+                    className="p-2 text-gray-400 hover:text-green-600 dark:hover:text-green-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                    title="Mark as read"
+                  >
+                    <Check className="w-4 h-4" />
+                  </button>
+                )}
+                {activeTab === 'active' ? (
+                  <button
+                    onClick={() => archiveNotifications([notification.id])}
+                    disabled={archiving}
+                    className="p-2 text-gray-400 hover:text-orange-600 dark:hover:text-orange-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded disabled:opacity-50"
+                    title="Archive notification"
+                  >
+                    <Archive className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => archiveNotifications([notification.id], true)}
+                    disabled={archiving}
+                    className="p-2 text-gray-400 hover:text-green-600 dark:hover:text-green-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded disabled:opacity-50"
+                    title="Restore notification"
+                  >
+                    <ArchiveRestore className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       <LabHeader
         title="Notifications"
-        breadcrumbs={[{ label: 'Notifications' }]}
       />
 
       <main className="max-w-3xl mx-auto px-4 py-6">
         {/* Header Actions */}
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
           <div className="flex items-center gap-4">
             <Link
-              href="/lab-management"
+              href="/"
               className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
             >
               <ArrowLeft className="w-4 h-4" />
-              Back to Dashboard
+              Back to Home
             </Link>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {/* Keyboard shortcuts */}
             <button
               onClick={() => setShowShortcutsHelp(true)}
@@ -460,10 +740,21 @@ export default function NotificationsPage() {
             {activeTab === 'active' && unreadCount > 0 && (
               <button
                 onClick={markAllAsRead}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+                className="flex items-center gap-2 px-3 py-1.5 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
               >
                 <CheckCheck className="w-4 h-4" />
                 Mark All Read
+              </button>
+            )}
+
+            {/* Dismiss All (active tab only) */}
+            {activeTab === 'active' && total > 0 && (
+              <button
+                onClick={() => setShowDismissAllConfirm(true)}
+                className="flex items-center gap-2 px-3 py-1.5 text-sm text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-300 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-lg transition-colors"
+              >
+                <Archive className="w-4 h-4" />
+                Dismiss All
               </button>
             )}
 
@@ -471,7 +762,7 @@ export default function NotificationsPage() {
             {activeTab === 'active' && total > 0 && (
               <button
                 onClick={() => setShowClearConfirm(true)}
-                className="flex items-center gap-2 px-3 py-1.5 text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
+                className="flex items-center gap-2 px-3 py-1.5 text-sm text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
               >
                 <Trash2 className="w-4 h-4" />
                 Clear All
@@ -694,6 +985,19 @@ export default function NotificationsPage() {
               {selectedIds.size} selected
             </span>
             <div className="flex items-center gap-2">
+              {/* Mark Selected as Read */}
+              {activeTab === 'active' && selectedUnreadCount > 0 && (
+                <button
+                  onClick={markSelectedAsRead}
+                  disabled={markingSelectedRead}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 transition-colors"
+                >
+                  <CheckCheck className="w-3.5 h-3.5" />
+                  Mark Read
+                </button>
+              )}
+
+              {/* Archive / Restore Selected */}
               {activeTab === 'active' ? (
                 <button
                   onClick={() => archiveNotifications(Array.from(selectedIds))}
@@ -701,7 +1005,7 @@ export default function NotificationsPage() {
                   className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
                 >
                   <Archive className="w-3.5 h-3.5" />
-                  Archive Selected
+                  Dismiss Selected
                 </button>
               ) : (
                 <button
@@ -759,105 +1063,112 @@ export default function NotificationsPage() {
                 </span>
               </div>
 
-              {filteredNotifications.map((notification, index) => {
-                const isKeyboardSelected = index === selectedIndex;
-                const isChecked = selectedIds.has(notification.id);
+              {/* Render grouped or individual notifications */}
+              {displayItems.map((item) => {
+                if (!item.isGroup) {
+                  // Single notification
+                  const idx = filteredNotifications.indexOf(item.notification);
+                  return renderNotificationRow(item.notification, idx);
+                }
+
+                // Grouped notifications
+                const group = item;
+                const isExpanded = expandedGroups.has(group.key);
+                const groupUnread = group.notifications.filter(n => !n.is_read).length;
+                const groupAllIds = group.notifications.map(n => n.id);
+                const groupAllSelected = groupAllIds.every(id => selectedIds.has(id));
+
                 return (
-                  <div
-                    key={notification.id}
-                    className={`p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors group ${
-                      !notification.is_read && activeTab === 'active' ? 'bg-blue-50 dark:bg-blue-900/20' : ''
-                    } ${isKeyboardSelected ? 'ring-2 ring-inset ring-blue-500 dark:ring-blue-400' : ''}`}
-                  >
-                    <div className="flex items-start gap-3">
-                      {/* Checkbox */}
-                      <div className="flex-shrink-0 pt-1">
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={() => toggleSelect(notification.id)}
-                          className="w-4 h-4 rounded border-gray-300 dark:border-gray-500 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                        />
-                      </div>
+                  <div key={group.key} className="border-b border-gray-200 dark:border-gray-700 last:border-0">
+                    {/* Group Header */}
+                    <div
+                      className={`p-4 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-pointer ${
+                        groupUnread > 0 && activeTab === 'active' ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''
+                      }`}
+                      onClick={() => toggleGroupExpanded(group.key)}
+                    >
+                      <div className="flex items-center gap-3">
+                        {/* Group Checkbox */}
+                        <div className="flex-shrink-0" onClick={e => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={groupAllSelected}
+                            onChange={() => {
+                              setSelectedIds(prev => {
+                                const next = new Set(prev);
+                                if (groupAllSelected) {
+                                  groupAllIds.forEach(id => next.delete(id));
+                                } else {
+                                  groupAllIds.forEach(id => next.add(id));
+                                }
+                                return next;
+                              });
+                            }}
+                            className="w-4 h-4 rounded border-gray-300 dark:border-gray-500 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                          />
+                        </div>
 
-                      {/* Read indicator */}
-                      <div className="flex-shrink-0 pt-2.5">
-                        {notification.is_read || activeTab === 'archived' ? (
-                          <span className="block w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600" />
-                        ) : (
-                          <span className="block w-2 h-2 rounded-full bg-blue-500" />
-                        )}
-                      </div>
+                        {/* Unread indicator */}
+                        <div className="flex-shrink-0">
+                          {groupUnread > 0 ? (
+                            <span className="block w-2 h-2 rounded-full bg-blue-500" />
+                          ) : (
+                            <span className="block w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600" />
+                          )}
+                        </div>
 
-                      {/* Icon */}
-                      <div className="flex-shrink-0 text-2xl">
-                        {TYPE_ICONS[notification.type] || TYPE_ICONS.general}
-                      </div>
+                        {/* Icon */}
+                        <div className="flex-shrink-0 text-2xl">
+                          {TYPE_ICONS[group.type] || TYPE_ICONS.general}
+                        </div>
 
-                      {/* Content */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1 min-w-0">
-                            <p className={`font-medium ${!notification.is_read && activeTab === 'active' ? 'text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}>
-                              {notification.title}
-                            </p>
-                            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                              {notification.message}
-                            </p>
-                            <div className="flex items-center gap-3 mt-2 text-xs text-gray-500 dark:text-gray-400">
-                              <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">
-                                {notification.category
-                                  ? CATEGORY_LABELS[notification.category] || notification.category
-                                  : TYPE_LABELS[notification.type] || 'General'}
+                        {/* Group Summary */}
+                        <div className="flex-1 min-w-0">
+                          <p className={`font-medium ${groupUnread > 0 ? 'text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}>
+                            {group.notifications.length} {TYPE_LABELS[group.type] || group.type} notifications
+                          </p>
+                          <div className="flex items-center gap-3 mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            <span className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded">
+                              {CATEGORY_LABELS[group.category] || group.category}
+                            </span>
+                            {groupUnread > 0 && (
+                              <span className="text-blue-600 dark:text-blue-400 font-medium">
+                                {groupUnread} unread
                               </span>
-                              <span>{formatDate(notification.created_at)}</span>
-                            </div>
+                            )}
+                            <span>
+                              {formatDate(group.notifications[0].created_at)}
+                              {group.notifications.length > 1 && (
+                                <> - {formatDate(group.notifications[group.notifications.length - 1].created_at)}</>
+                              )}
+                            </span>
                           </div>
+                        </div>
 
-                          {/* Actions */}
-                          <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                            {notification.link_url && (
-                              <Link
-                                href={notification.link_url}
-                                onClick={() => !notification.is_read && markAsRead(notification.id)}
-                                className="p-2 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                                title="Open link"
-                              >
-                                <ExternalLink className="w-4 h-4" />
-                              </Link>
-                            )}
-                            {!notification.is_read && activeTab === 'active' && (
-                              <button
-                                onClick={() => markAsRead(notification.id)}
-                                className="p-2 text-gray-400 hover:text-green-600 dark:hover:text-green-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                                title="Mark as read"
-                              >
-                                <Check className="w-4 h-4" />
-                              </button>
-                            )}
-                            {activeTab === 'active' ? (
-                              <button
-                                onClick={() => archiveNotifications([notification.id])}
-                                disabled={archiving}
-                                className="p-2 text-gray-400 hover:text-orange-600 dark:hover:text-orange-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded disabled:opacity-50"
-                                title="Archive notification"
-                              >
-                                <Archive className="w-4 h-4" />
-                              </button>
-                            ) : (
-                              <button
-                                onClick={() => archiveNotifications([notification.id], true)}
-                                disabled={archiving}
-                                className="p-2 text-gray-400 hover:text-green-600 dark:hover:text-green-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded disabled:opacity-50"
-                                title="Restore notification"
-                              >
-                                <ArchiveRestore className="w-4 h-4" />
-                              </button>
-                            )}
-                          </div>
+                        {/* Expand/Collapse */}
+                        <div className="flex-shrink-0 text-gray-400">
+                          {isExpanded ? (
+                            <ChevronUp className="w-5 h-5" />
+                          ) : (
+                            <ChevronDown className="w-5 h-5" />
+                          )}
                         </div>
                       </div>
                     </div>
+
+                    {/* Expanded: show individual notifications */}
+                    {isExpanded && (
+                      <div className="border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
+                        {group.notifications.map(notification => {
+                          const idx = filteredNotifications.indexOf(notification);
+                          return (
+                            <div key={notification.id} className="pl-6">
+                              {renderNotificationRow(notification, idx)}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -867,7 +1178,7 @@ export default function NotificationsPage() {
 
         {/* Pagination */}
         {total > PAGE_SIZE && (
-          <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 rounded-lg shadow">
+          <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 rounded-lg shadow mt-4">
             <p className="text-sm text-gray-700 dark:text-gray-300">
               Showing {((page - 1) * PAGE_SIZE) + 1} to {Math.min(page * PAGE_SIZE, total)} of {total}
             </p>
@@ -938,6 +1249,54 @@ export default function NotificationsPage() {
                   <>
                     <Trash2 className="w-4 h-4" />
                     Clear All
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Dismiss All Confirmation Modal */}
+      {showDismissAllConfirm && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="dismiss-confirm-title"
+        >
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6">
+            <h3 id="dismiss-confirm-title" className="text-lg font-bold text-gray-900 dark:text-white mb-2">
+              Dismiss All Notifications?
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              This will archive all {total} notification{total !== 1 ? 's' : ''}. You can restore them from the Archived tab later.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowDismissAllConfirm(false)}
+                disabled={archiving}
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={dismissAllNotifications}
+                disabled={archiving}
+                className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 disabled:opacity-50 transition-colors"
+              >
+                {archiving ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Dismissing...
+                  </>
+                ) : (
+                  <>
+                    <Archive className="w-4 h-4" />
+                    Dismiss All
                   </>
                 )}
               </button>

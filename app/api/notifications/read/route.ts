@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { createClient } from '@supabase/supabase-js';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
 // PUT - Mark notification(s) as read
@@ -14,19 +13,40 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { id, all } = body;
+    const { id, ids, all } = body;
 
     if (all) {
       // Mark all notifications as read for this user
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('user_notifications')
         .update({ is_read: true, read_at: new Date().toISOString() })
         .eq('user_email', session.user.email)
-        .eq('is_read', false);
+        .eq('is_read', false)
+        .select('id');
 
       if (error) throw error;
 
-      return NextResponse.json({ success: true, message: 'All notifications marked as read' });
+      return NextResponse.json({
+        success: true,
+        updated: data?.length || 0,
+        message: 'All notifications marked as read',
+      });
+    } else if (ids && Array.isArray(ids) && ids.length > 0) {
+      // Bulk mark selected notifications as read
+      const { data, error } = await supabase
+        .from('user_notifications')
+        .update({ is_read: true, read_at: new Date().toISOString() })
+        .in('id', ids)
+        .eq('user_email', session.user.email)
+        .select('id');
+
+      if (error) throw error;
+
+      return NextResponse.json({
+        success: true,
+        updated: data?.length || 0,
+        message: `${data?.length || 0} notification(s) marked as read`,
+      });
     } else if (id) {
       // Mark single notification as read
       const { error } = await supabase
@@ -37,17 +57,18 @@ export async function PUT(request: NextRequest) {
 
       if (error) throw error;
 
-      return NextResponse.json({ success: true, message: 'Notification marked as read' });
+      return NextResponse.json({ success: true, updated: 1, message: 'Notification marked as read' });
     } else {
       return NextResponse.json(
-        { error: 'Either id or all:true is required' },
+        { error: 'Provide id, ids[], or all:true' },
         { status: 400 }
       );
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to update notification';
     console.error('Error marking notification as read:', error);
     return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to update notification' },
+      { success: false, error: message },
       { status: 500 }
     );
   }

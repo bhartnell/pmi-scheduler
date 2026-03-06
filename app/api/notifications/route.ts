@@ -1,15 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { createClient } from '@supabase/supabase-js';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
-// Default category preferences by role (same as preferences API)
+// Default category preferences by role (same as preferences API and lib/notifications.ts)
 const ROLE_DEFAULTS: Record<string, Record<string, boolean>> = {
   superadmin: { tasks: true, labs: true, scheduling: true, feedback: true, clinical: true, system: true },
   admin: { tasks: true, labs: true, scheduling: true, feedback: true, clinical: true, system: true },
-  lead_instructor: { tasks: true, labs: true, scheduling: true, feedback: false, clinical: true, system: true },
+  lead_instructor: { tasks: true, labs: true, scheduling: true, feedback: true, clinical: true, system: true },
   instructor: { tasks: true, labs: true, scheduling: true, feedback: false, clinical: false, system: true },
+  volunteer_instructor: { tasks: false, labs: false, scheduling: true, feedback: false, clinical: false, system: true },
+  program_director: { tasks: false, labs: false, scheduling: false, feedback: false, clinical: true, system: true },
+  student: { tasks: true, labs: true, scheduling: false, feedback: false, clinical: false, system: true },
   guest: { tasks: false, labs: true, scheduling: false, feedback: false, clinical: false, system: true },
+  pending: { tasks: false, labs: false, scheduling: false, feedback: false, clinical: false, system: true },
 };
 
 // GET - Fetch notifications for current user
