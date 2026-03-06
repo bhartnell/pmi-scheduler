@@ -263,7 +263,6 @@ export async function GET(request: NextRequest) {
 
     const lowRated = preceptorAverages.filter((p) => p.flagged);
 
-    console.log(`[CLOSEOUT-SURVEYS] surveys=${surveyList.length} completed in ${Date.now() - startTime}ms`);
     return NextResponse.json({
       success: true,
       surveys: surveyList,

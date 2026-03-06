@@ -1,21 +1,9 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { getSupabase } from '@/lib/supabase';
 import CETracker from './CETracker';
 import { Award, Upload, Download, Calendar, Building, Hash, Edit2, Trash2, Plus, X } from 'lucide-react';
-
-// Lazy-initialize Supabase client to avoid SSR build issues
-let _supabase: SupabaseClient | null = null;
-function getSupabase() {
-  if (!_supabase) {
-    _supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-  }
-  return _supabase;
-}
 
 type Certification = {
   id: string;

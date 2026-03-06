@@ -196,7 +196,6 @@ export async function POST(
 
     if (updateError) throw updateError;
 
-    console.log(`[COHORT-ARCHIVE] cohort=${cohortId} completed in ${Date.now() - startTime}ms`);
     return NextResponse.json({
       success: true,
       cohort: updatedCohort,

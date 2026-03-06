@@ -386,7 +386,6 @@ export async function GET(request: NextRequest) {
     // -----------------------------------------------
     // Build final response
     // -----------------------------------------------
-    console.log(`[MY-PROGRESS] completed in ${Date.now() - startTime}ms`);
     return NextResponse.json({
       success: true,
       studentFound: true,

@@ -42,14 +42,6 @@ export async function GET(request: NextRequest) {
 
     if (error) throw error;
 
-    // One-time audit: log users with admin role when superadmin views list
-    if (user.role === 'superadmin' && data) {
-      const adminUsers = data.filter((u: any) => u.role === 'admin');
-      if (adminUsers.length > 0) {
-        console.log('[Admin Audit] Current admin-role users:', adminUsers.map((u: any) => u.email));
-      }
-    }
-
     return NextResponse.json({ success: true, users: data, pagination: { limit, offset, total: count || 0 } });
   } catch (error) {
     console.error('Error fetching users:', error);

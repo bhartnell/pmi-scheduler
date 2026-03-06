@@ -578,8 +578,6 @@ export async function GET(request: NextRequest) {
     }
 
     const fileSizeBytes = new TextEncoder().encode(fileContent).length;
-    console.log(`[DATA-EXPORT] type=${exportType} format=${format} records=${recordCount} completed in ${Date.now() - startTime}ms`);
-
     // ---------------------------------------------------------------------------
     // Log export to history
     // ---------------------------------------------------------------------------
