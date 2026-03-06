@@ -1379,12 +1379,25 @@ function ProfilePanel() {
 function GoogleCalendarPanel() {
   const toast = useToast();
   const [connected, setConnected] = useState<boolean | null>(null);
+  const [needsReauth, setNeedsReauth] = useState(false);
   const [loading, setLoading] = useState(true);
   const [disconnecting, setDisconnecting] = useState(false);
+  const [syncPrefs, setSyncPrefs] = useState({
+    sync_lab_assignments: true,
+    sync_lab_roles: true,
+    sync_shifts: true,
+  });
+  const [savingPrefs, setSavingPrefs] = useState(false);
 
   useEffect(() => {
     fetchCalendarStatus();
   }, []);
+
+  useEffect(() => {
+    if (connected && !needsReauth) {
+      fetchSyncPrefs();
+    }
+  }, [connected, needsReauth]);
 
   const fetchCalendarStatus = async () => {
     try {
@@ -1392,10 +1405,43 @@ function GoogleCalendarPanel() {
       if (!res.ok) throw new Error('Failed to fetch calendar status');
       const data = await res.json();
       setConnected(data.connected ?? false);
+      setNeedsReauth(data.needs_reauth ?? false);
     } catch {
       setConnected(false);
     }
     setLoading(false);
+  };
+
+  const fetchSyncPrefs = async () => {
+    try {
+      const res = await fetch('/api/settings/calendar-sync');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.calendar_sync) setSyncPrefs(data.calendar_sync);
+      }
+    } catch {
+      // Use defaults
+    }
+  };
+
+  const handleToggleSync = async (key: keyof typeof syncPrefs) => {
+    const updated = { ...syncPrefs, [key]: !syncPrefs[key] };
+    const previous = { ...syncPrefs };
+    setSyncPrefs(updated);
+    setSavingPrefs(true);
+    try {
+      const res = await fetch('/api/settings/calendar-sync', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updated),
+      });
+      if (!res.ok) throw new Error('Failed to save');
+      toast.success('Sync preferences updated');
+    } catch {
+      setSyncPrefs(previous);
+      toast.error('Failed to update sync preferences');
+    }
+    setSavingPrefs(false);
   };
 
   const handleDisconnect = async () => {
@@ -1404,6 +1450,7 @@ function GoogleCalendarPanel() {
       const res = await fetch('/api/calendar/disconnect', { method: 'POST' });
       if (!res.ok) throw new Error('Failed to disconnect');
       setConnected(false);
+      setNeedsReauth(false);
       toast.success('Google Calendar disconnected');
     } catch {
       toast.error('Failed to disconnect Google Calendar');
@@ -1421,47 +1468,106 @@ function GoogleCalendarPanel() {
   }
 
   return (
-    <div className="flex items-start justify-between gap-4">
-      <div className="flex items-start gap-3">
-        <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-          <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-        </div>
-        <div>
-          <p className="font-medium text-gray-900 dark:text-white text-sm">
-            {connected ? 'Google Calendar Connected' : 'Connect Google Calendar'}
-          </p>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 max-w-sm">
-            Connect your Google Calendar to show your availability when being assigned to lab roles.
-          </p>
-          {connected && (
-            <p className="text-xs text-green-600 dark:text-green-400 mt-1 flex items-center gap-1">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              Calendar is connected and syncing
+    <div className="space-y-4">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+          </div>
+          <div>
+            <p className="font-medium text-gray-900 dark:text-white text-sm">
+              {connected ? 'Google Calendar Connected' : 'Connect Google Calendar'}
             </p>
-          )}
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 max-w-sm">
+              Connect your Google Calendar to show availability and sync lab assignments, roles, and shifts.
+            </p>
+            {connected && !needsReauth && (
+              <p className="text-xs text-green-600 dark:text-green-400 mt-1 flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                Calendar is connected with two-way sync
+              </p>
+            )}
+          </div>
         </div>
+        {connected ? (
+          <button
+            onClick={handleDisconnect}
+            disabled={disconnecting}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 disabled:opacity-50 rounded-lg transition-colors flex-shrink-0"
+          >
+            {disconnecting ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Unlink className="w-4 h-4" />
+            )}
+            Disconnect
+          </button>
+        ) : (
+          <a
+            href="/api/calendar/connect"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors flex-shrink-0"
+          >
+            <Calendar className="w-4 h-4" />
+            Connect
+          </a>
+        )}
       </div>
-      {connected ? (
-        <button
-          onClick={handleDisconnect}
-          disabled={disconnecting}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 disabled:opacity-50 rounded-lg transition-colors flex-shrink-0"
-        >
-          {disconnecting ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Unlink className="w-4 h-4" />
-          )}
-          Disconnect
-        </button>
-      ) : (
-        <a
-          href="/api/calendar/connect"
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors flex-shrink-0"
-        >
-          <Calendar className="w-4 h-4" />
-          Connect
-        </a>
+
+      {/* Reauth banner for users who connected with old (freebusy-only) scope */}
+      {connected && needsReauth && (
+        <div className="ml-13 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+          <p className="text-sm font-medium text-amber-800 dark:text-amber-300">
+            Reconnect for two-way sync
+          </p>
+          <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
+            Your calendar connection uses an older permission level. Reconnect to enable automatic event creation for lab assignments and shifts.
+          </p>
+          <a
+            href="/api/calendar/connect"
+            className="inline-flex items-center gap-1.5 mt-2 px-3 py-1.5 text-xs font-medium text-amber-900 dark:text-amber-200 bg-amber-100 dark:bg-amber-900/40 hover:bg-amber-200 dark:hover:bg-amber-900/60 rounded-md transition-colors"
+          >
+            <Calendar className="w-3.5 h-3.5" />
+            Reconnect Calendar
+          </a>
+        </div>
+      )}
+
+      {/* Sync preference toggles — only shown when connected with events scope */}
+      {connected && !needsReauth && (
+        <div className="ml-13 space-y-3">
+          <p className="text-xs font-medium text-gray-600 dark:text-gray-400 uppercase tracking-wider">
+            Sync Settings
+          </p>
+          {[
+            { key: 'sync_lab_assignments' as const, label: 'Lab Station Assignments', desc: 'Create calendar events when assigned to lab stations' },
+            { key: 'sync_lab_roles' as const, label: 'Lab Day Roles', desc: 'Create calendar events for Lab Lead, Roamer, and Observer roles' },
+            { key: 'sync_shifts' as const, label: 'Shift Signups', desc: 'Create calendar events when shift signups are confirmed' },
+          ].map(({ key, label, desc }) => (
+            <div key={key} className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm text-gray-900 dark:text-white">{label}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{desc}</p>
+              </div>
+              <button
+                onClick={() => handleToggleSync(key)}
+                disabled={savingPrefs}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800 ${
+                  syncPrefs[key]
+                    ? 'bg-blue-600'
+                    : 'bg-gray-200 dark:bg-gray-700'
+                } ${savingPrefs ? 'opacity-50' : ''}`}
+                role="switch"
+                aria-checked={syncPrefs[key]}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    syncPrefs[key] ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );
