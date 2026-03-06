@@ -31,6 +31,8 @@ import {
   Sparkles,
   ScrollText,
   Info,
+  CheckCircle2,
+  Unlink,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import NotificationBell from '@/components/NotificationBell';
@@ -1371,6 +1373,100 @@ function ProfilePanel() {
   );
 }
 
+
+// ---- Google Calendar connection panel ----
+
+function GoogleCalendarPanel() {
+  const toast = useToast();
+  const [connected, setConnected] = useState<boolean | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [disconnecting, setDisconnecting] = useState(false);
+
+  useEffect(() => {
+    fetchCalendarStatus();
+  }, []);
+
+  const fetchCalendarStatus = async () => {
+    try {
+      const res = await fetch('/api/calendar/status');
+      if (!res.ok) throw new Error('Failed to fetch calendar status');
+      const data = await res.json();
+      setConnected(data.connected ?? false);
+    } catch {
+      setConnected(false);
+    }
+    setLoading(false);
+  };
+
+  const handleDisconnect = async () => {
+    setDisconnecting(true);
+    try {
+      const res = await fetch('/api/calendar/disconnect', { method: 'POST' });
+      if (!res.ok) throw new Error('Failed to disconnect');
+      setConnected(false);
+      toast.success('Google Calendar disconnected');
+    } catch {
+      toast.error('Failed to disconnect Google Calendar');
+    }
+    setDisconnecting(false);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+        <Loader2 className="w-4 h-4 animate-spin" />
+        Checking calendar connection...
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start gap-3">
+        <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+          <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+        </div>
+        <div>
+          <p className="font-medium text-gray-900 dark:text-white text-sm">
+            {connected ? 'Google Calendar Connected' : 'Connect Google Calendar'}
+          </p>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 max-w-sm">
+            Connect your Google Calendar to show your availability when being assigned to lab roles.
+          </p>
+          {connected && (
+            <p className="text-xs text-green-600 dark:text-green-400 mt-1 flex items-center gap-1">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              Calendar is connected and syncing
+            </p>
+          )}
+        </div>
+      </div>
+      {connected ? (
+        <button
+          onClick={handleDisconnect}
+          disabled={disconnecting}
+          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 disabled:opacity-50 rounded-lg transition-colors flex-shrink-0"
+        >
+          {disconnecting ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Unlink className="w-4 h-4" />
+          )}
+          Disconnect
+        </button>
+      ) : (
+        <a
+          href="/api/calendar/connect"
+          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors flex-shrink-0"
+        >
+          <Calendar className="w-4 h-4" />
+          Connect
+        </a>
+      )}
+    </div>
+  );
+}
+
 // ---- Page shell ----
 
 function SettingsPageContent() {
@@ -1609,6 +1705,22 @@ function SettingsPageContent() {
           </div>
           <div className="p-6">
             <TwoFactorPanel />
+          </div>
+        </div>
+
+        {/* Google Calendar card — always visible */}
+        <div className="mt-6 bg-white dark:bg-gray-800 rounded-xl shadow-sm">
+          <div className="px-6 py-4 border-b dark:border-gray-700">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-blue-600" />
+              Google Calendar
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Sync your Google Calendar to display availability for lab role assignments
+            </p>
+          </div>
+          <div className="p-6">
+            <GoogleCalendarPanel />
           </div>
         </div>
 
