@@ -2,37 +2,23 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
-// Helper: resolve the most recent open/closed event as default
-async function getDefaultEventId(supabase: ReturnType<typeof getSupabaseAdmin>): Promise<string | null> {
-  const { data } = await supabase
-    .from('osce_events')
-    .select('id')
-    .in('status', ['open', 'closed'])
-    .order('start_date', { ascending: false })
-    .limit(1)
-    .single();
-  return data?.id || null;
-}
-
-// GET - Admin: list all student-agency mappings (backward compat — defaults to most recent event)
-export async function GET() {
+// GET - Admin: list student-agency mappings for this event
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const auth = await requireAuth('admin');
   if (auth instanceof NextResponse) return auth;
 
   try {
+    const { id } = await params;
     const supabase = getSupabaseAdmin();
-    const eventId = await getDefaultEventId(supabase);
 
-    let query = supabase
+    const { data, error } = await supabase
       .from('osce_student_agencies')
       .select('*')
+      .eq('event_id', id)
       .order('student_name', { ascending: true });
-
-    if (eventId) {
-      query = query.eq('event_id', eventId);
-    }
-
-    const { data, error } = await query;
 
     if (error) {
       return NextResponse.json(
@@ -51,12 +37,16 @@ export async function GET() {
   }
 }
 
-// POST - Admin: add a student-agency mapping
-export async function POST(request: NextRequest) {
+// POST - Admin: add a student-agency mapping for this event
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const auth = await requireAuth('admin');
   if (auth instanceof NextResponse) return auth;
 
   try {
+    const { id } = await params;
     const body = await request.json();
     const { student_name, agency, relationship } = body;
 
@@ -68,19 +58,11 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = getSupabaseAdmin();
-    const eventId = await getDefaultEventId(supabase);
-
-    if (!eventId) {
-      return NextResponse.json(
-        { success: false, error: 'No open OSCE event found' },
-        { status: 400 }
-      );
-    }
 
     const { data, error } = await supabase
       .from('osce_student_agencies')
       .insert({
-        event_id: eventId,
+        event_id: id,
         student_name: student_name.trim(),
         agency: agency.trim(),
         relationship: relationship?.trim() || null,
@@ -107,15 +89,19 @@ export async function POST(request: NextRequest) {
 }
 
 // DELETE - Admin: remove a student-agency mapping
-export async function DELETE(request: NextRequest) {
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const auth = await requireAuth('admin');
   if (auth instanceof NextResponse) return auth;
 
   try {
+    const { id } = await params;
     const body = await request.json();
-    const { id } = body;
+    const { id: mappingId } = body;
 
-    if (!id) {
+    if (!mappingId) {
       return NextResponse.json(
         { success: false, error: 'ID is required' },
         { status: 400 }
@@ -124,10 +110,12 @@ export async function DELETE(request: NextRequest) {
 
     const supabase = getSupabaseAdmin();
 
+    // Delete with event_id check for safety
     const { error } = await supabase
       .from('osce_student_agencies')
       .delete()
-      .eq('id', id);
+      .eq('id', mappingId)
+      .eq('event_id', id);
 
     if (error) {
       console.error('Error deleting student agency:', error);

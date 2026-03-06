@@ -1,39 +1,25 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
-// Helper: resolve the most recent open/closed event as default
-async function getDefaultEventId(supabase: ReturnType<typeof getSupabaseAdmin>): Promise<string | null> {
-  const { data } = await supabase
-    .from('osce_events')
-    .select('id')
-    .in('status', ['open', 'closed'])
-    .order('start_date', { ascending: false })
-    .limit(1)
-    .single();
-  return data?.id || null;
-}
-
-// GET - Admin: list all observers with their blocks (backward compat — defaults to most recent event)
-export async function GET() {
+// GET - Admin: list all observers for this event with their time block assignments
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const auth = await requireAuth('admin');
   if (auth instanceof NextResponse) return auth;
 
   try {
+    const { id } = await params;
     const supabase = getSupabaseAdmin();
-    const eventId = await getDefaultEventId(supabase);
 
     // Get all observers for this event
-    let observerQuery = supabase
+    const { data: observers, error: observersError } = await supabase
       .from('osce_observers')
       .select('*')
+      .eq('event_id', id)
       .order('created_at', { ascending: false });
-
-    if (eventId) {
-      observerQuery = observerQuery.eq('event_id', eventId);
-    }
-
-    const { data: observers, error: observersError } = await observerQuery;
 
     if (observersError) {
       return NextResponse.json(
@@ -42,10 +28,16 @@ export async function GET() {
       );
     }
 
-    // Get all observer-block assignments with block details
+    if (!observers || observers.length === 0) {
+      return NextResponse.json({ success: true, observers: [] });
+    }
+
+    // Get all observer-block assignments with block details for these observers
+    const observerIds = observers.map((o) => o.id);
     const { data: observerBlocks, error: blocksError } = await supabase
       .from('osce_observer_blocks')
-      .select('observer_id, block_id, osce_time_blocks(id, day_number, label, date, start_time, end_time)');
+      .select('observer_id, block_id, osce_time_blocks(id, day_number, label, date, start_time, end_time)')
+      .in('observer_id', observerIds);
 
     if (blocksError) {
       return NextResponse.json(
@@ -84,7 +76,7 @@ export async function GET() {
       }
     }
 
-    const observersWithBlocks = (observers || []).map((obs) => ({
+    const observersWithBlocks = observers.map((obs) => ({
       ...obs,
       blocks: blocksByObserver[obs.id] || [],
     }));

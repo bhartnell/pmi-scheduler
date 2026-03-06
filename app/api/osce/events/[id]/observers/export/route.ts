@@ -1,39 +1,32 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
-// Helper: resolve the most recent open/closed event as default
-async function getDefaultEventId(supabase: ReturnType<typeof getSupabaseAdmin>): Promise<string | null> {
-  const { data } = await supabase
-    .from('osce_events')
-    .select('id')
-    .in('status', ['open', 'closed'])
-    .order('start_date', { ascending: false })
-    .limit(1)
-    .single();
-  return data?.id || null;
-}
-
-// GET - Admin: export all observers as CSV (backward compat — defaults to most recent event)
-export async function GET() {
+// GET - Admin: export observers for this event as CSV
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   const auth = await requireAuth('admin');
   if (auth instanceof NextResponse) return auth;
 
   try {
+    const { id } = await params;
     const supabase = getSupabaseAdmin();
-    const eventId = await getDefaultEventId(supabase);
+
+    // Get event for filename
+    const { data: event } = await supabase
+      .from('osce_events')
+      .select('slug')
+      .eq('id', id)
+      .single();
 
     // Get all observers for this event
-    let observerQuery = supabase
+    const { data: observers, error: observersError } = await supabase
       .from('osce_observers')
       .select('*')
+      .eq('event_id', id)
       .order('created_at', { ascending: false });
-
-    if (eventId) {
-      observerQuery = observerQuery.eq('event_id', eventId);
-    }
-
-    const { data: observers, error: observersError } = await observerQuery;
 
     if (observersError) {
       return NextResponse.json(
@@ -42,10 +35,24 @@ export async function GET() {
       );
     }
 
-    // Get all observer-block assignments with block details
+    if (!observers || observers.length === 0) {
+      // Return empty CSV with headers only
+      const headers = ['Name', 'Title', 'Agency', 'Email', 'Phone', 'Role', 'Blocks', 'Agency Preference', 'Agency Note', 'Registered'];
+      const filename = event?.slug ? `osce-observers-${event.slug}.csv` : 'osce-observers.csv';
+      return new NextResponse(headers.join(',') + '\n', {
+        headers: {
+          'Content-Type': 'text/csv',
+          'Content-Disposition': `attachment; filename=${filename}`,
+        },
+      });
+    }
+
+    // Get all observer-block assignments with block details for these observers
+    const observerIds = observers.map((o) => o.id);
     const { data: observerBlocks, error: blocksError } = await supabase
       .from('osce_observer_blocks')
-      .select('observer_id, osce_time_blocks(label, date, start_time, end_time)');
+      .select('observer_id, osce_time_blocks(label, date, start_time, end_time)')
+      .in('observer_id', observerIds);
 
     if (blocksError) {
       return NextResponse.json(
@@ -82,7 +89,7 @@ export async function GET() {
       return str;
     };
 
-    const rows = (observers || []).map((obs) => [
+    const rows = observers.map((obs) => [
       escapeCSV(obs.name),
       escapeCSV(obs.title),
       escapeCSV(obs.agency),
@@ -96,11 +103,12 @@ export async function GET() {
     ]);
 
     const csv = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const filename = event?.slug ? `osce-observers-${event.slug}.csv` : 'osce-observers.csv';
 
     return new NextResponse(csv, {
       headers: {
         'Content-Type': 'text/csv',
-        'Content-Disposition': 'attachment; filename=osce-observers.csv',
+        'Content-Disposition': `attachment; filename=${filename}`,
       },
     });
   } catch (error) {

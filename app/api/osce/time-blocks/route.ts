@@ -1,16 +1,37 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
-// GET - Public: list all time blocks with observer counts
-export async function GET() {
+// Helper: resolve the most recent open/closed event as default
+async function getDefaultEventId(supabase: ReturnType<typeof getSupabaseAdmin>): Promise<string | null> {
+  const { data } = await supabase
+    .from('osce_events')
+    .select('id')
+    .in('status', ['open', 'closed'])
+    .order('start_date', { ascending: false })
+    .limit(1)
+    .single();
+  return data?.id || null;
+}
+
+// GET - Public: list all time blocks with observer counts (backward compat — defaults to most recent event)
+export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseAdmin();
 
-    // Get all time blocks ordered by sort_order
-    const { data: blocks, error: blocksError } = await supabase
+    // Resolve event_id from query param or default to most recent open event
+    const eventId = request.nextUrl.searchParams.get('event_id') || await getDefaultEventId(supabase);
+
+    // Get all time blocks ordered by sort_order, filtered by event
+    let query = supabase
       .from('osce_time_blocks')
       .select('*')
       .order('sort_order', { ascending: true });
+
+    if (eventId) {
+      query = query.eq('event_id', eventId);
+    }
+
+    const { data: blocks, error: blocksError } = await query;
 
     if (blocksError) {
       return NextResponse.json(

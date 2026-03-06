@@ -1,21 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
-// Helper: resolve the most recent open event as default
-async function getDefaultOpenEventId(supabase: ReturnType<typeof getSupabaseAdmin>): Promise<string | null> {
-  const { data } = await supabase
-    .from('osce_events')
-    .select('id')
-    .eq('status', 'open')
-    .order('start_date', { ascending: false })
-    .limit(1)
-    .single();
-  return data?.id || null;
-}
-
-// POST - Public: register as an OSCE observer (backward compat — defaults to most recent open event)
-export async function POST(request: NextRequest) {
+// POST - Public: register as an OSCE observer for an event (by slug)
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ slug: string }> }
+) {
   try {
+    const { slug } = await params;
     const body = await request.json();
     const {
       name,
@@ -56,11 +48,24 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabaseAdmin();
 
-    // Resolve event_id
-    const eventId = body.event_id || await getDefaultOpenEventId(supabase);
-    if (!eventId) {
+    // Look up event by slug
+    const { data: event, error: eventError } = await supabase
+      .from('osce_events')
+      .select('id, status')
+      .eq('slug', slug)
+      .single();
+
+    if (eventError || !event) {
       return NextResponse.json(
-        { success: false, error: 'No open OSCE event found.' },
+        { success: false, error: 'Event not found.' },
+        { status: 404 }
+      );
+    }
+
+    // Check event status is 'open'
+    if (event.status !== 'open') {
+      return NextResponse.json(
+        { success: false, error: 'Registration is not currently open for this event.' },
         { status: 400 }
       );
     }
@@ -69,7 +74,7 @@ export async function POST(request: NextRequest) {
     const { data: existing } = await supabase
       .from('osce_observers')
       .select('id')
-      .eq('event_id', eventId)
+      .eq('event_id', event.id)
       .ilike('email', email.trim())
       .single();
 
@@ -85,11 +90,12 @@ export async function POST(request: NextRequest) {
 
     // Check capacity for each block BEFORE inserting
     for (const blockId of block_ids) {
-      // Get block info
+      // Get block info (must belong to this event)
       const { data: block } = await supabase
         .from('osce_time_blocks')
         .select('id, label, max_observers')
         .eq('id', blockId)
+        .eq('event_id', event.id)
         .single();
 
       if (!block) {
@@ -116,11 +122,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Insert observer record
+    // Insert observer record with event_id
     const { data: observer, error: observerError } = await supabase
       .from('osce_observers')
       .insert({
-        event_id: eventId,
+        event_id: event.id,
         name: name.trim(),
         title: title.trim(),
         agency: agency.trim(),
@@ -134,7 +140,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (observerError) {
-      // Handle unique constraint violation on email
+      // Handle unique constraint violation on (event_id, email)
       if (observerError.code === '23505') {
         return NextResponse.json(
           {
