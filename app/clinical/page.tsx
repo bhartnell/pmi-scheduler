@@ -24,6 +24,7 @@ import {
   BookOpen,
   Shuffle,
   ScrollText,
+  ClipboardCheck,
 } from 'lucide-react';
 import { canAccessClinical, canAccessAffiliations, type Role } from '@/lib/permissions';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
@@ -512,6 +513,30 @@ export default function ClinicalDashboardPage() {
                 </p>
                 <div className="flex items-center text-cyan-600 dark:text-cyan-400 text-sm font-medium">
                   Log visit
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </div>
+              </div>
+            </div>
+          </Link>
+          )}
+
+          {/* OSCE Events — lead_instructor+ only */}
+          {effectiveRole && canAccessClinical(effectiveRole) && (
+          <Link
+            href="/admin/osce-events"
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
+          >
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-xl group-hover:bg-amber-200 dark:group-hover:bg-amber-900/50 transition-colors">
+                <ClipboardCheck className="w-6 h-6 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">OSCE Events</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                  Create and manage OSCE evaluator signup events
+                </p>
+                <div className="flex items-center text-amber-600 dark:text-amber-400 text-sm font-medium">
+                  Manage events
                   <ChevronRight className="w-4 h-4 ml-1" />
                 </div>
               </div>

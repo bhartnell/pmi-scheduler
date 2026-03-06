@@ -243,6 +243,13 @@ function buildSections(pendingAccessRequests: number): AdminSection[] {
           description: 'Log and track safety incidents in lab and clinical settings for OSHA compliance',
           color: 'bg-red-600',
         },
+        {
+          href: '/admin/osce-events',
+          icon: ClipboardCheck,
+          title: 'OSCE Events',
+          description: 'Create and manage OSCE evaluator signup events per semester',
+          color: 'bg-amber-600',
+        },
       ],
     },
     {

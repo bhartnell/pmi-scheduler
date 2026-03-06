@@ -53,6 +53,11 @@ const nextConfig: NextConfig = {
         destination: '/lab-management/skill-sheets',
         permanent: false,
       },
+      {
+        source: '/osce-evaluator-signup',
+        destination: '/osce/spring-2026',
+        permanent: false,
+      },
     ];
   },
 };
