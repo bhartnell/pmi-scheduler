@@ -51,7 +51,8 @@ import {
   XCircle,
   Shield,
   DollarSign,
-  Layers
+  Layers,
+  Monitor
 } from 'lucide-react';
 import LabTimer from '@/components/LabTimer';
 import InlineTimerWidget from '@/components/InlineTimerWidget';
@@ -2937,6 +2938,15 @@ export default function LabDayPage() {
               >
                 <Timer className="w-4 h-4" />
                 Start Timer
+              </button>
+              <button
+                onClick={() => window.open(`/timer-display/live/${labDayId}`, '_blank')}
+                className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 lg:px-3 lg:py-2 max-lg:px-4 max-lg:py-3 max-lg:text-base max-lg:font-medium"
+                title="Open full-screen timer display in new tab"
+              >
+                <Monitor className="w-4 h-4 max-lg:w-5 max-lg:h-5" />
+                <span className="hidden sm:inline">Timer Display</span>
+                <span className="sm:hidden">Display</span>
               </button>
               <button
                 onClick={handlePrint}

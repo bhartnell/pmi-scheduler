@@ -20,7 +20,10 @@ import {
   Circle,
   Users,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  Monitor,
+  Link2,
+  ExternalLink
 } from 'lucide-react';
 import { useVisibilityPolling } from '@/hooks/useVisibilityPolling';
 import { useTimerAudio, loadTimerAudioSettings, TimerAudioSettings, TIMER_AUDIO_STORAGE_KEY } from '@/hooks/useTimerAudio';
@@ -92,6 +95,7 @@ export default function LabTimer({
   const [allStations, setAllStations] = useState<Station[]>([]);
   const [showStaleWarning, setShowStaleWarning] = useState(false);
   const [showEndLabConfirm, setShowEndLabConfirm] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const ROTATE_ALERT_TIMEOUT = 30000; // 30 seconds auto-dismiss
 
@@ -613,6 +617,45 @@ export default function LabTimer({
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {/* Share Display Link */}
+          <div className="relative">
+            <button
+              onClick={() => {
+                const url = `${window.location.origin}/timer-display/live/${labDayId}`;
+                navigator.clipboard.writeText(url).then(() => {
+                  setLinkCopied(true);
+                  setTimeout(() => setLinkCopied(false), 2000);
+                }).catch(() => {
+                  // Fallback for older browsers
+                  const textArea = document.createElement('textarea');
+                  textArea.value = url;
+                  document.body.appendChild(textArea);
+                  textArea.select();
+                  document.execCommand('copy');
+                  document.body.removeChild(textArea);
+                  setLinkCopied(true);
+                  setTimeout(() => setLinkCopied(false), 2000);
+                });
+              }}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg transition-colors text-sm ${
+                linkCopied
+                  ? 'bg-green-600 text-white'
+                  : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+              }`}
+              title="Copy timer display link for tablets/projectors"
+            >
+              {linkCopied ? <CheckCircle className="w-4 h-4" /> : <Link2 className="w-4 h-4" />}
+              {linkCopied ? 'Link Copied!' : 'Share Display'}
+            </button>
+          </div>
+          {/* Open display in new tab */}
+          <button
+            onClick={() => window.open(`/timer-display/live/${labDayId}`, '_blank')}
+            className="p-2 rounded-lg hover:bg-gray-700"
+            title="Open timer display in new tab"
+          >
+            <Monitor className="w-5 h-5" />
+          </button>
           <button
             onClick={() => setSoundEnabled(!soundEnabled)}
             className="p-2 rounded-lg hover:bg-gray-700"
