@@ -149,7 +149,7 @@ export default function SiteVisitsPage() {
   });
   const [formVisitTime, setFormVisitTime] = useState('');
   const [formCohortId, setFormCohortId] = useState('');
-  const [formEntireClass, setFormEntireClass] = useState(true);
+  const [formEntireClass, setFormEntireClass] = useState(false);
   const [formStudentIds, setFormStudentIds] = useState<string[]>([]);
   const [formComments, setFormComments] = useState('');
 
@@ -301,7 +301,7 @@ export default function SiteVisitsPage() {
     const now = new Date();
     setFormVisitTime(`${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`);
     setFormCohortId('');
-    setFormEntireClass(true);
+    setFormEntireClass(false);
     setFormStudentIds([]);
     // Default comment for quick logging
     setFormComments('Observed student(s) interaction with staff and patients.');
@@ -924,7 +924,10 @@ export default function SiteVisitsPage() {
                       <input
                         type="radio"
                         checked={formEntireClass}
-                        onChange={() => setFormEntireClass(true)}
+                        onChange={() => {
+                          setFormEntireClass(true);
+                          setFormStudentIds([]);
+                        }}
                         className="text-teal-600"
                       />
                       <span className="text-sm text-gray-700 dark:text-gray-300">Entire Class</span>
