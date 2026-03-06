@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { canAccessAdmin } from '@/lib/permissions';
 import { logAuditEvent } from '@/lib/audit';
+import { requireAuth } from '@/lib/api-auth';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -414,8 +415,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const currentUser = await getCurrentUser(session.user.email);
-    if (!currentUser || !canAccessAdmin(currentUser.role)) {
+    const currentUser = await getCurrentUser(user.email);
+    if (!currentUser || !canAccessAdmin(user.role)) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
@@ -555,7 +556,7 @@ export async function GET(request: NextRequest) {
           {
             export_type: 'full_backup',
             exported_at: new Date().toISOString(),
-            exported_by: currentUser.email,
+            exported_by: user.email,
             data: {
               cohorts,
               students,
@@ -606,7 +607,7 @@ export async function GET(request: NextRequest) {
     // ---------------------------------------------------------------------------
     try {
       await supabase.from('data_export_history').insert({
-        exported_by: currentUser.email,
+        exported_by: user.email,
         export_type: exportType,
         format,
         filters: { cohort_id: cohortId || null, start_date: startDate || null, end_date: endDate || null },
@@ -620,7 +621,7 @@ export async function GET(request: NextRequest) {
 
     // Log to audit log
     await logAuditEvent({
-      user: { id: currentUser.id, email: currentUser.email, role: currentUser.role },
+      user: { id: user.id, email: user.email, role: user.role },
       action: 'export',
       resourceType: 'student_list',
       resourceDescription: `Exported ${exportType} data (${recordCount} records) as ${format.toUpperCase()}`,
@@ -664,8 +665,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const currentUser = await getCurrentUser(session.user.email);
-    if (!currentUser || !canAccessAdmin(currentUser.role)) {
+    const currentUser = await getCurrentUser(user.email);
+    if (!currentUser || !canAccessAdmin(user.role)) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 

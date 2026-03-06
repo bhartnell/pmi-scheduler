@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { canAccessAdmin } from '@/lib/permissions';
+import { requireAuth } from '@/lib/api-auth';
 
 // POST /api/admin/broadcast
 // Resolves the audience, creates user_notifications for each recipient,
@@ -19,10 +20,10 @@ export async function POST(request: NextRequest) {
     const { data: currentUser } = await supabase
       .from('lab_users')
       .select('id, name, email, role')
-      .ilike('email', session.user.email)
+      .ilike('email', user.email)
       .single();
 
-    if (!currentUser || !canAccessAdmin(currentUser.role)) {
+    if (!currentUser || !canAccessAdmin(user.role)) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
@@ -178,7 +179,7 @@ export async function POST(request: NextRequest) {
         delivery_method,
         priority,
         recipient_count: recipientCount,
-        sent_by: session.user.email,
+        sent_by: user.email,
         scheduled_at: scheduled_at || null,
         sent_at: new Date().toISOString(),
       })
@@ -218,10 +219,10 @@ export async function GET(request: NextRequest) {
     const { data: currentUser } = await supabase
       .from('lab_users')
       .select('role')
-      .ilike('email', session.user.email)
+      .ilike('email', user.email)
       .single();
 
-    if (!currentUser || !canAccessAdmin(currentUser.role)) {
+    if (!currentUser || !canAccessAdmin(user.role)) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 

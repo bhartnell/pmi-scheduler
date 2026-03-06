@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
 import { canAccessAdmin } from '@/lib/permissions';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { requireAuth } from '@/lib/api-auth';
 
 // Helper to get current user with role
 async function getCurrentUser(email: string) {
@@ -27,8 +28,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    const currentUser = await getCurrentUser(session.user.email);
-    if (!currentUser || !canAccessAdmin(currentUser.role)) {
+    const currentUser = await getCurrentUser(user.email);
+    if (!currentUser || !canAccessAdmin(user.role)) {
       return NextResponse.json({ success: false, error: 'Access denied' }, { status: 403 });
     }
 

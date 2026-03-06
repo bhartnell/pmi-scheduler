@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { canAccessAdmin } from '@/lib/permissions';
+import { requireAuth } from '@/lib/api-auth';
 
 // ---------------------------------------------------------------------------
 // Helper – resolve current user from session email
@@ -74,8 +75,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const currentUser = await getCurrentUser(session.user.email);
-    if (!currentUser || !canAccessAdmin(currentUser.role)) {
+    const currentUser = await getCurrentUser(user.email);
+    if (!currentUser || !canAccessAdmin(user.role)) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
@@ -154,7 +155,7 @@ export async function POST(request: NextRequest) {
               review_notes: tmpl.review_notes,
               template_data: {},
               is_shared: true,
-              created_by: currentUser.email,
+              created_by: user.email,
               updated_at: new Date().toISOString(),
             })
             .select('id')

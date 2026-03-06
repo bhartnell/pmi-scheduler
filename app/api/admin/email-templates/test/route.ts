@@ -59,6 +59,7 @@ async function getCurrentUser(email: string) {
 // (re-exported to avoid duplication)
 // ---------------------------------------------------------------------------
 import { getDefaultSubject, getDefaultBody } from '../route';
+import { requireAuth } from '@/lib/api-auth';
 
 // ---------------------------------------------------------------------------
 // POST /api/admin/email-templates/test
@@ -71,8 +72,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const currentUser = await getCurrentUser(session.user.email);
-    if (!currentUser || !canAccessAdmin(currentUser.role)) {
+    const currentUser = await getCurrentUser(user.email);
+    if (!currentUser || !canAccessAdmin(user.role)) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
@@ -84,7 +85,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Security: the test destination must be the current user's email
-    if (!to || to.toLowerCase() !== currentUser.email.toLowerCase()) {
+    if (!to || to.toLowerCase() !== user.email.toLowerCase()) {
       return NextResponse.json(
         { error: 'Test emails can only be sent to your own address' },
         { status: 403 }

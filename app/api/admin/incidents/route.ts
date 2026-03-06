@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { canAccessAdmin } from '@/lib/permissions';
+import { requireAuth } from '@/lib/api-auth';
 
 // ---------------------------------------------------------------------------
 // Helper – resolve current user from session email
@@ -32,8 +33,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const currentUser = await getCurrentUser(session.user.email);
-    if (!currentUser || !canAccessAdmin(currentUser.role)) {
+    const currentUser = await getCurrentUser(user.email);
+    if (!currentUser || !canAccessAdmin(user.role)) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
@@ -123,8 +124,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const currentUser = await getCurrentUser(session.user.email);
-    if (!currentUser || !canAccessAdmin(currentUser.role)) {
+    const currentUser = await getCurrentUser(user.email);
+    if (!currentUser || !canAccessAdmin(user.role)) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
@@ -164,7 +165,7 @@ export async function POST(request: NextRequest) {
       follow_up_notes: body.follow_up_notes?.trim() ?? null,
       witness_statements: body.witness_statements?.trim() ?? null,
       status: 'open',
-      reported_by: currentUser.email,
+      reported_by: user.email,
     };
 
     const { data, error } = await supabase
