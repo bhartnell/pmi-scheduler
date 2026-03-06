@@ -1,22 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { canAccessAdmin } from '@/lib/permissions';
 import { logAuditEvent } from '@/lib/audit';
-
-// ---------------------------------------------------------------------------
-// Helper: get current user
-// ---------------------------------------------------------------------------
-
-async function getCurrentUser(email: string) {
-  const supabase = getSupabaseAdmin();
-  const { data } = await supabase
-    .from('lab_users')
-    .select('id, name, email, role')
-    .ilike('email', email)
-    .single();
-  return data;
-}
 
 // ---------------------------------------------------------------------------
 // POST /api/admin/bulk-operations/[id]/rollback
@@ -28,15 +13,9 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const currentUser = await getCurrentUser(session.user.email);
-    if (!currentUser || !canAccessAdmin(currentUser.role)) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
+    const auth = await requireAuth('admin');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
     const { id } = await params;
     if (!id) {
@@ -115,12 +94,12 @@ export async function POST(
       changes: { original_operation_id: id, success_count: successCount, fail_count: failCount },
       is_dry_run: false,
       rollback_data: null,
-      executed_by: currentUser.email,
+      executed_by: user.email,
     });
 
     // Audit log
     await logAuditEvent({
-      user: { id: currentUser.id, email: currentUser.email, role: currentUser.role },
+      user: { id: user.id, email: user.email, role: user.role },
       action: 'update',
       resourceType: 'student_list',
       resourceDescription: `Rolled back bulk operation ${id} on ${table}: ${successCount} records restored`,

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { canAccessAdmin } from '@/lib/permissions';
 import { logAuditEvent } from '@/lib/audit';
 
 // ---------------------------------------------------------------------------
@@ -49,20 +48,6 @@ const ALLOWED_UPDATE_FIELDS: Record<AllowedTable, string[]> = {
   lab_users: ['role', 'is_active'],
   student_internships: ['status', 'current_phase'],
 };
-
-// ---------------------------------------------------------------------------
-// Helper: get current user
-// ---------------------------------------------------------------------------
-
-async function getCurrentUser(email: string) {
-  const supabase = getSupabaseAdmin();
-  const { data } = await supabase
-    .from('lab_users')
-    .select('id, name, email, role')
-    .ilike('email', email)
-    .single();
-  return data;
-}
 
 // ---------------------------------------------------------------------------
 // Helper: apply filters to a Supabase query
@@ -141,15 +126,9 @@ function toCsv(rows: Record<string, unknown>[]): string {
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const currentUser = await getCurrentUser(session.user.email);
-    if (!currentUser || !canAccessAdmin(currentUser.role)) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
+    const auth = await requireAuth('admin');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
     const supabase = getSupabaseAdmin();
     const limit = Math.min(parseInt(request.nextUrl.searchParams.get('limit') || '50'), 100);
@@ -175,15 +154,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const currentUser = await getCurrentUser(session.user.email);
-    if (!currentUser || !canAccessAdmin(currentUser.role)) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
+    const auth = await requireAuth('admin');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
     const body: BulkOperationRequest = await request.json();
     const { operation, target_table, filters = [], parameters = {}, dry_run = false } = body;
@@ -322,7 +295,7 @@ export async function POST(request: NextRequest) {
           {
             export_type: `bulk_${table}`,
             exported_at: new Date().toISOString(),
-            exported_by: currentUser.email,
+            exported_by: user.email,
             record_count: affectedCount,
             filters,
             data: records,
@@ -349,7 +322,7 @@ export async function POST(request: NextRequest) {
         changes: parameters,
         is_dry_run: false,
         rollback_data: rollbackData,
-        executed_by: currentUser.email,
+        executed_by: user.email,
       })
       .select('id')
       .single();
@@ -363,7 +336,7 @@ export async function POST(request: NextRequest) {
 
     // Audit log
     await logAuditEvent({
-      user: { id: currentUser.id, email: currentUser.email, role: currentUser.role },
+      user: { id: user.id, email: user.email, role: user.role },
       action: operation === 'delete_records' ? 'delete' : operation === 'export_records' ? 'export' : 'update',
       resourceType: 'student_list',
       resourceDescription: `Bulk ${operation} on ${table}: ${affectedCount} records`,

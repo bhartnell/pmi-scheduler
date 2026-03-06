@@ -1,40 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { getServerSession } from 'next-auth';
+import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import {
-  canAccessAdmin,
   canModifyUser,
   canAssignRole,
-  canDeleteUsers,
   isProtectedSuperadmin,
   type Role
 } from '@/lib/permissions';
 import { notifyRoleApproved } from '@/lib/notifications';
 import { logAuditEvent } from '@/lib/audit';
 
-// Helper to get current user with role
-async function getCurrentUser(email: string) {
-  const supabase = getSupabaseAdmin();
-  const { data } = await supabase
-    .from('lab_users')
-    .select('id, name, email, role')
-    .ilike('email', email)
-    .single();
-  return data;
-}
-
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const currentUser = await getCurrentUser(session.user.email);
-    if (!currentUser || !canAccessAdmin(currentUser.role)) {
-      return NextResponse.json({ success: false, error: 'Admin access required' }, { status: 403 });
-    }
+    const auth = await requireAuth('admin');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
     const searchParams = request.nextUrl.searchParams;
     const role = searchParams.get('role');
@@ -62,7 +43,7 @@ export async function GET(request: NextRequest) {
     if (error) throw error;
 
     // One-time audit: log users with admin role when superadmin views list
-    if (currentUser.role === 'superadmin' && data) {
+    if (user.role === 'superadmin' && data) {
       const adminUsers = data.filter((u: any) => u.role === 'admin');
       if (adminUsers.length > 0) {
         console.log('[Admin Audit] Current admin-role users:', adminUsers.map((u: any) => u.email));
@@ -78,15 +59,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const currentUser = await getCurrentUser(session.user.email);
-    if (!currentUser || !canAccessAdmin(currentUser.role)) {
-      return NextResponse.json({ success: false, error: 'Admin access required' }, { status: 403 });
-    }
+    const auth = await requireAuth('admin');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
     const body = await request.json();
     const { email, name, role = 'pending' } = body;
@@ -117,7 +92,7 @@ export async function POST(request: NextRequest) {
         role,
         is_active: true,
         approved_at: new Date().toISOString(),
-        approved_by: currentUser.id
+        approved_by: user.id
       })
       .select()
       .single();
@@ -133,15 +108,9 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const currentUser = await getCurrentUser(session.user.email);
-    if (!currentUser || !canAccessAdmin(currentUser.role)) {
-      return NextResponse.json({ success: false, error: 'Admin access required' }, { status: 403 });
-    }
+    const auth = await requireAuth('admin');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
     const body = await request.json();
     const { userId, role, is_active, is_part_time } = body;
@@ -164,13 +133,13 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Check permissions
-    if (!canModifyUser(currentUser.role as Role, targetUser.role as Role)) {
+    if (!canModifyUser(user.role as Role, targetUser.role as Role)) {
       return NextResponse.json({ success: false, error: 'Cannot modify users at or above your role level' }, { status: 403 });
     }
 
     // Protect superadmin accounts — only the account holder can modify their own protected status
     if (isProtectedSuperadmin(targetUser.email)) {
-      if (currentUser.email.toLowerCase() !== targetUser.email.toLowerCase()) {
+      if (user.email.toLowerCase() !== targetUser.email.toLowerCase()) {
         return NextResponse.json({ success: false, error: 'Protected superadmin accounts can only be modified by the account holder' }, { status: 403 });
       }
     }
@@ -182,7 +151,7 @@ export async function PATCH(request: NextRequest) {
 
     if (role !== undefined) {
       // Validate the requesting user can assign this specific role
-      if (!canAssignRole(currentUser.role as Role, role as Role)) {
+      if (!canAssignRole(user.role as Role, role as Role)) {
         return NextResponse.json(
           { success: false, error: 'Insufficient permissions to assign this role' },
           { status: 403 }
@@ -192,7 +161,7 @@ export async function PATCH(request: NextRequest) {
       // Set approval info when assigning a real role
       if (role !== 'pending' && !targetUser.approved_at) {
         updates.approved_at = new Date().toISOString();
-        updates.approved_by = currentUser.id;
+        updates.approved_by = user.id;
       }
     }
 
@@ -216,12 +185,12 @@ export async function PATCH(request: NextRequest) {
     // Audit log role changes
     if (role !== undefined && role !== targetUser.role) {
       logAuditEvent({
-        user: { id: currentUser.id, email: currentUser.email, role: currentUser.role },
+        user: { id: user.id, email: user.email, role: user.role },
         action: 'update',
         resourceType: 'user',
         resourceId: userId,
         resourceDescription: `Role change for ${targetUser.email}`,
-        metadata: { oldRole: targetUser.role, newRole: role, changedBy: currentUser.email },
+        metadata: { oldRole: targetUser.role, newRole: role, changedBy: user.email },
       }).catch(() => {}); // fire and forget
     }
 
@@ -231,7 +200,7 @@ export async function PATCH(request: NextRequest) {
       notifyRoleApproved(data.email, {
         userId: data.id,
         newRole: data.role,
-        approverName: currentUser.name || currentUser.email,
+        approverName: user.name || user.email,
       }).catch(err => console.error('Failed to send role approval notification:', err));
     }
 
@@ -244,15 +213,9 @@ export async function PATCH(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const currentUser = await getCurrentUser(session.user.email);
-    if (!currentUser || !canDeleteUsers(currentUser.role)) {
-      return NextResponse.json({ success: false, error: 'Superadmin access required' }, { status: 403 });
-    }
+    const auth = await requireAuth('superadmin');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');

@@ -1,32 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { canManageGuestAccess } from '@/lib/permissions';
+import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
-
-// Helper to get current user with role
-async function getCurrentUser(email: string) {
-  const supabase = getSupabaseAdmin();
-  const { data } = await supabase
-    .from('lab_users')
-    .select('id, name, email, role')
-    .ilike('email', email)
-    .single();
-  return data;
-}
 
 export async function GET(request: NextRequest) {
   try {
+    const auth = await requireAuth('lead_instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
+
     const supabase = getSupabaseAdmin();
-
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const currentUser = await getCurrentUser(session.user.email);
-    if (!currentUser || !canManageGuestAccess(currentUser.role)) {
-      return NextResponse.json({ success: false, error: 'Access denied' }, { status: 403 });
-    }
 
     const { data, error } = await supabase
       .from('guest_access')
@@ -54,17 +36,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = await requireAuth('lead_instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
+
     const supabase = getSupabaseAdmin();
-
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const currentUser = await getCurrentUser(session.user.email);
-    if (!currentUser || !canManageGuestAccess(currentUser.role)) {
-      return NextResponse.json({ success: false, error: 'Access denied' }, { status: 403 });
-    }
 
     const body = await request.json();
     const { name, email, access_code, lab_day_id, assigned_role, expires_at } = body;
@@ -95,7 +71,7 @@ export async function POST(request: NextRequest) {
         lab_day_id: lab_day_id || null,
         assigned_role: assigned_role || null,
         expires_at: expires_at || null,
-        created_by: currentUser.id
+        created_by: user.id
       })
       .select(`
         *,
@@ -121,17 +97,11 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
+    const auth = await requireAuth('lead_instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
+
     const supabase = getSupabaseAdmin();
-
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const currentUser = await getCurrentUser(session.user.email);
-    if (!currentUser || !canManageGuestAccess(currentUser.role)) {
-      return NextResponse.json({ success: false, error: 'Access denied' }, { status: 403 });
-    }
 
     const body = await request.json();
     const { id, name, email, lab_day_id, assigned_role, expires_at } = body;
@@ -175,17 +145,11 @@ export async function PATCH(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    const auth = await requireAuth('lead_instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
+
     const supabase = getSupabaseAdmin();
-
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const currentUser = await getCurrentUser(session.user.email);
-    if (!currentUser || !canManageGuestAccess(currentUser.role)) {
-      return NextResponse.json({ success: false, error: 'Access denied' }, { status: 403 });
-    }
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');

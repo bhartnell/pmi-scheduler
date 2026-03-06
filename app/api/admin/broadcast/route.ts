@@ -1,30 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { canAccessAdmin } from '@/lib/permissions';
 
 // POST /api/admin/broadcast
 // Resolves the audience, creates user_notifications for each recipient,
 // records the broadcast in broadcast_history, and returns the send count.
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireAuth('admin');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
     const supabase = getSupabaseAdmin();
-
-    // Verify admin role
-    const { data: currentUser } = await supabase
-      .from('lab_users')
-      .select('id, name, email, role')
-      .ilike('email', session.user.email)
-      .single();
-
-    if (!currentUser || !canAccessAdmin(currentUser.role)) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
 
     const body = await request.json();
     const {
@@ -178,7 +165,7 @@ export async function POST(request: NextRequest) {
         delivery_method,
         priority,
         recipient_count: recipientCount,
-        sent_by: session.user.email,
+        sent_by: user.email,
         scheduled_at: scheduled_at || null,
         sent_at: new Date().toISOString(),
       })
@@ -208,22 +195,11 @@ export async function POST(request: NextRequest) {
 // Returns info about a single broadcast (not history - history has its own route)
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireAuth('admin');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
     const supabase = getSupabaseAdmin();
-
-    const { data: currentUser } = await supabase
-      .from('lab_users')
-      .select('role')
-      .ilike('email', session.user.email)
-      .single();
-
-    if (!currentUser || !canAccessAdmin(currentUser.role)) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
 
     // Return the list of available cohorts and users for audience selection
     const [cohortsResult, usersResult] = await Promise.all([

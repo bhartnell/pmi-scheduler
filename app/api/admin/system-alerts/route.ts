@@ -1,20 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { canAccessAdmin } from '@/lib/permissions';
-
-// ---------------------------------------------------------------------------
-// Helper – resolve current user from session email
-// ---------------------------------------------------------------------------
-async function getCurrentUser(email: string) {
-  const supabase = getSupabaseAdmin();
-  const { data } = await supabase
-    .from('lab_users')
-    .select('id, name, email, role')
-    .ilike('email', email)
-    .single();
-  return data;
-}
 
 // ---------------------------------------------------------------------------
 // GET /api/admin/system-alerts
@@ -29,15 +15,9 @@ async function getCurrentUser(email: string) {
 // ---------------------------------------------------------------------------
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const currentUser = await getCurrentUser(session.user.email);
-    if (!currentUser || !canAccessAdmin(currentUser.role)) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
+    const auth = await requireAuth('admin');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
     const supabase = getSupabaseAdmin();
     const { searchParams } = new URL(request.url);
@@ -105,15 +85,9 @@ export async function GET(request: NextRequest) {
 // ---------------------------------------------------------------------------
 export async function PATCH(request: NextRequest) {
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const currentUser = await getCurrentUser(session.user.email);
-    if (!currentUser || !canAccessAdmin(currentUser.role)) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
+    const auth = await requireAuth('admin');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
     const body = await request.json() as { id: string; resolved: boolean };
     const { id, resolved } = body;
@@ -131,7 +105,7 @@ export async function PATCH(request: NextRequest) {
       .update({
         is_resolved: resolved,
         resolved_at: resolved ? new Date().toISOString() : null,
-        resolved_by: resolved ? session.user.email : null,
+        resolved_by: resolved ? user.email : null,
       })
       .eq('id', id)
       .select()

@@ -1,20 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { canAccessAdmin } from '@/lib/permissions';
-
-// ---------------------------------------------------------------------------
-// Helper – resolve current user from session email
-// ---------------------------------------------------------------------------
-async function getCurrentUser(email: string) {
-  const supabase = getSupabaseAdmin();
-  const { data } = await supabase
-    .from('lab_users')
-    .select('id, name, email, role')
-    .ilike('email', email)
-    .single();
-  return data;
-}
 
 // ---------------------------------------------------------------------------
 // GET /api/admin/equipment/checkout
@@ -23,15 +9,9 @@ async function getCurrentUser(email: string) {
 // ---------------------------------------------------------------------------
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const currentUser = await getCurrentUser(session.user.email);
-    if (!currentUser || !canAccessAdmin(currentUser.role)) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
+    const auth = await requireAuth('admin');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
@@ -57,15 +37,9 @@ export async function GET(request: NextRequest) {
 // ---------------------------------------------------------------------------
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const currentUser = await getCurrentUser(session.user.email);
-    if (!currentUser || !canAccessAdmin(currentUser.role)) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
+    const auth = await requireAuth('admin');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
     const body = await request.json() as {
       equipment_id: string;
@@ -122,7 +96,7 @@ export async function POST(request: NextRequest) {
       .insert({
         equipment_id,
         lab_day_id: lab_day_id ?? null,
-        checked_out_by: currentUser.email,
+        checked_out_by: user.email,
         quantity,
         notes: notes ?? null,
       })
@@ -157,15 +131,9 @@ export async function POST(request: NextRequest) {
 // ---------------------------------------------------------------------------
 export async function PUT(request: NextRequest) {
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const currentUser = await getCurrentUser(session.user.email);
-    if (!currentUser || !canAccessAdmin(currentUser.role)) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
+    const auth = await requireAuth('admin');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
     const body = await request.json() as { checkout_id: string; condition_on_return?: string | null };
     const { checkout_id, condition_on_return } = body;
@@ -201,7 +169,7 @@ export async function PUT(request: NextRequest) {
       .from('equipment_checkouts')
       .update({
         checked_in_at: now,
-        checked_in_by: currentUser.email,
+        checked_in_by: user.email,
         condition_on_return: condition_on_return ?? null,
       })
       .eq('id', checkout_id)

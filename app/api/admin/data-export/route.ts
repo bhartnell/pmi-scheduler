@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { canAccessAdmin } from '@/lib/permissions';
 import { logAuditEvent } from '@/lib/audit';
 
 // ---------------------------------------------------------------------------
@@ -10,20 +9,6 @@ import { logAuditEvent } from '@/lib/audit';
 
 type ExportType = 'cohort' | 'students' | 'labs' | 'clinical' | 'assessments' | 'full_backup';
 type ExportFormat = 'csv' | 'json';
-
-// ---------------------------------------------------------------------------
-// Helper: get current user
-// ---------------------------------------------------------------------------
-
-async function getCurrentUser(email: string) {
-  const supabase = getSupabaseAdmin();
-  const { data } = await supabase
-    .from('lab_users')
-    .select('id, name, email, role')
-    .ilike('email', email)
-    .single();
-  return data;
-}
 
 // ---------------------------------------------------------------------------
 // Helper: CSV escaping
@@ -409,15 +394,9 @@ function flattenAssessments(data: { scenario_assessments: any[]; skill_signoffs:
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const currentUser = await getCurrentUser(session.user.email);
-    if (!currentUser || !canAccessAdmin(currentUser.role)) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
+    const auth = await requireAuth('admin');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
     const searchParams = request.nextUrl.searchParams;
     const exportType = (searchParams.get('type') || 'students') as ExportType;
@@ -555,7 +534,7 @@ export async function GET(request: NextRequest) {
           {
             export_type: 'full_backup',
             exported_at: new Date().toISOString(),
-            exported_by: currentUser.email,
+            exported_by: user.email,
             data: {
               cohorts,
               students,
@@ -606,7 +585,7 @@ export async function GET(request: NextRequest) {
     // ---------------------------------------------------------------------------
     try {
       await supabase.from('data_export_history').insert({
-        exported_by: currentUser.email,
+        exported_by: user.email,
         export_type: exportType,
         format,
         filters: { cohort_id: cohortId || null, start_date: startDate || null, end_date: endDate || null },
@@ -620,7 +599,7 @@ export async function GET(request: NextRequest) {
 
     // Log to audit log
     await logAuditEvent({
-      user: { id: currentUser.id, email: currentUser.email, role: currentUser.role },
+      user: { id: user.id, email: user.email, role: user.role },
       action: 'export',
       resourceType: 'student_list',
       resourceDescription: `Exported ${exportType} data (${recordCount} records) as ${format.toUpperCase()}`,
@@ -659,15 +638,9 @@ export async function GET(request: NextRequest) {
 // POST /api/admin/data-export  -> returns recent export history
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const currentUser = await getCurrentUser(session.user.email);
-    if (!currentUser || !canAccessAdmin(currentUser.role)) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
+    const auth = await requireAuth('admin');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase

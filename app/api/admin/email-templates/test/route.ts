@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { canAccessAdmin } from '@/lib/permissions';
 import { wrapInEmailTemplate } from '@/lib/email-templates';
 import { Resend } from 'resend';
 
@@ -42,19 +41,6 @@ function applySampleData(text: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// Helper – get current user
-// ---------------------------------------------------------------------------
-async function getCurrentUser(email: string) {
-  const supabase = getSupabaseAdmin();
-  const { data } = await supabase
-    .from('lab_users')
-    .select('id, name, email, role')
-    .ilike('email', email)
-    .single();
-  return data;
-}
-
-// ---------------------------------------------------------------------------
 // Import default generators from the parent route module
 // (re-exported to avoid duplication)
 // ---------------------------------------------------------------------------
@@ -66,15 +52,9 @@ import { getDefaultSubject, getDefaultBody } from '../route';
 // ---------------------------------------------------------------------------
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const currentUser = await getCurrentUser(session.user.email);
-    if (!currentUser || !canAccessAdmin(currentUser.role)) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
+    const auth = await requireAuth('admin');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
     const body = await request.json();
     const { template_key, to } = body as { template_key: string; to: string };
@@ -84,7 +64,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Security: the test destination must be the current user's email
-    if (!to || to.toLowerCase() !== currentUser.email.toLowerCase()) {
+    if (!to || to.toLowerCase() !== user.email.toLowerCase()) {
       return NextResponse.json(
         { error: 'Test emails can only be sent to your own address' },
         { status: 403 }

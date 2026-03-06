@@ -1,21 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { canAccessAdmin } from '@/lib/permissions';
-
-// ---------------------------------------------------------------------------
-// Helper – resolve current user
-// ---------------------------------------------------------------------------
-async function getCurrentUser(email: string) {
-  const supabase = getSupabaseAdmin();
-  const { data } = await supabase
-    .from('lab_users')
-    .select('id, name, email, role')
-    .ilike('email', email)
-    .single();
-  return data;
-}
 
 // ---------------------------------------------------------------------------
 // Canonical skills seed data (41 entries)
@@ -404,15 +389,9 @@ const canonicalSkills = [
 // Requires admin+ role.
 // ---------------------------------------------------------------------------
 export async function POST() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const currentUser = await getCurrentUser(session.user.email);
-  if (!currentUser || !canAccessAdmin(currentUser.role)) {
-    return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-  }
+  const auth = await requireAuth('admin');
+  if (auth instanceof NextResponse) return auth;
+  const { user } = auth;
 
   const supabase = getSupabaseAdmin();
   let inserted = 0;

@@ -1,20 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { hasMinRole, canAccessAdmin } from '@/lib/permissions';
-
-// ---------------------------------------------------------------------------
-// Helper – resolve current user from session email
-// ---------------------------------------------------------------------------
-async function getCurrentUser(email: string) {
-  const supabase = getSupabaseAdmin();
-  const { data } = await supabase
-    .from('lab_users')
-    .select('id, name, email, role')
-    .ilike('email', email)
-    .single();
-  return data;
-}
 
 // ---------------------------------------------------------------------------
 // GET /api/admin/lab-templates
@@ -28,15 +14,9 @@ async function getCurrentUser(email: string) {
 // ---------------------------------------------------------------------------
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const currentUser = await getCurrentUser(session.user.email);
-    if (!currentUser || !hasMinRole(currentUser.role, 'lead_instructor')) {
-      return NextResponse.json({ error: 'Lead instructor access required' }, { status: 403 });
-    }
+    const auth = await requireAuth('lead_instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
     const supabase = getSupabaseAdmin();
     const { searchParams } = new URL(request.url);
@@ -116,15 +96,9 @@ export async function GET(request: NextRequest) {
 // ---------------------------------------------------------------------------
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const currentUser = await getCurrentUser(session.user.email);
-    if (!currentUser || !canAccessAdmin(currentUser.role)) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
+    const auth = await requireAuth('admin');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
     const body = await request.json() as {
       program: string;
@@ -178,7 +152,7 @@ export async function POST(request: NextRequest) {
         anchor_type: body.anchor_type ?? null,
         requires_review: body.requires_review ?? false,
         review_notes: body.review_notes ?? null,
-        created_by: currentUser.email,
+        created_by: user.email,
         template_data: {},
         is_shared: true,
         updated_at: new Date().toISOString(),

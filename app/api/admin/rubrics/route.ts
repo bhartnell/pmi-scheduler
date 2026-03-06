@@ -1,20 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { canAccessAdmin } from '@/lib/permissions';
-
-// ---------------------------------------------------------------------------
-// Helper – resolve current user from session email
-// ---------------------------------------------------------------------------
-async function getCurrentUser(email: string) {
-  const supabase = getSupabaseAdmin();
-  const { data } = await supabase
-    .from('lab_users')
-    .select('id, name, email, role')
-    .ilike('email', email)
-    .single();
-  return data;
-}
 
 // ---------------------------------------------------------------------------
 // GET /api/admin/rubrics
@@ -24,15 +10,9 @@ async function getCurrentUser(email: string) {
 // ---------------------------------------------------------------------------
 export async function GET(_request: NextRequest) {
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const currentUser = await getCurrentUser(session.user.email);
-    if (!currentUser || !canAccessAdmin(currentUser.role)) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
+    const auth = await requireAuth('admin');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
     const supabase = getSupabaseAdmin();
 
@@ -87,15 +67,9 @@ export async function GET(_request: NextRequest) {
 // ---------------------------------------------------------------------------
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const currentUser = await getCurrentUser(session.user.email);
-    if (!currentUser || !canAccessAdmin(currentUser.role)) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
+    const auth = await requireAuth('admin');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
     const body = await request.json() as {
       name: string;
@@ -125,7 +99,7 @@ export async function POST(request: NextRequest) {
         name: name.trim(),
         description: description ?? null,
         rating_scale: rating_scale ?? 'numeric_5',
-        created_by: currentUser.email,
+        created_by: user.email,
         updated_at: new Date().toISOString(),
       })
       .select('id')
@@ -155,7 +129,7 @@ export async function POST(request: NextRequest) {
       const assignments = scenario_ids.map((sid) => ({
         rubric_id: rubric.id,
         scenario_id: sid,
-        assigned_by: currentUser.email,
+        assigned_by: user.email,
       }));
 
       const { error: assignError } = await supabase

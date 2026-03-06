@@ -1,27 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { canAccessAdmin } from '@/lib/permissions';
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireAuth('admin');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
     const supabase = getSupabaseAdmin();
-
-    // Verify admin role
-    const { data: currentUser } = await supabase
-      .from('lab_users')
-      .select('id, role')
-      .ilike('email', session.user.email)
-      .single();
-
-    if (!currentUser || !canAccessAdmin(currentUser.role)) {
-      return NextResponse.json({ success: false, error: 'Access denied' }, { status: 403 });
-    }
 
     const searchParams = request.nextUrl.searchParams;
     const period = searchParams.get('period') || 'week';

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { canAccessAdmin } from '@/lib/permissions';
 
 /**
  * PUT /api/admin/certifications/verify
@@ -9,27 +8,11 @@ import { canAccessAdmin } from '@/lib/permissions';
  * Body: { certification_id, verification_status, verification_notes? }
  */
 
-async function getCurrentUser(email: string) {
-  const supabase = getSupabaseAdmin();
-  const { data } = await supabase
-    .from('lab_users')
-    .select('id, name, email, role')
-    .ilike('email', email)
-    .single();
-  return data;
-}
-
 export async function PUT(request: NextRequest) {
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const currentUser = await getCurrentUser(session.user.email);
-    if (!currentUser || !canAccessAdmin(currentUser.role)) {
-      return NextResponse.json({ success: false, error: 'Admin access required' }, { status: 403 });
-    }
+    const auth = await requireAuth('admin');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
     const body = await request.json();
     const { certification_id, verification_status, verification_notes } = body;
@@ -66,7 +49,7 @@ export async function PUT(request: NextRequest) {
       .from('instructor_certifications')
       .update({
         verification_status,
-        verified_by: session.user.email,
+        verified_by: user.email,
         verified_at: new Date().toISOString(),
         verification_notes: verification_notes?.trim() || null,
         updated_at: new Date().toISOString(),
@@ -79,7 +62,7 @@ export async function PUT(request: NextRequest) {
       success: true,
       message: `Certification marked as ${verification_status}.`,
       verification_status,
-      verified_by: session.user.email,
+      verified_by: user.email,
     });
   } catch (error) {
     console.error('Error updating certification verification:', error);

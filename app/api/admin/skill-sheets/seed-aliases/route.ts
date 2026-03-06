@@ -1,8 +1,6 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { canAccessAdmin } from '@/lib/permissions';
 
 // ---------------------------------------------------------------------------
 // Common station skill name aliases → skill_sheet_assignments
@@ -600,22 +598,11 @@ const ALIASES: AliasMapping[] = [
 // POST /api/admin/skill-sheets/seed-aliases
 // ---------------------------------------------------------------------------
 export async function POST() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireAuth('admin');
+  if (auth instanceof NextResponse) return auth;
+  const { user } = auth;
 
-  // Check admin role
   const supabase = getSupabaseAdmin();
-  const { data: currentUser } = await supabase
-    .from('lab_users')
-    .select('id, role')
-    .ilike('email', session.user.email)
-    .single();
-
-  if (!currentUser || !canAccessAdmin(currentUser.role)) {
-    return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-  }
 
   let inserted = 0;
   let skipped = 0;

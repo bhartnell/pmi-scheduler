@@ -1,20 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
+import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { hasMinRole, canAccessAdmin } from '@/lib/permissions';
 
-// ---------------------------------------------------------------------------
-// Helper – resolve current user from session email
-// ---------------------------------------------------------------------------
-async function getCurrentUser(email: string) {
-  const supabase = getSupabaseAdmin();
-  const { data } = await supabase
-    .from('lab_users')
-    .select('id, name, email, role')
-    .ilike('email', email)
-    .single();
-  return data;
-}
 
 // ---------------------------------------------------------------------------
 // Helper – create a version snapshot of the current template state
@@ -92,15 +79,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const currentUser = await getCurrentUser(session.user.email);
-    if (!currentUser || !hasMinRole(currentUser.role, 'lead_instructor')) {
-      return NextResponse.json({ error: 'Lead instructor access required' }, { status: 403 });
-    }
+    const auth = await requireAuth('lead_instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
     const { id } = await params;
     const supabase = getSupabaseAdmin();
@@ -149,15 +130,9 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const currentUser = await getCurrentUser(session.user.email);
-    if (!currentUser || !canAccessAdmin(currentUser.role)) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
+    const auth = await requireAuth('admin');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
     const { id } = await params;
     const body = await request.json() as {
@@ -189,7 +164,7 @@ export async function PUT(
     }
 
     // Auto-create version snapshot before updates
-    await createVersionSnapshot(supabase, id, currentUser.email, 'Direct template edit');
+    await createVersionSnapshot(supabase, id, user.email, 'Direct template edit');
 
     // Build update object
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
@@ -267,15 +242,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const currentUser = await getCurrentUser(session.user.email);
-    if (!currentUser || !canAccessAdmin(currentUser.role)) {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
-    }
+    const auth = await requireAuth('admin');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
     const { id } = await params;
     const supabase = getSupabaseAdmin();

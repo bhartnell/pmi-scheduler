@@ -1,33 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { canAccessAdmin, isSuperadmin } from '@/lib/permissions';
+import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { logAuditEvent } from '@/lib/audit';
-
-// Helper to get current user with role
-async function getCurrentUser(email: string) {
-  const supabase = getSupabaseAdmin();
-  const { data } = await supabase
-    .from('lab_users')
-    .select('id, name, email, role')
-    .ilike('email', email)
-    .single();
-  return data;
-}
 
 export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseAdmin();
 
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const currentUser = await getCurrentUser(session.user.email);
-    if (!currentUser || !canAccessAdmin(currentUser.role)) {
-      return NextResponse.json({ success: false, error: 'Access denied' }, { status: 403 });
-    }
+    const auth = await requireAuth('admin');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
     const { data, error } = await supabase
       .from('deletion_requests')
@@ -63,15 +45,9 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = getSupabaseAdmin();
 
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const currentUser = await getCurrentUser(session.user.email);
-    if (!currentUser || !canAccessAdmin(currentUser.role)) {
-      return NextResponse.json({ success: false, error: 'Access denied' }, { status: 403 });
-    }
+    const auth = await requireAuth('admin');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
     const body = await request.json();
     const { item_type, item_id, item_name, reason } = body;
@@ -87,7 +63,7 @@ export async function POST(request: NextRequest) {
         item_id,
         item_name,
         reason: reason || '',
-        requested_by: currentUser.id,
+        requested_by: user.id,
         status: 'pending'
       })
       .select()
@@ -106,15 +82,9 @@ export async function PATCH(request: NextRequest) {
   try {
     const supabase = getSupabaseAdmin();
 
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const currentUser = await getCurrentUser(session.user.email);
-    if (!currentUser || !isSuperadmin(currentUser.role)) {
-      return NextResponse.json({ success: false, error: 'Only superadmin can approve or deny deletion requests' }, { status: 403 });
-    }
+    const auth = await requireAuth('superadmin');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
     const body = await request.json();
     const { requestId, action } = body;
@@ -140,7 +110,7 @@ export async function PATCH(request: NextRequest) {
       .from('deletion_requests')
       .update({
         status: newStatus,
-        reviewed_by: currentUser.id,
+        reviewed_by: user.id,
         reviewed_at: new Date().toISOString()
       })
       .eq('id', requestId);
@@ -174,7 +144,7 @@ export async function PATCH(request: NextRequest) {
 
     // Audit log the deletion request action
     logAuditEvent({
-      user: { id: currentUser.id, email: currentUser.email, role: currentUser.role },
+      user: { id: user.id, email: user.email, role: user.role },
       action: action === 'approve' ? 'delete' : 'update',
       resourceType: 'user',
       resourceId: deletionRequest.item_id,
