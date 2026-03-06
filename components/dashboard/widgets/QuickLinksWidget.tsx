@@ -41,9 +41,9 @@ export const QUICK_LINK_DEFINITIONS: Record<string, {
     color: 'bg-green-500',
   },
   schedule: {
-    href: '/lab-management/schedule',
+    href: '/calendar',
     icon: Calendar,
-    label: 'Schedule',
+    label: 'Calendar',
     color: 'bg-blue-500',
   },
   emt_tracker: {

@@ -82,7 +82,7 @@ export default function OverviewStatsWidget() {
       value: stats.labsThisWeek,
       icon: Calendar,
       color: 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400',
-      href: '/lab-management/schedule',
+      href: '/calendar',
     },
     {
       label: 'Open Feedback',
