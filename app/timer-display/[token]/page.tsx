@@ -2,7 +2,7 @@
 
 import { useParams } from 'next/navigation';
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { Maximize2, Minimize2, Volume2, VolumeX, Smartphone, Lock, Unlock, Play, Pause, Square, SkipForward, Plus, Minus, RotateCcw, Settings } from 'lucide-react';
+import { Maximize2, Minimize2, Volume2, VolumeX, Smartphone } from 'lucide-react';
 import { useVisibilityPolling } from '@/hooks/useVisibilityPolling';
 import { useTimerAudio, loadTimerAudioSettings, TimerAudioSettings, TIMER_AUDIO_STORAGE_KEY } from '@/hooks/useTimerAudio';
 import { formatTime } from '@/lib/utils';
@@ -56,13 +56,6 @@ export default function TimerDisplayPage() {
   const [isLandscape, setIsLandscape] = useState(false);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
-  const [isUnlocked, setIsUnlocked] = useState(false);
-  const [showPinDialog, setShowPinDialog] = useState(false);
-  const [pinInput, setPinInput] = useState('');
-  const [pinError, setPinError] = useState(false);
-  const [showControlPanel, setShowControlPanel] = useState(false);
-  const [controlActionLoading, setControlActionLoading] = useState(false);
-  const [adjustmentFlash, setAdjustmentFlash] = useState<string | null>(null);
 
   const lastFetchRef = useRef<number>(0);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
@@ -71,7 +64,6 @@ export default function TimerDisplayPage() {
   const touchStartXRef = useRef(0);
   const doubleTapTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastTapRef = useRef(0);
-  const controlPanelHideRef = useRef<NodeJS.Timeout | null>(null);
 
   // Track which rotation's warnings have fired (once per rotation cycle)
   const hasPlayedRotationAlertRef = useRef<number | null>(null);
@@ -267,114 +259,6 @@ export default function TimerDisplayPage() {
       document.removeEventListener('touchend', handleTouchEnd);
     };
   }, [handleTouchStart, handleTouchEnd]);
-
-  // ─── PIN Unlock & Control Panel ──────────────────────────────────────────────
-  const DEFAULT_PIN = '1234';
-
-  const handlePinSubmit = useCallback(() => {
-    if (pinInput === DEFAULT_PIN) {
-      setIsUnlocked(true);
-      setShowPinDialog(false);
-      setPinInput('');
-      setPinError(false);
-    } else {
-      setPinError(true);
-      setPinInput('');
-    }
-  }, [pinInput]);
-
-  const handleLockToggle = useCallback(() => {
-    if (isUnlocked) {
-      setIsUnlocked(false);
-      setShowControlPanel(false);
-      if (controlPanelHideRef.current) clearTimeout(controlPanelHideRef.current);
-    } else {
-      setShowPinDialog(true);
-      setPinInput('');
-      setPinError(false);
-    }
-  }, [isUnlocked]);
-
-  const resetControlPanelHideTimer = useCallback(() => {
-    if (controlPanelHideRef.current) clearTimeout(controlPanelHideRef.current);
-    controlPanelHideRef.current = setTimeout(() => {
-      setShowControlPanel(false);
-    }, 10000);
-  }, []);
-
-  const toggleControlPanel = useCallback(() => {
-    if (!isUnlocked) return;
-    setShowControlPanel(prev => {
-      if (!prev) {
-        if (controlPanelHideRef.current) clearTimeout(controlPanelHideRef.current);
-        controlPanelHideRef.current = setTimeout(() => {
-          setShowControlPanel(false);
-        }, 10000);
-      } else {
-        if (controlPanelHideRef.current) clearTimeout(controlPanelHideRef.current);
-      }
-      return !prev;
-    });
-  }, [isUnlocked]);
-
-  useEffect(() => {
-    return () => {
-      if (controlPanelHideRef.current) clearTimeout(controlPanelHideRef.current);
-    };
-  }, []);
-
-  // Timer control actions (using the lab_day_id from the timer state)
-  const sendTimerAction = useCallback(async (action: string) => {
-    if (!timer?.lab_day_id) return;
-    setControlActionLoading(true);
-    resetControlPanelHideTimer();
-    try {
-      const res = await fetch('/api/lab-management/timer', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ labDayId: timer.lab_day_id, action })
-      });
-      const data = await res.json();
-      if (data.success) {
-        setTimer(data.timer);
-      }
-    } catch (err) {
-      console.error('Error sending timer action:', err);
-    } finally {
-      setControlActionLoading(false);
-    }
-  }, [timer?.lab_day_id, resetControlPanelHideTimer]);
-
-  const handleTimeAdjust = useCallback(async (action: 'add_time' | 'subtract_time') => {
-    if (!timer?.lab_day_id) return;
-    setControlActionLoading(true);
-    resetControlPanelHideTimer();
-    try {
-      const res = await fetch('/api/lab-management/timer/adjust', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lab_day_id: timer.lab_day_id, action, seconds: 60 })
-      });
-      const data = await res.json();
-      if (data.success) {
-        setTimer(data.timer);
-        const flashText = action === 'add_time' ? '+1:00' : '-1:00';
-        setAdjustmentFlash(flashText);
-        setTimeout(() => setAdjustmentFlash(null), 2000);
-      }
-    } catch (err) {
-      console.error('Error adjusting timer:', err);
-    } finally {
-      setControlActionLoading(false);
-    }
-  }, [timer?.lab_day_id, resetControlPanelHideTimer]);
-
-  const handleStopWithConfirm = useCallback(() => {
-    resetControlPanelHideTimer();
-    if (window.confirm('Stop the timer? This will halt the current rotation.')) {
-      sendTimerAction('stop');
-    }
-  }, [sendTimerAction, resetControlPanelHideTimer]);
 
   // ─── Timer Polling ───────────────────────────────────────────────────────────
   const fetchTimerStatus = useCallback(async () => {
@@ -802,187 +686,6 @@ export default function TimerDisplayPage() {
         )}
       </div>
 
-      {/* Adjustment Flash Overlay */}
-      {adjustmentFlash && (
-        <div className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none">
-          <div
-            className={`text-7xl md:text-9xl font-black animate-fade-out ${
-              adjustmentFlash.startsWith('+') ? 'text-green-400' : 'text-red-400'
-            }`}
-            style={{ textShadow: '0 0 40px rgba(0,0,0,0.8)' }}
-          >
-            {adjustmentFlash}
-          </div>
-        </div>
-      )}
-
-      {/* PIN Dialog */}
-      {showPinDialog && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-40">
-          <div className="bg-gray-800 rounded-2xl p-6 max-w-xs mx-4 shadow-2xl border border-white/10">
-            <h3 className="text-xl font-bold text-white mb-4 text-center">Enter PIN</h3>
-            <p className="text-gray-400 text-sm text-center mb-4">
-              Enter the 4-digit PIN to unlock timer controls.
-            </p>
-            <input
-              type="password"
-              maxLength={4}
-              inputMode="numeric"
-              pattern="[0-9]*"
-              value={pinInput}
-              onChange={(e) => {
-                const val = e.target.value.replace(/\D/g, '').slice(0, 4);
-                setPinInput(val);
-                setPinError(false);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && pinInput.length === 4) {
-                  handlePinSubmit();
-                }
-              }}
-              className={`w-full text-center text-3xl font-mono tracking-[0.5em] px-4 py-3 rounded-lg bg-gray-700 text-white border-2 ${
-                pinError ? 'border-red-500' : 'border-gray-600 focus:border-blue-500'
-              } outline-none`}
-              autoFocus
-              placeholder="----"
-            />
-            {pinError && (
-              <p className="text-red-400 text-sm text-center mt-2">Incorrect PIN</p>
-            )}
-            <div className="flex gap-3 mt-4">
-              <button
-                onClick={handlePinSubmit}
-                disabled={pinInput.length !== 4}
-                className="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg font-medium text-white transition-colors touch-manipulation min-h-[48px]"
-              >
-                Unlock
-              </button>
-              <button
-                onClick={() => {
-                  setShowPinDialog(false);
-                  setPinInput('');
-                  setPinError(false);
-                }}
-                className="flex-1 px-4 py-3 bg-gray-600 hover:bg-gray-500 rounded-lg font-medium text-white transition-colors touch-manipulation min-h-[48px]"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Lock/Unlock icon - bottom left corner */}
-      <button
-        onClick={handleLockToggle}
-        className={`absolute bottom-4 left-4 z-20 flex items-center justify-center min-w-[44px] min-h-[44px] p-2.5 rounded-full transition-all touch-manipulation ${
-          isUnlocked
-            ? 'bg-green-600/50 text-green-300 hover:bg-green-600/70'
-            : 'bg-white/5 text-white/20 hover:bg-white/10 hover:text-white/40'
-        }`}
-        style={{ bottom: showInstallBanner ? 'calc(56px + max(16px, env(safe-area-inset-bottom)))' : 'max(16px, env(safe-area-inset-bottom))' }}
-        title={isUnlocked ? 'Lock controls' : 'Unlock controls'}
-      >
-        {isUnlocked ? <Unlock className="w-5 h-5" /> : <Lock className="w-5 h-5" />}
-      </button>
-
-      {/* Timer Control Panel Toggle (gear icon) - only when unlocked */}
-      {isUnlocked && (
-        <button
-          onClick={toggleControlPanel}
-          className={`absolute bottom-4 right-4 z-20 flex items-center justify-center min-w-[48px] min-h-[48px] p-3 rounded-full transition-all touch-manipulation ${
-            showControlPanel
-              ? 'bg-white/30 text-white rotate-90'
-              : 'bg-white/10 hover:bg-white/20 text-white/50 hover:text-white'
-          }`}
-          style={{ bottom: showInstallBanner ? 'calc(56px + max(16px, env(safe-area-inset-bottom)))' : 'max(16px, env(safe-area-inset-bottom))' }}
-          title="Timer controls"
-        >
-          <Settings className="w-6 h-6" />
-        </button>
-      )}
-
-      {/* Collapsible Control Panel - only when unlocked */}
-      {isUnlocked && showControlPanel && (
-        <div
-          className="absolute bottom-20 left-4 right-4 z-20 flex justify-center"
-          style={{ bottom: showInstallBanner ? 'calc(80px + max(16px, env(safe-area-inset-bottom)))' : 'max(80px, calc(64px + env(safe-area-inset-bottom)))' }}
-          onPointerDown={resetControlPanelHideTimer}
-        >
-          <div className="bg-black/80 backdrop-blur-sm rounded-2xl px-6 py-4 flex items-center gap-3 flex-wrap justify-center shadow-2xl border border-white/10">
-            {/* Play/Pause */}
-            <button
-              onClick={() => sendTimerAction(timer.status === 'running' ? 'pause' : 'start')}
-              disabled={controlActionLoading}
-              className={`flex items-center justify-center min-w-[56px] min-h-[56px] p-3 rounded-xl transition-colors touch-manipulation disabled:opacity-50 ${
-                timer.status === 'running'
-                  ? 'bg-yellow-500 hover:bg-yellow-400 text-black'
-                  : 'bg-green-500 hover:bg-green-400 text-black'
-              }`}
-              title={timer.status === 'running' ? 'Pause' : 'Play'}
-            >
-              {timer.status === 'running' ? <Pause className="w-7 h-7" /> : <Play className="w-7 h-7 ml-0.5" />}
-            </button>
-
-            {/* Stop */}
-            <button
-              onClick={handleStopWithConfirm}
-              disabled={controlActionLoading}
-              className="flex items-center justify-center min-w-[56px] min-h-[56px] p-3 rounded-xl bg-red-600 hover:bg-red-500 text-white transition-colors touch-manipulation disabled:opacity-50"
-              title="Stop"
-            >
-              <Square className="w-7 h-7" />
-            </button>
-
-            {/* Next Rotation */}
-            <button
-              onClick={() => sendTimerAction('next')}
-              disabled={controlActionLoading}
-              className="flex items-center justify-center min-w-[56px] min-h-[56px] p-3 rounded-xl bg-blue-500 hover:bg-blue-400 text-white transition-colors touch-manipulation disabled:opacity-50"
-              title="Next Rotation"
-            >
-              <SkipForward className="w-7 h-7" />
-            </button>
-
-            {/* Separator */}
-            <div className="w-px h-10 bg-white/20 mx-1" />
-
-            {/* -1 min */}
-            <button
-              onClick={() => handleTimeAdjust('subtract_time')}
-              disabled={controlActionLoading}
-              className="flex items-center justify-center min-w-[56px] min-h-[56px] p-3 rounded-xl bg-gray-700 hover:bg-gray-600 text-white transition-colors touch-manipulation disabled:opacity-50"
-              title="-1 minute"
-            >
-              <Minus className="w-6 h-6" />
-            </button>
-
-            {/* +1 min */}
-            <button
-              onClick={() => handleTimeAdjust('add_time')}
-              disabled={controlActionLoading}
-              className="flex items-center justify-center min-w-[56px] min-h-[56px] p-3 rounded-xl bg-gray-700 hover:bg-gray-600 text-white transition-colors touch-manipulation disabled:opacity-50"
-              title="+1 minute"
-            >
-              <Plus className="w-6 h-6" />
-            </button>
-
-            {/* Separator */}
-            <div className="w-px h-10 bg-white/20 mx-1" />
-
-            {/* Reset current rotation */}
-            <button
-              onClick={() => sendTimerAction('reset')}
-              disabled={controlActionLoading}
-              className="flex items-center justify-center min-w-[56px] min-h-[56px] p-3 rounded-xl bg-gray-700 hover:bg-gray-600 text-white transition-colors touch-manipulation disabled:opacity-50"
-              title="Reset current rotation"
-            >
-              <RotateCcw className="w-6 h-6" />
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* ── Swipe gesture hint (mobile only, portrait) ── */}
       {!isLandscape && (
         <div className="absolute bottom-10 left-0 right-0 flex justify-center sm:hidden">
@@ -1019,7 +722,7 @@ export default function TimerDisplayPage() {
       {/* ── Install Banner ── */}
       <InstallBanner />
 
-      {/* CSS for ROTATE animation and adjustment flash fade */}
+      {/* CSS for ROTATE animation */}
       <style jsx>{`
         @keyframes pulse-bg {
           0%, 100% { background-color: rgb(220, 38, 38); }
@@ -1027,14 +730,6 @@ export default function TimerDisplayPage() {
         }
         .animate-pulse {
           animation: pulse-bg 1s ease-in-out infinite;
-        }
-        @keyframes fade-out {
-          0% { opacity: 1; transform: scale(1); }
-          70% { opacity: 0.8; transform: scale(1.1); }
-          100% { opacity: 0; transform: scale(1.2); }
-        }
-        .animate-fade-out {
-          animation: fade-out 2s ease-out forwards;
         }
       `}</style>
     </div>

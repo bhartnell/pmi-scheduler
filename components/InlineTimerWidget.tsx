@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Timer, Pause, Play, ExternalLink } from 'lucide-react';
+import { Timer, Pause, Play, ExternalLink, Minus, Plus, SkipForward } from 'lucide-react';
 import { useVisibilityPolling } from '@/hooks/useVisibilityPolling';
 
 interface TimerState {
@@ -29,6 +29,7 @@ export default function InlineTimerWidget({ labDayId, onOpenFullTimer, paused = 
   const [displaySeconds, setDisplaySeconds] = useState(0);
   const [serverTimeOffset, setServerTimeOffset] = useState(0);
   const [actionLoading, setActionLoading] = useState(false);
+  const [adjustFlash, setAdjustFlash] = useState<string | null>(null);
   const versionRef = useRef<number>(0);
 
   // Fetch timer state for this lab day with version tracking
@@ -149,6 +150,30 @@ export default function InlineTimerWidget({ labDayId, onOpenFullTimer, paused = 
     }
   }, [labDayId]);
 
+  // Time adjustment (±N seconds)
+  const handleTimeAdjust = useCallback(async (action: 'add_time' | 'subtract_time', seconds: number = 60) => {
+    setActionLoading(true);
+    try {
+      const res = await fetch('/api/lab-management/timer/adjust', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lab_day_id: labDayId, action, seconds })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTimerState(data.timer);
+        const mins = Math.floor(seconds / 60);
+        const flashText = action === 'add_time' ? `+${mins}m` : `-${mins}m`;
+        setAdjustFlash(flashText);
+        setTimeout(() => setAdjustFlash(null), 1500);
+      }
+    } catch (error) {
+      console.error('Error adjusting timer:', error);
+    } finally {
+      setActionLoading(false);
+    }
+  }, [labDayId]);
+
   // Don't show widget if no timer exists or it's stopped
   if (!timerState || timerState.status === 'stopped') {
     return null;
@@ -177,18 +202,25 @@ export default function InlineTimerWidget({ labDayId, onOpenFullTimer, paused = 
   };
 
   return (
-    <div className={`flex items-center gap-3 px-4 py-2.5 rounded-lg border ${getBgColor()} print:hidden`}>
+    <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${getBgColor()} print:hidden relative`}>
       <Timer className={`w-4 h-4 flex-shrink-0 ${getTimeColor()}`} />
 
       {/* Rotation info */}
       <span className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">
-        Rotation {timerState.rotation_number}
+        R{timerState.rotation_number}
       </span>
 
       {/* Time display */}
       <span className={`text-lg font-mono font-bold tabular-nums ${getTimeColor()}`}>
         {isTimeUp ? 'TIME UP' : formatTime(displaySeconds)}
       </span>
+
+      {/* Adjustment flash */}
+      {adjustFlash && (
+        <span className={`text-xs font-bold ${adjustFlash.startsWith('+') ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'} animate-pulse`}>
+          {adjustFlash}
+        </span>
+      )}
 
       {/* Status badge */}
       {isPaused && (
@@ -202,7 +234,10 @@ export default function InlineTimerWidget({ labDayId, onOpenFullTimer, paused = 
         </span>
       )}
 
-      {/* Pause/Resume button */}
+      {/* Divider */}
+      <div className="w-px h-5 bg-gray-300 dark:bg-gray-600" />
+
+      {/* Play/Pause */}
       <button
         onClick={() => sendAction(isRunning ? 'pause' : 'start')}
         disabled={actionLoading}
@@ -216,10 +251,40 @@ export default function InlineTimerWidget({ labDayId, onOpenFullTimer, paused = 
         {isRunning ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
       </button>
 
+      {/* -1 min */}
+      <button
+        onClick={() => handleTimeAdjust('subtract_time')}
+        disabled={actionLoading}
+        className="p-1.5 rounded-md bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition-colors disabled:opacity-50"
+        title="-1 minute"
+      >
+        <Minus className="w-3.5 h-3.5" />
+      </button>
+
+      {/* +1 min */}
+      <button
+        onClick={() => handleTimeAdjust('add_time')}
+        disabled={actionLoading}
+        className="p-1.5 rounded-md bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 transition-colors disabled:opacity-50"
+        title="+1 minute"
+      >
+        <Plus className="w-3.5 h-3.5" />
+      </button>
+
+      {/* Next Rotation */}
+      <button
+        onClick={() => sendAction('next')}
+        disabled={actionLoading}
+        className="p-1.5 rounded-md bg-blue-500 hover:bg-blue-600 text-white transition-colors disabled:opacity-50"
+        title="Next rotation"
+      >
+        <SkipForward className="w-3.5 h-3.5" />
+      </button>
+
       {/* Open full timer button */}
       <button
         onClick={onOpenFullTimer}
-        className="p-1.5 rounded-md bg-gray-600 hover:bg-gray-700 text-white transition-colors"
+        className="p-1.5 rounded-md bg-gray-500 hover:bg-gray-600 text-white transition-colors"
         title="Open full timer"
       >
         <ExternalLink className="w-3.5 h-3.5" />

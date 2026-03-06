@@ -23,7 +23,9 @@ import {
   AlertTriangle,
   Monitor,
   Link2,
-  ExternalLink
+  ExternalLink,
+  Plus,
+  Minus
 } from 'lucide-react';
 import { useVisibilityPolling } from '@/hooks/useVisibilityPolling';
 import { useTimerAudio, loadTimerAudioSettings, TimerAudioSettings, TIMER_AUDIO_STORAGE_KEY } from '@/hooks/useTimerAudio';
@@ -98,6 +100,9 @@ export default function LabTimer({
   const [linkCopied, setLinkCopied] = useState(false);
   const [showConflictDialog, setShowConflictDialog] = useState(false);
   const [conflictTimerTitle, setConflictTimerTitle] = useState<string>('');
+  const [adjustmentFlash, setAdjustmentFlash] = useState<string | null>(null);
+  const [adjustLoading, setAdjustLoading] = useState(false);
+  const [durationChangeMsg, setDurationChangeMsg] = useState<string | null>(null);
 
   const ROTATE_ALERT_TIMEOUT = 30000; // 30 seconds auto-dismiss
 
@@ -300,6 +305,55 @@ export default function LabTimer({
       console.error('Error sending action:', error);
     }
   }, [labDayId]);
+
+  // Quick time adjustment (±N seconds for current rotation)
+  const handleTimeAdjust = useCallback(async (action: 'add_time' | 'subtract_time', seconds: number = 60) => {
+    setAdjustLoading(true);
+    try {
+      const res = await fetch('/api/lab-management/timer/adjust', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lab_day_id: labDayId, action, seconds })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTimerState(data.timer);
+        const mins = Math.floor(seconds / 60);
+        const flashText = action === 'add_time' ? `+${mins}:00` : `-${mins}:00`;
+        setAdjustmentFlash(flashText);
+        setTimeout(() => setAdjustmentFlash(null), 2000);
+      }
+    } catch (error) {
+      console.error('Error adjusting timer:', error);
+    } finally {
+      setAdjustLoading(false);
+    }
+  }, [labDayId]);
+
+  // Set rotation duration (for current + remaining rotations)
+  const handleSetDuration = useCallback(async (newDurationSeconds: number) => {
+    if (newDurationSeconds < 60) return; // minimum 1 minute
+    setAdjustLoading(true);
+    try {
+      const res = await fetch('/api/lab-management/timer/adjust', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lab_day_id: labDayId, action: 'set_duration', new_duration: newDurationSeconds })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTimerState(data.timer);
+        const newMins = Math.floor(newDurationSeconds / 60);
+        const remaining = numRotations - (data.timer?.rotation_number || 1);
+        setDurationChangeMsg(`Rotation length changed to ${newMins} min. ${remaining > 0 ? `${remaining} remaining rotation${remaining > 1 ? 's' : ''} will use the new length.` : ''}`);
+        setTimeout(() => setDurationChangeMsg(null), 4000);
+      }
+    } catch (error) {
+      console.error('Error setting duration:', error);
+    } finally {
+      setAdjustLoading(false);
+    }
+  }, [labDayId, numRotations]);
 
   // Initialize on mount
   useEffect(() => {
@@ -592,12 +646,16 @@ export default function LabTimer({
         handleNextRotation();
       } else if (e.key === 'r' || e.key === 'R') {
         handleReset();
+      } else if (e.key === '+' || e.key === '=') {
+        handleTimeAdjust('add_time');
+      } else if (e.key === '-' || e.key === '_') {
+        handleTimeAdjust('subtract_time');
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isFullscreen, timerState, numRotations, isController, handleClose, handlePlayPause, handleNextRotation, handleReset, showRotateAlert, acknowledgeRotation]);
+  }, [isFullscreen, timerState, numRotations, isController, handleClose, handlePlayPause, handleNextRotation, handleReset, handleTimeAdjust, showRotateAlert, acknowledgeRotation]);
 
   // Get background color based on time/alerts
   const getBackgroundClass = () => {
@@ -929,6 +987,110 @@ export default function LabTimer({
           </div>
         </div>
 
+        {/* Adjustment Controls - Only show for controller when timer is active */}
+        {isController && timerState && !isStopped && (
+          <div className="mt-8 w-full max-w-lg space-y-4">
+            {/* Quick Adjust Current Rotation */}
+            <div className="bg-gray-800/80 rounded-xl p-4">
+              <label className="block text-sm font-medium text-gray-400 uppercase tracking-wide mb-3">
+                Adjust Current Rotation
+              </label>
+              <div className="flex items-center justify-center gap-2">
+                <button
+                  onClick={() => handleTimeAdjust('subtract_time', 300)}
+                  disabled={adjustLoading}
+                  className="px-3 py-2 rounded-lg bg-red-700/50 hover:bg-red-700 text-red-300 font-bold text-sm transition-colors disabled:opacity-40"
+                  title="-5 minutes"
+                >
+                  -5
+                </button>
+                <button
+                  onClick={() => handleTimeAdjust('subtract_time', 60)}
+                  disabled={adjustLoading}
+                  className="px-3 py-2 rounded-lg bg-red-700/30 hover:bg-red-700/60 text-red-300 font-bold text-sm transition-colors disabled:opacity-40"
+                  title="-1 minute"
+                >
+                  -1
+                </button>
+                <div className="px-4 py-2 rounded-lg bg-gray-700 min-w-[80px] text-center">
+                  <span className="text-lg font-mono font-bold tabular-nums">
+                    {formatTime(displaySeconds)}
+                  </span>
+                </div>
+                <button
+                  onClick={() => handleTimeAdjust('add_time', 60)}
+                  disabled={adjustLoading}
+                  className="px-3 py-2 rounded-lg bg-green-700/30 hover:bg-green-700/60 text-green-300 font-bold text-sm transition-colors disabled:opacity-40"
+                  title="+1 minute"
+                >
+                  +1
+                </button>
+                <button
+                  onClick={() => handleTimeAdjust('add_time', 300)}
+                  disabled={adjustLoading}
+                  className="px-3 py-2 rounded-lg bg-green-700/50 hover:bg-green-700 text-green-300 font-bold text-sm transition-colors disabled:opacity-40"
+                  title="+5 minutes"
+                >
+                  +5
+                </button>
+              </div>
+            </div>
+
+            {/* Rotation Duration */}
+            <div className="bg-gray-800/80 rounded-xl p-4">
+              <label className="block text-sm font-medium text-gray-400 uppercase tracking-wide mb-1">
+                Rotation Length
+              </label>
+              <p className="text-xs text-gray-500 mb-3">Applies to current + remaining rotations</p>
+              <div className="flex items-center justify-center gap-2">
+                <button
+                  onClick={() => handleSetDuration(Math.max(60, (timerState.duration_seconds || 0) - 300))}
+                  disabled={adjustLoading || (timerState.duration_seconds || 0) <= 60}
+                  className="px-3 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-300 font-bold text-sm transition-colors disabled:opacity-40"
+                  title="-5 minutes"
+                >
+                  -5
+                </button>
+                <button
+                  onClick={() => handleSetDuration(Math.max(60, (timerState.duration_seconds || 0) - 60))}
+                  disabled={adjustLoading || (timerState.duration_seconds || 0) <= 60}
+                  className="px-3 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-300 font-bold text-sm transition-colors disabled:opacity-40"
+                  title="-1 minute"
+                >
+                  -1
+                </button>
+                <div className="px-4 py-2 rounded-lg bg-gray-700 min-w-[100px] text-center">
+                  <span className="text-lg font-bold">
+                    {Math.floor((timerState.duration_seconds || 0) / 60)} min
+                  </span>
+                </div>
+                <button
+                  onClick={() => handleSetDuration((timerState.duration_seconds || 0) + 60)}
+                  disabled={adjustLoading}
+                  className="px-3 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-300 font-bold text-sm transition-colors disabled:opacity-40"
+                  title="+1 minute"
+                >
+                  +1
+                </button>
+                <button
+                  onClick={() => handleSetDuration((timerState.duration_seconds || 0) + 300)}
+                  disabled={adjustLoading}
+                  className="px-3 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-300 font-bold text-sm transition-colors disabled:opacity-40"
+                  title="+5 minutes"
+                >
+                  +5
+                </button>
+              </div>
+              {/* Duration change confirmation */}
+              {durationChangeMsg && (
+                <div className="mt-3 text-sm text-green-400 text-center animate-pulse">
+                  ✓ {durationChangeMsg}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Settings - Only show for controller (inside scrollable area) */}
         {isController && (
           <div className="mt-8">
@@ -988,7 +1150,7 @@ export default function LabTimer({
                 {/* Info */}
                 <div className="text-xs opacity-60 pt-2 border-t border-gray-700">
                   <p><strong>Shortcuts:</strong></p>
-                  <p>Space = Play/Pause | N = Next | R = Reset | Esc = Close</p>
+                  <p>Space = Play/Pause | N = Next | R = Reset | +/- = ±1 min | Esc = Close</p>
                 </div>
               </div>
             )}
@@ -1088,6 +1250,23 @@ export default function LabTimer({
         </div>
       )}
 
+      {/* Adjustment Flash Overlay */}
+      {adjustmentFlash && (
+        <div className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none">
+          <div
+            className={`text-7xl md:text-9xl font-black ${
+              adjustmentFlash.startsWith('+') ? 'text-green-400' : 'text-red-400'
+            }`}
+            style={{
+              textShadow: '0 0 40px rgba(0,0,0,0.8)',
+              animation: 'fade-out 2s ease-out forwards',
+            }}
+          >
+            {adjustmentFlash}
+          </div>
+        </div>
+      )}
+
       {/* Controls Bar - Always visible at bottom for controller */}
       {isController && (
         <div className="flex items-center justify-center gap-4 p-4 bg-gray-800 border-t border-gray-700">
@@ -1155,6 +1334,15 @@ export default function LabTimer({
         {rotationMinutes} minute rotations | {numRotations} total rotations
         {timerState?.debrief_seconds ? ` | Debrief alert at ${Math.floor(timerState.debrief_seconds / 60)} min remaining` : ''}
       </div>
+
+      {/* CSS for adjustment flash */}
+      <style jsx>{`
+        @keyframes fade-out {
+          0% { opacity: 1; transform: scale(1); }
+          70% { opacity: 0.8; transform: scale(1.1); }
+          100% { opacity: 0; transform: scale(1.2); }
+        }
+      `}</style>
     </div>
   );
 }
