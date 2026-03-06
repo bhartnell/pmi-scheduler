@@ -11,6 +11,7 @@ import {
   FileText,
   Filter,
   Loader2,
+  GraduationCap,
 } from 'lucide-react';
 import { hasMinRole } from '@/lib/permissions';
 import { PageLoader } from '@/components/ui';
@@ -195,20 +196,62 @@ export default function SkillSheetsBrowsePage() {
           </p>
         </div>
 
-        {/* Count badges */}
-        <div className="flex flex-wrap gap-3 mb-6">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300">
-            {counts.paramedic} Paramedic
-          </span>
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
-            {counts.aemt} AEMT
-          </span>
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
-            {counts.emt} EMT
-          </span>
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
-            {counts.total} Total
-          </span>
+        {/* Program Level Segmented Control */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm mb-6">
+          <div className="p-4">
+            <div className="flex items-center gap-2 mb-3 text-sm text-gray-500 dark:text-gray-400">
+              <GraduationCap className="w-4 h-4" />
+              <span className="font-medium">Program Level</span>
+            </div>
+            <div className="inline-flex rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-100 dark:bg-gray-700/50 p-1 w-full sm:w-auto">
+              {PROGRAM_OPTIONS.map((opt) => {
+                const isActive = program === opt.value;
+                const count =
+                  opt.value === ''
+                    ? counts.total
+                    : opt.value === 'emt'
+                      ? counts.emt
+                      : opt.value === 'aemt'
+                        ? counts.aemt
+                        : counts.paramedic;
+
+                // Color styling per program when active
+                let activeClasses = 'bg-white dark:bg-gray-600 text-gray-900 dark:text-white shadow-sm';
+                if (isActive && opt.value === 'emt') {
+                  activeClasses = 'bg-blue-600 text-white shadow-sm shadow-blue-600/25';
+                } else if (isActive && opt.value === 'aemt') {
+                  activeClasses = 'bg-green-600 text-white shadow-sm shadow-green-600/25';
+                } else if (isActive && opt.value === 'paramedic') {
+                  activeClasses = 'bg-purple-600 text-white shadow-sm shadow-purple-600/25';
+                }
+
+                return (
+                  <button
+                    key={opt.value}
+                    onClick={() => setProgram(opt.value)}
+                    className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                      isActive
+                        ? activeClasses
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-600/50'
+                    }`}
+                  >
+                    <span>{opt.label}</span>
+                    <span
+                      className={`inline-flex items-center justify-center min-w-[1.5rem] px-1.5 py-0.5 rounded-full text-xs font-semibold ${
+                        isActive
+                          ? opt.value === ''
+                            ? 'bg-gray-200 dark:bg-gray-500 text-gray-700 dark:text-gray-200'
+                            : 'bg-white/25 text-white'
+                          : 'bg-gray-200 dark:bg-gray-600 text-gray-500 dark:text-gray-400'
+                      }`}
+                    >
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
 
         {/* Filter bar */}
@@ -218,20 +261,7 @@ export default function SkillSheetsBrowsePage() {
               <Filter className="w-4 h-4" />
               <span className="font-medium">Filters</span>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              {/* Program filter */}
-              <select
-                value={program}
-                onChange={(e) => setProgram(e.target.value)}
-                className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                {PROGRAM_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {/* Source filter */}
               <select
                 value={source}
