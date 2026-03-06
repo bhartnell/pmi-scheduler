@@ -120,6 +120,40 @@ export async function POST(request: NextRequest) {
       instructor: Array.isArray(newRole.instructor) ? newRole.instructor[0] : newRole.instructor
     };
 
+    // Fire-and-forget: sync Google Calendar event for role assignment
+    try {
+      const instructorData = processedRole.instructor;
+      if (instructorData?.email) {
+        const { syncLabDayRole } = await import('@/lib/google-calendar');
+        // Look up lab day details
+        const { data: labDay } = await supabase
+          .from('lab_days')
+          .select('id, title, date, start_time, end_time, location_id')
+          .eq('id', lab_day_id)
+          .single();
+
+        if (labDay) {
+          const roleNames: Record<string, string> = {
+            lab_lead: 'Lab Lead',
+            roamer: 'Roamer',
+            observer: 'Observer',
+          };
+          syncLabDayRole({
+            userEmail: instructorData.email,
+            roleId: processedRole.id,
+            roleName: roleNames[role] || role,
+            labDayId: labDay.id,
+            labDayTitle: labDay.title || 'Lab Day',
+            labDayDate: labDay.date,
+            startTime: labDay.start_time || undefined,
+            endTime: labDay.end_time || undefined,
+          }).catch(() => {}); // Fire-and-forget
+        }
+      }
+    } catch {
+      // Calendar sync is best-effort
+    }
+
     return NextResponse.json({ success: true, role: processedRole });
   } catch (error) {
     console.error('Error adding role:', error);
@@ -145,6 +179,13 @@ export async function DELETE(request: NextRequest) {
     const supabase = getSupabaseAdmin();
 
     if (roleId) {
+      // Query role record before deleting (need instructor email for calendar cleanup)
+      const { data: roleRecord } = await supabase
+        .from('lab_day_roles')
+        .select('id, instructor:instructor_id(email)')
+        .eq('id', roleId)
+        .single();
+
       // Delete a single role by ID
       const { error } = await supabase
         .from('lab_day_roles')
@@ -152,7 +193,26 @@ export async function DELETE(request: NextRequest) {
         .eq('id', roleId);
 
       if (error) throw error;
+
+      // Fire-and-forget: remove Google Calendar event
+      if (roleRecord) {
+        try {
+          const { removeLabDayRole } = await import('@/lib/google-calendar');
+          const instructor = Array.isArray(roleRecord.instructor) ? roleRecord.instructor[0] : roleRecord.instructor;
+          if (instructor?.email) {
+            removeLabDayRole({ userEmail: instructor.email, roleId }).catch(() => {});
+          }
+        } catch {
+          // Calendar sync is best-effort
+        }
+      }
     } else if (labDayId) {
+      // Query all roles before deleting (need instructor emails for calendar cleanup)
+      const { data: roles } = await supabase
+        .from('lab_day_roles')
+        .select('id, instructor:instructor_id(email)')
+        .eq('lab_day_id', labDayId);
+
       // Delete ALL roles for a lab day (used by edit page before re-inserting)
       const { error } = await supabase
         .from('lab_day_roles')
@@ -160,6 +220,21 @@ export async function DELETE(request: NextRequest) {
         .eq('lab_day_id', labDayId);
 
       if (error) throw error;
+
+      // Fire-and-forget: remove Google Calendar events for each role
+      if (roles && roles.length > 0) {
+        try {
+          const { removeLabDayRole } = await import('@/lib/google-calendar');
+          for (const r of roles) {
+            const instructor = Array.isArray(r.instructor) ? r.instructor[0] : r.instructor;
+            if (instructor?.email) {
+              removeLabDayRole({ userEmail: instructor.email, roleId: r.id }).catch(() => {});
+            }
+          }
+        } catch {
+          // Calendar sync is best-effort
+        }
+      }
     } else {
       return NextResponse.json({ success: false, error: 'Either id or lab_day_id is required' }, { status: 400 });
     }

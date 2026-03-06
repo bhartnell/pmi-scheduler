@@ -159,6 +159,41 @@ export async function POST(request: NextRequest) {
         .eq('id', stationId);
     }
 
+    // Fire-and-forget: sync Google Calendar event
+    try {
+      const { syncLabStationAssignment } = await import('@/lib/google-calendar');
+      // Look up station → lab_day to get calendar event details
+      const { data: station } = await supabase
+        .from('lab_stations')
+        .select('id, station_number, lab_day_id, scenario:scenarios(title)')
+        .eq('id', stationId)
+        .single();
+
+      if (station?.lab_day_id) {
+        const { data: labDay } = await supabase
+          .from('lab_days')
+          .select('id, title, date, start_time, end_time, location_id')
+          .eq('id', station.lab_day_id)
+          .single();
+
+        if (labDay) {
+          syncLabStationAssignment({
+            userEmail,
+            stationId,
+            stationNumber: station.station_number,
+            labDayId: labDay.id,
+            labDayTitle: labDay.title || 'Lab Day',
+            labDayDate: labDay.date,
+            startTime: labDay.start_time || undefined,
+            endTime: labDay.end_time || undefined,
+            scenarioTitle: (station.scenario as any)?.title || undefined,
+          }).catch(() => {}); // Fire-and-forget
+        }
+      }
+    } catch {
+      // Calendar sync is best-effort
+    }
+
     return NextResponse.json({ success: true, instructor: data });
   } catch (error) {
     console.error('Error adding station instructor:', error);
@@ -193,6 +228,14 @@ export async function DELETE(request: NextRequest) {
       .eq('user_email', userEmail);
 
     if (error) throw error;
+
+    // Fire-and-forget: remove Google Calendar event
+    try {
+      const { removeLabStationAssignment } = await import('@/lib/google-calendar');
+      removeLabStationAssignment({ userEmail, stationId }).catch(() => {});
+    } catch {
+      // Calendar sync is best-effort
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

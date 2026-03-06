@@ -189,6 +189,21 @@ export async function PATCH(
 
     if (error) throw error;
 
+    // Fire-and-forget: update linked Google Calendar events if date/time/title changed
+    if (allowedFields.date || allowedFields.title || allowedFields.start_time || allowedFields.end_time) {
+      try {
+        const { updateLabDayEvents } = await import('@/lib/google-calendar');
+        updateLabDayEvents(id, {
+          date: allowedFields.date as string | undefined,
+          title: allowedFields.title as string | undefined,
+          startTime: allowedFields.start_time as string | undefined,
+          endTime: allowedFields.end_time as string | undefined,
+        }).catch(() => {});
+      } catch {
+        // Calendar sync is best-effort
+      }
+    }
+
     return NextResponse.json({ success: true, labDay: data });
   } catch (error) {
     console.error('Error updating lab day:', error);
@@ -219,6 +234,14 @@ export async function DELETE(
 
     if (!callerUser || !isSuperadmin(callerUser.role)) {
       return NextResponse.json({ error: 'Lab day deletion requires superadmin approval via deletion requests' }, { status: 403 });
+    }
+
+    // Fire-and-forget: delete all linked Google Calendar events BEFORE deleting the lab day
+    try {
+      const { deleteLabDayEvents } = await import('@/lib/google-calendar');
+      await deleteLabDayEvents(id);
+    } catch {
+      // Calendar sync is best-effort
     }
 
     const { error } = await supabase
