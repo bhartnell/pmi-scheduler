@@ -1,21 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
-
-// Helper to get current user's lab_users record
-async function getCurrentUser(email: string) {
-  const supabase = getSupabaseAdmin();
-  const { data } = await supabase
-    .from('lab_users')
-    .select('id, role')
-    .ilike('email', email)
-    .single();
-  return data;
-}
+import { requireAuth } from '@/lib/api-auth';
 
 // Check if user can access this certification
 async function canAccessCert(certId: string, userId: string, userRole: string): Promise<boolean> {
-  if (userRole === 'admin') return true;
+  if (userRole === 'admin' || userRole === 'superadmin') return true;
 
   const supabase = getSupabaseAdmin();
   const { data } = await supabase
@@ -34,6 +23,10 @@ export async function GET(
   const { id } = await params;
 
   try {
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
+
     const supabase = getSupabaseAdmin();
 
     const { data, error } = await supabase
@@ -62,23 +55,16 @@ export async function PATCH(
   const { id } = await params;
 
   try {
-    const supabase = getSupabaseAdmin();
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const currentUser = await getCurrentUser(session.user.email);
-    if (!currentUser) {
-      return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
-    }
-
-    const canAccess = await canAccessCert(id, currentUser.id, currentUser.role);
+    const canAccess = await canAccessCert(id, user.id, user.role);
     if (!canAccess) {
       return NextResponse.json({ success: false, error: 'Access denied' }, { status: 403 });
     }
 
+    const supabase = getSupabaseAdmin();
     const body = await request.json();
 
     const updates: Record<string, any> = { updated_at: new Date().toISOString() };
@@ -118,22 +104,16 @@ export async function DELETE(
   const { id } = await params;
 
   try {
-    const supabase = getSupabaseAdmin();
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const currentUser = await getCurrentUser(session.user.email);
-    if (!currentUser) {
-      return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
-    }
-
-    const canAccess = await canAccessCert(id, currentUser.id, currentUser.role);
+    const canAccess = await canAccessCert(id, user.id, user.role);
     if (!canAccess) {
       return NextResponse.json({ success: false, error: 'Access denied' }, { status: 403 });
     }
+
+    const supabase = getSupabaseAdmin();
 
     const { error } = await supabase
       .from('instructor_certifications')

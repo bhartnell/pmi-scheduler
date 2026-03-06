@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { getServerSession } from 'next-auth';
+import { requireAuth } from '@/lib/api-auth';
 // PATCH - Update token (activate/deactivate)
 export async function PATCH(
   request: NextRequest,
@@ -9,10 +9,11 @@ export async function PATCH(
   const { id } = await params;
 
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireAuth('instructor');
+
+    if (auth instanceof NextResponse) return auth;
+
+    const { user } = auth;
 
     const body = await request.json();
     const updates: Record<string, unknown> = {};
@@ -48,10 +49,11 @@ export async function DELETE(
   const { id } = await params;
 
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireAuth('instructor');
+
+    if (auth instanceof NextResponse) return auth;
+
+    const { user } = auth;
 
     const { error } = await getSupabaseAdmin()
       .from('timer_display_tokens')

@@ -1,34 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { hasMinRole } from '@/lib/permissions';
-
-// ─── Auth helper ─────────────────────────────────────────────────────────────
-
-async function requireRole(minRole: string) {
-  const session = await getServerSession();
-  if (!session?.user?.email) {
-    return { error: NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 }) };
-  }
-  const supabase = getSupabaseAdmin();
-  const { data: user } = await supabase
-    .from('lab_users')
-    .select('role, email')
-    .ilike('email', session.user.email)
-    .single();
-
-  if (!user || !hasMinRole(user.role, minRole as any)) {
-    return { error: NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 }) };
-  }
-  return { user, session };
-}
+import { requireAuth } from '@/lib/api-auth';
 
 // ─── GET: List rotation assignments ──────────────────────────────────────────
 // Query params: cohort_id, site_id, start_date, end_date
 export async function GET(request: NextRequest) {
   try {
-    const auth = await requireRole('lead_instructor');
-    if (auth.error) return auth.error;
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
     const supabase = getSupabaseAdmin();
     const { searchParams } = request.nextUrl;
@@ -88,8 +68,9 @@ export async function GET(request: NextRequest) {
 // Body: { student_id, site_id, rotation_date, shift_type?, status?, notes?, assigned_by? }
 export async function POST(request: NextRequest) {
   try {
-    const auth = await requireRole('lead_instructor');
-    if (auth.error) return auth.error;
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user, session } = auth;
 
     const supabase = getSupabaseAdmin();
     const body = await request.json();
@@ -153,7 +134,7 @@ export async function POST(request: NextRequest) {
           shift_type: shift_type || 'day',
           status: status || 'scheduled',
           notes: notes || null,
-          assigned_by: auth.session?.user?.email || null,
+          assigned_by: session.user.email || null,
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'student_id,rotation_date' }

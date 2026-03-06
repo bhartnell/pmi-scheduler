@@ -1,36 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { hasMinRole } from '@/lib/permissions';
+import { requireAuth } from '@/lib/api-auth';
 
 type RouteContext = { params: Promise<{ id: string }> };
-
-async function getAuthenticatedUser(email: string) {
-  const supabase = getSupabaseAdmin();
-  const { data: user } = await supabase
-    .from('lab_users')
-    .select('id, role')
-    .ilike('email', email)
-    .single();
-  return user;
-}
 
 // GET /api/lab-management/lab-days/[id]/equipment
 // Fetch all equipment items for a lab day
 export async function GET(request: NextRequest, { params }: RouteContext) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireAuth('instructor');
+
+  if (auth instanceof NextResponse) return auth;
+
+  const { user } = auth;
 
   const { id: labDayId } = await params;
   const supabase = getSupabaseAdmin();
 
-  const user = await getAuthenticatedUser(session.user.email);
-  if (!user || !hasMinRole(user.role, 'instructor')) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+
 
   try {
     const { data, error } = await supabase
@@ -60,18 +46,16 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
 // POST /api/lab-management/lab-days/[id]/equipment
 // Add a new equipment item
 export async function POST(request: NextRequest, { params }: RouteContext) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireAuth('instructor');
+
+  if (auth instanceof NextResponse) return auth;
+
+  const { user } = auth;
 
   const { id: labDayId } = await params;
   const supabase = getSupabaseAdmin();
 
-  const user = await getAuthenticatedUser(session.user.email);
-  if (!user || !hasMinRole(user.role, 'instructor')) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+
 
   try {
     const body = await request.json();
@@ -111,18 +95,16 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 // PUT /api/lab-management/lab-days/[id]/equipment
 // Update status or notes on an equipment item
 export async function PUT(request: NextRequest, { params }: RouteContext) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireAuth('instructor');
+
+  if (auth instanceof NextResponse) return auth;
+
+  const { user } = auth;
 
   const { id: labDayId } = await params;
   const supabase = getSupabaseAdmin();
 
-  const user = await getAuthenticatedUser(session.user.email);
-  if (!user || !hasMinRole(user.role, 'instructor')) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+
 
   try {
     const body = await request.json();
@@ -177,18 +159,16 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
 // DELETE /api/lab-management/lab-days/[id]/equipment
 // Remove an equipment item by itemId query param
 export async function DELETE(request: NextRequest, { params }: RouteContext) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireAuth('instructor');
+
+  if (auth instanceof NextResponse) return auth;
+
+  const { user } = auth;
 
   const { id: labDayId } = await params;
   const supabase = getSupabaseAdmin();
 
-  const user = await getAuthenticatedUser(session.user.email);
-  if (!user || !hasMinRole(user.role, 'instructor')) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+
 
   const { searchParams } = new URL(request.url);
   const itemId = searchParams.get('itemId');

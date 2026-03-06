@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole } from '@/lib/permissions';
 import { Resend } from 'resend';
+import { requireAuth } from '@/lib/api-auth';
 
 const FROM_EMAIL = process.env.EMAIL_FROM || 'PMI Paramedic Tools <notifications@pmiparamedic.tools>';
 const APP_URL = process.env.NEXTAUTH_URL || 'https://pmiparamedic.tools';
@@ -89,10 +89,11 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession();
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireAuth('instructor');
+
+  if (auth instanceof NextResponse) return auth;
+
+  const { user, session } = auth;
 
   const { id: cohortId } = await params;
 

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { requireAuth } from '@/lib/api-auth';
 
 // Valid file types for skill documents
 const VALID_TYPES = [
@@ -24,6 +23,9 @@ export async function GET(
   const { id: skillId } = await params;
 
   try {
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
+
     const supabase = getSupabaseAdmin();
 
     const { data, error } = await supabase
@@ -50,13 +52,11 @@ export async function POST(
   const { id: skillId } = await params;
 
   try {
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user, session } = auth;
+
     const supabase = getSupabaseAdmin();
-
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
-
     const contentType = request.headers.get('content-type') || '';
 
     // --- URL-only path (JSON body) ---
@@ -206,13 +206,11 @@ export async function DELETE(
   const { id: skillId } = await params;
 
   try {
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
+
     const supabase = getSupabaseAdmin();
-
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
-
     const { searchParams } = new URL(request.url);
     const documentId = searchParams.get('documentId');
 
@@ -262,13 +260,11 @@ export async function PATCH(
   const { id: skillId } = await params;
 
   try {
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
+
     const supabase = getSupabaseAdmin();
-
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
-
     const body = await request.json();
     const { documentId, document_name, document_type, display_order } = body;
 

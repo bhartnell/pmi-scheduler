@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { requireAuth } from '@/lib/api-auth';
 
 // Valid file types for station documents
 const VALID_TYPES = [
@@ -25,10 +24,9 @@ export async function POST(
   try {
     const supabase = getSupabaseAdmin();
 
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
     const formData = await request.formData();
     const file = formData.get('file') as File;
@@ -127,10 +125,9 @@ export async function DELETE(
   try {
     const supabase = getSupabaseAdmin();
 
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
     const { searchParams } = new URL(request.url);
     const documentType = searchParams.get('documentType');

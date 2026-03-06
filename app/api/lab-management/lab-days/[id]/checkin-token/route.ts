@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole } from '@/lib/permissions';
+import { requireAuth } from '@/lib/api-auth';
 
 // POST /api/lab-management/lab-days/[id]/checkin-token
 // Generate (or regenerate) a unique check-in token for this lab day and enable check-in
@@ -10,10 +9,11 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireAuth('instructor');
+
+  if (auth instanceof NextResponse) return auth;
+
+  const { user, session } = auth;
 
   const { id: labDayId } = await params;
   const supabase = getSupabaseAdmin();
@@ -68,10 +68,11 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireAuth('instructor');
+
+  if (auth instanceof NextResponse) return auth;
+
+  const { user, session } = auth;
 
   const { id: labDayId } = await params;
   const supabase = getSupabaseAdmin();

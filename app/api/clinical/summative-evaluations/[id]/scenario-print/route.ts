@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { requireAuth } from '@/lib/api-auth';
 
 // GET - Export scenario as printable HTML
 export async function GET(
@@ -10,10 +10,11 @@ export async function GET(
   const { id: evaluationId } = await params;
 
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireAuth('instructor');
+
+    if (auth instanceof NextResponse) return auth;
+
+    const { user } = auth;
 
     const supabase = getSupabaseAdmin();
 

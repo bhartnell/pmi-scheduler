@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { requireAuth } from '@/lib/api-auth';
 
 export interface LabDayRole {
   id: string;
@@ -20,10 +19,11 @@ export interface LabDayRole {
 // GET - Fetch roles for a lab day
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireAuth('instructor');
+
+    if (auth instanceof NextResponse) return auth;
+
+    const { user } = auth;
 
     const { searchParams } = new URL(request.url);
     // Accept both labDayId and lab_day_id for compatibility
@@ -66,10 +66,11 @@ export async function GET(request: NextRequest) {
 // POST - Add a role assignment
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireAuth('instructor');
+
+    if (auth instanceof NextResponse) return auth;
+
+    const { user } = auth;
 
     const body = await request.json();
     const { lab_day_id, instructor_id, role, notes } = body;
@@ -131,10 +132,11 @@ export async function POST(request: NextRequest) {
 //           ?lab_day_id=<labDayId> to delete ALL roles for a lab day
 export async function DELETE(request: NextRequest) {
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireAuth('instructor');
+
+    if (auth instanceof NextResponse) return auth;
+
+    const { user } = auth;
 
     const { searchParams } = new URL(request.url);
     const roleId = searchParams.get('id');

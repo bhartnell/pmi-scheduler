@@ -1,36 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { hasMinRole } from '@/lib/permissions';
+import { requireAuth } from '@/lib/api-auth';
 
 type RouteContext = { params: Promise<{ id: string }> };
-
-async function getAuthenticatedUser(email: string) {
-  const supabase = getSupabaseAdmin();
-  const { data: user } = await supabase
-    .from('lab_users')
-    .select('id, role, name')
-    .ilike('email', email)
-    .single();
-  return user;
-}
 
 // GET /api/lab-management/lab-days/[id]/debrief
 // Fetch all debriefs for a lab day
 export async function GET(request: NextRequest, { params }: RouteContext) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireAuth('instructor');
+
+  if (auth instanceof NextResponse) return auth;
+
+  const { user } = auth;
 
   const { id: labDayId } = await params;
   const supabase = getSupabaseAdmin();
 
-  const user = await getAuthenticatedUser(session.user.email);
-  if (!user || !hasMinRole(user.role, 'instructor')) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+
 
   try {
     const { data, error } = await supabase
@@ -60,18 +46,16 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
 // POST /api/lab-management/lab-days/[id]/debrief
 // Submit a new debrief (or update existing one if instructor already submitted)
 export async function POST(request: NextRequest, { params }: RouteContext) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireAuth('instructor');
+
+  if (auth instanceof NextResponse) return auth;
+
+  const { user } = auth;
 
   const { id: labDayId } = await params;
   const supabase = getSupabaseAdmin();
 
-  const user = await getAuthenticatedUser(session.user.email);
-  if (!user || !hasMinRole(user.role, 'instructor')) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+
 
   try {
     const body = await request.json();
@@ -86,7 +70,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       .from('lab_day_debriefs')
       .select('id')
       .eq('lab_day_id', labDayId)
-      .eq('instructor_email', session.user.email)
+      .eq('instructor_email', user.email)
       .maybeSingle();
 
     if (existing) {
@@ -115,7 +99,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       .from('lab_day_debriefs')
       .insert({
         lab_day_id: labDayId,
-        instructor_email: session.user.email,
+        instructor_email: user.email,
         went_well: went_well?.trim() || null,
         to_improve: to_improve?.trim() || null,
         student_concerns: student_concerns?.trim() || null,
@@ -141,18 +125,16 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 // PUT /api/lab-management/lab-days/[id]/debrief
 // Update an existing debrief — only the original submitter may edit
 export async function PUT(request: NextRequest, { params }: RouteContext) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireAuth('instructor');
+
+  if (auth instanceof NextResponse) return auth;
+
+  const { user } = auth;
 
   const { id: labDayId } = await params;
   const supabase = getSupabaseAdmin();
 
-  const user = await getAuthenticatedUser(session.user.email);
-  if (!user || !hasMinRole(user.role, 'instructor')) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+
 
   try {
     const body = await request.json();
@@ -178,7 +160,7 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ error: 'Debrief not found' }, { status: 404 });
     }
 
-    if (existing.instructor_email !== session.user.email) {
+    if (existing.instructor_email !== user.email) {
       return NextResponse.json({ error: 'Forbidden: you can only edit your own debrief' }, { status: 403 });
     }
 

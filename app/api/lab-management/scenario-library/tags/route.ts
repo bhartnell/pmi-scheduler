@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { requireAuth } from '@/lib/api-auth';
 
 // GET /api/lab-management/scenario-library/tags
 // Returns all distinct tags (optionally filtered by scenario_id)
 export async function GET(request: NextRequest) {
-  const session = await getServerSession();
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireAuth('instructor');
+
+  if (auth instanceof NextResponse) return auth;
+
+  const { user } = auth;
 
   const supabase = getSupabaseAdmin();
   const scenarioId = request.nextUrl.searchParams.get('scenario_id');
@@ -43,10 +44,11 @@ export async function GET(request: NextRequest) {
 // POST /api/lab-management/scenario-library/tags
 // Add a tag to a scenario
 export async function POST(request: NextRequest) {
-  const session = await getServerSession();
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireAuth('instructor');
+
+  if (auth instanceof NextResponse) return auth;
+
+  const { user } = auth;
 
   try {
     const body = await request.json();
@@ -88,10 +90,11 @@ export async function POST(request: NextRequest) {
 // DELETE /api/lab-management/scenario-library/tags
 // Remove a tag from a scenario
 export async function DELETE(request: NextRequest) {
-  const session = await getServerSession();
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireAuth('instructor');
+
+  if (auth instanceof NextResponse) return auth;
+
+  const { user } = auth;
 
   try {
     const body = await request.json();

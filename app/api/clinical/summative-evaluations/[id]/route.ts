@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { requireAuth } from '@/lib/api-auth';
 
 // GET - Get single evaluation with all scores (v2)
 export async function GET(
@@ -13,10 +12,9 @@ export async function GET(
   try {
     const supabase = getSupabaseAdmin();
 
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
     const { data, error } = await supabase
       .from('summative_evaluations')
@@ -100,10 +98,9 @@ export async function PATCH(
   try {
     const supabase = getSupabaseAdmin();
 
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
     const body = await request.json();
     const allowedFields = [
@@ -153,10 +150,9 @@ export async function DELETE(
   try {
     const supabase = getSupabaseAdmin();
 
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
     // Scores will be deleted automatically due to CASCADE
     const { error } = await supabase

@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { requireAuth } from '@/lib/api-auth';
 
 /**
  * GET /api/stations/pool/favorites
  * Returns the current user's favorited station IDs from user_preferences.preferences.station_favorites
  */
 export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireAuth('instructor');
+
+  if (auth instanceof NextResponse) return auth;
+
+  const { user, session } = auth;
 
   try {
     const supabase = getSupabaseAdmin();
@@ -42,10 +42,11 @@ export async function GET() {
  * Body: { station_id: string }
  */
 export async function POST(request: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireAuth('instructor');
+
+  if (auth instanceof NextResponse) return auth;
+
+  const { user, session } = auth;
 
   try {
     const body = await request.json();
@@ -99,10 +100,11 @@ export async function POST(request: NextRequest) {
  * Query param: ?station_id=
  */
 export async function DELETE(request: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireAuth('instructor');
+
+  if (auth instanceof NextResponse) return auth;
+
+  const { user, session } = auth;
 
   try {
     const stationId = request.nextUrl.searchParams.get('station_id');

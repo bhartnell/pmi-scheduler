@@ -1,27 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { hasMinRole } from '@/lib/permissions';
-
-// ─── Auth helper ─────────────────────────────────────────────────────────────
-
-async function requireRole(minRole: string) {
-  const session = await getServerSession();
-  if (!session?.user?.email) {
-    return { error: NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 }) };
-  }
-  const supabase = getSupabaseAdmin();
-  const { data: user } = await supabase
-    .from('lab_users')
-    .select('role')
-    .ilike('email', session.user.email)
-    .single();
-
-  if (!user || !hasMinRole(user.role, minRole as any)) {
-    return { error: NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 }) };
-  }
-  return { user };
-}
+import { requireAuth } from '@/lib/api-auth';
 
 // ─── DELETE: Remove a rotation assignment ─────────────────────────────────────
 export async function DELETE(
@@ -29,8 +8,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const auth = await requireRole('lead_instructor');
-    if (auth.error) return auth.error;
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
     const supabase = getSupabaseAdmin();
     const { id } = await params;
@@ -59,8 +39,9 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const auth = await requireRole('lead_instructor');
-    if (auth.error) return auth.error;
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
     const supabase = getSupabaseAdmin();
     const { id } = await params;

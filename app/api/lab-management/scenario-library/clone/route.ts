@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { requireAuth } from '@/lib/api-auth';
 
 // POST /api/lab-management/scenario-library/clone
 // Clone a scenario with an optional new name
 export async function POST(request: NextRequest) {
-  const session = await getServerSession();
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireAuth('instructor');
+
+  if (auth instanceof NextResponse) return auth;
+
+  const { user, session } = auth;
 
   try {
     const body = await request.json();

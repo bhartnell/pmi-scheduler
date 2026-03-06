@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole } from '@/lib/permissions';
+import { requireAuth } from '@/lib/api-auth';
 
 // Question definitions mirrored from the survey component
 // Keys match the JSONB responses field (q1..q19)
@@ -54,10 +54,9 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseAdmin();
 
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user, session } = auth;
 
     // Require admin+ role
     const { data: requestingUser } = await supabase

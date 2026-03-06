@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole } from '@/lib/permissions';
+import { requireAuth } from '@/lib/api-auth';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -12,10 +11,9 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseAdmin();
 
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user, session } = auth;
 
     const { data: callerUser } = await supabase
       .from('lab_users')
@@ -114,10 +112,9 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = getSupabaseAdmin();
 
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user, session } = auth;
 
     const { data: callerUser } = await supabase
       .from('lab_users')

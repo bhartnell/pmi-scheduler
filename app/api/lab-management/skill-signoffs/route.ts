@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { getServerSession } from 'next-auth';
 import { hasMinRole } from '@/lib/permissions';
+import { requireAuth } from '@/lib/api-auth';
 
 // GET /api/lab-management/skill-signoffs
 // Query params: ?student_id=X or ?lab_day_id=X or ?skill_id=X
 // Returns signoffs with student and skill info. Requires instructor+.
 export async function GET(request: NextRequest) {
-  const session = await getServerSession();
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireAuth('instructor');
+
+  if (auth instanceof NextResponse) return auth;
+
+  const { user, session } = auth;
 
   const searchParams = request.nextUrl.searchParams;
   const studentId = searchParams.get('student_id');
@@ -54,10 +55,11 @@ export async function GET(request: NextRequest) {
 //    OR { student_ids: string[], skill_id, lab_day_id?, notes? } for bulk
 // Requires instructor+.
 export async function POST(request: NextRequest) {
-  const session = await getServerSession();
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireAuth('instructor');
+
+  if (auth instanceof NextResponse) return auth;
+
+  const { user, session } = auth;
 
   try {
     const supabase = getSupabaseAdmin();
@@ -165,10 +167,11 @@ export async function POST(request: NextRequest) {
 // Body: { id, revoke_reason? }
 // Revokes a signoff. Requires lead_instructor+.
 export async function PUT(request: NextRequest) {
-  const session = await getServerSession();
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireAuth('instructor');
+
+  if (auth instanceof NextResponse) return auth;
+
+  const { user, session } = auth;
 
   try {
     const supabase = getSupabaseAdmin();

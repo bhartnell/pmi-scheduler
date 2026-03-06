@@ -1,17 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
-
-// Helper to get current user's lab_users record
-async function getCurrentUser(email: string) {
-  const supabase = getSupabaseAdmin();
-  const { data } = await supabase
-    .from('lab_users')
-    .select('id, role')
-    .ilike('email', email)
-    .single();
-  return data;
-}
+import { requireAuth } from '@/lib/api-auth';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -19,6 +8,10 @@ export async function GET(request: NextRequest) {
   const instructorId = searchParams.get('instructorId');
 
   try {
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
+
     const supabase = getSupabaseAdmin();
     let query = supabase
       .from('ce_records')
@@ -46,29 +39,22 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
+
     const supabase = getSupabaseAdmin();
-
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const currentUser = await getCurrentUser(session.user.email);
-    if (!currentUser) {
-      return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
-    }
-
     const body = await request.json();
 
     // Verify the certification belongs to this instructor (or admin)
-    if (currentUser.role !== 'admin' && currentUser.role !== 'superadmin') {
+    if (user.role !== 'admin' && user.role !== 'superadmin') {
       const { data: cert } = await supabase
         .from('instructor_certifications')
         .select('instructor_id')
         .eq('id', body.certification_id)
         .single();
 
-      if (cert?.instructor_id !== currentUser.id) {
+      if (cert?.instructor_id !== user.id) {
         return NextResponse.json({ success: false, error: 'Access denied' }, { status: 403 });
       }
     }

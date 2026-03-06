@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { canCreateLabDays } from '@/lib/permissions';
+import { requireAuth } from '@/lib/api-auth';
 
 const VALID_CATEGORIES = ['skills_lab', 'scenario_lab', 'assessment', 'mixed', 'other'] as const;
 type TemplateCategory = typeof VALID_CATEGORIES[number];
@@ -10,10 +10,11 @@ type TemplateCategory = typeof VALID_CATEGORIES[number];
 // Returns all templates owned by the current user plus all shared templates
 // Optional ?category= filter
 export async function GET(request: NextRequest) {
-  const session = await getServerSession();
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireAuth('instructor');
+
+  if (auth instanceof NextResponse) return auth;
+
+  const { user, session } = auth;
 
   try {
     const supabase = getSupabaseAdmin();
@@ -44,10 +45,11 @@ export async function GET(request: NextRequest) {
 // POST /api/lab-management/templates
 // Creates a new lab day template
 export async function POST(request: NextRequest) {
-  const session = await getServerSession();
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireAuth('instructor');
+
+  if (auth instanceof NextResponse) return auth;
+
+  const { user, session } = auth;
 
   // Fetch user role for permission check
   try {

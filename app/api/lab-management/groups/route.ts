@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { requireAuth } from '@/lib/api-auth';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -8,6 +8,8 @@ export async function GET(request: NextRequest) {
   const includeHistory = searchParams.get('includeHistory') === 'true';
 
   try {
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
     const supabase = getSupabaseAdmin();
     let query = supabase
       .from('lab_groups')
@@ -58,12 +60,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = getSupabaseAdmin();
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
+    const supabase = getSupabaseAdmin();
 
     const body = await request.json();
 
@@ -105,10 +106,9 @@ export async function PUT(request: NextRequest) {
   try {
     const supabase = getSupabaseAdmin();
 
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user, session } = auth;
 
     const userEmail = session.user.email;
     const body = await request.json();

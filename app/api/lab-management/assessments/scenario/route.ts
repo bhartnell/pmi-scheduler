@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { getServerSession } from 'next-auth';
 import { requireAuth } from '@/lib/api-auth';
 
 // GET - Fetch assessments
@@ -50,12 +48,10 @@ export async function GET(request: NextRequest) {
 
 // POST - Create a new assessment
 export async function POST(request: NextRequest) {
-  const session = await getServerSession();
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
   try {
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
     const supabase = getSupabaseAdmin();
 
     const body = await request.json();

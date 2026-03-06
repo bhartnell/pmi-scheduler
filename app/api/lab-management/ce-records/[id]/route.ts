@@ -1,17 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
-
-// Helper to get current user's lab_users record
-async function getCurrentUser(email: string) {
-  const supabase = getSupabaseAdmin();
-  const { data } = await supabase
-    .from('lab_users')
-    .select('id, role')
-    .ilike('email', email)
-    .single();
-  return data;
-}
+import { requireAuth } from '@/lib/api-auth';
 
 export async function DELETE(
   request: NextRequest,
@@ -20,27 +9,21 @@ export async function DELETE(
   const { id } = await params;
 
   try {
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
+
     const supabase = getSupabaseAdmin();
 
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const currentUser = await getCurrentUser(session.user.email);
-    if (!currentUser) {
-      return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
-    }
-
     // Check if user owns this record or is admin
-    if (currentUser.role !== 'admin' && currentUser.role !== 'superadmin') {
+    if (user.role !== 'admin' && user.role !== 'superadmin') {
       const { data: record } = await supabase
         .from('ce_records')
         .select('instructor_id')
         .eq('id', id)
         .single();
 
-      if (record?.instructor_id !== currentUser.id) {
+      if (record?.instructor_id !== user.id) {
         return NextResponse.json({ success: false, error: 'Access denied' }, { status: 403 });
       }
     }

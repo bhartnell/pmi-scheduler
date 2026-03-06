@@ -1,18 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { isSuperadmin } from '@/lib/permissions';
-
-async function getCallerRole(email: string): Promise<string | null> {
-  const supabase = getSupabaseAdmin();
-  const { data } = await supabase
-    .from('lab_users')
-    .select('role')
-    .ilike('email', email)
-    .single();
-  return data?.role ?? null;
-}
+import { requireAuth } from '@/lib/api-auth';
 
 // Use service role key for server-side operations to bypass RLS
 export async function GET(
@@ -22,6 +11,9 @@ export async function GET(
   const { id } = await params;
   
   try {
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
+
     const supabase = getSupabaseAdmin();
 
     const { data, error } = await supabase
@@ -46,14 +38,11 @@ export async function PATCH(
   const { id } = await params;
 
   try {
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
+
     const supabase = getSupabaseAdmin();
-
-    // Check authentication
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
-
     const body = await request.json();
     
     // Build update object with only provided fields
@@ -158,13 +147,11 @@ export async function DELETE(
     const supabase = getSupabaseAdmin();
 
     // Check authentication
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
-    const callerRole = await getCallerRole(session.user.email);
-    if (!callerRole || !isSuperadmin(callerRole)) {
+    if (!isSuperadmin(user.role)) {
       return NextResponse.json({ success: false, error: 'Scenario deletion requires superadmin approval via deletion requests' }, { status: 403 });
     }
 

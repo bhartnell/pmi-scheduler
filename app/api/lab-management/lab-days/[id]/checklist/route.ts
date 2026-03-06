@@ -1,36 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { hasMinRole } from '@/lib/permissions';
+import { requireAuth } from '@/lib/api-auth';
 
 type RouteContext = { params: Promise<{ id: string }> };
-
-async function getAuthenticatedInstructor(email: string) {
-  const supabase = getSupabaseAdmin();
-  const { data: user } = await supabase
-    .from('lab_users')
-    .select('id, role')
-    .ilike('email', email)
-    .single();
-  return user;
-}
 
 // GET /api/lab-management/lab-days/[id]/checklist
 // Fetch all checklist items for a lab day, sorted by sort_order
 export async function GET(request: NextRequest, { params }: RouteContext) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireAuth('instructor');
+
+  if (auth instanceof NextResponse) return auth;
+
+  const { user } = auth;
 
   const { id: labDayId } = await params;
   const supabase = getSupabaseAdmin();
 
-  const user = await getAuthenticatedInstructor(session.user.email);
-  if (!user || !hasMinRole(user.role, 'instructor')) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+
 
   try {
     const { data, error } = await supabase
@@ -61,18 +47,16 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
 // POST /api/lab-management/lab-days/[id]/checklist
 // Add a new item OR auto-generate items from stations
 export async function POST(request: NextRequest, { params }: RouteContext) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireAuth('instructor');
+
+  if (auth instanceof NextResponse) return auth;
+
+  const { user } = auth;
 
   const { id: labDayId } = await params;
   const supabase = getSupabaseAdmin();
 
-  const user = await getAuthenticatedInstructor(session.user.email);
-  if (!user || !hasMinRole(user.role, 'instructor')) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+
 
   try {
     const body = await request.json();
@@ -260,18 +244,16 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 // PUT /api/lab-management/lab-days/[id]/checklist
 // Update a checklist item (toggle completed, update title)
 export async function PUT(request: NextRequest, { params }: RouteContext) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireAuth('instructor');
+
+  if (auth instanceof NextResponse) return auth;
+
+  const { user } = auth;
 
   const { id: labDayId } = await params;
   const supabase = getSupabaseAdmin();
 
-  const user = await getAuthenticatedInstructor(session.user.email);
-  if (!user || !hasMinRole(user.role, 'instructor')) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+
 
   try {
     const body = await request.json();
@@ -326,18 +308,16 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
 // DELETE /api/lab-management/lab-days/[id]/checklist
 // Remove a specific checklist item by item_id query param
 export async function DELETE(request: NextRequest, { params }: RouteContext) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireAuth('instructor');
+
+  if (auth instanceof NextResponse) return auth;
+
+  const { user } = auth;
 
   const { id: labDayId } = await params;
   const supabase = getSupabaseAdmin();
 
-  const user = await getAuthenticatedInstructor(session.user.email);
-  if (!user || !hasMinRole(user.role, 'instructor')) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+
 
   const { searchParams } = new URL(request.url);
   const itemId = searchParams.get('itemId');

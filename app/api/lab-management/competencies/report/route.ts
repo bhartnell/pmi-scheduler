@@ -1,21 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { hasMinRole } from '@/lib/permissions';
+import { requireAuth } from '@/lib/api-auth';
 
 const LEVELS = ['introduced', 'practiced', 'competent', 'proficient'] as const;
 type Level = typeof LEVELS[number];
 
 export async function GET(request: NextRequest) {
-  const session = await getServerSession();
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const userRole = (session.user as { role?: string }).role || 'guest';
-  if (!hasMinRole(userRole, 'instructor')) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+  const auth = await requireAuth('instructor');
+  if (auth instanceof NextResponse) return auth;
+  const { user } = auth;
 
   const searchParams = request.nextUrl.searchParams;
   const cohortId = searchParams.get('cohort_id');

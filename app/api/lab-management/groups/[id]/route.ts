@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { requireAuth } from '@/lib/api-auth';
 
 export async function GET(
   request: NextRequest,
@@ -9,6 +9,9 @@ export async function GET(
   const { id } = await params;
 
   try {
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
+
     const supabase = getSupabaseAdmin();
 
     // Get group with members
@@ -62,13 +65,11 @@ export async function PUT(
   const { id } = await params;
 
   try {
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
+
     const supabase = getSupabaseAdmin();
-
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
-
     const body = await request.json();
 
     const { data, error } = await supabase
@@ -97,12 +98,11 @@ export async function DELETE(
   const { id } = await params;
 
   try {
-    const supabase = getSupabaseAdmin();
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
+    const supabase = getSupabaseAdmin();
 
     // Delete assignments first
     await supabase

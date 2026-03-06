@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { requireAuth } from '@/lib/api-auth';
 
 // GET - Fetch daily notes for a date range
 // ?all=true  → return all instructors' notes (for "All Notes" toggle)
@@ -8,27 +8,17 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseAdmin();
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireAuth('instructor');
+
+    if (auth instanceof NextResponse) return auth;
+
+    const { user } = auth;
 
     const searchParams = request.nextUrl.searchParams;
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
     const date = searchParams.get('date');
     const all = searchParams.get('all') === 'true';
-
-    // Get current user
-    const { data: user } = await supabase
-      .from('lab_users')
-      .select('id')
-      .eq('email', session.user.email)
-      .single();
-
-    if (!user) {
-      return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
-    }
 
     // Join with lab_users to get display name for "All Notes" view
     let query = supabase
@@ -83,27 +73,17 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const supabase = getSupabaseAdmin();
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireAuth('instructor');
+
+    if (auth instanceof NextResponse) return auth;
+
+    const { user } = auth;
 
     const body = await request.json();
     const { date, content } = body;
 
     if (!date) {
       return NextResponse.json({ success: false, error: 'Date is required' }, { status: 400 });
-    }
-
-    // Get instructor
-    const { data: user } = await supabase
-      .from('lab_users')
-      .select('id, email, name')
-      .eq('email', session.user.email)
-      .single();
-
-    if (!user) {
-      return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
     }
 
     // If content is empty, delete the note

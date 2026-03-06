@@ -1,35 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { hasMinRole } from '@/lib/permissions';
+import { requireAuth } from '@/lib/api-auth';
 
 const VALID_CATEGORIES = ['Equipment', 'Consumables', 'Instructor Pay', 'External', 'Other'];
 
 type RouteContext = { params: Promise<{ id: string }> };
 
-async function getAuthenticatedUser(email: string) {
-  const supabase = getSupabaseAdmin();
-  const { data: user } = await supabase
-    .from('lab_users')
-    .select('id, role')
-    .ilike('email', email)
-    .single();
-  return user;
-}
-
 // PUT /api/lab-management/costs/[id]
 // Update a cost line item
 export async function PUT(request: NextRequest, { params }: RouteContext) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireAuth('instructor');
 
-  const user = await getAuthenticatedUser(session.user.email);
-  if (!user || !hasMinRole(user.role, 'instructor')) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+  if (auth instanceof NextResponse) return auth;
+
+  const { user } = auth;
 
   const { id } = await params;
   const supabase = getSupabaseAdmin();
@@ -91,15 +75,11 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
 // DELETE /api/lab-management/costs/[id]
 // Remove a cost line item
 export async function DELETE(request: NextRequest, { params }: RouteContext) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireAuth('instructor');
 
-  const user = await getAuthenticatedUser(session.user.email);
-  if (!user || !hasMinRole(user.role, 'instructor')) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+  if (auth instanceof NextResponse) return auth;
+
+  const { user } = auth;
 
   const { id } = await params;
   const supabase = getSupabaseAdmin();

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { requireAuth } from '@/lib/api-auth';
 
 const ASSIGNMENT_SELECT = `
   id,
@@ -32,10 +31,11 @@ export async function PUT(
   { params }: { params: Promise<{ id: string; assignmentId: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireAuth('lead_instructor');
+
+    if (auth instanceof NextResponse) return auth;
+
+    const { user } = auth;
 
     const { assignmentId } = await params;
     const body = await request.json();
@@ -82,10 +82,11 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string; assignmentId: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireAuth('lead_instructor');
+
+    if (auth instanceof NextResponse) return auth;
+
+    const { user } = auth;
 
     const { assignmentId } = await params;
     const today = new Date().toISOString().split('T')[0];

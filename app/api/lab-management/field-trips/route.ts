@@ -1,17 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { createClient } from '@supabase/supabase-js';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { requireAuth } from '@/lib/api-auth';
 
 // GET - List field trips for a cohort
 export async function GET(request: NextRequest) {
   try {
-    const supabase = getSupabaseAdmin();
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const supabase = getSupabaseAdmin();
 
     const searchParams = request.nextUrl.searchParams;
     const cohortId = searchParams.get('cohortId');
@@ -67,13 +65,11 @@ export async function GET(request: NextRequest) {
 // POST - Create a new field trip
 export async function POST(request: NextRequest) {
   try {
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user, session } = auth;
+
     const supabase = getSupabaseAdmin();
-
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const body = await request.json();
     const { cohort_id, name, trip_date, location, description } = body;
 
@@ -112,12 +108,11 @@ export async function POST(request: NextRequest) {
 // DELETE - Remove a field trip (soft delete)
 export async function DELETE(request: NextRequest) {
   try {
-    const supabase = getSupabaseAdmin();
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const supabase = getSupabaseAdmin();
 
     const searchParams = request.nextUrl.searchParams;
     const id = searchParams.get('id');

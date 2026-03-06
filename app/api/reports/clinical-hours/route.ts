@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { requireAuth } from '@/lib/api-auth';
 
 // Default hour requirements - these could be moved to a config table
 const HOUR_REQUIREMENTS = {
@@ -12,12 +12,11 @@ const HOUR_REQUIREMENTS = {
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = getSupabaseAdmin();
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
+    const supabase = getSupabaseAdmin();
 
     const searchParams = request.nextUrl.searchParams;
     const cohortId = searchParams.get('cohortId');

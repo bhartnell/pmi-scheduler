@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { getServerSession } from 'next-auth';
+import { requireAuth } from '@/lib/api-auth';
 
 // GET - Get timer state for a lab day
 export async function GET(request: NextRequest) {
-  const session = await getServerSession();
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireAuth('instructor');
+
+  if (auth instanceof NextResponse) return auth;
+
+  const { user } = auth;
 
   const searchParams = request.nextUrl.searchParams;
   const labDayId = searchParams.get('labDayId');
@@ -70,10 +70,11 @@ export async function GET(request: NextRequest) {
 
 // POST - Create or reset timer state for a lab day
 export async function POST(request: NextRequest) {
-  const session = await getServerSession();
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireAuth('instructor');
+
+  if (auth instanceof NextResponse) return auth;
+
+  const { user } = auth;
 
   try {
     const supabase = getSupabaseAdmin();
@@ -125,10 +126,11 @@ export async function POST(request: NextRequest) {
 
 // DELETE - Completely remove timer state for a lab day (end lab)
 export async function DELETE(request: NextRequest) {
-  const session = await getServerSession();
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireAuth('instructor');
+
+  if (auth instanceof NextResponse) return auth;
+
+  const { user } = auth;
 
   const searchParams = request.nextUrl.searchParams;
   const labDayId = searchParams.get('labDayId');
@@ -171,10 +173,11 @@ export async function DELETE(request: NextRequest) {
 
 // PATCH - Update timer state (start, pause, stop, next rotation)
 export async function PATCH(request: NextRequest) {
-  const session = await getServerSession();
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireAuth('instructor');
+
+  if (auth instanceof NextResponse) return auth;
+
+  const { user } = auth;
 
   try {
     const supabase = getSupabaseAdmin();

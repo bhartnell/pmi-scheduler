@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole } from '@/lib/permissions';
+import { requireAuth } from '@/lib/api-auth';
 
 async function getCallerRole(email: string): Promise<string | null> {
   const supabase = getSupabaseAdmin();
@@ -23,10 +23,9 @@ export async function GET(
   try {
     const supabase = getSupabaseAdmin();
 
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user, session } = auth;
 
     const callerRole = await getCallerRole(session.user.email);
     if (!callerRole || !hasMinRole(callerRole, 'lead_instructor')) {
@@ -61,10 +60,9 @@ export async function POST(
   try {
     const supabase = getSupabaseAdmin();
 
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user, session } = auth;
 
     const callerRole = await getCallerRole(session.user.email);
     if (!callerRole || !hasMinRole(callerRole, 'lead_instructor')) {
@@ -129,10 +127,9 @@ export async function PUT(
   try {
     const supabase = getSupabaseAdmin();
 
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user, session } = auth;
 
     const callerRole = await getCallerRole(session.user.email);
     if (!callerRole || !hasMinRole(callerRole, 'lead_instructor')) {
@@ -202,10 +199,9 @@ export async function DELETE(
   try {
     const supabase = getSupabaseAdmin();
 
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user, session } = auth;
 
     const callerRole = await getCallerRole(session.user.email);
     if (!callerRole || !hasMinRole(callerRole, 'lead_instructor')) {

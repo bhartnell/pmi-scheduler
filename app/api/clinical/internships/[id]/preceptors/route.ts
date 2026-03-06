@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { requireAuth } from '@/lib/api-auth';
 
 // GET - Fetch preceptor assignments for internship
 // Joins with field_preceptors for name/credentials
@@ -11,10 +10,11 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireAuth('lead_instructor');
+
+    if (auth instanceof NextResponse) return auth;
+
+    const { user } = auth;
 
     const { id: internshipId } = await params;
 
@@ -69,10 +69,11 @@ export async function POST(
 ) {
   try {
     const supabase = getSupabaseAdmin();
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireAuth('lead_instructor');
+
+    if (auth instanceof NextResponse) return auth;
+
+    const { user } = auth;
 
     const { id: internshipId } = await params;
     const body = await request.json();
@@ -157,10 +158,11 @@ export async function PATCH(
 ) {
   try {
     const supabase = getSupabaseAdmin();
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireAuth('lead_instructor');
+
+    if (auth instanceof NextResponse) return auth;
+
+    const { user } = auth;
 
     await params; // Await params even though we don't use it, for consistency
     const body = await request.json();

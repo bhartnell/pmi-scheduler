@@ -1,31 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { hasMinRole } from '@/lib/permissions';
-
-// Helper: get caller's role
-async function getCallerRole(supabase: ReturnType<typeof getSupabaseAdmin>, email: string) {
-  const { data } = await supabase
-    .from('lab_users')
-    .select('role')
-    .ilike('email', email)
-    .single();
-  return data?.role ?? null;
-}
+import { requireAuth } from '@/lib/api-auth';
 
 export async function GET(request: NextRequest) {
   try {
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
+
     const supabase = getSupabaseAdmin();
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const callerRole = await getCallerRole(supabase, session.user.email);
-    if (!callerRole || !hasMinRole(callerRole, 'lead_instructor')) {
-      return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
-    }
-
     const searchParams = request.nextUrl.searchParams;
     const siteId = searchParams.get('site_id');
     const institution = searchParams.get('institution');
@@ -70,17 +53,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user, session } = auth;
+
     const supabase = getSupabaseAdmin();
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const callerRole = await getCallerRole(supabase, session.user.email);
-    if (!callerRole || !hasMinRole(callerRole, 'lead_instructor')) {
-      return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
-    }
-
     const body = await request.json();
 
     if (!body.clinical_site_id) {
@@ -127,17 +104,11 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
+
     const supabase = getSupabaseAdmin();
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const callerRole = await getCallerRole(supabase, session.user.email);
-    if (!callerRole || !hasMinRole(callerRole, 'lead_instructor')) {
-      return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
-    }
-
     const body = await request.json();
 
     if (!body.id) {
@@ -174,17 +145,11 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
+
     const supabase = getSupabaseAdmin();
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const callerRole = await getCallerRole(supabase, session.user.email);
-    if (!callerRole || !hasMinRole(callerRole, 'lead_instructor')) {
-      return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
-    }
-
     const searchParams = request.nextUrl.searchParams;
     const id = searchParams.get('id');
 

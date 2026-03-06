@@ -1,17 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { hasMinRole } from '@/lib/permissions';
-
-async function getCallerRole(email: string): Promise<string | null> {
-  const supabase = getSupabaseAdmin();
-  const { data } = await supabase
-    .from('lab_users')
-    .select('role')
-    .ilike('email', email)
-    .single();
-  return data?.role ?? null;
-}
+import { requireAuth } from '@/lib/api-auth';
 
 const VALID_TYPES = [
   'application/pdf',
@@ -31,15 +20,9 @@ export async function POST(
   try {
     const supabase = getSupabaseAdmin();
 
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const callerRole = await getCallerRole(session.user.email);
-    if (!callerRole || !hasMinRole(callerRole, 'lead_instructor')) {
-      return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
-    }
+    const auth = await requireAuth('lead_instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
     const { id } = await params;
 
@@ -107,7 +90,7 @@ export async function POST(
         internship_id: id,
         doc_type: docType,
         file_url: fileUrl,
-        uploaded_by: session.user.email,
+        uploaded_by: user.email,
         uploaded_at: new Date().toISOString(),
       })
       .select()
@@ -139,15 +122,9 @@ export async function DELETE(
   try {
     const supabase = getSupabaseAdmin();
 
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const callerRole = await getCallerRole(session.user.email);
-    if (!callerRole || !hasMinRole(callerRole, 'lead_instructor')) {
-      return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
-    }
+    const auth = await requireAuth('lead_instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
 
     const { id } = await params;
     const { searchParams } = new URL(request.url);

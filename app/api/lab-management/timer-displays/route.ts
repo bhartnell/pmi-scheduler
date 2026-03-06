@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { createClient } from '@supabase/supabase-js';
-import { getServerSession } from 'next-auth';
 import crypto from 'crypto';
+import { requireAuth } from '@/lib/api-auth';
 
 // Generate a secure random token
 function generateToken(): string {
@@ -12,10 +11,11 @@ function generateToken(): string {
 // GET - List all timer display tokens
 export async function GET() {
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireAuth('instructor');
+
+    if (auth instanceof NextResponse) return auth;
+
+    const { user, session } = auth;
 
     const { data, error } = await getSupabaseAdmin()
       .from('timer_display_tokens')
@@ -34,10 +34,11 @@ export async function GET() {
 // POST - Create a new timer display token
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireAuth('instructor');
+
+    if (auth instanceof NextResponse) return auth;
+
+    const { user, session } = auth;
 
     const body = await request.json();
     const { room_name } = body;

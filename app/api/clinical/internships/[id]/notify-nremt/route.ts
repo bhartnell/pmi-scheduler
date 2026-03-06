@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole } from '@/lib/permissions';
 import { createNotification } from '@/lib/notifications';
 import { sendEmail } from '@/lib/email';
+import { requireAuth } from '@/lib/api-auth';
 
 const RYAN_EMAIL = 'ryan@pmi.edu';
 
@@ -25,10 +25,11 @@ export async function POST(
   try {
     const supabase = getSupabaseAdmin();
 
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireAuth('instructor');
+
+    if (auth instanceof NextResponse) return auth;
+
+    const { user, session } = auth;
 
     const callerRole = await getCallerRole(session.user.email);
     if (!callerRole || !hasMinRole(callerRole, 'lead_instructor')) {

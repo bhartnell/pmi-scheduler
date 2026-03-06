@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole } from '@/lib/permissions';
+import { requireAuth } from '@/lib/api-auth';
 
 // Helper to get current user with role
 async function getCurrentUser(email: string) {
@@ -23,10 +23,11 @@ export async function GET(
   const { id } = await params;
 
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireAuth('instructor');
+
+    if (auth instanceof NextResponse) return auth;
+
+    const { user, session } = auth;
 
     const currentUser = await getCurrentUser(session.user.email);
     if (!currentUser || !hasMinRole(currentUser.role, 'instructor')) {
@@ -58,10 +59,11 @@ export async function POST(
   const { id } = await params;
 
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireAuth('instructor');
+
+    if (auth instanceof NextResponse) return auth;
+
+    const { user, session } = auth;
 
     const currentUser = await getCurrentUser(session.user.email);
     if (!currentUser || !hasMinRole(currentUser.role, 'instructor')) {
@@ -119,10 +121,11 @@ export async function PUT(
   const { id } = await params;
 
   try {
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireAuth('instructor');
+
+    if (auth instanceof NextResponse) return auth;
+
+    const { user, session } = auth;
 
     const currentUser = await getCurrentUser(session.user.email);
     if (!currentUser || !hasMinRole(currentUser.role, 'lead_instructor')) {

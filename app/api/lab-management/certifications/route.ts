@@ -1,18 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth } from '@/lib/api-auth';
-
-// Helper to get current user's lab_users record
-async function getCurrentUser(email: string) {
-  const supabase = getSupabaseAdmin();
-  const { data } = await supabase
-    .from('lab_users')
-    .select('id, role')
-    .ilike('email', email)
-    .single();
-  return data;
-}
 
 export async function GET(request: NextRequest) {
   const auth = await requireAuth('admin');
@@ -57,23 +45,17 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
+
     const supabase = getSupabaseAdmin();
-
-    const session = await getServerSession();
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const currentUser = await getCurrentUser(session.user.email);
-    if (!currentUser) {
-      return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
-    }
 
     const body = await request.json();
 
     // If instructorId provided and user is admin, use that; otherwise use current user's ID
-    let instructorId = currentUser.id;
-    if (body.instructor_id && currentUser.role === 'admin') {
+    let instructorId = user.id;
+    if (body.instructor_id && (user.role === 'admin' || user.role === 'superadmin')) {
       instructorId = body.instructor_id;
     }
 

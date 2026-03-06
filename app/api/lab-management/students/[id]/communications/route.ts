@@ -1,34 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { hasMinRole } from '@/lib/permissions';
+import { requireAuth } from '@/lib/api-auth';
 
 type RouteContext = { params: Promise<{ id: string }> };
-
-async function getAuthenticatedUser(email: string) {
-  const supabase = getSupabaseAdmin();
-  const { data: user } = await supabase
-    .from('lab_users')
-    .select('id, role, email, name')
-    .ilike('email', email)
-    .single();
-  return user;
-}
 
 // GET /api/lab-management/students/[id]/communications
 // List all communications for a student, ordered by created_at desc
 // Optional query params: ?type=phone, ?flagged=true, ?search=keyword
 export async function GET(request: NextRequest, { params }: RouteContext) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireAuth('instructor');
 
-  const user = await getAuthenticatedUser(session.user.email);
-  if (!user || !hasMinRole(user.role, 'instructor')) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+  if (auth instanceof NextResponse) return auth;
+
+  const { user } = auth;
+
+
 
   const { id: studentId } = await params;
   const { searchParams } = new URL(request.url);
@@ -73,15 +59,13 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
 // Add a new communication log entry
 // Body: { comm_type, subject, summary, follow_up_needed?, follow_up_date?, is_flagged? }
 export async function POST(request: NextRequest, { params }: RouteContext) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireAuth('instructor');
 
-  const user = await getAuthenticatedUser(session.user.email);
-  if (!user || !hasMinRole(user.role, 'instructor')) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+  if (auth instanceof NextResponse) return auth;
+
+  const { user } = auth;
+
+
 
   const { id: studentId } = await params;
 
@@ -129,15 +113,13 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 // Update communication - supports toggling follow_up_completed or is_flagged
 // Body: { id, follow_up_completed?, is_flagged? }
 export async function PATCH(request: NextRequest, { params }: RouteContext) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const auth = await requireAuth('instructor');
 
-  const user = await getAuthenticatedUser(session.user.email);
-  if (!user || !hasMinRole(user.role, 'instructor')) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
+  if (auth instanceof NextResponse) return auth;
+
+  const { user } = auth;
+
+
 
   const { id: studentId } = await params;
 

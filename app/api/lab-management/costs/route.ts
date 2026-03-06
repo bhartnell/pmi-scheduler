@@ -1,42 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { hasMinRole } from '@/lib/permissions';
+import { requireAuth } from '@/lib/api-auth';
 
 const VALID_CATEGORIES = ['Equipment', 'Consumables', 'Instructor Pay', 'External', 'Other'];
-
-async function getAuthenticatedUser(email: string) {
-  const supabase = getSupabaseAdmin();
-  const { data: user } = await supabase
-    .from('lab_users')
-    .select('id, role')
-    .ilike('email', email)
-    .single();
-  return user;
-}
 
 // GET /api/lab-management/costs
 // List cost items filtered by lab_day_id, cohort_id, or date range
 export async function GET(request: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const user = await getAuthenticatedUser(session.user.email);
-  if (!user || !hasMinRole(user.role, 'instructor')) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
-
-  const supabase = getSupabaseAdmin();
-  const searchParams = request.nextUrl.searchParams;
-  const labDayId = searchParams.get('lab_day_id');
-  const cohortId = searchParams.get('cohort_id');
-  const startDate = searchParams.get('start_date');
-  const endDate = searchParams.get('end_date');
-
   try {
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user } = auth;
+
+    const supabase = getSupabaseAdmin();
+    const searchParams = request.nextUrl.searchParams;
+    const labDayId = searchParams.get('lab_day_id');
+    const cohortId = searchParams.get('cohort_id');
+    const startDate = searchParams.get('start_date');
+    const endDate = searchParams.get('end_date');
+
     if (labDayId) {
       // Simple fetch for a specific lab day
       const { data, error } = await supabase
@@ -68,11 +50,6 @@ export async function GET(request: NextRequest) {
       `)
       .order('created_at', { ascending: true });
 
-    if (cohortId) {
-      // Filter through the join — use explicit subquery via RPC or filter after
-      // We'll filter in JS since Supabase nested filtering can be tricky
-    }
-
     const { data, error } = await query;
     if (error) throw error;
 
@@ -101,19 +78,12 @@ export async function GET(request: NextRequest) {
 // POST /api/lab-management/costs
 // Add a new cost line item
 export async function POST(request: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const user = await getAuthenticatedUser(session.user.email);
-  if (!user || !hasMinRole(user.role, 'instructor')) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-  }
-
-  const supabase = getSupabaseAdmin();
-
   try {
+    const auth = await requireAuth('instructor');
+    if (auth instanceof NextResponse) return auth;
+    const { user, session } = auth;
+
+    const supabase = getSupabaseAdmin();
     const body = await request.json();
     const { lab_day_id, category, description, amount } = body;
 
