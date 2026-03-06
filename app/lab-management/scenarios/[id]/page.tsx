@@ -32,6 +32,7 @@ import {
   Copy,
   Wand2
 } from 'lucide-react';
+import { SKIN_OPTIONS } from '@/lib/constants';
 
 // Helper to safely convert DB values to arrays (handles string, array, null)
 const toArray = (value: any): string[] => {
@@ -206,11 +207,6 @@ const LUNG_SOUND_OPTIONS = [
   'Rhonchi bilateral', 'Rhonchi (right)', 'Rhonchi (left)',
   'Diminished bilateral', 'Diminished (right)', 'Diminished (left)',
   'Absent (right)', 'Absent (left)', 'Stridor', 'Other'
-];
-
-const SKIN_OPTIONS = [
-  'Warm, dry, pink', 'Cool, pale, dry', 'Cool, pale, diaphoretic', 'Cool, pale, clammy',
-  'Hot, dry, flushed', 'Hot, moist', 'Cyanotic', 'Mottled', 'Jaundiced', 'Other'
 ];
 
 const EDEMA_OPTIONS = ['None', 'Trace', '1+ (2mm)', '2+ (4mm)', '3+ (6mm)', '4+ (8mm+)'];

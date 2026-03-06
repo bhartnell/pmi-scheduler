@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { useVisibilityPolling } from '@/hooks/useVisibilityPolling';
 import { useTimerAudio, loadTimerAudioSettings, TimerAudioSettings, TIMER_AUDIO_STORAGE_KEY } from '@/hooks/useTimerAudio';
+import { formatTime } from '@/lib/utils';
 
 interface LabTimerProps {
   labDayId: string;
@@ -393,7 +394,7 @@ export default function LabTimer({
     updateDisplay();
 
     // Only run display timer when page is visible
-    let displayInterval: NodeJS.Timeout | null = setInterval(updateDisplay, 100);
+    let displayInterval: NodeJS.Timeout | null = setInterval(updateDisplay, 1000);
 
     const handleVisibility = () => {
       if (document.hidden) {
@@ -403,7 +404,7 @@ export default function LabTimer({
         }
       } else {
         updateDisplay(); // Catch up immediately
-        displayInterval = setInterval(updateDisplay, 100);
+        displayInterval = setInterval(updateDisplay, 1000);
       }
     };
 
@@ -434,7 +435,7 @@ export default function LabTimer({
       updateCountdown();
 
       // Only run countdown timer when page is visible
-      let countdownInterval: NodeJS.Timeout | null = setInterval(updateCountdown, 100);
+      let countdownInterval: NodeJS.Timeout | null = setInterval(updateCountdown, 1000);
 
       // Auto-dismiss timeout
       const timeoutId = setTimeout(() => {
@@ -449,7 +450,7 @@ export default function LabTimer({
           }
         } else {
           updateCountdown(); // Catch up immediately
-          countdownInterval = setInterval(updateCountdown, 100);
+          countdownInterval = setInterval(updateCountdown, 1000);
         }
       };
 
@@ -464,13 +465,6 @@ export default function LabTimer({
       setRotateAlertCountdown(30);
     }
   }, [showRotateAlert, rotateAlertStartTime, acknowledgeRotation]);
-
-  // Format time as MM:SS
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(Math.abs(seconds) / 60);
-    const secs = Math.abs(seconds) % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
 
   // Progress percentage
   const progress = timerState?.mode === 'countdown'

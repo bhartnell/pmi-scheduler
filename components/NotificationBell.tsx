@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { Bell, CheckCheck, ExternalLink, Settings, X, Mail } from 'lucide-react';
 import Link from 'next/link';
 import { useVisibilityPolling } from '@/hooks/useVisibilityPolling';
+import { formatTimeAgo } from '@/lib/utils';
 
 // Play a gentle single-tone chime (440 Hz, 150 ms, low gain)
 function playNotificationChime() {
@@ -75,22 +76,6 @@ const CATEGORY_LABELS: Record<string, { label: string; emoji: string }> = {
   clinical: { label: 'Clinical', emoji: '🏥' },
   system: { label: 'System', emoji: 'ℹ️' },
 };
-
-function formatTimeAgo(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins} min ago`;
-  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-  if (diffDays === 1) return 'Yesterday';
-  if (diffDays < 7) return `${diffDays} days ago`;
-  return date.toLocaleDateString();
-}
 
 export default function NotificationBell() {
   const { data: session } = useSession();

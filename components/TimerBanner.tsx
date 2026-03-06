@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Clock, Wifi, WifiOff, Volume2, VolumeX, AlertTriangle, CheckCircle, Circle } from 'lucide-react';
 import { useVisibilityPolling } from '@/hooks/useVisibilityPolling';
 import { useTimerAudio, loadTimerAudioSettings, TimerAudioSettings, TIMER_AUDIO_STORAGE_KEY } from '@/hooks/useTimerAudio';
+import { formatTime } from '@/lib/utils';
 
 interface TimerBannerProps {
   labDayId: string;
@@ -245,7 +246,7 @@ export default function TimerBanner({
     updateDisplay();
 
     // Only run display timer when page is visible
-    let displayInterval: NodeJS.Timeout | null = setInterval(updateDisplay, 100);
+    let displayInterval: NodeJS.Timeout | null = setInterval(updateDisplay, 1000);
 
     const handleVisibility = () => {
       if (document.hidden) {
@@ -255,7 +256,7 @@ export default function TimerBanner({
         }
       } else {
         updateDisplay(); // Catch up immediately
-        displayInterval = setInterval(updateDisplay, 100);
+        displayInterval = setInterval(updateDisplay, 1000);
       }
     };
 
@@ -278,13 +279,6 @@ export default function TimerBanner({
   useEffect(() => {
     setDebriefAlertShown(false);
   }, [timerState?.rotation_number]);
-
-  // Format time as MM:SS
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(Math.abs(seconds) / 60);
-    const secs = Math.abs(seconds) % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
 
   // Calculate progress percentage
   const getProgress = () => {

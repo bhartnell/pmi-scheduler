@@ -142,3 +142,46 @@ export function formatDateSafe(
     day: 'numeric',
   });
 }
+
+/**
+ * Format seconds as MM:SS or HH:MM:SS (if hours > 0).
+ * Handles negative values by using absolute value.
+ *
+ * @example
+ * formatTime(125) // "2:05"
+ * formatTime(3661) // "1:01:01"
+ * formatTime(-90) // "1:30"
+ */
+export function formatTime(seconds: number): string {
+  const absSeconds = Math.abs(seconds);
+  const hrs = Math.floor(absSeconds / 3600);
+  const mins = Math.floor((absSeconds % 3600) / 60);
+  const secs = absSeconds % 60;
+
+  if (hrs > 0) {
+    return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  }
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
+
+/**
+ * Format a date string as a relative time ago string.
+ *
+ * @example
+ * formatTimeAgo('2024-01-15T08:00:00Z') // "3 days ago"
+ */
+export function formatTimeAgo(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins} min ago`;
+  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return `${diffDays} days ago`;
+  return date.toLocaleDateString();
+}

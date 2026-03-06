@@ -24,7 +24,6 @@ import {
   Filter
 } from 'lucide-react';
 import { canAccessClinical, canEditClinical, type Role } from '@/lib/permissions';
-import * as XLSX from 'xlsx';
 import { useToast } from '@/components/Toast';
 import { PageErrorBoundary } from '@/components/PageErrorBoundary';
 
@@ -536,6 +535,7 @@ export default function ClinicalHoursTrackerPage() {
     setImportError(null);
 
     try {
+      const XLSX = await import('xlsx');
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data);
       const sheetName = workbook.SheetNames[0];

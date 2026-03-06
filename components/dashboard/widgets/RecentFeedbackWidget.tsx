@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { MessageSquare, ChevronRight, Bug, Lightbulb, HelpCircle } from 'lucide-react';
 import WidgetCard, { WidgetEmpty } from '../WidgetCard';
+import { formatTimeAgo } from '@/lib/utils';
 
 interface FeedbackReport {
   id: string;
@@ -27,20 +28,6 @@ const STATUS_STYLES: Record<string, string> = {
   resolved: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300',
   closed: 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300',
 };
-
-function formatTimeAgo(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffHours < 1) return 'Just now';
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays === 1) return 'Yesterday';
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return date.toLocaleDateString();
-}
 
 export default function RecentFeedbackWidget() {
   const [reports, setReports] = useState<FeedbackReport[]>([]);

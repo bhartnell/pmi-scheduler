@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Clock, ChevronRight, Pause, Play } from 'lucide-react';
 import { useVisibilityPolling } from '@/hooks/useVisibilityPolling';
+import { formatTime } from '@/lib/utils';
 
 interface TimerState {
   id: string;
@@ -146,13 +147,6 @@ export default function GlobalTimerBanner() {
       document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, [timer]);
-
-  // Format time as MM:SS
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
 
   // Get background color based on time remaining
   const getBannerColor = () => {
