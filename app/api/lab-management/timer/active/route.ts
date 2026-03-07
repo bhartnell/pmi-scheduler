@@ -1,11 +1,12 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth } from '@/lib/api-auth';
 
 // GET - Get any active (running or paused) timer across all lab days
 // Enforces single active timer: if multiple found, keeps the most recent and stops others
 // Also cleans up stale timers that have been running for >24 hours
-export async function GET() {
+// Supports ?version=N for efficient polling (returns not_modified when unchanged)
+export async function GET(request: NextRequest) {
   const auth = await requireAuth('instructor');
 
   if (auth instanceof NextResponse) return auth;
@@ -14,6 +15,9 @@ export async function GET() {
 
   try {
     const supabase = getSupabaseAdmin();
+
+    // Version-based polling: if client sends version, check if any timer has changed
+    const clientVersion = parseInt(request.nextUrl.searchParams.get('version') || '0');
 
     // Find ALL timers that are currently running or paused (not stopped)
     const { data: activeTimers, error: timerError } = await supabase
@@ -103,6 +107,13 @@ export async function GET() {
         .in('lab_day_id', extraTimerIds);
 
       console.log(`Stopped ${extraTimerIds.length} extra active timer(s), keeping most recent`);
+    }
+
+    // Version-based short-circuit: if the primary timer's version matches what
+    // the client has, skip the lab_days join and return not_modified
+    const currentVersion = primaryTimer.version ?? 0;
+    if (clientVersion > 0 && currentVersion === clientVersion) {
+      return NextResponse.json({ success: true, not_modified: true });
     }
 
     // Get lab day info with cohort details for the primary timer

@@ -88,8 +88,8 @@ export default function GlobalTimerBanner() {
     if (!isTimerRelevantPage) return null;
     if (hasOwnTimerComponent) return 60000; // 60s on pages with their own timer component
     if (timer?.status === 'running') return 5000; // 5s when running
-    if (timer?.status === 'paused') return 10000; // 10s when paused (catch resume)
-    return 30000; // 30s when idle/no timer
+    if (timer?.status === 'paused') return 15000; // 15s when paused (catch resume)
+    return 60000; // 60s when idle/no timer
   };
   const pollInterval = getPollInterval();
   useVisibilityPolling(fetchActiveTimer, pollInterval);

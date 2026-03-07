@@ -348,9 +348,18 @@ export default function LiveTimerDisplayPage({ params }: { params: Promise<{ lab
     }
   }, [labDayId]);
 
-  // Poll timer and ready statuses
-  useVisibilityPolling(fetchTimerStatus, 5000);
-  useVisibilityPolling(fetchReadyStatuses, 5000);
+  // Adaptive poll interval based on timer state
+  const getTimerPollInterval = (): number => {
+    if (!timer) return 60000;              // No timer yet, 60s
+    if (timer.status === 'stopped') return 60000; // Stopped, 60s
+    if (timer.status === 'paused') return 15000;  // Paused, 15s
+    return 5000;                           // Running, 5s
+  };
+  useVisibilityPolling(fetchTimerStatus, getTimerPollInterval());
+
+  // Ready statuses only need polling when timer is actively running
+  const readyPollInterval = timer?.status === 'running' ? 5000 : null;
+  useVisibilityPolling(fetchReadyStatuses, readyPollInterval);
 
   // --- Timer Display Calculation ---
   useEffect(() => {

@@ -290,8 +290,15 @@ export default function TimerDisplayPage() {
     }
   }, [token]);
 
-  // Initial fetch and polling with visibility awareness
-  useVisibilityPolling(fetchTimerStatus, 5000);
+  // Adaptive poll interval based on timer state
+  const getPollInterval = (): number => {
+    if (!display) return 5000;           // Still loading, poll fast
+    if (!labDay) return 300000;          // No lab day associated, 5 min
+    if (!timer || timer.status === 'stopped') return 60000; // Stopped/no timer, 60s
+    if (timer.status === 'paused') return 15000;            // Paused, 15s
+    return 5000;                         // Running, 5s
+  };
+  useVisibilityPolling(fetchTimerStatus, getPollInterval());
 
   // ─── Timer Display Calculation ───────────────────────────────────────────────
   useEffect(() => {
