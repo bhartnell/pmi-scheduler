@@ -281,6 +281,13 @@ function buildSections(pendingAccessRequests: number): AdminSection[] {
           color: 'bg-emerald-600',
         },
         {
+          href: '/admin/data-import',
+          icon: Upload,
+          title: 'Data Import',
+          description: 'Import historical student data from CSV files',
+          color: 'bg-indigo-600',
+        },
+        {
           href: '/admin/scheduled-exports',
           icon: Download,
           title: 'Scheduled Exports',
