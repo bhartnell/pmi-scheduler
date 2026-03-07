@@ -3,6 +3,7 @@
 
 import { Resend } from 'resend';
 import { wrapInEmailTemplate } from '@/lib/email-templates';
+import { getSupabaseAdmin } from '@/lib/supabase';
 
 // Lazy initialization to avoid build errors when env vars aren't set
 let resendClient: Resend | null = null;
@@ -211,8 +212,37 @@ const templates: Record<EmailTemplate, (data: Record<string, unknown>) => { subj
 };
 
 /**
+ * Log an email send result to the email_log table.
+ * Non-fatal — errors are logged but do not throw.
+ */
+async function logEmailSend(params: {
+  to: string;
+  subject: string;
+  template: string;
+  status: 'sent' | 'failed';
+  resendId?: string;
+  error?: string;
+}): Promise<void> {
+  try {
+    const supabase = getSupabaseAdmin();
+    await supabase.from('email_log').insert({
+      to_email: params.to,
+      subject: params.subject,
+      template: params.template,
+      status: params.status,
+      resend_id: params.resendId ?? null,
+      error: params.error ?? null,
+      sent_at: params.status === 'sent' ? new Date().toISOString() : null,
+    });
+  } catch (err) {
+    console.error('Failed to log email send:', err);
+  }
+}
+
+/**
  * Send an email using the Resend API.
  * Uses the centralized wrapInEmailTemplate for consistent branding.
+ * Logs the result to email_log for delivery tracking.
  * @param emailData - Email data including recipient, template, and template data
  * @returns Result object with success status, optional error message, and email ID
  */
@@ -238,13 +268,36 @@ export async function sendEmail(emailData: EmailData): Promise<{ success: boolea
 
     if (error) {
       console.error('Resend error:', error);
+      await logEmailSend({
+        to: emailData.to,
+        subject,
+        template: emailData.template,
+        status: 'failed',
+        error: error.message,
+      });
       return { success: false, error: error.message };
     }
+
+    await logEmailSend({
+      to: emailData.to,
+      subject,
+      template: emailData.template,
+      status: 'sent',
+      resendId: data?.id,
+    });
 
     return { success: true, id: data?.id };
   } catch (error) {
     console.error('Email send error:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    const errMsg = error instanceof Error ? error.message : 'Unknown error';
+    await logEmailSend({
+      to: emailData.to,
+      subject: `[PMI] ${emailData.template}`,
+      template: emailData.template,
+      status: 'failed',
+      error: errMsg,
+    });
+    return { success: false, error: errMsg };
   }
 }
 

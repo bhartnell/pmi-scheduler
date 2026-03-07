@@ -25,6 +25,10 @@ import {
   Check,
   ArrowLeft,
   Maximize2,
+  BarChart3,
+  TrendingUp,
+  XCircle,
+  RefreshCw,
 } from 'lucide-react';
 import { canAccessAdmin } from '@/lib/permissions';
 import { PageLoader } from '@/components/ui';
@@ -769,6 +773,199 @@ function TemplateEditor({
 }
 
 // ---------------------------------------------------------------------------
+// Email Stats Types & Component
+// ---------------------------------------------------------------------------
+
+interface EmailFailure {
+  id: string;
+  to_email: string;
+  subject: string;
+  template: string;
+  error: string;
+  created_at: string;
+}
+
+interface EmailStats {
+  sent_7d: number;
+  failed_7d: number;
+  sent_30d: number;
+  failed_30d: number;
+  by_template: Record<string, { sent: number; failed: number }>;
+  recent_failures: EmailFailure[];
+}
+
+function DeliveryStatsPanel({ stats, loading, onRefresh }: {
+  stats: EmailStats | null;
+  loading: boolean;
+  onRefresh: () => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  if (loading && !stats) {
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          <span className="text-sm">Loading email stats...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!stats) return null;
+
+  const successRate7d = stats.sent_7d + stats.failed_7d > 0
+    ? Math.round((stats.sent_7d / (stats.sent_7d + stats.failed_7d)) * 100)
+    : 100;
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+      {/* Header */}
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <BarChart3 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+          <span className="font-semibold text-gray-900 dark:text-white text-sm">Email Delivery Stats</span>
+        </div>
+        <div className="flex items-center gap-3">
+          {/* Quick summary badges */}
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+            <TrendingUp className="w-3 h-3" />
+            {stats.sent_7d} sent (7d)
+          </span>
+          {stats.failed_7d > 0 && (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300">
+              <XCircle className="w-3 h-3" />
+              {stats.failed_7d} failed
+            </span>
+          )}
+          {expanded ? (
+            <ChevronUp className="w-4 h-4 text-gray-400" />
+          ) : (
+            <ChevronDown className="w-4 h-4 text-gray-400" />
+          )}
+        </div>
+      </button>
+
+      {expanded && (
+        <div className="border-t border-gray-200 dark:border-gray-700 px-4 py-4 space-y-4">
+          {/* Summary row */}
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 text-center">
+              <p className="text-2xl font-bold text-green-700 dark:text-green-400">{stats.sent_7d}</p>
+              <p className="text-xs text-green-600 dark:text-green-500">Sent (7 days)</p>
+            </div>
+            <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-3 text-center">
+              <p className="text-2xl font-bold text-red-700 dark:text-red-400">{stats.failed_7d}</p>
+              <p className="text-xs text-red-600 dark:text-red-500">Failed (7 days)</p>
+            </div>
+            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 text-center">
+              <p className="text-2xl font-bold text-blue-700 dark:text-blue-400">{successRate7d}%</p>
+              <p className="text-xs text-blue-600 dark:text-blue-500">Success Rate</p>
+            </div>
+            <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 text-center">
+              <p className="text-2xl font-bold text-gray-700 dark:text-gray-300">{stats.sent_30d}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Sent (30 days)</p>
+            </div>
+            <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 text-center">
+              <p className="text-2xl font-bold text-gray-700 dark:text-gray-300">{stats.failed_30d}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Failed (30 days)</p>
+            </div>
+          </div>
+
+          {/* By template breakdown */}
+          {Object.keys(stats.by_template).length > 0 && (
+            <div>
+              <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                By Template (Last 7 Days)
+              </h4>
+              <div className="bg-gray-50 dark:bg-gray-700/30 rounded-lg overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-200 dark:border-gray-600">
+                      <th className="text-left px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400">Template</th>
+                      <th className="text-right px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400">Sent</th>
+                      <th className="text-right px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400">Failed</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-600">
+                    {Object.entries(stats.by_template)
+                      .sort(([, a], [, b]) => (b.sent + b.failed) - (a.sent + a.failed))
+                      .map(([template, counts]) => (
+                        <tr key={template}>
+                          <td className="px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300 font-mono">
+                            {template.replace(/_/g, ' ')}
+                          </td>
+                          <td className="px-3 py-1.5 text-xs text-right text-green-700 dark:text-green-400">
+                            {counts.sent}
+                          </td>
+                          <td className="px-3 py-1.5 text-xs text-right text-red-700 dark:text-red-400">
+                            {counts.failed || '-'}
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Recent failures */}
+          {stats.recent_failures.length > 0 && (
+            <div>
+              <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                Recent Failures
+              </h4>
+              <div className="space-y-2">
+                {stats.recent_failures.map((failure) => (
+                  <div
+                    key={failure.id}
+                    className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-red-800 dark:text-red-300">
+                        {failure.to_email}
+                      </span>
+                      <span className="text-xs text-red-600 dark:text-red-400">
+                        {new Date(failure.created_at).toLocaleDateString()}{' '}
+                        {new Date(failure.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                    <p className="text-xs text-red-700 dark:text-red-400 mt-0.5">
+                      <span className="font-mono">{failure.template}</span>: {failure.error || 'Unknown error'}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {stats.sent_7d === 0 && stats.failed_7d === 0 && (
+            <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-2">
+              No email activity in the last 7 days.
+            </p>
+          )}
+
+          {/* Refresh button */}
+          <div className="flex justify-end">
+            <button
+              onClick={onRefresh}
+              disabled={loading}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Main page component
 // ---------------------------------------------------------------------------
 export default function EmailTemplatesPage() {
@@ -783,6 +980,8 @@ export default function EmailTemplatesPage() {
   const [editTemplate, setEditTemplate]   = useState<TemplateDef | null>(null);
   const [sendingTest, setSendingTest]     = useState<string | null>(null);
   const [toast, setToast]                 = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [emailStats, setEmailStats]       = useState<EmailStats | null>(null);
+  const [statsLoading, setStatsLoading]   = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/');
@@ -809,6 +1008,7 @@ export default function EmailTemplatesPage() {
         }
         setCurrentUser(data.user);
         await fetchTemplates();
+        fetchEmailStats();
       }
     } catch (err) {
       console.error('Error fetching user:', err);
@@ -824,6 +1024,18 @@ export default function EmailTemplatesPage() {
     } catch (err) {
       console.error('Error fetching templates:', err);
     }
+  }, []);
+
+  const fetchEmailStats = useCallback(async () => {
+    setStatsLoading(true);
+    try {
+      const res = await fetch('/api/admin/email-stats');
+      const data = await res.json();
+      if (data.success) setEmailStats(data.stats);
+    } catch (err) {
+      console.error('Error fetching email stats:', err);
+    }
+    setStatsLoading(false);
   }, []);
 
   const handleSave = async (key: string, subject: string, body: string) => {
@@ -1016,6 +1228,13 @@ export default function EmailTemplatesPage() {
             <strong className="text-gray-700 dark:text-gray-300">{currentUser.email}</strong>
           </div>
         </div>
+
+        {/* Delivery stats */}
+        <DeliveryStatsPanel
+          stats={emailStats}
+          loading={statsLoading}
+          onRefresh={fetchEmailStats}
+        />
 
         {/* Category filter */}
         <div className="flex flex-wrap gap-2">
