@@ -27,6 +27,8 @@ import {
   Users,
   CalendarCheck,
   FolderOpen,
+  ClipboardCheck,
+  Calendar,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { isStudent } from '@/lib/permissions';
@@ -94,9 +96,11 @@ export default function StudentLayout({
     { href: '/student', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/student/my-progress', label: 'My Progress', icon: TrendingUp },
     { href: '/student/completions', label: 'Stations', icon: CheckSquare },
+    { href: '/student/skill-sheets', label: 'Skill Sheets', icon: ClipboardCheck },
     { href: '/student/ekg', label: 'EKG Progress', icon: Activity },
     { href: '/student/scenarios', label: 'Scenarios', icon: BookOpen },
     { href: '/student/available-labs', label: 'Lab Sign-Ups', icon: CalendarCheck },
+    { href: '/student/labs', label: 'Lab History', icon: Calendar },
     { href: '/student/documents', label: 'Documents', icon: FolderOpen },
     { href: '/student/attendance-appeals', label: 'Attendance Appeals', icon: FileText },
     { href: '/student/peer-eval', label: 'Peer Evals', icon: Users },
