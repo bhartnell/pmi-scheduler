@@ -49,7 +49,7 @@ export async function PATCH(request: NextRequest) {
     // Get current timer state
     const { data: currentState, error: fetchError } = await supabase
       .from('lab_timer_state')
-      .select('*')
+      .select('id, lab_day_id, rotation_number, status, started_at, paused_at, elapsed_when_paused, duration_seconds, debrief_seconds, mode, rotation_acknowledged, version')
       .eq('lab_day_id', lab_day_id)
       .single();
 

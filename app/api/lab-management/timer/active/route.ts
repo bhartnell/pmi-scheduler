@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     // Find ALL timers that are currently running or paused (not stopped)
     const { data: activeTimers, error: timerError } = await supabase
       .from('lab_timer_state')
-      .select('*')
+      .select('id, lab_day_id, rotation_number, status, started_at, paused_at, elapsed_when_paused, duration_seconds, debrief_seconds, mode, rotation_acknowledged, version, updated_at')
       .in('status', ['running', 'paused'])
       .order('updated_at', { ascending: false });
 

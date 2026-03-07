@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     const { data, error } = await supabase
       .from('lab_timer_state')
       .select(`
-        *,
+        id, lab_day_id, rotation_number, status, started_at, paused_at, elapsed_when_paused, duration_seconds, debrief_seconds, mode, rotation_acknowledged, version, updated_at,
         lab_day:lab_days(id, date)
       `)
       .eq('lab_day_id', labDayId)
@@ -48,8 +48,9 @@ export async function GET(request: NextRequest) {
 
     // Check if timer is stale (lab day date is in the past)
     let isStale = false;
-    if (data?.lab_day?.date) {
-      const labDate = new Date(data.lab_day.date);
+    const labDayData = (data?.lab_day as unknown) as { id: string; date: string } | null;
+    if (labDayData?.date) {
+      const labDate = new Date(labDayData.date);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       labDate.setHours(0, 0, 0, 0);
@@ -250,7 +251,7 @@ export async function PATCH(request: NextRequest) {
     // Get current state
     const { data: currentState, error: fetchError } = await supabase
       .from('lab_timer_state')
-      .select('*')
+      .select('id, lab_day_id, rotation_number, status, started_at, paused_at, elapsed_when_paused, duration_seconds, debrief_seconds, mode, rotation_acknowledged, version')
       .eq('lab_day_id', labDayId)
       .single();
 
