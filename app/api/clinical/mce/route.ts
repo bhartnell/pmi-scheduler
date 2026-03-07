@@ -1,26 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { hasMinRole } from '@/lib/permissions';
 import { requireAuth } from '@/lib/api-auth';
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = getSupabaseAdmin();
-
-    const auth = await requireAuth('instructor');
+    const auth = await requireAuth('lead_instructor');
     if (auth instanceof NextResponse) return auth;
-    const { user, session } = auth;
 
-    const { data: callerUser } = await supabase
-      .from('lab_users')
-      .select('role')
-      .ilike('email', session.user.email)
-      .single();
-
-    if (!callerUser || !hasMinRole(callerUser.role, 'lead_instructor')) {
-      return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
-    }
-
+    const supabase = getSupabaseAdmin();
     const { searchParams } = new URL(request.url);
     const cohortId = searchParams.get('cohortId');
 
@@ -28,99 +15,161 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Cohort ID required' }, { status: 400 });
     }
 
-    // Get all active students in the cohort (exclude withdrawn/dropped students)
-    const { data: students } = await supabase
+    // Get active students in the cohort
+    const { data: students, error: studentsError } = await supabase
       .from('students')
-      .select('id')
+      .select('id, first_name, last_name')
       .eq('cohort_id', cohortId)
-      .eq('status', 'active');
+      .eq('status', 'active')
+      .order('last_name', { ascending: true });
 
-    const studentIds = students?.map(s => s.id) || [];
+    if (studentsError) throw studentsError;
 
-    if (studentIds.length === 0) {
-      return NextResponse.json({ success: true, modules: [] });
+    if (!students || students.length === 0) {
+      return NextResponse.json({ success: true, clearances: [] });
     }
 
-    // Get mCE modules for these students
-    const { data: modules, error } = await supabase
-      .from('student_mce_modules')
+    const studentIds = students.map(s => s.id);
+
+    // Get clearance records for these students
+    const { data: clearances, error: clearanceError } = await supabase
+      .from('student_mce_clearance')
       .select('*')
       .in('student_id', studentIds);
 
-    if (error) throw error;
+    if (clearanceError) throw clearanceError;
 
-    return NextResponse.json({ success: true, modules: modules || [] });
+    // Build a lookup map
+    const clearanceMap = new Map(
+      (clearances || []).map(c => [c.student_id, c])
+    );
+
+    // Merge students with their clearance data
+    const result = students.map(student => {
+      const clearance = clearanceMap.get(student.id);
+      const modulesRequired = clearance?.modules_required || 0;
+      const modulesCompleted = clearance?.modules_completed || 0;
+      const completionPercent = modulesRequired > 0
+        ? Math.round((modulesCompleted / modulesRequired) * 100)
+        : 0;
+
+      return {
+        student_id: student.id,
+        student_name: `${student.first_name} ${student.last_name}`,
+        first_name: student.first_name,
+        last_name: student.last_name,
+        mce_provider: clearance?.mce_provider || 'Platinum Planner',
+        modules_required: modulesRequired,
+        modules_completed: modulesCompleted,
+        completion_percent: completionPercent,
+        clearance_status: clearance?.clearance_status || 'not_started',
+        clearance_date: clearance?.clearance_date || null,
+        cleared_by: clearance?.cleared_by || null,
+        notes: clearance?.notes || '',
+        clearance_id: clearance?.id || null,
+      };
+    });
+
+    return NextResponse.json({ success: true, clearances: result });
   } catch (error) {
-    console.error('Error fetching mCE modules:', error);
-    return NextResponse.json({ success: false, error: 'Failed to fetch mCE modules' }, { status: 500 });
+    console.error('Error fetching mCE clearances:', error);
+    return NextResponse.json({ success: false, error: 'Failed to fetch mCE clearances' }, { status: 500 });
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = getSupabaseAdmin();
-
-    const auth = await requireAuth('instructor');
+    const auth = await requireAuth('lead_instructor');
     if (auth instanceof NextResponse) return auth;
-    const { user, session } = auth;
 
-    const { data: callerUser } = await supabase
-      .from('lab_users')
-      .select('role')
-      .ilike('email', session.user.email)
-      .single();
-
-    if (!callerUser || !hasMinRole(callerUser.role, 'lead_instructor')) {
-      return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
-    }
-
+    const supabase = getSupabaseAdmin();
     const body = await request.json();
-    const { student_id, module_name, completed, completion_date } = body;
+    const {
+      student_id,
+      mce_provider,
+      modules_required,
+      modules_completed,
+      clearance_status,
+      clearance_date,
+      cleared_by,
+      notes,
+    } = body;
 
-    if (!student_id || !module_name) {
-      return NextResponse.json({ success: false, error: 'Student ID and module name required' }, { status: 400 });
+    if (!student_id) {
+      return NextResponse.json({ success: false, error: 'Student ID required' }, { status: 400 });
     }
 
-    // Check if record exists
-    const { data: existing } = await supabase
-      .from('student_mce_modules')
-      .select('id')
-      .eq('student_id', student_id)
-      .eq('module_name', module_name)
+    // Build upsert data — only include fields that were provided
+    const upsertData: Record<string, unknown> = {
+      student_id,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (mce_provider !== undefined) upsertData.mce_provider = mce_provider;
+    if (modules_required !== undefined) upsertData.modules_required = modules_required;
+    if (modules_completed !== undefined) upsertData.modules_completed = modules_completed;
+    if (clearance_status !== undefined) upsertData.clearance_status = clearance_status;
+    if (clearance_date !== undefined) upsertData.clearance_date = clearance_date || null;
+    if (cleared_by !== undefined) upsertData.cleared_by = cleared_by;
+    if (notes !== undefined) upsertData.notes = notes;
+
+    const { data, error } = await supabase
+      .from('student_mce_clearance')
+      .upsert(upsertData, { onConflict: 'student_id' })
+      .select()
       .single();
 
-    let result;
-    if (existing) {
-      // Update existing
-      result = await supabase
-        .from('student_mce_modules')
-        .update({
-          completed,
-          completion_date: completion_date || null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', existing.id)
-        .select()
-        .single();
-    } else {
-      // Insert new
-      result = await supabase
-        .from('student_mce_modules')
-        .insert({
-          student_id,
-          module_name,
-          completed,
-          completion_date: completion_date || null,
-        })
-        .select()
-        .single();
+    if (error) throw error;
+
+    return NextResponse.json({ success: true, clearance: data });
+  } catch (error) {
+    console.error('Error saving mCE clearance:', error);
+    return NextResponse.json({ success: false, error: 'Failed to save mCE clearance' }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const auth = await requireAuth('lead_instructor');
+    if (auth instanceof NextResponse) return auth;
+
+    const supabase = getSupabaseAdmin();
+    const body = await request.json();
+    const { student_ids, clearance_status, clearance_date, cleared_by } = body;
+
+    if (!student_ids || !Array.isArray(student_ids) || student_ids.length === 0) {
+      return NextResponse.json({ success: false, error: 'student_ids array required' }, { status: 400 });
     }
 
-    if (result.error) throw result.error;
+    if (!clearance_status) {
+      return NextResponse.json({ success: false, error: 'clearance_status required' }, { status: 400 });
+    }
 
-    return NextResponse.json({ success: true, module: result.data });
+    const validStatuses = ['not_started', 'in_progress', 'submitted', 'cleared'];
+    if (!validStatuses.includes(clearance_status)) {
+      return NextResponse.json({ success: false, error: `Invalid status. Must be one of: ${validStatuses.join(', ')}` }, { status: 400 });
+    }
+
+    // Upsert a row for each student with the new status
+    const now = new Date().toISOString();
+    const upsertRows = student_ids.map((sid: string) => ({
+      student_id: sid,
+      clearance_status,
+      clearance_date: clearance_date || (clearance_status === 'cleared' ? now : null),
+      cleared_by: cleared_by || null,
+      updated_at: now,
+    }));
+
+    const { data, error } = await supabase
+      .from('student_mce_clearance')
+      .upsert(upsertRows, { onConflict: 'student_id' })
+      .select();
+
+    if (error) throw error;
+
+    return NextResponse.json({ success: true, updated: data?.length || 0 });
   } catch (error) {
-    console.error('Error saving mCE module:', error);
-    return NextResponse.json({ success: false, error: 'Failed to save mCE module' }, { status: 500 });
+    console.error('Error bulk updating mCE clearances:', error);
+    return NextResponse.json({ success: false, error: 'Failed to bulk update clearances' }, { status: 500 });
   }
 }
