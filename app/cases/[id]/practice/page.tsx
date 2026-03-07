@@ -23,7 +23,6 @@ import {
   Target,
   ThermometerSun,
   Trophy,
-  X,
   XCircle,
 } from 'lucide-react';
 import type {
@@ -148,7 +147,7 @@ export default function PracticeModePage() {
   // Core state
   const [screen, setScreen] = useState<PracticeScreen>('loading');
   const [caseStudy, setCaseStudy] = useState<CaseStudy | null>(null);
-  const [progress, setProgress] = useState<CasePracticeProgress | null>(null);
+  const [, setProgress] = useState<CasePracticeProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Phase navigation
@@ -380,7 +379,6 @@ export default function PracticeModePage() {
     setPhaseResponses([]);
     resetQuestionState();
     setScreen('phase_presentation');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Transition countdown timer

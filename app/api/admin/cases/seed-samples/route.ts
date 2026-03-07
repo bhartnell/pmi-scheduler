@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import sampleCases from '@/data/case-studies/sample-cases.json';
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function POST(request: NextRequest) {
   try {
     const auth = await requireAuth('admin');
