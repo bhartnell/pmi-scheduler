@@ -32,13 +32,15 @@ import {
   ArchiveRestore,
   FileText,
   Wand2,
-  Loader2
+  Loader2,
+  Printer
 } from 'lucide-react';
 import ExportDropdown from '@/components/ExportDropdown';
 import FieldTripAttendance from '@/components/FieldTripAttendance';
 import BulkPhotoUpload from '@/components/BulkPhotoUpload';
 import EmptyState from '@/components/EmptyState';
 import { useToast } from '@/components/Toast';
+import { openPrintWindow, printHeader, printFooter, escapeHtml } from '@/lib/print-utils';
 import type { ExportConfig } from '@/lib/export-utils';
 
 interface ArchiveSummary {
@@ -455,6 +457,71 @@ export default function CohortHubPage() {
     }
   };
 
+  const handlePrintRoster = () => {
+    if (!cohort || students.length === 0) return;
+
+    const cohortName = `${cohort.program.abbreviation} Group ${cohort.cohort_number}`;
+    const subtitle = [
+      cohort.is_active ? 'Active' : 'Inactive',
+      cohort.start_date ? `Started: ${new Date(cohort.start_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}` : '',
+      `${students.length} students`,
+    ].filter(Boolean).join(' | ');
+
+    let html = printHeader(`Cohort Roster: ${cohortName}`, subtitle);
+
+    // Stats
+    if (stats) {
+      html += '<div class="stats-grid">';
+      html += `<div class="stat-card"><div class="stat-label">Total Students</div><div class="stat-value">${stats.totalStudents}</div></div>`;
+      html += `<div class="stat-card"><div class="stat-label">With Photos</div><div class="stat-value">${stats.withPhotos} (${stats.photosPercent}%)</div></div>`;
+      html += `<div class="stat-card"><div class="stat-label">With Agency</div><div class="stat-value">${stats.withAgency} (${stats.agencyPercent}%)</div></div>`;
+      html += '</div>';
+    }
+
+    // Student roster table
+    html += `<h2>Student Roster (${students.length})</h2>`;
+    html += '<table><thead><tr><th style="width: 30px;">#</th><th>Name</th><th>Email</th><th>Agency</th><th>Status</th></tr></thead><tbody>';
+    const sorted = [...students].sort((a, b) => a.last_name.localeCompare(b.last_name));
+    sorted.forEach((student, idx) => {
+      html += `<tr>
+        <td>${idx + 1}</td>
+        <td><strong>${escapeHtml(student.last_name)}, ${escapeHtml(student.first_name)}</strong></td>
+        <td>${escapeHtml(student.email || '')}</td>
+        <td>${escapeHtml(student.agency || '')}</td>
+        <td style="text-transform: capitalize;">${escapeHtml(student.status || 'active')}</td>
+      </tr>`;
+    });
+    html += '</tbody></table>';
+
+    // Agency breakdown
+    if (stats && stats.agencyBreakdown.length > 0) {
+      html += '<h2>Agency Breakdown</h2>';
+      html += '<table><thead><tr><th>Agency</th><th style="width: 80px; text-align: center;">Count</th></tr></thead><tbody>';
+      stats.agencyBreakdown.forEach(ab => {
+        html += `<tr><td>${escapeHtml(ab.name)}</td><td style="text-align: center;">${ab.count}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    }
+
+    // Withdrawn students
+    if (withdrawnStudents.length > 0) {
+      html += `<h2>Withdrawn Students (${withdrawnStudents.length})</h2>`;
+      html += '<table><thead><tr><th style="width: 30px;">#</th><th>Name</th><th>Email</th><th>Agency</th></tr></thead><tbody>';
+      withdrawnStudents.forEach((student, idx) => {
+        html += `<tr>
+          <td>${idx + 1}</td>
+          <td>${escapeHtml(student.last_name)}, ${escapeHtml(student.first_name)}</td>
+          <td>${escapeHtml(student.email || '')}</td>
+          <td>${escapeHtml(student.agency || '')}</td>
+        </tr>`;
+      });
+      html += '</tbody></table>';
+    }
+
+    html += printFooter();
+    openPrintWindow(`Roster - ${cohortName}`, html);
+  };
+
   const handleExportCSV = () => {
     if (students.length === 0) return;
 
@@ -663,6 +730,15 @@ export default function CohortHubPage() {
               >
                 <Mail className="w-4 h-4" />
                 Email Cohort
+              </button>
+              <button
+                onClick={handlePrintRoster}
+                disabled={students.length === 0}
+                className="inline-flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-700 border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 text-sm text-gray-700 dark:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Print student roster"
+              >
+                <Printer className="w-4 h-4" />
+                Print
               </button>
               <button
                 onClick={handleExportCSV}

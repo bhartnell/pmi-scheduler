@@ -33,6 +33,7 @@ import {
   Wand2
 } from 'lucide-react';
 import { SKIN_OPTIONS } from '@/lib/constants';
+import { openPrintWindow, printHeader, printFooter, escapeHtml } from '@/lib/print-utils';
 import Breadcrumbs from '@/components/Breadcrumbs';
 
 // Helper to safely convert DB values to arrays (handles string, array, null)
@@ -904,19 +905,241 @@ export default function ScenarioEditorPage() {
   };
 
   const handlePrint = () => {
-    setInstructorPrintMode(true);
-    setTimeout(() => {
-      window.print();
-      setInstructorPrintMode(false);
-    }, 100);
+    const s = scenario;
+    const subtitle = [s.category, s.difficulty, s.estimated_duration ? `${s.estimated_duration} min` : ''].filter(Boolean).join(' | ');
+    let html = printHeader(s.title || 'EMS Scenario', subtitle);
+
+    // Instructor summary
+    if (s.instructor_summary) {
+      html += '<div class="section" style="border: 2px solid #333; padding: 8px; background: #f9f9f9;"><h3 style="text-transform: uppercase; font-size: 11px; font-weight: bold; border-bottom: 2px solid #333; padding-bottom: 4px; margin-bottom: 6px;">INSTRUCTOR NOTES (READ FIRST)</h3>';
+      html += `<p style="font-size: 12px;">${escapeHtml(s.instructor_summary)}</p></div>`;
+    }
+
+    // Dispatch
+    if (s.dispatch_time || s.dispatch_location || s.chief_complaint || s.dispatch_notes) {
+      html += '<h2>Dispatch Information</h2><div class="two-col" style="font-size: 12px;">';
+      if (s.dispatch_time) html += `<div class="label">Time:</div><div>${escapeHtml(s.dispatch_time)}</div>`;
+      if (s.dispatch_location) html += `<div class="label">Location:</div><div>${escapeHtml(s.dispatch_location)}</div>`;
+      html += '</div>';
+      if (s.chief_complaint) html += `<p style="font-size: 12px; margin-top: 4px;"><strong>Chief Complaint:</strong> ${escapeHtml(s.chief_complaint)}</p>`;
+      if (s.dispatch_notes) html += `<p style="font-size: 12px;"><strong>Dispatch Notes:</strong> ${escapeHtml(s.dispatch_notes)}</p>`;
+    }
+
+    // Patient info
+    if (s.patient_name || s.patient_age || s.patient_sex || s.patient_weight) {
+      html += '<h2>Patient Information</h2><div class="two-col" style="font-size: 12px;">';
+      if (s.patient_name) html += `<div class="label">Name:</div><div>${escapeHtml(s.patient_name)}</div>`;
+      if (s.patient_age) html += `<div class="label">Age:</div><div>${escapeHtml(s.patient_age)} years</div>`;
+      if (s.patient_sex) html += `<div class="label">Sex:</div><div>${escapeHtml(s.patient_sex)}</div>`;
+      if (s.patient_weight) html += `<div class="label">Weight:</div><div>${escapeHtml(s.patient_weight)} kg</div>`;
+      html += '</div>';
+      if (s.general_impression) html += `<p style="font-size: 12px; margin-top: 4px; padding: 4px 8px; background: #f5f5f5; border-left: 2px solid #333;"><strong>General Impression:</strong> ${escapeHtml(s.general_impression)}</p>`;
+    }
+
+    // Medical history
+    if (s.medical_history.length > 0 || s.medications.length > 0 || s.allergies) {
+      html += '<h2>Medical History</h2><div class="three-col" style="font-size: 12px;">';
+      if (s.medical_history.length > 0) html += `<div><strong>PMH:</strong><ul>${s.medical_history.map(h => `<li>${escapeHtml(h)}</li>`).join('')}</ul></div>`;
+      if (s.medications.length > 0) html += `<div><strong>Medications:</strong><ul>${s.medications.map(m => `<li>${escapeHtml(m)}</li>`).join('')}</ul></div>`;
+      if (s.allergies) html += `<div><strong>Allergies:</strong> ${escapeHtml(s.allergies)}</div>`;
+      html += '</div>';
+    }
+
+    // SAMPLE
+    html += '<h2>SAMPLE History</h2><table>';
+    html += `<tr><th style="width:30px;">S</th><th style="width:120px;">Signs/Symptoms</th><td>${escapeHtml(s.sample_history?.signs_symptoms || s.chief_complaint || '—')}</td></tr>`;
+    html += `<tr><th>A</th><th>Allergies</th><td>${escapeHtml(s.allergies || 'NKDA')}</td></tr>`;
+    html += `<tr><th>M</th><th>Medications</th><td>${s.medications.length > 0 ? s.medications.map(m => escapeHtml(m)).join(', ') : 'None'}</td></tr>`;
+    html += `<tr><th>P</th><th>Past Medical Hx</th><td>${s.medical_history.length > 0 ? s.medical_history.map(h => escapeHtml(h)).join(', ') : 'None'}</td></tr>`;
+    html += `<tr><th>L</th><th>Last Oral Intake</th><td>${escapeHtml(s.sample_history?.last_oral_intake || '—')}</td></tr>`;
+    html += `<tr><th>E</th><th>Events Leading</th><td>${escapeHtml(s.sample_history?.events_leading || '—')}</td></tr>`;
+    html += '</table>';
+
+    // OPQRST
+    if (s.opqrst?.onset || s.opqrst?.provocation || s.opqrst?.quality || s.opqrst?.radiation || s.opqrst?.severity || s.opqrst?.time_onset) {
+      html += '<h2>OPQRST (Pain Assessment)</h2><table>';
+      if (s.opqrst.onset) html += `<tr><th style="width:30px;">O</th><th style="width:120px;">Onset</th><td>${escapeHtml(s.opqrst.onset)}</td></tr>`;
+      if (s.opqrst.provocation) html += `<tr><th>P</th><th>Provocation</th><td>${escapeHtml(s.opqrst.provocation)}</td></tr>`;
+      if (s.opqrst.quality) html += `<tr><th>Q</th><th>Quality</th><td>${escapeHtml(s.opqrst.quality)}</td></tr>`;
+      if (s.opqrst.radiation) html += `<tr><th>R</th><th>Radiation</th><td>${escapeHtml(s.opqrst.radiation)}</td></tr>`;
+      if (s.opqrst.severity) html += `<tr><th>S</th><th>Severity</th><td>${escapeHtml(s.opqrst.severity)}</td></tr>`;
+      if (s.opqrst.time_onset) html += `<tr><th>T</th><th>Time</th><td>${escapeHtml(s.opqrst.time_onset)}</td></tr>`;
+      html += '</table>';
+    }
+
+    // Primary assessment XABCDE
+    if (s.phases[0]?.vitals || s.assessment_x || s.assessment_a || s.assessment_e) {
+      html += '<h2>Primary Assessment (XABCDE)</h2><table>';
+      const v = s.phases[0]?.vitals;
+      if (s.assessment_x || v?.hemorrhage_control) html += `<tr><th style="width:30px;">X</th><th style="width:140px;">Hemorrhage Control</th><td>${escapeHtml(v?.hemorrhage_control || s.assessment_x)}</td></tr>`;
+      if (s.assessment_a || v?.airway_status) html += `<tr><th>A</th><th>Airway</th><td>${escapeHtml(v?.airway_status || s.assessment_a)}</td></tr>`;
+      if (v && (v.rr || v.spo2 || v.lung_sounds)) html += `<tr><th>B</th><th>Breathing</th><td>${[v.rr ? `RR ${v.rr}` : '', v.spo2 ? `SpO2 ${v.spo2}` : '', v.lung_sounds || ''].filter(Boolean).join(', ')}</td></tr>`;
+      if (v && (v.bp || v.hr || v.skin)) html += `<tr><th>C</th><th>Circulation</th><td>${[v.bp ? `BP ${v.bp}` : '', v.hr ? `HR ${v.hr}` : '', v.skin ? `Skin: ${v.skin}` : ''].filter(Boolean).join(', ')}</td></tr>`;
+      if (v && (v.gcs_total || v.loc || v.pupils)) html += `<tr><th>D</th><th>Disability</th><td>${[v.gcs_total ? `GCS ${v.gcs_total}` : '', v.loc || '', v.pupils ? `Pupils: ${v.pupils}` : ''].filter(Boolean).join(', ')}</td></tr>`;
+      if (s.assessment_e || v?.expose_findings) html += `<tr><th>E</th><th>Expose/Environ.</th><td>${escapeHtml(v?.expose_findings || s.assessment_e)}</td></tr>`;
+      html += '</table>';
+    }
+
+    // Critical actions
+    if (s.critical_actions.length > 0) {
+      html += '<div class="section" style="border: 2px solid #333; padding: 8px; background: #f9f9f9;"><h3 style="text-transform: uppercase; font-size: 11px; font-weight: bold; border-bottom: 2px solid #333; padding-bottom: 4px; margin-bottom: 6px;">CRITICAL ACTIONS (MUST PERFORM)</h3>';
+      html += '<ul style="font-weight: 600;">';
+      s.critical_actions.forEach(a => { html += `<li>${escapeHtml(a.description)}</li>`; });
+      html += '</ul></div>';
+    }
+
+    // Phases
+    if (s.phases.length > 0) {
+      html += '<h2>Scenario Phases</h2>';
+      s.phases.forEach((phase, idx) => {
+        html += `<div class="section" style="border: 1px solid #ddd; padding: 8px; margin-bottom: 8px;">`;
+        html += `<div style="margin-bottom: 6px;"><span style="background: #333; color: white; padding: 2px 8px; font-size: 11px; font-weight: bold;">PHASE ${idx + 1}</span> <strong style="font-size: 13px; margin-left: 4px;">${escapeHtml(phase.name)}</strong></div>`;
+        if (phase.trigger) html += `<p style="font-size: 12px;"><strong>Trigger:</strong> ${escapeHtml(phase.trigger)}</p>`;
+        if (phase.general_impression) html += `<p style="font-size: 12px; padding: 4px; background: #f5f5f5;"><strong>General Impression:</strong> ${escapeHtml(phase.general_impression)}</p>`;
+        if (phase.vitals) {
+          const v = phase.vitals;
+          const vitalEntries = [
+            v.bp ? ['BP', v.bp] : null, v.hr ? ['HR', v.hr] : null, v.rr ? ['RR', v.rr] : null,
+            v.spo2 ? ['SpO2', v.spo2] : null, v.etco2 ? ['EtCO2', v.etco2] : null,
+            v.temp ? ['Temp', v.temp] : null, v.blood_glucose ? ['BGL', v.blood_glucose] : null,
+            v.gcs_total ? ['GCS', `${v.gcs_total}${(v.gcs_e || v.gcs_v || v.gcs_m) ? ` (E${v.gcs_e}V${v.gcs_v}M${v.gcs_m})` : ''}`] : null,
+            v.pupils ? ['Pupils', v.pupils] : null, v.skin ? ['Skin', v.skin] : null,
+          ].filter(Boolean) as [string, string][];
+          if (vitalEntries.length > 0) {
+            html += '<table style="font-size: 11px;"><thead><tr>' + vitalEntries.map(([label]) => `<th style="text-align: center;">${label}</th>`).join('') + '</tr></thead>';
+            html += '<tbody><tr>' + vitalEntries.map(([, val]) => `<td style="text-align: center; font-weight: 600;">${escapeHtml(val)}</td>`).join('') + '</tr></tbody></table>';
+          }
+          if (v.ekg_rhythm) html += `<p style="font-size: 11px;"><strong>EKG Rhythm:</strong> ${escapeHtml(v.ekg_rhythm)}</p>`;
+        }
+        if (phase.presentation_notes) html += `<p style="font-size: 12px; margin-top: 4px;"><strong>Presentation:</strong> ${escapeHtml(phase.presentation_notes)}</p>`;
+        if (phase.expected_actions) html += `<p style="font-size: 12px;"><strong>Expected Actions:</strong> ${escapeHtml(phase.expected_actions)}</p>`;
+        html += '</div>';
+      });
+    }
+
+    // Learning objectives
+    if (s.key_decision_points.length > 0) {
+      html += '<h2>Learning Objectives</h2><ul>';
+      s.key_decision_points.forEach(p => { html += `<li>${escapeHtml(p)}</li>`; });
+      html += '</ul>';
+    }
+
+    // Evaluation criteria
+    if (s.evaluation_criteria.length > 0) {
+      html += '<h2>Evaluation Criteria</h2><table>';
+      s.evaluation_criteria.forEach(c => {
+        html += `<tr><td style="font-weight: 600; width: 30%; background: #f9f9f9;">${escapeHtml(c.name)}</td><td>${escapeHtml(c.description)}</td></tr>`;
+      });
+      html += '</table>';
+    }
+
+    // Debrief
+    if (s.debrief_points.length > 0) {
+      html += '<div class="section" style="border: 2px solid #333; padding: 8px; background: #f9f9f9;"><h3 style="text-transform: uppercase; font-size: 11px; font-weight: bold; border-bottom: 2px solid #333; padding-bottom: 4px; margin-bottom: 6px;">DEBRIEF DISCUSSION POINTS</h3>';
+      html += '<ul>';
+      s.debrief_points.forEach(p => { html += `<li>${escapeHtml(p)}</li>`; });
+      html += '</ul></div>';
+    }
+
+    html += printFooter();
+    openPrintWindow(`Scenario - ${s.title}`, html);
   };
 
   const handleStudentPrint = () => {
-    setStudentPrintMode(true);
-    setTimeout(() => {
-      window.print();
-      setStudentPrintMode(false);
-    }, 100);
+    const s = scenario;
+    const subtitle = [s.category, s.difficulty, s.estimated_duration ? `${s.estimated_duration} min` : ''].filter(Boolean).join(' | ');
+
+    let html = `<div style="text-align: center; border-bottom: 2px solid #333; padding-bottom: 8px; margin-bottom: 16px;">
+      <h1 style="margin-bottom: 4px;">${escapeHtml(s.title)}</h1>
+      <div style="font-size: 16px; font-weight: 600;">PEER-TO-PEER SCENARIO</div>
+      <div style="font-size: 12px; color: #666; margin-top: 4px;">${escapeHtml(subtitle)}</div>
+    </div>`;
+
+    // Dispatch
+    if (s.dispatch_time || s.dispatch_location || s.chief_complaint || s.dispatch_notes) {
+      html += '<h2>Dispatch Information</h2><div class="two-col" style="font-size: 12px;">';
+      if (s.dispatch_time) html += `<div class="label">Time:</div><div>${escapeHtml(s.dispatch_time)}</div>`;
+      if (s.dispatch_location) html += `<div class="label">Location:</div><div>${escapeHtml(s.dispatch_location)}</div>`;
+      if (s.chief_complaint) html += `<div class="label">Chief Complaint:</div><div>${escapeHtml(s.chief_complaint)}</div>`;
+      html += '</div>';
+      if (s.dispatch_notes) html += `<p style="font-size: 12px; margin-top: 4px;"><strong>Additional Notes:</strong> ${escapeHtml(s.dispatch_notes)}</p>`;
+    }
+
+    // Patient info
+    html += '<h2>Patient Information</h2><div class="two-col" style="font-size: 12px;">';
+    if (s.patient_name) html += `<div class="label">Name:</div><div>${escapeHtml(s.patient_name)}</div>`;
+    if (s.patient_age) html += `<div class="label">Age:</div><div>${escapeHtml(s.patient_age)} years</div>`;
+    if (s.patient_sex) html += `<div class="label">Sex:</div><div>${escapeHtml(s.patient_sex)}</div>`;
+    if (s.patient_weight) html += `<div class="label">Weight:</div><div>${escapeHtml(s.patient_weight)} kg</div>`;
+    html += '</div>';
+    if (s.medical_history.length > 0) html += `<p style="font-size: 12px;"><strong>Medical History:</strong> ${s.medical_history.map(h => escapeHtml(h)).join(', ')}</p>`;
+    if (s.medications.length > 0) html += `<p style="font-size: 12px;"><strong>Medications:</strong> ${s.medications.map(m => escapeHtml(m)).join(', ')}</p>`;
+    if (s.allergies) html += `<p style="font-size: 12px;"><strong>Allergies:</strong> ${escapeHtml(s.allergies)}</p>`;
+
+    // Primary assessment
+    if (s.phases[0]?.vitals) {
+      html += '<h2>Primary Assessment (XABCDE)</h2><div style="font-size: 12px;">';
+      const v = s.phases[0].vitals;
+      if (v.hemorrhage_control || s.assessment_x) html += `<p><strong>X - Hemorrhage Control:</strong> ${escapeHtml(v.hemorrhage_control || s.assessment_x)}</p>`;
+      if (v.airway_status || s.assessment_a) html += `<p><strong>A - Airway:</strong> ${escapeHtml(v.airway_status || s.assessment_a)}</p>`;
+      if (v.rr || v.spo2) html += `<p><strong>B - Breathing:</strong> RR ${v.rr || '__'}, SpO2 ${v.spo2 || '__'}${v.lung_sounds ? `, ${v.lung_sounds}` : ''}</p>`;
+      if (v.bp || v.hr) html += `<p><strong>C - Circulation:</strong> BP ${v.bp || '__'}, HR ${v.hr || '__'}${v.skin ? `, Skin: ${v.skin}` : ''}</p>`;
+      if (v.gcs_total || v.loc) html += `<p><strong>D - Disability:</strong> GCS ${v.gcs_total || '__'}${v.loc ? `, ${v.loc}` : ''}${v.pupils ? `, Pupils: ${v.pupils}` : ''}</p>`;
+      if (v.expose_findings || s.assessment_e) html += `<p><strong>E - Expose/Environment:</strong> ${escapeHtml(v.expose_findings || s.assessment_e)}</p>`;
+      html += '</div>';
+    }
+
+    // SAMPLE
+    if (s.sample_history?.signs_symptoms || s.sample_history?.last_oral_intake || s.sample_history?.events_leading) {
+      html += '<h2>SAMPLE History</h2><div style="font-size: 12px;">';
+      if (s.sample_history.signs_symptoms) html += `<p><strong>S - Signs/Symptoms:</strong> ${escapeHtml(s.sample_history.signs_symptoms)}</p>`;
+      if (s.allergies) html += `<p><strong>A - Allergies:</strong> ${escapeHtml(s.allergies)}</p>`;
+      if (s.medications.length > 0) html += `<p><strong>M - Medications:</strong> ${s.medications.map(m => escapeHtml(m)).join(', ')}</p>`;
+      if (s.medical_history.length > 0) html += `<p><strong>P - Past Medical History:</strong> ${s.medical_history.map(h => escapeHtml(h)).join(', ')}</p>`;
+      if (s.sample_history.last_oral_intake) html += `<p><strong>L - Last Oral Intake:</strong> ${escapeHtml(s.sample_history.last_oral_intake)}</p>`;
+      if (s.sample_history.events_leading) html += `<p><strong>E - Events Leading:</strong> ${escapeHtml(s.sample_history.events_leading)}</p>`;
+      html += '</div>';
+    }
+
+    // OPQRST
+    if (s.opqrst?.onset || s.opqrst?.provocation || s.opqrst?.quality || s.opqrst?.radiation || s.opqrst?.severity || s.opqrst?.time_onset) {
+      html += '<h2>OPQRST (Pain/Symptom Assessment)</h2><div style="font-size: 12px;">';
+      if (s.opqrst.onset) html += `<p><strong>O - Onset:</strong> ${escapeHtml(s.opqrst.onset)}</p>`;
+      if (s.opqrst.provocation) html += `<p><strong>P - Provocation/Palliation:</strong> ${escapeHtml(s.opqrst.provocation)}</p>`;
+      if (s.opqrst.quality) html += `<p><strong>Q - Quality:</strong> ${escapeHtml(s.opqrst.quality)}</p>`;
+      if (s.opqrst.radiation) html += `<p><strong>R - Radiation/Region:</strong> ${escapeHtml(s.opqrst.radiation)}</p>`;
+      if (s.opqrst.severity) html += `<p><strong>S - Severity:</strong> ${escapeHtml(s.opqrst.severity)}</p>`;
+      if (s.opqrst.time_onset) html += `<p><strong>T - Time/Duration:</strong> ${escapeHtml(s.opqrst.time_onset)}</p>`;
+      html += '</div>';
+    }
+
+    // Initial vital signs
+    if (s.phases[0]?.vitals) {
+      html += '<h2>Initial Vital Signs</h2><table>';
+      const v = s.phases[0].vitals;
+      if (v.bp) html += `<tr><th style="width: 140px; background: #f5f5f5;">Blood Pressure</th><td>${escapeHtml(v.bp)}</td></tr>`;
+      if (v.hr) html += `<tr><th style="background: #f5f5f5;">Heart Rate</th><td>${escapeHtml(v.hr)}</td></tr>`;
+      if (v.rr) html += `<tr><th style="background: #f5f5f5;">Respiratory Rate</th><td>${escapeHtml(v.rr)}</td></tr>`;
+      if (v.spo2) html += `<tr><th style="background: #f5f5f5;">SpO2</th><td>${escapeHtml(v.spo2)}</td></tr>`;
+      if (v.etco2) html += `<tr><th style="background: #f5f5f5;">EtCO2</th><td>${escapeHtml(v.etco2)}</td></tr>`;
+      if (v.ekg_rhythm) html += `<tr><th style="background: #f5f5f5;">EKG Rhythm</th><td>${escapeHtml(v.ekg_rhythm)}</td></tr>`;
+      if (v.temp) html += `<tr><th style="background: #f5f5f5;">Temperature</th><td>${escapeHtml(v.temp)}</td></tr>`;
+      if (v.blood_glucose) html += `<tr><th style="background: #f5f5f5;">Blood Glucose</th><td>${escapeHtml(v.blood_glucose)}</td></tr>`;
+      if (v.gcs_total) html += `<tr><th style="background: #f5f5f5;">GCS</th><td>${v.gcs_total}${(v.gcs_e || v.gcs_v || v.gcs_m) ? ` (E${v.gcs_e}V${v.gcs_v}M${v.gcs_m})` : ''}</td></tr>`;
+      if (v.skin) html += `<tr><th style="background: #f5f5f5;">Skin</th><td>${escapeHtml(v.skin)}</td></tr>`;
+      if (v.lung_sounds) html += `<tr><th style="background: #f5f5f5;">Lung Sounds</th><td>${escapeHtml(v.lung_sounds)}</td></tr>`;
+      if (v.pain) html += `<tr><th style="background: #f5f5f5;">Pain (0-10)</th><td>${escapeHtml(v.pain)}</td></tr>`;
+      html += '</table>';
+    }
+
+    // Notes section with blank lines
+    html += '<h2 style="margin-top: 24px;">Assessment Notes</h2>';
+    for (let i = 1; i <= 5; i++) {
+      html += `<div style="font-size: 11px; color: #999; margin-top: 12px;">Note ${i}:</div><div style="border-bottom: 1px solid #ccc; height: 20px;"></div>`;
+    }
+
+    html += printFooter();
+    openPrintWindow(`Student Handout - ${s.title}`, html);
   };
 
   const handleDuplicate = async () => {

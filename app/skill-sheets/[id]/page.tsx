@@ -23,6 +23,7 @@ import {
   ChevronUp,
   Loader2,
 } from 'lucide-react';
+import { openPrintWindow, printHeader, printFooter, escapeHtml } from '@/lib/print-utils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -386,6 +387,73 @@ function SkillSheetDetailContent() {
     handleSave();
   };
 
+  const handlePrintSkillSheet = () => {
+    if (!sheet) return;
+
+    const sourceBadgeLabel = (SOURCE_BADGE[sheet.source] || SOURCE_BADGE.publisher).label;
+    const programBadgeLabel = (PROGRAM_BADGE[sheet.program] || PROGRAM_BADGE.emt).label;
+    const subtitle = `${programBadgeLabel} | ${sourceBadgeLabel}${sheet.platinum_skill_type ? ` | ${sheet.platinum_skill_type}` : ''}`;
+
+    let html = printHeader(sheet.skill_name, subtitle);
+
+    // Overview
+    if (sheet.overview) {
+      html += `<p style="font-size: 12px; color: #555; margin-bottom: 12px;">${escapeHtml(sheet.overview)}</p>`;
+    }
+
+    // Equipment
+    if (sheet.equipment && sheet.equipment.length > 0) {
+      html += '<h2>Equipment Required</h2>';
+      html += `<p style="font-size: 12px;">${sheet.equipment.map(e => escapeHtml(e)).join(', ')}</p>`;
+    }
+
+    // Steps by phase
+    const groups = groupStepsByPhase(sheet.steps);
+    const phases = getOrderedPhases(groups);
+
+    phases.forEach(phase => {
+      const phaseLabel = PHASE_LABELS[phase] || phase.charAt(0).toUpperCase() + phase.slice(1);
+      const phaseSteps = groups[phase];
+
+      html += `<h2>${escapeHtml(phaseLabel)}</h2>`;
+      html += '<table><thead><tr><th style="width: 40px;">#</th><th style="width: 30px;"></th><th>Step</th><th style="width: 60px; text-align: center;">Critical</th></tr></thead><tbody>';
+      phaseSteps.forEach(step => {
+        html += `<tr>
+          <td style="text-align: center; font-weight: 600;">${step.step_number}</td>
+          <td><span class="checkbox"></span></td>
+          <td>${escapeHtml(step.instruction)}${step.detail_notes ? `<br/><span style="font-size: 11px; color: #666;">${escapeHtml(step.detail_notes)}</span>` : ''}</td>
+          <td style="text-align: center;">${step.is_critical ? '<strong style="color: #c00;">YES</strong>' : ''}</td>
+        </tr>`;
+      });
+      html += '</tbody></table>';
+    });
+
+    // Critical criteria
+    if (sheet.critical_criteria && sheet.critical_criteria.length > 0) {
+      html += '<div class="section" style="border: 2px solid #d97706; padding: 8px; background: #fffbeb; margin-top: 12px;"><h3 style="font-size: 13px; font-weight: bold; color: #92400e; margin-bottom: 6px;">Critical Criteria</h3>';
+      html += '<ul>';
+      sheet.critical_criteria.forEach(cc => { html += `<li>${escapeHtml(cc)}</li>`; });
+      html += '</ul></div>';
+    }
+
+    // Critical failures
+    if (sheet.critical_failures && sheet.critical_failures.length > 0) {
+      html += '<div class="section" style="border: 2px solid #dc2626; padding: 8px; background: #fef2f2; margin-top: 8px;"><h3 style="font-size: 13px; font-weight: bold; color: #991b1b; margin-bottom: 6px;">Critical Failures</h3>';
+      html += '<ul>';
+      sheet.critical_failures.forEach(cf => { html += `<li>${escapeHtml(cf)}</li>`; });
+      html += '</ul></div>';
+    }
+
+    // Notes
+    if (sheet.notes) {
+      html += '<h2>Notes</h2>';
+      html += `<p style="font-size: 12px;">${escapeHtml(sheet.notes)}</p>`;
+    }
+
+    html += printFooter();
+    openPrintWindow(`Skill Sheet - ${sheet.skill_name}`, html);
+  };
+
   const handleModeChange = (newMode: DisplayMode) => {
     setMode(newMode);
     // Update URL without full navigation
@@ -535,7 +603,7 @@ function SkillSheetDetailContent() {
 
             {/* Print button */}
             <button
-              onClick={() => window.print()}
+              onClick={handlePrintSkillSheet}
               className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors self-start"
             >
               <Printer className="w-4 h-4" />

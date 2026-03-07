@@ -50,6 +50,7 @@ import BLSPlatinumChecklist from '@/components/BLSPlatinumChecklist';
 import AttendanceSection from '@/components/AttendanceSection';
 import LearningStyleDistribution from '@/components/LearningStyleDistribution';
 import { downloadICS, parseLocalDate } from '@/lib/ics-export';
+import { openPrintWindow, printHeader, printFooter, escapeHtml } from '@/lib/print-utils';
 import { useToast } from '@/components/Toast';
 import { hasMinRole, canAccessAdmin } from '@/lib/permissions';
 import HelpTooltip from '@/components/HelpTooltip';
@@ -1406,15 +1407,170 @@ export default function LabDayPage() {
   };
 
   const handlePrint = () => {
-    window.print();
+    if (!labDay) return;
+
+    const cohortName = `${labDay.cohort.program.abbreviation} Group ${labDay.cohort.cohort_number}`;
+    const dateStr = formatDate(labDay.date);
+    const timeStr = labDay.start_time
+      ? `${formatTime(labDay.start_time)}${labDay.end_time ? ` - ${formatTime(labDay.end_time)}` : ''}`
+      : '';
+
+    let html = printHeader(
+      labDay.title || 'Lab Day Schedule',
+      `${cohortName} — ${dateStr}${timeStr ? ` — ${timeStr}` : ''}`
+    );
+
+    // Week/Day info
+    if (labDay.week_number && labDay.day_number) {
+      html += `<div style="font-size: 13px; color: #444; margin-bottom: 12px;">Week ${labDay.week_number}, Day ${labDay.day_number} &bull; ${labDay.num_rotations} rotations &times; ${labDay.rotation_duration} min</div>`;
+    } else {
+      html += `<div style="font-size: 13px; color: #444; margin-bottom: 12px;">${labDay.num_rotations} rotations &times; ${labDay.rotation_duration} min</div>`;
+    }
+
+    // Lab Day Roles
+    if (labDayRoles.length > 0) {
+      const leads = labDayRoles.filter(r => r.role === 'lab_lead').map(r => r.instructor?.name || 'Unknown');
+      const roamers = labDayRoles.filter(r => r.role === 'roamer').map(r => r.instructor?.name || 'Unknown');
+      const observers = labDayRoles.filter(r => r.role === 'observer').map(r => r.instructor?.name || 'Unknown');
+      html += '<div class="section" style="font-size: 12px;">';
+      if (leads.length > 0) html += `<strong>Lab Lead${leads.length > 1 ? 's' : ''}:</strong> ${leads.map(n => escapeHtml(n)).join(', ')} &nbsp; `;
+      if (roamers.length > 0) html += `<strong>Roamer${roamers.length > 1 ? 's' : ''}:</strong> ${roamers.map(n => escapeHtml(n)).join(', ')} &nbsp; `;
+      if (observers.length > 0) html += `<strong>Observer${observers.length > 1 ? 's' : ''}:</strong> ${observers.map(n => escapeHtml(n)).join(', ')}`;
+      html += '</div>';
+    }
+
+    // Stations table
+    if (labDay.stations.length > 0) {
+      html += '<h2>Stations</h2>';
+      html += '<table><thead><tr><th>#</th><th>Type</th><th>Station / Scenario</th><th>Instructor</th><th>Room</th></tr></thead><tbody>';
+      labDay.stations.forEach((station: Station) => {
+        const stationTitle = station.custom_title || station.scenario?.title || station.skill_name || `Station ${station.station_number}`;
+        html += `<tr>
+          <td>${station.station_number}</td>
+          <td style="text-transform: capitalize; font-size: 11px;">${escapeHtml(station.station_type.replace('_', ' '))}</td>
+          <td><strong>${escapeHtml(stationTitle)}</strong>${station.station_notes ? `<br/><span style="font-size: 11px; color: #666;">${escapeHtml(station.station_notes)}</span>` : ''}</td>
+          <td>${station.instructor_name ? escapeHtml(station.instructor_name) : '<em style="color: #999;">TBD</em>'}</td>
+          <td>${escapeHtml(station.room || '')}</td>
+        </tr>`;
+      });
+      html += '</tbody></table>';
+    }
+
+    // Rotation schedule
+    if (labDay.start_time && labDay.rotation_duration > 0 && labDay.num_rotations > 0) {
+      html += '<h2>Rotation Schedule</h2>';
+      html += '<div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; font-size: 12px;">';
+      const startParts = labDay.start_time.split(':');
+      const startMinutes = parseInt(startParts[0]) * 60 + parseInt(startParts[1]);
+      for (let i = 0; i < labDay.num_rotations; i++) {
+        const rotStart = startMinutes + (i * labDay.rotation_duration);
+        const rotEnd = rotStart + labDay.rotation_duration;
+        const fmtTime = (mins: number) => {
+          const h = Math.floor(mins / 60) % 12 || 12;
+          const m = String(mins % 60).padStart(2, '0');
+          const ampm = Math.floor(mins / 60) >= 12 ? 'PM' : 'AM';
+          return `${h}:${m} ${ampm}`;
+        };
+        html += `<div style="border: 1px solid #ddd; border-radius: 4px; padding: 4px 8px;"><strong>R${i + 1}:</strong> ${fmtTime(rotStart)} - ${fmtTime(rotEnd)}</div>`;
+      }
+      html += '</div>';
+    }
+
+    // Checklist
+    if (checklistItems.length > 0) {
+      html += '<h2>Prep Checklist (' + checklistItems.filter(i => i.is_completed).length + '/' + checklistItems.length + ')</h2>';
+      html += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2px 16px; font-size: 12px;">';
+      checklistItems.forEach(item => {
+        const icon = item.is_completed
+          ? '<span class="checkbox-checked"></span>'
+          : '<span class="checkbox"></span>';
+        html += `<div>${icon} <span${item.is_completed ? ' style="text-decoration: line-through; color: #888;"' : ''}>${escapeHtml(item.title)}</span></div>`;
+      });
+      html += '</div>';
+    }
+
+    // Notes
+    if (labDay.notes) {
+      html += '<h2>Notes</h2>';
+      html += `<p style="font-size: 12px;">${escapeHtml(labDay.notes)}</p>`;
+    }
+
+    // Student roster
+    if (cohortStudents.length > 0) {
+      html += `<h2>Student Roster (${cohortStudents.length})</h2>`;
+      html += '<div class="three-col" style="font-size: 12px;">';
+      const sorted = [...cohortStudents].sort((a, b) => a.last_name.localeCompare(b.last_name));
+      sorted.forEach((student, idx) => {
+        html += `<div>${idx + 1}. ${escapeHtml(student.last_name)}, ${escapeHtml(student.first_name)}</div>`;
+      });
+      html += '</div>';
+    }
+
+    html += printFooter();
+    openPrintWindow(`Lab Day - ${cohortName} - ${labDay.date}`, html);
   };
 
   const handlePrintRoster = () => {
-    setShowRosterPrint(true);
-    // Use a short timeout to let React render the print div before printing
-    setTimeout(() => {
-      window.print();
-    }, 150);
+    if (!labDay) return;
+
+    const cohortName = `${labDay.cohort.program.abbreviation} Group ${labDay.cohort.cohort_number}`;
+    let html = printHeader('Lab Day Roster', `${cohortName} — ${formatDate(labDay.date)}`);
+
+    html += '<div class="two-col" style="margin-bottom: 12px; font-size: 12px;">';
+    html += `<div><strong>Date:</strong> ${escapeHtml(formatDate(labDay.date))}<br/><strong>Cohort:</strong> ${escapeHtml(cohortName)}`;
+    if (labDay.title) html += `<br/><strong>Lab:</strong> ${escapeHtml(labDay.title)}`;
+    html += '</div>';
+    html += '<div>';
+    if (labDay.start_time) {
+      html += `<strong>Time:</strong> ${formatTime(labDay.start_time)}${labDay.end_time ? ` - ${formatTime(labDay.end_time)}` : ''}<br/>`;
+    }
+    if (labDay.week_number && labDay.day_number) {
+      html += `<strong>Week ${labDay.week_number}, Day ${labDay.day_number}</strong><br/>`;
+    }
+    html += `<strong>Rotations:</strong> ${labDay.num_rotations} x ${labDay.rotation_duration} min`;
+    html += '</div></div>';
+
+    // Roles
+    if (labDayRoles.length > 0) {
+      html += '<h2>Lab Day Roles</h2><div style="font-size: 12px; margin-bottom: 8px;">';
+      const leads = labDayRoles.filter(r => r.role === 'lab_lead');
+      const roamers = labDayRoles.filter(r => r.role === 'roamer');
+      const observers = labDayRoles.filter(r => r.role === 'observer');
+      if (leads.length > 0) html += `<strong>Lab Lead${leads.length > 1 ? 's' : ''}:</strong> ${leads.map(r => escapeHtml(r.instructor?.name || 'Unknown')).join(', ')} &nbsp; `;
+      if (roamers.length > 0) html += `<strong>Roamer${roamers.length > 1 ? 's' : ''}:</strong> ${roamers.map(r => escapeHtml(r.instructor?.name || 'Unknown')).join(', ')} &nbsp; `;
+      if (observers.length > 0) html += `<strong>Observer${observers.length > 1 ? 's' : ''}:</strong> ${observers.map(r => escapeHtml(r.instructor?.name || 'Unknown')).join(', ')}`;
+      html += '</div>';
+    }
+
+    // Stations
+    if (labDay.stations.length > 0) {
+      html += '<h2>Stations & Instructors</h2>';
+      html += '<table><thead><tr><th>Stn</th><th>Station</th><th>Instructor</th><th>Room</th></tr></thead><tbody>';
+      labDay.stations.forEach((station: Station) => {
+        const title = station.custom_title || station.scenario?.title || station.skill_name || `Station ${station.station_number}`;
+        html += `<tr><td>${station.station_number}</td><td>${escapeHtml(title)}</td>`;
+        html += `<td>${station.instructor_name ? escapeHtml(station.instructor_name) : '<em style="color:#999">TBD</em>'}</td>`;
+        html += `<td>${escapeHtml(station.room || '')}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    }
+
+    // Students
+    html += `<h2>Enrolled Students (${cohortStudents.length})</h2>`;
+    if (cohortStudents.length === 0) {
+      html += '<p style="font-size: 12px; color: #999; font-style: italic;">No students found for this cohort.</p>';
+    } else {
+      html += '<table><thead><tr><th>#</th><th>Name</th><th>Email</th><th>Agency</th></tr></thead><tbody>';
+      const sorted = [...cohortStudents].sort((a, b) => a.last_name.localeCompare(b.last_name));
+      sorted.forEach((student, idx) => {
+        html += `<tr><td>${idx + 1}</td><td><strong>${escapeHtml(student.last_name)}, ${escapeHtml(student.first_name)}</strong></td>`;
+        html += `<td>${escapeHtml(student.email || '')}</td><td>${escapeHtml(student.agency || '')}</td></tr>`;
+      });
+      html += '</tbody></table>';
+    }
+
+    html += printFooter();
+    openPrintWindow(`Roster - ${cohortName} - ${labDay.date}`, html);
   };
 
   const handleCSVExport = async () => {
