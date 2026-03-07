@@ -21,6 +21,10 @@ import {
   Search,
   Wand2,
   ClipboardList,
+  Sparkles,
+  X,
+  Baby,
+  ArrowRight,
 } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
@@ -66,6 +70,31 @@ interface CompletenessData {
   fully_complete: number;
   total: number;
   report: CompletenessEntry[];
+}
+
+interface AutoFillFieldChange {
+  field: string;
+  old_value: unknown;
+  new_value: unknown;
+}
+
+interface AutoFillScenarioChange {
+  scenario_id: string;
+  title: string;
+  category: string | null;
+  is_pediatric: boolean;
+  changes: AutoFillFieldChange[];
+}
+
+interface AutoFillResult {
+  total_checked: number;
+  total_with_changes: number;
+  total_unchanged: number;
+  total_applied: number;
+  total_errors: number;
+  pediatric_scenarios: number;
+  changelog: AutoFillScenarioChange[];
+  errors: Array<{ scenario_id: string; title: string; error: string }>;
 }
 
 interface AuditData {
@@ -172,6 +201,79 @@ export default function ScenarioAuditPage() {
   const [issueFilter, setIssueFilter] = useState('');
   const [qualityFilter, setQualityFilter] = useState<'all' | 'incomplete' | 'complete'>('incomplete');
 
+  // Auto-fill state
+  const [autoFillLoading, setAutoFillLoading] = useState(false);
+  const [autoFillPreview, setAutoFillPreview] = useState<AutoFillResult | null>(null);
+  const [autoFillApplying, setAutoFillApplying] = useState(false);
+  const [autoFillDone, setAutoFillDone] = useState<AutoFillResult | null>(null);
+  const [showAutoFillModal, setShowAutoFillModal] = useState(false);
+
+  const loadAudit = () => {
+    setLoading(true);
+    setError(null);
+    fetch('/api/admin/scenarios/audit')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          setAudit(data.audit);
+        } else {
+          setError(data.error || 'Failed to load audit');
+        }
+      })
+      .catch(err => setError(err.message))
+      .finally(() => setLoading(false));
+  };
+
+  const handleAutoFillPreview = async () => {
+    setAutoFillLoading(true);
+    setAutoFillPreview(null);
+    setAutoFillDone(null);
+    setShowAutoFillModal(true);
+    try {
+      const res = await fetch('/api/admin/scenarios/auto-fill', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ preview: true }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAutoFillPreview(data.results);
+      } else {
+        setError(data.error || 'Failed to preview auto-fill');
+        setShowAutoFillModal(false);
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to preview auto-fill');
+      setShowAutoFillModal(false);
+    } finally {
+      setAutoFillLoading(false);
+    }
+  };
+
+  const handleAutoFillApply = async () => {
+    setAutoFillApplying(true);
+    try {
+      const res = await fetch('/api/admin/scenarios/auto-fill', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ preview: false }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAutoFillDone(data.results);
+        setAutoFillPreview(null);
+        // Refresh audit data
+        loadAudit();
+      } else {
+        setError(data.error || 'Failed to apply auto-fill');
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to apply auto-fill');
+    } finally {
+      setAutoFillApplying(false);
+    }
+  };
+
   const toggleSection = (key: string) => {
     setExpandedSections(prev => {
       const next = new Set(prev);
@@ -183,18 +285,9 @@ export default function ScenarioAuditPage() {
 
   useEffect(() => {
     if (session) {
-      fetch('/api/admin/scenarios/audit')
-        .then(res => res.json())
-        .then(data => {
-          if (data.success) {
-            setAudit(data.audit);
-          } else {
-            setError(data.error || 'Failed to load audit');
-          }
-        })
-        .catch(err => setError(err.message))
-        .finally(() => setLoading(false));
+      loadAudit();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session]);
 
   if (!session) {
@@ -224,13 +317,27 @@ export default function ScenarioAuditPage() {
             Comprehensive analysis of scenario data structure and quality
           </p>
         </div>
-        <Link
-          href="/admin/scenarios/transform"
-          className="ml-auto flex items-center gap-2 px-4 py-2 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-600 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/50 transition-colors whitespace-nowrap"
-        >
-          <Wand2 className="h-4 w-4" />
-          Transform Tool
-        </Link>
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={handleAutoFillPreview}
+            disabled={autoFillLoading || !audit}
+            className="flex items-center gap-2 px-4 py-2 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-600 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {autoFillLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Sparkles className="h-4 w-4" />
+            )}
+            Fix Incomplete Scenarios
+          </button>
+          <Link
+            href="/admin/scenarios/transform"
+            className="flex items-center gap-2 px-4 py-2 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-600 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/50 transition-colors whitespace-nowrap"
+          >
+            <Wand2 className="h-4 w-4" />
+            Transform Tool
+          </Link>
+        </div>
       </div>
 
       {loading && (
@@ -246,6 +353,270 @@ export default function ScenarioAuditPage() {
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-4 flex items-center gap-3">
           <XCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
           <span className="text-red-800 dark:text-red-300">{error}</span>
+        </div>
+      )}
+
+      {/* Auto-Fill Modal */}
+      {showAutoFillModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-3xl max-h-[80vh] flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-5 border-b dark:border-gray-700">
+              <div className="flex items-center gap-3">
+                <Sparkles className="h-5 w-5 text-emerald-500" />
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {autoFillDone ? 'Auto-Fill Complete' : autoFillPreview ? 'Auto-Fill Preview' : 'Analyzing Scenarios...'}
+                </h2>
+              </div>
+              <button
+                onClick={() => { setShowAutoFillModal(false); setAutoFillPreview(null); setAutoFillDone(null); }}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto p-5">
+              {autoFillLoading && (
+                <div className="flex items-center justify-center py-12">
+                  <div className="text-center">
+                    <Loader2 className="animate-spin h-8 w-8 text-emerald-500 mx-auto" />
+                    <p className="mt-3 text-gray-500 dark:text-gray-400">Analyzing scenarios for auto-fill...</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Preview Results */}
+              {autoFillPreview && (
+                <div className="space-y-4">
+                  {/* Summary Stats */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 text-center">
+                      <div className="text-xl font-bold text-gray-900 dark:text-white">{autoFillPreview.total_checked}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">Checked</div>
+                    </div>
+                    <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-lg p-3 text-center">
+                      <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400">{autoFillPreview.total_with_changes}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">Can Auto-Fill</div>
+                    </div>
+                    <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 text-center">
+                      <div className="text-xl font-bold text-gray-500">{autoFillPreview.total_unchanged}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">No Changes</div>
+                    </div>
+                    {autoFillPreview.pediatric_scenarios > 0 && (
+                      <div className="bg-pink-50 dark:bg-pink-900/20 rounded-lg p-3 text-center">
+                        <div className="text-xl font-bold text-pink-600 dark:text-pink-400 flex items-center justify-center gap-1">
+                          <Baby className="h-4 w-4" />
+                          {autoFillPreview.pediatric_scenarios}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">Pediatric</div>
+                      </div>
+                    )}
+                  </div>
+
+                  {autoFillPreview.total_with_changes === 0 ? (
+                    <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg p-4 flex items-center gap-3">
+                      <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
+                      <span className="text-green-800 dark:text-green-300">All auto-fillable fields are already populated. No changes needed.</span>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Change Details */}
+                      <div className="space-y-2">
+                        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                          Changes Preview ({autoFillPreview.changelog.filter(c => c.changes.some(ch => ch.field !== '_pediatric_missing_fields')).length} scenarios)
+                        </h3>
+                        {autoFillPreview.changelog
+                          .filter(c => c.changes.some(ch => ch.field !== '_pediatric_missing_fields'))
+                          .map((entry) => (
+                            <div key={entry.scenario_id} className="bg-gray-50 dark:bg-gray-700/30 rounded-lg border dark:border-gray-600 p-3">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className="text-sm font-medium text-gray-900 dark:text-white">
+                                  {entry.title}
+                                </span>
+                                {entry.is_pediatric && (
+                                  <span className="px-1.5 py-0.5 text-xs rounded bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300 flex items-center gap-1">
+                                    <Baby className="h-3 w-3" />
+                                    Pediatric
+                                  </span>
+                                )}
+                                {entry.category && (
+                                  <span className="px-1.5 py-0.5 text-xs rounded bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300">
+                                    {entry.category}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="space-y-1.5">
+                                {entry.changes
+                                  .filter(ch => ch.field !== '_pediatric_missing_fields')
+                                  .map((change, i) => (
+                                    <div key={i} className="flex items-start gap-2 text-xs">
+                                      <span className="font-mono font-medium text-indigo-600 dark:text-indigo-400 whitespace-nowrap mt-0.5">
+                                        {change.field}
+                                      </span>
+                                      <ArrowRight className="h-3 w-3 text-gray-400 flex-shrink-0 mt-0.5" />
+                                      <div className="flex-1 min-w-0">
+                                        <span className="text-gray-500 dark:text-gray-400 line-through mr-2">
+                                          {change.old_value === null || change.old_value === undefined
+                                            ? '(empty)'
+                                            : typeof change.old_value === 'string'
+                                              ? change.old_value
+                                              : JSON.stringify(change.old_value)}
+                                        </span>
+                                        <span className="text-emerald-700 dark:text-emerald-400">
+                                          {typeof change.new_value === 'string'
+                                            ? change.new_value
+                                            : Array.isArray(change.new_value)
+                                              ? (change.new_value as string[]).join(', ')
+                                              : JSON.stringify(change.new_value)}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                {/* Pediatric missing fields info */}
+                                {entry.changes
+                                  .filter(ch => ch.field === '_pediatric_missing_fields')
+                                  .map((change, i) => (
+                                    <div key={`ped-${i}`} className="flex items-start gap-2 text-xs mt-1 pt-1 border-t dark:border-gray-600">
+                                      <AlertTriangle className="h-3 w-3 text-amber-500 flex-shrink-0 mt-0.5" />
+                                      <span className="text-amber-700 dark:text-amber-400">
+                                        Pediatric fields needing manual attention: {Array.isArray(change.old_value) ? (change.old_value as string[]).join(', ') : String(change.old_value)}
+                                      </span>
+                                    </div>
+                                  ))}
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+
+                      {/* Pediatric-only entries (info only, no auto-fill changes) */}
+                      {autoFillPreview.changelog.filter(c => c.is_pediatric && !c.changes.some(ch => ch.field !== '_pediatric_missing_fields')).length > 0 && (
+                        <div className="space-y-2">
+                          <h3 className="text-sm font-semibold text-pink-700 dark:text-pink-300 flex items-center gap-1">
+                            <Baby className="h-4 w-4" />
+                            Pediatric Scenarios - Manual Review Needed
+                          </h3>
+                          {autoFillPreview.changelog
+                            .filter(c => c.is_pediatric && !c.changes.some(ch => ch.field !== '_pediatric_missing_fields'))
+                            .map((entry) => {
+                              const pedChange = entry.changes.find(ch => ch.field === '_pediatric_missing_fields');
+                              if (!pedChange) return null;
+                              return (
+                                <div key={entry.scenario_id} className="bg-pink-50 dark:bg-pink-900/10 rounded-lg border border-pink-200 dark:border-pink-800 p-3">
+                                  <div className="text-sm font-medium text-gray-900 dark:text-white mb-1">{entry.title}</div>
+                                  <div className="flex flex-wrap gap-1">
+                                    {Array.isArray(pedChange.old_value) && (pedChange.old_value as string[]).map((field, i) => (
+                                      <span key={i} className="px-1.5 py-0.5 text-xs bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300 rounded">
+                                        {field}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Apply Results */}
+              {autoFillDone && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-lg p-3 text-center">
+                      <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400">{autoFillDone.total_applied}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">Applied</div>
+                    </div>
+                    <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 text-center">
+                      <div className="text-xl font-bold text-gray-500">{autoFillDone.total_unchanged}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">Unchanged</div>
+                    </div>
+                    <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-3 text-center">
+                      <div className="text-xl font-bold text-red-600 dark:text-red-400">{autoFillDone.total_errors}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">Errors</div>
+                    </div>
+                    {autoFillDone.pediatric_scenarios > 0 && (
+                      <div className="bg-pink-50 dark:bg-pink-900/20 rounded-lg p-3 text-center">
+                        <div className="text-xl font-bold text-pink-600 dark:text-pink-400">{autoFillDone.pediatric_scenarios}</div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">Pediatric</div>
+                      </div>
+                    )}
+                  </div>
+
+                  {autoFillDone.total_applied > 0 && (
+                    <div className="bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-700 rounded-lg p-4 flex items-center gap-3">
+                      <CheckCircle2 className="h-5 w-5 text-emerald-500 flex-shrink-0" />
+                      <span className="text-emerald-800 dark:text-emerald-300">
+                        Successfully auto-filled {autoFillDone.total_applied} scenario(s). Audit data has been refreshed.
+                      </span>
+                    </div>
+                  )}
+
+                  {autoFillDone.total_errors > 0 && (
+                    <div className="space-y-2">
+                      <h3 className="text-sm font-semibold text-red-700 dark:text-red-300">Errors</h3>
+                      {autoFillDone.errors.map((err, i) => (
+                        <div key={i} className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-3 text-sm">
+                          <span className="font-medium text-red-800 dark:text-red-300">{err.title}:</span>{' '}
+                          <span className="text-red-600 dark:text-red-400">{err.error}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Show what was changed */}
+                  {autoFillDone.changelog.filter(c => c.changes.some(ch => ch.field !== '_pediatric_missing_fields')).length > 0 && (
+                    <div className="space-y-2">
+                      <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Applied Changes</h3>
+                      {autoFillDone.changelog
+                        .filter(c => c.changes.some(ch => ch.field !== '_pediatric_missing_fields'))
+                        .map((entry) => (
+                          <div key={entry.scenario_id} className="bg-gray-50 dark:bg-gray-700/30 rounded-lg border dark:border-gray-600 p-3">
+                            <div className="flex items-center gap-2 mb-1">
+                              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />
+                              <span className="text-sm font-medium text-gray-900 dark:text-white">{entry.title}</span>
+                              {entry.is_pediatric && (
+                                <span className="px-1.5 py-0.5 text-xs rounded bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300">Pediatric</span>
+                              )}
+                            </div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400 ml-5">
+                              {entry.changes.filter(ch => ch.field !== '_pediatric_missing_fields').map(ch => ch.field).join(', ')} updated
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-end gap-3 p-5 border-t dark:border-gray-700">
+              {autoFillPreview && autoFillPreview.total_with_changes > 0 && (
+                <button
+                  onClick={handleAutoFillApply}
+                  disabled={autoFillApplying}
+                  className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {autoFillApplying ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="h-4 w-4" />
+                  )}
+                  Apply {autoFillPreview.total_with_changes} Change{autoFillPreview.total_with_changes !== 1 ? 's' : ''}
+                </button>
+              )}
+              <button
+                onClick={() => { setShowAutoFillModal(false); setAutoFillPreview(null); setAutoFillDone(null); }}
+                className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              >
+                {autoFillDone ? 'Close' : 'Cancel'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
