@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { ArrowLeft, Home, ChevronRight, BarChart3 } from 'lucide-react';
-import Scheduler from '@/components/Scheduler';
+import Scheduler from '@/components/scheduler';
 
 export default function AdminPollPage() {
   const params = useParams();

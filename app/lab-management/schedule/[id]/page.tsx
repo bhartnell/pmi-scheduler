@@ -14,7 +14,6 @@ import {
   ClipboardCheck,
   FileText,
   Users,
-  MapPin,
   Clock,
   Check,
   AlertCircle,
@@ -28,14 +27,9 @@ import {
   Upload,
   ExternalLink,
   Copy,
-  ListChecks,
   RefreshCw,
-  Square,
-  CheckSquare,
-  Package,
   RotateCcw,
   AlertTriangle,
-  HelpCircle,
   Info,
   Link2,
   ToggleLeft,
@@ -43,14 +37,10 @@ import {
   Loader2,
   UserCheck,
   CalendarPlus,
-  MessageSquare,
-  Star,
   ChevronUp,
-  Wrench,
   CheckCircle,
   XCircle,
   Shield,
-  DollarSign,
   Layers,
   Monitor
 } from 'lucide-react';
@@ -71,234 +61,28 @@ import { useCalendarAvailability } from '@/hooks/useCalendarAvailability';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import { ArrowLeft } from 'lucide-react';
 
-interface LabDay {
-  id: string;
-  date: string;
-  title: string | null;
-  start_time: string | null;
-  end_time: string | null;
-  week_number: number | null;
-  day_number: number | null;
-  num_rotations: number;
-  rotation_duration: number;
-  notes: string | null;
-  checkin_token: string | null;
-  checkin_enabled: boolean;
-  cohort: {
-    id: string;
-    cohort_number: number;
-    program: {
-      name: string;
-      abbreviation: string;
-    };
-  };
-  stations: Station[];
-  source_template_id?: string | null;
-  source_template?: {
-    id: string;
-    name: string;
-    program: string;
-    semester: number;
-    week_number: number;
-    day_number: number;
-    updated_at: string;
-  } | null;
-}
-
-interface Station {
-  id: string;
-  station_number: number;
-  station_type: string;
-  scenario?: {
-    id: string;
-    title: string;
-    category: string;
-    difficulty: string;
-  };
-  skill_name: string | null;
-  custom_title: string | null;
-  skill_sheet_url: string | null;
-  instructions_url: string | null;
-  station_notes: string | null;
-  instructor_name: string | null;
-  instructor_email: string | null;
-  room: string | null;
-  notes: string | null;
-  rotation_minutes: number;
-  num_rotations: number;
-  // Legacy fields for backwards compatibility
-  instructor?: {
-    id: string;
-    name: string;
-  };
-  location: string | null;
-  documentation_required: boolean;
-  platinum_required: boolean;
-  drill_ids?: string[] | null;
-  metadata?: StationMetadata;
-}
-
-interface Scenario {
-  id: string;
-  title: string;
-  category: string;
-  difficulty: string;
-}
-
-interface SkillDocument {
-  id: string;
-  document_name: string;
-  document_url: string;
-  document_type: string;
-  file_type: string;
-  display_order: number;
-}
-
-interface Skill {
-  id: string;
-  name: string;
-  category: string;
-  certification_levels?: string[];
-  documents?: SkillDocument[];
-}
-
-interface Instructor {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-}
-
-interface LabDayRole {
-  id: string;
-  lab_day_id: string;
-  instructor_id: string;
-  role: 'lab_lead' | 'roamer' | 'observer';
-  notes: string | null;
-  instructor?: {
-    id: string;
-    name: string;
-    email: string;
-  };
-}
-
-interface Student {
-  id: string;
-  first_name: string;
-  last_name: string;
-  email: string | null;
-  cohort_id: string;
-  agency?: string | null;
-  photo_url?: string | null;
-  status?: string;
-}
-
-interface ScenarioParticipation {
-  id: string;
-  student_id: string;
-  scenario_id: string | null;
-  scenario_name: string | null;
-  role: 'team_lead' | 'med_tech' | 'monitor_tech' | 'airway_tech' | 'observer';
-  lab_day_id: string | null;
-  date: string;
-  student?: {
-    id: string;
-    first_name: string;
-    last_name: string;
-  };
-}
-
-interface ChecklistItem {
-  id: string;
-  lab_day_id: string;
-  title: string;
-  is_completed: boolean;
-  completed_by: string | null;
-  completed_at: string | null;
-  is_auto_generated: boolean;
-  sort_order: number;
-  created_at: string;
-}
-
-interface StudentRating {
-  id: string;
-  lab_day_id: string;
-  student_id: string;
-  instructor_email: string;
-  rating: number;
-  note: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-interface EquipmentItem {
-  id: string;
-  lab_day_id: string;
-  name: string;
-  quantity: number;
-  status: 'checked_out' | 'returned' | 'damaged' | 'missing';
-  station_id: string | null;
-  notes: string | null;
-  checked_out_by: string | null;
-  returned_by: string | null;
-  returned_at: string | null;
-  created_at: string;
-  updated_at: string;
-  station?: {
-    id: string;
-    station_number: number;
-    custom_title: string | null;
-    skill_name: string | null;
-    station_type: string;
-  } | null;
-}
-
-interface CostItem {
-  id: string;
-  lab_day_id: string;
-  category: string;
-  description: string;
-  amount: number;
-  created_by: string | null;
-  created_at: string;
-}
-
-const COST_CATEGORIES = ['Equipment', 'Consumables', 'Instructor Pay', 'External', 'Other'] as const;
-
-const COST_CATEGORY_COLORS: Record<string, string> = {
-  Equipment: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
-  Consumables: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
-  'Instructor Pay': 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300',
-  External: 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300',
-  Other: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
-};
-
-const STATION_TYPES = [
-  { value: 'scenario', label: 'Scenario', description: 'Full scenario with grading' },
-  { value: 'skills', label: 'Skills', description: 'Skills practice station' },
-  { value: 'skill_drill', label: 'Skill Drill', description: 'Student-led practice' },
-  { value: 'documentation', label: 'Documentation', description: 'Documentation/PCR station' }
-];
-
-const STATION_TYPE_COLORS: Record<string, string> = {
-  scenario: 'border-blue-200 bg-blue-50 dark:border-blue-700 dark:bg-blue-900/30',
-  skill: 'border-green-200 bg-green-50 dark:border-green-700 dark:bg-green-900/30',
-  skills: 'border-green-200 bg-green-50 dark:border-green-700 dark:bg-green-900/30',
-  skill_drill: 'border-orange-200 bg-orange-50 dark:border-orange-700 dark:bg-orange-900/30',
-  documentation: 'border-purple-200 bg-purple-50 dark:border-purple-700 dark:bg-purple-900/30',
-  lecture: 'border-yellow-200 bg-yellow-50 dark:border-yellow-700 dark:bg-yellow-900/30',
-  testing: 'border-red-200 bg-red-50 dark:border-red-700 dark:bg-red-900/30',
-};
-
-const STATION_TYPE_BADGES: Record<string, string> = {
-  scenario: 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300',
-  skill: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300',
-  skills: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300',
-  skill_drill: 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300',
-  documentation: 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300',
-  lecture: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300',
-  testing: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300',
-};
+import type {
+  LabDay,
+  Station,
+  Scenario,
+  SkillDocument,
+  Skill,
+  Instructor,
+  LabDayRole,
+  Student,
+  ScenarioParticipation,
+  ChecklistItem,
+  StudentRating,
+  EquipmentItem,
+  CostItem,
+} from '@/components/lab-day/types';
+import { STATION_TYPES } from '@/components/lab-day/types';
+import ChecklistSection from '@/components/lab-day/ChecklistSection';
+import EquipmentSection from '@/components/lab-day/EquipmentSection';
+import CostsSection from '@/components/lab-day/CostsSection';
+import DebriefSection from '@/components/lab-day/DebriefSection';
+import StationCards from '@/components/lab-day/StationCards';
+import StudentRatingsSection from '@/components/lab-day/StudentRatingsSection';
 
 export default function LabDayPage() {
   const { data: session, status } = useSession();
@@ -3490,753 +3274,76 @@ export default function LabDayPage() {
         </div>
 
         {/* Stations Grid */}
-        {labDay.stations.length === 0 ? (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
-            <FileText className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Stations Yet</h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-4">Add stations to this lab day to get started.</p>
-            <Link
-              href={`/lab-management/schedule/${labDayId}/stations/new`}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              <Plus className="w-5 h-5" />
-              Add First Station
-            </Link>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {labDay.stations.map((station) => (
-              <div
-                key={station.id}
-                className={`bg-white dark:bg-gray-800 rounded-lg shadow border-l-4 ${STATION_TYPE_COLORS[station.station_type] || 'border-gray-200 dark:border-gray-700'}`}
-              >
-                <div className="p-4">
-                  {/* Station Header */}
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-lg font-bold text-gray-900 dark:text-white">
-                          Station {station.station_number}
-                        </span>
-                        <span className={`px-2 py-0.5 text-xs font-medium rounded ${STATION_TYPE_BADGES[station.station_type] || 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'}`}>
-                          {station.station_type}
-                        </span>
-                        {station.platinum_required && (
-                          <span className="px-2 py-0.5 text-xs font-medium rounded bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300">
-                            Platinum
-                          </span>
-                        )}
-                      </div>
-                      <h3 className="font-semibold text-gray-900 dark:text-white">
-                        {getStationTitle(station)}
-                      </h3>
-                      {station.scenario && (
-                        <p className="text-sm text-gray-600 dark:text-gray-400">{station.scenario.category}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Station Details */}
-                  <div className="space-y-2 text-sm mb-4">
-                    {(station.instructor_name || station.instructor?.name) && (
-                      <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                        <Users className="w-4 h-4" />
-                        <span>{station.instructor_name || station.instructor?.name}</span>
-                        {station.instructor_email && calendarAvailability.has(station.instructor_email.toLowerCase()) && (
-                          <CalendarAvailabilityDot
-                            status={calendarAvailability.get(station.instructor_email.toLowerCase())!.status}
-                            events={calendarAvailability.get(station.instructor_email.toLowerCase())!.events}
-                            size="sm"
-                          />
-                        )}
-                      </div>
-                    )}
-                    {(station.room || station.location) && (
-                      <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                        <MapPin className="w-4 h-4" />
-                        <span>{station.room || station.location}</span>
-                      </div>
-                    )}
-                    {station.documentation_required && (
-                      <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400">
-                        <FileText className="w-4 h-4" />
-                        <span>Documentation required</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Document Links */}
-                  {(station.skill_sheet_url || station.instructions_url || (stationSkillDocs[station.id] && stationSkillDocs[station.id].length > 0)) && (
-                    <div className="flex flex-wrap gap-2 mb-3 print:hidden">
-                      {station.skill_sheet_url && (
-                        <a
-                          href={station.skill_sheet_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-100 dark:hover:bg-blue-900/50"
-                        >
-                          <FileText className="w-3 h-3" />
-                          Skill Sheet
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
-                      )}
-                      {station.instructions_url && (
-                        <a
-                          href={station.instructions_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded hover:bg-green-100 dark:hover:bg-green-900/50"
-                        >
-                          <FileText className="w-3 h-3" />
-                          Instructions
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
-                      )}
-                      {stationSkillDocs[station.id] && stationSkillDocs[station.id].map((doc) => (
-                        <a
-                          key={doc.id}
-                          href={doc.document_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded hover:bg-purple-100 dark:hover:bg-purple-900/50"
-                        >
-                          <FileText className="w-3 h-3" />
-                          {doc.document_name}
-                          <ExternalLink className="w-3 h-3" />
-                        </a>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* View Skill Sheet (from skill_sheets table lookup) */}
-                  {stationSkillSheetIds[station.id] ? (
-                    <div className="mb-3 print:hidden">
-                      <Link
-                        href={`/skill-sheets/${stationSkillSheetIds[station.id]}`}
-                        className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded hover:bg-emerald-100 dark:hover:bg-emerald-900/50"
-                      >
-                        <ClipboardCheck className="w-3 h-3" />
-                        View Skill Sheet
-                      </Link>
-                    </div>
-                  ) : (station.skill_name || station.scenario?.title) ? (
-                    <div className="mb-3 print:hidden">
-                      <span className="text-xs text-gray-400 dark:text-gray-500 italic">No skill sheet available</span>
-                    </div>
-                  ) : null}
-
-                  {/* Template Guide (from applied template metadata) */}
-                  {station.metadata && Object.keys(station.metadata).length > 0 && (
-                    <div className="mb-3">
-                      <TemplateGuideSection metadata={station.metadata} />
-                    </div>
-                  )}
-
-                  {/* Actions */}
-                  <div className="flex gap-2 pt-3 border-t dark:border-gray-700 print:hidden">
-                    <button
-                      onClick={() => openEditModal(station)}
-                      className="inline-flex items-center justify-center gap-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                      Edit
-                    </button>
-                    {station.scenario && (
-                      <>
-                        <Link
-                          href={`/lab-management/scenarios/${station.scenario.id}`}
-                          className="inline-flex items-center justify-center gap-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
-                        >
-                          <FileText className="w-4 h-4" />
-                          Scenario
-                        </Link>
-                        <button
-                          onClick={() => openRoleModal(station)}
-                          className="inline-flex items-center justify-center gap-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
-                        >
-                          <Users className="w-4 h-4" />
-                          Log Roles
-                        </button>
-                      </>
-                    )}
-                    <Link
-                      href={`/lab-management/grade/station/${station.id}`}
-                      className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                    >
-                      <ClipboardCheck className="w-4 h-4" />
-                      Grade
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        <StationCards
+          stations={labDay.stations}
+          stationSkillDocs={stationSkillDocs}
+          stationSkillSheetIds={stationSkillSheetIds}
+          calendarAvailability={calendarAvailability}
+          labDayId={labDayId as string}
+          getStationTitle={getStationTitle}
+          onEditStation={openEditModal}
+          onOpenRoleModal={openRoleModal}
+        />
 
         {/* Prep Checklist */}
-        <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow print:shadow-none print:border print:border-gray-300">
-          {/* Checklist Header */}
-          <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
-            <button
-              onClick={() => setChecklistCollapsed(prev => !prev)}
-              className="print-include flex items-center gap-2 text-left flex-1 min-w-0"
-            >
-              <ListChecks className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-              <h3 className="font-semibold text-gray-900 dark:text-white">Prep Checklist</h3>
-              {checklistItems.length > 0 && (
-                <span className="ml-2 text-sm text-gray-500 dark:text-gray-400 shrink-0">
-                  {checklistItems.filter(i => i.is_completed).length}/{checklistItems.length} completed
-                </span>
-              )}
-              {checklistItems.length > 0 && (
-                <div className="ml-2 flex-1 max-w-xs bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 overflow-hidden">
-                  <div
-                    className="bg-emerald-500 h-1.5 rounded-full transition-all duration-300"
-                    style={{ width: `${Math.round((checklistItems.filter(i => i.is_completed).length / checklistItems.length) * 100)}%` }}
-                  />
-                </div>
-              )}
-              <ChevronDown className={`w-4 h-4 text-gray-400 shrink-0 transition-transform duration-200 ${checklistCollapsed ? '-rotate-90' : ''}`} />
-            </button>
-            <div className="flex items-center gap-2 ml-3 print:hidden">
-              <button
-                onClick={handleAutoGenerateChecklist}
-                disabled={checklistGenerating}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Generate checklist items from stations"
-              >
-                {checklistGenerating ? (
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  <RefreshCw className="w-3.5 h-3.5" />
-                )}
-                Auto-Generate
-              </button>
-            </div>
-          </div>
-
-          {/* Checklist Body */}
-          {!checklistCollapsed && (
-            <div className="p-4">
-              {checklistLoading ? (
-                <div className="flex items-center justify-center py-6">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-500"></div>
-                </div>
-              ) : (
-                <>
-                  {/* Items list */}
-                  {checklistItems.length === 0 ? (
-                    <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
-                      No checklist items yet. Click &quot;Auto-Generate&quot; to create items from stations, or add items manually below.
-                    </p>
-                  ) : (
-                    <ul className="space-y-1 mb-4">
-                      {checklistItems.map(item => (
-                        <li
-                          key={item.id}
-                          className="flex items-center gap-3 group py-1.5 px-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
-                        >
-                          <button
-                            onClick={() => handleToggleChecklistItem(item)}
-                            className="shrink-0 text-gray-400 dark:text-gray-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors print:hidden"
-                            aria-label={item.is_completed ? 'Mark incomplete' : 'Mark complete'}
-                          >
-                            {item.is_completed ? (
-                              <CheckSquare className="w-5 h-5 text-emerald-500 dark:text-emerald-400" />
-                            ) : (
-                              <Square className="w-5 h-5" />
-                            )}
-                          </button>
-                          {/* Print-only checkbox */}
-                          <span className="hidden print:inline-block w-4 h-4 border border-gray-500 rounded-sm shrink-0" />
-                          <span className={`flex-1 text-sm ${item.is_completed ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-800 dark:text-gray-200'}`}>
-                            {item.title}
-                          </span>
-                          {item.is_auto_generated && (
-                            <span className="text-xs text-gray-400 dark:text-gray-500 print:hidden shrink-0">auto</span>
-                          )}
-                          <button
-                            onClick={() => handleDeleteChecklistItem(item.id)}
-                            className="shrink-0 p-1 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all rounded print:hidden"
-                            aria-label="Delete item"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-
-                  {/* Add item input */}
-                  <div className="flex gap-2 print:hidden">
-                    <input
-                      type="text"
-                      value={newChecklistItem}
-                      onChange={e => setNewChecklistItem(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter') handleAddChecklistItem(); }}
-                      placeholder="Add a checklist item..."
-                      className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400"
-                    />
-                    <button
-                      onClick={handleAddChecklistItem}
-                      disabled={addingChecklistItem || !newChecklistItem.trim()}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Add
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-        </div>
+        <ChecklistSection
+          checklistItems={checklistItems}
+          checklistCollapsed={checklistCollapsed}
+          checklistLoading={checklistLoading}
+          checklistGenerating={checklistGenerating}
+          newChecklistItem={newChecklistItem}
+          addingChecklistItem={addingChecklistItem}
+          onToggleCollapse={() => setChecklistCollapsed(prev => !prev)}
+          onToggleItem={handleToggleChecklistItem}
+          onAddItem={handleAddChecklistItem}
+          onDeleteItem={handleDeleteChecklistItem}
+          onAutoGenerate={handleAutoGenerateChecklist}
+          onNewItemChange={setNewChecklistItem}
+        />
 
         {/* Equipment & Supplies */}
-        <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow print:shadow-none print:border print:border-gray-300">
-          {/* Equipment Header */}
-          <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
-            <button
-              onClick={() => setEquipmentCollapsed(prev => !prev)}
-              className="print-include flex items-center gap-2 text-left flex-1 min-w-0"
-            >
-              <Package className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
-              <h3 className="font-semibold text-gray-900 dark:text-white">Equipment &amp; Supplies</h3>
-              {equipmentItems.length > 0 && (
-                <span className="ml-2 text-sm text-gray-500 dark:text-gray-400 shrink-0">
-                  {equipmentItems.filter(i => i.status === 'checked_out').length} out,{' '}
-                  {equipmentItems.filter(i => i.status === 'returned').length} returned
-                  {equipmentItems.filter(i => i.status === 'damaged' || i.status === 'missing').length > 0 && (
-                    <span className="text-red-600 dark:text-red-400">
-                      , {equipmentItems.filter(i => i.status === 'damaged' || i.status === 'missing').length} issues
-                    </span>
-                  )}
-                </span>
-              )}
-              <ChevronDown className={`w-4 h-4 text-gray-400 shrink-0 transition-transform duration-200 ${equipmentCollapsed ? '-rotate-90' : ''}`} />
-            </button>
-          </div>
-
-          {/* Equipment Body */}
-          {!equipmentCollapsed && (
-            <div className="p-4">
-              {equipmentLoading ? (
-                <div className="flex items-center justify-center py-6">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-amber-500"></div>
-                </div>
-              ) : (
-                <>
-                  {/* Summary badges */}
-                  {equipmentItems.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mb-4 print:hidden">
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
-                        {equipmentItems.filter(i => i.status === 'checked_out').length} Checked Out
-                      </span>
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
-                        {equipmentItems.filter(i => i.status === 'returned').length} Returned
-                      </span>
-                      {equipmentItems.filter(i => i.status === 'damaged').length > 0 && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300">
-                          {equipmentItems.filter(i => i.status === 'damaged').length} Damaged
-                        </span>
-                      )}
-                      {equipmentItems.filter(i => i.status === 'missing').length > 0 && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300">
-                          {equipmentItems.filter(i => i.status === 'missing').length} Missing
-                        </span>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Items list */}
-                  {equipmentItems.length === 0 ? (
-                    <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
-                      No equipment tracked yet. Add items below to track checked-out supplies.
-                    </p>
-                  ) : (
-                    <div className="mb-4 overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b dark:border-gray-700">
-                            <th className="pb-2 pr-4">Item</th>
-                            <th className="pb-2 pr-4">Qty</th>
-                            <th className="pb-2 pr-4">Station</th>
-                            <th className="pb-2 pr-4">Status</th>
-                            <th className="pb-2 print:hidden">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                          {equipmentItems.map(item => (
-                            <tr key={item.id} className="group">
-                              <td className="py-2 pr-4">
-                                <div className="font-medium text-gray-900 dark:text-white">{item.name}</div>
-                                {item.notes && (
-                                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{item.notes}</div>
-                                )}
-                              </td>
-                              <td className="py-2 pr-4 text-gray-700 dark:text-gray-300">{item.quantity}</td>
-                              <td className="py-2 pr-4 text-gray-500 dark:text-gray-400">
-                                {item.station
-                                  ? `Stn ${item.station.station_number}${item.station.custom_title ? ': ' + item.station.custom_title : ''}`
-                                  : <span className="text-gray-300 dark:text-gray-600">—</span>
-                                }
-                              </td>
-                              <td className="py-2 pr-4">
-                                {item.status === 'checked_out' && (
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300">
-                                    Checked Out
-                                  </span>
-                                )}
-                                {item.status === 'returned' && (
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
-                                    Returned
-                                  </span>
-                                )}
-                                {item.status === 'damaged' && (
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300">
-                                    Damaged
-                                  </span>
-                                )}
-                                {item.status === 'missing' && (
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300">
-                                    Missing
-                                  </span>
-                                )}
-                              </td>
-                              <td className="py-2 print:hidden">
-                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  {item.status !== 'returned' && (
-                                    <button
-                                      onClick={() => handleUpdateEquipmentStatus(item, 'returned')}
-                                      title="Mark Returned"
-                                      className="p-1 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded"
-                                    >
-                                      <RotateCcw className="w-3.5 h-3.5" />
-                                    </button>
-                                  )}
-                                  {item.status !== 'damaged' && (
-                                    <button
-                                      onClick={() => handleUpdateEquipmentStatus(item, 'damaged')}
-                                      title="Mark Damaged"
-                                      className="p-1 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded"
-                                    >
-                                      <AlertTriangle className="w-3.5 h-3.5" />
-                                    </button>
-                                  )}
-                                  {item.status !== 'missing' && (
-                                    <button
-                                      onClick={() => handleUpdateEquipmentStatus(item, 'missing')}
-                                      title="Mark Missing"
-                                      className="p-1 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
-                                    >
-                                      <HelpCircle className="w-3.5 h-3.5" />
-                                    </button>
-                                  )}
-                                  {item.status !== 'checked_out' && (
-                                    <button
-                                      onClick={() => handleUpdateEquipmentStatus(item, 'checked_out')}
-                                      title="Mark Checked Out"
-                                      className="p-1 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 rounded"
-                                    >
-                                      <Package className="w-3.5 h-3.5" />
-                                    </button>
-                                  )}
-                                  <button
-                                    onClick={() => handleDeleteEquipmentItem(item.id)}
-                                    title="Remove item"
-                                    className="p-1 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 rounded ml-1"
-                                  >
-                                    <X className="w-3.5 h-3.5" />
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-
-                  {/* Add item form */}
-                  <div className="flex flex-wrap gap-2 print:hidden">
-                    <input
-                      type="text"
-                      value={newEquipmentName}
-                      onChange={e => setNewEquipmentName(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter') handleAddEquipmentItem(); }}
-                      placeholder="Item name (e.g. BVM, AED trainer)"
-                      className="flex-1 min-w-[180px] px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400"
-                    />
-                    <input
-                      type="number"
-                      min={1}
-                      value={newEquipmentQty}
-                      onChange={e => setNewEquipmentQty(Math.max(1, parseInt(e.target.value) || 1))}
-                      className="w-16 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400"
-                      title="Quantity"
-                    />
-                    <select
-                      value={newEquipmentStation}
-                      onChange={e => setNewEquipmentStation(e.target.value)}
-                      className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400"
-                    >
-                      <option value="">No station</option>
-                      {labDay.stations?.map(station => (
-                        <option key={station.id} value={station.id}>
-                          Stn {station.station_number}{station.custom_title ? ': ' + station.custom_title : station.scenario ? ': ' + station.scenario.title : ''}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      onClick={handleAddEquipmentItem}
-                      disabled={addingEquipment || !newEquipmentName.trim()}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 text-sm bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Add
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-        </div>
+        <EquipmentSection
+          equipmentItems={equipmentItems}
+          equipmentCollapsed={equipmentCollapsed}
+          equipmentLoading={equipmentLoading}
+          stations={labDay.stations}
+          newEquipmentName={newEquipmentName}
+          newEquipmentQty={newEquipmentQty}
+          newEquipmentStation={newEquipmentStation}
+          addingEquipment={addingEquipment}
+          onToggleCollapse={() => setEquipmentCollapsed(prev => !prev)}
+          onUpdateStatus={handleUpdateEquipmentStatus}
+          onAddEquipment={handleAddEquipmentItem}
+          onDeleteEquipment={handleDeleteEquipmentItem}
+          onNewNameChange={setNewEquipmentName}
+          onNewQtyChange={setNewEquipmentQty}
+          onNewStationChange={setNewEquipmentStation}
+        />
 
         {/* Lab Day Costs */}
         {userRole && hasMinRole(userRole, 'instructor') && (
-          <div className="mt-6 print:hidden bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700">
-            {/* Costs Header */}
-            <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
-              <button
-                onClick={() => setCostsCollapsed(prev => !prev)}
-                className="flex items-center gap-2 text-left flex-1 min-w-0"
-              >
-                <DollarSign className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                <h3 className="font-semibold text-gray-900 dark:text-white">Lab Costs</h3>
-                {costItems.length > 0 && (
-                  <span className="ml-2 text-sm text-gray-500 dark:text-gray-400 shrink-0">
-                    Total: ${costItems.reduce((sum, i) => sum + i.amount, 0).toFixed(2)}
-                  </span>
-                )}
-                {costsCollapsed ? (
-                  <ChevronDown className="w-4 h-4 text-gray-400 shrink-0 ml-1" />
-                ) : (
-                  <ChevronUp className="w-4 h-4 text-gray-400 shrink-0 ml-1" />
-                )}
-              </button>
-            </div>
-
-            {/* Costs Body */}
-            {!costsCollapsed && (
-              <div className="p-4">
-                {costsLoading ? (
-                  <div className="flex items-center justify-center py-6">
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-500"></div>
-                  </div>
-                ) : (
-                  <>
-                    {/* Summary row */}
-                    {costItems.length > 0 && (
-                      <div className="flex flex-wrap gap-3 mb-4 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                        <div className="text-sm text-gray-700 dark:text-gray-300">
-                          <span className="font-medium">Total Cost: </span>
-                          <span className="font-bold text-emerald-700 dark:text-emerald-400">
-                            ${costItems.reduce((sum, i) => sum + i.amount, 0).toFixed(2)}
-                          </span>
-                        </div>
-                        {cohortStudents.length > 0 && (
-                          <div className="text-sm text-gray-700 dark:text-gray-300">
-                            <span className="font-medium">Per Student ({cohortStudents.length}): </span>
-                            <span className="font-bold text-blue-700 dark:text-blue-400">
-                              ${(costItems.reduce((sum, i) => sum + i.amount, 0) / cohortStudents.length).toFixed(2)}
-                            </span>
-                          </div>
-                        )}
-                        <div className="text-sm text-gray-700 dark:text-gray-300">
-                          <span className="font-medium">Items: </span>
-                          {costItems.length}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Category breakdown badges */}
-                    {costItems.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mb-4">
-                        {COST_CATEGORIES.map(cat => {
-                          const catItems = costItems.filter(i => i.category === cat);
-                          if (catItems.length === 0) return null;
-                          const catTotal = catItems.reduce((sum, i) => sum + i.amount, 0);
-                          return (
-                            <span
-                              key={cat}
-                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${COST_CATEGORY_COLORS[cat]}`}
-                            >
-                              {cat}: ${catTotal.toFixed(2)}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    )}
-
-                    {/* Items table */}
-                    {costItems.length === 0 ? (
-                      <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
-                        No cost items yet. Add items below to track lab expenses.
-                      </p>
-                    ) : (
-                      <div className="mb-4 overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b dark:border-gray-700">
-                              <th className="pb-2 pr-3">Category</th>
-                              <th className="pb-2 pr-3">Description</th>
-                              <th className="pb-2 pr-3 text-right">Amount</th>
-                              <th className="pb-2"></th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y dark:divide-gray-700">
-                            {costItems.map(item => (
-                              <tr key={item.id} className="group hover:bg-gray-50 dark:hover:bg-gray-700/30">
-                                {editingCostId === item.id ? (
-                                  <>
-                                    <td className="py-2 pr-3">
-                                      <select
-                                        value={editCostForm.category}
-                                        onChange={e => setEditCostForm(prev => ({ ...prev, category: e.target.value }))}
-                                        className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                                      >
-                                        {COST_CATEGORIES.map(c => (
-                                          <option key={c} value={c}>{c}</option>
-                                        ))}
-                                      </select>
-                                    </td>
-                                    <td className="py-2 pr-3">
-                                      <input
-                                        type="text"
-                                        value={editCostForm.description}
-                                        onChange={e => setEditCostForm(prev => ({ ...prev, description: e.target.value }))}
-                                        className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                                        placeholder="Description"
-                                      />
-                                    </td>
-                                    <td className="py-2 pr-3">
-                                      <input
-                                        type="number"
-                                        min="0"
-                                        step="0.01"
-                                        value={editCostForm.amount}
-                                        onChange={e => setEditCostForm(prev => ({ ...prev, amount: e.target.value }))}
-                                        className="w-24 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-right"
-                                      />
-                                    </td>
-                                    <td className="py-2">
-                                      <div className="flex items-center gap-1">
-                                        <button
-                                          onClick={() => handleSaveEditCost(item.id)}
-                                          className="p-1 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded"
-                                          title="Save"
-                                        >
-                                          <Check className="w-3.5 h-3.5" />
-                                        </button>
-                                        <button
-                                          onClick={() => setEditingCostId(null)}
-                                          className="p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                                          title="Cancel"
-                                        >
-                                          <X className="w-3.5 h-3.5" />
-                                        </button>
-                                      </div>
-                                    </td>
-                                  </>
-                                ) : (
-                                  <>
-                                    <td className="py-2 pr-3">
-                                      <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${COST_CATEGORY_COLORS[item.category] || COST_CATEGORY_COLORS['Other']}`}>
-                                        {item.category}
-                                      </span>
-                                    </td>
-                                    <td className="py-2 pr-3 text-gray-800 dark:text-gray-200 max-w-[200px] truncate">
-                                      {item.description}
-                                    </td>
-                                    <td className="py-2 pr-3 text-right font-medium text-gray-900 dark:text-white font-mono">
-                                      ${item.amount.toFixed(2)}
-                                    </td>
-                                    <td className="py-2">
-                                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button
-                                          onClick={() => handleStartEditCost(item)}
-                                          className="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 rounded"
-                                          title="Edit"
-                                        >
-                                          <Edit2 className="w-3.5 h-3.5" />
-                                        </button>
-                                        <button
-                                          onClick={() => handleDeleteCostItem(item.id)}
-                                          className="p-1 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 rounded"
-                                          title="Delete"
-                                        >
-                                          <X className="w-3.5 h-3.5" />
-                                        </button>
-                                      </div>
-                                    </td>
-                                  </>
-                                )}
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-
-                    {/* Add item form */}
-                    <div className="flex flex-wrap gap-2">
-                      <select
-                        value={newCostCategory}
-                        onChange={e => setNewCostCategory(e.target.value)}
-                        className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400"
-                      >
-                        {COST_CATEGORIES.map(c => (
-                          <option key={c} value={c}>{c}</option>
-                        ))}
-                      </select>
-                      <input
-                        type="text"
-                        value={newCostDescription}
-                        onChange={e => setNewCostDescription(e.target.value)}
-                        onKeyDown={e => { if (e.key === 'Enter') handleAddCostItem(); }}
-                        placeholder="Description (e.g. Nitrile gloves box)"
-                        className="flex-1 min-w-[160px] px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400"
-                      />
-                      <div className="flex items-center gap-1">
-                        <span className="text-sm text-gray-500 dark:text-gray-400 pl-1">$</span>
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={newCostAmount}
-                          onChange={e => setNewCostAmount(e.target.value)}
-                          placeholder="Amount"
-                          className="w-24 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400"
-                        />
-                      </div>
-                      <button
-                        onClick={handleAddCostItem}
-                        disabled={addingCost || !newCostDescription.trim() || !newCostAmount}
-                        className="inline-flex items-center gap-1.5 px-3 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        {addingCost ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Plus className="w-4 h-4" />
-                        )}
-                        Add Cost
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
+          <CostsSection
+            costItems={costItems}
+            costsCollapsed={costsCollapsed}
+            costsLoading={costsLoading}
+            addingCost={addingCost}
+            editingCostId={editingCostId}
+            editCostForm={editCostForm}
+            newCostCategory={newCostCategory}
+            newCostDescription={newCostDescription}
+            newCostAmount={newCostAmount}
+            cohortStudents={cohortStudents}
+            onToggleCollapse={() => setCostsCollapsed(prev => !prev)}
+            onAddCostItem={handleAddCostItem}
+            onStartEditCost={handleStartEditCost}
+            onSaveEditCost={handleSaveEditCost}
+            onCancelEditCost={() => setEditingCostId(null)}
+            onDeleteCostItem={handleDeleteCostItem}
+            onEditCostFormChange={setEditCostForm}
+            onNewCostCategoryChange={setNewCostCategory}
+            onNewCostDescriptionChange={setNewCostDescription}
+            onNewCostAmountChange={setNewCostAmount}
+          />
         )}
 
         {/* Student Self Check-In */}
@@ -4333,199 +3440,23 @@ export default function LabDayPage() {
 
         {/* Student Performance Ratings — visible to instructors+ */}
         {userRole && hasMinRole(userRole, 'instructor') && cohortStudents.length > 0 && (
-          <div className="mt-6 print:hidden">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700">
-              {/* Section header */}
-              <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
-                <button
-                  onClick={() => setRatingsCollapsed(prev => !prev)}
-                  className="flex items-center gap-2 text-left flex-1 min-w-0"
-                >
-                  <Star className="w-5 h-5 text-amber-500 shrink-0" />
-                  <h3 className="font-semibold text-gray-900 dark:text-white">Student Performance</h3>
-                  {studentRatings.length > 0 && (
-                    <span className="ml-2 text-sm text-gray-500 dark:text-gray-400 shrink-0">
-                      {studentRatings.length} {studentRatings.length === 1 ? 'rating' : 'ratings'}
-                    </span>
-                  )}
-                  {ratingsCollapsed ? (
-                    <ChevronDown className="w-4 h-4 text-gray-400 shrink-0 ml-1" />
-                  ) : (
-                    <ChevronUp className="w-4 h-4 text-gray-400 shrink-0 ml-1" />
-                  )}
-                </button>
-                <div className="group relative inline-flex items-center shrink-0 ml-2">
-                  <Info className="h-4 w-4 text-gray-400 hover:text-blue-500 cursor-help" />
-                  <div className="invisible group-hover:visible absolute right-6 top-0 z-50 w-72 p-3 bg-gray-900 dark:bg-gray-700 text-white text-sm rounded-lg shadow-lg">
-                    <div className="absolute -right-1 top-2 w-2 h-2 bg-gray-900 dark:bg-gray-700 rotate-45" />
-                    Rate student performance during lab sessions. Ratings help track progress and identify students needing additional support.
-                  </div>
-                </div>
-              </div>
-
-              {!ratingsCollapsed && (
-                <div className="p-4">
-                  {ratingsLoading ? (
-                    <div className="flex items-center justify-center py-8">
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-amber-500"></div>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {cohortStudents.map((student) => {
-                        const currentEmail = session?.user?.email?.toLowerCase();
-                        const myRating = studentRatings.find(
-                          r => r.student_id === student.id && r.instructor_email?.toLowerCase() === currentEmail
-                        );
-                        const otherRatings = studentRatings.filter(
-                          r => r.student_id === student.id && r.instructor_email?.toLowerCase() !== currentEmail
-                        );
-                        const otherAvg =
-                          otherRatings.length > 0
-                            ? Math.round(
-                                (otherRatings.reduce((s, r) => s + r.rating, 0) / otherRatings.length) * 10
-                              ) / 10
-                            : null;
-                        const hoverVal = ratingHover[student.id] || 0;
-                        const displayRating = hoverVal || myRating?.rating || 0;
-                        const initials = `${student.first_name[0]}${student.last_name[0]}`.toUpperCase();
-                        const isSaving = savingRating[student.id];
-                        const noteExpanded = expandedNotes[student.id];
-                        const pendingNote = pendingNotes[student.id] ?? (myRating?.note || '');
-
-                        return (
-                          <div
-                            key={student.id}
-                            className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 space-y-3 bg-gray-50 dark:bg-gray-700/40"
-                          >
-                            {/* Student identity */}
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                                {(student as any).photo_url ? (
-                                  <img
-                                    src={(student as any).photo_url}
-                                    alt={`${student.first_name} ${student.last_name}`}
-                                    className="w-10 h-10 object-cover rounded-full"
-                                  />
-                                ) : (
-                                  <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
-                                    {initials}
-                                  </span>
-                                )}
-                              </div>
-                              <div className="min-w-0">
-                                <p className="font-medium text-gray-900 dark:text-white text-sm truncate">
-                                  {student.first_name} {student.last_name}
-                                </p>
-                                {otherAvg !== null && (
-                                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                                    {otherRatings.length} other {otherRatings.length === 1 ? 'rating' : 'ratings'}, avg {otherAvg}
-                                    <Star className="w-3 h-3 inline ml-0.5 text-amber-400 fill-amber-400" />
-                                  </p>
-                                )}
-                              </div>
-                              {isSaving && (
-                                <Loader2 className="w-4 h-4 animate-spin text-gray-400 ml-auto flex-shrink-0" />
-                              )}
-                            </div>
-
-                            {/* Star rating row */}
-                            <div className="flex items-center gap-1">
-                              {[1, 2, 3, 4, 5].map(star => {
-                                const filled = star <= displayRating;
-                                return (
-                                  <button
-                                    key={star}
-                                    type="button"
-                                    disabled={isSaving}
-                                    onClick={() => handleSaveRating(student.id, star)}
-                                    onMouseEnter={() => setRatingHover(prev => ({ ...prev, [student.id]: star }))}
-                                    onMouseLeave={() => setRatingHover(prev => ({ ...prev, [student.id]: 0 }))}
-                                    className="p-0.5 focus:outline-none disabled:opacity-50"
-                                    aria-label={`Rate ${star} star${star > 1 ? 's' : ''}`}
-                                  >
-                                    <Star
-                                      className={`w-6 h-6 transition-colors ${
-                                        filled
-                                          ? 'text-amber-400 fill-amber-400'
-                                          : 'text-gray-300 dark:text-gray-600'
-                                      }`}
-                                    />
-                                  </button>
-                                );
-                              })}
-                              {myRating && (
-                                <span className="ml-1 text-xs text-gray-500 dark:text-gray-400">
-                                  {myRating.rating}/5
-                                </span>
-                              )}
-                              <HelpTooltip text="Rate this lab experience 1-5. Ratings help improve future lab planning and track student progress over time." />
-                            </div>
-
-                            {/* Note section */}
-                            {myRating && !noteExpanded && (
-                              <button
-                                onClick={() => {
-                                  setPendingNotes(prev => ({ ...prev, [student.id]: myRating.note || '' }));
-                                  setExpandedNotes(prev => ({ ...prev, [student.id]: true }));
-                                }}
-                                className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline"
-                              >
-                                <MessageSquare className="w-3 h-3" />
-                                {myRating.note ? 'Edit note' : 'Add note'}
-                              </button>
-                            )}
-
-                            {myRating && noteExpanded && (
-                              <div className="space-y-2">
-                                <textarea
-                                  rows={2}
-                                  value={pendingNote}
-                                  onChange={e =>
-                                    setPendingNotes(prev => ({ ...prev, [student.id]: e.target.value }))
-                                  }
-                                  placeholder="Optional note about this student..."
-                                  className="w-full text-xs px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                />
-                                <div className="flex items-center gap-2">
-                                  <button
-                                    disabled={savingRating[`note-${student.id}`]}
-                                    onClick={() => handleSaveNote(student.id)}
-                                    className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-                                  >
-                                    {savingRating[`note-${student.id}`] ? (
-                                      <Loader2 className="w-3 h-3 animate-spin" />
-                                    ) : (
-                                      <Save className="w-3 h-3" />
-                                    )}
-                                    Save
-                                  </button>
-                                  <button
-                                    onClick={() =>
-                                      setExpandedNotes(prev => ({ ...prev, [student.id]: false }))
-                                    }
-                                    className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-                                  >
-                                    Cancel
-                                  </button>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Show existing note (read-only when not expanded) */}
-                            {myRating?.note && !noteExpanded && (
-                              <p className="text-xs text-gray-600 dark:text-gray-400 italic line-clamp-2">
-                                &ldquo;{myRating.note}&rdquo;
-                              </p>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
+          <StudentRatingsSection
+            studentRatings={studentRatings}
+            ratingsCollapsed={ratingsCollapsed}
+            ratingsLoading={ratingsLoading}
+            cohortStudents={cohortStudents}
+            savingRating={savingRating}
+            ratingHover={ratingHover}
+            expandedNotes={expandedNotes}
+            pendingNotes={pendingNotes}
+            session={session}
+            onToggleCollapse={() => setRatingsCollapsed(prev => !prev)}
+            onSaveRating={handleSaveRating}
+            onSaveNote={handleSaveNote}
+            onRatingHoverChange={(studentId, value) => setRatingHover(prev => ({ ...prev, [studentId]: value }))}
+            onPendingNoteChange={(studentId, value) => setPendingNotes(prev => ({ ...prev, [studentId]: value }))}
+            onExpandedNotesChange={(studentId, expanded) => setExpandedNotes(prev => ({ ...prev, [studentId]: expanded }))}
+          />
         )}
 
         {/* Learning Style Distribution — visible to instructors+ */}
@@ -4842,335 +3773,24 @@ export default function LabDayPage() {
 
         {/* Post-Lab Debrief — shown only after lab day date has passed */}
         {isLabDayPast() && (
-          <div className="mt-6 print:hidden border-t-2 border-indigo-100 dark:border-indigo-900/50 pt-6">
-            <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg shadow border border-indigo-100 dark:border-indigo-800/50">
-              {/* Section header */}
-              <div className="flex items-center justify-between p-4 border-b border-indigo-100 dark:border-indigo-800/50">
-                <button
-                  onClick={() => setDebriefCollapsed(prev => !prev)}
-                  className="flex items-center gap-2 text-left flex-1 min-w-0"
-                >
-                  <MessageSquare className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0" />
-                  <h3 className="font-semibold text-gray-900 dark:text-white">Post-Lab Debrief</h3>
-                  {debriefs.length > 0 && (
-                    <span className="ml-2 text-sm text-gray-500 dark:text-gray-400 shrink-0">
-                      {debriefs.length} {debriefs.length === 1 ? 'response' : 'responses'}
-                    </span>
-                  )}
-                  {debriefCollapsed ? (
-                    <ChevronDown className="w-4 h-4 text-gray-400 shrink-0 ml-1" />
-                  ) : (
-                    <ChevronUp className="w-4 h-4 text-gray-400 shrink-0 ml-1" />
-                  )}
-                </button>
-              </div>
-
-              {!debriefCollapsed && (
-                <div className="p-4 space-y-6">
-                  {debriefLoading ? (
-                    <div className="flex items-center justify-center py-6">
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
-                    </div>
-                  ) : (
-                    <>
-                      {/* Student Concerns from Evaluations */}
-                      {evaluationConcerns.length > 0 && (
-                        <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800 p-4 mb-4">
-                          <h4 className="font-medium text-amber-800 dark:text-amber-300 flex items-center gap-2 mb-3">
-                            <AlertTriangle className="w-4 h-4" />
-                            Student Concerns from Evaluations
-                          </h4>
-                          <div className="space-y-2">
-                            {evaluationConcerns.map((evalItem: any, i: number) => (
-                              <div key={evalItem.id || i} className="bg-white dark:bg-gray-800 rounded border border-amber-100 dark:border-amber-900/50 p-3">
-                                <div className="flex items-center justify-between mb-1">
-                                  <span className="text-sm font-medium text-gray-900 dark:text-white">
-                                    {evalItem.student?.first_name} {evalItem.student?.last_name}
-                                  </span>
-                                  <span className={`text-xs px-2 py-0.5 rounded-full ${
-                                    evalItem.result === 'fail'
-                                      ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
-                                      : evalItem.result === 'remediation'
-                                        ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'
-                                        : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
-                                  }`}>
-                                    {evalItem.result}
-                                  </span>
-                                </div>
-                                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                                  {evalItem.skill_sheet?.skill_name} &mdash; evaluated by {evalItem.evaluator?.name || 'Unknown'}
-                                </p>
-                                <div className="flex flex-wrap gap-1">
-                                  {(evalItem.flagged_items || []).map((item: string, j: number) => (
-                                    <span
-                                      key={j}
-                                      className="text-xs bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded"
-                                    >
-                                      {item}
-                                    </span>
-                                  ))}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Submit / edit form — shown if current user hasn&apos;t submitted yet, or is editing their entry */}
-                      {(!currentUserDebrief || editingDebriefId === currentUserDebrief?.id) && (
-                        <div className="bg-white dark:bg-gray-800 rounded-lg border border-indigo-100 dark:border-indigo-800/50 p-4 space-y-4">
-                          <h4 className="font-medium text-gray-900 dark:text-white text-sm">
-                            {editingDebriefId ? 'Edit Your Debrief' : 'Submit Your Debrief'}
-                          </h4>
-
-                          {/* Star rating */}
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                              Overall Rating <span className="text-red-500">*</span>
-                            </label>
-                            <div className="flex items-center gap-1">
-                              {[1, 2, 3, 4, 5].map(star => {
-                                const filled = star <= (debriefHoverRating || debriefForm.rating);
-                                return (
-                                  <button
-                                    key={star}
-                                    type="button"
-                                    onClick={() => setDebriefForm(prev => ({ ...prev, rating: star }))}
-                                    onMouseEnter={() => setDebriefHoverRating(star)}
-                                    onMouseLeave={() => setDebriefHoverRating(0)}
-                                    className="p-0.5 focus:outline-none"
-                                    aria-label={`Rate ${star} star${star > 1 ? 's' : ''}`}
-                                  >
-                                    <Star
-                                      className={`w-7 h-7 transition-colors ${
-                                        filled
-                                          ? 'text-amber-400 fill-amber-400'
-                                          : 'text-gray-300 dark:text-gray-600'
-                                      }`}
-                                    />
-                                  </button>
-                                );
-                              })}
-                              {debriefForm.rating > 0 && (
-                                <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">
-                                  {debriefForm.rating} / 5
-                                </span>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* What went well */}
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                              What went well?
-                            </label>
-                            <textarea
-                              value={debriefForm.went_well}
-                              onChange={e => setDebriefForm(prev => ({ ...prev, went_well: e.target.value }))}
-                              rows={3}
-                              placeholder="Describe what worked well during the lab..."
-                              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-                            />
-                          </div>
-
-                          {/* What could improve */}
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                              What could improve?
-                            </label>
-                            <textarea
-                              value={debriefForm.to_improve}
-                              onChange={e => setDebriefForm(prev => ({ ...prev, to_improve: e.target.value }))}
-                              rows={3}
-                              placeholder="Describe areas for improvement..."
-                              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-                            />
-                          </div>
-
-                          {/* Student concerns */}
-                          <div>
-                            <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                              <AlertTriangle className="w-4 h-4 text-amber-500" />
-                              Student concerns noted?
-                            </label>
-                            <textarea
-                              value={debriefForm.student_concerns}
-                              onChange={e => setDebriefForm(prev => ({ ...prev, student_concerns: e.target.value }))}
-                              rows={2}
-                              placeholder="Any student performance or behavioral concerns..."
-                              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-                            />
-                          </div>
-
-                          {/* Equipment issues */}
-                          <div>
-                            <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                              <Wrench className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                              Equipment issues?
-                            </label>
-                            <textarea
-                              value={debriefForm.equipment_issues}
-                              onChange={e => setDebriefForm(prev => ({ ...prev, equipment_issues: e.target.value }))}
-                              rows={2}
-                              placeholder="Any equipment problems, damage, or missing items..."
-                              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-                            />
-                          </div>
-
-                          {/* Actions */}
-                          <div className="flex items-center gap-3 pt-1">
-                            <button
-                              onClick={handleSubmitDebrief}
-                              disabled={submittingDebrief || debriefForm.rating < 1}
-                              className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
-                            >
-                              {submittingDebrief ? (
-                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                              ) : (
-                                <Save className="w-4 h-4" />
-                              )}
-                              {editingDebriefId ? 'Save Changes' : 'Submit Debrief'}
-                            </button>
-                            {editingDebriefId && (
-                              <button
-                                onClick={cancelEditingDebrief}
-                                className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-sm"
-                              >
-                                Cancel
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Submitted debriefs list */}
-                      {debriefs.length > 0 && (
-                        <div className="space-y-4">
-                          <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Submitted Responses
-                          </h4>
-                          {debriefs.map(debrief => {
-                            const isOwn = debrief.instructor_email?.toLowerCase() === session?.user?.email?.toLowerCase();
-                            const isBeingEdited = editingDebriefId === debrief.id;
-                            if (isBeingEdited) return null;
-                            const emailName = debrief.instructor_email?.split('@')[0] || '';
-                            const initials = emailName.slice(0, 2).toUpperCase() || '?';
-                            return (
-                              <div
-                                key={debrief.id}
-                                className={`bg-white dark:bg-gray-800 rounded-lg border p-4 ${
-                                  isOwn
-                                    ? 'border-indigo-200 dark:border-indigo-700'
-                                    : 'border-gray-200 dark:border-gray-700'
-                                }`}
-                              >
-                                {/* Card header */}
-                                <div className="flex items-start justify-between gap-3 mb-3">
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center flex-shrink-0">
-                                      <span className="text-xs font-semibold text-indigo-700 dark:text-indigo-300">
-                                        {initials}
-                                      </span>
-                                    </div>
-                                    <div>
-                                      <p className="text-sm font-medium text-gray-900 dark:text-white">
-                                        {debrief.instructor_email?.split('@')[0] || debrief.instructor_email || 'Unknown'}
-                                        {isOwn && (
-                                          <span className="ml-2 text-xs text-indigo-600 dark:text-indigo-400 font-normal">(you)</span>
-                                        )}
-                                      </p>
-                                      <p className="text-xs text-gray-400 dark:text-gray-500">
-                                        {new Date(debrief.created_at).toLocaleDateString('en-US', {
-                                          month: 'short', day: 'numeric', year: 'numeric',
-                                          hour: 'numeric', minute: '2-digit',
-                                        })}
-                                        {debrief.updated_at !== debrief.created_at && ' (edited)'}
-                                      </p>
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center gap-3 flex-shrink-0">
-                                    {/* Star rating display */}
-                                    <div className="flex items-center gap-0.5">
-                                      {[1, 2, 3, 4, 5].map(star => (
-                                        <Star
-                                          key={star}
-                                          className={`w-4 h-4 ${
-                                            star <= debrief.rating
-                                              ? 'text-amber-400 fill-amber-400'
-                                              : 'text-gray-200 dark:text-gray-700'
-                                          }`}
-                                        />
-                                      ))}
-                                    </div>
-                                    {isOwn && (
-                                      <button
-                                        onClick={() => startEditingDebrief(debrief)}
-                                        className="inline-flex items-center gap-1 px-2 py-1 text-xs text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded"
-                                      >
-                                        <Edit2 className="w-3 h-3" />
-                                        Edit
-                                      </button>
-                                    )}
-                                  </div>
-                                </div>
-
-                                {/* Card body */}
-                                <div className="space-y-3 text-sm">
-                                  {debrief.went_well && (
-                                    <div>
-                                      <p className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase tracking-wider mb-0.5">
-                                        What went well
-                                      </p>
-                                      <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{debrief.went_well}</p>
-                                    </div>
-                                  )}
-                                  {debrief.to_improve && (
-                                    <div>
-                                      <p className="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase tracking-wider mb-0.5">
-                                        What could improve
-                                      </p>
-                                      <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{debrief.to_improve}</p>
-                                    </div>
-                                  )}
-                                  {debrief.student_concerns && (
-                                    <div>
-                                      <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 uppercase tracking-wider mb-0.5 flex items-center gap-1">
-                                        <AlertTriangle className="w-3 h-3" />
-                                        Student concerns
-                                      </p>
-                                      <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{debrief.student_concerns}</p>
-                                    </div>
-                                  )}
-                                  {debrief.equipment_issues && (
-                                    <div>
-                                      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-0.5 flex items-center gap-1">
-                                        <Wrench className="w-3 h-3" />
-                                        Equipment issues
-                                      </p>
-                                      <p className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{debrief.equipment_issues}</p>
-                                    </div>
-                                  )}
-                                  {!debrief.went_well && !debrief.to_improve && !debrief.student_concerns && !debrief.equipment_issues && (
-                                    <p className="text-gray-400 dark:text-gray-500 italic">No written notes provided.</p>
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
-
-                      {debriefs.length === 0 && !currentUserDebrief && (
-                        <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-2">
-                          No debriefs submitted yet. Be the first to share feedback on this lab.
-                        </p>
-                      )}
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
+          <DebriefSection
+            debriefs={debriefs}
+            debriefCollapsed={debriefCollapsed}
+            debriefLoading={debriefLoading}
+            currentUserDebrief={currentUserDebrief}
+            editingDebriefId={editingDebriefId}
+            submittingDebrief={submittingDebrief}
+            debriefForm={debriefForm}
+            debriefHoverRating={debriefHoverRating}
+            evaluationConcerns={evaluationConcerns}
+            session={session}
+            onToggleCollapse={() => setDebriefCollapsed(prev => !prev)}
+            onSubmitDebrief={handleSubmitDebrief}
+            onStartEditingDebrief={startEditingDebrief}
+            onCancelEditingDebrief={cancelEditingDebrief}
+            onDebriefFormChange={setDebriefForm}
+            onDebriefHoverRatingChange={setDebriefHoverRating}
+          />
         )}
 
         {/* Quick Actions */}
