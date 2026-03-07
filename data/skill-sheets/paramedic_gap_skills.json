@@ -1,0 +1,621 @@
+[
+  {
+    "title": "CPAP Application",
+    "index": 100,
+    "sections": {
+      "assessment_steps": [
+        {
+          "text": "Takes or verbalizes appropriate BSI/PPE precautions",
+          "section": null
+        },
+        {
+          "text": "Clearly explains CPAP procedure, expected sensations, and importance of keeping mask sealed to the patient",
+          "section": null
+        },
+        {
+          "text": "CPAP device with adjustable flow generator",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "CPAP masks (small, medium, large sizes)",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Oxygen source with sufficient supply",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Flow meter capable of 10-15 LPM",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Pulse oximeter",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Waveform capnography (EtCO2) monitor",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Bag-valve mask (backup) readily accessible",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Assesses patient's respiratory status including respiratory rate, tidal volume, accessory muscle use, and work of breathing",
+          "section": "Assesses patient for CPAP indications"
+        },
+        {
+          "text": "Auscultates lung sounds bilaterally and documents findings",
+          "section": "Assesses patient for CPAP indications"
+        },
+        {
+          "text": "Obtains baseline vital signs including SpO2 and EtCO2",
+          "section": "Assesses patient for CPAP indications"
+        },
+        {
+          "text": "Verifies indication for CPAP use (acute pulmonary edema/CHF, COPD exacerbation, or severe asthma with adequate respiratory effort)",
+          "section": "Assesses patient for CPAP indications"
+        },
+        {
+          "text": "Assesses for and verbalizes contraindications: apnea or near-apnea, active vomiting or inability to protect airway, facial trauma precluding mask seal, suspected pneumothorax, systolic BP less than 90 mmHg",
+          "section": "Assesses patient for CPAP indications"
+        },
+        {
+          "text": "Confirms patient is alert enough to follow commands and maintain own airway",
+          "section": "Assesses patient for CPAP indications"
+        },
+        {
+          "text": "Connects oxygen source to CPAP device and verifies gas flow",
+          "section": "Performs CPAP setup and application"
+        },
+        {
+          "text": "Sets initial oxygen flow rate to 10-15 LPM per protocol",
+          "section": "Performs CPAP setup and application"
+        },
+        {
+          "text": "Sets initial PEEP to 5 cmH2O (adjustable to 5-10 cmH2O based on patient response)",
+          "section": "Performs CPAP setup and application"
+        },
+        {
+          "text": "Selects appropriately sized mask ensuring coverage of nose and mouth without air leak over eyes",
+          "section": "Performs CPAP setup and application"
+        },
+        {
+          "text": "Positions patient in high Fowler's or tripod position to optimize respiratory effort",
+          "section": "Performs CPAP setup and application"
+        },
+        {
+          "text": "Applies mask to patient's face, starting at bridge of nose, and secures with head straps",
+          "section": "Performs CPAP setup and application"
+        },
+        {
+          "text": "Verifies adequate mask seal with no significant air leak around eyes or chin",
+          "section": "Performs CPAP setup and application"
+        },
+        {
+          "text": "Coaches patient to breathe normally through the device and not fight the positive pressure",
+          "section": "Performs CPAP setup and application"
+        },
+        {
+          "text": "Monitors SpO2 and EtCO2 continuously after application",
+          "section": "Reassesses patient response"
+        },
+        {
+          "text": "Reassesses respiratory rate, work of breathing, lung sounds, and mental status every 5 minutes",
+          "section": "Reassesses patient response"
+        },
+        {
+          "text": "Adjusts PEEP incrementally (up to 10 cmH2O) if patient remains in distress with adequate blood pressure",
+          "section": "Reassesses patient response"
+        },
+        {
+          "text": "Recognizes signs of CPAP failure: worsening respiratory distress, decreasing SpO2, altered mental status, hemodynamic instability, or inability to maintain mask seal",
+          "section": "Reassesses patient response"
+        },
+        {
+          "text": "Verbalizes criteria and plan for transitioning to BVM ventilation or advanced airway if CPAP fails",
+          "section": "Reassesses patient response"
+        },
+        {
+          "text": "Documents time of application, initial and ongoing vital signs, device settings, and patient response",
+          "section": "Reassesses patient response"
+        }
+      ],
+      "equipment": [],
+      "procedure_steps": [],
+      "affective": [
+        "Accepts evaluation and criticism professionally",
+        "Shows willingness to learn",
+        "Interacts with simulated patient and other personnel in professional manner"
+      ],
+      "critical_criteria": [
+        "Failure to take or verbalize appropriate BSI/PPE precautions",
+        "Failure to assess patient for contraindications before applying CPAP",
+        "Failure to maintain adequate mask seal resulting in ineffective therapy",
+        "Failure to continuously monitor patient with SpO2 and EtCO2 after application",
+        "Failure to recognize signs of CPAP failure requiring transition to BVM or advanced airway",
+        "Failure to have BVM immediately available as backup",
+        "Failure to manage the patient as a competent EMT",
+        "Exhibits unacceptable affect with patient or other personnel",
+        "Uses or orders a dangerous or inappropriate intervention"
+      ],
+      "section_headers": [
+        "Selects, checks, assembles equipment",
+        "Assesses patient for CPAP indications",
+        "Performs CPAP setup and application",
+        "Reassesses patient response"
+      ],
+      "points_info": null
+    }
+  },
+  {
+    "title": "Inhaled Medication Administration",
+    "index": 101,
+    "sections": {
+      "assessment_steps": [
+        {
+          "text": "Takes or verbalizes appropriate BSI/PPE precautions",
+          "section": null
+        },
+        {
+          "text": "Clearly explains inhaled medication procedure and proper technique to the patient",
+          "section": null
+        },
+        {
+          "text": "Metered-dose inhaler (MDI) with spacer device",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Small-volume nebulizer kit with mask or mouthpiece",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Oxygen source with flow meter",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Stethoscope",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Prescribed or protocol-authorized medication",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Pulse oximeter",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Auscultates lung sounds bilaterally before medication administration and documents findings (wheezing, rhonchi, diminished sounds)",
+          "section": "Assesses patient respiratory status"
+        },
+        {
+          "text": "Obtains baseline vital signs including respiratory rate, SpO2, and heart rate",
+          "section": "Assesses patient respiratory status"
+        },
+        {
+          "text": "Assesses work of breathing including accessory muscle use, speaking in full sentences, and patient positioning",
+          "section": "Assesses patient respiratory status"
+        },
+        {
+          "text": "Verifies 5 rights of medication administration: Right Patient, Right Medication, Right Dose, Right Route (inhalation), Right Time",
+          "section": "Verifies medication order"
+        },
+        {
+          "text": "Checks medication for clarity and expiration date",
+          "section": "Verifies medication order"
+        },
+        {
+          "text": "Asks patient about known medication allergies and previous use of inhaled medications",
+          "section": "Verifies medication order"
+        },
+        {
+          "text": "Confirms medication order or standing protocol authorization",
+          "section": "Verifies medication order"
+        },
+        {
+          "text": "For MDI: Shakes inhaler vigorously for 5 seconds to mix medication",
+          "section": "Performs MDI administration"
+        },
+        {
+          "text": "For MDI: Primes inhaler if new or not recently used (1-2 test sprays away from patient)",
+          "section": "Performs MDI administration"
+        },
+        {
+          "text": "For MDI: Attaches spacer device to inhaler mouthpiece",
+          "section": "Performs MDI administration"
+        },
+        {
+          "text": "For MDI: Instructs patient to sit upright, exhale fully, then place spacer mouthpiece in mouth creating seal with lips",
+          "section": "Performs MDI administration"
+        },
+        {
+          "text": "For MDI: Coaches patient to begin slow deep inhalation while simultaneously actuating the inhaler canister",
+          "section": "Performs MDI administration"
+        },
+        {
+          "text": "For MDI: Instructs patient to hold breath for up to 10 seconds after inhalation, then exhale slowly",
+          "section": "Performs MDI administration"
+        },
+        {
+          "text": "For MDI: Waits 1 minute between puffs if multiple doses ordered",
+          "section": "Performs MDI administration"
+        },
+        {
+          "text": "For nebulizer: Places prescribed medication dose into nebulizer chamber",
+          "section": "Performs nebulizer administration"
+        },
+        {
+          "text": "For nebulizer: Assembles nebulizer kit connecting T-piece, mouthpiece or mask, and reservoir tubing",
+          "section": "Performs nebulizer administration"
+        },
+        {
+          "text": "For nebulizer: Connects nebulizer to oxygen source and sets flow rate to 6-8 LPM to produce steady mist",
+          "section": "Performs nebulizer administration"
+        },
+        {
+          "text": "For nebulizer: Positions patient upright and instructs patient to breathe normally through mouthpiece with occasional deep breaths",
+          "section": "Performs nebulizer administration"
+        },
+        {
+          "text": "For nebulizer: Instructs patient to hold nebulizer upright and periodically tap chamber to ensure complete medication delivery",
+          "section": "Performs nebulizer administration"
+        },
+        {
+          "text": "For nebulizer: Continues treatment until medication chamber sputters and mist production ceases (approximately 5-10 minutes)",
+          "section": "Performs nebulizer administration"
+        },
+        {
+          "text": "Auscultates lung sounds bilaterally after medication administration and compares to pre-treatment assessment",
+          "section": "Reassesses patient after treatment"
+        },
+        {
+          "text": "Reassesses respiratory rate, SpO2, work of breathing, and patient-reported symptom relief",
+          "section": "Reassesses patient after treatment"
+        },
+        {
+          "text": "Monitors heart rate for tachycardia and patient for tremors or other side effects of beta-agonist medications",
+          "section": "Reassesses patient after treatment"
+        },
+        {
+          "text": "Documents medication administered, dose, route, time, pre- and post-treatment lung sounds, and patient response",
+          "section": "Reassesses patient after treatment"
+        }
+      ],
+      "equipment": [],
+      "procedure_steps": [],
+      "affective": [
+        "Accepts evaluation and criticism professionally",
+        "Shows willingness to learn",
+        "Interacts with simulated patient and other personnel in professional manner"
+      ],
+      "critical_criteria": [
+        "Failure to take or verbalize appropriate BSI/PPE precautions",
+        "Failure to verify 5 rights of medication administration (right patient, medication, dose, route, time)",
+        "Failure to properly assemble MDI with spacer or nebulizer device",
+        "Failure to auscultate lung sounds before and after medication administration",
+        "Failure to coach patient on proper inhalation technique",
+        "Failure to monitor patient for adverse effects after administration",
+        "Failure to manage the patient as a competent EMT",
+        "Exhibits unacceptable affect with patient or other personnel",
+        "Uses or orders a dangerous or inappropriate intervention"
+      ],
+      "section_headers": [
+        "Selects, checks, assembles equipment",
+        "Assesses patient respiratory status",
+        "Verifies medication order",
+        "Performs MDI administration",
+        "Performs nebulizer administration",
+        "Reassesses patient after treatment"
+      ],
+      "points_info": null
+    }
+  },
+  {
+    "title": "Blood Glucose Monitoring",
+    "index": 102,
+    "sections": {
+      "assessment_steps": [
+        {
+          "text": "Takes or verbalizes appropriate BSI/PPE precautions (gloves at minimum)",
+          "section": null
+        },
+        {
+          "text": "Clearly explains blood glucose testing procedure to the patient",
+          "section": null
+        },
+        {
+          "text": "Glucometer device",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Test strips (compatible with glucometer, not expired)",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Lancet device with appropriate depth setting",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Alcohol prep swabs",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Sterile gauze pads",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Sharps container",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Control solution for quality verification",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Verifies glucometer is functioning and displays within calibration date or verbalizes use of control solution to confirm accuracy",
+          "section": "Checks glucometer calibration"
+        },
+        {
+          "text": "Confirms test strip lot number matches glucometer coding or verifies auto-coding feature is active",
+          "section": "Checks glucometer calibration"
+        },
+        {
+          "text": "Verifies test strips are not expired and container has been properly stored (sealed, not exposed to extreme temperatures)",
+          "section": "Checks glucometer calibration"
+        },
+        {
+          "text": "Selects puncture site on lateral aspect of fingertip (avoids finger pad and thumb/index finger when possible)",
+          "section": "Performs blood glucose sampling"
+        },
+        {
+          "text": "Cleanses selected site with alcohol swab using circular motion and allows site to air dry completely",
+          "section": "Performs blood glucose sampling"
+        },
+        {
+          "text": "Inserts test strip into glucometer and confirms device is ready for sample",
+          "section": "Performs blood glucose sampling"
+        },
+        {
+          "text": "Arms lancet device and applies to prepared site with firm pressure to obtain puncture",
+          "section": "Performs blood glucose sampling"
+        },
+        {
+          "text": "Wipes away first drop of blood with sterile gauze, then gently squeezes finger to produce an adequate second drop (avoids excessive squeezing which dilutes sample with interstitial fluid)",
+          "section": "Performs blood glucose sampling"
+        },
+        {
+          "text": "Applies blood drop to test strip sample area ensuring adequate fill as indicated by glucometer",
+          "section": "Performs blood glucose sampling"
+        },
+        {
+          "text": "Applies direct pressure to puncture site with sterile gauze until bleeding stops",
+          "section": "Performs blood glucose sampling"
+        },
+        {
+          "text": "Immediately disposes of used lancet in sharps container without recapping",
+          "section": "Performs blood glucose sampling"
+        },
+        {
+          "text": "Reads and verbalizes glucometer result in mg/dL",
+          "section": "Assesses result and initiates treatment"
+        },
+        {
+          "text": "Interprets result: normal range 70-140 mg/dL, hypoglycemia less than 60 mg/dL, hyperglycemia greater than 300 mg/dL",
+          "section": "Assesses result and initiates treatment"
+        },
+        {
+          "text": "For critical hypoglycemia (less than 60 mg/dL): verbalizes initiation of treatment per protocol (oral glucose if conscious, IV dextrose or IM glucagon if unconscious)",
+          "section": "Assesses result and initiates treatment"
+        },
+        {
+          "text": "For critical hyperglycemia (greater than 300 mg/dL): verbalizes assessment for signs of DKA or HHS and appropriate fluid resuscitation",
+          "section": "Assesses result and initiates treatment"
+        },
+        {
+          "text": "Documents blood glucose value, time of test, site used, and any treatment initiated",
+          "section": "Secures scene and documents findings"
+        },
+        {
+          "text": "Properly disposes of all contaminated materials (test strip, gauze, gloves) in biohazard waste",
+          "section": "Secures scene and documents findings"
+        }
+      ],
+      "equipment": [],
+      "procedure_steps": [],
+      "affective": [
+        "Accepts evaluation and criticism professionally",
+        "Shows willingness to learn",
+        "Interacts with simulated patient and other personnel in professional manner"
+      ],
+      "critical_criteria": [
+        "Failure to take or verbalize appropriate BSI/PPE precautions",
+        "Failure to verify glucometer calibration or use control solution",
+        "Failure to obtain adequate blood sample for accurate reading",
+        "Failure to recognize and verbalize treatment for critical hypoglycemia (less than 60 mg/dL)",
+        "Failure to recognize and verbalize treatment for critical hyperglycemia (greater than 300 mg/dL)",
+        "Failure to properly dispose of lancet in sharps container",
+        "Recaps lancet instead of disposing directly into sharps container",
+        "Failure to manage the patient as a competent EMT",
+        "Exhibits unacceptable affect with patient or other personnel",
+        "Uses or orders a dangerous or inappropriate intervention"
+      ],
+      "section_headers": [
+        "Selects, checks, assembles equipment",
+        "Checks glucometer calibration",
+        "Performs blood glucose sampling",
+        "Assesses result and initiates treatment",
+        "Secures scene and documents findings"
+      ],
+      "points_info": null
+    }
+  },
+  {
+    "title": "12-Lead ECG Acquisition",
+    "index": 103,
+    "sections": {
+      "assessment_steps": [
+        {
+          "text": "Takes or verbalizes appropriate BSI/PPE precautions",
+          "section": null
+        },
+        {
+          "text": "Clearly explains 12-lead ECG procedure to the patient, including need to expose chest and remain still during acquisition",
+          "section": null
+        },
+        {
+          "text": "12-Lead ECG machine (monitor/defibrillator with 12-lead capability)",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "10 ECG electrodes (4 limb, 6 precordial)",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "ECG cable set with limb and precordial lead wires",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Skin preparation supplies: disposable razor, alcohol prep swabs, abrasive pad or dry gauze",
+          "section": "Selects, checks, assembles equipment"
+        },
+        {
+          "text": "Positions patient supine or semi-reclined with arms at sides and legs uncrossed",
+          "section": "Prepares patient for acquisition"
+        },
+        {
+          "text": "Exposes chest completely, maintaining patient dignity with appropriate draping",
+          "section": "Prepares patient for acquisition"
+        },
+        {
+          "text": "Identifies electrode placement sites and shaves excessive chest hair at each site if needed to ensure electrode contact",
+          "section": "Prepares patient for acquisition"
+        },
+        {
+          "text": "Abrades skin lightly at electrode sites with abrasive pad to remove dead skin cells and reduce impedance",
+          "section": "Prepares patient for acquisition"
+        },
+        {
+          "text": "Cleanses each electrode site with alcohol swab and allows to dry completely before electrode placement",
+          "section": "Prepares patient for acquisition"
+        },
+        {
+          "text": "Places RA (white) electrode on right arm at bony prominence of distal forearm or right shoulder",
+          "section": "Performs limb lead placement"
+        },
+        {
+          "text": "Places LA (black) electrode on left arm at bony prominence of distal forearm or left shoulder",
+          "section": "Performs limb lead placement"
+        },
+        {
+          "text": "Places RL (green) electrode on right leg at bony prominence of distal lower leg or right lower abdomen",
+          "section": "Performs limb lead placement"
+        },
+        {
+          "text": "Places LL (red) electrode on left leg at bony prominence of distal lower leg or left lower abdomen",
+          "section": "Performs limb lead placement"
+        },
+        {
+          "text": "Locates angle of Louis (sternal angle) and identifies 4th intercostal space by palpating downward from the 2nd rib",
+          "section": "Performs precordial lead placement"
+        },
+        {
+          "text": "Places V1 (C1) electrode at 4th intercostal space, right sternal border",
+          "section": "Performs precordial lead placement"
+        },
+        {
+          "text": "Places V2 (C2) electrode at 4th intercostal space, left sternal border",
+          "section": "Performs precordial lead placement"
+        },
+        {
+          "text": "Places V4 (C4) electrode at 5th intercostal space, left midclavicular line (placed before V3)",
+          "section": "Performs precordial lead placement"
+        },
+        {
+          "text": "Places V3 (C3) electrode midway between V2 and V4",
+          "section": "Performs precordial lead placement"
+        },
+        {
+          "text": "Places V5 (C5) electrode at anterior axillary line, horizontal to V4",
+          "section": "Performs precordial lead placement"
+        },
+        {
+          "text": "Places V6 (C6) electrode at midaxillary line, horizontal to V4 and V5",
+          "section": "Performs precordial lead placement"
+        },
+        {
+          "text": "Connects all lead wires to corresponding electrodes, verifying correct color-code matching",
+          "section": "Performs ECG acquisition"
+        },
+        {
+          "text": "Instructs patient to remain still, relax arms and legs, and breathe normally during acquisition",
+          "section": "Performs ECG acquisition"
+        },
+        {
+          "text": "Verifies all leads display on monitor with acceptable waveform quality before printing",
+          "section": "Performs ECG acquisition"
+        },
+        {
+          "text": "Troubleshoots artifact if present: checks lead connections, verifies electrode adhesion, instructs patient to relax, applies AC (60 Hz) filter if necessary",
+          "section": "Performs ECG acquisition"
+        },
+        {
+          "text": "Acquires and prints 12-lead ECG tracing with proper standardization (10mm/mV, 25mm/sec)",
+          "section": "Performs ECG acquisition"
+        },
+        {
+          "text": "Verbalizes systematic interpretation: determines rate, rhythm, axis, intervals (PR, QRS, QT), and ST-segment analysis across all 12 leads",
+          "section": "Assesses ECG and communicates findings"
+        },
+        {
+          "text": "Identifies ST-segment elevation greater than 1mm in 2 or more contiguous leads as STEMI criteria",
+          "section": "Assesses ECG and communicates findings"
+        },
+        {
+          "text": "Verbalizes identification of reciprocal ST depression and its significance in confirming acute MI",
+          "section": "Assesses ECG and communicates findings"
+        },
+        {
+          "text": "Initiates electronic or verbal transmission of 12-lead ECG to receiving facility when STEMI or other acute findings are identified",
+          "section": "Assesses ECG and communicates findings"
+        },
+        {
+          "text": "Documents time of acquisition, clinical indication, significant findings, and any transmission to receiving facility",
+          "section": "Secures and documents findings"
+        },
+        {
+          "text": "Verbalizes need to obtain serial 12-lead ECGs every 15 minutes or with any change in patient symptoms",
+          "section": "Secures and documents findings"
+        }
+      ],
+      "equipment": [],
+      "procedure_steps": [],
+      "affective": [
+        "Accepts evaluation and criticism professionally",
+        "Shows willingness to learn",
+        "Interacts with simulated patient and other personnel in professional manner"
+      ],
+      "critical_criteria": [
+        "Failure to take or verbalize appropriate BSI/PPE precautions",
+        "Failure to correctly identify and place precordial leads V1 through V6",
+        "Failure to properly prepare skin resulting in inadequate electrode contact",
+        "Failure to obtain artifact-free ECG tracing suitable for interpretation",
+        "Failure to recognize STEMI criteria (ST elevation greater than 1mm in 2 or more contiguous leads)",
+        "Failure to transmit 12-lead ECG to receiving facility when acute findings are identified",
+        "Failure to manage the patient as a competent EMT",
+        "Exhibits unacceptable affect with patient or other personnel",
+        "Uses or orders a dangerous or inappropriate intervention"
+      ],
+      "section_headers": [
+        "Selects, checks, assembles equipment",
+        "Prepares patient for acquisition",
+        "Performs limb lead placement",
+        "Performs precordial lead placement",
+        "Performs ECG acquisition",
+        "Assesses ECG and communicates findings",
+        "Secures and documents findings"
+      ],
+      "points_info": null
+    }
+  }
+]

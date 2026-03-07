@@ -123,6 +123,10 @@ const PLATINUM_TO_CANONICAL: Record<string, string> = {
   'Ventilate a Neonate Patient with a BVM': 'BVM Ventilation — Neonate',
   'Ventilate a Pediatric Patient with a BVM': 'BVM Ventilation — Pediatric',
   'Ventilate an Adult Patient with a BVM': 'BVM Ventilation — Adult',
+  'CPAP Application': 'CPAP Application',
+  'Inhaled Medication Administration': 'Inhaled Medication (MDI / Nebulizer)',
+  'Blood Glucose Monitoring': 'Blood Glucose Monitoring',
+  '12-Lead ECG Acquisition': '12-Lead ECG Acquisition',
 };
 
 // Publisher (AEMT) cross-reference - maps stripped skill_name -> canonical
@@ -150,6 +154,7 @@ const PUBLISHER_TO_CANONICAL: Record<string, string> = {
   'Obtaining Blood Pressure by Palpation': 'Vital Signs',
   'Positioning an Unresponsive Patient': 'Patient Lifting and Movement',
   "Suctioning a Patient's Airway": 'Oral Suctioning',
+  "Suctioning a Patient\u2019s Airway": 'Oral Suctioning', // Unicode right single quote variant
   'Inserting an Oral Airway Into an Adult': 'OPA Insertion',
   'Inserting an Oral Airway With a 90° Rotation': 'OPA Insertion',
   'Inserting a Nasal Airway': 'NPA Insertion',
@@ -423,10 +428,10 @@ function transformPublisher(sheet: Record<string, unknown>): NormalizedSheet {
 // ---------------------------------------------------------------------------
 // File paths for bundled JSON
 // ---------------------------------------------------------------------------
-const SOURCE_FILES: Record<string, string> = {
-  nremt: 'nremt_emt_skill_sheets.json',
-  platinum: 'paramedic_platinum_complete.json',
-  publisher: 'aemt_publisher_skill_sheets_raw.json',
+const SOURCE_FILES: Record<string, string[]> = {
+  nremt: ['nremt_emt_skill_sheets.json'],
+  platinum: ['paramedic_platinum_complete.json', 'paramedic_gap_skills.json'],
+  publisher: ['aemt_publisher_skill_sheets_raw.json'],
 };
 
 // ---------------------------------------------------------------------------
@@ -459,13 +464,19 @@ export async function POST(request: NextRequest) {
   if (data && Array.isArray(data) && data.length > 0) {
     sheets = data;
   } else {
-    const fileName = SOURCE_FILES[source];
-    const filePath = path.join(process.cwd(), 'data', 'skill-sheets', fileName);
-    if (!fs.existsSync(filePath)) {
-      return NextResponse.json({ error: `Source file not found: ${fileName}` }, { status: 404 });
+    const fileNames = SOURCE_FILES[source];
+    sheets = [];
+    for (const fileName of fileNames) {
+      const filePath = path.join(process.cwd(), 'data', 'skill-sheets', fileName);
+      if (!fs.existsSync(filePath)) {
+        return NextResponse.json({ error: `Source file not found: ${fileName}` }, { status: 404 });
+      }
+      const raw = fs.readFileSync(filePath, 'utf-8');
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        sheets.push(...parsed);
+      }
     }
-    const raw = fs.readFileSync(filePath, 'utf-8');
-    sheets = JSON.parse(raw);
   }
 
   if (!Array.isArray(sheets) || sheets.length === 0) {
