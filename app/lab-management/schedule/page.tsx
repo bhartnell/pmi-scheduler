@@ -2,7 +2,9 @@
 
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState, useRef, Suspense } from 'react';
+import { useEffect, useState, useRef, useMemo, Suspense } from 'react';
+import { useCohorts } from '@/hooks/useCohorts';
+import { useLabDays } from '@/hooks/useLabDays';
 import Link from 'next/link';
 import EmptyState from '@/components/EmptyState';
 import {
@@ -158,9 +160,6 @@ function SchedulePageContent() {
   const searchParams = useSearchParams();
   const toast = useToast();
 
-  const [cohorts, setCohorts] = useState<Cohort[]>([]);
-  const [labDays, setLabDays] = useState<LabDay[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedCohort, setSelectedCohort] = useState('');
   const [showTodayOnly, setShowTodayOnly] = useState(searchParams.get('today') === 'true');
 
@@ -197,6 +196,35 @@ function SchedulePageContent() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const [userRole, setUserRole] = useState<string | null>(null);
+
+  // Compute date range for the current view
+  const dateRange = useMemo(() => {
+    let startDate: Date;
+    let endDate: Date;
+    if (viewMode === 'week') {
+      startDate = new Date(weekStart);
+      endDate = new Date(weekStart);
+      endDate.setDate(endDate.getDate() + 6);
+    } else {
+      startDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+      startDate.setDate(startDate.getDate() - startDate.getDay());
+      endDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
+      endDate.setDate(endDate.getDate() + (6 - endDate.getDay()));
+    }
+    return {
+      startDate: startDate.toISOString().split('T')[0],
+      endDate: endDate.toISOString().split('T')[0],
+    };
+  }, [viewMode, weekStart, currentMonth]);
+
+  // React Query hooks for cohorts and lab days
+  const { data: cohorts = [] } = useCohorts({ enabled: !!session });
+  const { data: labDays = [], isLoading: loading } = useLabDays({
+    startDate: dateRange.startDate,
+    endDate: dateRange.endDate,
+    cohortId: selectedCohort || undefined,
+    enabled: !!session,
+  });
 
   // Calendar availability for today's labs and list/week view
   const todayStr = new Date().toISOString().split('T')[0];
@@ -243,13 +271,6 @@ function SchedulePageContent() {
 
   useEffect(() => {
     if (session) {
-      fetchCohorts();
-    }
-  }, [session]);
-
-  useEffect(() => {
-    if (session) {
-      fetchLabDays();
       fetchDailyNotes();
     }
   }, [session, currentMonth, selectedCohort, showAllNotes, viewMode, weekStart]);
@@ -270,59 +291,6 @@ function SchedulePageContent() {
     document.addEventListener('keydown', handleEsc);
     return () => document.removeEventListener('keydown', handleEsc);
   }, [noteModalDate]);
-
-  const fetchCohorts = async () => {
-    try {
-      const res = await fetch('/api/lab-management/cohorts');
-      const data = await res.json();
-      if (data.success) {
-        setCohorts(data.cohorts);
-      }
-    } catch (error) {
-      console.error('Error fetching cohorts:', error);
-    }
-  };
-
-  const fetchLabDays = async () => {
-    setLoading(true);
-    try {
-      let startDate: Date;
-      let endDate: Date;
-
-      if (viewMode === 'week') {
-        // Week view: Sunday through Saturday of weekStart
-        startDate = new Date(weekStart);
-        endDate = new Date(weekStart);
-        endDate.setDate(endDate.getDate() + 6);
-      } else {
-        // Month view: full calendar grid (Sun of first week through Sat of last week)
-        startDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
-        startDate.setDate(startDate.getDate() - startDate.getDay()); // Go back to Sunday
-
-        endDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
-        endDate.setDate(endDate.getDate() + (6 - endDate.getDay())); // Go forward to Saturday
-      }
-
-      const params = new URLSearchParams({
-        startDate: startDate.toISOString().split('T')[0],
-        endDate: endDate.toISOString().split('T')[0],
-      });
-
-      if (selectedCohort) {
-        params.append('cohortId', selectedCohort);
-      }
-
-      const res = await fetch(`/api/lab-management/lab-days?${params}`);
-      const data = await res.json();
-
-      if (data.success) {
-        setLabDays(data.labDays);
-      }
-    } catch (error) {
-      console.error('Error fetching lab days:', error);
-    }
-    setLoading(false);
-  };
 
   const fetchDailyNotes = async () => {
     try {
@@ -1119,7 +1087,7 @@ function SchedulePageContent() {
                               : 'Lab Day'
                             )}
                             {' • '}
-                            {labDay.num_rotations} rotations × {labDay.stations[0]?.rotation_minutes || labDay.num_rotations} min
+                            {labDay.num_rotations} rotations × {String(labDay.stations[0]?.rotation_minutes || labDay.num_rotations)} min
                           </p>
                         </div>
                         <Link
@@ -1159,7 +1127,7 @@ function SchedulePageContent() {
                       {/* Shift Signups (Part-Timer Coverage) */}
                       {labDay.shift_signups && (labDay.shift_signups.confirmed.length > 0 || labDay.shift_signups.pending_count > 0) && (
                         <div className="flex flex-wrap gap-2 mt-2">
-                          {labDay.shift_signups.confirmed.map((signup, idx) => (
+                          {labDay.shift_signups.confirmed.map((signup: { name: string; email: string }, idx: number) => (
                             <span
                               key={`signup-${idx}`}
                               className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300"
@@ -1357,7 +1325,7 @@ function SchedulePageContent() {
                       ));
 
                       // Lab day roles (Lab Lead, Roamer, Observer)
-                      const roles = labDay.roles || [];
+                      const roles: LabDayRole[] = labDay.roles || [];
                       const labLeads = roles.filter(r => r.role === 'lab_lead');
                       const roamers = roles.filter(r => r.role === 'roamer');
 
@@ -1408,13 +1376,13 @@ function SchedulePageContent() {
                           {/* Instructors: Lab Lead, Roamer, Station assignments */}
                           {(labLeads.length > 0 || roamers.length > 0 || stationInstructors.length > 0) && (
                             <div className="mt-1.5 space-y-0.5">
-                              {labLeads.map(r => (
+                              {labLeads.map((r) => (
                                 <div key={r.id} className="flex items-center gap-1 text-[10px] leading-tight">
                                   <span className="flex-shrink-0 px-1 py-px rounded bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 font-semibold">Lead</span>
                                   <span className="text-gray-700 dark:text-gray-300 truncate">{r.instructor_name || r.instructor_email?.split('@')[0] || '?'}</span>
                                 </div>
                               ))}
-                              {roamers.map(r => (
+                              {roamers.map((r) => (
                                 <div key={r.id} className="flex items-center gap-1 text-[10px] leading-tight">
                                   <span className="flex-shrink-0 px-1 py-px rounded bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300 font-semibold">Roam</span>
                                   <span className="text-gray-700 dark:text-gray-300 truncate">{r.instructor_name || r.instructor_email?.split('@')[0] || '?'}</span>
@@ -1433,7 +1401,7 @@ function SchedulePageContent() {
                           {/* Shift Signups */}
                           {labDay.shift_signups && (labDay.shift_signups.confirmed.length > 0 || labDay.shift_signups.pending_count > 0) && (
                             <div className="mt-1 space-y-0.5">
-                              {labDay.shift_signups.confirmed.map((signup, idx) => (
+                              {labDay.shift_signups.confirmed.map((signup: { name: string; email: string }, idx: number) => (
                                 <div key={`pt-${idx}`} className="flex items-center gap-1 text-[10px] leading-tight">
                                   <span className="flex-shrink-0 px-1 py-px rounded bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300 font-semibold">PT</span>
                                   <span className="text-gray-700 dark:text-gray-300 truncate">{signup.name}</span>

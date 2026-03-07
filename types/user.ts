@@ -45,6 +45,7 @@ export interface CurrentUser {
 export interface CurrentUserMinimal {
   id: string;
   role: Role;
+  email?: string;
 }
 
 /**
