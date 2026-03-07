@@ -2,7 +2,9 @@
 
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
+import { useSkillSheets } from '@/hooks/useSkillSheets';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import Link from 'next/link';
 import {
   Home,
@@ -88,11 +90,6 @@ export default function SkillSheetsBrowsePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
-  const [currentUser, setCurrentUser] = useState<CurrentUserMinimal | null>(null);
-  const [sheets, setSheets] = useState<SkillSheetRow[]>([]);
-  const [counts, setCounts] = useState<ProgramCounts>({ emt: 0, aemt: 0, paramedic: 0, total: 0 });
-  const [loading, setLoading] = useState(true);
-
   // Filters
   const [program, setProgram] = useState('');
   const [source, setSource] = useState('');
@@ -101,34 +98,22 @@ export default function SkillSheetsBrowsePage() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
 
   // ---------- Auth ----------
+  const { data: currentUser } = useCurrentUser({
+    enabled: !!session?.user?.email,
+  });
+
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/signin');
     }
   }, [status, router]);
 
+  // Role guard: redirect non-instructors
   useEffect(() => {
-    if (session?.user?.email) {
-      fetchCurrentUser();
+    if (currentUser && !hasMinRole(currentUser.role, 'instructor')) {
+      router.push('/');
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session]);
-
-  const fetchCurrentUser = async () => {
-    try {
-      const res = await fetch('/api/instructor/me');
-      const data = await res.json();
-      if (data.success && data.user) {
-        if (!hasMinRole(data.user.role, 'instructor')) {
-          router.push('/');
-          return;
-        }
-        setCurrentUser(data.user);
-      }
-    } catch (err) {
-      console.error('Error fetching user:', err);
-    }
-  };
+  }, [currentUser, router]);
 
   // ---------- Debounce search ----------
   useEffect(() => {
@@ -138,36 +123,17 @@ export default function SkillSheetsBrowsePage() {
     return () => clearTimeout(timer);
   }, [search]);
 
-  // ---------- Fetch sheets ----------
-  const fetchSheets = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (program) params.set('program', program);
-      if (source) params.set('source', source);
-      if (category) params.set('category', category);
-      if (debouncedSearch) params.set('search', debouncedSearch);
+  // ---------- React Query hook for sheets ----------
+  const { data: skillSheetsData, isLoading: loading } = useSkillSheets({
+    program: program || undefined,
+    source: source || undefined,
+    category: category || undefined,
+    search: debouncedSearch || undefined,
+    enabled: !!currentUser && hasMinRole(currentUser.role, 'instructor'),
+  });
 
-      const qs = params.toString();
-      const res = await fetch(`/api/skill-sheets${qs ? `?${qs}` : ''}`);
-      const data = await res.json();
-
-      if (data.success) {
-        setSheets(data.sheets || []);
-        setCounts(data.counts || { emt: 0, aemt: 0, paramedic: 0, total: 0 });
-      }
-    } catch (err) {
-      console.error('Error fetching skill sheets:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, [program, source, category, debouncedSearch]);
-
-  useEffect(() => {
-    if (currentUser) {
-      fetchSheets();
-    }
-  }, [currentUser, fetchSheets]);
+  const sheets = skillSheetsData?.sheets || [];
+  const counts = skillSheetsData?.counts || { emt: 0, aemt: 0, paramedic: 0, total: 0 };
 
   // ---------- Render ----------
   if (status === 'loading' || !currentUser) {

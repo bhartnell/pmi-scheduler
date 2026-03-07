@@ -3,6 +3,7 @@
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
+import { useScenarios } from '@/hooks/useScenarios';
 import Link from 'next/link';
 import {
   Search,
@@ -72,8 +73,6 @@ const CATEGORY_ICONS: Record<string, any> = {
 export default function ScenariosPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [scenarios, setScenarios] = useState<Scenario[]>([]);
-  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [difficultyFilter, setDifficultyFilter] = useState('');
@@ -81,6 +80,14 @@ export default function ScenariosPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+
+  // React Query hook for scenarios
+  const { data: scenarios = [], isLoading: loading } = useScenarios({
+    category: categoryFilter,
+    difficulty: difficultyFilter,
+    program: programFilter,
+    enabled: !!session,
+  });
 
   // Keyboard shortcuts state
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
@@ -107,10 +114,9 @@ export default function ScenariosPage() {
 
   useEffect(() => {
     if (session) {
-      fetchScenarios();
       fetchFavorites();
     }
-  }, [session, categoryFilter, difficultyFilter, programFilter]);
+  }, [session]);
 
   const fetchFavorites = async () => {
     try {
@@ -152,25 +158,6 @@ export default function ScenariosPage() {
         return next;
       });
     }
-  };
-
-  const fetchScenarios = async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (categoryFilter) params.append('category', categoryFilter);
-      if (difficultyFilter) params.append('difficulty', difficultyFilter);
-      if (programFilter) params.append('program', programFilter);
-
-      const res = await fetch(`/api/lab-management/scenarios?${params}`);
-      const data = await res.json();
-      if (data.success) {
-        setScenarios(data.scenarios);
-      }
-    } catch (error) {
-      console.error('Error fetching scenarios:', error);
-    }
-    setLoading(false);
   };
 
   const filteredScenarios = scenarios.filter(s => {

@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
     }));
 
     const response = NextResponse.json({ success: true, cohorts });
-    response.headers.set('Cache-Control', 'private, max-age=3600, stale-while-revalidate=600');
+    response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
     return response;
   } catch (error) {
     console.error('Error fetching cohorts:', error);

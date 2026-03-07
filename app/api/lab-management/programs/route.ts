@@ -23,7 +23,7 @@ export async function GET() {
     }
 
     const response = NextResponse.json({ success: true, programs: data || [] });
-    response.headers.set('Cache-Control', 'private, max-age=86400, stale-while-revalidate=3600');
+    response.headers.set('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=1200');
     return response;
   } catch (error) {
     console.error('Error fetching programs:', error);

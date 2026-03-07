@@ -2,6 +2,7 @@
 
 import { useSession, signIn, signOut } from 'next-auth/react';
 import { useEffect, useState, useCallback } from 'react';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import Link from 'next/link';
 import {
   Calendar,
@@ -62,7 +63,7 @@ import ResizableWidget, { useWidgetSizes } from '@/components/dashboard/Resizabl
 import { useToast } from '@/components/Toast';
 import HelpTooltip from '@/components/HelpTooltip';
 import { SkeletonStats, SkeletonCard } from '@/components/ui';
-import type { CurrentUserMinimal } from '@/types';
+import type { CurrentUser as CurrentUserType } from '@/types';
 
 interface DashboardPreferences {
   dashboard_widgets: string[];
@@ -73,7 +74,7 @@ export default function HomePage() {
   const { data: session, status } = useSession();
   const toast = useToast();
   const { resetAll: resetWidgetSizes } = useWidgetSizes();
-  const [currentUser, setCurrentUser] = useState<CurrentUserMinimal | null>(null);
+  const [currentUser, setCurrentUser] = useState<CurrentUserType | null>(null);
   const [preferences, setPreferences] = useState<DashboardPreferences | null>(null);
   const [showCustomize, setShowCustomize] = useState(false);
   const [hasOnboarding, setHasOnboarding] = useState(false);
@@ -83,6 +84,11 @@ export default function HomePage() {
   // Edit mode state — local widget order until "Done" is clicked
   const [editMode, setEditMode] = useState(false);
   const [editWidgets, setEditWidgets] = useState<string[]>([]);
+
+  // React Query hook for current user (cached & shared across components)
+  const { data: cachedUser } = useCurrentUser({
+    enabled: !!session?.user?.email,
+  });
 
   // Sync layout to DB (fire-and-forget, called whenever prefs change)
   const syncLayoutToDB = useCallback(async (widgets: string[], quickLinks: string[]) => {
@@ -97,46 +103,40 @@ export default function HomePage() {
     }
   }, []);
 
+  // When cached user arrives, handle redirect logic and fetch preferences/onboarding
   useEffect(() => {
-    if (session?.user?.email) {
-      // Fetch user, preferences, and onboarding status in parallel
+    if (!cachedUser && !session?.user?.email) return;
+
+    if (cachedUser) {
+      const user = cachedUser;
+
+      // Non-PMI users with no approved role should go through the
+      // self-service volunteer request-access flow.
+      const isPmiEmail =
+        user.email?.endsWith('@pmi.edu') || user.email?.endsWith('@my.pmi.edu');
+      if (!isPmiEmail && (!user.role || user.role === 'pending')) {
+        window.location.href = '/request-access';
+        return;
+      }
+
+      // PMI users with pending role: set user so we can render the
+      // "access pending" screen, but do not load preferences or widgets.
+      if (user.role === 'pending') {
+        setCurrentUser(user);
+        return;
+      }
+
+      setCurrentUser(user);
+
+      // Fetch preferences and onboarding status in parallel
       Promise.all([
-        fetch('/api/instructor/me').then(res => res.json()),
         fetch('/api/user/preferences').then(res => res.json()),
         fetch('/api/onboarding/dashboard').then(res => res.json()).catch(() => null)
-      ]).then(([userData, prefsData, onboardingData]) => {
-        if (userData.success && userData.user) {
-          const user = userData.user;
+      ]).then(([prefsData, onboardingData]) => {
+        // Show onboarding card/widget ONLY if user has an active onboarding assignment
+        const hasActiveOnboarding = onboardingData?.success && onboardingData?.hasActiveAssignment;
+        setHasOnboarding(!!hasActiveOnboarding);
 
-          // Non-PMI users with no approved role should go through the
-          // self-service volunteer request-access flow.
-          const isPmiEmail =
-            user.email?.endsWith('@pmi.edu') || user.email?.endsWith('@my.pmi.edu');
-          if (!isPmiEmail && (!user.role || user.role === 'pending')) {
-            window.location.href = '/request-access';
-            return;
-          }
-
-          // PMI users with pending role: set user so we can render the
-          // "access pending" screen, but do not load preferences or widgets.
-          if (user.role === 'pending') {
-            setCurrentUser(user);
-            return;
-          }
-
-          setCurrentUser(user);
-          // Show onboarding card/widget ONLY if user has an active onboarding assignment
-          const hasActiveOnboarding = onboardingData?.success && onboardingData?.hasActiveAssignment;
-          setHasOnboarding(!!hasActiveOnboarding);
-        } else if (userData.success === false) {
-          // Could not find or create a user - redirect non-PMI users to request access
-          const email = session?.user?.email || '';
-          const isPmiEmail = email.endsWith('@pmi.edu') || email.endsWith('@my.pmi.edu');
-          if (!isPmiEmail) {
-            window.location.href = '/request-access';
-            return;
-          }
-        }
         if (prefsData.success && prefsData.preferences) {
           setPreferences(prefsData.preferences);
           // On first load, if preferences came from DB, also sync them into dashboard_layouts
@@ -147,17 +147,24 @@ export default function HomePage() {
               prefsData.preferences.quick_links,
             ).catch(() => {});
           }
-        } else if (userData.user) {
+        } else {
           // Use role defaults if no preferences
-          const defaults = ROLE_DEFAULTS[userData.user.role] || ROLE_DEFAULTS.instructor;
+          const defaults = ROLE_DEFAULTS[user.role] || ROLE_DEFAULTS.instructor;
           setPreferences({
             dashboard_widgets: defaults.widgets,
             quick_links: defaults.quickLinks,
           });
         }
       }).catch(console.error);
+    } else if (session?.user?.email) {
+      // cachedUser is null (not found) - redirect non-PMI users to request access
+      const email = session.user.email;
+      const isPmiEmail = email.endsWith('@pmi.edu') || email.endsWith('@my.pmi.edu');
+      if (!isPmiEmail) {
+        window.location.href = '/request-access';
+      }
     }
-  }, [session, syncLayoutToDB]);
+  }, [cachedUser, session, syncLayoutToDB]);
 
   const handleSavePreferences = async (widgets: string[], quickLinks: string[]) => {
     try {

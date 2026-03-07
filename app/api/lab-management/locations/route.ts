@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     }
 
     const response = NextResponse.json({ success: true, locations: locations || [] });
-    response.headers.set('Cache-Control', 'private, max-age=86400, stale-while-revalidate=3600');
+    response.headers.set('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=1200');
     return response;
   } catch (error: any) {
     console.error('Error fetching locations:', error);

@@ -3,6 +3,8 @@
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { useStudents } from '@/hooks/useStudents';
+import { useCohorts } from '@/hooks/useCohorts';
 import Link from 'next/link';
 import {
   ChevronRight,
@@ -51,13 +53,18 @@ export default function StudentsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
-  const [students, setStudents] = useState<Student[]>([]);
-  const [cohorts, setCohorts] = useState<Cohort[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCohort, setSelectedCohort] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('active');
   const [studentFlags, setStudentFlags] = useState<Record<string, 'yellow' | 'red'>>({});
+
+  // React Query hooks for cohorts and students
+  const { data: cohorts = [] } = useCohorts({ enabled: !!session });
+  const { data: students = [], isLoading: loading } = useStudents({
+    cohortId: selectedCohort || undefined,
+    status: selectedStatus || undefined,
+    enabled: !!session,
+  });
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -77,53 +84,14 @@ export default function StudentsPage() {
     });
   }, [session, router]);
 
+  // Fetch student flags when students change
   useEffect(() => {
-    if (session) {
-      fetchCohorts();
+    if (students.length > 0) {
+      fetchStudentFlags(students.map((s: Student) => s.id));
+    } else {
+      setStudentFlags({});
     }
-  }, [session]);
-
-  useEffect(() => {
-    if (session) {
-      fetchStudents();
-    }
-  }, [session, selectedCohort, selectedStatus]);
-
-  const fetchCohorts = async () => {
-    try {
-      const res = await fetch('/api/lab-management/cohorts');
-      const data = await res.json();
-      if (data.success) {
-        setCohorts(data.cohorts);
-      }
-    } catch (error) {
-      console.error('Error fetching cohorts:', error);
-    }
-  };
-
-  const fetchStudents = async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (selectedCohort) params.append('cohortId', selectedCohort);
-      if (selectedStatus) params.append('status', selectedStatus);
-
-      const res = await fetch(`/api/lab-management/students?${params}`);
-      const data = await res.json();
-      if (data.success) {
-        setStudents(data.students);
-        // Fetch flag summary for loaded students
-        if (data.students.length > 0) {
-          fetchStudentFlags(data.students.map((s: Student) => s.id));
-        } else {
-          setStudentFlags({});
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching students:', error);
-    }
-    setLoading(false);
-  };
+  }, [students]);
 
   const fetchStudentFlags = async (studentIds: string[]) => {
     try {

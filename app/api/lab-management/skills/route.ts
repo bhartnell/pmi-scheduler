@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
     if (error) throw error;
 
     const response = NextResponse.json({ success: true, skills: data });
-    response.headers.set('Cache-Control', 'no-store');
+    response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
     return response;
   } catch (error) {
     console.error('Error fetching skills:', error);
