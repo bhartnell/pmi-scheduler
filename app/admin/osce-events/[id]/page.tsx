@@ -504,6 +504,7 @@ function ObserversTab({ eventId, event, onRefresh }: { eventId: string; event: O
           <button
             onClick={() => { isEdit ? setShowEditModal(null) : setShowAddModal(false); setObserverForm(emptyObserverForm); setFormError(null); }}
             className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded"
+            aria-label="Close dialog"
           >
             <X className="w-5 h-5" />
           </button>
@@ -775,7 +776,7 @@ function ObserversTab({ eventId, event, onRefresh }: { eventId: string; event: O
                   <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">{new Date(o.created_at).toLocaleDateString()}</td>
                   <td className="px-4 py-3 text-sm">
                     <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
-                      <button onClick={() => openEditModal(o)} className="p-1 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded" title="Edit observer">
+                      <button onClick={() => openEditModal(o)} className="p-1 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded" title="Edit observer" aria-label="Edit observer">
                         <Edit3 className="w-4 h-4" />
                       </button>
                       {deleteConfirm === o.id ? (
@@ -784,7 +785,7 @@ function ObserversTab({ eventId, event, onRefresh }: { eventId: string; event: O
                           <button onClick={() => setDeleteConfirm(null)} className="px-2 py-1 bg-gray-200 dark:bg-gray-600 rounded text-xs">Cancel</button>
                         </div>
                       ) : (
-                        <button onClick={() => setDeleteConfirm(o.id)} className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded" title="Delete observer">
+                        <button onClick={() => setDeleteConfirm(o.id)} className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded" title="Delete observer" aria-label="Delete observer">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       )}
@@ -1275,7 +1276,8 @@ function TimeBlocksTab({ eventId, event, onRefresh }: { eventId: string; event: 
         <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">{isEdit ? 'Edit Time Block' : 'Add Time Block'}</h2>
           <button onClick={() => { isEdit ? setShowEditModal(null) : setShowAddModal(false); setBlockForm(emptyBlockForm); setFormError(null); }}
-            className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded">
+            className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded"
+            aria-label="Close dialog">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -1393,7 +1395,7 @@ function TimeBlocksTab({ eventId, event, onRefresh }: { eventId: string; event: 
                 </td>
                 <td className="px-4 py-3 text-sm">
                   <div className="flex items-center gap-1">
-                    <button onClick={() => openEditModal(block)} className="p-1 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded" title="Edit block">
+                    <button onClick={() => openEditModal(block)} className="p-1 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded" title="Edit block" aria-label="Edit time block">
                       <Edit3 className="w-4 h-4" />
                     </button>
                     {deleteConfirm === block.id ? (
@@ -1402,7 +1404,7 @@ function TimeBlocksTab({ eventId, event, onRefresh }: { eventId: string; event: 
                         <button onClick={() => setDeleteConfirm(null)} className="px-2 py-1 bg-gray-200 dark:bg-gray-600 rounded text-xs">Cancel</button>
                       </div>
                     ) : (
-                      <button onClick={() => setDeleteConfirm(block.id)} className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded" title="Delete block">
+                      <button onClick={() => setDeleteConfirm(block.id)} className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded" title="Delete block" aria-label="Delete time block">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     )}
@@ -1518,6 +1520,7 @@ function StudentsTab({ eventId }: { eventId: string }) {
                     disabled={idx === 0}
                     className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
                     title="Move up"
+                    aria-label="Move up"
                   >
                     <ArrowUp className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                   </button>
@@ -1526,6 +1529,7 @@ function StudentsTab({ eventId }: { eventId: string }) {
                     disabled={idx === block.students.length - 1}
                     className="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-30 disabled:cursor-not-allowed"
                     title="Move down"
+                    aria-label="Move down"
                   >
                     <ArrowDown className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                   </button>

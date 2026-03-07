@@ -470,7 +470,7 @@ export default function BulkImportPage() {
         </div>
       </div>
 
-      <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+      <main id="main-content" className="max-w-7xl mx-auto px-4 py-6 space-y-6">
         {/* Step indicator */}
         <div className="flex items-center gap-4">
           {(['upload', 'preview', 'results'] as Step[]).map((s, i) => (

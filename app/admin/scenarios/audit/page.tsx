@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import {
@@ -25,6 +25,10 @@ import {
   X,
   Baby,
   ArrowRight,
+  Bot,
+  Eye,
+  Play,
+  Square,
 } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
@@ -95,6 +99,37 @@ interface AutoFillResult {
   pediatric_scenarios: number;
   changelog: AutoFillScenarioChange[];
   errors: Array<{ scenario_id: string; title: string; error: string }>;
+}
+
+// AI content generation types
+const AI_GENERABLE_FIELDS = [
+  { key: 'phases', label: 'Phases (Clinical Progression)' },
+  { key: 'sample_history', label: 'SAMPLE History' },
+  { key: 'opqrst', label: 'OPQRST Assessment' },
+  { key: 'secondary_survey', label: 'Secondary Survey' },
+  { key: 'debrief_points', label: 'Debrief Points' },
+  { key: 'learning_objectives', label: 'Learning Objectives' },
+] as const;
+
+interface AIGenerateState {
+  scenarioId: string;
+  scenarioTitle: string;
+  selectedFields: Set<string>;
+  emptyFields: string[];
+}
+
+interface AIGeneratePreview {
+  generated: Record<string, unknown>;
+  fields_generated: string[];
+  skipped_fields: string[];
+}
+
+interface BulkGenerateProgress {
+  total: number;
+  current: number;
+  currentTitle: string;
+  results: Array<{ id: string; title: string; status: 'success' | 'error' | 'skipped'; message?: string }>;
+  running: boolean;
 }
 
 interface AuditData {
@@ -199,7 +234,10 @@ export default function ScenarioAuditPage() {
   const [expandedScenario, setExpandedScenario] = useState<string | null>(null);
   const [expandedCompletenessId, setExpandedCompletenessId] = useState<string | null>(null);
   const [issueFilter, setIssueFilter] = useState('');
-  const [qualityFilter, setQualityFilter] = useState<'all' | 'incomplete' | 'complete'>('incomplete');
+  const [qualityFilter, setQualityFilter] = useState<'all' | 'incomplete' | 'complete' | 'pending_review'>('incomplete');
+
+  // Track pending review scenario IDs
+  const [pendingReviewIds, setPendingReviewIds] = useState<Set<string>>(new Set());
 
   // Auto-fill state
   const [autoFillLoading, setAutoFillLoading] = useState(false);
@@ -208,16 +246,36 @@ export default function ScenarioAuditPage() {
   const [autoFillDone, setAutoFillDone] = useState<AutoFillResult | null>(null);
   const [showAutoFillModal, setShowAutoFillModal] = useState(false);
 
+  // AI generate state
+  const [showAIGenerateModal, setShowAIGenerateModal] = useState(false);
+  const [aiGenerateState, setAIGenerateState] = useState<AIGenerateState | null>(null);
+  const [aiGenerateLoading, setAIGenerateLoading] = useState(false);
+  const [aiGeneratePreview, setAIGeneratePreview] = useState<AIGeneratePreview | null>(null);
+  const [aiGenerateApplying, setAIGenerateApplying] = useState(false);
+  const [aiGenerateError, setAIGenerateError] = useState<string | null>(null);
+
+  // Bulk generate state
+  const [showBulkGenerateModal, setShowBulkGenerateModal] = useState(false);
+  const [bulkSelectedIds, setBulkSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkProgress, setBulkProgress] = useState<BulkGenerateProgress | null>(null);
+  const [bulkAbortRef] = useState<{ current: boolean }>({ current: false });
+
   const loadAudit = () => {
     setLoading(true);
     setError(null);
-    fetch('/api/admin/scenarios/audit')
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          setAudit(data.audit);
+    // Fetch audit data and pending review scenarios in parallel
+    Promise.all([
+      fetch('/api/admin/scenarios/audit').then(r => r.json()),
+      fetch('/api/admin/scenarios/generate-content?pending_review=true').then(r => r.json()).catch(() => ({ ids: [] })),
+    ])
+      .then(([auditData, pendingData]) => {
+        if (auditData.success) {
+          setAudit(auditData.audit);
         } else {
-          setError(data.error || 'Failed to load audit');
+          setError(auditData.error || 'Failed to load audit');
+        }
+        if (pendingData.ids) {
+          setPendingReviewIds(new Set(pendingData.ids));
         }
       })
       .catch(err => setError(err.message))
@@ -274,6 +332,187 @@ export default function ScenarioAuditPage() {
     }
   };
 
+  // ---------------------------------------------------------------------------
+  // AI Content Generation handlers
+  // ---------------------------------------------------------------------------
+  const openAIGenerateModal = useCallback((scenarioId: string, scenarioTitle: string, missingFields: string[]) => {
+    // Determine which AI-generable fields are empty
+    const emptyFields = missingFields.filter(f =>
+      AI_GENERABLE_FIELDS.some(af => af.key === f)
+    );
+    setAIGenerateState({
+      scenarioId,
+      scenarioTitle,
+      selectedFields: new Set(emptyFields),
+      emptyFields,
+    });
+    setAIGeneratePreview(null);
+    setAIGenerateError(null);
+    setAIGenerateLoading(false);
+    setAIGenerateApplying(false);
+    setShowAIGenerateModal(true);
+  }, []);
+
+  const handleAIGeneratePreview = async () => {
+    if (!aiGenerateState || aiGenerateState.selectedFields.size === 0) return;
+    setAIGenerateLoading(true);
+    setAIGeneratePreview(null);
+    setAIGenerateError(null);
+    try {
+      const res = await fetch('/api/admin/scenarios/generate-content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scenario_id: aiGenerateState.scenarioId,
+          fields_to_generate: Array.from(aiGenerateState.selectedFields),
+          preview: true,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAIGeneratePreview({
+          generated: data.generated,
+          fields_generated: data.fields_generated || [],
+          skipped_fields: data.skipped_fields || [],
+        });
+      } else {
+        setAIGenerateError(data.error || 'Failed to generate content');
+      }
+    } catch (err: unknown) {
+      setAIGenerateError(err instanceof Error ? err.message : 'Failed to generate content');
+    } finally {
+      setAIGenerateLoading(false);
+    }
+  };
+
+  const handleAIGenerateApply = async () => {
+    if (!aiGenerateState || aiGenerateState.selectedFields.size === 0) return;
+    setAIGenerateApplying(true);
+    setAIGenerateError(null);
+    try {
+      const res = await fetch('/api/admin/scenarios/generate-content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scenario_id: aiGenerateState.scenarioId,
+          fields_to_generate: Array.from(aiGenerateState.selectedFields),
+          preview: false,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setAIGeneratePreview({
+          generated: data.generated,
+          fields_generated: data.fields_generated || [],
+          skipped_fields: data.skipped_fields || [],
+        });
+        // Refresh audit data
+        loadAudit();
+      } else {
+        setAIGenerateError(data.error || 'Failed to apply generated content');
+      }
+    } catch (err: unknown) {
+      setAIGenerateError(err instanceof Error ? err.message : 'Failed to apply generated content');
+    } finally {
+      setAIGenerateApplying(false);
+    }
+  };
+
+  const closeAIGenerateModal = () => {
+    setShowAIGenerateModal(false);
+    setAIGenerateState(null);
+    setAIGeneratePreview(null);
+    setAIGenerateError(null);
+  };
+
+  // ---------------------------------------------------------------------------
+  // Bulk AI Generation handlers
+  // ---------------------------------------------------------------------------
+  const openBulkGenerateModal = () => {
+    if (!audit?.completeness) return;
+    // Find scenarios below 75% completeness
+    const lowCompleteness = audit.completeness.report.filter(e => e.percent_complete < 75);
+    setBulkSelectedIds(new Set(lowCompleteness.map(e => e.id)));
+    setBulkProgress(null);
+    bulkAbortRef.current = false;
+    setShowBulkGenerateModal(true);
+  };
+
+  const handleBulkGenerate = async () => {
+    if (!audit?.completeness || bulkSelectedIds.size === 0) return;
+
+    const selected = audit.completeness.report.filter(e => bulkSelectedIds.has(e.id));
+    const progress: BulkGenerateProgress = {
+      total: selected.length,
+      current: 0,
+      currentTitle: '',
+      results: [],
+      running: true,
+    };
+    setBulkProgress({ ...progress });
+    bulkAbortRef.current = false;
+
+    for (const entry of selected) {
+      if (bulkAbortRef.current) {
+        progress.running = false;
+        setBulkProgress({ ...progress });
+        break;
+      }
+
+      progress.current++;
+      progress.currentTitle = entry.title;
+      setBulkProgress({ ...progress });
+
+      // Determine which fields can be AI-generated
+      const aiFields = entry.missing.filter(f =>
+        AI_GENERABLE_FIELDS.some(af => af.key === f)
+      );
+
+      if (aiFields.length === 0) {
+        progress.results.push({ id: entry.id, title: entry.title, status: 'skipped', message: 'No AI-generable fields' });
+        setBulkProgress({ ...progress });
+        continue;
+      }
+
+      try {
+        const res = await fetch('/api/admin/scenarios/generate-content', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            scenario_id: entry.id,
+            fields_to_generate: aiFields,
+            preview: false,
+          }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          const count = data.fields_generated?.length || 0;
+          progress.results.push({ id: entry.id, title: entry.title, status: 'success', message: `Generated ${count} field(s)` });
+        } else {
+          progress.results.push({ id: entry.id, title: entry.title, status: 'error', message: data.error || 'Unknown error' });
+        }
+      } catch (err: unknown) {
+        progress.results.push({
+          id: entry.id,
+          title: entry.title,
+          status: 'error',
+          message: err instanceof Error ? err.message : 'Network error',
+        });
+      }
+      setBulkProgress({ ...progress });
+
+      // Rate limit delay: wait 6.5 seconds between requests
+      if (!bulkAbortRef.current && progress.current < selected.length) {
+        await new Promise(resolve => setTimeout(resolve, 6500));
+      }
+    }
+
+    progress.running = false;
+    setBulkProgress({ ...progress });
+    // Refresh audit data
+    loadAudit();
+  };
+
   const toggleSection = (key: string) => {
     setExpandedSections(prev => {
       const next = new Set(prev);
@@ -318,6 +557,14 @@ export default function ScenarioAuditPage() {
           </p>
         </div>
         <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={openBulkGenerateModal}
+            disabled={!audit?.completeness}
+            className="flex items-center gap-2 px-4 py-2 bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 border border-violet-300 dark:border-violet-600 rounded-lg hover:bg-violet-100 dark:hover:bg-violet-900/50 transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Bot className="h-4 w-4" />
+            Bulk AI Generate
+          </button>
           <button
             onClick={handleAutoFillPreview}
             disabled={autoFillLoading || !audit}
@@ -371,6 +618,7 @@ export default function ScenarioAuditPage() {
               <button
                 onClick={() => { setShowAutoFillModal(false); setAutoFillPreview(null); setAutoFillDone(null); }}
                 className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                aria-label="Close dialog"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -401,7 +649,7 @@ export default function ScenarioAuditPage() {
                       <div className="text-xs text-gray-500 dark:text-gray-400">Can Auto-Fill</div>
                     </div>
                     <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 text-center">
-                      <div className="text-xl font-bold text-gray-500">{autoFillPreview.total_unchanged}</div>
+                      <div className="text-xl font-bold text-gray-500 dark:text-gray-400">{autoFillPreview.total_unchanged}</div>
                       <div className="text-xs text-gray-500 dark:text-gray-400">No Changes</div>
                     </div>
                     {autoFillPreview.pediatric_scenarios > 0 && (
@@ -531,7 +779,7 @@ export default function ScenarioAuditPage() {
                       <div className="text-xs text-gray-500 dark:text-gray-400">Applied</div>
                     </div>
                     <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 text-center">
-                      <div className="text-xl font-bold text-gray-500">{autoFillDone.total_unchanged}</div>
+                      <div className="text-xl font-bold text-gray-500 dark:text-gray-400">{autoFillDone.total_unchanged}</div>
                       <div className="text-xs text-gray-500 dark:text-gray-400">Unchanged</div>
                     </div>
                     <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-3 text-center">
@@ -620,6 +868,378 @@ export default function ScenarioAuditPage() {
         </div>
       )}
 
+      {/* AI Generate Content Modal */}
+      {showAIGenerateModal && aiGenerateState && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between p-5 border-b dark:border-gray-700">
+              <div className="flex items-center gap-3">
+                <Bot className="h-5 w-5 text-violet-500" />
+                <div>
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    AI Content Generation
+                  </h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">{aiGenerateState.scenarioTitle}</p>
+                </div>
+              </div>
+              <button onClick={closeAIGenerateModal} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" aria-label="Close dialog">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-4">
+              {aiGenerateError && (
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg p-3 flex items-center gap-2">
+                  <XCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
+                  <span className="text-sm text-red-800 dark:text-red-300">{aiGenerateError}</span>
+                </div>
+              )}
+
+              {/* Field selection */}
+              {!aiGeneratePreview && !aiGenerateApplying && (
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                    Select fields to generate:
+                  </h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {AI_GENERABLE_FIELDS.map(({ key, label }) => {
+                      const isEmpty = aiGenerateState.emptyFields.includes(key);
+                      const isSelected = aiGenerateState.selectedFields.has(key);
+                      return (
+                        <label
+                          key={key}
+                          className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                            isSelected
+                              ? 'bg-violet-50 dark:bg-violet-900/20 border-violet-300 dark:border-violet-600'
+                              : 'bg-white dark:bg-gray-700/30 border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                          } ${!isEmpty ? 'opacity-50' : ''}`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            disabled={!isEmpty}
+                            onChange={() => {
+                              if (!isEmpty) return;
+                              const next = new Set(aiGenerateState.selectedFields);
+                              if (next.has(key)) next.delete(key);
+                              else next.add(key);
+                              setAIGenerateState({ ...aiGenerateState, selectedFields: next });
+                            }}
+                            className="h-4 w-4 rounded border-gray-300 text-violet-600 focus:ring-violet-500"
+                          />
+                          <div className="flex-1">
+                            <span className="text-sm font-medium text-gray-900 dark:text-white">{label}</span>
+                            {!isEmpty && (
+                              <span className="ml-2 text-xs text-green-600 dark:text-green-400">(already populated)</span>
+                            )}
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  {aiGenerateState.selectedFields.size === 0 && aiGenerateState.emptyFields.length > 0 && (
+                    <p className="text-sm text-amber-600 dark:text-amber-400">Select at least one field to generate.</p>
+                  )}
+                  {aiGenerateState.emptyFields.length === 0 && (
+                    <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg p-3 flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      <span className="text-sm text-green-800 dark:text-green-300">All AI-generable fields are already populated.</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Loading */}
+              {aiGenerateLoading && (
+                <div className="flex items-center justify-center py-12">
+                  <div className="text-center">
+                    <Loader2 className="animate-spin h-8 w-8 text-violet-500 mx-auto" />
+                    <p className="mt-3 text-gray-500 dark:text-gray-400">Generating content with AI...</p>
+                    <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">This may take 10-30 seconds</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Preview */}
+              {aiGeneratePreview && !aiGenerateApplying && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Eye className="h-4 w-4 text-violet-500" />
+                    <span className="font-semibold text-gray-700 dark:text-gray-300">
+                      Generated {aiGeneratePreview.fields_generated.length} field(s)
+                    </span>
+                    {aiGeneratePreview.skipped_fields.length > 0 && (
+                      <span className="text-gray-500 dark:text-gray-400">
+                        (skipped {aiGeneratePreview.skipped_fields.length}: already populated)
+                      </span>
+                    )}
+                  </div>
+
+                  {Object.entries(aiGeneratePreview.generated).map(([field, value]) => (
+                    <div key={field} className="bg-gray-50 dark:bg-gray-700/30 rounded-lg border dark:border-gray-600 overflow-hidden">
+                      <div className="px-4 py-2 bg-violet-50 dark:bg-violet-900/20 border-b dark:border-gray-600">
+                        <span className="text-sm font-mono font-semibold text-violet-700 dark:text-violet-300">{field}</span>
+                      </div>
+                      <pre className="p-4 text-xs text-gray-700 dark:text-gray-300 overflow-x-auto max-h-64 overflow-y-auto">
+                        {JSON.stringify(value, null, 2)}
+                      </pre>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-end gap-3 p-5 border-t dark:border-gray-700">
+              {!aiGeneratePreview && !aiGenerateLoading && aiGenerateState.selectedFields.size > 0 && (
+                <button
+                  onClick={handleAIGeneratePreview}
+                  disabled={aiGenerateLoading}
+                  className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg transition-colors disabled:opacity-50"
+                >
+                  <Eye className="h-4 w-4" />
+                  Preview Generation
+                </button>
+              )}
+              {aiGeneratePreview && !aiGenerateApplying && Object.keys(aiGeneratePreview.generated).length > 0 && (
+                <>
+                  <button
+                    onClick={() => { setAIGeneratePreview(null); setAIGenerateError(null); }}
+                    className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                  >
+                    Re-generate
+                  </button>
+                  <button
+                    onClick={handleAIGenerateApply}
+                    disabled={aiGenerateApplying}
+                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    {aiGenerateApplying ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="h-4 w-4" />
+                    )}
+                    Apply to Scenario
+                  </button>
+                </>
+              )}
+              <button
+                onClick={closeAIGenerateModal}
+                className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              >
+                {aiGenerateApplying ? 'Close' : 'Cancel'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk AI Generate Modal */}
+      {showBulkGenerateModal && audit?.completeness && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between p-5 border-b dark:border-gray-700">
+              <div className="flex items-center gap-3">
+                <Bot className="h-5 w-5 text-violet-500" />
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Bulk AI Content Generation
+                </h2>
+              </div>
+              <button
+                onClick={() => { setShowBulkGenerateModal(false); setBulkProgress(null); bulkAbortRef.current = true; }}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                aria-label="Close dialog"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-4">
+              {/* Pre-run: scenario selection */}
+              {!bulkProgress && (
+                <>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Select scenarios below 75% completeness to generate missing AI-generable content. Each scenario will be processed sequentially.
+                  </p>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                      {bulkSelectedIds.size} of {audit.completeness.report.filter(e => e.percent_complete < 75).length} selected
+                    </span>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setBulkSelectedIds(new Set(audit!.completeness!.report.filter(e => e.percent_complete < 75).map(e => e.id)))}
+                        className="text-xs text-violet-600 dark:text-violet-400 hover:underline"
+                      >
+                        Select All
+                      </button>
+                      <button
+                        onClick={() => setBulkSelectedIds(new Set())}
+                        className="text-xs text-gray-500 dark:text-gray-400 hover:underline"
+                      >
+                        Deselect All
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1 max-h-80 overflow-y-auto">
+                    {audit.completeness.report
+                      .filter(e => e.percent_complete < 75)
+                      .sort((a, b) => a.percent_complete - b.percent_complete)
+                      .map(entry => {
+                        const aiFieldCount = entry.missing.filter(f => AI_GENERABLE_FIELDS.some(af => af.key === f)).length;
+                        return (
+                          <label
+                            key={entry.id}
+                            className={`flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer transition-colors ${
+                              bulkSelectedIds.has(entry.id)
+                                ? 'bg-violet-50 dark:bg-violet-900/20 border-violet-200 dark:border-violet-700'
+                                : 'bg-white dark:bg-gray-700/30 border-gray-200 dark:border-gray-600'
+                            } ${aiFieldCount === 0 ? 'opacity-40' : ''}`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={bulkSelectedIds.has(entry.id)}
+                              disabled={aiFieldCount === 0}
+                              onChange={() => {
+                                const next = new Set(bulkSelectedIds);
+                                if (next.has(entry.id)) next.delete(entry.id);
+                                else next.add(entry.id);
+                                setBulkSelectedIds(next);
+                              }}
+                              className="h-4 w-4 rounded border-gray-300 text-violet-600 focus:ring-violet-500"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <span className="text-sm font-medium text-gray-900 dark:text-white truncate block">{entry.title}</span>
+                              <span className="text-xs text-gray-500 dark:text-gray-400">
+                                {entry.percent_complete}% complete | {aiFieldCount} AI-generable field(s) missing
+                              </span>
+                            </div>
+                          </label>
+                        );
+                      })}
+                  </div>
+
+                  {audit.completeness.report.filter(e => e.percent_complete < 75).length === 0 && (
+                    <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700 rounded-lg p-4 flex items-center gap-3">
+                      <CheckCircle2 className="h-5 w-5 text-green-500" />
+                      <span className="text-green-800 dark:text-green-300">All scenarios are above 75% completeness!</span>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* Progress */}
+              {bulkProgress && (
+                <div className="space-y-4">
+                  {/* Progress bar */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {bulkProgress.running
+                          ? `Processing ${bulkProgress.current} of ${bulkProgress.total}...`
+                          : `Complete: ${bulkProgress.results.length} of ${bulkProgress.total} processed`}
+                      </span>
+                      <span className="text-sm font-mono text-gray-500 dark:text-gray-400">
+                        {Math.round((bulkProgress.current / bulkProgress.total) * 100)}%
+                      </span>
+                    </div>
+                    <div className="w-full h-3 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-violet-500 transition-all duration-500"
+                        style={{ width: `${(bulkProgress.current / bulkProgress.total) * 100}%` }}
+                      />
+                    </div>
+                    {bulkProgress.running && bulkProgress.currentTitle && (
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 truncate">
+                        Currently: {bulkProgress.currentTitle}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Results summary */}
+                  {bulkProgress.results.length > 0 && (
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-lg p-3 text-center">
+                        <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
+                          {bulkProgress.results.filter(r => r.status === 'success').length}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">Generated</div>
+                      </div>
+                      <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-3 text-center">
+                        <div className="text-xl font-bold text-red-600 dark:text-red-400">
+                          {bulkProgress.results.filter(r => r.status === 'error').length}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">Failed</div>
+                      </div>
+                      <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 text-center">
+                        <div className="text-xl font-bold text-gray-500 dark:text-gray-400">
+                          {bulkProgress.results.filter(r => r.status === 'skipped').length}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">Skipped</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Result details */}
+                  {bulkProgress.results.length > 0 && (
+                    <div className="space-y-1 max-h-60 overflow-y-auto">
+                      {bulkProgress.results.map((result, i) => (
+                        <div key={i} className="flex items-center gap-2 p-2 rounded text-sm">
+                          {result.status === 'success' && <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />}
+                          {result.status === 'error' && <XCircle className="h-4 w-4 text-red-500 flex-shrink-0" />}
+                          {result.status === 'skipped' && <ArrowRight className="h-4 w-4 text-gray-400 flex-shrink-0" />}
+                          <span className="flex-1 text-gray-800 dark:text-gray-200 truncate">{result.title}</span>
+                          <span className={`text-xs ${
+                            result.status === 'success' ? 'text-emerald-600 dark:text-emerald-400' :
+                            result.status === 'error' ? 'text-red-600 dark:text-red-400' :
+                            'text-gray-500 dark:text-gray-400'
+                          }`}>
+                            {result.message}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-end gap-3 p-5 border-t dark:border-gray-700">
+              {!bulkProgress && bulkSelectedIds.size > 0 && (
+                <button
+                  onClick={handleBulkGenerate}
+                  className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg transition-colors"
+                >
+                  <Play className="h-4 w-4" />
+                  Generate All ({bulkSelectedIds.size})
+                </button>
+              )}
+              {bulkProgress?.running && (
+                <button
+                  onClick={() => { bulkAbortRef.current = true; }}
+                  className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+                >
+                  <Square className="h-4 w-4" />
+                  Stop
+                </button>
+              )}
+              <button
+                onClick={() => { setShowBulkGenerateModal(false); setBulkProgress(null); bulkAbortRef.current = true; }}
+                className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              >
+                {bulkProgress && !bulkProgress.running ? 'Close' : 'Cancel'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {audit && (
         <>
           {/* Overview Stats */}
@@ -629,14 +1249,14 @@ export default function ScenarioAuditPage() {
               className="w-full flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white mb-3"
             >
               {expandedSections.has('overview') ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
-              <Database className="h-5 w-5 text-gray-500" />
+              <Database className="h-5 w-5 text-gray-500 dark:text-gray-400" />
               Overview
             </button>
             {expandedSections.has('overview') && (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                 <StatCard label="Total Scenarios" value={audit.total} color="text-gray-900 dark:text-white" />
                 <StatCard label="Active" value={audit.active} color="text-green-600 dark:text-green-400" />
-                <StatCard label="Inactive" value={audit.inactive} color="text-gray-500" />
+                <StatCard label="Inactive" value={audit.inactive} color="text-gray-500 dark:text-gray-400" />
                 <StatCard label="Clean" value={audit.clean_scenarios} subValue="No issues" color="text-green-600 dark:text-green-400" />
                 <StatCard label="With Issues" value={audit.problematic_scenarios} color="text-red-600 dark:text-red-400" />
                 <StatCard label="Avg Phases" value={audit.phases.avg_phase_count} color="text-blue-600 dark:text-blue-400" />
@@ -680,23 +1300,34 @@ export default function ScenarioAuditPage() {
                   </div>
 
                   {/* Filter tabs */}
-                  <div className="flex gap-2">
-                    {([['all', 'All'], ['incomplete', 'Incomplete'], ['complete', 'Complete']] as const).map(([key, label]) => (
+                  <div className="flex gap-2 flex-wrap">
+                    {([
+                      ['all', 'All'],
+                      ['incomplete', 'Incomplete'],
+                      ['complete', 'Complete'],
+                      ['pending_review', 'Pending Review'],
+                    ] as const).map(([key, label]) => (
                       <button
                         key={key}
-                        onClick={() => setQualityFilter(key)}
+                        onClick={() => setQualityFilter(key as typeof qualityFilter)}
                         className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
                           qualityFilter === key
-                            ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 font-medium'
+                            ? key === 'pending_review'
+                              ? 'bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 font-medium'
+                              : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 font-medium'
                             : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
                         }`}
                       >
+                        {key === 'pending_review' && <Bot className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />}
                         {label}
                         {key === 'incomplete' && (
                           <span className="ml-1 text-xs">({audit.completeness!.total - audit.completeness!.fully_complete})</span>
                         )}
                         {key === 'complete' && (
                           <span className="ml-1 text-xs">({audit.completeness!.fully_complete})</span>
+                        )}
+                        {key === 'pending_review' && pendingReviewIds.size > 0 && (
+                          <span className="ml-1 text-xs">({pendingReviewIds.size})</span>
                         )}
                       </button>
                     ))}
@@ -708,6 +1339,7 @@ export default function ScenarioAuditPage() {
                       .filter(entry => {
                         if (qualityFilter === 'incomplete') return entry.missing.length > 0;
                         if (qualityFilter === 'complete') return entry.missing.length === 0;
+                        if (qualityFilter === 'pending_review') return pendingReviewIds.has(entry.id);
                         return true;
                       })
                       .map((entry) => {
@@ -775,14 +1407,38 @@ export default function ScenarioAuditPage() {
 
                             {expandedCompletenessId === entry.id && entry.missing.length > 0 && (
                               <div className="px-4 pb-3 border-t dark:border-gray-700 pt-2">
-                                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Missing fields:</p>
+                                <div className="flex items-center justify-between mb-1.5">
+                                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Missing fields:</p>
+                                  {entry.missing.some(f => AI_GENERABLE_FIELDS.some(af => af.key === f)) && (
+                                    <button
+                                      onClick={() => openAIGenerateModal(entry.id, entry.title, entry.missing)}
+                                      className="flex items-center gap-1.5 px-2.5 py-1 text-xs bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-700 rounded-lg hover:bg-violet-100 dark:hover:bg-violet-900/40 transition-colors"
+                                    >
+                                      <Bot className="h-3.5 w-3.5" />
+                                      Generate Content
+                                    </button>
+                                  )}
+                                </div>
                                 <div className="flex flex-wrap gap-1.5">
                                   {entry.missing.map((field, i) => (
-                                    <span key={i} className="px-2 py-0.5 text-xs bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 rounded-full border border-red-200 dark:border-red-800">
+                                    <span key={i} className={`px-2 py-0.5 text-xs rounded-full border ${
+                                      AI_GENERABLE_FIELDS.some(af => af.key === field)
+                                        ? 'bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-800'
+                                        : 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800'
+                                    }`}>
                                       {field}
+                                      {AI_GENERABLE_FIELDS.some(af => af.key === field) && (
+                                        <Bot className="inline h-3 w-3 ml-1 -mt-0.5 opacity-60" />
+                                      )}
                                     </span>
                                   ))}
                                 </div>
+                                {pendingReviewIds.has(entry.id) && (
+                                  <div className="mt-2 flex items-center gap-1.5 text-xs text-violet-600 dark:text-violet-400">
+                                    <Bot className="h-3.5 w-3.5" />
+                                    AI-generated content pending review
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>
@@ -801,7 +1457,7 @@ export default function ScenarioAuditPage() {
               className="w-full flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white mb-3"
             >
               {expandedSections.has('breakdown') ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
-              <BarChart3 className="h-5 w-5 text-gray-500" />
+              <BarChart3 className="h-5 w-5 text-gray-500 dark:text-gray-400" />
               Category & Difficulty Breakdown
             </button>
             {expandedSections.has('breakdown') && (
@@ -815,7 +1471,7 @@ export default function ScenarioAuditPage() {
                       .map(([cat, count]) => (
                         <div key={cat} className="flex justify-between text-sm">
                           <span className="text-gray-700 dark:text-gray-300">{cat}</span>
-                          <span className="font-mono text-gray-500">{count}</span>
+                          <span className="font-mono text-gray-500 dark:text-gray-400">{count}</span>
                         </div>
                       ))}
                   </div>
@@ -830,7 +1486,7 @@ export default function ScenarioAuditPage() {
                       .map(([diff, count]) => (
                         <div key={diff} className="flex justify-between text-sm">
                           <span className="text-gray-700 dark:text-gray-300 capitalize">{diff}</span>
-                          <span className="font-mono text-gray-500">{count}</span>
+                          <span className="font-mono text-gray-500 dark:text-gray-400">{count}</span>
                         </div>
                       ))}
                   </div>
@@ -845,7 +1501,7 @@ export default function ScenarioAuditPage() {
                       .map(([prog, count]) => (
                         <div key={prog} className="flex justify-between text-sm">
                           <span className="text-gray-700 dark:text-gray-300">{prog}</span>
-                          <span className="font-mono text-gray-500">{count}</span>
+                          <span className="font-mono text-gray-500 dark:text-gray-400">{count}</span>
                         </div>
                       ))}
                   </div>
@@ -861,7 +1517,7 @@ export default function ScenarioAuditPage() {
               className="w-full flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white mb-3"
             >
               {expandedSections.has('fields') ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
-              <FileText className="h-5 w-5 text-gray-500" />
+              <FileText className="h-5 w-5 text-gray-500 dark:text-gray-400" />
               Field Population ({audit.field_stats.filter(f => f.percent === 100).length}/{audit.field_stats.length} fully populated)
             </button>
             {expandedSections.has('fields') && (
@@ -882,7 +1538,7 @@ export default function ScenarioAuditPage() {
               className="w-full flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white mb-3"
             >
               {expandedSections.has('structure') ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
-              <Activity className="h-5 w-5 text-gray-500" />
+              <Activity className="h-5 w-5 text-gray-500 dark:text-gray-400" />
               Data Structure Analysis
             </button>
             {expandedSections.has('structure') && (
@@ -1120,7 +1776,7 @@ export default function ScenarioAuditPage() {
               className="w-full flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-white mb-3"
             >
               {expandedSections.has('samples') ? <ChevronDown className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
-              <Database className="h-5 w-5 text-gray-500" />
+              <Database className="h-5 w-5 text-gray-500 dark:text-gray-400" />
               Raw Data Samples ({audit.raw_samples.length})
             </button>
             {expandedSections.has('samples') && (

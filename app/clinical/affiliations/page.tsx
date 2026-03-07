@@ -394,7 +394,7 @@ export default function AffiliationsPage() {
         </div>
       </div>
 
-      <main className="max-w-7xl mx-auto px-4 py-8">
+      <main id="main-content" className="max-w-7xl mx-auto px-4 py-8">
         {/* Success / Error Messages */}
         {successMsg && (
           <div className="mb-4 px-4 py-3 bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 rounded-lg flex items-center gap-2">
@@ -456,6 +456,7 @@ export default function AffiliationsPage() {
             onClick={() => { setLoading(true); fetchAffiliations().finally(() => setLoading(false)); }}
             className="px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
             title="Refresh"
+            aria-label="Refresh"
           >
             <RefreshCw className="w-4 h-4" />
           </button>
@@ -495,7 +496,7 @@ export default function AffiliationsPage() {
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                   {sortedAffiliations.map((aff) => {
                     const StatusIcon = STATUS_ICONS[aff.agreement_status] || CheckCircle2;
-                    const statusColor = STATUS_COLORS[aff.agreement_status] || 'text-gray-500';
+                    const statusColor = STATUS_COLORS[aff.agreement_status] || 'text-gray-500 dark:text-gray-400';
                     const daysLeft = getDaysUntilExpiry(aff.expiration_date);
                     const expiryLabelColor =
                       daysLeft < 0 ? 'text-red-600 dark:text-red-400 font-semibold' :
@@ -572,6 +573,7 @@ export default function AffiliationsPage() {
                                   onClick={() => openEditModal(aff)}
                                   className="p-1.5 text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
                                   title="Edit"
+                                  aria-label="Edit agreement"
                                 >
                                   <Edit2 className="w-4 h-4" />
                                 </button>
@@ -579,6 +581,7 @@ export default function AffiliationsPage() {
                                   onClick={() => setDeleteConfirmId(aff.id)}
                                   className="p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
                                   title="Delete"
+                                  aria-label="Delete agreement"
                                 >
                                   <Trash2 className="w-4 h-4" />
                                 </button>
@@ -612,6 +615,7 @@ export default function AffiliationsPage() {
               <button
                 onClick={() => setShowModal(false)}
                 className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                aria-label="Close dialog"
               >
                 <X className="w-5 h-5" />
               </button>

@@ -318,7 +318,7 @@ export default function SchedulerReportsPage() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 py-6">
+      <main id="main-content" className="max-w-7xl mx-auto px-4 py-6">
         {/* Back link */}
         <Link
           href="/scheduling"
@@ -649,7 +649,7 @@ export default function SchedulerReportsPage() {
                             <span className="font-semibold text-red-600 dark:text-red-400">{coverageOverall.unfilled}</span> unfilled
                           </span>
                           <span className="text-gray-600 dark:text-gray-400">
-                            <span className="font-semibold text-gray-500">{coverageOverall.cancelled}</span> cancelled
+                            <span className="font-semibold text-gray-500 dark:text-gray-400">{coverageOverall.cancelled}</span> cancelled
                           </span>
                         </div>
                       </div>

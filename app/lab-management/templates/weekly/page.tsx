@@ -453,7 +453,7 @@ export default function WeeklyTemplatesPage() {
       </div>
 
       {/* ── Main ── */}
-      <main className="max-w-7xl mx-auto px-4 py-6 space-y-4">
+      <main id="main-content" className="max-w-7xl mx-auto px-4 py-6 space-y-4">
         {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 text-center">
@@ -645,7 +645,7 @@ export default function WeeklyTemplatesPage() {
                 <Play className="w-5 h-5 text-green-600 dark:text-green-400" />
                 <h3 className="font-semibold text-gray-900 dark:text-white">Generate Lab Days</h3>
               </div>
-              <button onClick={() => setGenerateTemplateId(null)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+              <button onClick={() => setGenerateTemplateId(null)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded" aria-label="Close dialog">
                 <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
               </button>
             </div>
@@ -751,7 +751,7 @@ export default function WeeklyTemplatesPage() {
                   {editId ? 'Edit' : 'Create'} Weekly Template
                 </h3>
               </div>
-              <button onClick={() => setShowEditor(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+              <button onClick={() => setShowEditor(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded" aria-label="Close editor">
                 <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
               </button>
             </div>
@@ -867,6 +867,7 @@ export default function WeeklyTemplatesPage() {
                             onClick={e => { e.stopPropagation(); removeDay(dayIdx); }}
                             className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded"
                             title="Remove day"
+                            aria-label="Remove day"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -929,6 +930,7 @@ export default function WeeklyTemplatesPage() {
                                       <button
                                         onClick={() => removeStation(dayIdx, stIdx)}
                                         className="p-0.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded"
+                                        aria-label="Remove station"
                                       >
                                         <X className="w-3.5 h-3.5" />
                                       </button>

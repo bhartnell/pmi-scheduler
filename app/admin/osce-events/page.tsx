@@ -285,6 +285,7 @@ export default function OsceEventsListPage() {
               <button
                 onClick={() => { setShowCreate(false); setForm(emptyForm); setCreateError(null); setQuickSetup(false); }}
                 className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded"
+                aria-label="Close dialog"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -506,6 +507,7 @@ export default function OsceEventsListPage() {
                     onClick={e => { e.stopPropagation(); handleCopyUrl(event.slug); }}
                     className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded flex-shrink-0"
                     title="Copy public URL"
+                    aria-label="Copy public URL"
                   >
                     {copiedSlug === event.slug ? (
                       <Check className="w-3 h-3 text-green-500" />
@@ -537,6 +539,7 @@ export default function OsceEventsListPage() {
                       onClick={() => setDeleteConfirm(event.id)}
                       className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
                       title="Delete event"
+                      aria-label="Delete event"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>

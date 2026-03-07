@@ -440,7 +440,7 @@ export default function MCEClearanceTrackerPage() {
         </div>
       </div>
 
-      <main className="max-w-full mx-auto px-4 py-6 space-y-4">
+      <main id="main-content" className="max-w-full mx-auto px-4 py-6 space-y-4">
         {/* ── Filters ── */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
           <div className="flex flex-wrap gap-4 items-center">
@@ -531,7 +531,7 @@ export default function MCEClearanceTrackerPage() {
                   <tr>
                     {canEdit && (
                       <th className="px-3 py-3 text-center">
-                        <button onClick={toggleSelectAll} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                        <button onClick={toggleSelectAll} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" aria-label="Select all rows">
                           {selectedIds.size === filteredRows.length && filteredRows.length > 0
                             ? <CheckSquare className="w-4 h-4" />
                             : <Square className="w-4 h-4" />}
@@ -571,7 +571,7 @@ export default function MCEClearanceTrackerPage() {
                         {/* Checkbox */}
                         {canEdit && (
                           <td className="px-3 py-3 text-center">
-                            <button onClick={() => toggleSelect(row.student_id)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                            <button onClick={() => toggleSelect(row.student_id)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200" aria-label={`Select ${row.student_name}`}>
                               {selectedIds.has(row.student_id)
                                 ? <CheckSquare className="w-4 h-4 text-green-600" />
                                 : <Square className="w-4 h-4" />}
@@ -731,6 +731,7 @@ export default function MCEClearanceTrackerPage() {
                                   : 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500 cursor-not-allowed'
                               }`}
                               title={row.dirty ? 'Save changes' : 'No changes'}
+                              aria-label={row.dirty ? 'Save changes' : 'No changes'}
                             >
                               {savingRow === row.student_id
                                 ? <Loader2 className="w-4 h-4 animate-spin" />
