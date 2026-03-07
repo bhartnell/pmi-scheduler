@@ -139,13 +139,13 @@ export function filterWidgetsByRole(widgets: string[], role: string): string[] {
 
 // Quick link whitelists per role
 export const QUICK_LINK_WHITELIST: Record<string, string[]> = {
-  superadmin: ['scenarios', 'students', 'schedule', 'emt_tracker', 'aemt_tracker', 'clinical', 'internships', 'admin', 'feedback', 'my_certs', 'learning_styles', 'cohorts', 'lab_days', 'skill_sheets', 'reports', 'onboarding', 'todays_labs', 'tasks', 'ekg_warmup'],
-  admin: ['scenarios', 'students', 'schedule', 'emt_tracker', 'aemt_tracker', 'clinical', 'internships', 'admin', 'feedback', 'my_certs', 'learning_styles', 'cohorts', 'lab_days', 'skill_sheets', 'reports', 'onboarding', 'todays_labs', 'tasks', 'ekg_warmup'],
-  lead_instructor: ['scenarios', 'students', 'schedule', 'emt_tracker', 'aemt_tracker', 'clinical', 'internships', 'my_certs', 'learning_styles', 'cohorts', 'lab_days', 'skill_sheets', 'reports', 'onboarding', 'todays_labs', 'tasks', 'ekg_warmup'],
-  instructor: ['scenarios', 'students', 'schedule', 'my_certs', 'onboarding', 'todays_labs', 'tasks', 'skill_sheets', 'ekg_warmup'],
+  superadmin: ['scenarios', 'students', 'schedule', 'emt_tracker', 'aemt_tracker', 'clinical', 'internships', 'admin', 'feedback', 'my_certs', 'learning_styles', 'cohorts', 'lab_days', 'skill_sheets', 'reports', 'onboarding', 'todays_labs', 'tasks', 'ekg_warmup', 'case_studies'],
+  admin: ['scenarios', 'students', 'schedule', 'emt_tracker', 'aemt_tracker', 'clinical', 'internships', 'admin', 'feedback', 'my_certs', 'learning_styles', 'cohorts', 'lab_days', 'skill_sheets', 'reports', 'onboarding', 'todays_labs', 'tasks', 'ekg_warmup', 'case_studies'],
+  lead_instructor: ['scenarios', 'students', 'schedule', 'emt_tracker', 'aemt_tracker', 'clinical', 'internships', 'my_certs', 'learning_styles', 'cohorts', 'lab_days', 'skill_sheets', 'reports', 'onboarding', 'todays_labs', 'tasks', 'ekg_warmup', 'case_studies'],
+  instructor: ['scenarios', 'students', 'schedule', 'my_certs', 'onboarding', 'todays_labs', 'tasks', 'skill_sheets', 'ekg_warmup', 'case_studies'],
   volunteer_instructor: ['schedule', 'todays_labs'],
   program_director: ['clinical'],
-  student: [],
+  student: ['case_studies'],
   guest: [],
   pending: [],
 };

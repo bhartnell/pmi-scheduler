@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import {
   BookOpen,
+  BookOpenCheck,
   Users,
   Calendar,
   Settings,
@@ -141,6 +142,12 @@ export const QUICK_LINK_DEFINITIONS: Record<string, {
     icon: Activity,
     label: 'EKG Warmup',
     color: 'bg-red-600',
+  },
+  case_studies: {
+    href: '/cases',
+    icon: BookOpenCheck,
+    label: 'Case Studies',
+    color: 'bg-orange-500',
   },
 };
 

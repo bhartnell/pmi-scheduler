@@ -24,6 +24,7 @@ import {
   Loader2,
   X,
   BookOpen,
+  BookOpenCheck,
 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { parseDateSafe } from '@/lib/utils';
@@ -397,6 +398,14 @@ export default function CommandPalette() {
         category: 'Navigation',
         action: () => router.push('/reports/instructor-workload'),
         keywords: ['workload', 'analytics'],
+      },
+      {
+        id: 'nav-cases',
+        label: 'Go to Case Studies',
+        icon: BookOpenCheck,
+        category: 'Navigation',
+        action: () => router.push('/cases'),
+        keywords: ['case', 'study', 'practice', 'scenario', 'clinical'],
       },
       // Actions
       {

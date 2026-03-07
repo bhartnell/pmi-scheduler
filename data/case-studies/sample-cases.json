@@ -1,0 +1,1582 @@
+[
+  {
+    "title": "Acute ST-Elevation Myocardial Infarction",
+    "description": "A 55-year-old male office worker presents with acute substernal chest pain, diaphoresis, and a history of hypertension and diabetes. This case covers systematic assessment, 12-lead ECG interpretation, STEMI recognition, and appropriate pharmacological intervention with transport to a PCI-capable facility.",
+    "chief_complaint": "Chest pain",
+    "category": "Cardiac",
+    "subcategory": "Acute Coronary Syndrome",
+    "difficulty": "intermediate",
+    "applicable_programs": ["Paramedic"],
+    "estimated_duration_minutes": 30,
+    "patient_age": "55",
+    "patient_sex": "Male",
+    "patient_weight": "95 kg",
+    "patient_medical_history": ["Hypertension", "Type 2 Diabetes Mellitus", "Hyperlipidemia"],
+    "patient_medications": ["Metformin 1000mg BID", "Lisinopril 20mg daily", "Atorvastatin 40mg daily"],
+    "patient_allergies": "Sulfa drugs",
+    "dispatch_info": {
+      "call_type": "Medical - Chest Pain",
+      "location": "Office building, 3rd floor",
+      "additional_info": "55yo male, chest pain, diaphoretic",
+      "priority": "Priority 1",
+      "caller": "Coworker"
+    },
+    "scene_info": {
+      "environment": "Office building, elevator access available",
+      "hazards": "None identified",
+      "access": "Elevator to 3rd floor, patient seated at desk",
+      "bystanders": "Multiple coworkers present, one performing basic first aid"
+    },
+    "phases": [
+      {
+        "id": "phase1",
+        "title": "Scene Assessment & Initial Contact",
+        "description": "You arrive at a 3rd-floor office. Coworkers direct you to a middle-aged male seated at his desk, clutching his chest. He is visibly diaphoretic and appears anxious.",
+        "vitals": {
+          "bp": "168/94",
+          "hr": 104,
+          "rr": 22,
+          "spo2": 94,
+          "etco2": 32,
+          "gcs": 15,
+          "skin": "Cool, pale, diaphoretic",
+          "pupils": "PERRL"
+        },
+        "questions": [
+          {
+            "id": "q1",
+            "type": "multiple_choice",
+            "text": "Upon arriving at the office building, what is your FIRST priority before making patient contact?",
+            "options": [
+              {"id": "a", "text": "Immediately rush to the patient and begin assessment"},
+              {"id": "b", "text": "Ensure scene safety and don appropriate BSI/PPE"},
+              {"id": "c", "text": "Ask coworkers what happened"},
+              {"id": "d", "text": "Call for ALS backup"}
+            ],
+            "correct_answer": "b",
+            "explanation": "Scene safety and BSI/PPE are always the first priority on any call. Even in an office environment, you must ensure the scene is safe and don appropriate protective equipment before making patient contact. Rushing to the patient (A) bypasses critical safety steps. Gathering history from bystanders (C) and calling for backup (D) are important but come after ensuring scene safety.",
+            "points": 10,
+            "hint": "Think about what every call begins with, regardless of the emergency type."
+          },
+          {
+            "id": "q2",
+            "type": "multiple_choice",
+            "text": "Your patient states he has a 'heavy pressure' in his chest that started about 45 minutes ago. Using OPQRST, which question would BEST help you assess the severity of this complaint?",
+            "options": [
+              {"id": "a", "text": "Does the pain radiate anywhere?"},
+              {"id": "b", "text": "On a scale of 0-10, how would you rate this pain?"},
+              {"id": "c", "text": "What were you doing when it started?"},
+              {"id": "d", "text": "Have you taken anything for the pain?"}
+            ],
+            "correct_answer": "b",
+            "explanation": "The 'S' in OPQRST stands for Severity, which is best assessed by asking the patient to rate their pain on a numerical scale (0-10). This provides a baseline for reassessment. Radiation (A) corresponds to 'R' (Region/Radiation), onset activity (C) relates to 'O' (Onset), and prior interventions (D) relates to 'P' (Provocation/Palliation). All are important, but the question asks specifically about severity assessment.",
+            "points": 10,
+            "hint": "Consider the 'S' in OPQRST."
+          },
+          {
+            "id": "q3",
+            "type": "multi_select",
+            "text": "Which findings from your initial assessment are MOST concerning for an acute cardiac event? Select all that apply.",
+            "options": [
+              {"id": "a", "text": "Diaphoresis with chest pain"},
+              {"id": "b", "text": "History of hypertension and diabetes"},
+              {"id": "c", "text": "SpO2 of 94%"},
+              {"id": "d", "text": "Patient is alert and oriented"},
+              {"id": "e", "text": "Heart rate of 104 bpm"}
+            ],
+            "correct_answer": ["a", "b", "c", "e"],
+            "explanation": "Diaphoresis with chest pain (A) is a classic presentation of acute MI. History of HTN and diabetes (B) are major cardiac risk factors. SpO2 of 94% (C) suggests early hypoxia potentially from cardiac compromise. Tachycardia at 104 bpm (E) indicates sympathetic stimulation from pain and/or cardiac compromise. Being alert and oriented (D) is actually a reassuring finding, not a concerning one.",
+            "points": 15,
+            "hint": "Think about which signs and symptoms indicate the heart may not be functioning properly."
+          },
+          {
+            "id": "q4",
+            "type": "multiple_choice",
+            "text": "The patient's coworker tells you the patient was complaining of indigestion earlier and took two antacid tablets. The patient now rates his chest pain 8/10. What is the MOST important next step?",
+            "options": [
+              {"id": "a", "text": "Obtain a full set of vital signs and place the patient on the cardiac monitor"},
+              {"id": "b", "text": "Administer nitroglycerin immediately"},
+              {"id": "c", "text": "Have the patient chew aspirin"},
+              {"id": "d", "text": "Start an IV line for medication administration"}
+            ],
+            "correct_answer": "a",
+            "explanation": "Obtaining a complete set of vital signs and placing the patient on the cardiac monitor is the most important next step. You need baseline data before administering any medications. Nitroglycerin (B) and aspirin (C) are appropriate interventions but require baseline vitals first. An IV (D) is important but monitoring takes priority for identifying potentially lethal rhythms.",
+            "points": 10,
+            "hint": "You need data before you can properly treat."
+          },
+          {
+            "id": "q5",
+            "type": "multiple_choice",
+            "text": "While obtaining the SAMPLE history, the patient mentions he is allergic to sulfa drugs. Why is this information clinically important in the context of a potential cardiac emergency?",
+            "options": [
+              {"id": "a", "text": "Sulfa allergy contraindicates the use of aspirin"},
+              {"id": "b", "text": "Sulfa allergy may cross-react with some diuretics like furosemide"},
+              {"id": "c", "text": "Sulfa allergy means the patient cannot receive nitroglycerin"},
+              {"id": "d", "text": "Sulfa allergy is not relevant in cardiac emergencies"}
+            ],
+            "correct_answer": "b",
+            "explanation": "Sulfa drug allergies may have potential cross-reactivity with certain sulfonamide-containing diuretics (like furosemide/Lasix), which could be relevant if the patient develops pulmonary edema. Sulfa allergy does NOT contraindicate aspirin (A) or nitroglycerin (C). It IS relevant to document (not D) because it affects potential medication choices during hospital care.",
+            "points": 10,
+            "hint": "Consider what types of medications share a chemical structure with sulfonamides."
+          }
+        ]
+      },
+      {
+        "id": "phase2",
+        "title": "Treatment & 12-Lead ECG",
+        "description": "You have the patient on the monitor showing sinus tachycardia. You proceed with treatment and obtain a 12-lead ECG. The 12-lead shows ST elevation in leads II, III, and aVF with reciprocal changes in I and aVL.",
+        "vitals": {
+          "bp": "152/88",
+          "hr": 96,
+          "rr": 20,
+          "spo2": 96,
+          "etco2": 35,
+          "gcs": 15,
+          "skin": "Warm, slightly diaphoretic",
+          "pupils": "PERRL",
+          "ecg": "Sinus tachycardia, ST elevation in II, III, aVF; reciprocal ST depression in I, aVL"
+        },
+        "questions": [
+          {
+            "id": "q6",
+            "type": "multiple_choice",
+            "text": "Your patient's SpO2 is 96% on room air. What is the MOST appropriate oxygen therapy at this time?",
+            "options": [
+              {"id": "a", "text": "High-flow oxygen via non-rebreather mask at 15 LPM"},
+              {"id": "b", "text": "Nasal cannula at 2-4 LPM to maintain SpO2 above 94%"},
+              {"id": "c", "text": "No supplemental oxygen is needed since SpO2 is above 94%"},
+              {"id": "d", "text": "BVM-assisted ventilations at 12 breaths per minute"}
+            ],
+            "correct_answer": "c",
+            "explanation": "Current AHA guidelines (2020) recommend that supplemental oxygen is NOT indicated for patients with suspected ACS if SpO2 is 94% or greater. Research has shown that unnecessary high-flow oxygen can actually be harmful in MI patients by causing coronary vasoconstriction. If SpO2 drops below 94%, nasal cannula (B) would be appropriate. NRB (A) is excessive, and BVM (D) is for patients with inadequate ventilation.",
+            "points": 10,
+            "hint": "Review current AHA guidelines regarding oxygen therapy in ACS."
+          },
+          {
+            "id": "q7",
+            "type": "multiple_choice",
+            "text": "You establish IV access. What is the appropriate initial dose of aspirin for this patient with suspected ACS?",
+            "options": [
+              {"id": "a", "text": "81 mg chewed"},
+              {"id": "b", "text": "162 mg swallowed"},
+              {"id": "c", "text": "324 mg chewed"},
+              {"id": "d", "text": "500 mg swallowed"}
+            ],
+            "correct_answer": "c",
+            "explanation": "The recommended dose of aspirin for suspected ACS is 324 mg (four 81mg baby aspirin) chewed for rapid absorption. The chewing is critical as it speeds absorption through the buccal mucosa and achieves therapeutic antiplatelet effect more quickly than swallowing. 81 mg (A) is a daily maintenance dose, not an acute dose. 162 mg (B) is sometimes seen but 324 mg is the standard ACS dose per AHA guidelines. 500 mg (D) is not a standard dose.",
+            "points": 10,
+            "hint": "Think about the acute ACS dosing protocol, not the daily maintenance dose."
+          },
+          {
+            "id": "q8",
+            "type": "numeric",
+            "text": "What is the correct dose of aspirin (in milligrams) that should be administered to this patient with suspected ACS?",
+            "correct_answer": 324,
+            "tolerance": 10,
+            "explanation": "The standard acute dose of aspirin for suspected ACS is 324 mg (4 x 81 mg baby aspirin), chewed for rapid buccal absorption. This dose provides effective antiplatelet activity by irreversibly inhibiting cyclooxygenase-1 (COX-1) in platelets, reducing thromboxane A2 production and limiting further platelet aggregation at the site of coronary artery plaque rupture.",
+            "points": 10,
+            "hint": "How many baby aspirin (81 mg each) make up the standard acute ACS dose?"
+          },
+          {
+            "id": "q9",
+            "type": "multiple_choice",
+            "text": "Your 12-lead ECG shows ST elevation in leads II, III, and aVF with reciprocal ST depression in I and aVL. Which coronary artery is MOST likely occluded?",
+            "options": [
+              {"id": "a", "text": "Left anterior descending (LAD)"},
+              {"id": "b", "text": "Left circumflex (LCx)"},
+              {"id": "c", "text": "Right coronary artery (RCA)"},
+              {"id": "d", "text": "Left main coronary artery"}
+            ],
+            "correct_answer": "c",
+            "explanation": "ST elevation in the inferior leads (II, III, aVF) with reciprocal changes in the lateral leads (I, aVL) is the classic pattern for a Right Coronary Artery (RCA) occlusion causing an inferior STEMI. The LAD (A) typically causes anterior STEMI (V1-V4). The LCx (B) typically causes lateral STEMI (I, aVL, V5-V6). Left main (D) would typically show widespread ST changes and hemodynamic instability.",
+            "points": 15,
+            "hint": "Which leads represent the inferior wall of the heart?"
+          },
+          {
+            "id": "q10",
+            "type": "multiple_choice",
+            "text": "Before administering nitroglycerin, what finding on this specific 12-lead should make you CAUTIOUS about NTG administration?",
+            "options": [
+              {"id": "a", "text": "The patient's blood pressure is 152/88"},
+              {"id": "b", "text": "Inferior STEMI may involve right ventricular infarction"},
+              {"id": "c", "text": "The patient is already on lisinopril"},
+              {"id": "d", "text": "ST depression in lead I and aVL"}
+            ],
+            "correct_answer": "b",
+            "explanation": "Inferior STEMIs (especially involving the RCA) frequently involve right ventricular infarction. NTG causes venous dilation and reduces preload, which can cause severe hypotension in patients with RV infarction because the compromised right ventricle is preload-dependent. Before giving NTG in an inferior STEMI, you should obtain a right-sided 12-lead (V4R) to evaluate for RV involvement. The BP (A) is adequate for NTG, lisinopril (C) is not a direct contraindication, and reciprocal changes (D) are expected findings.",
+            "points": 15,
+            "hint": "Think about which additional chamber may be affected in an inferior MI and why that matters for NTG."
+          },
+          {
+            "id": "q11",
+            "type": "ordered_list",
+            "text": "Place the following ACS medication interventions in the CORRECT order of administration:",
+            "options": [
+              {"id": "a", "text": "Nitroglycerin 0.4mg sublingual"},
+              {"id": "b", "text": "Aspirin 324mg chewed"},
+              {"id": "c", "text": "Obtain IV access"},
+              {"id": "d", "text": "Obtain right-sided 12-lead (V4R)"},
+              {"id": "e", "text": "Administer fentanyl for pain management"}
+            ],
+            "correct_answer": ["b", "c", "d", "a", "e"],
+            "explanation": "The correct sequence is: (1) Aspirin 324mg chewed - early antiplatelet therapy is critical and has no setup requirements. (2) Obtain IV access - needed for medication administration and fluid resuscitation if needed. (3) Obtain right-sided 12-lead (V4R) - must rule out RV infarction BEFORE giving NTG in an inferior STEMI. (4) Nitroglycerin - only after confirming no RV involvement and adequate BP. (5) Fentanyl for pain - analgesic after other interventions are initiated. Morphine was previously standard but fentanyl is now preferred in many protocols due to fewer side effects.",
+            "points": 15,
+            "hint": "Think about which interventions require setup, which have safety prerequisites, and what can be given immediately."
+          }
+        ]
+      },
+      {
+        "id": "phase3",
+        "title": "Transport Decision & Ongoing Care",
+        "description": "Your right-sided 12-lead shows no ST elevation in V4R. The patient has received aspirin and one NTG with partial relief. Pain is now 5/10. You need to make transport decisions.",
+        "vitals": {
+          "bp": "138/82",
+          "hr": 88,
+          "rr": 18,
+          "spo2": 97,
+          "etco2": 37,
+          "gcs": 15,
+          "skin": "Warm, dry",
+          "ecg": "Sinus rhythm, persistent ST elevation in II, III, aVF"
+        },
+        "questions": [
+          {
+            "id": "q12",
+            "type": "multiple_choice",
+            "text": "What is the MOST appropriate transport destination for this patient?",
+            "options": [
+              {"id": "a", "text": "The closest hospital regardless of capabilities"},
+              {"id": "b", "text": "A hospital with a cardiac catheterization lab (PCI-capable facility)"},
+              {"id": "c", "text": "A hospital chosen by the patient's preference"},
+              {"id": "d", "text": "Any hospital with an emergency department"}
+            ],
+            "correct_answer": "b",
+            "explanation": "A STEMI patient requires emergent percutaneous coronary intervention (PCI), so transport to a PCI-capable facility is the standard of care. The goal is a door-to-balloon time of less than 90 minutes. Even if a PCI facility is farther away, the benefit of definitive treatment outweighs the additional transport time (up to a point, per local protocols). The closest hospital (A) may not have cath lab capabilities. Patient preference (C) is secondary to emergent medical need. Any ED (D) is inadequate without PCI capability.",
+            "points": 10,
+            "hint": "What definitive treatment does a STEMI patient need, and where can they receive it?"
+          },
+          {
+            "id": "q13",
+            "type": "multiple_choice",
+            "text": "You have identified this as a STEMI. Which additional notification should you make during transport?",
+            "options": [
+              {"id": "a", "text": "Contact the patient's primary care physician"},
+              {"id": "b", "text": "Activate the cardiac catheterization lab at the receiving facility"},
+              {"id": "c", "text": "Request helicopter transport"},
+              {"id": "d", "text": "Contact medical control for permission to transport"}
+            ],
+            "correct_answer": "b",
+            "explanation": "Early cath lab activation is critical in STEMI management. Prehospital notification and cath lab activation significantly reduce door-to-balloon times. Many systems allow paramedics to activate the cath lab directly based on their 12-lead interpretation, either by transmitting the ECG or providing a verbal report. This can save 15-30 minutes of in-hospital activation time. PCP notification (A) is not urgent. Helicopter (C) is not indicated for a stable STEMI with reasonable ground transport time. Medical control (D) is protocol-dependent but cath lab activation is the priority.",
+            "points": 10,
+            "hint": "Think about what you can do during transport to reduce the overall time to definitive treatment."
+          },
+          {
+            "id": "q14",
+            "type": "multiple_choice",
+            "text": "During transport, how often should you repeat the 12-lead ECG?",
+            "options": [
+              {"id": "a", "text": "Only if the patient's condition changes"},
+              {"id": "b", "text": "Every 5 minutes"},
+              {"id": "c", "text": "Every 10-15 minutes or with any change in symptoms"},
+              {"id": "d", "text": "No repeat is needed since STEMI has been identified"}
+            ],
+            "correct_answer": "c",
+            "explanation": "Serial 12-lead ECGs should be obtained every 10-15 minutes during transport and with any change in patient symptoms. This allows you to monitor for evolving ST changes, extension of the infarction, resolution (which could indicate reperfusion), or development of new arrhythmias. Only on condition change (A) misses gradual evolution. Every 5 minutes (B) is too frequent and impractical. No repeat (D) misses critical changes that could alter management.",
+            "points": 10,
+            "hint": "Consider how the ECG pattern might change during transport and why tracking those changes matters."
+          },
+          {
+            "id": "q15",
+            "type": "multi_select",
+            "text": "Which complications should you be MOST vigilant for during transport of this inferior STEMI patient? Select all that apply.",
+            "options": [
+              {"id": "a", "text": "Heart blocks (especially 2nd and 3rd degree)"},
+              {"id": "b", "text": "Ventricular fibrillation"},
+              {"id": "c", "text": "Hypotension from vagal stimulation"},
+              {"id": "d", "text": "Tension pneumothorax"},
+              {"id": "e", "text": "Bradycardia"}
+            ],
+            "correct_answer": ["a", "b", "c", "e"],
+            "explanation": "Inferior STEMIs are associated with several specific complications: Heart blocks (A) because the AV node is typically supplied by the RCA. Ventricular fibrillation (B) is a risk with any acute MI, particularly in the first hours. Hypotension from vagal stimulation (C) because the inferior wall is rich in vagal fibers (Bezold-Jarisch reflex). Bradycardia (E) for the same vagal and AV node reasons. Tension pneumothorax (D) is not associated with MI and is a traumatic or iatrogenic condition.",
+            "points": 15,
+            "hint": "Think about the anatomy of the inferior wall and what nerve supply and conduction pathways are nearby."
+          }
+        ]
+      }
+    ],
+    "learning_objectives": [
+      "Perform systematic scene assessment and patient evaluation for chest pain complaints",
+      "Apply OPQRST and SAMPLE history-taking mnemonics in cardiac emergencies",
+      "Interpret 12-lead ECG findings to identify STEMI patterns and their anatomical correlations",
+      "Recognize the relationship between inferior STEMI and right ventricular infarction",
+      "Apply current AHA guidelines for ACS medication administration sequence",
+      "Make appropriate transport decisions based on patient acuity and facility capabilities",
+      "Understand the importance of cath lab activation and its impact on patient outcomes"
+    ],
+    "critical_actions": [
+      "Apply BSI/PPE and ensure scene safety before patient contact",
+      "Obtain 12-lead ECG within 10 minutes of patient contact",
+      "Identify STEMI pattern on the 12-lead ECG",
+      "Obtain right-sided 12-lead (V4R) before NTG administration in inferior STEMI",
+      "Administer aspirin 324 mg chewed early in the assessment",
+      "Transport to PCI-capable facility",
+      "Activate the cardiac catheterization lab during transport",
+      "Perform serial 12-lead ECGs during transport"
+    ],
+    "common_errors": [
+      "Administering high-flow oxygen to patients with SpO2 above 94%",
+      "Failing to obtain right-sided 12-lead before NTG in inferior STEMI",
+      "Not recognizing reciprocal changes as supporting evidence for STEMI",
+      "Transporting to the closest hospital instead of a PCI-capable facility",
+      "Delaying aspirin administration",
+      "Forgetting to activate the cath lab during transport"
+    ],
+    "debrief_points": [
+      "Review the significance of identifying RCA vs LAD occlusions based on ECG lead patterns",
+      "Discuss the Bezold-Jarisch reflex and its implications for inferior STEMI management",
+      "Review current evidence on oxygen therapy in ACS (AVOID and DETO2X-AMI trials)",
+      "Discuss systems-based approaches to reducing door-to-balloon times",
+      "Review the pathophysiology of why RV infarction patients are preload-dependent"
+    ],
+    "equipment_needed": [
+      "Cardiac monitor/defibrillator with 12-lead capability",
+      "IV start kit and normal saline",
+      "Aspirin 324 mg (4 x 81 mg tablets)",
+      "Nitroglycerin 0.4 mg sublingual tablets or spray",
+      "Fentanyl or morphine for pain management",
+      "Supplemental oxygen equipment",
+      "Stethoscope and BP cuff"
+    ],
+    "visibility": "official",
+    "is_published": true
+  },
+  {
+    "title": "High-Speed MVC with Multi-System Trauma",
+    "description": "A 28-year-old female is the restrained driver involved in a T-bone collision at an intersection. The vehicle has significant steering wheel deformity and deployed airbag. This case covers scene assessment, trauma patient evaluation using XABCDE, recognition of hemorrhagic shock, and appropriate packaging and transport decisions.",
+    "chief_complaint": "Motor vehicle collision - driver",
+    "category": "Trauma",
+    "subcategory": "Multi-System Trauma",
+    "difficulty": "intermediate",
+    "applicable_programs": ["EMT", "AEMT", "Paramedic"],
+    "estimated_duration_minutes": 25,
+    "patient_age": "28",
+    "patient_sex": "Female",
+    "patient_weight": "65 kg",
+    "patient_medical_history": ["None significant"],
+    "patient_medications": ["Oral contraceptives"],
+    "patient_allergies": "NKDA",
+    "dispatch_info": {
+      "call_type": "Motor Vehicle Collision - Injuries",
+      "location": "Intersection of Main St and 5th Ave",
+      "additional_info": "Two-vehicle T-bone collision, one patient trapped, airbag deployment",
+      "priority": "Priority 1",
+      "caller": "Bystander"
+    },
+    "scene_info": {
+      "environment": "Urban intersection, daytime, dry pavement",
+      "hazards": "Broken glass, vehicle fluids on roadway, traffic not yet controlled",
+      "access": "Patient in driver seat, door deformed but openable",
+      "bystanders": "Multiple bystanders, PD en route",
+      "mechanism": "T-bone collision, driver side impacted, estimated 40+ mph"
+    },
+    "phases": [
+      {
+        "id": "phase1",
+        "title": "Scene Safety & Initial Triage",
+        "description": "You arrive at an intersection where two vehicles have collided. A sedan has been struck on the driver's side by an SUV. The sedan has significant driver-side intrusion, a deployed airbag, and visible steering wheel deformity. Traffic is still flowing around the scene.",
+        "vitals": {
+          "initial_assessment": "Patient is conscious, moaning, seatbelt on"
+        },
+        "questions": [
+          {
+            "id": "q1",
+            "type": "multi_select",
+            "text": "As you arrive on scene, which hazards must be addressed BEFORE approaching the patient? Select all that apply.",
+            "options": [
+              {"id": "a", "text": "Uncontrolled traffic around the scene"},
+              {"id": "b", "text": "Broken glass and vehicle fluids on the roadway"},
+              {"id": "c", "text": "Potential vehicle instability"},
+              {"id": "d", "text": "Deployed airbags that may have undeployed components"},
+              {"id": "e", "text": "The patient's emotional state"}
+            ],
+            "correct_answer": ["a", "b", "c", "d"],
+            "explanation": "All physical hazards must be identified before approach: uncontrolled traffic (A) poses a strike risk to responders; broken glass and fluids (B) create slip and puncture hazards; vehicle instability (C) could cause the vehicle to shift during extrication; undeployed airbag components (D) could fire during rescue. The patient's emotional state (E), while important to manage, is not a scene safety hazard.",
+            "points": 10,
+            "hint": "Focus on hazards that could injure you or your crew."
+          },
+          {
+            "id": "q2",
+            "type": "multiple_choice",
+            "text": "You note the steering wheel is deformed with a cracked windshield in a spiderweb pattern. What mechanism-of-injury concerns does this raise?",
+            "options": [
+              {"id": "a", "text": "Upper extremity fractures only"},
+              {"id": "b", "text": "Chest and abdominal injuries from steering wheel impact, possible head injury from windshield contact"},
+              {"id": "c", "text": "Primarily lower extremity injuries from pedal entrapment"},
+              {"id": "d", "text": "Spinal cord injury only"}
+            ],
+            "correct_answer": "b",
+            "explanation": "Steering wheel deformity strongly suggests the driver's chest and abdomen struck the wheel, raising concern for sternal fracture, myocardial contusion, aortic injury, pneumothorax, rib fractures, and abdominal organ injury (spleen, liver). The spiderweb windshield pattern suggests head impact, raising concern for traumatic brain injury and cervical spine injury. While extremity (A), lower body (C), and spinal (D) injuries are possible, the steering wheel deformity and windshield pattern specifically point to chest, abdominal, and head injuries.",
+            "points": 10,
+            "hint": "Consider what body parts would contact a steering wheel and windshield in a frontal or lateral collision."
+          },
+          {
+            "id": "q3",
+            "type": "multiple_choice",
+            "text": "As you approach the vehicle, you note one patient in the sedan and the SUV driver is standing outside his vehicle appearing uninjured. How many patients should you initially plan for?",
+            "options": [
+              {"id": "a", "text": "1 patient - only the trapped driver needs treatment"},
+              {"id": "b", "text": "2 patients - both drivers need assessment"},
+              {"id": "c", "text": "2 patients minimum - both drivers, plus check for additional occupants in both vehicles"},
+              {"id": "d", "text": "1 patient - the SUV driver is obviously fine"}
+            ],
+            "correct_answer": "c",
+            "explanation": "You must plan for a minimum of 2 patients (both drivers) and systematically check both vehicles for additional occupants. The standing SUV driver (B and D) still requires medical assessment as injuries may not be immediately apparent (internal injuries, delayed symptoms). You should also check back seats, look for child car seats, and ask about passengers who may have self-extricated. Never assume based on appearance alone.",
+            "points": 10,
+            "hint": "Think about who might be in the vehicles that you cannot immediately see."
+          }
+        ]
+      },
+      {
+        "id": "phase2",
+        "title": "Primary Assessment",
+        "description": "You gain access to the patient. She is a 28-year-old female, conscious and moaning. She is restrained by her seatbelt with the airbag deployed. She is holding her left side and complaining of difficulty breathing. Her skin is pale and cool.",
+        "vitals": {
+          "bp": "104/72",
+          "hr": 118,
+          "rr": 24,
+          "spo2": 93,
+          "gcs": 14,
+          "gcs_breakdown": "E4 V4 M6",
+          "skin": "Pale, cool, slightly diaphoretic",
+          "pupils": "PERRL, slightly sluggish on left"
+        },
+        "questions": [
+          {
+            "id": "q4",
+            "type": "ordered_list",
+            "text": "Using the XABCDE approach for trauma assessment, arrange these interventions in the correct priority order:",
+            "options": [
+              {"id": "a", "text": "Assess breathing and lung sounds bilaterally"},
+              {"id": "b", "text": "Control any massive external hemorrhage"},
+              {"id": "c", "text": "Perform rapid neurological assessment (GCS, pupils)"},
+              {"id": "d", "text": "Open and assess the airway with C-spine stabilization"},
+              {"id": "e", "text": "Expose the patient and check for additional injuries"}
+            ],
+            "correct_answer": ["b", "d", "a", "c", "e"],
+            "explanation": "The XABCDE approach prioritizes: X (eXsanguination) - Control massive external hemorrhage first as it is the most rapidly lethal. A (Airway) - Open and assess airway with cervical spine protection. B (Breathing) - Assess ventilation, lung sounds, identify pneumothorax. C (Circulation/Disability merged with D in field) - GCS and neurological status. E (Exposure) - Full body exam for hidden injuries. This mnemonic was updated from the traditional ABCDE to reflect that massive hemorrhage kills faster than airway compromise in trauma.",
+            "points": 15,
+            "hint": "Think about what kills the fastest in trauma. The 'X' was added before 'A' for a specific reason."
+          },
+          {
+            "id": "q5",
+            "type": "multiple_choice",
+            "text": "You auscultate breath sounds and find diminished sounds on the left side with chest wall tenderness and crepitus over the left lateral ribs. The patient's SpO2 is 93% and she is tachypneic at 24/min. What is the MOST likely injury?",
+            "options": [
+              {"id": "a", "text": "Simple pneumothorax"},
+              {"id": "b", "text": "Hemothorax"},
+              {"id": "c", "text": "Flail chest"},
+              {"id": "d", "text": "Pulmonary contusion with rib fractures"}
+            ],
+            "correct_answer": "d",
+            "explanation": "The combination of diminished breath sounds, chest wall tenderness, and crepitus (indicating rib fractures) with hypoxia most suggests pulmonary contusion with rib fractures. Pulmonary contusion is the most common potentially lethal chest injury in blunt trauma. Simple pneumothorax (A) would typically show absent (not diminished) breath sounds. Hemothorax (B) would show dullness to percussion. Flail chest (C) requires paradoxical chest wall movement from multiple segmental rib fractures. The findings here best match contusion with associated fractures.",
+            "points": 10,
+            "hint": "Consider what causes diminished (not absent) breath sounds combined with rib crepitus."
+          },
+          {
+            "id": "q6",
+            "type": "multiple_choice",
+            "text": "The patient's GCS is 14 (E4 V4 M6). Her left pupil is slightly more sluggish than the right. What does this finding suggest?",
+            "options": [
+              {"id": "a", "text": "Normal finding after airbag deployment"},
+              {"id": "b", "text": "Possible early traumatic brain injury requiring close monitoring"},
+              {"id": "c", "text": "Optic nerve damage from facial trauma"},
+              {"id": "d", "text": "Effect of pain medications"}
+            ],
+            "correct_answer": "b",
+            "explanation": "A unilateral sluggish pupil in a trauma patient with a GCS of 14 (verbal component reduced) suggests early traumatic brain injury. This could indicate developing intracranial pressure or a developing epidural/subdural hematoma. This finding requires close serial neurological monitoring as it may progress. It is NOT a normal finding after airbag deployment (A). Optic nerve damage (C) would typically present with a fixed dilated pupil, not sluggish. No pain medications have been administered (D).",
+            "points": 10,
+            "hint": "A unilateral pupil change in a trauma patient is significant until proven otherwise."
+          },
+          {
+            "id": "q7",
+            "type": "multi_select",
+            "text": "The patient's vital signs show BP 104/72, HR 118, RR 24. Which of these indicate compensated hemorrhagic shock? Select all that apply.",
+            "options": [
+              {"id": "a", "text": "Tachycardia at 118 bpm"},
+              {"id": "b", "text": "Tachypnea at 24 breaths/min"},
+              {"id": "c", "text": "Systolic BP of 104 mmHg"},
+              {"id": "d", "text": "Pale, cool, diaphoretic skin"},
+              {"id": "e", "text": "GCS of 14"}
+            ],
+            "correct_answer": ["a", "b", "c", "d", "e"],
+            "explanation": "ALL of these findings are indicators of compensated hemorrhagic shock (Class II-III): Tachycardia (A) is one of the earliest signs as the heart attempts to maintain cardiac output. Tachypnea (B) compensates for metabolic acidosis from poor perfusion. Narrowing pulse pressure with SBP 104 (C) indicates decreasing cardiac output. Pale, cool, diaphoretic skin (D) results from peripheral vasoconstriction to shunt blood to vital organs. Altered mental status/GCS 14 (E) indicates decreased cerebral perfusion. Together, these paint a picture of a patient in compensated shock who may rapidly decompensate.",
+            "points": 15,
+            "hint": "Compensated shock means the body is still maintaining (barely) adequate perfusion through compensatory mechanisms."
+          },
+          {
+            "id": "q8",
+            "type": "multiple_choice",
+            "text": "Given the mechanism of injury (T-bone, driver side) and physical findings, you should palpate the abdomen focusing on which quadrant?",
+            "options": [
+              {"id": "a", "text": "Right upper quadrant for liver injury"},
+              {"id": "b", "text": "Left upper quadrant for splenic injury"},
+              {"id": "c", "text": "Right lower quadrant for appendix"},
+              {"id": "d", "text": "Suprapubic region for bladder injury"}
+            ],
+            "correct_answer": "b",
+            "explanation": "With a driver-side (left side) T-bone impact, the spleen in the left upper quadrant is the most likely abdominal organ to be injured. The spleen is the most commonly injured abdominal organ in blunt trauma and is particularly vulnerable to left-sided impacts. Left-sided rib fractures (which this patient has) are strongly associated with splenic injury. While all quadrants should be assessed, the LUQ deserves special attention given this mechanism. The liver (A) is more at risk in right-sided impacts. Appendix (C) and bladder (D) injuries are less common in this mechanism.",
+            "points": 10,
+            "hint": "Which side of the vehicle was impacted, and which organ sits on that side?"
+          }
+        ]
+      },
+      {
+        "id": "phase3",
+        "title": "Packaging & Transport",
+        "description": "You have completed your primary assessment. The patient is showing signs of early shock with worsening vitals. Fire department has stabilized the vehicle and the door is now fully open. You need to make packaging and transport decisions.",
+        "vitals": {
+          "bp": "94/68",
+          "hr": 128,
+          "rr": 28,
+          "spo2": 90,
+          "gcs": 13,
+          "gcs_breakdown": "E3 V4 M6",
+          "skin": "Pale, cool, diaphoretic, mottling noted on extremities"
+        },
+        "questions": [
+          {
+            "id": "q9",
+            "type": "multiple_choice",
+            "text": "The patient's vitals have deteriorated: BP 94/68, HR 128, RR 28, SpO2 90%. Compared to the initial vitals, what does this trend indicate?",
+            "options": [
+              {"id": "a", "text": "The patient is stabilizing with treatment"},
+              {"id": "b", "text": "The patient is transitioning from compensated to decompensated shock"},
+              {"id": "c", "text": "These changes are normal stress responses"},
+              {"id": "d", "text": "The patient needs more pain medication"}
+            ],
+            "correct_answer": "b",
+            "explanation": "The deteriorating vitals show classic progression from compensated to decompensated hemorrhagic shock: BP dropped from 104/72 to 94/68 (failing compensatory vasoconstriction), HR increased from 118 to 128 (worsening tachycardia), RR increased from 24 to 28 (worsening acidosis), SpO2 dropped from 93% to 90% (worsening hypoxia), and GCS dropped from 14 to 13 (decreasing cerebral perfusion). This patient is actively bleeding internally and is running out of compensatory reserve. This is NOT stabilization (A), normal stress (C), or a pain management issue (D).",
+            "points": 10,
+            "hint": "Compare each vital sign to the previous set and note the direction of change."
+          },
+          {
+            "id": "q10",
+            "type": "multiple_choice",
+            "text": "What is the MOST appropriate method to extricate this patient from the vehicle?",
+            "options": [
+              {"id": "a", "text": "Allow the patient to self-extricate since she is conscious"},
+              {"id": "b", "text": "Rapid extrication with manual C-spine stabilization onto a long backboard"},
+              {"id": "c", "text": "Wait for a KED device before moving the patient"},
+              {"id": "d", "text": "Full spinal immobilization with C-collar before any movement"}
+            ],
+            "correct_answer": "b",
+            "explanation": "This patient is in decompensating hemorrhagic shock and requires rapid extrication. Rapid extrication with manual in-line cervical spine stabilization onto a long backboard is appropriate for unstable trauma patients. Self-extrication (A) is inappropriate for a patient in shock with potential spinal injury. A KED device (C) is used for stable patients and takes too long in this critical situation. While C-collar (D) is ideal, the critical nature of this patient's condition means rapid extrication with manual stabilization takes priority - you can apply the collar once the patient is on the board.",
+            "points": 10,
+            "hint": "Consider the patient's hemodynamic stability when choosing between rapid vs. careful extrication."
+          },
+          {
+            "id": "q11",
+            "type": "multiple_choice",
+            "text": "En route to the trauma center, you establish two large-bore IVs. What is the CURRENT evidence-based approach to fluid resuscitation in hemorrhagic shock?",
+            "options": [
+              {"id": "a", "text": "Administer 2 liters of normal saline as rapidly as possible"},
+              {"id": "b", "text": "Permissive hypotension - maintain SBP of 80-90 mmHg with small fluid boluses"},
+              {"id": "c", "text": "No IV fluids should be given in the prehospital setting"},
+              {"id": "d", "text": "Administer lactated Ringer's at a maintenance rate only"}
+            ],
+            "correct_answer": "b",
+            "explanation": "Current evidence supports permissive (controlled) hypotension in hemorrhagic shock, targeting a systolic BP of 80-90 mmHg (or sufficient to maintain radial pulse and mentation). Aggressive fluid resuscitation (A) can worsen hemorrhage by disrupting clot formation, causing dilutional coagulopathy, and increasing blood pressure to levels that promote continued bleeding. No fluids (C) is too restrictive. Maintenance rate (D) does not address the shock state. The goal is to provide just enough volume to maintain organ perfusion without worsening hemorrhage.",
+            "points": 10,
+            "hint": "Consider how aggressive fluid administration might affect an actively bleeding patient."
+          },
+          {
+            "id": "q12",
+            "type": "multi_select",
+            "text": "Which of the following criteria make this patient eligible for transport to a Level I Trauma Center? Select all that apply.",
+            "options": [
+              {"id": "a", "text": "GCS less than or equal to 13"},
+              {"id": "b", "text": "Systolic BP less than 90 mmHg"},
+              {"id": "c", "text": "High-speed MVC with significant vehicle intrusion"},
+              {"id": "d", "text": "Patient is 28 years old"},
+              {"id": "e", "text": "Suspected internal hemorrhage"}
+            ],
+            "correct_answer": ["a", "b", "c", "e"],
+            "explanation": "Multiple CDC Field Triage Decision Scheme criteria are met: GCS of 13 (A) meets physiologic criteria (GCS < 14). SBP < 90 (B) meets physiologic criteria. High-speed MVC with intrusion > 12 inches (C) meets mechanism criteria. Suspected internal hemorrhage (E) meets anatomic criteria based on assessment findings. Patient age of 28 (D) is not itself a trauma center criterion, though extremes of age (very young or elderly) can be considered in the special considerations step of the triage scheme.",
+            "points": 15,
+            "hint": "Review the CDC Field Triage Decision Scheme steps: physiologic, anatomic, mechanism, and special considerations."
+          }
+        ]
+      }
+    ],
+    "learning_objectives": [
+      "Identify scene hazards and safety concerns at an MVC",
+      "Apply the XABCDE trauma assessment approach in the correct sequence",
+      "Recognize the mechanism of injury and predict injury patterns based on collision type",
+      "Identify signs and symptoms of hemorrhagic shock and differentiate compensated from decompensated shock",
+      "Make appropriate packaging and transport decisions for unstable trauma patients",
+      "Apply current evidence-based fluid resuscitation strategies for hemorrhagic shock",
+      "Apply CDC Field Triage criteria for trauma center destination decisions"
+    ],
+    "critical_actions": [
+      "Ensure scene safety and control traffic hazards before patient access",
+      "Maintain cervical spine stabilization throughout assessment and extrication",
+      "Identify and address life-threatening injuries using XABCDE approach",
+      "Recognize signs of hemorrhagic shock early",
+      "Perform rapid extrication for the unstable trauma patient",
+      "Transport to appropriate Level I Trauma Center",
+      "Apply permissive hypotension principles during fluid resuscitation",
+      "Perform serial reassessment of vital signs and neurological status"
+    ],
+    "common_errors": [
+      "Failing to control scene hazards before patient contact",
+      "Using a KED device on a hemodynamically unstable patient",
+      "Aggressive fluid resuscitation in hemorrhagic shock",
+      "Failing to reassess vital signs to identify shock progression",
+      "Not correlating mechanism of injury with expected injury patterns",
+      "Transporting to the nearest hospital instead of a trauma center"
+    ],
+    "debrief_points": [
+      "Discuss the pathophysiology of hemorrhagic shock classes (I-IV)",
+      "Review the evidence for permissive hypotension (PROPPR, PROMMTT trials)",
+      "Discuss when rapid extrication is appropriate vs. careful extrication",
+      "Review the CDC Field Triage Decision Scheme and its clinical implications",
+      "Discuss the significance of a unilateral sluggish pupil in trauma"
+    ],
+    "equipment_needed": [
+      "Long backboard with straps",
+      "Cervical collar (appropriately sized)",
+      "Trauma shears",
+      "Large-bore IV catheters (14g or 16g) x2",
+      "Normal saline or lactated Ringer's",
+      "Supplemental oxygen equipment (NRB mask)",
+      "Stethoscope and BP cuff",
+      "Pulse oximeter",
+      "Pelvic binder (if available)",
+      "Tourniquets and hemostatic dressings"
+    ],
+    "visibility": "official",
+    "is_published": true
+  },
+  {
+    "title": "Severe Asthma Exacerbation",
+    "description": "A 19-year-old male college student presents with severe wheezing and respiratory distress. His prescribed MDI is not providing relief. This case covers assessment of respiratory emergencies, proper use of inhaler-assist protocols, oxygen administration, and transport decisions for BLS providers.",
+    "chief_complaint": "Difficulty breathing / Wheezing",
+    "category": "Respiratory",
+    "subcategory": "Asthma",
+    "difficulty": "beginner",
+    "applicable_programs": ["EMT"],
+    "estimated_duration_minutes": 20,
+    "patient_age": "19",
+    "patient_sex": "Male",
+    "patient_weight": "70 kg",
+    "patient_medical_history": ["Asthma (diagnosed age 8)", "Seasonal allergies"],
+    "patient_medications": ["Albuterol MDI PRN", "Fluticasone inhaler daily", "Cetirizine 10mg daily"],
+    "patient_allergies": "Peanuts",
+    "dispatch_info": {
+      "call_type": "Medical - Breathing Difficulty",
+      "location": "College dormitory, Room 312",
+      "additional_info": "19yo male, can't breathe, has asthma, inhaler not working",
+      "priority": "Priority 1",
+      "caller": "Roommate"
+    },
+    "scene_info": {
+      "environment": "College dormitory room, 3rd floor, elevator available",
+      "hazards": "None identified",
+      "access": "Door propped open by roommate, patient sitting upright on bed",
+      "bystanders": "Roommate present, RA (resident advisor) en route"
+    },
+    "phases": [
+      {
+        "id": "phase1",
+        "title": "Assessment",
+        "description": "You find a 19-year-old male sitting on the edge of his bed in the tripod position. He is visibly working hard to breathe, with audible wheezing. His roommate says he has been wheezing for about 2 hours and his inhaler hasn't helped. The patient can only speak in 2-3 word sentences.",
+        "vitals": {
+          "bp": "132/78",
+          "hr": 112,
+          "rr": 28,
+          "spo2": 91,
+          "skin": "Warm, slightly diaphoretic",
+          "gcs": 15,
+          "lung_sounds": "Bilateral expiratory wheezing, diminished at bases, accessory muscle use noted"
+        },
+        "questions": [
+          {
+            "id": "q1",
+            "type": "multiple_choice",
+            "text": "The patient is sitting in the tripod position and can only speak in 2-3 word sentences. What does this tell you about the severity of his respiratory distress?",
+            "options": [
+              {"id": "a", "text": "Mild distress - the patient is still conscious and alert"},
+              {"id": "b", "text": "Moderate distress - the patient needs monitoring only"},
+              {"id": "c", "text": "Severe distress - tripod positioning and inability to speak in full sentences indicate significant respiratory compromise"},
+              {"id": "d", "text": "The tripod position is not clinically significant"}
+            ],
+            "correct_answer": "c",
+            "explanation": "The tripod position (sitting upright, leaning forward on hands) is a compensatory mechanism that maximizes diaphragmatic excursion and accessory muscle use. Combined with the inability to speak in full sentences (indicating severely limited tidal volume), this presentation indicates severe respiratory distress. Mild (A) or moderate (B) distress would allow for full sentences. The tripod position (D) is always clinically significant as it indicates the patient is working very hard to breathe.",
+            "points": 10,
+            "hint": "How many words between breaths is an important severity indicator."
+          },
+          {
+            "id": "q2",
+            "type": "multiple_choice",
+            "text": "You auscultate breath sounds and hear bilateral expiratory wheezing with diminished sounds at the bases and visible accessory muscle use. What does the diminished sounds at the bases indicate?",
+            "options": [
+              {"id": "a", "text": "The patient's asthma is resolving at the bases"},
+              {"id": "b", "text": "Poor air movement due to severe bronchospasm - a concerning finding"},
+              {"id": "c", "text": "Normal finding in young adults during exercise"},
+              {"id": "d", "text": "Fluid accumulation suggesting pneumonia"}
+            ],
+            "correct_answer": "b",
+            "explanation": "Diminished breath sounds at the bases in an asthma patient indicate severe bronchospasm with very poor air movement. This is actually more concerning than loud wheezing - loud wheezes mean air is still moving through narrowed airways. Diminished or absent sounds ('silent chest') indicate airways are so constricted that inadequate air is moving through them. This is NOT a sign of resolution (A), not normal (C), and the clinical context does not support pneumonia (D).",
+            "points": 10,
+            "hint": "In asthma, what does it mean when you stop hearing wheezing?"
+          },
+          {
+            "id": "q3",
+            "type": "multiple_choice",
+            "text": "You gather a SAMPLE history. The patient tells you he ran out of his daily fluticasone inhaler a week ago and has been relying on his albuterol rescue inhaler, which he has used 6 times today. Why is this history important?",
+            "options": [
+              {"id": "a", "text": "It indicates medication non-compliance, which is not clinically relevant"},
+              {"id": "b", "text": "Stopping the controller medication allowed worsening inflammation, and excessive rescue inhaler use indicates poor control and potential for severe exacerbation"},
+              {"id": "c", "text": "The albuterol is causing his symptoms"},
+              {"id": "d", "text": "He needs a different brand of inhaler"}
+            ],
+            "correct_answer": "b",
+            "explanation": "Fluticasone is an inhaled corticosteroid (controller medication) that manages chronic airway inflammation. Stopping it allows inflammation to worsen progressively. The excessive use of the albuterol rescue inhaler (6 times in one day, where normal is less than 2 times per week) indicates poor asthma control and impending severe exacerbation. This isn't simply non-compliance (A) - understanding WHY he stopped helps predict the severity. Albuterol is not causing symptoms (C). The issue is stopping the controller, not the brand (D).",
+            "points": 10,
+            "hint": "Think about the difference between controller medications and rescue medications in asthma management."
+          },
+          {
+            "id": "q4",
+            "type": "multiple_choice",
+            "text": "What is the MOST appropriate initial position for this patient during your assessment?",
+            "options": [
+              {"id": "a", "text": "Lay the patient supine on the stretcher"},
+              {"id": "b", "text": "Allow the patient to remain sitting upright in a position of comfort"},
+              {"id": "c", "text": "Place the patient in Trendelenburg position"},
+              {"id": "d", "text": "Place the patient in the recovery position on his side"}
+            ],
+            "correct_answer": "b",
+            "explanation": "Patients in respiratory distress should be allowed to remain in their position of comfort, typically upright (sitting or high Fowler's). The tripod position maximizes their ability to use accessory muscles and diaphragmatic movement. Laying supine (A) would compress the diaphragm and worsen breathing difficulty. Trendelenburg (C) is inappropriate and would further compromise respiratory function. Recovery position (D) is for unconscious patients.",
+            "points": 5,
+            "hint": "Let the patient tell you how they breathe best."
+          },
+          {
+            "id": "q5",
+            "type": "multiple_choice",
+            "text": "The patient's SpO2 is 91%. What is the MOST appropriate oxygen delivery method?",
+            "options": [
+              {"id": "a", "text": "No oxygen needed - SpO2 is above 90%"},
+              {"id": "b", "text": "Nasal cannula at 2 LPM"},
+              {"id": "c", "text": "Non-rebreather mask at 15 LPM"},
+              {"id": "d", "text": "High-flow nasal cannula at 6 LPM"}
+            ],
+            "correct_answer": "c",
+            "explanation": "With an SpO2 of 91% in a patient with severe respiratory distress, high-flow oxygen via non-rebreather mask at 15 LPM is appropriate to rapidly improve oxygenation. An SpO2 of 91% represents significant hypoxia in a young, healthy patient. No oxygen (A) is inappropriate as this patient is hypoxic and in distress. Nasal cannula at 2 LPM (B) provides insufficient FiO2 for this severity. High-flow nasal cannula (D) is a hospital device, not standard in prehospital BLS kits.",
+            "points": 10,
+            "hint": "Consider both the SpO2 reading and the overall clinical picture when choosing oxygen delivery."
+          }
+        ]
+      },
+      {
+        "id": "phase2",
+        "title": "Treatment",
+        "description": "You have the patient on high-flow oxygen. His SpO2 is improving slightly. The patient has his prescribed albuterol MDI with him. You consider assisting with the MDI per your BLS protocols.",
+        "vitals": {
+          "bp": "128/76",
+          "hr": 102,
+          "rr": 22,
+          "spo2": 95,
+          "skin": "Warm, less diaphoretic",
+          "gcs": 15,
+          "lung_sounds": "Bilateral wheezing improving, still present throughout"
+        },
+        "questions": [
+          {
+            "id": "q6",
+            "type": "multi_select",
+            "text": "Before assisting with the patient's prescribed MDI, which conditions MUST be met? Select all that apply.",
+            "options": [
+              {"id": "a", "text": "The inhaler must be prescribed to this patient"},
+              {"id": "b", "text": "Medical control authorization (per local protocol)"},
+              {"id": "c", "text": "The patient must have a systolic BP above 100 mmHg"},
+              {"id": "d", "text": "The medication must not be expired"},
+              {"id": "e", "text": "The patient must be able to follow instructions for proper use"}
+            ],
+            "correct_answer": ["a", "b", "d", "e"],
+            "explanation": "EMT MDI-assist requirements include: the medication must be prescribed to the patient (A) - you cannot use another person's medication. Medical control must be contacted per local protocol (B). The medication must not be expired (D) as effectiveness decreases. The patient must be able to follow instructions (E) to properly coordinate inhalation with actuation. Blood pressure above 100 (C) is NOT a standard requirement for albuterol MDI-assist; however, tachycardia is an expected side effect to monitor.",
+            "points": 15,
+            "hint": "Think about what your protocols require before administering any patient medication."
+          },
+          {
+            "id": "q7",
+            "type": "ordered_list",
+            "text": "Arrange the proper steps for assisting with an MDI in the correct order:",
+            "options": [
+              {"id": "a", "text": "Coach the patient to exhale fully"},
+              {"id": "b", "text": "Shake the MDI vigorously for 5 seconds"},
+              {"id": "c", "text": "Have the patient seal lips around the mouthpiece and begin a slow deep inhalation while depressing the canister"},
+              {"id": "d", "text": "Instruct the patient to hold their breath for 10 seconds"},
+              {"id": "e", "text": "Remove the cap and attach spacer if available"}
+            ],
+            "correct_answer": ["e", "b", "a", "c", "d"],
+            "explanation": "The correct MDI sequence is: (1) Remove cap and attach spacer if available (E) - preparation step. (2) Shake vigorously (B) - ensures proper mixing of the medication. (3) Coach patient to exhale fully (A) - creates maximum space for medication inhalation. (4) Seal lips, begin slow deep inhalation, and depress canister simultaneously (C) - delivers medication deep into the airways. (5) Hold breath for 10 seconds (D) - allows medication to deposit in the lower airways for maximum effect. Using a spacer significantly improves drug delivery and is recommended whenever available.",
+            "points": 15,
+            "hint": "Think about preparing the device, preparing the patient, then delivering the medication."
+          },
+          {
+            "id": "q8",
+            "type": "multiple_choice",
+            "text": "After the MDI treatment, the patient's wheezing has improved and his SpO2 is now 95%. His heart rate has increased to 108 bpm. What is the significance of the increased heart rate?",
+            "options": [
+              {"id": "a", "text": "The patient's condition is worsening"},
+              {"id": "b", "text": "This is an expected side effect of albuterol (beta-2 agonist)"},
+              {"id": "c", "text": "The patient is having an allergic reaction to the medication"},
+              {"id": "d", "text": "The MDI dose was too high"}
+            ],
+            "correct_answer": "b",
+            "explanation": "Tachycardia is an expected side effect of albuterol, which is a beta-2 adrenergic agonist. While it primarily targets beta-2 receptors in the lungs (causing bronchodilation), it also has some beta-1 effect on the heart, increasing heart rate. Other expected side effects include tremor, nervousness, and palpitations. The improving wheezing and SpO2 indicate the medication is working (not worsening - A). This is not an allergic reaction (C) or overdose (D) - it is a known pharmacological effect.",
+            "points": 10,
+            "hint": "Consider the pharmacology of beta-2 agonists and their effects on the cardiovascular system."
+          },
+          {
+            "id": "q9",
+            "type": "multiple_choice",
+            "text": "The patient is improving but still has audible wheezing. He asks if he can use his inhaler again. What is the appropriate response?",
+            "options": [
+              {"id": "a", "text": "Allow another dose immediately"},
+              {"id": "b", "text": "Wait the appropriate interval per protocol (usually 1-2 minutes between puffs), reassess, and contact medical control for additional doses"},
+              {"id": "c", "text": "Refuse any additional doses since one treatment was given"},
+              {"id": "d", "text": "Switch to a different medication"}
+            ],
+            "correct_answer": "b",
+            "explanation": "Per most BLS protocols, if symptoms persist after the initial puff, you may assist with additional puffs after the appropriate interval (typically 1-2 minutes between puffs, up to the prescribed number). Medical control should be contacted for authorization of additional doses beyond the initial treatment. Immediate re-dosing (A) doesn't allow time for the medication to take effect. Refusing additional doses (C) is not appropriate when the patient remains symptomatic. EMTs cannot switch medications (D).",
+            "points": 10,
+            "hint": "Check your protocol for the number of puffs allowed and the interval between them."
+          },
+          {
+            "id": "q10",
+            "type": "multiple_choice",
+            "text": "Your patient is improving but you decide to transport. What is the MOST important reason to transport this patient even though he is improving?",
+            "options": [
+              {"id": "a", "text": "You need to document the call and cannot do that on scene"},
+              {"id": "b", "text": "Asthma exacerbations can rebound after bronchodilator effects wear off, and he needs corticosteroid therapy only available at the hospital"},
+              {"id": "c", "text": "His roommate wants him to go to the hospital"},
+              {"id": "d", "text": "All asthma patients must go to the hospital by protocol"}
+            ],
+            "correct_answer": "b",
+            "explanation": "The most important reason is the risk of rebound bronchospasm after the short-acting bronchodilator (albuterol) wears off (typically 4-6 hours). This patient needs corticosteroid therapy (oral or IV) which is only available at the hospital, and which takes hours to take full effect. Additionally, he stopped his controller medication, meaning the underlying inflammation is untreated. Documentation (A) can be done anywhere. Roommate preference (C) is not a medical reason. Not all asthma patients must go to the hospital (D) - patient refusal is always an option.",
+            "points": 10,
+            "hint": "Think about what happens when the albuterol wears off and what additional treatments this patient needs."
+          }
+        ]
+      }
+    ],
+    "learning_objectives": [
+      "Assess severity of respiratory distress using clinical indicators (positioning, speech, accessory muscle use)",
+      "Differentiate between normal and abnormal breath sounds in asthma presentations",
+      "Understand the role of controller vs. rescue medications in asthma management",
+      "Demonstrate proper MDI-assist technique as a BLS provider",
+      "Recognize expected side effects of beta-2 agonist medications",
+      "Make appropriate transport and oxygen therapy decisions for respiratory emergencies"
+    ],
+    "critical_actions": [
+      "Recognize severity of respiratory distress from visual cues",
+      "Administer high-flow oxygen for SpO2 below 94%",
+      "Properly assess breath sounds including identifying diminished sounds as a danger sign",
+      "Follow MDI-assist protocol correctly (prescription, medical control, technique)",
+      "Monitor for medication side effects after bronchodilator administration",
+      "Transport patient for definitive care despite clinical improvement"
+    ],
+    "common_errors": [
+      "Underestimating severity based on the patient being alert and oriented",
+      "Interpreting diminished breath sounds as improvement rather than worsening",
+      "Assisting with an expired or non-prescribed inhaler",
+      "Laying a dyspneic patient supine for transport",
+      "Failing to reassess after medication administration",
+      "Not recognizing the need for hospital-based corticosteroid therapy"
+    ],
+    "debrief_points": [
+      "Review the pathophysiology of asthma (inflammation vs. bronchospasm)",
+      "Discuss the difference between 'quiet chest' and 'clear lungs' in asthma",
+      "Review EMT scope of practice for MDI-assist and when to call medical control",
+      "Discuss when an asthma patient transitions from manageable to life-threatening",
+      "Review proper documentation of respiratory assessments and treatments"
+    ],
+    "equipment_needed": [
+      "Stethoscope",
+      "Blood pressure cuff",
+      "Pulse oximeter",
+      "Non-rebreather mask with oxygen tank",
+      "Patient's prescribed MDI",
+      "Spacer device (if available)",
+      "Stretcher with ability to position patient upright"
+    ],
+    "visibility": "official",
+    "is_published": true
+  },
+  {
+    "title": "Pediatric Febrile Seizure with Status Epilepticus",
+    "description": "A 3-year-old child is actively seizing with a high fever. The mother is frantic and reports the seizure has been ongoing for several minutes. This case covers pediatric seizure management, benzodiazepine administration, weight-based dosing, temperature management, and communication with distressed caregivers.",
+    "chief_complaint": "Seizure with fever",
+    "category": "Pediatric",
+    "subcategory": "Febrile Seizure / Status Epilepticus",
+    "difficulty": "advanced",
+    "applicable_programs": ["Paramedic"],
+    "estimated_duration_minutes": 30,
+    "patient_age": "3",
+    "patient_sex": "Female",
+    "patient_weight": "15 kg",
+    "patient_medical_history": ["Previous febrile seizure at age 18 months", "Recurrent ear infections"],
+    "patient_medications": ["Amoxicillin 400mg/5mL (started 2 days ago for ear infection)"],
+    "patient_allergies": "NKDA",
+    "dispatch_info": {
+      "call_type": "Medical - Pediatric Seizure",
+      "location": "Single-family residence",
+      "additional_info": "3yo female, actively seizing, high fever, mother very upset",
+      "priority": "Priority 1",
+      "caller": "Mother"
+    },
+    "scene_info": {
+      "environment": "Single-family home, child in living room on carpet",
+      "hazards": "Coffee table with sharp corners near child",
+      "access": "Front door unlocked, mother meets you at the door",
+      "bystanders": "Mother, 5-year-old sibling watching from hallway"
+    },
+    "phases": [
+      {
+        "id": "phase1",
+        "title": "Scene & Initial Seizure Management",
+        "description": "You enter the home to find a 3-year-old female on the living room floor having generalized tonic-clonic seizure activity. Her body is rigid with rhythmic jerking of all extremities. She is cyanotic around the lips. The mother reports the seizure started about 4 minutes ago. A coffee table with sharp corners is within reach of the child.",
+        "vitals": {
+          "hr": 168,
+          "rr": 8,
+          "spo2": 88,
+          "temp": "104.2 F (40.1 C)",
+          "gcs": 3,
+          "skin": "Hot, flushed, perioral cyanosis",
+          "pupils": "Bilateral 4mm, unable to assess reactivity during seizure"
+        },
+        "questions": [
+          {
+            "id": "q1",
+            "type": "ordered_list",
+            "text": "Arrange the following initial management priorities in the correct order for this actively seizing child:",
+            "options": [
+              {"id": "a", "text": "Move furniture and hazards away from the child"},
+              {"id": "b", "text": "Position the child on her side (recovery position)"},
+              {"id": "c", "text": "Establish IV access for medication administration"},
+              {"id": "d", "text": "Suction the airway if secretions are present"},
+              {"id": "e", "text": "Apply oxygen via blow-by or non-rebreather mask"}
+            ],
+            "correct_answer": ["a", "d", "e", "b", "c"],
+            "explanation": "Correct priority order: (1) Move hazards away (A) - protect the seizing child from injury. (2) Suction airway (D) - manage secretions that could cause aspiration. (3) Apply oxygen (E) - address the hypoxia (SpO2 88%) as early as possible. (4) Position on side (B) - lateral recumbent/recovery position to protect airway from secretions (if seizure allows). (5) IV access (C) - important for medication but should not delay the above interventions. Key principle: protect, oxygenate, then prepare for pharmacological intervention.",
+            "points": 15,
+            "hint": "Focus on safety and oxygenation before pharmacological intervention."
+          },
+          {
+            "id": "q2",
+            "type": "multiple_choice",
+            "text": "The mother is screaming and trying to hold the child down. What is the MOST appropriate response?",
+            "options": [
+              {"id": "a", "text": "Tell the mother to leave the room immediately"},
+              {"id": "b", "text": "Ignore the mother and focus entirely on the child"},
+              {"id": "c", "text": "Calmly explain that you need her to step back slightly, that you are helping her daughter, and that holding her down could cause injury"},
+              {"id": "d", "text": "Have your partner physically remove the mother from the room"}
+            ],
+            "correct_answer": "c",
+            "explanation": "Calm, empathetic communication is essential. Explain to the mother that restraining a seizing child can cause musculoskeletal injury. Acknowledge her fear, provide reassurance that you are helping, and direct her to stay nearby where she can see her child. Telling her to leave (A) or removing her (D) is unnecessarily harsh and could increase her distress. Ignoring her (B) misses an opportunity to gain a valuable historian and may increase her anxiety, making the scene harder to manage.",
+            "points": 10,
+            "hint": "Parents are both patients and valuable resources. Managing their emotions is part of your job."
+          },
+          {
+            "id": "q3",
+            "type": "multiple_choice",
+            "text": "You assess the child using a Broselow tape and determine she is approximately 15 kg. Why is this step critical before medication administration?",
+            "options": [
+              {"id": "a", "text": "It determines which size equipment to use only"},
+              {"id": "b", "text": "Pediatric medication doses are weight-based, and incorrect dosing can cause respiratory depression or be ineffective"},
+              {"id": "c", "text": "It is required for documentation purposes only"},
+              {"id": "d", "text": "Hospital staff will need this information later"}
+            ],
+            "correct_answer": "b",
+            "explanation": "Pediatric medication doses are calculated based on weight (mg/kg), making accurate weight estimation critical. Underdosing may be ineffective, while overdosing can cause dangerous side effects including respiratory depression, hypotension, and apnea. The Broselow tape provides quick weight estimation along with pre-calculated medication doses and equipment sizes. While equipment sizing (A), documentation (C), and hospital handoff (D) are valid secondary uses, the primary reason is safe medication dosing.",
+            "points": 10,
+            "hint": "Think about what happens if you give too much or too little medication to a child."
+          },
+          {
+            "id": "q4",
+            "type": "multiple_choice",
+            "text": "Which of the following is an appropriate immediate cooling measure for this febrile child?",
+            "options": [
+              {"id": "a", "text": "Submerge the child in ice water"},
+              {"id": "b", "text": "Remove excess clothing and blankets to allow passive cooling"},
+              {"id": "c", "text": "Apply alcohol rubs to the skin"},
+              {"id": "d", "text": "Administer rectal acetaminophen immediately during the seizure"}
+            ],
+            "correct_answer": "b",
+            "explanation": "Removing excess clothing and blankets allows passive cooling and is safe during an active seizure. Ice water immersion (A) can cause shivering, which generates more heat, and is dangerous in a seizing child. Alcohol rubs (C) are contraindicated in pediatrics due to risk of skin absorption causing toxicity and excessive rapid cooling. Rectal medications (D) should not be administered during active seizure activity due to risk of injury. Active cooling measures should be gentle - tepid cloths to forehead, axillae, and groin can be used once the seizure stops.",
+            "points": 10,
+            "hint": "Think about which methods are safe to use during an active seizure."
+          },
+          {
+            "id": "q5",
+            "type": "multiple_choice",
+            "text": "The mother reports the child had a febrile seizure at 18 months old that stopped on its own. This seizure has now been going for 6 minutes. What does this duration change about your management approach?",
+            "options": [
+              {"id": "a", "text": "Nothing - febrile seizures always stop on their own"},
+              {"id": "b", "text": "This is now status epilepticus (seizure > 5 minutes) and requires pharmacological intervention"},
+              {"id": "c", "text": "Continue waiting - seizures can last up to 15 minutes before intervention"},
+              {"id": "d", "text": "Begin CPR since the child has been seizing too long"}
+            ],
+            "correct_answer": "b",
+            "explanation": "A seizure lasting more than 5 minutes is defined as status epilepticus and requires pharmacological intervention with benzodiazepines. While simple febrile seizures typically stop on their own within 5 minutes, this seizure has exceeded that threshold. Status epilepticus is a neurological emergency that can cause permanent brain injury if not treated promptly. It does NOT always stop on its own (A). Waiting longer (C) risks neuronal damage. CPR (D) is not indicated unless the patient goes into cardiac arrest.",
+            "points": 10,
+            "hint": "There is a specific time threshold at which a seizure becomes status epilepticus."
+          }
+        ]
+      },
+      {
+        "id": "phase2",
+        "title": "Seizure Pharmacological Management",
+        "description": "The seizure has continued past 5 minutes. You have identified this as status epilepticus and need to administer medication to stop the seizure. You have attempted IV access but the child's veins are difficult to access during seizure activity.",
+        "vitals": {
+          "hr": 172,
+          "rr": 6,
+          "spo2": 85,
+          "temp": "104.0 F (40.0 C)",
+          "gcs": 3,
+          "skin": "Hot, flushed, worsening cyanosis"
+        },
+        "questions": [
+          {
+            "id": "q6",
+            "type": "multi_select",
+            "text": "Which benzodiazepines are appropriate first-line medications for pediatric status epilepticus? Select all that apply.",
+            "options": [
+              {"id": "a", "text": "Midazolam (Versed) - intranasal or IM"},
+              {"id": "b", "text": "Diazepam (Valium) - IV or rectal"},
+              {"id": "c", "text": "Lorazepam (Ativan) - IV"},
+              {"id": "d", "text": "Phenobarbital - IV"},
+              {"id": "e", "text": "Ketamine - IV"}
+            ],
+            "correct_answer": ["a", "b", "c"],
+            "explanation": "First-line anticonvulsants for status epilepticus are benzodiazepines: Midazolam (A) can be given intranasally or IM when IV access is unavailable, making it particularly useful in seizing pediatric patients with difficult IV access. Diazepam (B) can be given IV or rectally. Lorazepam (C) is considered the gold standard when IV access is available due to its longer duration of action. Phenobarbital (D) is a second-line agent used when benzodiazepines fail. Ketamine (E) is not a standard anticonvulsant in prehospital protocols.",
+            "points": 15,
+            "hint": "Which drug class is first-line for seizure termination, and which routes are available for each?"
+          },
+          {
+            "id": "q7",
+            "type": "numeric",
+            "text": "You decide to administer intranasal midazolam. The dose is 0.2 mg/kg. The child weighs 15 kg. Calculate the correct dose in milligrams.",
+            "correct_answer": 3,
+            "tolerance": 0.5,
+            "explanation": "The calculation is: 0.2 mg/kg x 15 kg = 3 mg. This is a standard intranasal midazolam dose for a 15 kg child. Always double-check your weight-based calculations in pediatrics. Common errors include decimal point mistakes (giving 30 mg instead of 3 mg would be a 10x overdose) or forgetting to multiply by the weight. Many services have pre-calculated dose charts on the Broselow tape to reduce calculation errors.",
+            "points": 15,
+            "hint": "Multiply the per-kg dose by the patient's weight in kilograms."
+          },
+          {
+            "id": "q8",
+            "type": "multiple_choice",
+            "text": "You have been unable to establish IV access after two attempts. What is the MOST appropriate alternative vascular access for this critically ill pediatric patient?",
+            "options": [
+              {"id": "a", "text": "Continue attempting IV access in other locations"},
+              {"id": "b", "text": "Intraosseous (IO) access in the proximal tibia"},
+              {"id": "c", "text": "External jugular vein cannulation"},
+              {"id": "d", "text": "Central venous access in the femoral vein"}
+            ],
+            "correct_answer": "b",
+            "explanation": "Intraosseous (IO) access is the recommended alternative to IV access in critically ill pediatric patients when IV access cannot be rapidly established (typically after 2 failed attempts or 90 seconds). The proximal tibia is the preferred site in pediatrics. IO access allows rapid administration of all medications and fluids. Continuing IV attempts (A) delays critical medication. External jugular (C) is technically challenging in a seizing child. Femoral central lines (D) are not within prehospital scope and are impractical during active seizures.",
+            "points": 10,
+            "hint": "What access route is recommended when you can't get an IV in a critically ill child?"
+          },
+          {
+            "id": "q9",
+            "type": "multiple_choice",
+            "text": "After administering intranasal midazolam, the child's respiratory rate drops to 4 breaths per minute and SpO2 continues to fall. What is your IMMEDIATE action?",
+            "options": [
+              {"id": "a", "text": "Administer naloxone to reverse the benzodiazepine"},
+              {"id": "b", "text": "Begin bag-valve-mask ventilations with 100% oxygen at age-appropriate rate"},
+              {"id": "c", "text": "Wait for the medication to reach full effect - respiratory depression is expected"},
+              {"id": "d", "text": "Perform endotracheal intubation immediately"}
+            ],
+            "correct_answer": "b",
+            "explanation": "Respiratory depression is a known side effect of benzodiazepines and requires immediate airway management with BVM ventilations at an age-appropriate rate (20-30 breaths per minute for a 3-year-old). Naloxone (A) reverses opioids, not benzodiazepines (flumazenil reverses benzodiazepines but is NOT used in the seizure setting as it can cause refractory seizures). Simply waiting (C) is dangerous as the patient needs ventilatory support now. Intubation (D) may become necessary but BVM is the immediate intervention.",
+            "points": 15,
+            "hint": "What is the immediate intervention for inadequate breathing in any patient?"
+          },
+          {
+            "id": "q10",
+            "type": "multiple_choice",
+            "text": "When providing BVM ventilations to this 3-year-old, which size mask and ventilation technique is MOST appropriate?",
+            "options": [
+              {"id": "a", "text": "Adult-size mask with two-hand technique, ventilating at 20 breaths per minute"},
+              {"id": "b", "text": "Pediatric-size mask with E-C clamp technique, ventilating at 20-30 breaths per minute with just enough volume to see chest rise"},
+              {"id": "c", "text": "Infant-size mask with jaw thrust, ventilating at 10-12 breaths per minute"},
+              {"id": "d", "text": "Pediatric-size mask with head-tilt chin-lift, ventilating as fast as possible"}
+            ],
+            "correct_answer": "b",
+            "explanation": "A pediatric-sized mask that covers the nose and mouth without covering the eyes is appropriate. The E-C clamp technique provides a good seal while maintaining jaw position. Ventilation rate for a child (1-8 years) is 20-30 breaths per minute. Use just enough volume to see gentle chest rise to avoid gastric distension and barotrauma. Adult mask (A) is too large. Infant mask (C) is too small for a 3-year-old. Ventilating as fast as possible (D) causes gastric distension and increases intrathoracic pressure.",
+            "points": 10,
+            "hint": "Consider the correct equipment size and the age-appropriate ventilation rate."
+          }
+        ]
+      },
+      {
+        "id": "phase3",
+        "title": "Post-Ictal Care & Transport",
+        "description": "Three minutes after the midazolam administration, the seizure activity stops. The child is now in a post-ictal state. She is unresponsive but breathing spontaneously with BVM assistance discontinued. You continue to monitor closely.",
+        "vitals": {
+          "hr": 132,
+          "rr": 20,
+          "spo2": 96,
+          "temp": "103.1 F (39.5 C)",
+          "gcs": 10,
+          "gcs_breakdown": "E2 V3 M5",
+          "skin": "Warm, color improving, still flushed",
+          "pupils": "PERRL, 3mm bilateral"
+        },
+        "questions": [
+          {
+            "id": "q11",
+            "type": "multi_select",
+            "text": "During the post-ictal phase, which assessments are MOST important? Select all that apply.",
+            "options": [
+              {"id": "a", "text": "Serial GCS assessments to monitor for improving mental status"},
+              {"id": "b", "text": "Blood glucose level"},
+              {"id": "c", "text": "Continuous pulse oximetry and capnography"},
+              {"id": "d", "text": "Detailed neurological exam including cranial nerves"},
+              {"id": "e", "text": "Ongoing temperature monitoring"}
+            ],
+            "correct_answer": ["a", "b", "c", "e"],
+            "explanation": "Key post-ictal assessments include: Serial GCS (A) to track neurological improvement - failure to improve suggests ongoing seizure activity or other pathology. Blood glucose (B) is critical as seizures consume glucose rapidly and hypoglycemia can both cause and result from seizures. Continuous SpO2 and EtCO2 monitoring (C) to detect respiratory depression from benzodiazepines. Temperature monitoring (E) to track fever response to cooling measures. A detailed cranial nerve exam (D) is impractical in a post-ictal 3-year-old and is more appropriate for the emergency department.",
+            "points": 15,
+            "hint": "Think about what can go wrong in the post-ictal period and what you need to monitor."
+          },
+          {
+            "id": "q12",
+            "type": "multiple_choice",
+            "text": "You check the child's blood glucose and it reads 62 mg/dL. What is the significance of this finding?",
+            "options": [
+              {"id": "a", "text": "Normal for a 3-year-old - no intervention needed"},
+              {"id": "b", "text": "Mildly low - monitor and recheck in 15 minutes"},
+              {"id": "c", "text": "Low for a pediatric patient post-seizure - administer dextrose per protocol"},
+              {"id": "d", "text": "Critically low - begin aggressive glucose replacement"}
+            ],
+            "correct_answer": "c",
+            "explanation": "A blood glucose of 62 mg/dL is below the normal threshold for a pediatric patient (generally 70 mg/dL is considered the lower limit). Post-seizure patients have depleted glycogen stores through intense muscular activity, and hypoglycemia can trigger additional seizures. Per most pediatric protocols, this level warrants dextrose administration (typically D10W 5 mL/kg or D25W 2 mL/kg IV/IO). It is not normal (A) or something to simply watch (B). While low, 62 mg/dL is not critically low (D) - critically low would be below 40-50 mg/dL.",
+            "points": 10,
+            "hint": "Consider normal pediatric glucose ranges and the metabolic demands of sustained seizure activity."
+          },
+          {
+            "id": "q13",
+            "type": "multiple_choice",
+            "text": "The mother asks you if her daughter is going to be okay. She is crying and asking if the seizure caused brain damage. What is the MOST appropriate response?",
+            "options": [
+              {"id": "a", "text": "Tell her the seizure was probably caused by the fever and is common in children, and that her daughter is responding to treatment"},
+              {"id": "b", "text": "Tell her you don't know and she needs to ask the doctor"},
+              {"id": "c", "text": "Reassure her that there is absolutely no chance of brain damage"},
+              {"id": "d", "text": "Explain the pathophysiology of febrile seizures in medical terminology"}
+            ],
+            "correct_answer": "a",
+            "explanation": "Honest, compassionate communication is essential. Acknowledging the likely cause (fever) and noting that febrile seizures are common in children (affecting 2-5% of children under 5) provides context without false promises. Noting that the child is responding to treatment is truthful and reassuring. Simply deferring to the doctor (B) feels dismissive. Guaranteeing no brain damage (C) makes promises you cannot keep. Medical jargon (D) will increase confusion and anxiety in an already distressed parent.",
+            "points": 10,
+            "hint": "Balance honesty with compassion. Give information that is both truthful and reassuring."
+          },
+          {
+            "id": "q14",
+            "type": "multiple_choice",
+            "text": "You are preparing for transport. The child's GCS has improved to 12 (E3 V4 M5). What transport priority and considerations apply?",
+            "options": [
+              {"id": "a", "text": "Low priority - the seizure has stopped and the child is improving"},
+              {"id": "b", "text": "High priority - status epilepticus with benzodiazepine administration requires close monitoring during transport, contact receiving facility early"},
+              {"id": "c", "text": "Moderate priority - routine transport with standard monitoring"},
+              {"id": "d", "text": "Critical - lights and sirens are mandatory"}
+            ],
+            "correct_answer": "b",
+            "explanation": "This remains a high-priority transport. The child had status epilepticus requiring benzodiazepine administration, has ongoing fever, post-ictal altered mental status, and received medications that can cause respiratory depression. Early notification to the receiving facility allows them to prepare for a potentially complex pediatric patient. The child could re-seize during transport. Low priority (A) underestimates the complexity. Routine (C) doesn't account for the potential for deterioration. While urgent, lights and sirens (D) are not automatically mandatory and should be based on patient condition and local protocol.",
+            "points": 10,
+            "hint": "Consider the potential complications that could occur during transport in this patient."
+          }
+        ]
+      }
+    ],
+    "learning_objectives": [
+      "Manage an actively seizing pediatric patient using appropriate safety measures",
+      "Differentiate simple febrile seizures from status epilepticus based on duration",
+      "Calculate weight-based medication doses using Broselow tape measurements",
+      "Administer benzodiazepines via appropriate routes (IN, IM, IV, IO) for seizure termination",
+      "Manage benzodiazepine-induced respiratory depression in pediatric patients",
+      "Perform appropriate post-ictal assessment including glucose monitoring",
+      "Communicate effectively with distressed caregivers during pediatric emergencies"
+    ],
+    "critical_actions": [
+      "Protect the seizing child from environmental hazards",
+      "Manage airway and oxygenation during active seizure",
+      "Obtain accurate weight estimation using Broselow tape",
+      "Recognize status epilepticus (seizure > 5 minutes) and initiate pharmacological intervention",
+      "Calculate and administer correct weight-based benzodiazepine dose",
+      "Manage respiratory depression with BVM ventilations at age-appropriate rate",
+      "Check blood glucose in the post-ictal period",
+      "Maintain calm, empathetic communication with the caregiver"
+    ],
+    "common_errors": [
+      "Attempting to restrain the seizing child or place objects in the mouth",
+      "Medication dose calculation errors (decimal point errors, wrong weight)",
+      "Failing to prepare airway equipment before administering benzodiazepines",
+      "Using adult ventilation rates or volumes for pediatric BVM ventilations",
+      "Neglecting to check blood glucose in the post-ictal period",
+      "Providing false reassurances to parents or being dismissive of their concerns",
+      "Administering naloxone for benzodiazepine-related respiratory depression"
+    ],
+    "debrief_points": [
+      "Review the classification of febrile seizures (simple vs. complex)",
+      "Discuss the pathophysiology of status epilepticus and neuronal injury",
+      "Review pediatric weight estimation methods and dose calculation safeguards",
+      "Discuss the advantages and limitations of each benzodiazepine route in pediatrics",
+      "Review family-centered care principles in pediatric emergencies",
+      "Discuss the post-ictal period and what to expect during recovery"
+    ],
+    "equipment_needed": [
+      "Broselow tape for weight/dose estimation",
+      "Pediatric BVM with appropriately sized mask",
+      "Midazolam for intranasal or IM administration",
+      "Mucosal atomizer device (MAD) for intranasal delivery",
+      "IO needle (pediatric size)",
+      "Pulse oximeter with pediatric probe",
+      "Glucometer and test strips",
+      "Suction unit with pediatric catheter",
+      "Temperature assessment device",
+      "Dextrose (D10W or D25W)",
+      "IV supplies (appropriately sized catheters)"
+    ],
+    "visibility": "official",
+    "is_published": true
+  },
+  {
+    "title": "Precipitous Field Delivery with Nuchal Cord",
+    "description": "A 32-year-old G3P2 female presents with active contractions and crowning on EMS arrival. There is no time for transport. This case covers field delivery preparation, normal delivery technique, nuchal cord management, APGAR scoring, post-delivery maternal and newborn care, and management of post-partum hemorrhage.",
+    "chief_complaint": "Imminent delivery - crowning",
+    "category": "OB/GYN",
+    "subcategory": "Precipitous Delivery",
+    "difficulty": "intermediate",
+    "applicable_programs": ["Paramedic"],
+    "estimated_duration_minutes": 25,
+    "patient_age": "32",
+    "patient_sex": "Female",
+    "patient_weight": "78 kg",
+    "patient_medical_history": ["G3P2 (2 previous uncomplicated vaginal deliveries)", "Gestational age 39 weeks", "Prenatal care up to date"],
+    "patient_medications": ["Prenatal vitamins"],
+    "patient_allergies": "NKDA",
+    "dispatch_info": {
+      "call_type": "Medical - Childbirth/OB Emergency",
+      "location": "Residential address, single-story home",
+      "additional_info": "32yo female, baby is coming, contractions very close together, husband says he can see the head",
+      "priority": "Priority 1",
+      "caller": "Husband"
+    },
+    "scene_info": {
+      "environment": "Clean, well-lit bedroom in a single-story home",
+      "hazards": "None identified",
+      "access": "Husband meets you at the door, patient on bed in master bedroom",
+      "bystanders": "Husband present, two older children (ages 4 and 6) in another room with neighbor"
+    },
+    "phases": [
+      {
+        "id": "phase1",
+        "title": "Scene Assessment & Delivery Preparation",
+        "description": "You arrive to find a 32-year-old female lying on her back on the bed. She is in obvious distress from contractions and states she feels the urge to push. Her husband reports contractions are less than 1 minute apart. Visual inspection confirms crowning - you can see the top of the baby's head during contractions.",
+        "vitals": {
+          "bp": "128/78",
+          "hr": 96,
+          "rr": 22,
+          "spo2": 99,
+          "skin": "Warm, diaphoretic from labor"
+        },
+        "questions": [
+          {
+            "id": "q1",
+            "type": "multi_select",
+            "text": "Upon confirming crowning, which BSI/PPE measures are ESSENTIAL for delivery? Select all that apply.",
+            "options": [
+              {"id": "a", "text": "Double gloving with sterile gloves"},
+              {"id": "b", "text": "Face shield or goggles for splash protection"},
+              {"id": "c", "text": "Gown or fluid-resistant covering"},
+              {"id": "d", "text": "N95 respirator"},
+              {"id": "e", "text": "Shoe covers"}
+            ],
+            "correct_answer": ["a", "b", "c"],
+            "explanation": "Delivery involves significant exposure to blood and body fluids. Essential PPE includes: Double gloving with sterile gloves (A) protects against bloodborne pathogens and provides a backup if the outer glove tears. Face shield or goggles (B) protect against splash exposure of amniotic fluid and blood. Gown or fluid-resistant covering (C) protects your uniform and skin from fluid exposure. N95 (D) is not required unless airborne precautions are indicated. Shoe covers (E) are optional and not a priority in the field setting.",
+            "points": 10,
+            "hint": "Think about which body fluids you will be exposed to during delivery."
+          },
+          {
+            "id": "q2",
+            "type": "multiple_choice",
+            "text": "The patient's contractions are less than 1 minute apart with visible crowning. Should you attempt transport to the hospital?",
+            "options": [
+              {"id": "a", "text": "Yes - always transport for delivery in the safest environment"},
+              {"id": "b", "text": "No - delivery is imminent with crowning and rapid contractions; prepare for field delivery"},
+              {"id": "c", "text": "Yes - but use lights and sirens to get there faster"},
+              {"id": "d", "text": "Call for a helicopter to expedite transport"}
+            ],
+            "correct_answer": "b",
+            "explanation": "When delivery is imminent (crowning present, contractions < 2 minutes apart, strong urge to push), attempting transport risks delivering the baby in the ambulance during movement, which is far more dangerous than a controlled field delivery. Crowning means delivery will occur within minutes. Transport attempts (A, C) could result in delivery during movement without proper positioning. Helicopter (D) is inappropriate and would arrive after the delivery occurs.",
+            "points": 10,
+            "hint": "What are the risks of moving a patient who is about to deliver?"
+          },
+          {
+            "id": "q3",
+            "type": "multiple_choice",
+            "text": "As you prepare for delivery, what should you assess about the amniotic fluid if the membranes have ruptured?",
+            "options": [
+              {"id": "a", "text": "Temperature of the fluid"},
+              {"id": "b", "text": "Color and consistency - specifically looking for meconium staining (green/brown discoloration)"},
+              {"id": "c", "text": "Volume of fluid only"},
+              {"id": "d", "text": "Amniotic fluid assessment is not important in the field"}
+            ],
+            "correct_answer": "b",
+            "explanation": "The color of amniotic fluid is critical: normal fluid is clear to slightly yellowish. Green or brown discoloration indicates meconium staining, which means the fetus has passed stool in utero, often a sign of fetal distress. Meconium-stained fluid increases the risk of meconium aspiration syndrome in the newborn, which requires specific airway management. Volume (C) and temperature (A) are less clinically relevant in the immediate delivery. Fluid assessment (D) is absolutely important.",
+            "points": 10,
+            "hint": "What does discolored amniotic fluid tell you about the fetus?"
+          },
+          {
+            "id": "q4",
+            "type": "multiple_choice",
+            "text": "You set up your OB kit. Which of the following items should be within immediate reach before the delivery begins?",
+            "options": [
+              {"id": "a", "text": "Suction device, cord clamps, sterile scissors, towels, and bulb syringe"},
+              {"id": "b", "text": "Only cord clamps and scissors"},
+              {"id": "c", "text": "Cardiac monitor and 12-lead ECG"},
+              {"id": "d", "text": "IV supplies and oxytocin"}
+            ],
+            "correct_answer": "a",
+            "explanation": "Essential items for immediate delivery include: suction device for clearing the airway, cord clamps (2) for clamping the umbilical cord, sterile scissors or scalpel for cutting the cord, clean towels for drying and warming the newborn (stimulating breathing), and a bulb syringe for suctioning the mouth and nose. Having only clamps and scissors (B) leaves you unprepared for airway management. Cardiac monitor (C) is not the priority. Oxytocin (D) is a post-delivery medication and IV supplies can be set up after delivery.",
+            "points": 10,
+            "hint": "Think about what you need for the baby's first moments of life."
+          }
+        ]
+      },
+      {
+        "id": "phase2",
+        "title": "Delivery Management",
+        "description": "The mother begins pushing with contractions. The baby's head is delivering. As the head emerges, you notice the umbilical cord is wrapped around the baby's neck (nuchal cord). The amniotic fluid appears clear.",
+        "vitals": {
+          "mother_bp": "132/82",
+          "mother_hr": 104,
+          "mother_rr": 24
+        },
+        "questions": [
+          {
+            "id": "q5",
+            "type": "ordered_list",
+            "text": "Arrange the following delivery steps in the correct order:",
+            "options": [
+              {"id": "a", "text": "Support the head as it delivers, allowing it to turn naturally to one side"},
+              {"id": "b", "text": "Check for nuchal cord by feeling around the baby's neck"},
+              {"id": "c", "text": "Apply gentle downward traction to deliver the anterior shoulder"},
+              {"id": "d", "text": "Suction the mouth first, then the nose"},
+              {"id": "e", "text": "Apply gentle upward traction to deliver the posterior shoulder"}
+            ],
+            "correct_answer": ["a", "b", "d", "c", "e"],
+            "explanation": "Correct delivery sequence: (1) Support the head during delivery and allow it to rotate naturally (restitution) - never pull on the head. (2) Immediately check for nuchal cord by gently sliding fingers around the neck. (3) Suction mouth then nose (mouth first to prevent aspiration of oral secretions during the gasp reflex triggered by nasal suctioning). (4) Gentle downward traction on the head to deliver the anterior (upper) shoulder. (5) Gentle upward traction to deliver the posterior (lower) shoulder. The body typically delivers rapidly after the shoulders.",
+            "points": 15,
+            "hint": "Remember: head delivery, cord check, airway clearance, then shoulders."
+          },
+          {
+            "id": "q6",
+            "type": "multiple_choice",
+            "text": "You discover a nuchal cord (umbilical cord wrapped around the baby's neck). The cord is loose. What is the CORRECT management?",
+            "options": [
+              {"id": "a", "text": "Immediately clamp and cut the cord before delivering the body"},
+              {"id": "b", "text": "Gently slip the cord over the baby's head and proceed with delivery"},
+              {"id": "c", "text": "Push the baby's head back in and perform an emergency cesarean"},
+              {"id": "d", "text": "Pull firmly on the cord to create slack"}
+            ],
+            "correct_answer": "b",
+            "explanation": "A loose nuchal cord should be gently slipped over the baby's head (or in some cases, over the shoulders) and delivery should proceed normally. This is the most common presentation and is usually easily managed. Clamping and cutting (A) is reserved for a TIGHT nuchal cord that cannot be slipped over the head, as cutting the cord before delivery ends placental oxygenation. Pushing the head back (C) is the Zavanelli maneuver, which is a last resort for shoulder dystocia, not nuchal cord. Pulling the cord (D) risks rupturing it and causing hemorrhage.",
+            "points": 15,
+            "hint": "The management of nuchal cord depends on whether it is loose or tight."
+          },
+          {
+            "id": "q7",
+            "type": "multiple_choice",
+            "text": "The baby delivers and you immediately dry and stimulate the newborn. The baby cries weakly and has blue extremities but a pink trunk. What does this color pattern indicate?",
+            "options": [
+              {"id": "a", "text": "Severe hypoxia requiring immediate CPR"},
+              {"id": "b", "text": "Acrocyanosis - a normal finding in the first few minutes of life"},
+              {"id": "c", "text": "Central cyanosis indicating respiratory failure"},
+              {"id": "d", "text": "Hypothermia"}
+            ],
+            "correct_answer": "b",
+            "explanation": "Acrocyanosis (blue hands and feet with a pink trunk) is a normal finding in the first minutes of life as the newborn's peripheral circulation adapts to the extrauterine environment. This is different from central cyanosis (blue trunk, face, mucous membranes) which would indicate hypoxia. A weak cry with acrocyanosis is within normal limits for a newborn in the first 1-2 minutes. This does NOT require CPR (A), is not central cyanosis (C), and while the baby should be kept warm, acrocyanosis alone does not indicate hypothermia (D).",
+            "points": 10,
+            "hint": "Differentiate between central and peripheral cyanosis in the newborn."
+          },
+          {
+            "id": "q8",
+            "type": "multiple_choice",
+            "text": "One minute after delivery, you perform the 1-minute APGAR assessment. The baby has a heart rate of 130, weak cry, some flexion of extremities, grimace with suctioning, and acrocyanosis. What is the APGAR score?",
+            "options": [
+              {"id": "a", "text": "5"},
+              {"id": "b", "text": "7"},
+              {"id": "c", "text": "8"},
+              {"id": "d", "text": "9"}
+            ],
+            "correct_answer": "b",
+            "explanation": "APGAR scoring: Appearance (color) - acrocyanosis = 1 point. Pulse - HR > 100 = 2 points. Grimace (reflex irritability) - grimace with suction = 1 point. Activity (muscle tone) - some flexion = 1 point. Respiration - weak cry = 1 point, but the baby IS crying so some protocols score this as a 2. Using conservative scoring: 1 + 2 + 1 + 1 + 2 = 7. An APGAR of 7 at 1 minute indicates a newborn that is doing reasonably well but needs close monitoring. Scores 7-10 are generally reassuring.",
+            "points": 10,
+            "hint": "Remember APGAR: Appearance, Pulse, Grimace, Activity, Respiration. Each scored 0, 1, or 2."
+          },
+          {
+            "id": "q9",
+            "type": "multiple_choice",
+            "text": "When should you clamp and cut the umbilical cord?",
+            "options": [
+              {"id": "a", "text": "Immediately after delivery before the baby takes its first breath"},
+              {"id": "b", "text": "After the cord stops pulsating, typically 1-3 minutes after delivery (delayed cord clamping)"},
+              {"id": "c", "text": "Only at the hospital - never cut the cord in the field"},
+              {"id": "d", "text": "After the placenta delivers"}
+            ],
+            "correct_answer": "b",
+            "explanation": "Current evidence supports delayed cord clamping (DCC), waiting until the cord stops pulsating (typically 1-3 minutes). DCC allows additional blood volume transfer to the newborn, increasing iron stores and improving transitional circulation. Immediate clamping (A) is no longer recommended except in emergencies where the newborn requires resuscitation. Cord can and should be cut in the field (C) when indicated. Waiting for the placenta (D) is unnecessarily long in most situations. Place two clamps 4-6 inches from the newborn's abdomen and cut between them.",
+            "points": 10,
+            "hint": "Current evidence has changed the timing recommendation for cord clamping."
+          }
+        ]
+      },
+      {
+        "id": "phase3",
+        "title": "Post-Delivery Care",
+        "description": "The baby is delivered and vigorous. The cord has been clamped and cut. You now need to manage the mother and newborn in the post-delivery period. The mother reports increased vaginal bleeding.",
+        "vitals": {
+          "mother_bp": "108/64",
+          "mother_hr": 98,
+          "mother_rr": 18,
+          "mother_spo2": 99,
+          "newborn_hr": 148,
+          "newborn_rr": 42,
+          "newborn_spo2": 94,
+          "newborn_color": "Pink trunk, improving extremity color"
+        },
+        "questions": [
+          {
+            "id": "q10",
+            "type": "multiple_choice",
+            "text": "The placenta has not yet delivered. The mother reports increasing cramping. What is the appropriate management?",
+            "options": [
+              {"id": "a", "text": "Pull on the umbilical cord to speed placental delivery"},
+              {"id": "b", "text": "Allow the placenta to deliver spontaneously; do not pull on the cord. Watch for signs of placental separation (gush of blood, cord lengthening, uterine contraction)"},
+              {"id": "c", "text": "Manually extract the placenta"},
+              {"id": "d", "text": "The placenta must be delivered before transport and should be removed immediately"}
+            ],
+            "correct_answer": "b",
+            "explanation": "The placenta should be allowed to deliver spontaneously. Signs of placental separation include a sudden gush of blood, lengthening of the umbilical cord, and the uterus becoming firm and globular. NEVER pull on the cord (A) as this can cause uterine inversion (a life-threatening emergency) or cord separation leaving placental fragments behind. Manual extraction (C) is a physician-level procedure. The placenta does not need to deliver before transport (D) - if it hasn't delivered within 20-30 minutes, transport with the placenta in place.",
+            "points": 10,
+            "hint": "What are the risks of aggressive placental management?"
+          },
+          {
+            "id": "q11",
+            "type": "multiple_choice",
+            "text": "After placental delivery, you notice the mother has significant vaginal bleeding that is soaking through pads rapidly. Her BP is 108/64 and HR 98. What is the MOST important initial intervention?",
+            "options": [
+              {"id": "a", "text": "Pack the vagina with gauze to control bleeding"},
+              {"id": "b", "text": "Perform fundal massage by firmly massaging the uterine fundus through the abdominal wall"},
+              {"id": "c", "text": "Elevate the patient's legs and administer IV fluids only"},
+              {"id": "d", "text": "Apply external pressure to the perineum"}
+            ],
+            "correct_answer": "b",
+            "explanation": "Uterine atony (failure of the uterus to contract after delivery) is the most common cause of post-partum hemorrhage. Fundal massage stimulates uterine contraction, which compresses the blood vessels at the placental attachment site. This is the first-line intervention for post-partum bleeding. Vaginal packing (A) does not address the source of bleeding (the uterus). IV fluids (C) support volume but do not control the hemorrhage source. Perineal pressure (D) does not affect uterine bleeding. Have the mother breastfeed if possible, as this stimulates natural oxytocin release.",
+            "points": 15,
+            "hint": "What is the most common cause of post-partum hemorrhage, and how do you address it mechanically?"
+          },
+          {
+            "id": "q12",
+            "type": "multiple_choice",
+            "text": "What is the MOST important concern for the newborn during transport?",
+            "options": [
+              {"id": "a", "text": "Ensuring the newborn is properly restrained in a car seat"},
+              {"id": "b", "text": "Preventing hypothermia by keeping the newborn dry, warm, and skin-to-skin with mother if stable"},
+              {"id": "c", "text": "Starting an IV on the newborn for fluid administration"},
+              {"id": "d", "text": "Performing a complete head-to-toe assessment during transport"}
+            ],
+            "correct_answer": "b",
+            "explanation": "Hypothermia prevention is the most critical concern for newborn transport. Newborns lose heat rapidly through evaporation, convection, conduction, and radiation due to their high surface area-to-body weight ratio and thin skin. Keep the newborn dry (replace wet towels with dry ones), wrap warmly, cover the head (significant heat loss from the head), and place skin-to-skin with the mother if both are stable. A car seat (A) is not practical for a newborn in an ambulance. IV (C) is not routinely needed for a healthy newborn. Complete assessment (D) can be done at the hospital.",
+            "points": 10,
+            "hint": "Newborns have a disproportionately large surface area and lose heat quickly."
+          },
+          {
+            "id": "q13",
+            "type": "multi_select",
+            "text": "Which of the following should be documented and communicated to the receiving hospital? Select all that apply.",
+            "options": [
+              {"id": "a", "text": "Time of delivery and 1-minute and 5-minute APGAR scores"},
+              {"id": "b", "text": "Presence and management of nuchal cord"},
+              {"id": "c", "text": "Estimated blood loss and response to fundal massage"},
+              {"id": "d", "text": "Amniotic fluid color (clear, meconium-stained)"},
+              {"id": "e", "text": "Whether the placenta delivered intact and time of delivery"}
+            ],
+            "correct_answer": ["a", "b", "c", "d", "e"],
+            "explanation": "ALL of these items are critical for hospital handoff: Delivery time and APGAR scores (A) establish the newborn's condition timeline. Nuchal cord presence and management (B) alerts to potential complications. Blood loss and fundal massage response (C) guides hemorrhage management. Amniotic fluid color (D) alerts to meconium aspiration risk. Placental delivery status (E) is critical - if the placenta is incomplete, retained fragments can cause ongoing hemorrhage and infection. Thorough documentation and communication improve continuity of care.",
+            "points": 10,
+            "hint": "Think about what the hospital needs to know to continue caring for both patients."
+          }
+        ]
+      }
+    ],
+    "learning_objectives": [
+      "Assess a patient in active labor and determine whether field delivery is necessary",
+      "Prepare appropriate equipment and BSI for emergency field delivery",
+      "Perform a normal cephalic delivery including management of nuchal cord",
+      "Assess newborn status using the APGAR scoring system",
+      "Manage post-partum hemorrhage with uterine fundal massage",
+      "Implement neonatal thermoregulation strategies",
+      "Communicate effectively with the hospital regarding delivery complications"
+    ],
+    "critical_actions": [
+      "Don appropriate PPE including face/eye protection for splash hazard",
+      "Correctly assess for imminent delivery (crowning, contraction frequency)",
+      "Assess amniotic fluid for meconium staining",
+      "Check for and manage nuchal cord before delivering the body",
+      "Suction mouth before nose in the newborn",
+      "Perform 1-minute and 5-minute APGAR assessments",
+      "Apply delayed cord clamping when appropriate",
+      "Perform fundal massage for post-partum hemorrhage",
+      "Maintain newborn thermoregulation throughout care and transport"
+    ],
+    "common_errors": [
+      "Attempting transport when delivery is imminent (crowning present)",
+      "Pulling on the umbilical cord to hasten placental delivery",
+      "Suctioning nose before mouth in the newborn",
+      "Immediately clamping and cutting the cord when delayed clamping is appropriate",
+      "Failing to check for nuchal cord after head delivery",
+      "Inadequate thermoregulation of the newborn",
+      "Not performing fundal massage for post-partum bleeding",
+      "Incomplete documentation of delivery details for hospital handoff"
+    ],
+    "debrief_points": [
+      "Review the indications for field delivery vs. transport",
+      "Discuss loose vs. tight nuchal cord management",
+      "Review the evidence for delayed cord clamping and its benefits",
+      "Discuss the APGAR scoring system and its clinical significance",
+      "Review the causes and management of post-partum hemorrhage",
+      "Discuss neonatal resuscitation algorithm (NRP) for non-vigorous newborns",
+      "Review communication strategies with receiving facilities for OB emergencies"
+    ],
+    "equipment_needed": [
+      "OB delivery kit (sterile)",
+      "Cord clamps (x2) and sterile scissors/scalpel",
+      "Bulb syringe for suctioning",
+      "Sterile towels and warm blankets",
+      "Face shield or goggles",
+      "Sterile gloves (2 pairs)",
+      "Gown or fluid-resistant covering",
+      "Infant BVM with newborn mask",
+      "Pulse oximeter with neonatal probe",
+      "Sterile gauze and absorbent pads",
+      "Timer or watch for APGAR timing",
+      "Infant warming wrap or hat"
+    ],
+    "visibility": "official",
+    "is_published": true
+  }
+]

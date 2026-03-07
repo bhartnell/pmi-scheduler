@@ -15,6 +15,7 @@ import {
   GraduationCap,
   Award,
   BookOpen,
+  BookOpenCheck,
   Settings,
   UserPlus,
   Briefcase,
@@ -903,6 +904,29 @@ export default function HomePage() {
                   <span className="px-2 py-1 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-full">Progress</span>
                   <span className="px-2 py-1 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-full">Labs</span>
                   <span className="px-2 py-1 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-full">Documents</span>
+                </div>
+              </div>
+            </Link>
+          )}
+
+          {/* Case Studies Card - instructor+ and students */}
+          {currentUser && effectiveRole && (hasMinRole(effectiveRole, 'instructor') || effectiveRole === 'student') && (
+            <Link
+              href="/cases"
+              className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
+            >
+              <div className="flex flex-col items-center text-center">
+                <div className="w-16 h-16 bg-orange-100 dark:bg-orange-900/30 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-orange-200 dark:group-hover:bg-orange-900/50 transition-colors">
+                  <BookOpenCheck className="w-8 h-8 text-orange-600 dark:text-orange-400" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Case Studies</h3>
+                <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
+                  Practice clinical scenarios with interactive patient cases.
+                </p>
+                <div className="flex flex-wrap justify-center gap-2 text-xs">
+                  <span className="px-2 py-1 bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 rounded-full">Practice</span>
+                  <span className="px-2 py-1 bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 rounded-full">Scenarios</span>
+                  <span className="px-2 py-1 bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 rounded-full">Assessment</span>
                 </div>
               </div>
             </Link>
