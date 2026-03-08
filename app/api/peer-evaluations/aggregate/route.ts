@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
           first_name,
           last_name,
           cohort_id,
-          cohort:cohorts(id, name)
+          cohort:cohorts!students_cohort_id_fkey(id, cohort_number, program:programs(abbreviation))
         ),
         lab_day:lab_days!peer_evaluations_lab_day_id_fkey(id, date, title)
       `);

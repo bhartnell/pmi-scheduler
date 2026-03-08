@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
       .from('station_completions')
       .select(`
         *,
-        student:students(id, first_name, last_name, cohort_id, cohort:cohorts(id, cohort_number)),
+        student:students(id, first_name, last_name, cohort_id, cohort:cohorts!students_cohort_id_fkey(id, cohort_number)),
         station:station_pool(id, station_code, station_name, category),
         logged_by_user:lab_users!station_completions_logged_by_fkey(id, name),
         lab_day:lab_days(id, date)

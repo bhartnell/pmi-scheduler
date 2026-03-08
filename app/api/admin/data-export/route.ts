@@ -45,7 +45,7 @@ async function fetchCohortData(supabase: ReturnType<typeof getSupabaseAdmin>, co
     .select(`
       *,
       program:programs(id, name, abbreviation),
-      students(id, first_name, last_name, email, status, agency)
+      students!students_cohort_id_fkey(id, first_name, last_name, email, status, agency)
     `)
     .order('created_at', { ascending: false });
 
@@ -75,7 +75,7 @@ async function fetchStudentsData(
       status,
       cohort_id,
       created_at,
-      cohort:cohorts(id, cohort_number, program:programs(name, abbreviation))
+      cohort:cohorts!students_cohort_id_fkey(id, cohort_number, program:programs(name, abbreviation))
     `)
     .order('last_name', { ascending: true });
 

@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
         phone,
         cohort_id,
         status,
-        cohort:cohorts(id, cohort_number, program:programs(abbreviation))
+        cohort:cohorts!students_cohort_id_fkey(id, cohort_number, program:programs(abbreviation))
       `)
       .order('last_name', { ascending: true })
       .order('first_name', { ascending: true });

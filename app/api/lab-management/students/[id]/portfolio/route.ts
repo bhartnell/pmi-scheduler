@@ -77,7 +77,7 @@ export async function GET(
           prior_cert_level,
           years_ems_experience,
           created_at,
-          cohort:cohorts(
+          cohort:cohorts!students_cohort_id_fkey(
             id,
             cohort_number,
             start_date,

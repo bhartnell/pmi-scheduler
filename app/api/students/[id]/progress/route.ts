@@ -61,7 +61,7 @@ export async function GET(
         agency,
         cohort_id,
         created_at,
-        cohort:cohorts(
+        cohort:cohorts!students_cohort_id_fkey(
           id,
           cohort_number,
           start_date,

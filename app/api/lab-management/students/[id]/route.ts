@@ -37,7 +37,7 @@ export async function GET(
       .from('students')
       .select(`
         *,
-        cohort:cohorts(
+        cohort:cohorts!students_cohort_id_fkey(
           id,
           cohort_number,
           program:programs(name, abbreviation)
@@ -120,7 +120,7 @@ export async function PATCH(
       .eq('id', id)
       .select(`
         *,
-        cohort:cohorts(
+        cohort:cohorts!students_cohort_id_fkey(
           id,
           cohort_number,
           program:programs(name, abbreviation)

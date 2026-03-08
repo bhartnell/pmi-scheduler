@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     // 1. Student count by program
     const { data: students } = await supabase
       .from('students')
-      .select('id, status, cohort:cohorts(id, cohort_number, program:programs(id, name, abbreviation))')
+      .select('id, status, cohort:cohorts!students_cohort_id_fkey(id, cohort_number, program:programs(id, name, abbreviation))')
       .eq('status', 'active');
 
     const studentsByProgram: Record<string, number> = {};

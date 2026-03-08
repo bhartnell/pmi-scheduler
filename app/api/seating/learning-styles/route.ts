@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
           last_name,
           agency,
           cohort_id,
-          cohort:cohorts(
+          cohort:cohorts!students_cohort_id_fkey(
             id,
             cohort_number,
             program:programs(abbreviation)
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
             first_name,
             last_name,
             agency,
-            cohort:cohorts(
+            cohort:cohorts!students_cohort_id_fkey(
               id,
               cohort_number,
               program:programs(abbreviation)
@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
             first_name,
             last_name,
             agency,
-            cohort:cohorts(
+            cohort:cohorts!students_cohort_id_fkey(
               id,
               cohort_number,
               program:programs(abbreviation)

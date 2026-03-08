@@ -126,7 +126,7 @@ async function generateClinicalHoursReport(
       first_name,
       last_name,
       status,
-      cohort:cohorts(cohort_number, program:programs(abbreviation))
+      cohort:cohorts!students_cohort_id_fkey(cohort_number, program:programs(abbreviation))
     `)
     .eq('status', 'active')
     .order('last_name');
@@ -242,7 +242,7 @@ async function generateStudentStatusReport(
       first_name,
       last_name,
       status,
-      cohort:cohorts(cohort_number, program:programs(abbreviation))
+      cohort:cohorts!students_cohort_id_fkey(cohort_number, program:programs(abbreviation))
     `)
     .order('last_name');
 

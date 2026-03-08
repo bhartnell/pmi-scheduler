@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
         status,
         cohort_id,
         created_at,
-        cohort:cohorts(
+        cohort:cohorts!students_cohort_id_fkey(
           id,
           cohort_number,
           start_date,
@@ -199,7 +199,7 @@ export async function PUT(request: NextRequest) {
         emergency_contact_relationship,
         learning_style,
         cohort_id,
-        cohort:cohorts(
+        cohort:cohorts!students_cohort_id_fkey(
           id,
           cohort_number,
           start_date,

@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
       // Students - search first_name, last_name, email; join cohort name
       supabase
         .from('students')
-        .select('id, first_name, last_name, email, cohort_id, cohort:cohorts(id, name)')
+        .select('id, first_name, last_name, email, cohort_id, cohort:cohorts!students_cohort_id_fkey(id, cohort_number, program:programs(abbreviation))')
         .or(`first_name.ilike.%${safe}%,last_name.ilike.%${safe}%,email.ilike.%${safe}%`)
         .limit(limitParam),
 
@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
       // Lab Days - search title, notes; join cohort name
       supabase
         .from('lab_days')
-        .select('id, date, title, cohort_id, status, cohort:cohorts(id, name)')
+        .select('id, date, title, cohort_id, status, cohort:cohorts(id, cohort_number, program:programs(abbreviation))')
         .or(`title.ilike.%${safe}%,notes.ilike.%${safe}%`)
         .order('date', { ascending: false })
         .limit(limitParam),
@@ -88,18 +88,21 @@ export async function GET(request: NextRequest) {
     ]);
 
     // Shape results into consistent format
-    type CohortRow = { id: string; name: string } | null;
+    type CohortRow = { id: string; cohort_number: string; program?: { abbreviation: string }[] | { abbreviation: string } | null } | null;
+    const formatCohort = (row: CohortRow) => {
+      if (!row) return null;
+      const prog = Array.isArray(row.program) ? row.program[0] : row.program;
+      return prog?.abbreviation ? `${prog.abbreviation} ${row.cohort_number}` : `Group ${row.cohort_number}`;
+    };
 
     const students = (studentsRes.data || []).map((s) => {
       const cohortRow = s.cohort as CohortRow | CohortRow[];
-      const cohortName = Array.isArray(cohortRow)
-        ? (cohortRow[0]?.name ?? null)
-        : (cohortRow?.name ?? null);
+      const cohort = Array.isArray(cohortRow) ? cohortRow[0] : cohortRow;
       return {
         id: s.id,
         name: `${s.first_name || ''} ${s.last_name || ''}`.trim(),
         email: s.email || '',
-        cohortName: cohortName || null,
+        cohortName: formatCohort(cohort),
         type: 'student' as const,
       };
     });
@@ -123,15 +126,13 @@ export async function GET(request: NextRequest) {
 
     const labDays = (labDaysRes.data || []).map((l) => {
       const cohortRow = l.cohort as CohortRow | CohortRow[];
-      const cohortName = Array.isArray(cohortRow)
-        ? (cohortRow[0]?.name ?? null)
-        : (cohortRow?.name ?? null);
+      const cohort = Array.isArray(cohortRow) ? cohortRow[0] : cohortRow;
       return {
         id: l.id,
         date: l.date,
         title: l.title || null,
         status: l.status || null,
-        cohortName: cohortName || null,
+        cohortName: formatCohort(cohort),
         type: 'lab_day' as const,
       };
     });

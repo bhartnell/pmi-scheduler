@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     // 1. Fetch students (optionally filtered by cohort)
     let studentsQuery = supabase
       .from('students')
-      .select('id, first_name, last_name, status, cohort_id, cohort:cohorts(cohort_number, program:programs(abbreviation))')
+      .select('id, first_name, last_name, status, cohort_id, cohort:cohorts!students_cohort_id_fkey(cohort_number, program:programs(abbreviation))')
       .eq('status', 'active')
       .order('last_name')
       .order('first_name');

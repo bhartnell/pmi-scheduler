@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
         first_name,
         last_name,
         status,
-        cohort:cohorts(
+        cohort:cohorts!students_cohort_id_fkey(
           id,
           cohort_number,
           program:programs(name, abbreviation)

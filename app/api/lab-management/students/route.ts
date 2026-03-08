@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
       .from('students')
       .select(`
         id, first_name, last_name, email, status, cohort_id, agency, photo_url,
-        cohort:cohorts(
+        cohort:cohorts!students_cohort_id_fkey(
           id,
           cohort_number,
           program:programs(name, abbreviation)
@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
       })
       .select(`
         *,
-        cohort:cohorts(
+        cohort:cohorts!students_cohort_id_fkey(
           id,
           cohort_number,
           program:programs(name, abbreviation)
