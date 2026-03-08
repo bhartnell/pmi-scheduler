@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
       .select(`
         *,
         scenario:scenarios(id, title, category),
-        station:lab_stations(
+        station:lab_stations!scenario_assessments_lab_station_id_fkey(
           id,
           station_number,
           lab_day:lab_days(id, date)

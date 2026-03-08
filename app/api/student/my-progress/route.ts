@@ -185,7 +185,7 @@ export async function GET(request: NextRequest) {
           pass_fail,
           created_at,
           lab_day:lab_days(id, date),
-          station:lab_stations(
+          station:lab_stations!scenario_assessments_lab_station_id_fkey(
             id,
             scenario:scenarios(id, title, category)
           ),

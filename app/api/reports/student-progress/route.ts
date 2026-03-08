@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
         criteria_ratings,
         created_at,
         lab_day:lab_days(date),
-        station:lab_stations(
+        station:lab_stations!scenario_assessments_lab_station_id_fkey(
           scenario:scenarios(title, category)
         )
       `)
