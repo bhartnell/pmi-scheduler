@@ -1,6 +1,7 @@
 // Standardized API route authentication & authorization utilities
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole, isSuperadmin, type Role } from '@/lib/permissions';
 
@@ -28,7 +29,7 @@ export interface AuthResult {
 export async function requireAuth(
   minRole?: Role
 ): Promise<AuthResult | NextResponse> {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
     return NextResponse.json(
       { success: false, error: 'Unauthorized' },
