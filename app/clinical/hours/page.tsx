@@ -27,6 +27,7 @@ import { canAccessClinical, canEditClinical, type Role } from '@/lib/permissions
 import { useToast } from '@/components/Toast';
 import { PageErrorBoundary } from '@/components/PageErrorBoundary';
 import Breadcrumbs from '@/components/Breadcrumbs';
+import { apiFetch, isAuthError } from '@/lib/fetch-utils';
 
 interface Student {
   id: string;
@@ -151,6 +152,8 @@ export default function ClinicalHoursTrackerPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('dashboard');
   const [showInactive, setShowInactive] = useState(false);
 
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
   // Import modal state
   const [showImportModal, setShowImportModal] = useState(false);
   const [importPreview, setImportPreview] = useState<ImportPreviewRow[]>([]);
@@ -228,9 +231,9 @@ export default function ClinicalHoursTrackerPage() {
 
   const fetchInitialData = async () => {
     setLoading(true);
+    setFetchError(null);
     try {
-      const userRes = await fetch('/api/instructor/me');
-      const userData = await userRes.json();
+      const userData = await apiFetch('/api/instructor/me');
       if (userData.success && userData.user) {
         setUserRole(userData.user.role);
         if (!canAccessClinical(userData.user.role)) {
@@ -239,8 +242,7 @@ export default function ClinicalHoursTrackerPage() {
         }
       }
 
-      const cohortsRes = await fetch('/api/lab-management/cohorts?activeOnly=false');
-      const cohortsData = await cohortsRes.json();
+      const cohortsData = await apiFetch('/api/lab-management/cohorts?activeOnly=false');
       if (cohortsData.success) {
         const fetched: CohortOption[] = cohortsData.cohorts || [];
         setAllCohorts(fetched);
@@ -254,8 +256,13 @@ export default function ClinicalHoursTrackerPage() {
           setSelectedCohort(filtered[0].id);
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching data:', error);
+      if (isAuthError(error)) {
+        setFetchError('You are not authorized to view this page. Please sign in.');
+      } else {
+        setFetchError(error?.message || 'Failed to load data. Please refresh the page.');
+      }
     }
     setLoading(false);
   };
@@ -263,18 +270,18 @@ export default function ClinicalHoursTrackerPage() {
   const fetchCohortData = async (fetchInactive?: boolean) => {
     try {
       const includeInactive = fetchInactive !== undefined ? fetchInactive : showInactive;
-      const [studentsRes, hoursRes] = await Promise.all([
-        fetch(`/api/students?cohortId=${selectedCohort}&activeOnly=${!includeInactive}`),
-        fetch(`/api/clinical/hours?cohortId=${selectedCohort}&activeOnly=${!includeInactive}`),
+      const [studentsData, hoursDataRes] = await Promise.all([
+        apiFetch(`/api/students?cohortId=${selectedCohort}&activeOnly=${!includeInactive}`),
+        apiFetch(`/api/clinical/hours?cohortId=${selectedCohort}&activeOnly=${!includeInactive}`),
       ]);
-
-      const studentsData = await studentsRes.json();
-      const hoursDataRes = await hoursRes.json();
 
       if (studentsData.success) setStudents(studentsData.students || []);
       if (hoursDataRes.success) setHoursData(hoursDataRes.hours || []);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching cohort data:', error);
+      if (!isAuthError(error)) {
+        toast.error(error?.message || 'Failed to load cohort data');
+      }
     }
   };
 
@@ -937,6 +944,24 @@ export default function ClinicalHoursTrackerPage() {
   }
 
   if (!session) return null;
+
+  if (fetchError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-teal-50 to-cyan-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 max-w-md text-center">
+          <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Failed to Load</h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">{fetchError}</p>
+          <button
+            onClick={() => fetchInitialData()}
+            className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const canEdit = userRole && canEditClinical(userRole);
   const unmatchedCount = importPreview.filter(r => !r.matchedStudent).length;

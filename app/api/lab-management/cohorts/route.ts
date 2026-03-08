@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
       .select(`
         *,
         program:programs(id, name, abbreviation),
-        student_count:students(count)
+        student_count:students!students_cohort_id_fkey(count)
       `)
       .order('created_at', { ascending: false });
 
@@ -46,9 +46,13 @@ export async function GET(request: NextRequest) {
     const response = NextResponse.json({ success: true, cohorts });
     response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
     return response;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error fetching cohorts:', error);
-    return NextResponse.json({ success: false, error: 'Failed to fetch cohorts' }, { status: 500 });
+    return NextResponse.json({
+      success: false,
+      error: error?.message || 'Failed to fetch cohorts',
+      code: error?.code || undefined,
+    }, { status: 500 });
   }
 }
 
