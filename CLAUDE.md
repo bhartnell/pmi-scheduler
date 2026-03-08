@@ -79,6 +79,21 @@ node scripts/run-migration.js supabase/migrations/<filename>.sql
 - Always run migrations after committing code that creates new tables
 - Migration files use `IF NOT EXISTS` for idempotency
 
+### PostgREST FK Ambiguity Check
+
+**After running any migration that creates or modifies foreign keys**, run:
+
+```bash
+node scripts/check-fk-ambiguity.js
+```
+
+This detects table pairs connected by multiple FK paths that cause PGRST201 errors. Fix any CRITICAL warnings before committing. When a new FK creates ambiguity, add `!fk_constraint_name` to all affected `.select()` embeds:
+
+```
+Before: cohort:cohorts(id, cohort_number)
+After:  cohort:cohorts!students_cohort_id_fkey(id, cohort_number)
+```
+
 ## Conventions
 
 - API routes: NextRequest/NextResponse, getServerSession for auth, createClient for Supabase
@@ -87,6 +102,7 @@ node scripts/run-migration.js supabase/migrations/<filename>.sql
 - Styling: Tailwind only, dark mode via next-themes
 - Migrations: IF NOT EXISTS, always add RLS policies and indexes
 - Audit: log sensitive operations via lib/audit.ts
+- Supabase embeds: Use explicit FK hints (`!fk_name`) when tables have multiple FK paths (see PostgREST FK Ambiguity Check above)
 
 ## Agent Workflow (Supervisor Pattern)
 
