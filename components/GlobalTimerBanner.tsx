@@ -77,16 +77,16 @@ export default function GlobalTimerBanner() {
     }
   }, [lastRotation]);
 
-  // Pages that already have their own timer component (LabTimer, TimerBanner, InlineTimerWidget)
-  // Only need infrequent GlobalTimerBanner polls as a fallback
+  // Pages that already have their own dedicated timer component (LabTimer, TimerBanner)
+  // GlobalTimerBanner should NOT render on these pages to avoid showing two timers
+  // that poll at different rates, which causes desync issues (Bug 6)
   const hasOwnTimerComponent = pathname.startsWith('/lab-management/schedule/') ||
     pathname.startsWith('/lab-management/grade/');
 
   // Poll for active timer - optimized interval based on state
   // Uses visibility-aware polling to pause when tab is hidden
   const getPollInterval = () => {
-    if (!isTimerRelevantPage) return null;
-    if (hasOwnTimerComponent) return 60000; // 60s on pages with their own timer component
+    if (!isTimerRelevantPage || hasOwnTimerComponent) return null; // Don't poll on pages with dedicated timer
     if (timer?.status === 'running') return 5000; // 5s when running
     if (timer?.status === 'paused') return 15000; // 15s when paused (catch resume)
     return 60000; // 60s when idle/no timer
@@ -181,8 +181,8 @@ export default function GlobalTimerBanner() {
   // Auto-dismiss when countdown reaches 0
   const isTimeUp = timer?.mode === 'countdown' && displaySeconds <= 0 && timer?.status === 'running';
 
-  // Don't render if not on a timer-relevant page
-  if (!isTimerRelevantPage) {
+  // Don't render if not on a timer-relevant page or if page has its own timer component
+  if (!isTimerRelevantPage || hasOwnTimerComponent) {
     return null;
   }
 
