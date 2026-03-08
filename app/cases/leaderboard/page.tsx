@@ -10,6 +10,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import Leaderboard from '@/components/cases/Leaderboard';
+import Breadcrumbs from '@/components/Breadcrumbs';
 import { CASE_CATEGORIES } from '@/types/case-studies';
 
 // ---------------------------------------------------------------------------
@@ -223,6 +224,7 @@ export default function LeaderboardPage() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <Breadcrumbs className="mb-4" />
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>

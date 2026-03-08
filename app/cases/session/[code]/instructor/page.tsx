@@ -29,6 +29,7 @@ import type {
   PhaseVitals,
 } from '@/types/case-studies';
 import { getSupabase } from '@/lib/supabase';
+import Breadcrumbs from '@/components/Breadcrumbs';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -406,6 +407,13 @@ export default function InstructorControlPanel() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
+      {/* Breadcrumb */}
+      <div className="max-w-full mx-auto px-4 pt-3">
+        <Breadcrumbs
+          customSegments={{ [code]: `Session ${code}`, 'instructor': 'Instructor' }}
+          className="mb-0"
+        />
+      </div>
       {/* ===== Header Bar (sticky) ===== */}
       <div className="sticky top-0 z-30 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
         <div className="max-w-full mx-auto px-4 py-3 flex items-center justify-between gap-4">

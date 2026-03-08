@@ -53,6 +53,12 @@ const ROUTE_LABELS: Record<string, string> = {
   'notifications': 'Notifications',
   'resources': 'Resources',
   'clinical/site-visit-settings': 'Alert Settings',
+  'cases': 'Case Studies',
+  'cases/leaderboard': 'Leaderboard',
+  'cases/new': 'New Case',
+  'cases/session': 'Session',
+  'admin/cases': 'Cases',
+  'admin/cases/generate': 'Case Generation',
 };
 
 /** Check if a segment looks like a UUID or dynamic ID */

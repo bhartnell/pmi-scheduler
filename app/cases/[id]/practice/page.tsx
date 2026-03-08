@@ -32,6 +32,7 @@ import type {
   CasePracticeProgress,
   PhaseVitals,
 } from '@/types/case-studies';
+import Breadcrumbs from '@/components/Breadcrumbs';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -968,6 +969,7 @@ export default function PracticeModePage() {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
         <div className="max-w-3xl mx-auto px-4 py-8">
+          <Breadcrumbs entityTitle={caseStudy?.title} className="mb-4" />
           {/* Score Hero */}
           <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 border border-gray-200 dark:border-gray-700 text-center mb-6">
             <div className="mb-4">

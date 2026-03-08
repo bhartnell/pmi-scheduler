@@ -6,7 +6,6 @@ import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import {
   ChevronRight,
-  Home,
   Loader2,
   Database,
   Sparkles,
@@ -27,6 +26,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { canAccessAdmin } from '@/lib/permissions';
+import Breadcrumbs from '@/components/Breadcrumbs';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -527,18 +527,7 @@ export default function CaseGenerationPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Breadcrumb */}
-      <nav className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-6">
-        <Link href="/" className="hover:text-gray-700 dark:hover:text-gray-200">
-          <Home className="h-4 w-4" />
-        </Link>
-        <ChevronRight className="h-3 w-3" />
-        <Link href="/admin" className="hover:text-gray-700 dark:hover:text-gray-200">
-          Admin
-        </Link>
-        <ChevronRight className="h-3 w-3" />
-        <span className="text-gray-900 dark:text-white font-medium">Case Generation Pipeline</span>
-      </nav>
+      <Breadcrumbs className="mb-6" />
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">

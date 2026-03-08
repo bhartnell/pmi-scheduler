@@ -29,6 +29,7 @@ import {
   DIFFICULTY_COLORS,
 } from '@/types/case-studies';
 import { hasMinRole } from '@/lib/permissions';
+import Breadcrumbs from '@/components/Breadcrumbs';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -206,14 +207,7 @@ export default function CaseDetailPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
-        {/* Back link */}
-        <button
-          onClick={() => router.back()}
-          className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 mb-6 text-sm"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Cases
-        </button>
+        <Breadcrumbs entityTitle={caseData.title} className="mb-4" />
 
         {/* Header card */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">
