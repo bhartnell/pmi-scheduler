@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { createNotification } from '@/lib/notifications';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
@@ -94,7 +95,7 @@ function normalizePriority(raw: string): string | null {
 export async function POST(request: NextRequest) {
   try {
     const supabase = getSupabaseAdmin();
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }

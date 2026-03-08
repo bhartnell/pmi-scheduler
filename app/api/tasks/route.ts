@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { notifyTaskAssigned } from '@/lib/notifications';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
@@ -60,7 +61,7 @@ type TaskRecord = any;
 // GET - List tasks
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
@@ -218,7 +219,7 @@ export async function GET(request: NextRequest) {
 // POST - Create new task (supports multi-assign)
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }

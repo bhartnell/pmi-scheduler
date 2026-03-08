@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { createNotification } from '@/lib/notifications';
 
 // GET - List all onboarding assignments (admin view)
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -110,7 +111,7 @@ export async function GET(request: NextRequest) {
 // POST - Create a new onboarding assignment for an instructor
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -364,7 +365,7 @@ export async function POST(request: NextRequest) {
 // DELETE - Remove an onboarding assignment (admin only)
 export async function DELETE(request: NextRequest) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

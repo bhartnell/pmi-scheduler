@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { isDirector } from '@/lib/endorsements';
 import { createNotification } from '@/lib/notifications';
@@ -25,7 +26,7 @@ async function canApproveTrades(userId: string, role: string): Promise<boolean> 
 // Query params: status, mine (boolean - only show my requests/incoming)
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
@@ -83,7 +84,7 @@ export async function GET(request: NextRequest) {
 // POST - Create a new trade request
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
@@ -194,7 +195,7 @@ export async function POST(request: NextRequest) {
 // PUT - Update a trade request (accept, decline, approve, cancel)
 export async function PUT(request: NextRequest) {
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }

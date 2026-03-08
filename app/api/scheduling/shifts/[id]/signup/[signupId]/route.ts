@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { isDirector } from '@/lib/endorsements';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
@@ -23,7 +24,7 @@ export async function POST(
   const { id: shiftId, signupId } = await params;
 
   try {
-    const session = await getServerSession();
+    const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }

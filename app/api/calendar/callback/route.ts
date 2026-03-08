@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
 /**
@@ -7,7 +8,7 @@ import { getSupabaseAdmin } from '@/lib/supabase';
  * Handles the OAuth callback from Google after calendar consent
  */
 export async function GET(request: NextRequest) {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
     const baseUrl = process.env.NEXTAUTH_URL || '';
     return NextResponse.redirect(
