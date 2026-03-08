@@ -197,6 +197,30 @@ export async function POST(request: NextRequest) {
 
     if (fetchError) throw fetchError;
 
+    // Fire-and-forget: sync to visitor's Google Calendar
+    if (completeVisit?.visitor?.email) {
+      try {
+        const { syncSiteVisit } = await import('@/lib/google-calendar');
+        const siteName = (completeVisit.site as any)?.name || (completeVisit.agency as any)?.name || 'Clinical Site';
+        const cohort = completeVisit.cohort as any;
+        const cohortName = cohort
+          ? `${cohort.program?.abbreviation || 'PMI'} G${cohort.cohort_number}`
+          : undefined;
+        syncSiteVisit({
+          visitorEmail: (completeVisit.visitor as any).email,
+          visitId: completeVisit.id,
+          siteName,
+          visitDate: completeVisit.visit_date,
+          visitTime: completeVisit.visit_time || undefined,
+          cohortName,
+          departments: completeVisit.departments || undefined,
+          comments: completeVisit.comments || undefined,
+        }).catch(() => {});
+      } catch {
+        // Calendar sync is best-effort
+      }
+    }
+
     return NextResponse.json({ success: true, visit: completeVisit });
   } catch (error: any) {
     console.error('Error creating site visit:', error);

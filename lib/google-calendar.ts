@@ -18,6 +18,8 @@ const TIMEZONE = 'America/Phoenix';
 const COLOR_LAB_STATION = '9';   // Blueberry
 const COLOR_LAB_ROLE = '7';      // Peacock
 const COLOR_SHIFT = '1';         // Lavender
+const COLOR_SITE_VISIT = '10';   // Basil (green)
+const COLOR_COVERAGE = '11';     // Tomato (red)
 
 // ─── Token & Preferences ─────────────────────────────────────────────
 
@@ -66,7 +68,7 @@ export async function getAccessTokenForUser(email: string): Promise<string | nul
   }
 }
 
-type SyncType = 'sync_lab_assignments' | 'sync_lab_roles' | 'sync_shifts';
+type SyncType = 'sync_lab_assignments' | 'sync_lab_roles' | 'sync_shifts' | 'sync_site_visits';
 
 /**
  * Check if calendar sync is enabled for a specific sync type.
@@ -728,5 +730,209 @@ export async function cancelShiftEvents(shiftId: string): Promise<void> {
       .eq('shift_id', shiftId);
   } catch (err) {
     console.error('[gcal] Error cancelling shift events:', err);
+  }
+}
+
+// --- Coverage Tag ---
+
+/**
+ * Update all calendar events for a lab day with [COVERAGE NEEDED] tag.
+ * When coverage is needed, prepend the tag. When filled, remove it.
+ */
+export async function updateCoverageTag(
+  labDayId: string,
+  needsCoverage: boolean
+): Promise<void> {
+  try {
+    const mappings = await getEventMappingsByLabDay(labDayId);
+    if (mappings.length === 0) return;
+
+    const TAG = '[COVERAGE NEEDED] ';
+
+    for (const mapping of mappings) {
+      try {
+        const accessToken = await getAccessTokenForUser(mapping.user_email);
+        if (!accessToken) continue;
+
+        const currentSummary = mapping.event_summary || '';
+        let newSummary: string;
+
+        if (needsCoverage) {
+          // Add tag if not already present
+          newSummary = currentSummary.startsWith(TAG)
+            ? currentSummary
+            : TAG + currentSummary;
+        } else {
+          // Remove tag
+          newSummary = currentSummary.startsWith(TAG)
+            ? currentSummary.slice(TAG.length)
+            : currentSummary;
+        }
+
+        if (newSummary !== currentSummary) {
+          await updateGoogleEvent(accessToken, mapping.google_event_id, {
+            summary: newSummary,
+            colorId: needsCoverage ? COLOR_COVERAGE : undefined,
+          });
+
+          // Update mapping summary
+          const supabase = getSupabaseAdmin();
+          await supabase
+            .from('google_calendar_events')
+            .update({ event_summary: newSummary, updated_at: new Date().toISOString() })
+            .eq('id', mapping.id);
+        }
+      } catch (err) {
+        console.error(`[gcal] Error updating coverage tag for ${mapping.user_email}:`, err);
+      }
+    }
+  } catch (err) {
+    console.error('[gcal] Error updating coverage tags:', err);
+  }
+}
+
+// --- Site Visits ---
+
+interface SiteVisitSyncParams {
+  visitorEmail: string;
+  visitId: string;
+  siteName: string;
+  visitDate: string;
+  visitTime?: string;
+  cohortName?: string;
+  departments?: string[];
+  comments?: string;
+}
+
+/**
+ * Create a Google Calendar event for a clinical site visit.
+ */
+export async function syncSiteVisit(params: SiteVisitSyncParams): Promise<void> {
+  try {
+    if (!(await shouldSyncForUser(params.visitorEmail, 'sync_site_visits'))) return;
+
+    const accessToken = await getAccessTokenForUser(params.visitorEmail);
+    if (!accessToken) return;
+
+    // Site visits are typically 1-2 hours; default to a 2-hour block
+    const startTimeStr = params.visitTime || '09:00';
+    const [hours, minutes] = startTimeStr.split(':').map(Number);
+    const endHours = Math.min(hours + 2, 23);
+    const endTimeStr = `${String(endHours).padStart(2, '0')}:${String(minutes || 0).padStart(2, '0')}`;
+
+    const { startDateTime, endDateTime } = buildDateTimes(
+      params.visitDate,
+      startTimeStr,
+      endTimeStr
+    );
+
+    const summary = `PMI Site Visit: ${params.siteName}`;
+    const descParts = [`Clinical Site Visit — ${params.siteName}`];
+    if (params.cohortName) descParts.push(`Cohort: ${params.cohortName}`);
+    if (params.departments?.length) descParts.push(`Departments: ${params.departments.join(', ')}`);
+    if (params.comments) descParts.push(`Notes: ${params.comments}`);
+    descParts.push('', 'Created by PMI EMS Scheduler');
+
+    const eventId = await createGoogleEvent(accessToken, {
+      summary,
+      description: descParts.join('\n'),
+      startDateTime,
+      endDateTime,
+      colorId: COLOR_SITE_VISIT,
+    });
+
+    if (eventId) {
+      await storeEventMapping({
+        user_email: params.visitorEmail,
+        google_event_id: eventId,
+        source_type: 'site_visit',
+        source_id: params.visitId,
+        event_summary: summary,
+      });
+    }
+  } catch (err) {
+    console.error('[gcal] Error syncing site visit:', err);
+  }
+}
+
+/**
+ * Update a Google Calendar event for a clinical site visit.
+ */
+export async function updateSiteVisit(params: SiteVisitSyncParams): Promise<void> {
+  try {
+    const mapping = await getEventMapping(
+      params.visitorEmail,
+      'site_visit',
+      params.visitId
+    );
+
+    if (!mapping) {
+      // No existing event — create one
+      await syncSiteVisit(params);
+      return;
+    }
+
+    const accessToken = await getAccessTokenForUser(params.visitorEmail);
+    if (!accessToken) return;
+
+    const startTimeStr = params.visitTime || '09:00';
+    const [hours, minutes] = startTimeStr.split(':').map(Number);
+    const endHours = Math.min(hours + 2, 23);
+    const endTimeStr = `${String(endHours).padStart(2, '0')}:${String(minutes || 0).padStart(2, '0')}`;
+
+    const { startDateTime, endDateTime } = buildDateTimes(
+      params.visitDate,
+      startTimeStr,
+      endTimeStr
+    );
+
+    const summary = `PMI Site Visit: ${params.siteName}`;
+    const descParts = [`Clinical Site Visit — ${params.siteName}`];
+    if (params.cohortName) descParts.push(`Cohort: ${params.cohortName}`);
+    if (params.departments?.length) descParts.push(`Departments: ${params.departments.join(', ')}`);
+    if (params.comments) descParts.push(`Notes: ${params.comments}`);
+    descParts.push('', 'Created by PMI EMS Scheduler');
+
+    await updateGoogleEvent(accessToken, mapping.google_event_id, {
+      summary,
+      description: descParts.join('\n'),
+      startDateTime,
+      endDateTime,
+    });
+
+    // Update mapping
+    const supabase = getSupabaseAdmin();
+    await supabase
+      .from('google_calendar_events')
+      .update({ event_summary: summary, updated_at: new Date().toISOString() })
+      .eq('id', mapping.id);
+  } catch (err) {
+    console.error('[gcal] Error updating site visit:', err);
+  }
+}
+
+/**
+ * Remove a Google Calendar event for a clinical site visit.
+ */
+export async function removeSiteVisit(params: {
+  visitorEmail: string;
+  visitId: string;
+}): Promise<void> {
+  try {
+    const mapping = await getEventMapping(
+      params.visitorEmail,
+      'site_visit',
+      params.visitId
+    );
+    if (!mapping) return;
+
+    const accessToken = await getAccessTokenForUser(params.visitorEmail);
+    if (accessToken) {
+      await deleteGoogleEvent(accessToken, mapping.google_event_id);
+    }
+
+    await deleteEventMapping(params.visitorEmail, 'site_visit', params.visitId);
+  } catch (err) {
+    console.error('[gcal] Error removing site visit:', err);
   }
 }

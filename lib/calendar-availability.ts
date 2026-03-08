@@ -39,14 +39,21 @@ export async function refreshAccessToken(refreshToken: string): Promise<string |
 }
 
 /**
- * Query the Google Calendar FreeBusy API for a single user.
+ * Query the Google Calendar FreeBusy API for a user's calendars.
+ * Checks all selected calendars (or just primary if none selected).
  */
 async function queryFreeBusy(
   accessToken: string,
   email: string,
   timeMin: string,
-  timeMax: string
+  timeMax: string,
+  calendarIds?: string[]
 ): Promise<BusyPeriod[]> {
+  // Use selected calendars or fall back to primary (email = primary alias)
+  const items = calendarIds?.length
+    ? calendarIds.map(id => ({ id }))
+    : [{ id: email }];
+
   const response = await fetch(
     'https://www.googleapis.com/calendar/v3/freeBusy',
     {
@@ -59,7 +66,7 @@ async function queryFreeBusy(
         timeMin,
         timeMax,
         timeZone: 'America/Phoenix',
-        items: [{ id: email }],
+        items,
       }),
     }
   );
@@ -70,12 +77,18 @@ async function queryFreeBusy(
   }
 
   const data = await response.json();
-  const calendarBusy = data.calendars?.[email]?.busy || [];
 
-  return calendarBusy.map((period: { start: string; end: string }) => ({
-    start: period.start,
-    end: period.end,
-  }));
+  // Aggregate busy periods from all queried calendars
+  const allBusy: BusyPeriod[] = [];
+  const calendars = data.calendars || {};
+  for (const calId of Object.keys(calendars)) {
+    const calBusy = calendars[calId]?.busy || [];
+    for (const period of calBusy) {
+      allBusy.push({ start: period.start, end: period.end });
+    }
+  }
+
+  return allBusy;
 }
 
 /**
@@ -122,10 +135,10 @@ export async function checkInstructorAvailability(
       continue;
     }
 
-    // Look up user in lab_users
+    // Look up user in lab_users (including selected calendar IDs)
     const { data: user } = await supabase
       .from('lab_users')
-      .select('google_calendar_connected, google_refresh_token')
+      .select('google_calendar_connected, google_refresh_token, google_calendar_ids')
       .ilike('email', email)
       .single();
 
@@ -152,8 +165,11 @@ export async function checkInstructorAvailability(
       continue;
     }
 
-    // Query FreeBusy API
-    const busy = await queryFreeBusy(accessToken, email, timeMin, timeMax);
+    // Query FreeBusy API (checks all selected calendars)
+    const calendarIds = user.google_calendar_ids?.length
+      ? user.google_calendar_ids
+      : undefined; // undefined = default to primary
+    const busy = await queryFreeBusy(accessToken, email, timeMin, timeMax, calendarIds);
     const available = !hasConflict(busy, windowStart, windowEnd);
 
     const result: InstructorAvailability = {

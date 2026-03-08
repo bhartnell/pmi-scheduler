@@ -1421,8 +1421,12 @@ function GoogleCalendarPanel() {
     sync_lab_assignments: true,
     sync_lab_roles: true,
     sync_shifts: true,
+    sync_site_visits: true,
   });
   const [savingPrefs, setSavingPrefs] = useState(false);
+  const [calendarList, setCalendarList] = useState<any[]>([]);
+  const [selectedCalendarIds, setSelectedCalendarIds] = useState<string[]>([]);
+  const [loadingCalendars, setLoadingCalendars] = useState(false);
 
   useEffect(() => {
     fetchCalendarStatus();
@@ -1431,6 +1435,12 @@ function GoogleCalendarPanel() {
   useEffect(() => {
     if (connected && !needsReauth) {
       fetchSyncPrefs();
+    }
+  }, [connected, needsReauth]);
+
+  useEffect(() => {
+    if (connected && !needsReauth) {
+      fetchCalendars();
     }
   }, [connected, needsReauth]);
 
@@ -1456,6 +1466,38 @@ function GoogleCalendarPanel() {
       }
     } catch {
       // Use defaults
+    }
+  };
+
+  const fetchCalendars = async () => {
+    setLoadingCalendars(true);
+    try {
+      const res = await fetch('/api/calendar/calendars');
+      const data = await res.json();
+      if (data.success) {
+        setCalendarList(data.calendars || []);
+        setSelectedCalendarIds(data.selectedIds || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch calendars:', err);
+    } finally {
+      setLoadingCalendars(false);
+    }
+  };
+
+  const toggleCalendar = async (calId: string) => {
+    const newIds = selectedCalendarIds.includes(calId)
+      ? selectedCalendarIds.filter(id => id !== calId)
+      : [...selectedCalendarIds, calId];
+    setSelectedCalendarIds(newIds);
+    try {
+      await fetch('/api/calendar/calendars', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ selectedCalendarIds: newIds }),
+      });
+    } catch (err) {
+      console.error('Failed to update calendar selection:', err);
     }
   };
 
@@ -1577,6 +1619,7 @@ function GoogleCalendarPanel() {
             { key: 'sync_lab_assignments' as const, label: 'Lab Station Assignments', desc: 'Create calendar events when assigned to lab stations' },
             { key: 'sync_lab_roles' as const, label: 'Lab Day Roles', desc: 'Create calendar events for Lab Lead, Roamer, and Observer roles' },
             { key: 'sync_shifts' as const, label: 'Shift Signups', desc: 'Create calendar events when shift signups are confirmed' },
+            { key: 'sync_site_visits' as const, label: 'Clinical Site Visits', desc: 'Create calendar events when you\'re assigned to visit a clinical site' },
           ].map(({ key, label, desc }) => (
             <div key={key} className="flex items-center justify-between gap-4">
               <div>
@@ -1602,6 +1645,61 @@ function GoogleCalendarPanel() {
               </button>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Calendar Sources */}
+      {connected && !needsReauth && (
+        <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+          <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Calendar Sources</h4>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            Select which calendars to check for scheduling conflicts. Only free/busy data is used.
+          </p>
+          {loadingCalendars ? (
+            <div className="space-y-2">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-8 bg-gray-100 dark:bg-gray-700 rounded animate-pulse" />
+              ))}
+            </div>
+          ) : calendarList.length === 0 ? (
+            <p className="text-sm text-gray-400 dark:text-gray-500">No calendars found</p>
+          ) : (
+            <div className="space-y-1">
+              {calendarList.map((cal: any) => (
+                <div key={cal.id} className="flex items-center justify-between py-1.5">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-3 h-3 rounded-sm"
+                      style={{ backgroundColor: cal.backgroundColor || '#4285f4' }}
+                    />
+                    <span className="text-sm text-gray-800 dark:text-gray-200">
+                      {cal.summary}
+                      {cal.primary && (
+                        <span className="ml-1 text-xs text-gray-400">(primary)</span>
+                      )}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => toggleCalendar(cal.id)}
+                    disabled={cal.primary}
+                    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                      cal.primary || selectedCalendarIds.includes(cal.id)
+                        ? 'bg-blue-600'
+                        : 'bg-gray-300 dark:bg-gray-600'
+                    } ${cal.primary ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  >
+                    <span
+                      className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                        cal.primary || selectedCalendarIds.includes(cal.id)
+                          ? 'translate-x-4'
+                          : 'translate-x-0.5'
+                      }`}
+                    />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

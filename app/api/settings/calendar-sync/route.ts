@@ -21,6 +21,7 @@ export async function GET() {
     sync_lab_assignments: true,
     sync_lab_roles: true,
     sync_shifts: true,
+    sync_site_visits: true,
   };
 
   return NextResponse.json({ success: true, calendar_sync: calendarSync });
@@ -36,12 +37,13 @@ export async function PUT(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { sync_lab_assignments, sync_lab_roles, sync_shifts } = body;
+    const { sync_lab_assignments, sync_lab_roles, sync_shifts, sync_site_visits } = body;
 
     const calendarSync = {
       sync_lab_assignments: sync_lab_assignments !== false,
       sync_lab_roles: sync_lab_roles !== false,
       sync_shifts: sync_shifts !== false,
+      sync_site_visits: sync_site_visits !== false,
     };
 
     const supabase = getSupabaseAdmin();

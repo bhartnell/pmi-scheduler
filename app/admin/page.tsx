@@ -44,6 +44,7 @@ import {
   ShieldCheck,
   Layers,
   BarChart3,
+  RefreshCw,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import {
@@ -250,6 +251,13 @@ function buildSections(pendingAccessRequests: number): AdminSection[] {
           title: 'OSCE Events',
           description: 'Create and manage OSCE evaluator signup events per semester',
           color: 'bg-amber-600',
+        },
+        {
+          href: '/admin/calendar-sync',
+          icon: RefreshCw,
+          title: 'Calendar Sync',
+          description: 'Monitor Google Calendar connections and sync status for instructors',
+          color: 'bg-teal-600',
         },
       ],
     },

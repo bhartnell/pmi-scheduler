@@ -19,12 +19,29 @@ export async function POST(request: NextRequest) {
     let failed = 0;
     let skipped = 0;
 
-    // Get all connected users with 'events' scope
-    const { data: connectedUsers } = await supabase
+    // Support per-user sync via optional body parameter
+    let targetEmail: string | null = null;
+    try {
+      const body = await request.json();
+      if (body.userEmail) {
+        targetEmail = body.userEmail;
+      }
+    } catch {
+      // No body or invalid JSON — proceed with bulk sync
+    }
+
+    // Get connected users with 'events' scope
+    let userQuery = supabase
       .from('lab_users')
       .select('email, google_calendar_scope')
       .eq('google_calendar_connected', true)
       .eq('google_calendar_scope', 'events');
+
+    if (targetEmail) {
+      userQuery = userQuery.ilike('email', targetEmail);
+    }
+
+    const { data: connectedUsers } = await userQuery;
 
     if (!connectedUsers || connectedUsers.length === 0) {
       return NextResponse.json({
@@ -32,7 +49,9 @@ export async function POST(request: NextRequest) {
         synced: 0,
         failed: 0,
         skipped: 0,
-        message: 'No users with calendar events scope connected',
+        message: targetEmail
+          ? `User ${targetEmail} is not connected or has insufficient scope`
+          : 'No users with calendar events scope connected',
       });
     }
 

@@ -99,6 +99,16 @@ export default function CalendarPage() {
   const [showLabDays, setShowLabDays] = useState(true);
   const [showOpenShifts, setShowOpenShifts] = useState(true);
   const [showMyShifts, setShowMyShifts] = useState(true);
+  const [showGoogleEvents, setShowGoogleEvents] = useState(false);
+  const [googleEvents, setGoogleEvents] = useState<Array<{
+    id: string;
+    summary: string;
+    start: string;
+    end: string;
+    allDay: boolean;
+    calendarName: string;
+  }>>([]);
+  const [loadingGoogleEvents, setLoadingGoogleEvents] = useState(false);
 
   const isDirector = currentUser?.role === 'admin' || currentUser?.role === 'superadmin';
 
@@ -126,6 +136,31 @@ export default function CalendarPage() {
       fetchData();
     }
   }, [currentUser, currentMonth]);
+
+  useEffect(() => {
+    if (!showGoogleEvents) return;
+    fetchGoogleEvents();
+  }, [showGoogleEvents, currentMonth]);
+
+  const fetchGoogleEvents = async () => {
+    setLoadingGoogleEvents(true);
+    try {
+      const year = currentMonth.getFullYear();
+      const month = currentMonth.getMonth();
+      // Get first day of previous month and last day of next month for buffer
+      const startDate = new Date(year, month - 1, 1).toISOString().split('T')[0];
+      const endDate = new Date(year, month + 2, 0).toISOString().split('T')[0];
+      const res = await fetch(`/api/calendar/google-events?startDate=${startDate}&endDate=${endDate}`);
+      const data = await res.json();
+      if (data.success) {
+        setGoogleEvents(data.events || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch Google events:', err);
+    } finally {
+      setLoadingGoogleEvents(false);
+    }
+  };
 
   const fetchCurrentUser = async () => {
     try {
@@ -216,6 +251,24 @@ export default function CalendarPage() {
   const getShiftsForDate = (date: Date) => {
     const dateStr = date.toISOString().split('T')[0];
     return shifts.filter(s => s.date === dateStr);
+  };
+
+  const getGoogleEventsForDate = (date: Date) => {
+    const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    return googleEvents.filter((event) => {
+      const eventDate = event.start?.split('T')[0] || event.start;
+      return eventDate === dateStr;
+    });
+  };
+
+  const formatGoogleEventTime = (dateStr: string) => {
+    if (!dateStr || !dateStr.includes('T')) return '';
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'America/Phoenix' });
+    } catch {
+      return '';
+    }
   };
 
   const isToday = (date: Date) => {
@@ -429,6 +482,18 @@ export default function CalendarPage() {
                 <span className="w-2 h-2 rounded-full bg-green-500"></span>
                 My Shifts
               </button>
+              <button
+                onClick={() => setShowGoogleEvents(!showGoogleEvents)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                  showGoogleEvents
+                    ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300'
+                    : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
+                <span className={`w-2 h-2 rounded-full ${showGoogleEvents ? 'bg-purple-500' : 'bg-gray-400'}`}></span>
+                My Google Calendar
+                {loadingGoogleEvents && <span className="ml-1 animate-spin">&#x27F3;</span>}
+              </button>
             </div>
           </div>
         </div>
@@ -577,6 +642,22 @@ export default function CalendarPage() {
                         </div>
                       </div>
                     ))}
+
+                    {/* Google Calendar events overlay */}
+                    {showGoogleEvents && getGoogleEventsForDate(date).map((event) => (
+                      <div
+                        key={`gcal-${event.id}`}
+                        className="block px-1.5 py-0.5 text-xs rounded bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border border-dashed border-purple-300 dark:border-purple-700 opacity-80 mt-0.5"
+                        title={`${event.summary} (${event.calendarName})\nOnly you can see this`}
+                      >
+                        <div className="font-medium truncate">{event.summary}</div>
+                        {!event.allDay && event.start && (
+                          <div className="text-[10px] text-purple-500 dark:text-purple-400">
+                            {formatGoogleEventTime(event.start)}
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </div>
               );
@@ -692,6 +773,12 @@ export default function CalendarPage() {
               </div>
             </div>
           </div>
+          {showGoogleEvents && (
+            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mt-3">
+              <div className="w-4 h-3 rounded bg-purple-100 dark:bg-purple-900/30 border border-dashed border-purple-400" />
+              <span>Google Calendar <span className="text-xs text-gray-400">(only visible to you)</span></span>
+            </div>
+          )}
           {!isDirector && (
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-3 italic">
               Directors see all shifts. Instructors see open shifts and their own confirmed shifts.

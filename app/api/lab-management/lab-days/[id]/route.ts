@@ -204,6 +204,16 @@ export async function PATCH(
       }
     }
 
+    // Fire-and-forget: update coverage tags on calendar events
+    if (allowedFields.needs_coverage !== undefined) {
+      try {
+        const { updateCoverageTag } = await import('@/lib/google-calendar');
+        updateCoverageTag(id, allowedFields.needs_coverage as boolean).catch(() => {});
+      } catch {
+        // Calendar sync is best-effort
+      }
+    }
+
     return NextResponse.json({ success: true, labDay: data });
   } catch (error) {
     console.error('Error updating lab day:', error);

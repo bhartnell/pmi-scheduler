@@ -125,6 +125,30 @@ export async function PUT(
 
     if (fetchError) throw fetchError;
 
+    // Fire-and-forget: update calendar event for visitor
+    if (completeVisit?.visitor?.email) {
+      try {
+        const { updateSiteVisit } = await import('@/lib/google-calendar');
+        const siteName = (completeVisit.site as any)?.name || (completeVisit.agency as any)?.name || 'Clinical Site';
+        const cohort = completeVisit.cohort as any;
+        const cohortName = cohort
+          ? `${cohort.program?.abbreviation || 'PMI'} G${cohort.cohort_number}`
+          : undefined;
+        updateSiteVisit({
+          visitorEmail: (completeVisit.visitor as any).email,
+          visitId: completeVisit.id,
+          siteName,
+          visitDate: completeVisit.visit_date,
+          visitTime: completeVisit.visit_time || undefined,
+          cohortName,
+          departments: completeVisit.departments || undefined,
+          comments: completeVisit.comments || undefined,
+        }).catch(() => {});
+      } catch {
+        // Calendar sync is best-effort
+      }
+    }
+
     return NextResponse.json({ success: true, visit: completeVisit });
   } catch (error) {
     console.error('Error updating site visit:', error);
@@ -145,6 +169,19 @@ export async function DELETE(
 
     const { id } = await params;
 
+    // Fetch visitor email before deleting (for calendar sync)
+    let visitorEmail: string | null = null;
+    try {
+      const { data: visit } = await supabase
+        .from('clinical_site_visits')
+        .select('visitor:lab_users(email)')
+        .eq('id', id)
+        .single();
+      visitorEmail = (visit?.visitor as any)?.email || null;
+    } catch {
+      // Continue with delete even if we can't get visitor email
+    }
+
     // Delete will cascade to clinical_visit_students
     const { error } = await supabase
       .from('clinical_site_visits')
@@ -152,6 +189,16 @@ export async function DELETE(
       .eq('id', id);
 
     if (error) throw error;
+
+    // Fire-and-forget: remove calendar event
+    if (visitorEmail) {
+      try {
+        const { removeSiteVisit } = await import('@/lib/google-calendar');
+        removeSiteVisit({ visitorEmail, visitId: id }).catch(() => {});
+      } catch {
+        // Calendar sync is best-effort
+      }
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
