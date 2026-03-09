@@ -128,7 +128,8 @@ export interface CaseStudy {
 
 export interface CasePracticeProgress {
   id: string;
-  student_id: string;
+  student_id: string | null;
+  practitioner_email?: string | null;
   case_id: string;
   attempt_number: number;
   variant_seed?: string | null;

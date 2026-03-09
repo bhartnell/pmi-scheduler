@@ -2,13 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { findPractitioner, type Practitioner } from '@/lib/practice-auth';
 
 /**
  * POST /api/cases/[id]/practice/complete
  *
  * Mark the current practice attempt as completed.
- * Calculates final score, upserts student_case_stats, checks achievements.
- * Returns debrief data.
+ * Calculates final score, upserts student_case_stats (students only),
+ * checks achievements, and returns debrief data.
+ * Works for both students and instructors.
  */
 export async function POST(
   request: NextRequest,
@@ -24,30 +26,28 @@ export async function POST(
 
     const supabase = getSupabaseAdmin();
 
-    // Find student
-    const { data: student, error: studentError } = await supabase
-      .from('students')
-      .select('id, email, cohort_id')
-      .ilike('email', session.user.email)
-      .single();
+    // Find practitioner (student or instructor)
+    const practitioner = await findPractitioner(supabase, session.user.email);
 
-    if (studentError || !student) {
+    if (!practitioner) {
       return NextResponse.json(
-        { error: 'Student record not found' },
+        { error: 'User record not found' },
         { status: 404 }
       );
     }
 
     // Get current in_progress attempt
-    const { data: progress, error: progressError } = await supabase
+    let progressQuery = supabase
       .from('case_practice_progress')
       .select('*')
-      .eq('student_id', student.id)
       .eq('case_id', caseId)
       .eq('status', 'in_progress')
       .order('attempt_number', { ascending: false })
-      .limit(1)
-      .single();
+      .limit(1);
+
+    progressQuery = applyPractitionerFilter(progressQuery, practitioner);
+
+    const { data: progress, error: progressError } = await progressQuery.single();
 
     if (progressError || !progress) {
       return NextResponse.json(
@@ -57,14 +57,17 @@ export async function POST(
     }
 
     // Fetch all responses for this attempt
-    const { data: allResponses } = await supabase
+    let responsesQuery = supabase
       .from('case_responses')
       .select('*')
       .eq('case_id', caseId)
-      .eq('student_id', student.id)
       .eq('attempt_number', progress.attempt_number)
       .is('session_id', null)
       .order('submitted_at', { ascending: true });
+
+    responsesQuery = applyResponseFilter(responsesQuery, practitioner);
+
+    const { data: allResponses } = await responsesQuery;
 
     // Fetch the case for debrief data
     const { data: caseStudy } = await supabase
@@ -76,13 +79,13 @@ export async function POST(
     // Calculate final totals from responses
     const responses = allResponses || [];
     const totalPoints = responses.reduce(
-      (sum, r) => sum + (r.points_earned || 0),
+      (sum: number, r: any) => sum + (r.points_earned || 0),
       0
     );
     const maxPoints = progress.max_points || 1;
     const percentage = Math.round((totalPoints / maxPoints) * 100);
     const totalTimeSec = responses.reduce(
-      (sum, r) => sum + (r.time_taken_seconds || 0),
+      (sum: number, r: any) => sum + (r.time_taken_seconds || 0),
       0
     );
 
@@ -98,14 +101,13 @@ export async function POST(
       })
       .eq('id', progress.id);
 
-    // Upsert student_case_stats if student has a cohort
-    if (student.cohort_id) {
-      // Fetch existing stats
+    // Upsert student_case_stats — only for students with a cohort
+    if (practitioner.isStudent && practitioner.id && practitioner.cohortId) {
       const { data: existingStats } = await supabase
         .from('student_case_stats')
         .select('*')
-        .eq('student_id', student.id)
-        .eq('cohort_id', student.cohort_id)
+        .eq('student_id', practitioner.id)
+        .eq('cohort_id', practitioner.cohortId)
         .single();
 
       if (existingStats) {
@@ -133,12 +135,12 @@ export async function POST(
             last_activity_at: now,
             updated_at: now,
           })
-          .eq('student_id', student.id)
-          .eq('cohort_id', student.cohort_id);
+          .eq('student_id', practitioner.id)
+          .eq('cohort_id', practitioner.cohortId);
       } else {
         await supabase.from('student_case_stats').insert({
-          student_id: student.id,
-          cohort_id: student.cohort_id,
+          student_id: practitioner.id,
+          cohort_id: practitioner.cohortId,
           cases_completed: 1,
           cases_attempted: 1,
           total_points_earned: totalPoints,
@@ -151,25 +153,30 @@ export async function POST(
       }
     }
 
-    // Check and award achievements
-    const achievements: Array<{
-      type: string;
-      name: string;
-    }> = [];
+    // Check and award achievements (for both students and instructors)
+    const achievements: Array<{ type: string; name: string }> = [];
+    const achievementId = practitioner.id; // null for instructors
 
     // Achievement: first_perfect (90%+)
     if (percentage >= 90) {
-      const { data: existingPerfect } = await supabase
+      let perfectQuery = supabase
         .from('student_achievements')
         .select('id')
-        .eq('student_id', student.id)
         .eq('achievement_type', 'first_perfect')
-        .limit(1)
-        .single();
+        .limit(1);
+
+      if (achievementId) {
+        perfectQuery = perfectQuery.eq('student_id', achievementId);
+      } else {
+        perfectQuery = perfectQuery.is('student_id', null).eq('practitioner_email', practitioner.email);
+      }
+
+      const { data: existingPerfect } = await perfectQuery.single();
 
       if (!existingPerfect) {
         await supabase.from('student_achievements').insert({
-          student_id: student.id,
+          student_id: achievementId,
+          practitioner_email: practitioner.email,
           achievement_type: 'first_perfect',
           achievement_name: 'Perfect Score',
           metadata: { case_id: caseId, score: percentage },
@@ -179,26 +186,29 @@ export async function POST(
     }
 
     // Achievement: improvement (better than previous attempt on same case)
-    const { data: previousAttempts } = await supabase
+    let prevQuery = supabase
       .from('case_practice_progress')
       .select('total_points, max_points')
-      .eq('student_id', student.id)
       .eq('case_id', caseId)
       .eq('status', 'completed')
       .neq('id', progress.id)
       .order('attempt_number', { ascending: false })
       .limit(1);
 
+    prevQuery = applyPractitionerFilter(prevQuery, practitioner);
+
+    const { data: previousAttempts } = await prevQuery;
+
     if (previousAttempts && previousAttempts.length > 0) {
       const prevPct = previousAttempts[0].max_points > 0
         ? Math.round(
-            (previousAttempts[0].total_points / previousAttempts[0].max_points) *
-              100
+            (previousAttempts[0].total_points / previousAttempts[0].max_points) * 100
           )
         : 0;
       if (percentage > prevPct) {
         await supabase.from('student_achievements').insert({
-          student_id: student.id,
+          student_id: achievementId,
+          practitioner_email: practitioner.email,
           achievement_type: 'improvement',
           achievement_name: 'Score Improved',
           metadata: {
@@ -212,26 +222,36 @@ export async function POST(
     }
 
     // Achievement: streak (3+ completed cases in a row)
-    const { data: recentCompleted } = await supabase
+    let streakQuery = supabase
       .from('case_practice_progress')
       .select('id')
-      .eq('student_id', student.id)
       .eq('status', 'completed')
       .order('completed_at', { ascending: false })
       .limit(3);
 
+    streakQuery = applyPractitionerFilter(streakQuery, practitioner);
+
+    const { data: recentCompleted } = await streakQuery;
+
     if (recentCompleted && recentCompleted.length >= 3) {
-      const { data: existingStreak } = await supabase
+      let existStreakQuery = supabase
         .from('student_achievements')
         .select('id')
-        .eq('student_id', student.id)
         .eq('achievement_type', 'streak')
-        .limit(1)
-        .single();
+        .limit(1);
+
+      if (achievementId) {
+        existStreakQuery = existStreakQuery.eq('student_id', achievementId);
+      } else {
+        existStreakQuery = existStreakQuery.is('student_id', null).eq('practitioner_email', practitioner.email);
+      }
+
+      const { data: existingStreak } = await existStreakQuery.single();
 
       if (!existingStreak) {
         await supabase.from('student_achievements').insert({
-          student_id: student.id,
+          student_id: achievementId,
+          practitioner_email: practitioner.email,
           achievement_type: 'streak',
           achievement_name: 'On a Roll',
           metadata: { streak_count: 3, case_id: caseId },
@@ -257,17 +277,17 @@ export async function POST(
     }>;
 
     const phaseScores = phases.map((phase) => {
-      const phaseResponses = responses.filter((r) => r.phase_id === phase.id);
+      const phaseResponses = responses.filter((r: any) => r.phase_id === phase.id);
       const phasePoints = phaseResponses.reduce(
-        (sum, r) => sum + (r.points_earned || 0),
+        (sum: number, r: any) => sum + (r.points_earned || 0),
         0
       );
       const phaseMaxPoints = (phase.questions || []).reduce(
-        (sum, q) => sum + (q.points || 10),
+        (sum: number, q: any) => sum + (q.points || 10),
         0
       );
       const phaseTime = phaseResponses.reduce(
-        (sum, r) => sum + (r.time_taken_seconds || 0),
+        (sum: number, r: any) => sum + (r.time_taken_seconds || 0),
         0
       );
 
@@ -278,7 +298,7 @@ export async function POST(
         max_points: phaseMaxPoints,
         time_seconds: phaseTime,
         questions: (phase.questions || []).map((q) => {
-          const resp = phaseResponses.find((r) => r.question_id === q.id);
+          const resp = phaseResponses.find((r: any) => r.question_id === q.id);
           return {
             question_id: q.id,
             question_text: q.text,
@@ -340,4 +360,23 @@ export async function POST(
       { status: 500 }
     );
   }
+}
+
+// ---------------------------------------------------------------------------
+// Query filter helpers
+// ---------------------------------------------------------------------------
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+function applyPractitionerFilter(query: any, p: Practitioner) {
+  if (p.isStudent && p.id) {
+    return query.eq('student_id', p.id);
+  }
+  return query.is('student_id', null).eq('practitioner_email', p.email);
+}
+
+function applyResponseFilter(query: any, p: Practitioner) {
+  if (p.isStudent && p.id) {
+    return query.eq('student_id', p.id);
+  }
+  return query.is('student_id', null).eq('student_email', p.email);
 }

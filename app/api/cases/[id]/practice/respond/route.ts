@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { findPractitioner, type Practitioner } from '@/lib/practice-auth';
 import type { CaseQuestion } from '@/types/case-studies';
 
 /**
@@ -9,6 +10,7 @@ import type { CaseQuestion } from '@/types/case-studies';
  *
  * Submit a response to a question during practice mode.
  * Scores the response and updates progress.
+ * Works for both students and instructors.
  *
  * Body: { phase_id, question_id, response, time_taken_seconds, hints_used }
  */
@@ -26,16 +28,12 @@ export async function PUT(
 
     const supabase = getSupabaseAdmin();
 
-    // Find student
-    const { data: student, error: studentError } = await supabase
-      .from('students')
-      .select('id, email, first_name, last_name')
-      .ilike('email', session.user.email)
-      .single();
+    // Find practitioner (student or instructor)
+    const practitioner = await findPractitioner(supabase, session.user.email);
 
-    if (studentError || !student) {
+    if (!practitioner) {
       return NextResponse.json(
-        { error: 'Student record not found' },
+        { error: 'User record not found' },
         { status: 404 }
       );
     }
@@ -52,15 +50,17 @@ export async function PUT(
     }
 
     // Get current in_progress attempt
-    const { data: progress, error: progressError } = await supabase
+    let progressQuery = supabase
       .from('case_practice_progress')
       .select('*')
-      .eq('student_id', student.id)
       .eq('case_id', caseId)
       .eq('status', 'in_progress')
       .order('attempt_number', { ascending: false })
-      .limit(1)
-      .single();
+      .limit(1);
+
+    progressQuery = applyPractitionerFilter(progressQuery, practitioner);
+
+    const { data: progress, error: progressError } = await progressQuery.single();
 
     if (progressError || !progress) {
       return NextResponse.json(
@@ -113,17 +113,19 @@ export async function PUT(
     const { isCorrect, pointsEarned } = scoreResponse(question, response);
 
     // Check if this response already exists (prevent double submissions)
-    const { data: existingResponse } = await supabase
+    let dupeQuery = supabase
       .from('case_responses')
       .select('id')
       .eq('case_id', caseId)
-      .eq('student_id', student.id)
       .eq('phase_id', phase_id)
       .eq('question_id', question_id)
       .eq('attempt_number', progress.attempt_number)
       .is('session_id', null)
-      .limit(1)
-      .single();
+      .limit(1);
+
+    dupeQuery = applyResponseFilter(dupeQuery, practitioner);
+
+    const { data: existingResponse } = await dupeQuery.single();
 
     if (existingResponse) {
       return NextResponse.json(
@@ -133,16 +135,15 @@ export async function PUT(
     }
 
     // Create case_responses record
-    const initials = `${(student.first_name || '')[0] || ''}${(student.last_name || '')[0] || ''}`.toUpperCase();
-
     const { error: responseError } = await supabase
       .from('case_responses')
       .insert({
         case_id: caseId,
-        student_id: student.id,
-        student_email: student.email,
-        student_name: `${student.first_name || ''} ${student.last_name || ''}`.trim(),
-        student_initials: initials,
+        student_id: practitioner.id, // null for instructors
+        student_email: practitioner.email,
+        student_name: practitioner.fullName,
+        student_initials: practitioner.initials,
+        practitioner_email: practitioner.email,
         phase_id,
         question_id,
         response: typeof response === 'object' ? response : { value: response },
@@ -209,9 +210,10 @@ export async function PUT(
   }
 }
 
-/**
- * Score a student response against the correct answer.
- */
+// ---------------------------------------------------------------------------
+// Scoring
+// ---------------------------------------------------------------------------
+
 function scoreResponse(
   question: CaseQuestion,
   response: unknown
@@ -220,7 +222,6 @@ function scoreResponse(
 
   switch (question.type) {
     case 'multiple_choice': {
-      // Exact match — response should be the option id
       const studentAnswer =
         typeof response === 'object' && response !== null
           ? (response as Record<string, unknown>).value
@@ -230,7 +231,6 @@ function scoreResponse(
     }
 
     case 'multi_select': {
-      // Partial credit: correct selections / total correct options
       const correctAnswers = Array.isArray(question.correct_answer)
         ? question.correct_answer
         : [question.correct_answer];
@@ -245,13 +245,11 @@ function scoreResponse(
       const correctSet = new Set(correctAnswers.map(String));
       const studentSet = new Set(studentAnswers.map(String));
 
-      // Count correct selections (true positives)
       let correctSelections = 0;
       for (const ans of studentSet) {
         if (correctSet.has(ans)) correctSelections++;
       }
 
-      // Penalize wrong selections
       const wrongSelections = studentSet.size - correctSelections;
       const adjustedScore = Math.max(0, correctSelections - wrongSelections);
       const ratio = correctSet.size > 0 ? adjustedScore / correctSet.size : 0;
@@ -261,7 +259,6 @@ function scoreResponse(
     }
 
     case 'ordered_list': {
-      // Compare sequence — each correct position earns proportional points
       const correctOrder = Array.isArray(question.correct_answer)
         ? question.correct_answer
         : [];
@@ -291,7 +288,6 @@ function scoreResponse(
     }
 
     case 'numeric': {
-      // Exact match or within tolerance
       const studentValue =
         typeof response === 'object' && response !== null
           ? Number((response as Record<string, unknown>).value)
@@ -308,11 +304,29 @@ function scoreResponse(
     }
 
     case 'free_text': {
-      // Always marked correct — self-assessed in debrief
       return { isCorrect: true, pointsEarned: maxPoints };
     }
 
     default:
       return { isCorrect: false, pointsEarned: 0 };
   }
+}
+
+// ---------------------------------------------------------------------------
+// Query filter helpers
+// ---------------------------------------------------------------------------
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+function applyPractitionerFilter(query: any, p: Practitioner) {
+  if (p.isStudent && p.id) {
+    return query.eq('student_id', p.id);
+  }
+  return query.is('student_id', null).eq('practitioner_email', p.email);
+}
+
+function applyResponseFilter(query: any, p: Practitioner) {
+  if (p.isStudent && p.id) {
+    return query.eq('student_id', p.id);
+  }
+  return query.is('student_id', null).eq('student_email', p.email);
 }

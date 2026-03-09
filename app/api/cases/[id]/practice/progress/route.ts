@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { findPractitioner, type Practitioner } from '@/lib/practice-auth';
 
 /**
  * GET /api/cases/[id]/practice/progress
  *
- * Return the current in_progress attempt for this student on this case.
+ * Return the current in_progress attempt for this user on this case.
  * Returns null if no active attempt.
+ * Works for both students and instructors.
  */
 export async function GET(
   request: NextRequest,
@@ -23,30 +25,26 @@ export async function GET(
 
     const supabase = getSupabaseAdmin();
 
-    // Find student
-    const { data: student, error: studentError } = await supabase
-      .from('students')
-      .select('id')
-      .ilike('email', session.user.email)
-      .single();
+    // Find practitioner (student or instructor)
+    const practitioner = await findPractitioner(supabase, session.user.email);
 
-    if (studentError || !student) {
-      return NextResponse.json(
-        { error: 'Student record not found' },
-        { status: 404 }
-      );
+    if (!practitioner) {
+      // No user record — return null progress (not a 404 error)
+      return NextResponse.json({ progress: null });
     }
 
     // Check for in_progress attempt
-    const { data: progress } = await supabase
+    let progressQuery = supabase
       .from('case_practice_progress')
       .select('*')
-      .eq('student_id', student.id)
       .eq('case_id', caseId)
       .eq('status', 'in_progress')
       .order('attempt_number', { ascending: false })
-      .limit(1)
-      .single();
+      .limit(1);
+
+    progressQuery = applyPractitionerFilter(progressQuery, practitioner);
+
+    const { data: progress } = await progressQuery.single();
 
     return NextResponse.json({ progress: progress || null });
   } catch (error) {
@@ -56,4 +54,16 @@ export async function GET(
       { status: 500 }
     );
   }
+}
+
+// ---------------------------------------------------------------------------
+// Query filter helper
+// ---------------------------------------------------------------------------
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+function applyPractitionerFilter(query: any, p: Practitioner) {
+  if (p.isStudent && p.id) {
+    return query.eq('student_id', p.id);
+  }
+  return query.is('student_id', null).eq('practitioner_email', p.email);
 }

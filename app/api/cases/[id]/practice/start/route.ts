@@ -2,14 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { findPractitioner, type Practitioner } from '@/lib/practice-auth';
 
 /**
  * POST /api/cases/[id]/practice/start
  *
  * Start or resume a practice attempt for a case study.
- * - If an in_progress attempt exists, resume it
- * - Otherwise create a new attempt (incrementing attempt_number)
- * - Returns: progress record + full case data
+ * Works for both students (student_id) and instructors (practitioner_email).
  */
 export async function POST(
   request: NextRequest,
@@ -25,16 +24,12 @@ export async function POST(
 
     const supabase = getSupabaseAdmin();
 
-    // Find student record by email
-    const { data: student, error: studentError } = await supabase
-      .from('students')
-      .select('id, email, cohort_id')
-      .ilike('email', session.user.email)
-      .single();
+    // Find practitioner (student or instructor)
+    const practitioner = await findPractitioner(supabase, session.user.email);
 
-    if (studentError || !student) {
+    if (!practitioner) {
       return NextResponse.json(
-        { error: 'Student record not found' },
+        { error: 'User record not found. You need a student or instructor account to practice.' },
         { status: 404 }
       );
     }
@@ -55,26 +50,31 @@ export async function POST(
     }
 
     // Check for existing in_progress attempt
-    const { data: existingProgress } = await supabase
+    let existingQuery = supabase
       .from('case_practice_progress')
       .select('*')
-      .eq('student_id', student.id)
       .eq('case_id', caseId)
       .eq('status', 'in_progress')
       .order('attempt_number', { ascending: false })
-      .limit(1)
-      .single();
+      .limit(1);
+
+    existingQuery = applyPractitionerFilter(existingQuery, practitioner);
+
+    const { data: existingProgress } = await existingQuery.single();
 
     if (existingProgress) {
       // Resume existing attempt — also fetch existing responses
-      const { data: existingResponses } = await supabase
+      let responsesQuery = supabase
         .from('case_responses')
         .select('*')
         .eq('case_id', caseId)
-        .eq('student_id', student.id)
         .eq('attempt_number', existingProgress.attempt_number)
         .is('session_id', null)
         .order('submitted_at', { ascending: true });
+
+      responsesQuery = applyResponseFilter(responsesQuery, practitioner);
+
+      const { data: existingResponses } = await responsesQuery;
 
       return NextResponse.json({
         progress: existingProgress,
@@ -84,15 +84,17 @@ export async function POST(
       });
     }
 
-    // Find the highest attempt number for this student+case
-    const { data: lastAttempt } = await supabase
+    // Find the highest attempt number for this practitioner+case
+    let lastAttemptQuery = supabase
       .from('case_practice_progress')
       .select('attempt_number')
-      .eq('student_id', student.id)
       .eq('case_id', caseId)
       .order('attempt_number', { ascending: false })
-      .limit(1)
-      .single();
+      .limit(1);
+
+    lastAttemptQuery = applyPractitionerFilter(lastAttemptQuery, practitioner);
+
+    const { data: lastAttempt } = await lastAttemptQuery.single();
 
     const nextAttempt = (lastAttempt?.attempt_number || 0) + 1;
 
@@ -108,19 +110,22 @@ export async function POST(
     }
 
     // Create new progress record
+    const insertData: Record<string, unknown> = {
+      student_id: practitioner.id, // null for instructors
+      practitioner_email: practitioner.email,
+      case_id: caseId,
+      attempt_number: nextAttempt,
+      current_phase: 0,
+      current_question: 0,
+      total_points: 0,
+      max_points: maxPoints,
+      status: 'in_progress',
+      responses: [],
+    };
+
     const { data: newProgress, error: progressError } = await supabase
       .from('case_practice_progress')
-      .insert({
-        student_id: student.id,
-        case_id: caseId,
-        attempt_number: nextAttempt,
-        current_phase: 0,
-        current_question: 0,
-        total_points: 0,
-        max_points: maxPoints,
-        status: 'in_progress',
-        responses: [],
-      })
+      .insert(insertData)
       .select()
       .single();
 
@@ -155,4 +160,23 @@ export async function POST(
       { status: 500 }
     );
   }
+}
+
+// ---------------------------------------------------------------------------
+// Query filter helpers
+// ---------------------------------------------------------------------------
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+function applyPractitionerFilter(query: any, p: Practitioner) {
+  if (p.isStudent && p.id) {
+    return query.eq('student_id', p.id);
+  }
+  return query.is('student_id', null).eq('practitioner_email', p.email);
+}
+
+function applyResponseFilter(query: any, p: Practitioner) {
+  if (p.isStudent && p.id) {
+    return query.eq('student_id', p.id);
+  }
+  return query.is('student_id', null).eq('student_email', p.email);
 }
