@@ -91,12 +91,14 @@ export async function GET(request: NextRequest) {
 
   const requiredHours: number = reqRow?.required_value ?? REQUIRED_HOURS_DEFAULT;
 
-  // Fetch all active, non-archived cohorts that have started
+  // Fetch active, non-archived cohorts that have started AND are configured
+  // to track clinical hours. Only PM S3+, AEMT, etc. should have this flag.
   const { data: cohorts, error: cohortsError } = await supabase
     .from('cohorts')
     .select('id, cohort_number, start_date, end_date, program:programs(name, abbreviation)')
     .eq('is_active', true)
     .eq('is_archived', false)
+    .eq('track_clinical_hours', true)
     .not('start_date', 'is', null)
     .lte('start_date', todayStr);
 

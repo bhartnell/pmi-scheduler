@@ -102,6 +102,49 @@ export async function GET(request: NextRequest) {
   const errors: string[] = [];
 
   // ---------------------------------------------------------------------------
+  // Pre-filter: Only check students in cohorts that track clinical hours.
+  // EMT cohorts and PM S1/S2 don't have clinical compliance requirements.
+  // ---------------------------------------------------------------------------
+
+  const { data: trackedCohorts } = await supabase
+    .from('cohorts')
+    .select('id')
+    .eq('track_clinical_hours', true);
+
+  const trackedCohortIds = (trackedCohorts || []).map((c: { id: string }) => c.id);
+
+  if (trackedCohortIds.length === 0) {
+    console.log('[COMPLIANCE-EXPIRY] No cohorts with track_clinical_hours enabled, skipping');
+    return NextResponse.json({
+      success: true,
+      records_checked: 0,
+      notifications_sent: 0,
+      skipped_reason: 'no_tracked_cohorts',
+      duration_ms: Date.now() - startTime,
+    });
+  }
+
+  // Get student IDs belonging to tracked cohorts
+  const { data: trackedStudents } = await supabase
+    .from('students')
+    .select('id')
+    .in('cohort_id', trackedCohortIds)
+    .eq('status', 'active');
+
+  const trackedStudentIds = (trackedStudents || []).map((s: { id: string }) => s.id);
+
+  if (trackedStudentIds.length === 0) {
+    console.log('[COMPLIANCE-EXPIRY] No active students in tracked cohorts');
+    return NextResponse.json({
+      success: true,
+      records_checked: 0,
+      notifications_sent: 0,
+      skipped_reason: 'no_tracked_students',
+      duration_ms: Date.now() - startTime,
+    });
+  }
+
+  // ---------------------------------------------------------------------------
   // 1. Check student_compliance_records (normalized schema)
   // ---------------------------------------------------------------------------
 
@@ -115,6 +158,7 @@ export async function GET(request: NextRequest) {
       doc_type:compliance_document_types(name),
       student:students(id, first_name, last_name, email)
     `)
+    .in('student_id', trackedStudentIds)
     .gte('expiration_date', todayStr)
     .lte('expiration_date', lookAheadStr)
     .neq('status', 'expired');
@@ -191,6 +235,7 @@ export async function GET(request: NextRequest) {
       expiration_date,
       student:students(id, first_name, last_name, email)
     `)
+    .in('student_id', trackedStudentIds)
     .gte('expiration_date', todayStr)
     .lte('expiration_date', lookAheadStr)
     .eq('completed', true);

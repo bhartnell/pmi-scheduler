@@ -82,7 +82,50 @@ export async function GET(request: NextRequest) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // Fetch all active internships (in progress, not completed/withdrawn)
+  // ---------------------------------------------------------------------------
+  // Pre-filter: Only check internships for students in cohorts that track
+  // clinical hours. This ensures EMT/PM S1-S2 cohorts are excluded.
+  // ---------------------------------------------------------------------------
+
+  const { data: trackedCohorts } = await supabase
+    .from('cohorts')
+    .select('id')
+    .eq('track_clinical_hours', true);
+
+  const trackedCohortIds = (trackedCohorts || []).map((c: { id: string }) => c.id);
+
+  if (trackedCohortIds.length === 0) {
+    console.log('[INTERNSHIP-MILESTONES] No cohorts with track_clinical_hours enabled, skipping');
+    return NextResponse.json({
+      success: true,
+      internships_checked: 0,
+      notifications_sent: 0,
+      skipped_reason: 'no_tracked_cohorts',
+      duration_ms: Date.now() - startTime,
+    });
+  }
+
+  // Get student IDs belonging to tracked cohorts
+  const { data: trackedStudents } = await supabase
+    .from('students')
+    .select('id')
+    .in('cohort_id', trackedCohortIds)
+    .eq('status', 'active');
+
+  const trackedStudentIds = (trackedStudents || []).map((s: { id: string }) => s.id);
+
+  if (trackedStudentIds.length === 0) {
+    console.log('[INTERNSHIP-MILESTONES] No active students in tracked cohorts');
+    return NextResponse.json({
+      success: true,
+      internships_checked: 0,
+      notifications_sent: 0,
+      skipped_reason: 'no_tracked_students',
+      duration_ms: Date.now() - startTime,
+    });
+  }
+
+  // Fetch active internships for students in tracked cohorts only
   const { data: internships, error: internshipsError } = await supabase
     .from('student_internships')
     .select(`
@@ -99,6 +142,7 @@ export async function GET(request: NextRequest) {
       closeout_meeting_date,
       student:students(id, first_name, last_name, email)
     `)
+    .in('student_id', trackedStudentIds)
     .in('status', ['in_progress', 'on_track', 'at_risk', 'phase_1_mentorship', 'phase_2_evaluation'])
     .eq('closeout_completed', false);
 

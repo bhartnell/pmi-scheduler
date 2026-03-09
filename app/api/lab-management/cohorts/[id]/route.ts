@@ -67,9 +67,13 @@ export async function PATCH(
     if (body.name !== undefined) allowedFields.name = body.name;
     if (body.start_date !== undefined) allowedFields.start_date = body.start_date;
     if (body.end_date !== undefined) allowedFields.end_date = body.end_date;
+    if (body.expected_end_date !== undefined) allowedFields.expected_end_date = body.expected_end_date;
     if (body.status !== undefined) allowedFields.status = body.status;
+    if (body.is_active !== undefined) allowedFields.is_active = body.is_active;
     if (body.program_id !== undefined) allowedFields.program_id = body.program_id;
     if (body.description !== undefined) allowedFields.description = body.description;
+    if (body.current_semester !== undefined) allowedFields.current_semester = body.current_semester;
+    if (body.track_clinical_hours !== undefined) allowedFields.track_clinical_hours = body.track_clinical_hours;
 
     if (Object.keys(allowedFields).length === 0) {
       return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });

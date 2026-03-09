@@ -16,6 +16,7 @@ export interface Cohort {
   start_date: string | null;
   expected_end_date: string | null;
   is_active: boolean;
+  track_clinical_hours: boolean;
   created_at: string;
   // Joined fields
   program?: Program;
