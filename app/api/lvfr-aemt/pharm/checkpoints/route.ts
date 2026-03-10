@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { hasMinRole } from '@/lib/permissions';
+import { hasMinRole, isAgencyRole } from '@/lib/permissions';
 import { scoreCheckpoint, getBlankedFields } from '@/lib/pharm-scoring';
 import { logRecordAccess } from '@/lib/ferpa';
 
@@ -58,6 +58,11 @@ export async function POST(request: NextRequest) {
   const auth = await requireAuth();
   if (auth instanceof NextResponse) return auth;
   const { user } = auth;
+
+  // Agency roles are strictly read-only — cannot submit checkpoints
+  if (isAgencyRole(user.role)) {
+    return NextResponse.json({ error: 'Write access denied' }, { status: 403 });
+  }
 
   const body = await request.json();
   const { difficulty_level, responses } = body;

@@ -8,7 +8,11 @@ import { AlertTriangle, ArrowLeft, RefreshCw } from 'lucide-react';
 const ERROR_MESSAGES: Record<string, { title: string; message: string }> = {
   AccessDenied: {
     title: 'Access Denied',
-    message: 'Access is restricted to authorized @pmi.edu accounts. Contact your administrator if you believe this is an error.',
+    message: 'Access is restricted to authorized accounts. Contact your administrator if you believe this is an error.',
+  },
+  AccessRestricted: {
+    title: 'Account Not Authorized',
+    message: 'Access to PMI Paramedic Tools is restricted to authorized personnel. If you are an agency partner or student and need access, contact your PMI program coordinator at bhartnell@pmi.edu.',
   },
   OAuthSignin: {
     title: 'Sign-In Failed',

@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
@@ -16,7 +15,7 @@ export async function GET(request: NextRequest) {
     // Get current user from lab_users table
     const { data: user, error } = await supabase
       .from('lab_users')
-      .select('id, name, email, role, is_active, approved_at, created_at')
+      .select('id, name, email, role, is_active, approved_at, created_at, auth_provider, agency_affiliation, agency_scope')
       .ilike('email', session.user.email)
       .single();
 

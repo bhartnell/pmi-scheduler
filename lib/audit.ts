@@ -15,7 +15,11 @@ export type AuditAction =
   | 'export'
   | 'login'
   | 'logout'
-  | 'access_denied';
+  | 'access_denied'
+  | 'external_email_approved'
+  | 'external_email_reactivated'
+  | 'external_email_revoked'
+  | 'external_roster_imported';
 
 export type AuditResourceType =
   | 'student'

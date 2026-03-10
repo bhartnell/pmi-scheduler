@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { hasMinRole } from '@/lib/permissions';
+import { hasMinRole, isAgencyRole } from '@/lib/permissions';
 
 // ---------------------------------------------------------------------------
 // GET /api/lvfr-aemt/chapters
@@ -56,8 +56,14 @@ export async function GET() {
 // Body: { chapter_id, status }
 // ---------------------------------------------------------------------------
 export async function PATCH(request: NextRequest) {
-  const auth = await requireAuth('instructor');
+  const auth = await requireAuth();
   if (auth instanceof NextResponse) return auth;
+  const { user: patchUser } = auth;
+
+  // Agency roles are strictly read-only
+  if (isAgencyRole(patchUser.role) || !hasMinRole(patchUser.role, 'instructor')) {
+    return NextResponse.json({ error: 'Write access denied' }, { status: 403 });
+  }
 
   const body = await request.json();
   const { chapter_id, status } = body;

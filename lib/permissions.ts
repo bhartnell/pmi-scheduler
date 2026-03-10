@@ -239,9 +239,19 @@ export function canAccessLVFR(role: Role | string): boolean {
 /**
  * Check if user can edit LVFR AEMT data (write).
  * Returns true for: instructor+, admin, superadmin (NOT agency_observer, NOT agency_liaison)
+ * Agency roles are strictly READ-ONLY despite their numeric level.
  */
 export function canEditLVFR(role: Role | string): boolean {
+  if (isAgencyRole(role)) return false;
   return hasMinRole(role, 'instructor');
+}
+
+/**
+ * Check if user has an agency role (liaison or observer).
+ * These roles are strictly read-only on all endpoints.
+ */
+export function isAgencyRole(role: Role | string): boolean {
+  return role === 'agency_liaison' || role === 'agency_observer';
 }
 
 /**

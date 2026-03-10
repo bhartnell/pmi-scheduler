@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { hasMinRole } from '@/lib/permissions';
+import { hasMinRole, isAgencyRole } from '@/lib/permissions';
 import { logRecordAccess } from '@/lib/ferpa';
 
 // ---------------------------------------------------------------------------
@@ -86,9 +86,14 @@ export async function GET(request: NextRequest) {
 // Body: { day_number, status?, completion_notes?, chapters_completed?: string[] }
 // ---------------------------------------------------------------------------
 export async function PATCH(request: NextRequest) {
-  const auth = await requireAuth('instructor');
+  const auth = await requireAuth();
   if (auth instanceof NextResponse) return auth;
   const { user } = auth;
+
+  // Agency roles are strictly read-only
+  if (isAgencyRole(user.role) || !hasMinRole(user.role, 'instructor')) {
+    return NextResponse.json({ error: 'Write access denied' }, { status: 403 });
+  }
 
   const body = await request.json();
   const { day_number, status, completion_notes, chapters_completed } = body;

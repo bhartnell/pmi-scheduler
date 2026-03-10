@@ -30,7 +30,7 @@ import {
   LayoutGrid,
   Check,
 } from 'lucide-react';
-import { canAccessAdmin, canAccessClinical, canAccessScheduling, canAccessAffiliations, hasMinRole, getRoleLabel, getRoleBadgeClasses } from '@/lib/permissions';
+import { canAccessAdmin, canAccessClinical, canAccessScheduling, canAccessAffiliations, hasMinRole } from '@/lib/permissions';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import NotificationBell from '@/components/NotificationBell';
@@ -124,6 +124,12 @@ export default function HomePage() {
       // "access pending" screen, but do not load preferences or widgets.
       if (user.role === 'pending') {
         setCurrentUser(user);
+        return;
+      }
+
+      // Students scoped to a specific program redirect to that program's dashboard
+      if (user.role === 'student' && user.agency_scope?.includes('lvfr_aemt')) {
+        window.location.href = '/lvfr-aemt';
         return;
       }
 

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { hasMinRole } from '@/lib/permissions';
+import { hasMinRole, isAgencyRole } from '@/lib/permissions';
 
 // ---------------------------------------------------------------------------
 // GET /api/lvfr-aemt/scheduling
@@ -138,8 +138,14 @@ export async function GET(request: NextRequest) {
 // Body: { day_number, primary_instructor_id?, secondary_instructor_id?, min_instructors? }
 // ---------------------------------------------------------------------------
 export async function PUT(request: NextRequest) {
-  const auth = await requireAuth('instructor');
+  const auth = await requireAuth();
   if (auth instanceof NextResponse) return auth;
+  const { user: putUser } = auth;
+
+  // Agency roles are strictly read-only
+  if (isAgencyRole(putUser.role) || !hasMinRole(putUser.role, 'instructor')) {
+    return NextResponse.json({ error: 'Write access denied' }, { status: 403 });
+  }
 
   const body = await request.json();
   const { day_number, primary_instructor_id, secondary_instructor_id, min_instructors } = body;
@@ -185,8 +191,14 @@ export async function PUT(request: NextRequest) {
 // Body: { instructor_id, pattern_type, pattern_config }
 // ---------------------------------------------------------------------------
 export async function POST(request: NextRequest) {
-  const auth = await requireAuth('instructor');
+  const auth = await requireAuth();
   if (auth instanceof NextResponse) return auth;
+  const { user: postUser } = auth;
+
+  // Agency roles are strictly read-only
+  if (isAgencyRole(postUser.role) || !hasMinRole(postUser.role, 'instructor')) {
+    return NextResponse.json({ error: 'Write access denied' }, { status: 403 });
+  }
 
   const body = await request.json();
   const { instructor_id, pattern_type, pattern_config } = body;

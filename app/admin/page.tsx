@@ -110,6 +110,13 @@ function buildSections(pendingAccessRequests: number): AdminSection[] {
           badge: pendingAccessRequests > 0 ? pendingAccessRequests : undefined,
         },
         {
+          href: '/admin/external-access',
+          icon: Key,
+          title: 'External Access',
+          description: 'Manage approved external emails for agency partners and contracted students',
+          color: 'bg-indigo-600',
+        },
+        {
           href: '/admin/deletion-requests',
           icon: Trash2,
           title: 'Deletion Requests',

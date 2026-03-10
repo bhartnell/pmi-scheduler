@@ -36,6 +36,9 @@ export interface CurrentUser {
   name: string;
   email: string;
   role: Role;
+  auth_provider?: string;
+  agency_affiliation?: string | null;
+  agency_scope?: string[] | null;
 }
 
 /**
