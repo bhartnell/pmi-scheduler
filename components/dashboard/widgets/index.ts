@@ -113,9 +113,11 @@ export const WIDGET_WHITELIST: Record<string, string[]> = {
   superadmin: Object.keys(WIDGET_DEFINITIONS), // all widgets
   admin: Object.keys(WIDGET_DEFINITIONS),
   lead_instructor: Object.keys(WIDGET_DEFINITIONS),
+  agency_liaison: ['notifications', 'quick_links'],
   instructor: ['my_labs', 'my_tasks', 'notifications', 'overdue_tasks', 'quick_links', 'open_stations', 'cert_expiry', 'onboarding', 'quick_stats'],
   volunteer_instructor: ['my_labs', 'notifications'],
   program_director: ['notifications'],
+  agency_observer: ['notifications', 'quick_links'],
   student: ['my_labs', 'my_tasks'],
   guest: [],
   pending: [],
@@ -139,12 +141,14 @@ export function filterWidgetsByRole(widgets: string[], role: string): string[] {
 
 // Quick link whitelists per role
 export const QUICK_LINK_WHITELIST: Record<string, string[]> = {
-  superadmin: ['scenarios', 'students', 'schedule', 'emt_tracker', 'aemt_tracker', 'clinical', 'internships', 'admin', 'feedback', 'my_certs', 'learning_styles', 'cohorts', 'lab_days', 'skill_sheets', 'reports', 'onboarding', 'todays_labs', 'tasks', 'ekg_warmup', 'case_studies'],
-  admin: ['scenarios', 'students', 'schedule', 'emt_tracker', 'aemt_tracker', 'clinical', 'internships', 'admin', 'feedback', 'my_certs', 'learning_styles', 'cohorts', 'lab_days', 'skill_sheets', 'reports', 'onboarding', 'todays_labs', 'tasks', 'ekg_warmup', 'case_studies'],
-  lead_instructor: ['scenarios', 'students', 'schedule', 'emt_tracker', 'aemt_tracker', 'clinical', 'internships', 'my_certs', 'learning_styles', 'cohorts', 'lab_days', 'skill_sheets', 'reports', 'onboarding', 'todays_labs', 'tasks', 'ekg_warmup', 'case_studies'],
-  instructor: ['scenarios', 'students', 'schedule', 'my_certs', 'onboarding', 'todays_labs', 'tasks', 'skill_sheets', 'ekg_warmup', 'case_studies'],
+  superadmin: ['scenarios', 'students', 'schedule', 'emt_tracker', 'aemt_tracker', 'clinical', 'internships', 'admin', 'feedback', 'my_certs', 'learning_styles', 'cohorts', 'lab_days', 'skill_sheets', 'reports', 'onboarding', 'todays_labs', 'tasks', 'ekg_warmup', 'case_studies', 'lvfr_dashboard', 'lvfr_calendar', 'lvfr_scheduling', 'lvfr_pharm'],
+  admin: ['scenarios', 'students', 'schedule', 'emt_tracker', 'aemt_tracker', 'clinical', 'internships', 'admin', 'feedback', 'my_certs', 'learning_styles', 'cohorts', 'lab_days', 'skill_sheets', 'reports', 'onboarding', 'todays_labs', 'tasks', 'ekg_warmup', 'case_studies', 'lvfr_dashboard', 'lvfr_calendar', 'lvfr_scheduling', 'lvfr_pharm'],
+  lead_instructor: ['scenarios', 'students', 'schedule', 'emt_tracker', 'aemt_tracker', 'clinical', 'internships', 'my_certs', 'learning_styles', 'cohorts', 'lab_days', 'skill_sheets', 'reports', 'onboarding', 'todays_labs', 'tasks', 'ekg_warmup', 'case_studies', 'lvfr_dashboard', 'lvfr_calendar', 'lvfr_scheduling', 'lvfr_pharm'],
+  agency_liaison: ['lvfr_dashboard', 'lvfr_calendar', 'lvfr_scheduling', 'lvfr_pharm'],
+  instructor: ['scenarios', 'students', 'schedule', 'my_certs', 'onboarding', 'todays_labs', 'tasks', 'skill_sheets', 'ekg_warmup', 'case_studies', 'lvfr_dashboard', 'lvfr_calendar', 'lvfr_scheduling', 'lvfr_pharm'],
   volunteer_instructor: ['schedule', 'todays_labs'],
   program_director: ['clinical'],
+  agency_observer: ['lvfr_dashboard', 'lvfr_calendar', 'lvfr_pharm'],
   student: ['case_studies'],
   guest: [],
   pending: [],
@@ -164,6 +168,10 @@ export const ROLE_DEFAULTS: Record<string, { widgets: string[]; quickLinks: stri
     widgets: ['needs_attention', 'my_tasks', 'my_labs', 'at_risk_students', 'overview_stats', 'quick_stats', 'open_stations', 'overdue_tasks', 'cert_expiry', 'notifications', 'quick_links'],
     quickLinks: ['scenarios', 'students', 'schedule', 'emt_tracker', 'clinical'],
   },
+  agency_liaison: {
+    widgets: ['notifications', 'quick_links'],
+    quickLinks: ['lvfr_dashboard', 'lvfr_calendar', 'lvfr_scheduling', 'lvfr_pharm'],
+  },
   instructor: {
     widgets: ['my_tasks', 'my_labs', 'notifications', 'overdue_tasks', 'open_stations', 'cert_expiry', 'quick_links'],
     quickLinks: ['scenarios', 'students', 'schedule', 'my_certs', 'onboarding'],
@@ -175,6 +183,10 @@ export const ROLE_DEFAULTS: Record<string, { widgets: string[]; quickLinks: stri
   program_director: {
     widgets: ['notifications'],
     quickLinks: ['clinical'],
+  },
+  agency_observer: {
+    widgets: ['notifications', 'quick_links'],
+    quickLinks: ['lvfr_dashboard', 'lvfr_calendar', 'lvfr_pharm'],
   },
   student: {
     widgets: ['my_labs', 'my_tasks'],

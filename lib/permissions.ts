@@ -224,6 +224,34 @@ export function canAccessAffiliations(role: Role | string): boolean {
   return role === 'program_director' || hasMinRole(role, 'lead_instructor');
 }
 
+// ============================================
+// LVFR AEMT Access Helpers
+// ============================================
+
+/**
+ * Check if user can access the LVFR AEMT section (read).
+ * Returns true for: agency_observer, agency_liaison, instructor+, admin, superadmin
+ */
+export function canAccessLVFR(role: Role | string): boolean {
+  return role === 'agency_observer' || role === 'agency_liaison' || hasMinRole(role, 'instructor');
+}
+
+/**
+ * Check if user can edit LVFR AEMT data (write).
+ * Returns true for: instructor+, admin, superadmin (NOT agency_observer, NOT agency_liaison)
+ */
+export function canEditLVFR(role: Role | string): boolean {
+  return hasMinRole(role, 'instructor');
+}
+
+/**
+ * Check if current user is a student role (LVFR student check is cohort-based,
+ * but this helper quickly identifies student-role users who may be LVFR students).
+ */
+export function isLVFRStudent(role: Role | string): boolean {
+  return role === 'student';
+}
+
 /**
  * Check if user can create/edit/delete affiliations
  * Program directors get full CRUD, plus admin and above

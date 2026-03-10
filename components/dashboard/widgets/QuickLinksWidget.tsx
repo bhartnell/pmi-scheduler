@@ -149,6 +149,30 @@ export const QUICK_LINK_DEFINITIONS: Record<string, {
     label: 'Case Studies',
     color: 'bg-orange-500',
   },
+  lvfr_dashboard: {
+    href: '/lvfr-aemt',
+    icon: Stethoscope,
+    label: 'LVFR AEMT',
+    color: 'bg-red-600',
+  },
+  lvfr_calendar: {
+    href: '/lvfr-aemt/calendar',
+    icon: Calendar,
+    label: 'LVFR Calendar',
+    color: 'bg-red-500',
+  },
+  lvfr_scheduling: {
+    href: '/lvfr-aemt/scheduling',
+    icon: ClipboardCheck,
+    label: 'LVFR Coverage',
+    color: 'bg-red-400',
+  },
+  lvfr_pharm: {
+    href: '/lvfr-aemt/pharm',
+    icon: Award,
+    label: 'LVFR Pharm',
+    color: 'bg-red-500',
+  },
 };
 
 interface QuickLinksWidgetProps {

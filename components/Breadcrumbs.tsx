@@ -59,6 +59,10 @@ const ROUTE_LABELS: Record<string, string> = {
   'cases/session': 'Session',
   'admin/cases': 'Cases',
   'admin/cases/generate': 'Case Generation',
+  'lvfr-aemt': 'LVFR AEMT',
+  'lvfr-aemt/calendar': 'Course Calendar',
+  'lvfr-aemt/scheduling': 'Coverage Grid',
+  'lvfr-aemt/pharm': 'Pharmacology',
 };
 
 /** Check if a segment looks like a UUID or dynamic ID */

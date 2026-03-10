@@ -8,9 +8,11 @@ import { canAccessAdmin, getRoleLabel, type Role } from '@/lib/permissions';
 
 const PREVIEWABLE_ROLES: Role[] = [
   'lead_instructor',
+  'agency_liaison',
   'instructor',
   'volunteer_instructor',
   'program_director',
+  'agency_observer',
   'student',
   'guest',
 ];
