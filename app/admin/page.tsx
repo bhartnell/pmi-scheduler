@@ -456,6 +456,13 @@ function buildSections(pendingAccessRequests: number): AdminSection[] {
           color: 'bg-red-600',
         },
         {
+          href: '/admin/compliance',
+          icon: ClipboardCheck,
+          title: 'Compliance Audits',
+          description: 'Track and manage regulatory compliance audits with automated checks and manual logging',
+          color: 'bg-emerald-600',
+        },
+        {
           href: '/admin/roles',
           icon: Key,
           title: 'Role Permissions',
