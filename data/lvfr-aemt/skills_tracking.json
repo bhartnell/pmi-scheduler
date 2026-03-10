@@ -1,0 +1,403 @@
+{
+  "skills_tracking": {
+    "description": "AEMT psychomotor skills that must be demonstrated and tracked for course completion and NREMT eligibility.",
+    "evaluation_standards": {
+      "passing": "Satisfactory completion per AAOS/NREMT skill sheet criteria",
+      "attempts_allowed": 3,
+      "remediation": "Required after 2 failed attempts before 3rd attempt"
+    },
+    "skill_categories": [
+      {
+        "id": "cat_patient_assessment",
+        "name": "Patient Assessment",
+        "skills": [
+          {
+            "id": "skill_trauma_assessment",
+            "name": "Trauma Patient Assessment",
+            "description": "Complete trauma assessment: scene size-up, primary assessment, rapid trauma exam, vitals, secondary assessment, reassessment",
+            "nremt_tested": true,
+            "introduced_day": 6,
+            "practice_days": [6, 10, 16],
+            "evaluation_day": null,
+            "min_practice_attempts": 3,
+            "equipment_needed": ["Stethoscope", "BP cuff", "Pulse oximeter", "Penlight", "Assessment manikin or volunteer"]
+          },
+          {
+            "id": "skill_medical_assessment",
+            "name": "Medical Patient Assessment",
+            "description": "Complete medical assessment: scene size-up, primary assessment, SAMPLE/OPQRST history, focused exam, vitals, reassessment",
+            "nremt_tested": true,
+            "introduced_day": 6,
+            "practice_days": [6, 22, 23],
+            "evaluation_day": null,
+            "min_practice_attempts": 3,
+            "equipment_needed": ["Stethoscope", "BP cuff", "Pulse oximeter", "Penlight", "Glucometer"]
+          }
+        ]
+      },
+      {
+        "id": "cat_airway",
+        "name": "Airway Management",
+        "skills": [
+          {
+            "id": "skill_opa",
+            "name": "OPA Insertion",
+            "description": "Size and insert oropharyngeal airway on unresponsive patient without gag reflex",
+            "nremt_tested": true,
+            "introduced_day": 11,
+            "practice_days": [11],
+            "evaluation_day": null,
+            "min_practice_attempts": 3,
+            "equipment_needed": ["OPA set (multiple sizes)", "Airway manikin"]
+          },
+          {
+            "id": "skill_npa",
+            "name": "NPA Insertion",
+            "description": "Size and insert nasopharyngeal airway with lubrication",
+            "nremt_tested": true,
+            "introduced_day": 11,
+            "practice_days": [11],
+            "evaluation_day": null,
+            "min_practice_attempts": 3,
+            "equipment_needed": ["NPA set (multiple sizes)", "Water-soluble lubricant", "Airway manikin"]
+          },
+          {
+            "id": "skill_bvm",
+            "name": "Bag-Valve-Mask Ventilation",
+            "description": "Effective BVM ventilation: 1-person and 2-person technique with adequate seal and volume delivery",
+            "nremt_tested": true,
+            "introduced_day": 11,
+            "practice_days": [11, 14],
+            "evaluation_day": null,
+            "min_practice_attempts": 3,
+            "equipment_needed": ["BVM (adult)", "O2 source", "Airway manikin"]
+          },
+          {
+            "id": "skill_suction",
+            "name": "Suctioning",
+            "description": "Oropharyngeal suctioning with rigid catheter. Correct technique, duration (<15 sec), pre-oxygenation",
+            "nremt_tested": true,
+            "introduced_day": 11,
+            "practice_days": [11],
+            "evaluation_day": null,
+            "min_practice_attempts": 2,
+            "equipment_needed": ["Suction unit", "Rigid catheter (Yankauer)", "Flexible catheter", "Airway manikin"]
+          },
+          {
+            "id": "skill_supraglottic",
+            "name": "Supraglottic Airway Insertion",
+            "description": "Size, insert, and confirm placement of supraglottic airway device (King LT or i-gel)",
+            "nremt_tested": true,
+            "introduced_day": 11,
+            "practice_days": [11],
+            "evaluation_day": null,
+            "min_practice_attempts": 3,
+            "equipment_needed": ["King LT or i-gel (multiple sizes)", "Syringe for cuff inflation", "BVM", "Stethoscope", "Airway manikin"]
+          },
+          {
+            "id": "skill_o2_admin",
+            "name": "Oxygen Administration",
+            "description": "O2 tank setup, regulator connection, and administration via NC, NRB, and BVM at appropriate flow rates",
+            "nremt_tested": false,
+            "introduced_day": 11,
+            "practice_days": [11],
+            "evaluation_day": null,
+            "min_practice_attempts": 2,
+            "equipment_needed": ["O2 tank", "Regulator", "NC", "NRB mask", "BVM"]
+          },
+          {
+            "id": "skill_cpap",
+            "name": "CPAP Application",
+            "description": "Set up and apply CPAP to patient with respiratory distress. Monitor and adjust.",
+            "nremt_tested": false,
+            "introduced_day": 11,
+            "practice_days": [11],
+            "evaluation_day": null,
+            "min_practice_attempts": 2,
+            "equipment_needed": ["CPAP device", "CPAP mask (multiple sizes)", "O2 source"]
+          }
+        ]
+      },
+      {
+        "id": "cat_pharmacology",
+        "name": "Pharmacology / Medication Administration",
+        "skills": [
+          {
+            "id": "skill_nebulizer",
+            "name": "Nebulizer Administration",
+            "description": "Set up and administer nebulized medication (albuterol). Assembly, loading, flow rate, patient coaching.",
+            "nremt_tested": false,
+            "introduced_day": 12,
+            "practice_days": [12],
+            "evaluation_day": null,
+            "min_practice_attempts": 2,
+            "equipment_needed": ["Nebulizer kit", "Albuterol vial (or training equivalent)", "O2 source"]
+          },
+          {
+            "id": "skill_iv_access",
+            "name": "IV Access (Peripheral Venipuncture)",
+            "description": "Establish peripheral IV access: tourniquet, site selection, skin prep, catheter insertion, secure, connect admin set, set drip rate",
+            "nremt_tested": true,
+            "introduced_day": 8,
+            "practice_days": [8, 9],
+            "evaluation_day": null,
+            "min_practice_attempts": 6,
+            "equipment_needed": ["IV start kits", "IV catheters (various gauges)", "IV arms/training mannequins", "NS bags", "Admin sets (macro/micro)", "Tourniquets", "Tegaderm/tape", "Sharps containers", "Gloves", "Alcohol prep pads"],
+            "safety_note": "Sharps safety briefing required before any practice. 1 instructor per 6-8 students for supervised practice."
+          },
+          {
+            "id": "skill_iv_med_push",
+            "name": "IV Medication Administration (Push)",
+            "description": "Administer medication via IV push: verify drug/dose/route, draw medication, connect, push at appropriate rate, flush, document",
+            "nremt_tested": false,
+            "introduced_day": 9,
+            "practice_days": [9],
+            "evaluation_day": null,
+            "min_practice_attempts": 2,
+            "equipment_needed": ["IV access (established)", "Syringes", "Training medication vials", "NS flush"]
+          },
+          {
+            "id": "skill_im_injection",
+            "name": "IM Injection (Epinephrine)",
+            "description": "Draw and administer IM injection. Site selection (vastus lateralis, deltoid), technique, documentation.",
+            "nremt_tested": false,
+            "introduced_day": 7,
+            "practice_days": [7],
+            "evaluation_day": null,
+            "min_practice_attempts": 2,
+            "equipment_needed": ["Training syringes", "Training vials", "IM injection pads or manikin", "Sharps container"]
+          },
+          {
+            "id": "skill_in_naloxone",
+            "name": "Intranasal Naloxone Administration",
+            "description": "Administer naloxone via intranasal route using MAD (mucosal atomization device)",
+            "nremt_tested": false,
+            "introduced_day": 7,
+            "practice_days": [7],
+            "evaluation_day": null,
+            "min_practice_attempts": 2,
+            "equipment_needed": ["MAD device", "Training naloxone or saline", "Syringe"]
+          },
+          {
+            "id": "skill_drip_rate",
+            "name": "IV Drip Rate Calculation and Setting",
+            "description": "Calculate and set IV drip rate using formula: gtts/min = (Volume × Drop factor) / Time. Both macro and micro drip sets.",
+            "nremt_tested": false,
+            "introduced_day": 8,
+            "practice_days": [8, 9],
+            "evaluation_day": null,
+            "min_practice_attempts": 5,
+            "equipment_needed": ["IV admin sets (macro 10 gtts/mL and micro 60 gtts/mL)", "NS bags", "IV pole or hook"]
+          }
+        ]
+      },
+      {
+        "id": "cat_lifting_moving",
+        "name": "Lifting and Moving",
+        "skills": [
+          {
+            "id": "skill_backboard",
+            "name": "Supine Backboard Immobilization",
+            "description": "Log-roll patient onto backboard, secure with straps, apply head immobilization device",
+            "nremt_tested": true,
+            "introduced_day": 3,
+            "practice_days": [3, 18],
+            "evaluation_day": null,
+            "min_practice_attempts": 3,
+            "equipment_needed": ["Backboard", "Straps", "Head immobilization device", "C-collar"]
+          },
+          {
+            "id": "skill_ked",
+            "name": "KED Application",
+            "description": "Apply Kendrick Extrication Device to seated patient. Torso straps → head straps → leg straps → rotate to backboard.",
+            "nremt_tested": true,
+            "introduced_day": 3,
+            "practice_days": [3],
+            "evaluation_day": null,
+            "min_practice_attempts": 2,
+            "equipment_needed": ["KED", "Backboard", "C-collar"]
+          },
+          {
+            "id": "skill_scoop",
+            "name": "Scoop Stretcher",
+            "description": "Assemble and apply scoop stretcher to supine patient",
+            "nremt_tested": false,
+            "introduced_day": 3,
+            "practice_days": [3],
+            "evaluation_day": null,
+            "min_practice_attempts": 2,
+            "equipment_needed": ["Scoop stretcher"]
+          }
+        ]
+      },
+      {
+        "id": "cat_cardiac",
+        "name": "Cardiac / Resuscitation",
+        "skills": [
+          {
+            "id": "skill_cpr",
+            "name": "High-Quality CPR",
+            "description": "Perform high-quality CPR: correct rate (100-120), depth (2-2.4 in), full recoil, minimal interruptions. 1-rescuer and 2-rescuer.",
+            "nremt_tested": true,
+            "introduced_day": 14,
+            "practice_days": [14],
+            "evaluation_day": null,
+            "min_practice_attempts": 3,
+            "equipment_needed": ["CPR manikin (adult)", "CPR manikin (infant)", "AED trainer"]
+          },
+          {
+            "id": "skill_aed",
+            "name": "AED Operation",
+            "description": "Apply AED pads, operate AED, integrate with CPR",
+            "nremt_tested": true,
+            "introduced_day": 14,
+            "practice_days": [14],
+            "evaluation_day": null,
+            "min_practice_attempts": 2,
+            "equipment_needed": ["AED trainer", "CPR manikin"]
+          },
+          {
+            "id": "skill_12lead",
+            "name": "12-Lead ECG Placement",
+            "description": "Correct anatomical placement of 4-lead and 12-lead electrodes (V1-V6 + limb leads)",
+            "nremt_tested": false,
+            "introduced_day": 15,
+            "practice_days": [15],
+            "evaluation_day": null,
+            "min_practice_attempts": 2,
+            "equipment_needed": ["Cardiac monitor or electrodes", "12-lead cable"]
+          }
+        ]
+      },
+      {
+        "id": "cat_trauma",
+        "name": "Trauma Skills",
+        "skills": [
+          {
+            "id": "skill_tourniquet",
+            "name": "Tourniquet Application (CAT)",
+            "description": "Apply CAT tourniquet high and tight on extremity hemorrhage",
+            "nremt_tested": false,
+            "introduced_day": 17,
+            "practice_days": [17],
+            "evaluation_day": null,
+            "min_practice_attempts": 3,
+            "equipment_needed": ["CAT tourniquets (training)"]
+          },
+          {
+            "id": "skill_wound_packing",
+            "name": "Wound Packing",
+            "description": "Pack junctional and extremity wounds with hemostatic gauze",
+            "nremt_tested": false,
+            "introduced_day": 17,
+            "practice_days": [17],
+            "evaluation_day": null,
+            "min_practice_attempts": 2,
+            "equipment_needed": ["Training wound models", "Hemostatic gauze", "Standard gauze"]
+          },
+          {
+            "id": "skill_cspine",
+            "name": "C-Spine Immobilization",
+            "description": "Manual inline stabilization, C-collar sizing and application, full spinal immobilization",
+            "nremt_tested": true,
+            "introduced_day": 18,
+            "practice_days": [18],
+            "evaluation_day": null,
+            "min_practice_attempts": 3,
+            "equipment_needed": ["C-collars (multiple sizes)", "Backboard", "Head immobilization device", "Straps"]
+          },
+          {
+            "id": "skill_helmet_removal",
+            "name": "Helmet Removal",
+            "description": "Two-person motorcycle/sports helmet removal with manual C-spine stabilization",
+            "nremt_tested": false,
+            "introduced_day": 18,
+            "practice_days": [18],
+            "evaluation_day": null,
+            "min_practice_attempts": 2,
+            "equipment_needed": ["Motorcycle helmet or sports helmet"]
+          },
+          {
+            "id": "skill_splinting",
+            "name": "Splinting (Rigid and Formable)",
+            "description": "Apply rigid and SAM splints to extremity injuries. Assess PMS before and after.",
+            "nremt_tested": true,
+            "introduced_day": 20,
+            "practice_days": [20],
+            "evaluation_day": null,
+            "min_practice_attempts": 2,
+            "equipment_needed": ["SAM splints", "Rigid splints", "Roller bandage", "Triangular bandages"]
+          },
+          {
+            "id": "skill_traction",
+            "name": "Traction Splint Application",
+            "description": "Apply traction splint for isolated midshaft femur fracture. Sizing, straps, traction, PMS check.",
+            "nremt_tested": true,
+            "introduced_day": 20,
+            "practice_days": [20],
+            "evaluation_day": null,
+            "min_practice_attempts": 2,
+            "equipment_needed": ["Traction splint (Sager or Hare)"]
+          },
+          {
+            "id": "skill_chest_seal",
+            "name": "Chest Seal Application",
+            "description": "Apply vented chest seal for open pneumothorax",
+            "nremt_tested": false,
+            "introduced_day": 19,
+            "practice_days": [19],
+            "evaluation_day": null,
+            "min_practice_attempts": 2,
+            "equipment_needed": ["Vented chest seals", "Occlusive dressings"]
+          }
+        ]
+      },
+      {
+        "id": "cat_obstetrics",
+        "name": "Obstetrics / Neonatal",
+        "skills": [
+          {
+            "id": "skill_delivery",
+            "name": "Normal Delivery",
+            "description": "Assist with normal cephalic delivery: positioning, coaching, controlled delivery of head, check for nuchal cord, deliver shoulders, clamp/cut cord, deliver placenta, initial neonatal care",
+            "nremt_tested": false,
+            "introduced_day": 27,
+            "practice_days": [27],
+            "evaluation_day": null,
+            "min_practice_attempts": 2,
+            "equipment_needed": ["Delivery manikin", "OB kit (clamps, scissors, bulb syringe, towels)"]
+          },
+          {
+            "id": "skill_nrp",
+            "name": "Neonatal Resuscitation",
+            "description": "NRP basics: stimulation, dry, warm, suction, assess HR/respirations, BVM if needed, compressions if HR <60",
+            "nremt_tested": false,
+            "introduced_day": 27,
+            "practice_days": [27],
+            "evaluation_day": null,
+            "min_practice_attempts": 2,
+            "equipment_needed": ["Infant manikin", "Infant BVM", "Bulb syringe", "Towels", "Warming supplies"]
+          }
+        ]
+      }
+    ]
+  },
+  "student_tracking_template": {
+    "description": "Per-student skill tracking. Each skill gets a status and attempt history.",
+    "statuses": ["not_started", "in_progress", "satisfactory", "needs_remediation", "failed"],
+    "record_fields": {
+      "student_id": "string",
+      "skill_id": "string",
+      "status": "string (enum)",
+      "attempts": [
+        {
+          "attempt_number": "integer",
+          "date": "date",
+          "evaluator": "string (instructor name)",
+          "result": "pass | fail",
+          "notes": "string (optional)"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,106 @@
+{
+  "instructors": [
+    {
+      "id": "inst_ben",
+      "name": "Ben Hartnell",
+      "role": "lead_instructor",
+      "primary_employer": "Pima Medical Institute",
+      "availability_type": "conditional",
+      "notes": "Primary assignment is Pima. Covers AEMT when needed / when Pima schedule allows. Oversight role.",
+      "known_conflicts": [
+        {"date": "2026-07-16", "type": "full_day", "reason": "PALS Course (Pima Paramedic)"},
+        {"start_date": "2026-07-07", "end_date": "2026-08-06", "day_of_week": "Tuesday", "type": "partial", "unavailable_windows": [{"start": "10:15", "end": "12:45", "reason": "Pima Airway + Peds classes"}, {"start": "14:15", "end": "17:00", "reason": "Pima Paramedic Lab"}], "available_for_aemt": [{"start": "07:30", "end": "10:15"}, {"start": "12:45", "end": "14:15"}]},
+        {"start_date": "2026-07-07", "end_date": "2026-08-06", "day_of_week": "Thursday", "type": "partial", "unavailable_windows": [{"start": "14:15", "end": "17:00", "reason": "Pima Paramedic Lab"}], "available_for_aemt": [{"start": "07:30", "end": "14:15"}]}
+      ],
+      "full_availability_start": "2026-08-11"
+    },
+    {
+      "id": "inst_jimi",
+      "name": "Jimi",
+      "role": "primary_daily_instructor",
+      "primary_employer": "LVFR",
+      "availability_type": "shift_based",
+      "shift_pattern": "48/96",
+      "shift_schedule": null,
+      "notes": "Available all days he is not on shift. Primary daily instructor for AEMT. Schedule pending upload.",
+      "known_conflicts": []
+    },
+    {
+      "id": "inst_trevor",
+      "name": "Trevor",
+      "role": "secondary_instructor",
+      "primary_employer": "TBD",
+      "availability_type": "tbd",
+      "notes": "Fills gaps where Jimi is on shift. Schedule pending.",
+      "known_conflicts": []
+    },
+    {
+      "id": "inst_josh",
+      "name": "Josh",
+      "role": "reserve_instructor",
+      "primary_employer": "Pima Medical Institute",
+      "availability_type": "conditional",
+      "notes": "Full-time Pima AEMT instructor. Using Josh may require shelving a Pima AEMT semester. Last resort for coverage.",
+      "known_conflicts": []
+    },
+    {
+      "id": "inst_sun",
+      "name": "Sun Kang",
+      "role": "supplementary",
+      "primary_employer": "LVFR",
+      "availability_type": "mondays_only",
+      "notes": "Leads Monday supplementary sessions: review, test prep, and potentially clinical coordination.",
+      "known_conflicts": []
+    }
+  ],
+  "coverage_priority": [
+    {"priority": 1, "instructor_id": "inst_jimi", "role": "Primary daily instructor — covers all off-shift days"},
+    {"priority": 2, "instructor_id": "inst_trevor", "role": "Fills Jimi's on-shift days"},
+    {"priority": 3, "instructor_id": "inst_ben", "role": "Covers remaining gaps when Pima schedule allows"},
+    {"priority": 4, "instructor_id": "inst_josh", "role": "Last resort — may require Pima AEMT course adjustment"}
+  ],
+  "daily_assignments": [
+    {"day": 1, "date": "2026-07-07", "primary": null, "secondary": null, "ben_status": "partial", "min_instructors": 1, "notes": "Need assignment"},
+    {"day": 2, "date": "2026-07-08", "primary": null, "secondary": null, "ben_status": "available", "min_instructors": 1, "notes": "Ben available full day (Wednesday)"},
+    {"day": 3, "date": "2026-07-09", "primary": null, "secondary": null, "ben_status": "partial", "min_instructors": 2, "notes": "LAB DAY — Lifting/Moving"},
+    {"day": 4, "date": "2026-07-14", "primary": null, "secondary": null, "ben_status": "partial", "min_instructors": 1, "notes": ""},
+    {"day": 5, "date": "2026-07-15", "primary": null, "secondary": null, "ben_status": "available", "min_instructors": 1, "notes": "Wednesday"},
+    {"day": 6, "date": "2026-07-16", "primary": null, "secondary": null, "ben_status": "conflict", "min_instructors": 1, "notes": "BEN OUT — PALS. Need full coverage."},
+    {"day": 7, "date": "2026-07-21", "primary": null, "secondary": null, "ben_status": "partial", "min_instructors": 2, "notes": "LAB — Pharm/Med draws"},
+    {"day": 8, "date": "2026-07-22", "primary": null, "secondary": null, "ben_status": "available", "min_instructors": 3, "notes": "LAB — IV Day 1. CRITICAL staffing. Wednesday."},
+    {"day": 9, "date": "2026-07-23", "primary": null, "secondary": null, "ben_status": "partial", "min_instructors": 3, "notes": "LAB — IV Day 2. CRITICAL staffing."},
+    {"day": 10, "date": "2026-07-28", "primary": null, "secondary": null, "ben_status": "partial", "min_instructors": 1, "notes": "Module 1 Exam + Airway start"},
+    {"day": 11, "date": "2026-07-29", "primary": null, "secondary": null, "ben_status": "available", "min_instructors": 3, "notes": "LAB — Airway. CRITICAL staffing. Wednesday."},
+    {"day": 12, "date": "2026-07-30", "primary": null, "secondary": null, "ben_status": "partial", "min_instructors": 1, "notes": ""},
+    {"day": 13, "date": "2026-08-04", "primary": null, "secondary": null, "ben_status": "partial", "min_instructors": 1, "notes": "Module 2 Exam + Shock"},
+    {"day": 14, "date": "2026-08-05", "primary": null, "secondary": null, "ben_status": "available", "min_instructors": 2, "notes": "LAB — BLS/CPR. Wednesday."},
+    {"day": 15, "date": "2026-08-06", "primary": null, "secondary": null, "ben_status": "partial", "min_instructors": 1, "notes": "Cardiac + possible monitor lab"},
+    {"day": 16, "date": "2026-08-11", "primary": null, "secondary": null, "ben_status": "available", "min_instructors": 1, "notes": "Module 3 Exam. Ben full availability starts."},
+    {"day": 17, "date": "2026-08-12", "primary": null, "secondary": null, "ben_status": "available", "min_instructors": 2, "notes": "LAB — Hemorrhage control"},
+    {"day": 18, "date": "2026-08-13", "primary": null, "secondary": null, "ben_status": "available", "min_instructors": 2, "notes": "LAB — C-Spine"},
+    {"day": 19, "date": "2026-08-18", "primary": null, "secondary": null, "ben_status": "available", "min_instructors": 1, "notes": ""},
+    {"day": 20, "date": "2026-08-19", "primary": null, "secondary": null, "ben_status": "available", "min_instructors": 2, "notes": "LAB — Splinting"},
+    {"day": 21, "date": "2026-08-20", "primary": null, "secondary": null, "ben_status": "available", "min_instructors": 1, "notes": ""},
+    {"day": 22, "date": "2026-08-25", "primary": null, "secondary": null, "ben_status": "available", "min_instructors": 1, "notes": "Trauma Exam"},
+    {"day": 23, "date": "2026-08-26", "primary": null, "secondary": null, "ben_status": "available", "min_instructors": 1, "notes": ""},
+    {"day": 24, "date": "2026-08-27", "primary": null, "secondary": null, "ben_status": "available", "min_instructors": 1, "notes": ""},
+    {"day": 25, "date": "2026-09-01", "primary": null, "secondary": null, "ben_status": "available", "min_instructors": 1, "notes": ""},
+    {"day": 26, "date": "2026-09-02", "primary": null, "secondary": null, "ben_status": "available", "min_instructors": 1, "notes": "Medical Exam"},
+    {"day": 27, "date": "2026-09-03", "primary": null, "secondary": null, "ben_status": "available", "min_instructors": 2, "notes": "LAB — OB/NRP"},
+    {"day": 28, "date": "2026-09-08", "primary": null, "secondary": null, "ben_status": "available", "min_instructors": 1, "notes": "Special Pop Exam"},
+    {"day": 29, "date": "2026-09-09", "primary": null, "secondary": null, "ben_status": "available", "min_instructors": 1, "notes": "EMS Ops group exam"},
+    {"day": 30, "date": "2026-09-10", "primary": null, "secondary": null, "ben_status": "available", "min_instructors": 1, "notes": "FINAL EXAM"}
+  ],
+  "lab_days_staffing": [
+    {"day": 3, "lab": "Lifting & Moving", "min_instructors": 2, "ideal_instructors": 2, "pima_cadre_option": true, "safety_critical": false},
+    {"day": 7, "lab": "Pharmacology", "min_instructors": 2, "ideal_instructors": 2, "pima_cadre_option": true, "safety_critical": false},
+    {"day": 8, "lab": "IV Access Day 1", "min_instructors": 3, "ideal_instructors": 4, "pima_cadre_option": true, "safety_critical": true, "safety_note": "Live stick sharps — need 1 instructor per 6-8 students"},
+    {"day": 9, "lab": "IV Access Day 2", "min_instructors": 3, "ideal_instructors": 4, "pima_cadre_option": true, "safety_critical": true, "safety_note": "Live stick sharps"},
+    {"day": 11, "lab": "Airway Management", "min_instructors": 3, "ideal_instructors": 3, "pima_cadre_option": true, "safety_critical": false},
+    {"day": 14, "lab": "BLS Resuscitation", "min_instructors": 2, "ideal_instructors": 3, "pima_cadre_option": true, "safety_critical": false},
+    {"day": 17, "lab": "Hemorrhage Control", "min_instructors": 2, "ideal_instructors": 2, "pima_cadre_option": true, "safety_critical": false},
+    {"day": 18, "lab": "Spinal Immobilization", "min_instructors": 2, "ideal_instructors": 3, "pima_cadre_option": true, "safety_critical": false},
+    {"day": 20, "lab": "Splinting", "min_instructors": 2, "ideal_instructors": 2, "pima_cadre_option": true, "safety_critical": false},
+    {"day": 27, "lab": "OB Delivery / NRP", "min_instructors": 2, "ideal_instructors": 2, "pima_cadre_option": true, "safety_critical": false}
+  ]
+}

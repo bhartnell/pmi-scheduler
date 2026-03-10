@@ -1,0 +1,121 @@
+{
+  "gradebook": {
+    "course_name": "AEMT Course — LVFR 2026-2",
+    "pass_standard": 80,
+    "testing_platform": "EMSTesting.com",
+    "grade_export_note": "EMSTesting has a gradebook with export functionality. This structure mirrors what the webapp needs to display and track grades.",
+
+    "assessment_categories": [
+      {
+        "id": "cat_daily_quiz",
+        "name": "Daily Quizzes",
+        "type": "formative",
+        "weight_percent": null,
+        "description": "Graded individual quizzes on EMSTesting, taken at the start of most class days. Covers previous day/week content.",
+        "grading_note": "10-20 questions per quiz. ~1.5 min/question. Pass standard applies but these are primarily formative."
+      },
+      {
+        "id": "cat_module_exam",
+        "name": "Module Exams",
+        "type": "summative",
+        "weight_percent": null,
+        "description": "Module exams on EMSTesting. 40-50 questions per exam. Must achieve 80% to pass.",
+        "grading_note": "Primary summative assessments. Students who fail must remediate before NREMT eligibility."
+      },
+      {
+        "id": "cat_final_exam",
+        "name": "Final Exam",
+        "type": "summative",
+        "weight_percent": null,
+        "description": "Comprehensive final written exam. 100-150 questions covering all course content."
+      },
+      {
+        "id": "cat_skills",
+        "name": "Skills Competency",
+        "type": "pass_fail",
+        "weight_percent": null,
+        "description": "Psychomotor skills must be demonstrated satisfactorily. See skills_tracking.json for full list."
+      },
+      {
+        "id": "cat_pharm_checkpoint",
+        "name": "Pharmacology Checkpoints",
+        "type": "formative",
+        "weight_percent": null,
+        "description": "Medication card fill-in exercises. Students complete blanked-out medication cards. See medication_cards.json."
+      }
+    ],
+
+    "assessments": [
+      {"id": "quiz_ch1_3", "category": "cat_daily_quiz", "day": 2, "date": "2026-07-08", "title": "Quiz: Chapters 1-3", "questions": 10, "chapters": ["ch01","ch02","ch03"]},
+      {"id": "quiz_ch4_6", "category": "cat_daily_quiz", "day": 3, "date": "2026-07-09", "title": "Quiz: Chapters 4-6", "questions": 10, "chapters": ["ch04","ch05","ch06"]},
+      {"id": "quiz_ch4_6_comp", "category": "cat_daily_quiz", "day": 4, "date": "2026-07-14", "title": "Quiz: Chapters 4-6 Comprehensive", "questions": 10, "chapters": ["ch04","ch05","ch06"]},
+      {"id": "quiz_ch7", "category": "cat_daily_quiz", "day": 5, "date": "2026-07-15", "title": "Quiz: Chapter 7", "questions": 20, "chapters": ["ch07"]},
+      {"id": "quiz_ch8_9", "category": "cat_daily_quiz", "day": 6, "date": "2026-07-16", "title": "Quiz: Chapters 8-9", "questions": 20, "chapters": ["ch08","ch09"]},
+      {"id": "quiz_ch10", "category": "cat_daily_quiz", "day": 7, "date": "2026-07-21", "title": "Quiz: Chapter 10", "questions": 20, "chapters": ["ch10"]},
+      {"id": "quiz_ch12", "category": "cat_daily_quiz", "day": 8, "date": "2026-07-22", "title": "Quiz: Chapter 12", "questions": 20, "chapters": ["ch12"]},
+      {"id": "quiz_ch13", "category": "cat_daily_quiz", "day": 9, "date": "2026-07-23", "title": "Quiz: Chapter 13", "questions": 10, "chapters": ["ch13"]},
+      {"id": "quiz_ch11", "category": "cat_daily_quiz", "day": 11, "date": "2026-07-29", "title": "Quiz: Chapter 11", "questions": 10, "chapters": ["ch11"]},
+      {"id": "quiz_ch11_comp", "category": "cat_daily_quiz", "day": 12, "date": "2026-07-30", "title": "Quiz: Chapter 11 Comprehensive", "questions": 15, "chapters": ["ch11"]},
+      {"id": "quiz_ch14", "category": "cat_daily_quiz", "day": 14, "date": "2026-08-05", "title": "Quiz: Chapter 14", "questions": 10, "chapters": ["ch14"]},
+      {"id": "quiz_ch15", "category": "cat_daily_quiz", "day": 15, "date": "2026-08-06", "title": "Quiz: Chapter 15", "questions": 10, "chapters": ["ch15"]},
+      {"id": "quiz_ch26", "category": "cat_daily_quiz", "day": 17, "date": "2026-08-12", "title": "Quiz: Chapter 26", "questions": 10, "chapters": ["ch26"]},
+      {"id": "quiz_ch27_28", "category": "cat_daily_quiz", "day": 18, "date": "2026-08-13", "title": "Quiz: Chapters 27-28", "questions": 10, "chapters": ["ch27","ch28"]},
+      {"id": "quiz_ch29_30", "category": "cat_daily_quiz", "day": 19, "date": "2026-08-18", "title": "Quiz: Chapters 29-30", "questions": 15, "chapters": ["ch29","ch30"]},
+      {"id": "quiz_ch31_32", "category": "cat_daily_quiz", "day": 20, "date": "2026-08-19", "title": "Quiz: Chapters 31-32", "questions": 10, "chapters": ["ch31","ch32"]},
+      {"id": "quiz_ch33", "category": "cat_daily_quiz", "day": 21, "date": "2026-08-20", "title": "Quiz: Chapter 33", "questions": 15, "chapters": ["ch33"]},
+      {"id": "quiz_ch16", "category": "cat_daily_quiz", "day": 23, "date": "2026-08-26", "title": "Quiz: Chapter 16", "questions": 10, "chapters": ["ch16"]},
+      {"id": "quiz_ch19_20", "category": "cat_daily_quiz", "day": 24, "date": "2026-08-27", "title": "Quiz: Chapters 19-20", "questions": 15, "chapters": ["ch19","ch20"]},
+      {"id": "quiz_ch21_23", "category": "cat_daily_quiz", "day": 25, "date": "2026-09-01", "title": "Quiz: Chapters 21-23", "questions": 15, "chapters": ["ch21","ch22","ch23"]},
+      {"id": "quiz_ch35", "category": "cat_daily_quiz", "day": 27, "date": "2026-09-03", "title": "Quiz: Chapter 35", "questions": 10, "chapters": ["ch35"]},
+      {"id": "quiz_ch36", "category": "cat_daily_quiz", "day": 28, "date": "2026-09-08", "title": "Quiz: Chapter 36", "questions": 20, "chapters": ["ch36"]},
+
+      {"id": "exam_mod1", "category": "cat_module_exam", "day": 10, "date": "2026-07-28", "title": "Module 1 Exam (Preparatory)", "questions": 50, "chapters": ["ch01","ch02","ch03","ch04","ch05","ch06","ch07","ch08","ch09","ch10","ch12","ch13"], "pass_score": 80},
+      {"id": "exam_mod2", "category": "cat_module_exam", "day": 13, "date": "2026-08-04", "title": "Module 2 Exam (Airway)", "questions": 45, "chapters": ["ch11","ch17"], "pass_score": 80},
+      {"id": "exam_mod3", "category": "cat_module_exam", "day": 16, "date": "2026-08-11", "title": "Module 3 Exam (Shock/Resus/Cardio)", "questions": 45, "chapters": ["ch14","ch15","ch18"], "pass_score": 80},
+      {"id": "exam_mod5", "category": "cat_module_exam", "day": 22, "date": "2026-08-25", "title": "Module 5 Exam (Trauma)", "questions": 50, "chapters": ["ch26","ch27","ch28","ch29","ch30","ch31","ch32","ch33","ch34"], "pass_score": 80},
+      {"id": "exam_mod4", "category": "cat_module_exam", "day": 26, "date": "2026-09-02", "title": "Module 4 Exam (Medical)", "questions": 45, "chapters": ["ch16","ch19","ch20","ch21","ch22","ch23","ch24","ch25"], "pass_score": 80},
+      {"id": "exam_mod6", "category": "cat_module_exam", "day": 28, "date": "2026-09-08", "title": "Module 6 Exam (Special Populations)", "questions": 40, "chapters": ["ch35","ch36","ch37","ch38"], "pass_score": 80},
+      {"id": "exam_mod7", "category": "cat_module_exam", "day": 29, "date": "2026-09-09", "title": "Module 7 Exam (EMS Operations — Group Format)", "questions": 30, "chapters": ["ch39","ch40","ch41","ch42"], "pass_score": null, "note": "Group format — formative, not individually graded"},
+      {"id": "exam_final", "category": "cat_final_exam", "day": 30, "date": "2026-09-10", "title": "Comprehensive Final Exam", "questions": 150, "chapters": "all", "pass_score": 80}
+    ],
+
+    "student_record_template": {
+      "student_id": "string",
+      "name": "string",
+      "email": "string",
+      "emstesting_id": "string (for grade import matching)",
+      "enrollment_date": "date",
+      "status": "active | withdrawn | completed | remediation",
+      "grades": {
+        "description": "Array of assessment results per student",
+        "record": {
+          "assessment_id": "string (matches assessments[].id)",
+          "date_taken": "date",
+          "score_percent": "number (0-100)",
+          "passed": "boolean",
+          "questions_correct": "integer",
+          "questions_total": "integer",
+          "imported_from_emstesting": "boolean"
+        }
+      },
+      "skills_completion": {
+        "description": "References skills_tracking.json skill IDs",
+        "record": {
+          "skill_id": "string",
+          "status": "not_started | in_progress | satisfactory | needs_remediation",
+          "completion_date": "date | null"
+        }
+      },
+      "pharm_checkpoints": {
+        "description": "References medication_cards.json checkpoint schedule",
+        "record": {
+          "checkpoint_date": "date",
+          "level": "integer (1-3)",
+          "medications_tested": ["string (medication IDs)"],
+          "score_percent": "number",
+          "passed": "boolean"
+        }
+      }
+    }
+  }
+}

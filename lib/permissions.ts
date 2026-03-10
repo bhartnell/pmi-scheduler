@@ -1,14 +1,16 @@
 // Role-based permission system for PMI Tools
 
-export type Role = 'superadmin' | 'admin' | 'lead_instructor' | 'instructor' | 'volunteer_instructor' | 'program_director' | 'student' | 'guest' | 'pending';
+export type Role = 'superadmin' | 'admin' | 'lead_instructor' | 'agency_liaison' | 'instructor' | 'program_director' | 'volunteer_instructor' | 'agency_observer' | 'student' | 'guest' | 'pending';
 
 export const ROLE_LEVELS: Record<Role, number> = {
   superadmin: 5,
   admin: 4,
   lead_instructor: 3,
+  agency_liaison: 2.5,       // Agency teaching staff — full read/write on scoped programs (e.g., LVFR AEMT)
   instructor: 2,
-  volunteer_instructor: 1.5, // Can access scheduling and lab schedule (read-only), no student data
   program_director: 1.75,    // Affiliations access only — non-instructor campus staff
+  volunteer_instructor: 1.5, // Can access scheduling and lab schedule (read-only), no student data
+  agency_observer: 1.25,     // Agency read-only staff (e.g., Training Captain) — read scoped program data only
   student: 1,                // Student portal access only
   guest: 1,                  // Guest access (same level as student)
   pending: 0,                // Minimal access - new users awaiting approval
@@ -18,9 +20,11 @@ export const ROLE_LABELS: Record<Role, string> = {
   superadmin: 'Super Admin',
   admin: 'Admin',
   lead_instructor: 'Lead Instructor',
+  agency_liaison: 'Agency Liaison',
   instructor: 'Instructor',
-  volunteer_instructor: 'Volunteer Instructor',
   program_director: 'Program Director',
+  volunteer_instructor: 'Volunteer Instructor',
+  agency_observer: 'Agency Observer',
   student: 'Student',
   guest: 'Guest',
   pending: 'Pending Approval',
@@ -30,9 +34,11 @@ export const ROLE_COLORS: Record<Role, string> = {
   superadmin: 'bg-purple-600 text-white',
   admin: 'bg-red-600 text-white',
   lead_instructor: 'bg-blue-600 text-white',
+  agency_liaison: 'bg-orange-600 text-white',
   instructor: 'bg-green-600 text-white',
-  volunteer_instructor: 'bg-teal-600 text-white',
   program_director: 'bg-amber-600 text-white',
+  volunteer_instructor: 'bg-teal-600 text-white',
+  agency_observer: 'bg-slate-600 text-white',
   student: 'bg-cyan-600 text-white',
   guest: 'bg-gray-500 text-white',
   pending: 'bg-yellow-500 text-white',
@@ -147,11 +153,11 @@ export function isProtectedSuperadmin(email: string): boolean {
 
 export function getAssignableRoles(currentRole: Role | string): Role[] {
   if (currentRole === 'superadmin') {
-    return ['superadmin', 'admin', 'lead_instructor', 'instructor', 'volunteer_instructor', 'program_director', 'student', 'guest', 'pending'];
+    return ['superadmin', 'admin', 'lead_instructor', 'agency_liaison', 'instructor', 'volunteer_instructor', 'program_director', 'agency_observer', 'student', 'guest', 'pending'];
   }
   if (currentRole === 'admin') {
     // Admins can assign up to lead_instructor — NOT admin or superadmin
-    return ['lead_instructor', 'instructor', 'volunteer_instructor', 'program_director', 'student', 'guest', 'pending'];
+    return ['lead_instructor', 'agency_liaison', 'instructor', 'volunteer_instructor', 'program_director', 'agency_observer', 'student', 'guest', 'pending'];
   }
   return [];
 }
@@ -278,22 +284,22 @@ export const DATA_PERMISSIONS = {
   studentEmail: ['superadmin', 'admin', 'lead_instructor'] as Role[],
 
   // Who can see student agency/employer
-  studentAgency: ['superadmin', 'admin', 'lead_instructor', 'instructor'] as Role[],
+  studentAgency: ['superadmin', 'admin', 'lead_instructor', 'agency_liaison', 'instructor'] as Role[],
 
   // Who can see learning styles
-  learningStyles: ['superadmin', 'admin', 'lead_instructor', 'instructor'] as Role[],
+  learningStyles: ['superadmin', 'admin', 'lead_instructor', 'agency_liaison', 'instructor'] as Role[],
 
   // Who can see performance notes
-  performanceNotes: ['superadmin', 'admin', 'lead_instructor', 'instructor'] as Role[],
+  performanceNotes: ['superadmin', 'admin', 'lead_instructor', 'agency_liaison', 'instructor'] as Role[],
 
   // Who can see skill assessments
-  skillAssessments: ['superadmin', 'admin', 'lead_instructor', 'instructor'] as Role[],
+  skillAssessments: ['superadmin', 'admin', 'lead_instructor', 'agency_liaison', 'instructor'] as Role[],
 
   // Who can see student full records (all data)
-  studentFullRecord: ['superadmin', 'admin', 'lead_instructor', 'instructor'] as Role[],
+  studentFullRecord: ['superadmin', 'admin', 'lead_instructor', 'agency_liaison', 'instructor'] as Role[],
 
   // Who can see directory info only (name, cohort, status)
-  studentDirectoryInfo: ['superadmin', 'admin', 'lead_instructor', 'instructor', 'guest'] as Role[],
+  studentDirectoryInfo: ['superadmin', 'admin', 'lead_instructor', 'agency_liaison', 'instructor', 'agency_observer', 'guest'] as Role[],
 
   // Who can view audit logs
   auditLogs: ['superadmin'] as Role[],
