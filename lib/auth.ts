@@ -122,6 +122,10 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
   },
+  session: {
+    strategy: 'jwt',
+    maxAge: 24 * 60 * 60, // 24 hours (default for all roles; agency 4hr timeout is client-side)
+  },
   pages: {
     signIn: '/auth/signin',
     error: '/auth/error',

@@ -442,6 +442,13 @@ function buildSections(pendingAccessRequests: number): AdminSection[] {
           color: 'bg-purple-600',
         },
         {
+          href: '/admin/ferpa-compliance',
+          icon: Shield,
+          title: 'FERPA Compliance',
+          description: 'Consent tracking, FERPA releases, and agency access management',
+          color: 'bg-red-600',
+        },
+        {
           href: '/admin/roles',
           icon: Key,
           title: 'Role Permissions',

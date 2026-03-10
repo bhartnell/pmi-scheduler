@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { logAuditEvent } from '@/lib/audit';
+import { logRecordAccess } from '@/lib/ferpa';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -603,6 +604,16 @@ export async function GET(request: NextRequest) {
       resourceDescription: `Exported ${exportType} data (${recordCount} records) as ${format.toUpperCase()}`,
       metadata: { exportType, format, cohortId, startDate, endDate, recordCount, fileSizeBytes },
     });
+
+    // Log to FERPA record access log (fire-and-forget)
+    logRecordAccess({
+      userEmail: user.email,
+      userRole: user.role,
+      dataType: exportType === 'clinical' ? 'clinical' : exportType === 'assessments' ? 'grades' : 'profile',
+      action: 'export',
+      route: '/api/admin/data-export',
+      details: { exportType, format, recordCount, fileSizeBytes },
+    }).catch(() => {});
 
     // ---------------------------------------------------------------------------
     // Return file download

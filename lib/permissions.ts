@@ -365,6 +365,33 @@ export function sanitizeStudentForRole(student: StudentRecord, userRole: Role | 
     status: student.status,
   };
 
+  // --- Agency Observer: directory info + basic status ONLY ---
+  // No email, no notes, no agency details, no photos, no learning styles
+  if (userRole === 'agency_observer') {
+    return sanitized;
+  }
+
+  // --- Agency Liaison: similar to instructor but strip internal notes ---
+  if (userRole === 'agency_liaison') {
+    // Include cohort info (directory info)
+    if (student.cohort) {
+      sanitized.cohort = student.cohort;
+    }
+    // Include photo (helps identify students)
+    sanitized.photo_url = student.photo_url;
+    // Include agency
+    sanitized.agency = student.agency;
+    // Include learning styles
+    if (student.learning_style) {
+      sanitized.learning_style = student.learning_style;
+    }
+    // NO email (agency liaisons don't need student email)
+    // NO internal notes (strip for agency views)
+    return sanitized;
+  }
+
+  // --- Standard role-based sanitization for all other roles ---
+
   // Include cohort info if present (directory info)
   if (student.cohort) {
     sanitized.cohort = student.cohort;

@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { isStudent } from '@/lib/permissions';
+import ConsentGate from '@/components/ConsentGate';
 
 interface StudentUser {
   id: string;
@@ -211,8 +212,12 @@ export default function StudentLayout({
         </div>
       </header>
 
-      {/* Main Content */}
-      <main>{children}</main>
+      {/* Main Content — gated by FERPA student data use agreement */}
+      <main>
+        <ConsentGate agreementType="student_data_use">
+          {children}
+        </ConsentGate>
+      </main>
     </div>
   );
 }
