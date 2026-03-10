@@ -62,6 +62,11 @@ export interface SceneInfo {
   scene_description?: string;
   safety_hazards?: string;
   additional_findings?: string;
+  // Extended scene fields (AI-generated or imported cases may use these)
+  safety?: string;
+  environment?: string;
+  bystanders?: string;
+  first_impression?: string;
 }
 
 // ---------------------------------------------------------------------------

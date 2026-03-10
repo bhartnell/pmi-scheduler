@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole } from '@/lib/permissions';
+import { normalizeQuestionType } from '@/lib/question-types';
 
 // ---------------------------------------------------------------------------
 // Helper — resolve current user from session email
@@ -150,6 +151,19 @@ export async function PUT(
     for (const field of allowedFields) {
       if (body[field] !== undefined) {
         updates[field] = body[field];
+      }
+    }
+
+    // Normalise question types when phases are updated
+    if (updates.phases && Array.isArray(updates.phases)) {
+      for (const phase of updates.phases as Array<Record<string, unknown>>) {
+        if (!Array.isArray(phase.questions)) continue;
+        for (const q of phase.questions as Array<Record<string, unknown>>) {
+          if (q.type && typeof q.type === 'string') {
+            const canonical = normalizeQuestionType(q.type as string);
+            if (canonical) q.type = canonical;
+          }
+        }
       }
     }
 

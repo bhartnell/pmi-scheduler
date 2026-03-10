@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole } from '@/lib/permissions';
 import { authOptions } from '@/lib/auth';
+import { normalizeQuestionType } from '@/lib/question-types';
 
 // ---------------------------------------------------------------------------
 // Helper - resolve current user from session email
@@ -213,6 +214,19 @@ export async function POST(request: NextRequest) {
         { error: `Visibility must be one of: ${validVisibilities.join(', ')}` },
         { status: 400 }
       );
+    }
+
+    // Normalise question types in phases
+    if (Array.isArray(body.phases)) {
+      for (const phase of body.phases) {
+        if (!Array.isArray(phase.questions)) continue;
+        for (const q of phase.questions) {
+          if (q.type && typeof q.type === 'string') {
+            const canonical = normalizeQuestionType(q.type);
+            if (canonical) q.type = canonical;
+          }
+        }
+      }
     }
 
     const supabase = getSupabaseAdmin();

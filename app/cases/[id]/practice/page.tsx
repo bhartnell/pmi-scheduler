@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   AlertCircle,
+  AlertTriangle,
   ArrowRight,
   Award,
   BookOpen,
@@ -12,17 +13,21 @@ import {
   ChevronDown,
   ChevronRight,
   Clock,
+  Eye,
   Heart,
   HelpCircle,
   Lightbulb,
   Loader2,
   Lock,
+  MapPin,
   Radio,
   RotateCcw,
+  ShieldAlert,
   Stethoscope,
   Target,
   ThermometerSun,
   Trophy,
+  Users,
   XCircle,
 } from 'lucide-react';
 import type {
@@ -32,6 +37,7 @@ import type {
   CasePracticeProgress,
   PhaseVitals,
 } from '@/types/case-studies';
+import { normalizeQuestionType, type CanonicalQuestionType } from '@/lib/question-types';
 import Breadcrumbs from '@/components/Breadcrumbs';
 
 // ---------------------------------------------------------------------------
@@ -41,6 +47,7 @@ import Breadcrumbs from '@/components/Breadcrumbs';
 type PracticeScreen =
   | 'loading'
   | 'dispatch'
+  | 'scene_arrival'
   | 'phase_presentation'
   | 'phase_vitals'
   | 'phase_questions'
@@ -256,8 +263,9 @@ export default function PracticeModePage() {
     if (!question) return;
 
     // Determine what to send as response
+    const normalizedType = normalizeQuestionType(question.type) ?? question.type;
     let responseValue: unknown = selectedAnswer;
-    if (question.type === 'ordered_list') {
+    if (normalizedType === 'ordered_list') {
       responseValue = orderedItems;
     }
 
@@ -458,7 +466,8 @@ export default function PracticeModePage() {
 
   const canSubmit = (): boolean => {
     if (!currentQuestion) return false;
-    switch (currentQuestion.type) {
+    const qType = normalizeQuestionType(currentQuestion.type) ?? currentQuestion.type;
+    switch (qType) {
       case 'multiple_choice':
         return selectedAnswer !== null && selectedAnswer !== '';
       case 'multi_select':
@@ -470,7 +479,8 @@ export default function PracticeModePage() {
       case 'numeric':
         return selectedAnswer !== null && selectedAnswer !== '' && !isNaN(Number(selectedAnswer));
       default:
-        return false;
+        // Unknown type falls back to free_text behavior
+        return typeof selectedAnswer === 'string' && selectedAnswer.trim().length > 0;
     }
   };
 
@@ -571,7 +581,7 @@ export default function PracticeModePage() {
             <button
               onClick={() => {
                 resetQuestionState();
-                setScreen('phase_presentation');
+                setScreen('scene_arrival');
               }}
               className="mt-8 w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-6 rounded-xl text-lg transition-colors flex items-center justify-center gap-2"
             >
@@ -606,7 +616,141 @@ export default function PracticeModePage() {
     );
   }
 
-  // --- Phase Presentation ---
+  // --- Scene Arrival (shown once after dispatch, before Phase 1) ---
+  if (screen === 'scene_arrival' && currentPhase) {
+    const scene = caseStudy?.scene_info;
+    const hasSceneData =
+      scene &&
+      (scene.scene_description ||
+        scene.environment ||
+        scene.safety_hazards ||
+        scene.safety ||
+        scene.bystanders ||
+        scene.first_impression ||
+        scene.additional_findings);
+    const hasPresentationText = !!currentPhase.presentation_text;
+
+    // If there's nothing to show on this screen, skip to vitals
+    if (!hasSceneData && !hasPresentationText) {
+      // Use an effect-free redirect: render nothing and set screen
+      // (we handle this via the button logic below, but as a safety net)
+    }
+
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+        <OverallProgressBar progress={overallProgress} />
+
+        <div className="max-w-2xl mx-auto px-4 py-8">
+          {/* Phase indicator */}
+          <div className="flex items-center gap-2 mb-6">
+            <span className="text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 px-3 py-1 rounded-full">
+              Phase {currentPhaseIdx + 1} of {phases.length}
+            </span>
+          </div>
+
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+            {currentPhase.title}
+          </h2>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mb-6">
+            You arrive on scene...
+          </p>
+
+          {/* Scene info cards */}
+          {hasSceneData && (
+            <div className="space-y-4 mb-6">
+              {/* Safety considerations */}
+              {(scene.safety_hazards || scene.safety) && (
+                <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-5">
+                  <div className="flex items-center gap-2 mb-2">
+                    <ShieldAlert className="h-5 w-5 text-red-600 dark:text-red-400" />
+                    <h3 className="font-semibold text-red-800 dark:text-red-300">
+                      Scene Safety
+                    </h3>
+                  </div>
+                  <p className="text-red-700 dark:text-red-300 leading-relaxed">
+                    {scene.safety || scene.safety_hazards}
+                  </p>
+                </div>
+              )}
+
+              {/* Environment description */}
+              {(scene.scene_description || scene.environment) && (
+                <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center gap-2 mb-2">
+                    <MapPin className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                    <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                      Environment
+                    </h3>
+                  </div>
+                  <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                    {scene.environment || scene.scene_description}
+                  </p>
+                </div>
+              )}
+
+              {/* Bystanders */}
+              {scene.bystanders && (
+                <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Users className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                    <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+                      Bystanders
+                    </h3>
+                  </div>
+                  <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                    {scene.bystanders}
+                  </p>
+                </div>
+              )}
+
+              {/* First impression */}
+              {scene.first_impression && (
+                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-5">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Eye className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                    <h3 className="font-semibold text-amber-800 dark:text-amber-300">
+                      First Impression
+                    </h3>
+                  </div>
+                  <p className="text-amber-700 dark:text-amber-300 leading-relaxed">
+                    {scene.first_impression}
+                  </p>
+                </div>
+              )}
+
+              {/* Additional findings */}
+              {scene.additional_findings && (
+                <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-200 dark:border-gray-700">
+                  <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                    {scene.additional_findings}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Phase presentation narrative */}
+          {hasPresentationText && (
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 mb-6">
+              <p className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
+                {currentPhase.presentation_text}
+              </p>
+            </div>
+          )}
+
+          <button
+            onClick={() => setScreen('phase_vitals')}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-6 rounded-xl transition-colors flex items-center justify-center gap-2"
+          >
+            <Stethoscope className="h-5 w-5" />
+            Continue to Assessment
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // --- Phase Presentation (Phase 2+ — no scene info) ---
   if (screen === 'phase_presentation' && currentPhase) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -1325,7 +1469,12 @@ function QuestionInput({
   getOrderPosition: (item: string) => number;
   onToggleMultiSelect: (optionId: string) => void;
 }) {
-  switch (question.type) {
+  // Normalise the type so aliases like "mc", "multiple-choice", "select_all",
+  // "free-text", "short_answer", "number" etc. all map to canonical types.
+  const qType: CanonicalQuestionType | string =
+    normalizeQuestionType(question.type) ?? question.type;
+
+  switch (qType) {
     case 'multiple_choice':
       return (
         <div className="space-y-3">
@@ -1483,10 +1632,27 @@ function QuestionInput({
       );
 
     default:
+      // Unrecognised type — fall back to a text input so the student can
+      // still answer the question instead of being blocked.
       return (
-        <p className="text-gray-500 dark:text-gray-400">
-          Unknown question type: {question.type}
-        </p>
+        <div>
+          <div className="flex items-center gap-2 mb-3 px-1">
+            <AlertTriangle className="h-4 w-4 text-amber-500" />
+            <span className="text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 rounded-full">
+              Unsupported question type: {question.type}
+            </span>
+          </div>
+          <textarea
+            value={typeof selectedAnswer === 'string' ? selectedAnswer : ''}
+            onChange={(e) => onSelectAnswer(e.target.value)}
+            placeholder="Type your response here..."
+            rows={4}
+            className="w-full p-4 rounded-xl border-2 border-amber-200 dark:border-amber-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:border-amber-500 focus:ring-0 outline-none resize-none"
+          />
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+            This response will be self-assessed during debrief
+          </p>
+        </div>
       );
   }
 }

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { findPractitioner, type Practitioner } from '@/lib/practice-auth';
+import { normalizeQuestionType } from '@/lib/question-types';
 import type { CaseQuestion } from '@/types/case-studies';
 
 /**
@@ -220,7 +221,10 @@ function scoreResponse(
 ): { isCorrect: boolean; pointsEarned: number } {
   const maxPoints = question.points || 10;
 
-  switch (question.type) {
+  // Normalise the type so aliases ("mc", "multiple-choice", etc.) score correctly
+  const qType = normalizeQuestionType(question.type) ?? question.type;
+
+  switch (qType) {
     case 'multiple_choice': {
       const studentAnswer =
         typeof response === 'object' && response !== null
@@ -308,7 +312,8 @@ function scoreResponse(
     }
 
     default:
-      return { isCorrect: false, pointsEarned: 0 };
+      // Unknown type — treat as free-text (self-assessed, full points)
+      return { isCorrect: true, pointsEarned: maxPoints };
   }
 }
 

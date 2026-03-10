@@ -6,6 +6,8 @@
 // question design rules.
 // ---------------------------------------------------------------------------
 
+import { normalizeQuestionType, CANONICAL_QUESTION_TYPES } from '@/lib/question-types';
+
 export interface ValidationError {
   field: string;
   message: string;
@@ -23,8 +25,10 @@ const VALID_CATEGORIES = [
 
 const VALID_DIFFICULTIES = ['beginner', 'intermediate', 'advanced'] as const;
 
+// Accept both canonical types and known AI-format aliases
 const VALID_QUESTION_TYPES = [
-  'multiple_choice', 'select_all', 'free_text', 'numeric', 'ordered_list',
+  ...CANONICAL_QUESTION_TYPES,
+  'select_all', // AI-generated alias for multi_select
 ] as const;
 
 // ---------------------------------------------------------------------------
@@ -162,9 +166,18 @@ export function validateCaseJson(caseData: Record<string, unknown>): ValidationE
           continue;
         }
 
-        const qType = q.question_type as string | undefined;
-        if (isNonEmptyString(qType)) {
-          allQuestionTypes.add(qType);
+        const rawQType = (q.question_type || q.type) as string | undefined;
+        const qType = isNonEmptyString(rawQType) ? (normalizeQuestionType(rawQType) ?? rawQType) : undefined;
+        if (isNonEmptyString(rawQType)) {
+          allQuestionTypes.add(qType || rawQType);
+          // Warn on unknown type
+          if (!normalizeQuestionType(rawQType)) {
+            errors.push({
+              field: `${qPrefix}.question_type`,
+              message: `Unknown question type "${rawQType}". Supported: ${CANONICAL_QUESTION_TYPES.join(', ')}`,
+              severity: 'warning',
+            });
+          }
         }
 
         // Points > 0
@@ -186,7 +199,7 @@ export function validateCaseJson(caseData: Record<string, unknown>): ValidationE
           });
         }
 
-        // Type-specific validation
+        // Type-specific validation (use normalised type for matching)
         if (qType === 'multiple_choice') {
           const options = q.options;
           if (!isNonEmptyArray(options)) {
@@ -222,7 +235,7 @@ export function validateCaseJson(caseData: Record<string, unknown>): ValidationE
           }
         }
 
-        if (qType === 'select_all') {
+        if (qType === 'multi_select' || rawQType === 'select_all') {
           const correctAnswers = q.correct_answers;
           if (!isNonEmptyArray(correctAnswers)) {
             errors.push({

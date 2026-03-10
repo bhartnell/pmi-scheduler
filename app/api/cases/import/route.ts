@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole } from '@/lib/permissions';
 import { authOptions } from '@/lib/auth';
+import { normalizeQuestionType, CANONICAL_QUESTION_TYPES } from '@/lib/question-types';
 
 // ---------------------------------------------------------------------------
 // Helper - resolve current user from session email
@@ -60,6 +61,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // -----------------------------------------------------------------------
+    // Normalise question types in phases & collect warnings
+    // -----------------------------------------------------------------------
+    const typeWarnings: string[] = [];
+    if (Array.isArray(body.phases)) {
+      for (const phase of body.phases as Array<Record<string, unknown>>) {
+        if (!Array.isArray(phase.questions)) continue;
+        for (const q of phase.questions as Array<Record<string, unknown>>) {
+          if (!q.type || typeof q.type !== 'string') continue;
+          const canonical = normalizeQuestionType(q.type as string);
+          if (canonical) {
+            // Auto-map to canonical type
+            if (q.type !== canonical) {
+              typeWarnings.push(`"${q.type}" → "${canonical}"`);
+              q.type = canonical;
+            }
+          } else {
+            // Unknown type — leave it but warn
+            typeWarnings.push(
+              `"${q.type}" is not a recognised question type (supported: ${CANONICAL_QUESTION_TYPES.join(', ')})`
+            );
+          }
+        }
+      }
+    }
+
     const supabase = getSupabaseAdmin();
 
     // Build insert data - map JSON fields to DB columns
@@ -103,7 +130,14 @@ export async function POST(request: NextRequest) {
 
     if (insertError) throw insertError;
 
-    return NextResponse.json({ success: true, case: imported }, { status: 201 });
+    return NextResponse.json({
+      success: true,
+      case: imported,
+      ...(typeWarnings.length > 0 && {
+        type_warnings: typeWarnings,
+        message: `Import successful. ${typeWarnings.length} question type(s) were normalised or flagged.`,
+      }),
+    }, { status: 201 });
   } catch (error) {
     console.error('Error importing case:', error);
     return NextResponse.json({ error: 'Failed to import case' }, { status: 500 });
