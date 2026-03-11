@@ -62,7 +62,7 @@ export default function InlineTimerWidget({ labDayId, onOpenFullTimer, paused = 
   // Dynamic poll interval: 5s when timer active, 30s when idle, null when paused
   const pollInterval = paused
     ? null
-    : (timerState && timerState.status !== 'stopped' ? 5000 : 30000);
+    : (timerState && timerState.status !== 'stopped' ? 5000 : 10000);
   useVisibilityPolling(fetchTimerState, pollInterval);
 
   // Calculate display time

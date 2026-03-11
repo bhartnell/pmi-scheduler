@@ -293,9 +293,9 @@ export default function TimerDisplayPage() {
   // Adaptive poll interval based on timer state
   const getPollInterval = (): number => {
     if (!display) return 5000;           // Still loading, poll fast
-    if (!labDay) return 300000;          // No lab day associated, 5 min
-    if (!timer || timer.status === 'stopped') return 60000; // Stopped/no timer, 60s
-    if (timer.status === 'paused') return 15000;            // Paused, 15s
+    if (!labDay) return 30000;           // No lab day associated, 30s
+    if (!timer || timer.status === 'stopped') return 10000; // Stopped/no timer, 10s (detect start quickly)
+    if (timer.status === 'paused') return 10000;            // Paused, 10s
     return 5000;                         // Running, 5s
   };
   useVisibilityPolling(fetchTimerStatus, getPollInterval());

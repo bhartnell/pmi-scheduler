@@ -41,8 +41,8 @@ export default function TimerBanner({
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [showDebriefAlert, setShowDebriefAlert] = useState(false);
   const [showRotateAlert, setShowRotateAlert] = useState(false);
-  const [lastAlertRotation, setLastAlertRotation] = useState(0);
-  const [debriefAlertShown, setDebriefAlertShown] = useState(false);
+  const lastAlertRotationRef = useRef(0);
+  const debriefAlertShownRef = useRef(false);
   const [isReady, setIsReady] = useState(false);
   const [settingReady, setSettingReady] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
@@ -173,7 +173,7 @@ export default function TimerBanner({
   // Determine poll interval based on timer state
   // TimerBanner is on grading page - user is actively grading
   const getPollInterval = () => {
-    if (!timerState || timerState.status === 'stopped') return 30000; // 30s when stopped (waiting for lab to start)
+    if (!timerState || timerState.status === 'stopped') return 10000; // 10s when stopped (detect timer start quickly)
     if (timerState.status === 'paused') return 5000; // 5s when paused
     // When running: faster polling in final 30 seconds
     if (timerState.status === 'running' && displaySeconds <= 30) return 2000; // 2s in final 30s
@@ -216,17 +216,17 @@ export default function TimerBanner({
         const debriefTime = timerState.debrief_seconds || 300;
 
         // Debrief alert (5 min warning)
-        if (remaining <= debriefTime && remaining > 0 && !debriefAlertShown && timerState.status === 'running') {
+        if (remaining <= debriefTime && remaining > 0 && !debriefAlertShownRef.current && timerState.status === 'running') {
           setShowDebriefAlert(true);
-          setDebriefAlertShown(true);
+          debriefAlertShownRef.current = true;
           playWarningBeep(2);
           setTimeout(() => setShowDebriefAlert(false), 5000);
         }
 
         // Rotation end alert - LOUD
-        if (remaining <= 0 && timerState.status === 'running' && lastAlertRotation !== timerState.rotation_number) {
+        if (remaining <= 0 && timerState.status === 'running' && lastAlertRotationRef.current !== timerState.rotation_number) {
           setShowRotateAlert(true);
-          setLastAlertRotation(timerState.rotation_number);
+          lastAlertRotationRef.current = timerState.rotation_number;
           playLoudAlert();
         }
 
@@ -242,16 +242,16 @@ export default function TimerBanner({
         // Count-up alerts
         const debriefTime = duration - (timerState.debrief_seconds || 300);
 
-        if (elapsed >= debriefTime && !debriefAlertShown && timerState.status === 'running') {
+        if (elapsed >= debriefTime && !debriefAlertShownRef.current && timerState.status === 'running') {
           setShowDebriefAlert(true);
-          setDebriefAlertShown(true);
+          debriefAlertShownRef.current = true;
           playWarningBeep(2);
           setTimeout(() => setShowDebriefAlert(false), 5000);
         }
 
-        if (elapsed >= duration && timerState.status === 'running' && lastAlertRotation !== timerState.rotation_number) {
+        if (elapsed >= duration && timerState.status === 'running' && lastAlertRotationRef.current !== timerState.rotation_number) {
           setShowRotateAlert(true);
-          setLastAlertRotation(timerState.rotation_number);
+          lastAlertRotationRef.current = timerState.rotation_number;
           playLoudAlert();
         }
       }
@@ -280,7 +280,7 @@ export default function TimerBanner({
       if (displayInterval) clearInterval(displayInterval);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [timerState, playWarningBeep, playLoudAlert, debriefAlertShown, lastAlertRotation]);
+  }, [timerState, playWarningBeep, playLoudAlert]);
 
   // Reset alerts when rotation changes
   useEffect(() => {
@@ -291,7 +291,7 @@ export default function TimerBanner({
   }, [timerState?.status]);
 
   useEffect(() => {
-    setDebriefAlertShown(false);
+    debriefAlertShownRef.current = false;
   }, [timerState?.rotation_number]);
 
   // Calculate progress percentage

@@ -350,9 +350,9 @@ export default function LiveTimerDisplayPage({ params }: { params: Promise<{ lab
 
   // Adaptive poll interval based on timer state
   const getTimerPollInterval = (): number => {
-    if (!timer) return 60000;              // No timer yet, 60s
-    if (timer.status === 'stopped') return 60000; // Stopped, 60s
-    if (timer.status === 'paused') return 15000;  // Paused, 15s
+    if (!timer) return 10000;              // No timer yet, 10s (detect start quickly)
+    if (timer.status === 'stopped') return 10000; // Stopped, 10s
+    if (timer.status === 'paused') return 10000;  // Paused, 10s
     return 5000;                           // Running, 5s
   };
   useVisibilityPolling(fetchTimerStatus, getTimerPollInterval());

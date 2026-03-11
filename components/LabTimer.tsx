@@ -91,8 +91,8 @@ export default function LabTimer({
   const [showRotateAlert, setShowRotateAlert] = useState(false);
   const [rotateAlertStartTime, setRotateAlertStartTime] = useState<number | null>(null);
   const [rotateAlertCountdown, setRotateAlertCountdown] = useState(30);
-  const [lastAlertRotation, setLastAlertRotation] = useState(0);
-  const [debriefAlertShown, setDebriefAlertShown] = useState(false);
+  const lastAlertRotationRef = useRef(0);
+  const debriefAlertShownRef = useRef(false);
   const [readyStatuses, setReadyStatuses] = useState<ReadyStatus[]>([]);
   const [allStations, setAllStations] = useState<Station[]>([]);
   const [showStaleWarning, setShowStaleWarning] = useState(false);
@@ -273,8 +273,8 @@ export default function LabTimer({
         setShowEndLabConfirm(false);
         setShowStaleWarning(false);
         // Reset local state
-        setDebriefAlertShown(false);
-        setLastAlertRotation(0);
+        debriefAlertShownRef.current = false;
+        lastAlertRotationRef.current = 0;
         setShowRotateAlert(false);
         setShowDebriefAlert(false);
       }
@@ -298,7 +298,7 @@ export default function LabTimer({
         if (action === 'next' || action === 'reset' || action === 'stop') {
           setShowRotateAlert(false);
           setShowDebriefAlert(false);
-          setDebriefAlertShown(false);
+          debriefAlertShownRef.current = false;
         }
       }
     } catch (error) {
@@ -429,18 +429,18 @@ export default function LabTimer({
         const debriefTime = timerState.debrief_seconds || 300;
 
         // Debrief alert
-        if (remaining <= debriefTime && remaining > 0 && !debriefAlertShown && timerState.status === 'running') {
+        if (remaining <= debriefTime && remaining > 0 && !debriefAlertShownRef.current && timerState.status === 'running') {
           setShowDebriefAlert(true);
-          setDebriefAlertShown(true);
+          debriefAlertShownRef.current = true;
           playWarningBeep(2);
           setTimeout(() => setShowDebriefAlert(false), 5000);
         }
 
         // Rotation end alert - LOUD
-        if (remaining <= 0 && timerState.status === 'running' && lastAlertRotation !== timerState.rotation_number) {
+        if (remaining <= 0 && timerState.status === 'running' && lastAlertRotationRef.current !== timerState.rotation_number) {
           setShowRotateAlert(true);
           setRotateAlertStartTime(Date.now());
-          setLastAlertRotation(timerState.rotation_number);
+          lastAlertRotationRef.current = timerState.rotation_number;
           playLoudAlert();
         }
 
@@ -455,17 +455,17 @@ export default function LabTimer({
 
         const debriefTime = duration - (timerState.debrief_seconds || 300);
 
-        if (elapsed >= debriefTime && !debriefAlertShown && timerState.status === 'running') {
+        if (elapsed >= debriefTime && !debriefAlertShownRef.current && timerState.status === 'running') {
           setShowDebriefAlert(true);
-          setDebriefAlertShown(true);
+          debriefAlertShownRef.current = true;
           playWarningBeep(2);
           setTimeout(() => setShowDebriefAlert(false), 5000);
         }
 
-        if (elapsed >= duration && timerState.status === 'running' && lastAlertRotation !== timerState.rotation_number) {
+        if (elapsed >= duration && timerState.status === 'running' && lastAlertRotationRef.current !== timerState.rotation_number) {
           setShowRotateAlert(true);
           setRotateAlertStartTime(Date.now());
-          setLastAlertRotation(timerState.rotation_number);
+          lastAlertRotationRef.current = timerState.rotation_number;
           playLoudAlert();
         }
       }
@@ -494,12 +494,12 @@ export default function LabTimer({
       if (displayInterval) clearInterval(displayInterval);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [timerState, playWarningBeep, playLoudAlert, debriefAlertShown, lastAlertRotation]);
+  }, [timerState, playWarningBeep, playLoudAlert]);
 
   // Reset debrief alert shown flag when rotation changes
   useEffect(() => {
     if (timerState) {
-      setDebriefAlertShown(false);
+      debriefAlertShownRef.current = false;
     }
   }, [timerState?.rotation_number]);
 
