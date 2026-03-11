@@ -266,6 +266,20 @@ function buildSections(pendingAccessRequests: number): AdminSection[] {
           description: 'Monitor Google Calendar connections and sync status for instructors',
           color: 'bg-teal-600',
         },
+        {
+          href: '/skill-sheets',
+          icon: ClipboardList,
+          title: 'Skill Sheets',
+          description: 'Browse and manage NREMT, Platinum, and publisher skill sheet library',
+          color: 'bg-violet-600',
+        },
+        {
+          href: '/admin/skill-sheets/import',
+          icon: Upload,
+          title: 'Skill Sheets Import',
+          description: 'Import skill sheets from NREMT, Platinum, or publisher JSON data files',
+          color: 'bg-violet-500',
+        },
       ],
     },
     {
