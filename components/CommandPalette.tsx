@@ -25,6 +25,7 @@ import {
   X,
   BookOpen,
   BookOpenCheck,
+  Flame,
 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { parseDateSafe } from '@/lib/utils';
@@ -406,6 +407,14 @@ export default function CommandPalette() {
         category: 'Navigation',
         action: () => router.push('/cases'),
         keywords: ['case', 'study', 'practice', 'scenario', 'clinical'],
+      },
+      {
+        id: 'nav-lvfr',
+        label: 'Go to LVFR AEMT',
+        icon: Flame,
+        category: 'Navigation',
+        action: () => router.push('/lvfr-aemt'),
+        keywords: ['lvfr', 'fire', 'aemt', 'academy'],
       },
       // Actions
       {

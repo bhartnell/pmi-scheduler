@@ -140,7 +140,7 @@ export default function QuickActionsMenu() {
   if (!effectiveRole || !hasMinRole(effectiveRole, 'instructor')) return null;
 
   return (
-    <div ref={menuRef} className="fixed bottom-20 right-6 z-40 flex flex-col items-end gap-3 print:hidden">
+    <div ref={menuRef} className="fixed bottom-[5.5rem] right-6 z-40 flex flex-col items-end gap-3 print:hidden">
       {/* Action buttons - stagger upward when open */}
       <div
         className={`flex flex-col items-end gap-2 transition-all duration-200 ${
