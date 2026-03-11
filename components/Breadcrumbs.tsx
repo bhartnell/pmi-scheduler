@@ -26,6 +26,7 @@ const ROUTE_LABELS: Record<string, string> = {
   'lab-management/mentorship': 'Mentorship',
   'lab-management/skills': 'Skills',
   'lab-management/skills/competencies': 'Competencies',
+  'lab-management/debrief-review': 'Debrief Review',
   'clinical': 'Clinical',
   'clinical/internships': 'Internships',
   'clinical/hours': 'Clinical Hours',

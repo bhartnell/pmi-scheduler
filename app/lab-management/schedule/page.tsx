@@ -25,7 +25,8 @@ import {
   LayoutGrid,
   CalendarDays,
   Download,
-  UserCheck
+  UserCheck,
+  MessageSquare
 } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import { PageErrorBoundary } from '@/components/PageErrorBoundary';
@@ -197,6 +198,7 @@ function SchedulePageContent() {
 
   const [userRole, setUserRole] = useState<string | null>(null);
 
+const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number>>({});
   // Compute date range for the current view
   const dateRange = useMemo(() => {
     let startDate: Date;
@@ -225,6 +227,20 @@ function SchedulePageContent() {
     cohortId: selectedCohort || undefined,
     enabled: !!session,
   });
+
+  // Fetch debrief note counts for visible lab days
+  useEffect(() => {
+    const pastLabDayIds = labDays
+      .filter(ld => new Date(ld.date + "T23:59:59") < new Date())
+      .map(ld => ld.id);
+    if (pastLabDayIds.length === 0) { setDebriefNoteCounts({}); return; }
+    fetch(`/api/lab-management/debrief-notes/counts?labDayIds=${pastLabDayIds.join(",")}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) setDebriefNoteCounts(data.counts || {});
+      })
+      .catch(() => {});
+  }, [labDays]);
 
   // Calendar availability for today's labs and list/week view
   const todayStr = new Date().toISOString().split('T')[0];
@@ -1412,6 +1428,14 @@ function SchedulePageContent() {
                                   ({labDay.shift_signups.pending_count} pending)
                                 </div>
                               )}
+                            </div>
+                          )}
+
+                          {/* Debrief note count badge for past lab days */}
+                          {debriefNoteCounts[labDay.id] > 0 && (
+                            <div className="flex items-center gap-1 mt-1 text-[10px] text-sky-600 dark:text-sky-400">
+                              <MessageSquare className="w-3 h-3" />
+                              {debriefNoteCounts[labDay.id]} note{debriefNoteCounts[labDay.id] !== 1 ? 's' : ''}
                             </div>
                           )}
                         </Link>

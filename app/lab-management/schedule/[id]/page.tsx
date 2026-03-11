@@ -82,6 +82,7 @@ import ChecklistSection from '@/components/lab-day/ChecklistSection';
 import EquipmentSection from '@/components/lab-day/EquipmentSection';
 import CostsSection from '@/components/lab-day/CostsSection';
 import DebriefSection from '@/components/lab-day/DebriefSection';
+import DebriefNotesSection from '@/components/lab-day/DebriefNotesSection';
 import StationCards from '@/components/lab-day/StationCards';
 import StudentRatingsSection from '@/components/lab-day/StudentRatingsSection';
 
@@ -696,6 +697,14 @@ export default function LabDayPage() {
     today.setHours(0, 0, 0, 0);
     const labDate = new Date(labDay.date + 'T00:00:00');
     return labDate < today;
+  };
+  const isLabDayPastOrToday = (): boolean => {
+    if (!labDay?.date) return false;
+    const tomorrow = new Date();
+    tomorrow.setHours(0, 0, 0, 0);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const labDate = new Date(labDay.date + 'T00:00:00');
+    return labDate < tomorrow;
   };
 
   const fetchDebriefs = async () => {
@@ -3946,6 +3955,15 @@ export default function LabDayPage() {
             onCancelEditingDebrief={cancelEditingDebrief}
             onDebriefFormChange={setDebriefForm}
             onDebriefHoverRatingChange={setDebriefHoverRating}
+          />
+        )}
+
+        {/* Debrief Notes Thread — shown for today and past lab days */}
+        {isLabDayPastOrToday() && (
+          <DebriefNotesSection
+            labDayId={labDayId}
+            session={session}
+            userRole={userRole || ''}
           />
         )}
 

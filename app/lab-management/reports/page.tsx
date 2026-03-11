@@ -200,6 +200,15 @@ export default function ReportsIndexPage() {
       color: 'text-indigo-600 dark:text-indigo-400',
       bgColor: 'bg-indigo-100 dark:bg-indigo-900/30',
     },
+    {
+      id: 'debrief-review',
+      title: 'Debrief Review',
+      description: 'Review categorized instructor debrief notes across lab days.',
+      icon: FileText,
+      href: '/lab-management/debrief-review',
+      color: 'text-sky-600 dark:text-sky-400',
+      bgColor: 'bg-sky-100 dark:bg-sky-900/30',
+    },
   ];
 
   // Filter reports based on user role
