@@ -82,11 +82,13 @@ export default function LVFRDashboardPage() {
   const navLinks = isStudent
     ? [
         { href: '/lvfr-aemt/calendar', icon: Calendar, label: 'Calendar', description: 'Course schedule and upcoming classes', color: 'bg-blue-600' },
+        { href: '/lvfr-aemt/grades', icon: BarChart3, label: 'My Grades', description: 'View your grades and assessment scores', color: 'bg-purple-600' },
         { href: '/lvfr-aemt/pharm', icon: Award, label: 'Pharm Checkpoints', description: 'Medication card practice and testing', color: 'bg-red-600' },
       ]
     : [
         { href: '/lvfr-aemt/calendar', icon: Calendar, label: 'Course Calendar', description: 'View and manage the 30-day course schedule', color: 'bg-blue-600' },
         ...(isInstructor ? [{ href: '/lvfr-aemt/scheduling', icon: Users, label: 'Coverage Grid', description: 'Instructor scheduling and coverage analysis', color: 'bg-amber-600' }] : []),
+        { href: '/lvfr-aemt/grades', icon: BarChart3, label: 'Gradebook', description: 'Student grades, assessments, and CSV import', color: 'bg-purple-600' },
         { href: '/lvfr-aemt/pharm', icon: Award, label: 'Pharmacology', description: 'Medication checkpoint cards and scoring', color: 'bg-red-600' },
       ];
 

@@ -66,6 +66,8 @@ const ROUTE_LABELS: Record<string, string> = {
   'lvfr-aemt/calendar': 'Course Calendar',
   'lvfr-aemt/scheduling': 'Coverage Grid',
   'lvfr-aemt/pharm': 'Pharmacology',
+  'lvfr-aemt/grades': 'Gradebook',
+  'lvfr-aemt/grades/import': 'CSV Import',
 };
 
 /** Check if a segment looks like a UUID or dynamic ID */
