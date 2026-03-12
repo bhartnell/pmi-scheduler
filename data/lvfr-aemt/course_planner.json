@@ -1,0 +1,2830 @@
+{
+  "content_blocks": [
+    {
+      "id": "lec-ch01",
+      "name": "Ch 1: EMS Systems",
+      "duration_min": 60,
+      "block_type": "lecture",
+      "min_instructors": 1,
+      "chapter_id": "ch01",
+      "module_id": "mod1",
+      "notes": "History, certification levels, system components",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "lec-ch02",
+      "name": "Ch 2: Workforce Safety & Wellness",
+      "duration_min": 60,
+      "block_type": "lecture",
+      "min_instructors": 1,
+      "chapter_id": "ch02",
+      "module_id": "mod1",
+      "notes": "BSI/PPE, stress management",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "lec-ch03",
+      "name": "Ch 3: Medical, Legal, and Ethical Issues",
+      "duration_min": 60,
+      "block_type": "lecture",
+      "min_instructors": 1,
+      "chapter_id": "ch03",
+      "module_id": "mod1",
+      "notes": "High discussion value — allow extra time",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "lec-ch04",
+      "name": "Ch 4: Communications & Documentation",
+      "duration_min": 75,
+      "block_type": "lecture",
+      "min_instructors": 1,
+      "chapter_id": "ch04",
+      "module_id": "mod1",
+      "notes": "64 slides",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "lec-ch05",
+      "name": "Ch 5: Medical Terminology",
+      "duration_min": 30,
+      "block_type": "lecture",
+      "min_instructors": 1,
+      "chapter_id": "ch05",
+      "module_id": "mod1",
+      "notes": "Fast chapter — mostly EMT review",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "lec-ch06",
+      "name": "Ch 6: Lifting & Moving Patients",
+      "duration_min": 45,
+      "block_type": "lecture",
+      "min_instructors": 1,
+      "chapter_id": "ch06",
+      "module_id": "mod1",
+      "notes": "Lecture only — lab is separate block",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "lec-ch07",
+      "name": "Ch 7: The Human Body (A&P)",
+      "duration_min": 240,
+      "block_type": "lecture",
+      "min_instructors": 1,
+      "chapter_id": "ch07",
+      "module_id": "mod1",
+      "can_split": true,
+      "notes": "FULL DAY. 4 blocks of ~60 min. Longest chapter in course.",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "lec-ch08",
+      "name": "Ch 8: Pathophysiology",
+      "duration_min": 90,
+      "block_type": "lecture",
+      "min_instructors": 1,
+      "chapter_id": "ch08",
+      "module_id": "mod1",
+      "notes": "Connects to Ch 7 — teach day after A&P",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "lec-ch09",
+      "name": "Ch 9: Life Span Development",
+      "duration_min": 45,
+      "block_type": "lecture",
+      "min_instructors": 1,
+      "chapter_id": "ch09",
+      "module_id": "mod1",
+      "notes": "Can pair with Ch 8 same day",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "lec-ch10",
+      "name": "Ch 10: Patient Assessment",
+      "duration_min": 120,
+      "block_type": "lecture",
+      "min_instructors": 1,
+      "chapter_id": "ch10",
+      "module_id": "mod1",
+      "can_split": true,
+      "notes": "Most important clinical chapter. 2 lecture blocks.",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "lec-ch11",
+      "name": "Ch 11: Airway Management",
+      "duration_min": 180,
+      "block_type": "lecture",
+      "min_instructors": 1,
+      "chapter_id": "ch11",
+      "module_id": "mod2",
+      "can_split": true,
+      "notes": "3 blocks of 60 min. Teach before airway lab.",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "lec-ch12",
+      "name": "Ch 12: Principles of Pharmacology",
+      "duration_min": 80,
+      "block_type": "lecture",
+      "min_instructors": 1,
+      "chapter_id": "ch12",
+      "module_id": "mod1",
+      "notes": "SNHD formulary review included",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "lec-ch13",
+      "name": "Ch 13: Vascular Access & Med Admin",
+      "duration_min": 90,
+      "block_type": "lecture",
+      "min_instructors": 1,
+      "chapter_id": "ch13",
+      "module_id": "mod1",
+      "notes": "Heavy on IV theory. Teach before IV lab.",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "lec-ch14",
+      "name": "Ch 14: Shock & Resuscitation",
+      "duration_min": 120,
+      "block_type": "lecture",
+      "min_instructors": 1,
+      "chapter_id": "ch14",
+      "module_id": "mod3",
+      "can_split": true,
+      "notes": "2 blocks. Connects to Ch 8 pathophysiology.",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "lec-ch15",
+      "name": "Ch 15: BLS Resuscitation",
+      "duration_min": 60,
+      "block_type": "lecture",
+      "min_instructors": 1,
+      "chapter_id": "ch15",
+      "module_id": "mod3",
+      "notes": "Shorter lecture — most students have CPR cert. Lab is separate.",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "lec-ch16",
+      "name": "Ch 16: Medical Overview",
+      "duration_min": 45,
+      "block_type": "lecture",
+      "min_instructors": 1,
+      "chapter_id": "ch16",
+      "module_id": "mod4",
+      "notes": "Intro to medical module",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "lec-ch17",
+      "name": "Ch 17: Respiratory Emergencies",
+      "duration_min": 170,
+      "block_type": "lecture",
+      "min_instructors": 1,
+      "chapter_id": "ch17",
+      "module_id": "mod2",
+      "can_split": true,
+      "notes": "2 blocks (~90 + 80 min). Builds directly on Ch 11 airway.",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "lec-ch18",
+      "name": "Ch 18: Cardiovascular Emergencies",
+      "duration_min": 90,
+      "block_type": "lecture",
+      "min_instructors": 1,
+      "chapter_id": "ch18",
+      "module_id": "mod3",
+      "notes": "ACS, CHF, hypertensive emergencies",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "lec-ch19",
+      "name": "Ch 19: Neurologic Emergencies",
+      "duration_min": 75,
+      "block_type": "lecture",
+      "min_instructors": 1,
+      "chapter_id": "ch19",
+      "module_id": "mod4",
+      "notes": "Stroke, seizures, AMS",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "lec-ch20",
+      "name": "Ch 20: GI & Urologic Emergencies",
+      "duration_min": 90,
+      "block_type": "lecture",
+      "min_instructors": 1,
+      "chapter_id": "ch20",
+      "module_id": "mod4",
+      "notes": "Abdominal assessment approach",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "lec-ch21",
+      "name": "Ch 21: Endocrine & Hematologic",
+      "duration_min": 60,
+      "block_type": "lecture",
+      "min_instructors": 1,
+      "chapter_id": "ch21",
+      "module_id": "mod4",
+      "notes": "Diabetes, hypoglycemia — very common call",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "lec-ch22",
+      "name": "Ch 22: Immunologic Emergencies",
+      "duration_min": 40,
+      "block_type": "lecture",
+      "min_instructors": 1,
+      "chapter_id": "ch22",
+      "module_id": "mod4",
+      "notes": "Short but critical — anaphylaxis",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "lec-ch23",
+      "name": "Ch 23: Toxicology",
+      "duration_min": 75,
+      "block_type": "lecture",
+      "min_instructors": 1,
+      "chapter_id": "ch23",
+      "module_id": "mod4",
+      "notes": "Toxidromes, naloxone",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "lec-ch24",
+      "name": "Ch 24: Psychiatric Emergencies",
+      "duration_min": 45,
+      "block_type": "lecture",
+      "min_instructors": 1,
+      "chapter_id": "ch24",
+      "module_id": "mod4",
+      "notes": "De-escalation, scene safety",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "lec-ch25",
+      "name": "Ch 25: Gynecologic Emergencies",
+      "duration_min": 45,
+      "block_type": "lecture",
+      "min_instructors": 1,
+      "chapter_id": "ch25",
+      "module_id": "mod4",
+      "notes": "Sensitive topic — professional approach",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "lec-ch26",
+      "name": "Ch 26: Trauma Overview",
+      "duration_min": 60,
+      "block_type": "lecture",
+      "min_instructors": 1,
+      "chapter_id": "ch26",
+      "module_id": "mod5",
+      "notes": "MOI, energy transfer, biomechanics",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "lec-ch27",
+      "name": "Ch 27: Bleeding",
+      "duration_min": 45,
+      "block_type": "lecture",
+      "min_instructors": 1,
+      "chapter_id": "ch27",
+      "module_id": "mod5",
+      "notes": "Hemorrhage types, control methods",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "lec-ch28",
+      "name": "Ch 28: Soft-Tissue Injuries",
+      "duration_min": 75,
+      "block_type": "lecture",
+      "min_instructors": 1,
+      "chapter_id": "ch28",
+      "module_id": "mod5",
+      "notes": "Burns, bandaging. Can pair with Ch 27.",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "lec-ch29",
+      "name": "Ch 29: Face & Neck Injuries",
+      "duration_min": 70,
+      "block_type": "lecture",
+      "min_instructors": 1,
+      "chapter_id": "ch29",
+      "module_id": "mod5",
+      "notes": "Eye, ear, nose, neck injuries",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "lec-ch30",
+      "name": "Ch 30: Head & Spine Injuries",
+      "duration_min": 80,
+      "block_type": "lecture",
+      "min_instructors": 1,
+      "chapter_id": "ch30",
+      "module_id": "mod5",
+      "notes": "TBI, spinal cord injury — HIGH YIELD",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "lec-ch31",
+      "name": "Ch 31: Chest Injuries",
+      "duration_min": 90,
+      "block_type": "lecture",
+      "min_instructors": 1,
+      "chapter_id": "ch31",
+      "module_id": "mod5",
+      "notes": "Pneumothorax types, flail chest, tamponade",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "lec-ch32",
+      "name": "Ch 32: Abdominal & GU Injuries",
+      "duration_min": 60,
+      "block_type": "lecture",
+      "min_instructors": 1,
+      "chapter_id": "ch32",
+      "module_id": "mod5",
+      "notes": "Can pair with Ch 31 same day",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "lec-ch33",
+      "name": "Ch 33: Orthopaedic Injuries",
+      "duration_min": 95,
+      "block_type": "lecture",
+      "min_instructors": 1,
+      "chapter_id": "ch33",
+      "module_id": "mod5",
+      "notes": "120 slides — heavy chapter. Splinting principles.",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "lec-ch34",
+      "name": "Ch 34: Environmental Emergencies",
+      "duration_min": 120,
+      "block_type": "lecture",
+      "min_instructors": 1,
+      "chapter_id": "ch34",
+      "module_id": "mod5",
+      "can_split": true,
+      "notes": "128 slides — heat/cold/drowning/envenomation. Las Vegas relevant.",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "lec-ch35",
+      "name": "Ch 35: OB & Neonatal Care",
+      "duration_min": 130,
+      "block_type": "lecture",
+      "min_instructors": 1,
+      "chapter_id": "ch35",
+      "module_id": "mod6",
+      "can_split": true,
+      "notes": "120 slides. Delivery, complications, NRP. Full day with lab.",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "lec-ch36",
+      "name": "Ch 36: Pediatric Emergencies",
+      "duration_min": 170,
+      "block_type": "lecture",
+      "min_instructors": 1,
+      "chapter_id": "ch36",
+      "module_id": "mod6",
+      "can_split": true,
+      "notes": "2 blocks (~50 + 120 min). Long single-chapter lecture.",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "lec-ch37",
+      "name": "Ch 37: Geriatric Emergencies",
+      "duration_min": 80,
+      "block_type": "lecture",
+      "min_instructors": 1,
+      "chapter_id": "ch37",
+      "module_id": "mod6",
+      "notes": "Atypical presentations, polypharmacy",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "lec-ch38",
+      "name": "Ch 38: Special Challenges",
+      "duration_min": 50,
+      "block_type": "lecture",
+      "min_instructors": 1,
+      "chapter_id": "ch38",
+      "module_id": "mod6",
+      "notes": "Shorter chapter. Trach care, bariatric, developmental.",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "lec-ch39",
+      "name": "Ch 39: Transport Operations",
+      "duration_min": 30,
+      "block_type": "lecture",
+      "min_instructors": 1,
+      "chapter_id": "ch39",
+      "module_id": "mod7",
+      "notes": "Condensed — academy grads know most of this",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "lec-ch40",
+      "name": "Ch 40: Extrication, Rescue, Hazmat",
+      "duration_min": 45,
+      "block_type": "lecture",
+      "min_instructors": 1,
+      "chapter_id": "ch40",
+      "module_id": "mod7",
+      "notes": "Condensed — focus EMS provider role",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "lec-ch41",
+      "name": "Ch 41: Incident Management",
+      "duration_min": 45,
+      "block_type": "lecture",
+      "min_instructors": 1,
+      "chapter_id": "ch41",
+      "module_id": "mod7",
+      "notes": "ICS, START triage — NREMT testable",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "lec-ch42",
+      "name": "Ch 42: Terrorism & Disaster",
+      "duration_min": 45,
+      "block_type": "lecture",
+      "min_instructors": 1,
+      "chapter_id": "ch42",
+      "module_id": "mod7",
+      "notes": "CBRNE awareness, blast injury review",
+      "color": "#3B82F6"
+    },
+    {
+      "id": "lab-lift",
+      "name": "Lifting & Moving Lab",
+      "duration_min": 300,
+      "block_type": "lab",
+      "min_instructors": 2,
+      "equipment": [
+        "Backboard",
+        "scoop",
+        "KED",
+        "stair chair",
+        "gurney",
+        "sheets"
+      ],
+      "chapter_id": "ch06",
+      "module_id": "mod1",
+      "notes": "Full day lab",
+      "color": "#F97316"
+    },
+    {
+      "id": "lab-assess",
+      "name": "Patient Assessment Practice",
+      "duration_min": 120,
+      "block_type": "lab",
+      "min_instructors": 2,
+      "equipment": [
+        "Stethoscopes",
+        "BP cuffs",
+        "pulse ox",
+        "penlight"
+      ],
+      "chapter_id": "ch10",
+      "module_id": "mod1",
+      "notes": "2 preferred instructors",
+      "color": "#F97316"
+    },
+    {
+      "id": "lab-pharm",
+      "name": "Pharmacology / Med Admin Demo",
+      "duration_min": 60,
+      "block_type": "lab",
+      "min_instructors": 2,
+      "equipment": [
+        "Syringes",
+        "vials",
+        "nebulizers",
+        "IM/SQ/IN trainers"
+      ],
+      "chapter_id": "ch12",
+      "module_id": "mod1",
+      "notes": null,
+      "color": "#F97316"
+    },
+    {
+      "id": "lab-iv-1",
+      "name": "IV Access Lab Day 1",
+      "duration_min": 300,
+      "block_type": "lab",
+      "min_instructors": 3,
+      "equipment": [
+        "IV arms",
+        "start kits",
+        "NS bags",
+        "admin sets",
+        "tourniquets",
+        "sharps containers",
+        "gloves",
+        "tegaderm"
+      ],
+      "chapter_id": "ch13",
+      "module_id": "mod1",
+      "notes": "High-fidelity skills lab",
+      "color": "#F97316"
+    },
+    {
+      "id": "lab-iv-2",
+      "name": "IV Access Lab Day 2",
+      "duration_min": 300,
+      "block_type": "lab",
+      "min_instructors": 3,
+      "equipment": [
+        "IV arms",
+        "start kits",
+        "NS bags",
+        "admin sets",
+        "tourniquets",
+        "sharps containers",
+        "gloves",
+        "tegaderm"
+      ],
+      "chapter_id": "ch13",
+      "module_id": "mod1",
+      "notes": "Live sticks if policy allows. Consecutive day strongly preferred.",
+      "color": "#F97316"
+    },
+    {
+      "id": "lab-airway",
+      "name": "Airway Management Lab",
+      "duration_min": 360,
+      "block_type": "lab",
+      "min_instructors": 3,
+      "equipment": [
+        "OPAs",
+        "NPAs",
+        "BVMs",
+        "suction",
+        "O2",
+        "supraglottics",
+        "CPAP",
+        "airway manikins"
+      ],
+      "chapter_id": "ch11",
+      "module_id": "mod2",
+      "notes": "Full day lab",
+      "color": "#F97316"
+    },
+    {
+      "id": "lab-bls",
+      "name": "BLS Resuscitation Lab",
+      "duration_min": 240,
+      "block_type": "lab",
+      "min_instructors": 2,
+      "equipment": [
+        "CPR manikins (adult + infant)",
+        "AEDs",
+        "BVMs"
+      ],
+      "chapter_id": "ch15",
+      "module_id": "mod3",
+      "notes": null,
+      "color": "#F97316"
+    },
+    {
+      "id": "lab-monitor",
+      "name": "Cardiac Monitor Familiarization",
+      "duration_min": 45,
+      "block_type": "lab",
+      "min_instructors": 1,
+      "equipment": [
+        "LP35 monitors (from LVFR)",
+        "electrodes"
+      ],
+      "chapter_id": "ch18",
+      "module_id": "mod3",
+      "notes": null,
+      "color": "#F97316"
+    },
+    {
+      "id": "lab-bleed",
+      "name": "Stop the Bleed / Hemorrhage Control",
+      "duration_min": 120,
+      "block_type": "lab",
+      "min_instructors": 2,
+      "equipment": [
+        "Tourniquets (CAT)",
+        "wound packing material",
+        "hemostatic gauze",
+        "training limbs"
+      ],
+      "chapter_id": "ch27",
+      "module_id": "mod5",
+      "notes": null,
+      "color": "#F97316"
+    },
+    {
+      "id": "lab-cspine",
+      "name": "Spinal Immobilization Lab",
+      "duration_min": 180,
+      "block_type": "lab",
+      "min_instructors": 2,
+      "equipment": [
+        "C-collars",
+        "backboard",
+        "KED",
+        "motorcycle helmet"
+      ],
+      "chapter_id": "ch30",
+      "module_id": "mod5",
+      "notes": null,
+      "color": "#F97316"
+    },
+    {
+      "id": "lab-splint",
+      "name": "Splinting Lab",
+      "duration_min": 150,
+      "block_type": "lab",
+      "min_instructors": 2,
+      "equipment": [
+        "SAM splints",
+        "rigid splints",
+        "traction splint",
+        "pelvic binder",
+        "triangular bandages"
+      ],
+      "chapter_id": "ch33",
+      "module_id": "mod5",
+      "notes": null,
+      "color": "#F97316"
+    },
+    {
+      "id": "lab-ob",
+      "name": "OB Delivery / NRP Lab",
+      "duration_min": 120,
+      "block_type": "lab",
+      "min_instructors": 2,
+      "equipment": [
+        "Delivery manikin",
+        "infant manikins",
+        "O2",
+        "bulb syringe",
+        "clamps",
+        "towels"
+      ],
+      "chapter_id": "ch35",
+      "module_id": "mod6",
+      "notes": null,
+      "color": "#F97316"
+    },
+    {
+      "id": "act-ch03-cases",
+      "name": "Legal/Ethics Case Discussion",
+      "duration_min": 60,
+      "block_type": "activity",
+      "min_instructors": 1,
+      "notes": "4 scenarios. Full class discussion. Follows Ch 3 lecture.",
+      "color": "#F59E0B"
+    },
+    {
+      "id": "act-medterm-ws",
+      "name": "Medical Terminology Worksheet",
+      "duration_min": 30,
+      "block_type": "activity",
+      "min_instructors": 1,
+      "notes": "Printed worksheet. Follows Ch 5.",
+      "color": "#F59E0B"
+    },
+    {
+      "id": "act-radio",
+      "name": "Radio Report Practice",
+      "duration_min": 60,
+      "block_type": "activity",
+      "min_instructors": 1,
+      "notes": "4 scenarios. Full class. Follows Ch 4.",
+      "color": "#F59E0B"
+    },
+    {
+      "id": "act-pcr",
+      "name": "PCR Narrative Writing",
+      "duration_min": 50,
+      "block_type": "activity",
+      "min_instructors": 1,
+      "notes": "Same scenarios as radio practice.",
+      "color": "#F59E0B"
+    },
+    {
+      "id": "act-ap-ws",
+      "name": "A&P Worksheet",
+      "duration_min": 50,
+      "block_type": "activity",
+      "min_instructors": 1,
+      "notes": "Printed worksheet. Follows Ch 7 lecture blocks.",
+      "color": "#F59E0B"
+    },
+    {
+      "id": "act-lifespan",
+      "name": "Life Span Case Studies",
+      "duration_min": 60,
+      "block_type": "activity",
+      "min_instructors": 1,
+      "notes": "6 age-group scenarios. Follows Ch 9.",
+      "color": "#F59E0B"
+    },
+    {
+      "id": "act-assess-scenario",
+      "name": "Assessment Scenario Practice",
+      "duration_min": 50,
+      "block_type": "activity",
+      "min_instructors": 1,
+      "notes": "4 patient scenarios. Can be solo instructor with 30 students.",
+      "color": "#F59E0B"
+    },
+    {
+      "id": "act-vitals",
+      "name": "Vital Signs Practice",
+      "duration_min": 60,
+      "block_type": "activity",
+      "min_instructors": 1,
+      "notes": "Students pair up. Manual BP, pulse, RR, SpO2, pupils. 2 preferred.",
+      "color": "#F59E0B"
+    },
+    {
+      "id": "act-drug-cards",
+      "name": "Drug Card Activity",
+      "duration_min": 60,
+      "block_type": "activity",
+      "min_instructors": 1,
+      "notes": "Students create/fill in drug cards for 8 AEMT meds.",
+      "color": "#F59E0B"
+    },
+    {
+      "id": "act-pharm-scenario",
+      "name": "Pharmacology Scenario Discussion",
+      "duration_min": 50,
+      "block_type": "activity",
+      "min_instructors": 1,
+      "notes": "5 medication administration scenarios.",
+      "color": "#F59E0B"
+    },
+    {
+      "id": "act-iv-math",
+      "name": "IV Math & Drip Rate Calculations",
+      "duration_min": 40,
+      "block_type": "activity",
+      "min_instructors": 1,
+      "notes": "Guided practice. Can be lecture-style with full class.",
+      "color": "#F59E0B"
+    },
+    {
+      "id": "act-moi",
+      "name": "MOI Analysis Activity",
+      "duration_min": 60,
+      "block_type": "activity",
+      "min_instructors": 1,
+      "notes": "8 trauma mechanism scenarios. Predict injuries.",
+      "color": "#F59E0B"
+    },
+    {
+      "id": "act-bandaging",
+      "name": "Bandaging & Burn Practice",
+      "duration_min": 60,
+      "block_type": "activity",
+      "min_instructors": 1,
+      "notes": "Pairs practice on each other. Low equipment.",
+      "color": "#F59E0B"
+    },
+    {
+      "id": "act-chest-seal",
+      "name": "Chest Seal Application Demo",
+      "duration_min": 20,
+      "block_type": "activity",
+      "min_instructors": 1,
+      "notes": "Quick demo, students practice application.",
+      "color": "#F59E0B"
+    },
+    {
+      "id": "act-stroke-scale",
+      "name": "Stroke Scale Practice",
+      "duration_min": 30,
+      "block_type": "activity",
+      "min_instructors": 1,
+      "notes": "FAST/RACE scoring on projected scenarios.",
+      "color": "#F59E0B"
+    },
+    {
+      "id": "act-mci-tabletop",
+      "name": "MCI Triage Tabletop",
+      "duration_min": 60,
+      "block_type": "activity",
+      "min_instructors": 1,
+      "notes": "START triage exercise. Works with 30 students + 1 instructor.",
+      "color": "#F59E0B"
+    },
+    {
+      "id": "act-cardiac-cases",
+      "name": "Cardiac Case Studies",
+      "duration_min": 60,
+      "block_type": "activity",
+      "min_instructors": 1,
+      "notes": "5 cardiac scenarios. Full class.",
+      "color": "#F59E0B"
+    },
+    {
+      "id": "act-resp-cases",
+      "name": "Respiratory Case Studies",
+      "duration_min": 60,
+      "block_type": "activity",
+      "min_instructors": 1,
+      "notes": "6 respiratory scenarios.",
+      "color": "#F59E0B"
+    },
+    {
+      "id": "act-shock-cases",
+      "name": "Shock Case Studies",
+      "duration_min": 60,
+      "block_type": "activity",
+      "min_instructors": 1,
+      "notes": "5 shock scenarios.",
+      "color": "#F59E0B"
+    },
+    {
+      "id": "act-trauma-scenarios",
+      "name": "Integrated Trauma Scenarios",
+      "duration_min": 60,
+      "block_type": "activity",
+      "min_instructors": 1,
+      "notes": "4 multi-system trauma cases.",
+      "color": "#F59E0B"
+    },
+    {
+      "id": "act-neuro-gi-cases",
+      "name": "Neuro/GI Case Studies",
+      "duration_min": 60,
+      "block_type": "activity",
+      "min_instructors": 1,
+      "notes": "6 scenarios mixing neuro + GI.",
+      "color": "#F59E0B"
+    },
+    {
+      "id": "act-endo-tox-cases",
+      "name": "Endocrine/Immunologic/Tox Cases",
+      "duration_min": 60,
+      "block_type": "activity",
+      "min_instructors": 1,
+      "notes": "6 scenarios.",
+      "color": "#F59E0B"
+    },
+    {
+      "id": "act-ob-cases",
+      "name": "OB Scenario Discussion",
+      "duration_min": 60,
+      "block_type": "activity",
+      "min_instructors": 1,
+      "notes": "5 OB complication scenarios.",
+      "color": "#F59E0B"
+    },
+    {
+      "id": "act-med-scenarios",
+      "name": "Integrated Medical Scenarios",
+      "duration_min": 60,
+      "block_type": "activity",
+      "min_instructors": 1,
+      "notes": "4 complex differential diagnosis scenarios.",
+      "color": "#F59E0B"
+    },
+    {
+      "id": "act-nremt-prep",
+      "name": "NREMT Preparation Briefing",
+      "duration_min": 60,
+      "block_type": "activity",
+      "min_instructors": 1,
+      "notes": "Exam format, study plan, test-taking strategies.",
+      "color": "#F59E0B"
+    },
+    {
+      "id": "act-12lead",
+      "name": "12-Lead Placement Practice",
+      "duration_min": 45,
+      "block_type": "activity",
+      "min_instructors": 1,
+      "notes": "Electrode placement on each other or manikin.",
+      "color": "#F59E0B"
+    },
+    {
+      "id": "quiz-daily",
+      "name": "Daily Quiz (10 questions)",
+      "duration_min": 30,
+      "block_type": "quiz",
+      "min_instructors": 1,
+      "notes": "Previous day's chapters (quiz + review time)",
+      "color": "#EAB308"
+    },
+    {
+      "id": "quiz-daily-20",
+      "name": "Daily Quiz (20 questions)",
+      "duration_min": 40,
+      "block_type": "quiz",
+      "min_instructors": 1,
+      "notes": "For heavy chapters (Ch 7, Ch 10, etc.)",
+      "color": "#EAB308"
+    },
+    {
+      "id": "grp-test",
+      "name": "EMSTesting Group Testing",
+      "duration_min": 30,
+      "block_type": "group_testing",
+      "min_instructors": 1,
+      "notes": "15-20 questions projected, class discusses. End-of-day reinforcement.",
+      "color": "#EAB308"
+    },
+    {
+      "id": "grp-test-review",
+      "name": "Module Review Group Testing",
+      "duration_min": 50,
+      "block_type": "group_testing",
+      "min_instructors": 1,
+      "notes": "20-25 questions, full exam prep format.",
+      "color": "#EAB308"
+    },
+    {
+      "id": "exam-mod1",
+      "name": "Module 1 Exam (Preparatory)",
+      "duration_min": 90,
+      "block_type": "exam",
+      "min_instructors": 1,
+      "notes": "Ch 1-10, 12-13. ~50 questions + 30 min review.",
+      "color": "#EF4444"
+    },
+    {
+      "id": "exam-mod2",
+      "name": "Module 2 Exam (Airway)",
+      "duration_min": 80,
+      "block_type": "exam",
+      "min_instructors": 1,
+      "notes": "Ch 11, 17. ~45 questions + 30 min review.",
+      "color": "#EF4444"
+    },
+    {
+      "id": "exam-mod3",
+      "name": "Module 3 Exam (Shock/Cardio)",
+      "duration_min": 80,
+      "block_type": "exam",
+      "min_instructors": 1,
+      "notes": "Ch 14, 15, 18. ~45 questions + 30 min review.",
+      "color": "#EF4444"
+    },
+    {
+      "id": "exam-mod5",
+      "name": "Module 5 Exam (Trauma)",
+      "duration_min": 90,
+      "block_type": "exam",
+      "min_instructors": 1,
+      "notes": "Ch 26-34. ~50 questions + 30 min review.",
+      "color": "#EF4444"
+    },
+    {
+      "id": "exam-mod4",
+      "name": "Module 4 Exam (Medical)",
+      "duration_min": 80,
+      "block_type": "exam",
+      "min_instructors": 1,
+      "notes": "Ch 16, 19-25. ~45 questions + 30 min review.",
+      "color": "#EF4444"
+    },
+    {
+      "id": "exam-mod6",
+      "name": "Module 6 Exam (Special Pop)",
+      "duration_min": 75,
+      "block_type": "exam",
+      "min_instructors": 1,
+      "notes": "Ch 35-38. ~40 questions + 30 min review.",
+      "color": "#EF4444"
+    },
+    {
+      "id": "exam-mod7",
+      "name": "Module 7 Exam (EMS Ops — Group)",
+      "duration_min": 60,
+      "block_type": "exam",
+      "min_instructors": 1,
+      "notes": "Ch 39-42. Group format. ~30 questions.",
+      "color": "#EF4444"
+    },
+    {
+      "id": "exam-final",
+      "name": "Comprehensive Final Exam",
+      "duration_min": 180,
+      "block_type": "exam",
+      "min_instructors": 1,
+      "notes": "ALL chapters. ~100-150 questions. Plan full morning.",
+      "color": "#EF4444"
+    },
+    {
+      "id": "pharm-ckpt",
+      "name": "Pharmacology Checkpoint",
+      "duration_min": 30,
+      "block_type": "checkpoint",
+      "min_instructors": 1,
+      "notes": "Ch 12 must be taught. Difficulty level varies.",
+      "color": "#EAB308"
+    },
+    {
+      "id": "admin-roll",
+      "name": "Roll Call / Announcements",
+      "duration_min": 10,
+      "block_type": "admin",
+      "min_instructors": 1,
+      "notes": "Start of every day",
+      "color": "#6B7280"
+    },
+    {
+      "id": "break-10",
+      "name": "Break",
+      "duration_min": 10,
+      "block_type": "break",
+      "min_instructors": 0,
+      "notes": "Typically every 60-90 min of instruction",
+      "color": "#9CA3AF"
+    },
+    {
+      "id": "lunch",
+      "name": "Lunch",
+      "duration_min": 60,
+      "block_type": "break",
+      "min_instructors": 0,
+      "notes": "1200-1300 every day",
+      "color": "#9CA3AF"
+    },
+    {
+      "id": "closeout",
+      "name": "Day Closeout / Preview",
+      "duration_min": 20,
+      "block_type": "admin",
+      "min_instructors": 1,
+      "notes": "End of every day. Reading assignments, preview tomorrow.",
+      "color": "#6B7280"
+    },
+    {
+      "id": "act-lvfr-pitcrew",
+      "name": "LVFR Pit Crew Standards Review",
+      "duration_min": 15,
+      "block_type": "activity",
+      "min_instructors": 1,
+      "notes": "LVFR-specific resuscitation roles.",
+      "color": "#F59E0B"
+    }
+  ],
+  "prerequisites": [
+    {
+      "block_id": "lec-ch08",
+      "requires_block_id": "lec-ch07",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lec-ch09",
+      "requires_block_id": "lec-ch07",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lec-ch10",
+      "requires_block_id": "lec-ch07",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lec-ch11",
+      "requires_block_id": "lec-ch07",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lec-ch11",
+      "requires_block_id": "lec-ch10",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lec-ch12",
+      "requires_block_id": "lec-ch07",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lec-ch12",
+      "requires_block_id": "lec-ch08",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lec-ch12",
+      "requires_block_id": "lec-ch10",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lec-ch13",
+      "requires_block_id": "lec-ch12",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lec-ch14",
+      "requires_block_id": "lec-ch07",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lec-ch14",
+      "requires_block_id": "lec-ch08",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lec-ch14",
+      "requires_block_id": "lec-ch10",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lec-ch15",
+      "requires_block_id": "lec-ch14",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lec-ch16",
+      "requires_block_id": "lec-ch10",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lec-ch17",
+      "requires_block_id": "lec-ch11",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lec-ch17",
+      "requires_block_id": "lec-ch10",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lec-ch18",
+      "requires_block_id": "lec-ch07",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lec-ch18",
+      "requires_block_id": "lec-ch10",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lec-ch18",
+      "requires_block_id": "lec-ch14",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lec-ch19",
+      "requires_block_id": "lec-ch10",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lec-ch19",
+      "requires_block_id": "lec-ch16",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lec-ch20",
+      "requires_block_id": "lec-ch10",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lec-ch20",
+      "requires_block_id": "lec-ch16",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lec-ch21",
+      "requires_block_id": "lec-ch10",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lec-ch21",
+      "requires_block_id": "lec-ch16",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lec-ch22",
+      "requires_block_id": "lec-ch10",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lec-ch22",
+      "requires_block_id": "lec-ch16",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lec-ch23",
+      "requires_block_id": "lec-ch10",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lec-ch23",
+      "requires_block_id": "lec-ch16",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lec-ch24",
+      "requires_block_id": "lec-ch10",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lec-ch24",
+      "requires_block_id": "lec-ch16",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lec-ch25",
+      "requires_block_id": "lec-ch10",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lec-ch25",
+      "requires_block_id": "lec-ch16",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lec-ch26",
+      "requires_block_id": "lec-ch10",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lec-ch27",
+      "requires_block_id": "lec-ch26",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lec-ch28",
+      "requires_block_id": "lec-ch26",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lec-ch29",
+      "requires_block_id": "lec-ch26",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lec-ch30",
+      "requires_block_id": "lec-ch26",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lec-ch31",
+      "requires_block_id": "lec-ch26",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lec-ch32",
+      "requires_block_id": "lec-ch26",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lec-ch33",
+      "requires_block_id": "lec-ch26",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lec-ch34",
+      "requires_block_id": "lec-ch26",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lec-ch35",
+      "requires_block_id": "lec-ch10",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lec-ch35",
+      "requires_block_id": "lec-ch07",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lec-ch36",
+      "requires_block_id": "lec-ch10",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lec-ch36",
+      "requires_block_id": "lec-ch11",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lec-ch37",
+      "requires_block_id": "lec-ch10",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lec-ch38",
+      "requires_block_id": "lec-ch10",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lab-lift",
+      "requires_block_id": "lec-ch06",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lab-assess",
+      "requires_block_id": "lec-ch10",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lab-pharm",
+      "requires_block_id": "lec-ch12",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lab-iv-1",
+      "requires_block_id": "lec-ch13",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lab-iv-2",
+      "requires_block_id": "lab-iv-1",
+      "rule_type": "consecutive_day"
+    },
+    {
+      "block_id": "lab-airway",
+      "requires_block_id": "lec-ch11",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lab-bls",
+      "requires_block_id": "lec-ch15",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lab-monitor",
+      "requires_block_id": "lec-ch18",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lab-bleed",
+      "requires_block_id": "lec-ch27",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lab-cspine",
+      "requires_block_id": "lec-ch30",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lab-splint",
+      "requires_block_id": "lec-ch33",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "lab-ob",
+      "requires_block_id": "lec-ch35",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "exam-mod1",
+      "requires_block_id": "lec-ch01",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "exam-mod1",
+      "requires_block_id": "lec-ch02",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "exam-mod1",
+      "requires_block_id": "lec-ch03",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "exam-mod1",
+      "requires_block_id": "lec-ch04",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "exam-mod1",
+      "requires_block_id": "lec-ch05",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "exam-mod1",
+      "requires_block_id": "lec-ch06",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "exam-mod1",
+      "requires_block_id": "lec-ch07",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "exam-mod1",
+      "requires_block_id": "lec-ch08",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "exam-mod1",
+      "requires_block_id": "lec-ch09",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "exam-mod1",
+      "requires_block_id": "lec-ch10",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "exam-mod1",
+      "requires_block_id": "lec-ch12",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "exam-mod1",
+      "requires_block_id": "lec-ch13",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "exam-mod2",
+      "requires_block_id": "lec-ch11",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "exam-mod2",
+      "requires_block_id": "lec-ch17",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "exam-mod3",
+      "requires_block_id": "lec-ch14",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "exam-mod3",
+      "requires_block_id": "lec-ch15",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "exam-mod3",
+      "requires_block_id": "lec-ch18",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "exam-mod5",
+      "requires_block_id": "lec-ch26",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "exam-mod5",
+      "requires_block_id": "lec-ch27",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "exam-mod5",
+      "requires_block_id": "lec-ch28",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "exam-mod5",
+      "requires_block_id": "lec-ch29",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "exam-mod5",
+      "requires_block_id": "lec-ch30",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "exam-mod5",
+      "requires_block_id": "lec-ch31",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "exam-mod5",
+      "requires_block_id": "lec-ch32",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "exam-mod5",
+      "requires_block_id": "lec-ch33",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "exam-mod5",
+      "requires_block_id": "lec-ch34",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "exam-mod4",
+      "requires_block_id": "lec-ch16",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "exam-mod4",
+      "requires_block_id": "lec-ch19",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "exam-mod4",
+      "requires_block_id": "lec-ch20",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "exam-mod4",
+      "requires_block_id": "lec-ch21",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "exam-mod4",
+      "requires_block_id": "lec-ch22",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "exam-mod4",
+      "requires_block_id": "lec-ch23",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "exam-mod4",
+      "requires_block_id": "lec-ch24",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "exam-mod4",
+      "requires_block_id": "lec-ch25",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "exam-mod6",
+      "requires_block_id": "lec-ch35",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "exam-mod6",
+      "requires_block_id": "lec-ch36",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "exam-mod6",
+      "requires_block_id": "lec-ch37",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "exam-mod6",
+      "requires_block_id": "lec-ch38",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "exam-mod7",
+      "requires_block_id": "lec-ch39",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "exam-mod7",
+      "requires_block_id": "lec-ch40",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "exam-mod7",
+      "requires_block_id": "lec-ch41",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "exam-mod7",
+      "requires_block_id": "lec-ch42",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "pharm-ckpt",
+      "requires_block_id": "lec-ch12",
+      "rule_type": "must_precede"
+    }
+  ],
+  "default_template": {
+    "name": "LVFR AEMT 10-Week Standard",
+    "description": "Standard 10-week LVFR AEMT course layout following ideal content sequence",
+    "total_weeks": 10,
+    "days_per_week": 3,
+    "class_days": [
+      "Tuesday",
+      "Wednesday",
+      "Thursday"
+    ],
+    "day_start_time": "07:30",
+    "day_end_time": "15:30",
+    "lunch_start": "12:00",
+    "lunch_end": "13:00"
+  },
+  "ideal_sequence": [
+    {
+      "day_number": 1,
+      "week_number": 1,
+      "day_of_week": "Tuesday",
+      "title": "EMS Systems + Safety + Legal/Ethics",
+      "blocks": [
+        {
+          "block_id": "admin-roll",
+          "start_time": "07:30"
+        },
+        {
+          "block_id": "lec-ch01",
+          "start_time": "07:40"
+        },
+        {
+          "block_id": "break-10",
+          "start_time": "08:40"
+        },
+        {
+          "block_id": "lec-ch02",
+          "start_time": "08:50"
+        },
+        {
+          "block_id": "break-10",
+          "start_time": "09:50"
+        },
+        {
+          "block_id": "lec-ch03",
+          "start_time": "10:00"
+        },
+        {
+          "block_id": "act-ch03-cases",
+          "start_time": "11:00"
+        },
+        {
+          "block_id": "lunch",
+          "start_time": "12:00"
+        },
+        {
+          "block_id": "grp-test",
+          "start_time": "13:00"
+        },
+        {
+          "block_id": "closeout",
+          "start_time": "13:30"
+        }
+      ]
+    },
+    {
+      "day_number": 2,
+      "week_number": 1,
+      "day_of_week": "Wednesday",
+      "title": "Communications + Med Terminology + Lifting Lecture",
+      "blocks": [
+        {
+          "block_id": "admin-roll",
+          "start_time": "07:30"
+        },
+        {
+          "block_id": "quiz-daily",
+          "start_time": "07:40"
+        },
+        {
+          "block_id": "lec-ch04",
+          "start_time": "08:10"
+        },
+        {
+          "block_id": "break-10",
+          "start_time": "09:25"
+        },
+        {
+          "block_id": "act-radio",
+          "start_time": "09:35"
+        },
+        {
+          "block_id": "lec-ch05",
+          "start_time": "10:35"
+        },
+        {
+          "block_id": "act-medterm-ws",
+          "start_time": "11:05"
+        },
+        {
+          "block_id": "lunch",
+          "start_time": "12:00"
+        },
+        {
+          "block_id": "lec-ch06",
+          "start_time": "13:00"
+        },
+        {
+          "block_id": "act-pcr",
+          "start_time": "13:45"
+        },
+        {
+          "block_id": "grp-test",
+          "start_time": "14:35"
+        },
+        {
+          "block_id": "closeout",
+          "start_time": "15:05"
+        }
+      ]
+    },
+    {
+      "day_number": 3,
+      "week_number": 1,
+      "day_of_week": "Thursday",
+      "title": "Lifting & Moving Lab",
+      "blocks": [
+        {
+          "block_id": "admin-roll",
+          "start_time": "07:30"
+        },
+        {
+          "block_id": "quiz-daily",
+          "start_time": "07:40"
+        },
+        {
+          "block_id": "lab-lift",
+          "start_time": "08:10"
+        },
+        {
+          "block_id": "lunch",
+          "start_time": "12:00"
+        },
+        {
+          "block_id": "closeout",
+          "start_time": "15:00"
+        }
+      ]
+    },
+    {
+      "day_number": 4,
+      "week_number": 2,
+      "day_of_week": "Tuesday",
+      "title": "A&P (Full Day)",
+      "blocks": [
+        {
+          "block_id": "admin-roll",
+          "start_time": "07:30"
+        },
+        {
+          "block_id": "lec-ch07",
+          "start_time": "07:40"
+        },
+        {
+          "block_id": "lunch",
+          "start_time": "12:00"
+        },
+        {
+          "block_id": "act-ap-ws",
+          "start_time": "13:00"
+        },
+        {
+          "block_id": "grp-test",
+          "start_time": "13:50"
+        },
+        {
+          "block_id": "closeout",
+          "start_time": "14:20"
+        }
+      ]
+    },
+    {
+      "day_number": 5,
+      "week_number": 2,
+      "day_of_week": "Wednesday",
+      "title": "Pathophysiology + Life Span Development",
+      "blocks": [
+        {
+          "block_id": "admin-roll",
+          "start_time": "07:30"
+        },
+        {
+          "block_id": "quiz-daily-20",
+          "start_time": "07:40"
+        },
+        {
+          "block_id": "lec-ch08",
+          "start_time": "08:20"
+        },
+        {
+          "block_id": "break-10",
+          "start_time": "09:50"
+        },
+        {
+          "block_id": "lec-ch09",
+          "start_time": "10:00"
+        },
+        {
+          "block_id": "act-lifespan",
+          "start_time": "10:45"
+        },
+        {
+          "block_id": "lunch",
+          "start_time": "12:00"
+        },
+        {
+          "block_id": "grp-test",
+          "start_time": "13:00"
+        },
+        {
+          "block_id": "closeout",
+          "start_time": "13:30"
+        }
+      ]
+    },
+    {
+      "day_number": 6,
+      "week_number": 2,
+      "day_of_week": "Thursday",
+      "title": "Patient Assessment + Assessment Practice",
+      "blocks": [
+        {
+          "block_id": "admin-roll",
+          "start_time": "07:30"
+        },
+        {
+          "block_id": "quiz-daily",
+          "start_time": "07:40"
+        },
+        {
+          "block_id": "lec-ch10",
+          "start_time": "08:10"
+        },
+        {
+          "block_id": "break-10",
+          "start_time": "10:10"
+        },
+        {
+          "block_id": "act-assess-scenario",
+          "start_time": "10:20"
+        },
+        {
+          "block_id": "act-vitals",
+          "start_time": "11:10"
+        },
+        {
+          "block_id": "lunch",
+          "start_time": "12:00"
+        },
+        {
+          "block_id": "lab-assess",
+          "start_time": "13:00"
+        },
+        {
+          "block_id": "closeout",
+          "start_time": "15:00"
+        }
+      ]
+    },
+    {
+      "day_number": 7,
+      "week_number": 3,
+      "day_of_week": "Tuesday",
+      "title": "Pharmacology + Pharm Lab",
+      "blocks": [
+        {
+          "block_id": "admin-roll",
+          "start_time": "07:30"
+        },
+        {
+          "block_id": "quiz-daily-20",
+          "start_time": "07:40"
+        },
+        {
+          "block_id": "lec-ch12",
+          "start_time": "08:20"
+        },
+        {
+          "block_id": "break-10",
+          "start_time": "09:40"
+        },
+        {
+          "block_id": "lab-pharm",
+          "start_time": "09:50"
+        },
+        {
+          "block_id": "act-drug-cards",
+          "start_time": "10:50"
+        },
+        {
+          "block_id": "lunch",
+          "start_time": "12:00"
+        },
+        {
+          "block_id": "act-pharm-scenario",
+          "start_time": "13:00"
+        },
+        {
+          "block_id": "pharm-ckpt",
+          "start_time": "13:50"
+        },
+        {
+          "block_id": "grp-test",
+          "start_time": "14:20"
+        },
+        {
+          "block_id": "closeout",
+          "start_time": "14:50"
+        }
+      ]
+    },
+    {
+      "day_number": 8,
+      "week_number": 3,
+      "day_of_week": "Wednesday",
+      "title": "Vascular Access + IV Lab Day 1",
+      "blocks": [
+        {
+          "block_id": "admin-roll",
+          "start_time": "07:30"
+        },
+        {
+          "block_id": "quiz-daily",
+          "start_time": "07:40"
+        },
+        {
+          "block_id": "lec-ch13",
+          "start_time": "08:10"
+        },
+        {
+          "block_id": "break-10",
+          "start_time": "09:40"
+        },
+        {
+          "block_id": "act-iv-math",
+          "start_time": "09:50"
+        },
+        {
+          "block_id": "lab-iv-1",
+          "start_time": "10:30"
+        },
+        {
+          "block_id": "lunch",
+          "start_time": "12:00"
+        },
+        {
+          "block_id": "closeout",
+          "start_time": "15:00"
+        }
+      ]
+    },
+    {
+      "day_number": 9,
+      "week_number": 3,
+      "day_of_week": "Thursday",
+      "title": "IV Lab Day 2 + Module 1 Review",
+      "blocks": [
+        {
+          "block_id": "admin-roll",
+          "start_time": "07:30"
+        },
+        {
+          "block_id": "lab-iv-2",
+          "start_time": "07:40"
+        },
+        {
+          "block_id": "lunch",
+          "start_time": "12:00"
+        },
+        {
+          "block_id": "grp-test-review",
+          "start_time": "13:00"
+        },
+        {
+          "block_id": "closeout",
+          "start_time": "13:50"
+        }
+      ]
+    },
+    {
+      "day_number": 10,
+      "week_number": 4,
+      "day_of_week": "Tuesday",
+      "title": "MODULE 1 EXAM + Airway (Part 1)",
+      "blocks": [
+        {
+          "block_id": "admin-roll",
+          "start_time": "07:30"
+        },
+        {
+          "block_id": "exam-mod1",
+          "start_time": "07:40"
+        },
+        {
+          "block_id": "break-10",
+          "start_time": "09:10"
+        },
+        {
+          "block_id": "lec-ch11",
+          "start_time": "09:20"
+        },
+        {
+          "block_id": "lunch",
+          "start_time": "12:00"
+        },
+        {
+          "block_id": "closeout",
+          "start_time": "15:00"
+        }
+      ]
+    },
+    {
+      "day_number": 11,
+      "week_number": 4,
+      "day_of_week": "Wednesday",
+      "title": "Airway Lab (Full Day)",
+      "blocks": [
+        {
+          "block_id": "admin-roll",
+          "start_time": "07:30"
+        },
+        {
+          "block_id": "lab-airway",
+          "start_time": "07:40"
+        },
+        {
+          "block_id": "lunch",
+          "start_time": "12:00"
+        },
+        {
+          "block_id": "closeout",
+          "start_time": "15:00"
+        }
+      ]
+    },
+    {
+      "day_number": 12,
+      "week_number": 4,
+      "day_of_week": "Thursday",
+      "title": "Respiratory Emergencies",
+      "blocks": [
+        {
+          "block_id": "admin-roll",
+          "start_time": "07:30"
+        },
+        {
+          "block_id": "quiz-daily",
+          "start_time": "07:40"
+        },
+        {
+          "block_id": "lec-ch17",
+          "start_time": "08:10"
+        },
+        {
+          "block_id": "lunch",
+          "start_time": "12:00"
+        },
+        {
+          "block_id": "act-resp-cases",
+          "start_time": "13:00"
+        },
+        {
+          "block_id": "grp-test",
+          "start_time": "14:00"
+        },
+        {
+          "block_id": "closeout",
+          "start_time": "14:30"
+        }
+      ]
+    },
+    {
+      "day_number": 13,
+      "week_number": 5,
+      "day_of_week": "Tuesday",
+      "title": "MODULE 2 EXAM + Shock",
+      "blocks": [
+        {
+          "block_id": "admin-roll",
+          "start_time": "07:30"
+        },
+        {
+          "block_id": "exam-mod2",
+          "start_time": "07:40"
+        },
+        {
+          "block_id": "break-10",
+          "start_time": "09:00"
+        },
+        {
+          "block_id": "lec-ch14",
+          "start_time": "09:10"
+        },
+        {
+          "block_id": "lunch",
+          "start_time": "12:00"
+        },
+        {
+          "block_id": "act-shock-cases",
+          "start_time": "13:00"
+        },
+        {
+          "block_id": "grp-test",
+          "start_time": "14:00"
+        },
+        {
+          "block_id": "closeout",
+          "start_time": "14:30"
+        }
+      ]
+    },
+    {
+      "day_number": 14,
+      "week_number": 5,
+      "day_of_week": "Wednesday",
+      "title": "BLS Resuscitation + BLS Lab",
+      "blocks": [
+        {
+          "block_id": "admin-roll",
+          "start_time": "07:30"
+        },
+        {
+          "block_id": "quiz-daily",
+          "start_time": "07:40"
+        },
+        {
+          "block_id": "lec-ch15",
+          "start_time": "08:10"
+        },
+        {
+          "block_id": "break-10",
+          "start_time": "09:10"
+        },
+        {
+          "block_id": "act-lvfr-pitcrew",
+          "start_time": "09:20"
+        },
+        {
+          "block_id": "lab-bls",
+          "start_time": "09:35"
+        },
+        {
+          "block_id": "lunch",
+          "start_time": "12:00"
+        },
+        {
+          "block_id": "closeout",
+          "start_time": "15:00"
+        }
+      ]
+    },
+    {
+      "day_number": 15,
+      "week_number": 5,
+      "day_of_week": "Thursday",
+      "title": "Cardiovascular Emergencies + Monitor Lab",
+      "blocks": [
+        {
+          "block_id": "admin-roll",
+          "start_time": "07:30"
+        },
+        {
+          "block_id": "quiz-daily",
+          "start_time": "07:40"
+        },
+        {
+          "block_id": "lec-ch18",
+          "start_time": "08:10"
+        },
+        {
+          "block_id": "break-10",
+          "start_time": "09:40"
+        },
+        {
+          "block_id": "lab-monitor",
+          "start_time": "09:50"
+        },
+        {
+          "block_id": "act-12lead",
+          "start_time": "10:35"
+        },
+        {
+          "block_id": "act-cardiac-cases",
+          "start_time": "11:20"
+        },
+        {
+          "block_id": "lunch",
+          "start_time": "12:00"
+        },
+        {
+          "block_id": "grp-test",
+          "start_time": "13:00"
+        },
+        {
+          "block_id": "closeout",
+          "start_time": "13:30"
+        }
+      ]
+    },
+    {
+      "day_number": 16,
+      "week_number": 6,
+      "day_of_week": "Tuesday",
+      "title": "MODULE 3 EXAM + Trauma Overview",
+      "blocks": [
+        {
+          "block_id": "admin-roll",
+          "start_time": "07:30"
+        },
+        {
+          "block_id": "exam-mod3",
+          "start_time": "07:40"
+        },
+        {
+          "block_id": "break-10",
+          "start_time": "09:00"
+        },
+        {
+          "block_id": "lec-ch26",
+          "start_time": "09:10"
+        },
+        {
+          "block_id": "act-moi",
+          "start_time": "10:10"
+        },
+        {
+          "block_id": "lunch",
+          "start_time": "12:00"
+        },
+        {
+          "block_id": "grp-test",
+          "start_time": "13:00"
+        },
+        {
+          "block_id": "closeout",
+          "start_time": "13:30"
+        }
+      ]
+    },
+    {
+      "day_number": 17,
+      "week_number": 6,
+      "day_of_week": "Wednesday",
+      "title": "Bleeding + Soft-Tissue + Stop the Bleed Lab",
+      "blocks": [
+        {
+          "block_id": "admin-roll",
+          "start_time": "07:30"
+        },
+        {
+          "block_id": "quiz-daily",
+          "start_time": "07:40"
+        },
+        {
+          "block_id": "lec-ch27",
+          "start_time": "08:10"
+        },
+        {
+          "block_id": "lec-ch28",
+          "start_time": "08:55"
+        },
+        {
+          "block_id": "break-10",
+          "start_time": "10:10"
+        },
+        {
+          "block_id": "act-bandaging",
+          "start_time": "10:20"
+        },
+        {
+          "block_id": "lunch",
+          "start_time": "12:00"
+        },
+        {
+          "block_id": "lab-bleed",
+          "start_time": "13:00"
+        },
+        {
+          "block_id": "closeout",
+          "start_time": "15:00"
+        }
+      ]
+    },
+    {
+      "day_number": 18,
+      "week_number": 6,
+      "day_of_week": "Thursday",
+      "title": "Face/Neck + Head/Spine + C-Spine Lab",
+      "blocks": [
+        {
+          "block_id": "admin-roll",
+          "start_time": "07:30"
+        },
+        {
+          "block_id": "quiz-daily",
+          "start_time": "07:40"
+        },
+        {
+          "block_id": "lec-ch29",
+          "start_time": "08:10"
+        },
+        {
+          "block_id": "break-10",
+          "start_time": "09:20"
+        },
+        {
+          "block_id": "lec-ch30",
+          "start_time": "09:30"
+        },
+        {
+          "block_id": "lunch",
+          "start_time": "12:00"
+        },
+        {
+          "block_id": "lab-cspine",
+          "start_time": "13:00"
+        },
+        {
+          "block_id": "closeout",
+          "start_time": "15:00"
+        }
+      ]
+    },
+    {
+      "day_number": 19,
+      "week_number": 7,
+      "day_of_week": "Tuesday",
+      "title": "Chest + Abdominal/GU Injuries",
+      "blocks": [
+        {
+          "block_id": "admin-roll",
+          "start_time": "07:30"
+        },
+        {
+          "block_id": "quiz-daily",
+          "start_time": "07:40"
+        },
+        {
+          "block_id": "lec-ch31",
+          "start_time": "08:10"
+        },
+        {
+          "block_id": "break-10",
+          "start_time": "09:40"
+        },
+        {
+          "block_id": "lec-ch32",
+          "start_time": "09:50"
+        },
+        {
+          "block_id": "act-chest-seal",
+          "start_time": "10:50"
+        },
+        {
+          "block_id": "lunch",
+          "start_time": "12:00"
+        },
+        {
+          "block_id": "act-trauma-scenarios",
+          "start_time": "13:00"
+        },
+        {
+          "block_id": "grp-test",
+          "start_time": "14:00"
+        },
+        {
+          "block_id": "closeout",
+          "start_time": "14:30"
+        }
+      ]
+    },
+    {
+      "day_number": 20,
+      "week_number": 7,
+      "day_of_week": "Wednesday",
+      "title": "Orthopaedic Injuries + Splinting Lab",
+      "blocks": [
+        {
+          "block_id": "admin-roll",
+          "start_time": "07:30"
+        },
+        {
+          "block_id": "quiz-daily",
+          "start_time": "07:40"
+        },
+        {
+          "block_id": "lec-ch33",
+          "start_time": "08:10"
+        },
+        {
+          "block_id": "break-10",
+          "start_time": "09:45"
+        },
+        {
+          "block_id": "lab-splint",
+          "start_time": "09:55"
+        },
+        {
+          "block_id": "lunch",
+          "start_time": "12:00"
+        },
+        {
+          "block_id": "closeout",
+          "start_time": "15:00"
+        }
+      ]
+    },
+    {
+      "day_number": 21,
+      "week_number": 7,
+      "day_of_week": "Thursday",
+      "title": "Environmental Emergencies + Trauma Module Review",
+      "blocks": [
+        {
+          "block_id": "admin-roll",
+          "start_time": "07:30"
+        },
+        {
+          "block_id": "quiz-daily",
+          "start_time": "07:40"
+        },
+        {
+          "block_id": "lec-ch34",
+          "start_time": "08:10"
+        },
+        {
+          "block_id": "lunch",
+          "start_time": "12:00"
+        },
+        {
+          "block_id": "grp-test-review",
+          "start_time": "13:00"
+        },
+        {
+          "block_id": "closeout",
+          "start_time": "13:50"
+        }
+      ]
+    },
+    {
+      "day_number": 22,
+      "week_number": 8,
+      "day_of_week": "Tuesday",
+      "title": "TRAUMA MODULE EXAM + Medical Overview",
+      "blocks": [
+        {
+          "block_id": "admin-roll",
+          "start_time": "07:30"
+        },
+        {
+          "block_id": "exam-mod5",
+          "start_time": "07:40"
+        },
+        {
+          "block_id": "break-10",
+          "start_time": "09:10"
+        },
+        {
+          "block_id": "lec-ch16",
+          "start_time": "09:20"
+        },
+        {
+          "block_id": "lunch",
+          "start_time": "12:00"
+        },
+        {
+          "block_id": "grp-test",
+          "start_time": "13:00"
+        },
+        {
+          "block_id": "closeout",
+          "start_time": "13:30"
+        }
+      ]
+    },
+    {
+      "day_number": 23,
+      "week_number": 8,
+      "day_of_week": "Wednesday",
+      "title": "Neurologic + GI/Urologic Emergencies",
+      "blocks": [
+        {
+          "block_id": "admin-roll",
+          "start_time": "07:30"
+        },
+        {
+          "block_id": "quiz-daily",
+          "start_time": "07:40"
+        },
+        {
+          "block_id": "lec-ch19",
+          "start_time": "08:10"
+        },
+        {
+          "block_id": "break-10",
+          "start_time": "09:25"
+        },
+        {
+          "block_id": "act-stroke-scale",
+          "start_time": "09:35"
+        },
+        {
+          "block_id": "lec-ch20",
+          "start_time": "10:05"
+        },
+        {
+          "block_id": "lunch",
+          "start_time": "12:00"
+        },
+        {
+          "block_id": "act-neuro-gi-cases",
+          "start_time": "13:00"
+        },
+        {
+          "block_id": "grp-test",
+          "start_time": "14:00"
+        },
+        {
+          "block_id": "closeout",
+          "start_time": "14:30"
+        }
+      ]
+    },
+    {
+      "day_number": 24,
+      "week_number": 8,
+      "day_of_week": "Thursday",
+      "title": "Endocrine + Immunologic + Toxicology",
+      "blocks": [
+        {
+          "block_id": "admin-roll",
+          "start_time": "07:30"
+        },
+        {
+          "block_id": "quiz-daily",
+          "start_time": "07:40"
+        },
+        {
+          "block_id": "lec-ch21",
+          "start_time": "08:10"
+        },
+        {
+          "block_id": "break-10",
+          "start_time": "09:10"
+        },
+        {
+          "block_id": "lec-ch22",
+          "start_time": "09:20"
+        },
+        {
+          "block_id": "lec-ch23",
+          "start_time": "10:00"
+        },
+        {
+          "block_id": "lunch",
+          "start_time": "12:00"
+        },
+        {
+          "block_id": "act-endo-tox-cases",
+          "start_time": "13:00"
+        },
+        {
+          "block_id": "grp-test",
+          "start_time": "14:00"
+        },
+        {
+          "block_id": "closeout",
+          "start_time": "14:30"
+        }
+      ]
+    },
+    {
+      "day_number": 25,
+      "week_number": 9,
+      "day_of_week": "Tuesday",
+      "title": "Psychiatric + Gynecologic + Medical Review",
+      "blocks": [
+        {
+          "block_id": "admin-roll",
+          "start_time": "07:30"
+        },
+        {
+          "block_id": "quiz-daily",
+          "start_time": "07:40"
+        },
+        {
+          "block_id": "lec-ch24",
+          "start_time": "08:10"
+        },
+        {
+          "block_id": "lec-ch25",
+          "start_time": "08:55"
+        },
+        {
+          "block_id": "break-10",
+          "start_time": "09:40"
+        },
+        {
+          "block_id": "act-med-scenarios",
+          "start_time": "09:50"
+        },
+        {
+          "block_id": "lunch",
+          "start_time": "12:00"
+        },
+        {
+          "block_id": "grp-test-review",
+          "start_time": "13:00"
+        },
+        {
+          "block_id": "closeout",
+          "start_time": "13:50"
+        }
+      ]
+    },
+    {
+      "day_number": 26,
+      "week_number": 9,
+      "day_of_week": "Wednesday",
+      "title": "MEDICAL MODULE EXAM + OB/Neonatal Lecture",
+      "blocks": [
+        {
+          "block_id": "admin-roll",
+          "start_time": "07:30"
+        },
+        {
+          "block_id": "exam-mod4",
+          "start_time": "07:40"
+        },
+        {
+          "block_id": "break-10",
+          "start_time": "09:00"
+        },
+        {
+          "block_id": "lec-ch35",
+          "start_time": "09:10"
+        },
+        {
+          "block_id": "lunch",
+          "start_time": "12:00"
+        },
+        {
+          "block_id": "act-ob-cases",
+          "start_time": "13:00"
+        },
+        {
+          "block_id": "closeout",
+          "start_time": "14:00"
+        }
+      ]
+    },
+    {
+      "day_number": 27,
+      "week_number": 9,
+      "day_of_week": "Thursday",
+      "title": "OB Lab + Pediatrics (Part 1)",
+      "blocks": [
+        {
+          "block_id": "admin-roll",
+          "start_time": "07:30"
+        },
+        {
+          "block_id": "quiz-daily",
+          "start_time": "07:40"
+        },
+        {
+          "block_id": "lab-ob",
+          "start_time": "08:10"
+        },
+        {
+          "block_id": "break-10",
+          "start_time": "10:10"
+        },
+        {
+          "block_id": "lec-ch36",
+          "start_time": "10:20"
+        },
+        {
+          "block_id": "lunch",
+          "start_time": "12:00"
+        },
+        {
+          "block_id": "grp-test",
+          "start_time": "13:00"
+        },
+        {
+          "block_id": "closeout",
+          "start_time": "13:30"
+        }
+      ]
+    },
+    {
+      "day_number": 28,
+      "week_number": 10,
+      "day_of_week": "Tuesday",
+      "title": "Pediatrics (Part 2) + Geriatric + Special Challenges + SPECIAL POP EXAM",
+      "blocks": [
+        {
+          "block_id": "admin-roll",
+          "start_time": "07:30"
+        },
+        {
+          "block_id": "lec-ch37",
+          "start_time": "07:40"
+        },
+        {
+          "block_id": "break-10",
+          "start_time": "09:00"
+        },
+        {
+          "block_id": "lec-ch38",
+          "start_time": "09:10"
+        },
+        {
+          "block_id": "break-10",
+          "start_time": "10:00"
+        },
+        {
+          "block_id": "exam-mod6",
+          "start_time": "10:10"
+        },
+        {
+          "block_id": "lunch",
+          "start_time": "12:00"
+        },
+        {
+          "block_id": "act-nremt-prep",
+          "start_time": "13:00"
+        },
+        {
+          "block_id": "closeout",
+          "start_time": "14:00"
+        }
+      ]
+    },
+    {
+      "day_number": 29,
+      "week_number": 10,
+      "day_of_week": "Wednesday",
+      "title": "EMS Ops (Ch 39-42) + EMS OPS EXAM + Final Review",
+      "blocks": [
+        {
+          "block_id": "admin-roll",
+          "start_time": "07:30"
+        },
+        {
+          "block_id": "lec-ch39",
+          "start_time": "07:40"
+        },
+        {
+          "block_id": "lec-ch40",
+          "start_time": "08:10"
+        },
+        {
+          "block_id": "break-10",
+          "start_time": "08:55"
+        },
+        {
+          "block_id": "lec-ch41",
+          "start_time": "09:05"
+        },
+        {
+          "block_id": "lec-ch42",
+          "start_time": "09:50"
+        },
+        {
+          "block_id": "break-10",
+          "start_time": "10:35"
+        },
+        {
+          "block_id": "act-mci-tabletop",
+          "start_time": "10:45"
+        },
+        {
+          "block_id": "exam-mod7",
+          "start_time": "11:45"
+        },
+        {
+          "block_id": "lunch",
+          "start_time": "12:00"
+        },
+        {
+          "block_id": "grp-test-review",
+          "start_time": "13:00"
+        },
+        {
+          "block_id": "closeout",
+          "start_time": "13:50"
+        }
+      ]
+    },
+    {
+      "day_number": 30,
+      "week_number": 10,
+      "day_of_week": "Thursday",
+      "title": "COMPREHENSIVE FINAL EXAM + Course Closeout",
+      "blocks": [
+        {
+          "block_id": "admin-roll",
+          "start_time": "07:30"
+        },
+        {
+          "block_id": "exam-final",
+          "start_time": "07:40"
+        },
+        {
+          "block_id": "lunch",
+          "start_time": "12:00"
+        },
+        {
+          "block_id": "closeout",
+          "start_time": "13:00"
+        }
+      ]
+    }
+  ]
+}
