@@ -439,7 +439,7 @@ function BlockBar({
 
   return (
     <div
-      className={`group relative flex items-center gap-2 px-2 py-1.5 mb-1 rounded border-l-4 bg-white dark:bg-gray-800 border ${borderColor} ${hasViolation ? 'border-red-300 dark:border-red-700' : 'border-gray-200 dark:border-gray-700'} hover:shadow-sm transition-shadow ${!isReadOnly ? 'cursor-grab active:cursor-grabbing' : ''}`}
+      className={`group relative flex items-center gap-2 px-2 py-1.5 mb-1 rounded border-l-4 bg-white dark:bg-gray-800 border ${borderColor} ${hasViolation ? 'border-red-300 dark:border-red-700' : 'border-gray-200 dark:border-gray-700'} hover:shadow-sm transition-shadow ${!isReadOnly && !getFixedRole(block) ? 'cursor-grab active:cursor-grabbing' : getFixedRole(block) ? 'cursor-not-allowed opacity-80' : ''}`}
       style={{ borderLeftColor: hasViolation ? undefined : (block.color || '#9CA3AF') }}
       draggable={!isReadOnly}
       onDragStart={(e) => {

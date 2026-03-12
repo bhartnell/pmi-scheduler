@@ -39,6 +39,19 @@ interface Station {
   } | null;
 }
 
+interface Scenario {
+  id: string;
+  title: string;
+  category: string;
+  subcategory: string | null;
+  difficulty: string;
+  applicable_programs: string[];
+  chief_complaint: string | null;
+  patient_name: string | null;
+  patient_age: string | null;
+  estimated_duration: number | null;
+}
+
 interface LabDay {
   id: string;
   date: string;
@@ -96,6 +109,13 @@ export default function EditLabDayPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  // Scenario picker state
+  const [scenarios, setScenarios] = useState<Scenario[]>([]);
+  const [scenarioPickerStation, setScenarioPickerStation] = useState<Station | null>(null);
+  const [scenarioSearch, setScenarioSearch] = useState('');
+  const [scenarioFilterCategory, setScenarioFilterCategory] = useState('');
+  const [scenarioFilterDifficulty, setScenarioFilterDifficulty] = useState('');
 
   // Conflict detection state
   interface SchedulingConflict {
