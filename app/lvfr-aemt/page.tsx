@@ -68,7 +68,17 @@ export default function LVFRDashboardPage() {
     fetch('/api/lvfr-aemt/dashboard')
       .then(res => res.json())
       .then(d => {
-        if (d.success) setData(d.data);
+        if (d.success && d.data) {
+          // Ensure arrays are always arrays
+          setData({
+            ...d.data,
+            courseProgress: d.data.courseProgress || { completedChapters: 0, totalChapters: 0, completedDays: 0, totalDays: 0, paceStatus: 'on_track' },
+            coverageAlerts: d.data.coverageAlerts || { totalGaps: 0, nextGapDay: null, nextGapDate: null },
+            studentStats: d.data.studentStats || { totalStudents: 0, avgGrade: null, skillsCompletionRate: null, atRiskCount: 0 },
+            recentGrades: Array.isArray(d.data.recentGrades) ? d.data.recentGrades : [],
+            upcomingAssessments: Array.isArray(d.data.upcomingAssessments) ? d.data.upcomingAssessments : [],
+          });
+        }
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -98,6 +108,10 @@ export default function LVFRDashboardPage() {
         { href: '/lvfr-aemt/files', icon: FolderOpen, label: 'Course Materials', description: 'Upload and manage course content files', color: 'bg-indigo-600' },
         { href: '/lvfr-aemt/pharm', icon: Award, label: 'Pharmacology', description: 'Medication checkpoint cards and scoring', color: 'bg-red-600' },
       ];
+
+  // Safe accessors for arrays
+  const upcomingAssessments = data && Array.isArray(data.upcomingAssessments) ? data.upcomingAssessments : [];
+  const recentGrades = data && Array.isArray(data.recentGrades) ? data.recentGrades : [];
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -149,7 +163,7 @@ export default function LVFRDashboardPage() {
             <StatCard
               icon={BookOpen}
               label="Course Progress"
-              value={`${data.courseProgress.completedChapters}/${data.courseProgress.totalChapters}`}
+              value={`${data.courseProgress?.completedChapters ?? 0}/${data.courseProgress?.totalChapters ?? 0}`}
               sublabel="chapters completed"
               color="text-blue-600"
               bgColor="bg-blue-50 dark:bg-blue-900/20"
@@ -157,7 +171,7 @@ export default function LVFRDashboardPage() {
             <StatCard
               icon={Calendar}
               label="Days Completed"
-              value={`${data.courseProgress.completedDays}/${data.courseProgress.totalDays}`}
+              value={`${data.courseProgress?.completedDays ?? 0}/${data.courseProgress?.totalDays ?? 0}`}
               sublabel="course days"
               color="text-green-600"
               bgColor="bg-green-50 dark:bg-green-900/20"
@@ -166,17 +180,17 @@ export default function LVFRDashboardPage() {
               <StatCard
                 icon={Users}
                 label="Students"
-                value={String(data.studentStats.totalStudents)}
-                sublabel={data.studentStats.atRiskCount > 0 ? `${data.studentStats.atRiskCount} at risk` : 'all on track'}
-                color={data.studentStats.atRiskCount > 0 ? 'text-amber-600' : 'text-green-600'}
-                bgColor={data.studentStats.atRiskCount > 0 ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-green-50 dark:bg-green-900/20'}
+                value={String(data.studentStats?.totalStudents ?? 0)}
+                sublabel={(data.studentStats?.atRiskCount ?? 0) > 0 ? `${data.studentStats.atRiskCount} at risk` : 'all on track'}
+                color={(data.studentStats?.atRiskCount ?? 0) > 0 ? 'text-amber-600' : 'text-green-600'}
+                bgColor={(data.studentStats?.atRiskCount ?? 0) > 0 ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-green-50 dark:bg-green-900/20'}
               />
             )}
             {!isStudent && (
               <StatCard
                 icon={BarChart3}
                 label="Avg Grade"
-                value={data.studentStats.avgGrade != null ? `${Math.round(data.studentStats.avgGrade)}%` : '—'}
+                value={data.studentStats?.avgGrade != null ? `${Math.round(data.studentStats.avgGrade)}%` : '—'}
                 sublabel="class average"
                 color="text-purple-600"
                 bgColor="bg-purple-50 dark:bg-purple-900/20"
@@ -195,10 +209,10 @@ export default function LVFRDashboardPage() {
                 <StatCard
                   icon={TrendingUp}
                   label="Pace"
-                  value={data.courseProgress.paceStatus === 'on_track' ? '✓' : '!'}
-                  sublabel={data.courseProgress.paceStatus.replace('_', ' ')}
-                  color={data.courseProgress.paceStatus === 'on_track' ? 'text-green-600' : 'text-amber-600'}
-                  bgColor={data.courseProgress.paceStatus === 'on_track' ? 'bg-green-50 dark:bg-green-900/20' : 'bg-amber-50 dark:bg-amber-900/20'}
+                  value={(data.courseProgress?.paceStatus ?? 'on_track') === 'on_track' ? '✓' : '!'}
+                  sublabel={(data.courseProgress?.paceStatus ?? 'on_track').replace('_', ' ')}
+                  color={(data.courseProgress?.paceStatus ?? 'on_track') === 'on_track' ? 'text-green-600' : 'text-amber-600'}
+                  bgColor={(data.courseProgress?.paceStatus ?? 'on_track') === 'on_track' ? 'bg-green-50 dark:bg-green-900/20' : 'bg-amber-50 dark:bg-amber-900/20'}
                 />
               </>
             )}
@@ -206,7 +220,7 @@ export default function LVFRDashboardPage() {
         ) : null}
 
         {/* Pace Indicator (instructor/observer) */}
-        {data && !isStudent && (
+        {data?.courseProgress && !isStudent && (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Course Pace</h3>
@@ -235,7 +249,7 @@ export default function LVFRDashboardPage() {
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               {data.courseProgress.completedChapters} of {data.courseProgress.totalChapters} chapters completed
-              {data.coverageAlerts.totalGaps > 0 && !isObserver && (
+              {(data.coverageAlerts?.totalGaps ?? 0) > 0 && !isObserver && (
                 <span className="text-amber-600 dark:text-amber-400 ml-2">
                   • {data.coverageAlerts.totalGaps} coverage gap{data.coverageAlerts.totalGaps !== 1 ? 's' : ''}
                 </span>
@@ -245,7 +259,7 @@ export default function LVFRDashboardPage() {
         )}
 
         {/* Coverage Alerts (instructor only) */}
-        {data && isInstructor && data.coverageAlerts.totalGaps > 0 && (
+        {data && isInstructor && (data.coverageAlerts?.totalGaps ?? 0) > 0 && (
           <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
             <div className="flex items-start gap-3">
               <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
@@ -302,10 +316,10 @@ export default function LVFRDashboardPage() {
                 <Link href="/lvfr-aemt/calendar" className="text-xs text-red-600 dark:text-red-400 hover:underline">View All</Link>
               </div>
               <div className="divide-y divide-gray-100 dark:divide-gray-700">
-                {data.upcomingAssessments.length === 0 ? (
+                {upcomingAssessments.length === 0 ? (
                   <p className="px-4 py-6 text-sm text-gray-500 dark:text-gray-400 text-center">No upcoming assessments</p>
                 ) : (
-                  data.upcomingAssessments.slice(0, 5).map(a => (
+                  upcomingAssessments.slice(0, 5).map(a => (
                     <div key={a.id} className="px-4 py-3 flex items-center gap-3">
                       <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
                         a.category === 'exam' ? 'bg-red-500' : a.category === 'quiz' ? 'bg-purple-500' : 'bg-blue-500'
@@ -333,10 +347,10 @@ export default function LVFRDashboardPage() {
                 <h3 className="font-semibold text-gray-900 dark:text-white">Recent Grades</h3>
               </div>
               <div className="divide-y divide-gray-100 dark:divide-gray-700">
-                {data.recentGrades.length === 0 ? (
+                {recentGrades.length === 0 ? (
                   <p className="px-4 py-6 text-sm text-gray-500 dark:text-gray-400 text-center">No grades recorded yet</p>
                 ) : (
-                  data.recentGrades.slice(0, 5).map(g => (
+                  recentGrades.slice(0, 5).map(g => (
                     <div key={g.assessment_id} className="px-4 py-3 flex items-center gap-3">
                       {g.passed ? (
                         <CheckCircle2 className="w-4 h-4 text-green-500 flex-shrink-0" />

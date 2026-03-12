@@ -1028,12 +1028,12 @@ export default function CoursePlannerPage() {
       const templatesData = templatesRes.ok ? await templatesRes.json() : { templates: [] };
 
       setInstance(planData.instance);
-      setPlacements(planData.placements || []);
-      setAllBlocks(blocksData.blocks || []);
-      setPrerequisites(blocksData.prerequisites || []);
-      setAvailability(availData.availability || []);
-      setAllInstances(instancesData.instances || []);
-      setTemplates(templatesData.templates || []);
+      setPlacements(Array.isArray(planData.placements) ? planData.placements : []);
+      setAllBlocks(Array.isArray(blocksData.blocks) ? blocksData.blocks : []);
+      setPrerequisites(Array.isArray(blocksData.prerequisites) ? blocksData.prerequisites : []);
+      setAvailability(Array.isArray(availData.availability) ? availData.availability : []);
+      setAllInstances(Array.isArray(instancesData.instances) ? instancesData.instances : []);
+      setTemplates(Array.isArray(templatesData.templates) ? templatesData.templates : []);
       setViolations([]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
