@@ -18,7 +18,7 @@ import {
   Briefcase,
   Send,
 } from 'lucide-react';
-import CloseoutSurveyModal from './CloseoutSurveyModal';
+// CloseoutSurveyModal replaced with completion checkboxes
 import EmploymentVerificationModal from './EmploymentVerificationModal';
 import PreceptorEvalModal from './PreceptorEvalModal';
 import { parseDateSafe } from '@/lib/utils';
@@ -40,16 +40,7 @@ interface CloseoutDocument {
   uploaded_at: string;
 }
 
-interface CloseoutSurvey {
-  id: string;
-  internship_id: string;
-  survey_type: 'hospital_preceptor' | 'field_preceptor';
-  preceptor_name: string | null;
-  agency_name: string | null;
-  responses: Record<string, number | string | null>;
-  submitted_by: string | null;
-  submitted_at: string | null;
-}
+// CloseoutSurvey interface removed - replaced with CompletionCheck
 
 interface EmploymentVerification {
   id: string;
@@ -83,21 +74,19 @@ interface CloseoutSectionProps {
   program?: string;
 }
 
-const SURVEY_CONFIGS: Array<{
-  type: 'hospital_preceptor' | 'field_preceptor';
+interface CompletionCheck {
+  key: string;
   label: string;
-  description: string;
-}> = [
-  {
-    type: 'hospital_preceptor',
-    label: 'Hospital Preceptor Survey',
-    description: 'Evaluate your hospital clinical preceptor (19 questions)',
-  },
-  {
-    type: 'field_preceptor',
-    label: 'Field Preceptor Survey',
-    description: 'Evaluate your field internship preceptor (19 questions)',
-  },
+  checked: boolean;
+  checked_at: string | null;
+  checked_by: string | null;
+}
+
+const COMPLETION_CHECK_KEYS = [
+  { key: 'exit_survey_completed', label: 'Exit survey completed (PMI system)' },
+  { key: 'final_affective_eval', label: 'Final affective evaluation completed' },
+  { key: 'final_skills_checkoff', label: 'Final skills checkoff completed' },
+  { key: 'exit_docs_collected', label: 'All exit documents collected' },
 ];
 
 const DOC_TYPE_LABELS: Record<string, string> = {
@@ -150,13 +139,10 @@ export default function CloseoutSection({
   // Packet generation state
   const [generatingPacket, setGeneratingPacket] = useState(false);
 
-  // Survey state
-  const [surveys, setSurveys] = useState<CloseoutSurvey[]>([]);
-  const [surveysLoading, setSurveysLoading] = useState(true);
-  const [activeSurveyModal, setActiveSurveyModal] = useState<{
-    type: 'hospital_preceptor' | 'field_preceptor';
-    existing: CloseoutSurvey | null;
-  } | null>(null);
+  // Completion checks state
+  const [completionChecks, setCompletionChecks] = useState<CompletionCheck[]>(
+    COMPLETION_CHECK_KEYS.map(c => ({ ...c, checked: false, checked_at: null, checked_by: null }))
+  );
 
   // Employment verification state
   const [employmentVerification, setEmploymentVerification] = useState<EmploymentVerification | null>(null);
@@ -169,7 +155,6 @@ export default function CloseoutSection({
 
   useEffect(() => {
     fetchCloseoutData();
-    fetchSurveys();
     fetchEmploymentVerification();
   }, [internshipId]);
 
@@ -183,25 +168,22 @@ export default function CloseoutSection({
         setDocuments(data.documents || []);
         setCompletedAt(data.completed_at || null);
         setCompletedBy(data.completed_by || null);
+        // Load completion checks from overrides
+        const overrides = data.overrides || {};
+        setCompletionChecks(
+          COMPLETION_CHECK_KEYS.map(c => {
+            const val = overrides[c.key];
+            if (val && typeof val === 'object') {
+              return { ...c, checked: true, checked_at: val.checked_at || null, checked_by: val.checked_by || null };
+            }
+            return { ...c, checked: !!val, checked_at: null, checked_by: null };
+          })
+        );
       }
     } catch (error) {
       console.error('Error fetching closeout data:', error);
     }
     setLoading(false);
-  };
-
-  const fetchSurveys = async () => {
-    setSurveysLoading(true);
-    try {
-      const res = await fetch(`/api/clinical/internships/${internshipId}/closeout/surveys`);
-      const data = await res.json();
-      if (data.success) {
-        setSurveys(data.surveys || []);
-      }
-    } catch (error) {
-      console.error('Error fetching closeout surveys:', error);
-    }
-    setSurveysLoading(false);
   };
 
   const fetchEmploymentVerification = async () => {
@@ -224,20 +206,67 @@ export default function CloseoutSection({
     showToastMessage('Employment verification saved', 'success');
   };
 
-  const handleSurveyComplete = (savedSurvey: CloseoutSurvey) => {
-    setSurveys(prev => {
-      const existing = prev.find(s => s.id === savedSurvey.id);
-      if (existing) {
-        return prev.map(s => (s.id === savedSurvey.id ? savedSurvey : s));
-      }
-      return [savedSurvey, ...prev];
-    });
-    setActiveSurveyModal(null);
-    showToastMessage('Survey saved successfully', 'success');
-  };
+  // Handle completion checkbox toggle
+  const handleCompletionCheck = async (key: string, checked: boolean) => {
+    // Optimistic update
+    setCompletionChecks(prev =>
+      prev.map(c => c.key === key
+        ? { ...c, checked, checked_at: checked ? new Date().toISOString() : null, checked_by: checked ? 'current_user' : null }
+        : c
+      )
+    );
 
-  const getSurveyForType = (type: 'hospital_preceptor' | 'field_preceptor'): CloseoutSurvey | null => {
-    return surveys.find(s => s.survey_type === type) || null;
+    // Build overrides: merge existing checklist overrides with completion checks
+    const overrides: Record<string, unknown> = {};
+    for (const item of checklist) {
+      if (item.manual_override) {
+        overrides[item.key] = true;
+      }
+    }
+    // Add completion checks
+    for (const c of completionChecks) {
+      if (c.key === key) {
+        if (checked) {
+          overrides[key] = { checked_at: new Date().toISOString(), checked_by: 'current_user' };
+        }
+        // If unchecked, don't include the key
+      } else if (c.checked) {
+        overrides[c.key] = { checked_at: c.checked_at, checked_by: c.checked_by };
+      }
+    }
+
+    try {
+      const res = await fetch(`/api/clinical/internships/${internshipId}/closeout`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ overrides }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        // Revert
+        setCompletionChecks(prev =>
+          prev.map(c => c.key === key ? { ...c, checked: !checked } : c)
+        );
+        showToastMessage('Failed to save', 'error');
+      } else {
+        // Refresh to get server-persisted state
+        const savedOverrides = data.overrides || {};
+        setCompletionChecks(prev =>
+          prev.map(c => {
+            const val = savedOverrides[c.key];
+            if (val && typeof val === 'object') {
+              return { ...c, checked: true, checked_at: val.checked_at || null, checked_by: val.checked_by || null };
+            }
+            return { ...c, checked: !!val, checked_at: null, checked_by: null };
+          })
+        );
+      }
+    } catch {
+      setCompletionChecks(prev =>
+        prev.map(c => c.key === key ? { ...c, checked: !checked } : c)
+      );
+      showToastMessage('Failed to save', 'error');
+    }
   };
 
   const showToastMessage = (message: string, type: 'success' | 'error') => {
@@ -1359,16 +1388,6 @@ export default function CloseoutSection({
         </div>
       )}
 
-      {/* Survey Modal */}
-      {activeSurveyModal && (
-        <CloseoutSurveyModal
-          internship_id={internshipId}
-          survey_type={activeSurveyModal.type}
-          existing_survey={activeSurveyModal.existing as unknown as Parameters<typeof CloseoutSurveyModal>[0]['existing_survey']}
-          onComplete={(survey) => handleSurveyComplete(survey as unknown as CloseoutSurvey)}
-          onClose={() => setActiveSurveyModal(null)}
-        />
-      )}
 
       {/* Employment Verification Modal */}
       {showEmploymentModal && (
@@ -1484,95 +1503,46 @@ export default function CloseoutSection({
           </div>
         </div>
 
-        {/* Surveys Section */}
+        {/* Completion Checklist Section */}
         <div>
           <div className="flex items-center gap-2 mb-3">
             <ClipboardList className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Preceptor Evaluation Surveys</h4>
+            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Completion Checklist</h4>
           </div>
-          {surveysLoading ? (
-            <div className="flex items-center gap-2 py-4 text-sm text-gray-400 dark:text-gray-500">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Loading surveys...
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {SURVEY_CONFIGS.map(config => {
-                const existing = getSurveyForType(config.type);
-                const isCompleted = !!existing;
-
-                return (
-                  <div
-                    key={config.type}
-                    className={`p-4 rounded-lg border ${
-                      isCompleted
-                        ? 'bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700'
-                        : 'bg-gray-50 dark:bg-gray-700/30 border-gray-200 dark:border-gray-700'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <div className="min-w-0">
-                        <div className="text-sm font-medium text-gray-900 dark:text-white">
-                          {config.label}
-                        </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                          {config.description}
-                        </div>
-                      </div>
-                      <span
-                        className={`flex-shrink-0 px-2 py-0.5 text-xs font-medium rounded-full ${
-                          isCompleted
-                            ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400'
-                            : 'bg-gray-200 text-gray-600 dark:bg-gray-600 dark:text-gray-300'
-                        }`}
-                      >
-                        {isCompleted ? 'Completed' : 'Not Started'}
-                      </span>
-                    </div>
-
-                    {isCompleted && existing.submitted_at && (
-                      <div className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                        Submitted {formatDate(existing.submitted_at)}
-                        {existing.submitted_by && <> by {existing.submitted_by}</>}
-                        {existing.preceptor_name && (
-                          <> &bull; {existing.preceptor_name}</>
-                        )}
-                        {existing.agency_name && (
-                          <> / {existing.agency_name}</>
-                        )}
-                      </div>
-                    )}
-
-                    {canEdit && (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setActiveSurveyModal({ type: config.type, existing: existing })
-                        }
-                        className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                          isCompleted
-                            ? 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-600'
-                            : 'bg-emerald-600 text-white hover:bg-emerald-700'
-                        }`}
-                      >
-                        {isCompleted ? (
-                          <>
-                            <Pencil className="w-3.5 h-3.5" />
-                            View / Edit
-                          </>
-                        ) : (
-                          <>
-                            <ClipboardList className="w-3.5 h-3.5" />
-                            Fill Online
-                          </>
-                        )}
-                      </button>
-                    )}
+          <div className="space-y-2">
+            {completionChecks.map(check => (
+              <label
+                key={check.key}
+                className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                  check.checked
+                    ? 'bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700'
+                    : 'bg-gray-50 dark:bg-gray-700/30 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={check.checked}
+                  onChange={(e) => canEdit && handleCompletionCheck(check.key, e.target.checked)}
+                  disabled={!canEdit}
+                  className="mt-0.5 h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-emerald-600 focus:ring-emerald-500 disabled:opacity-50"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-gray-900 dark:text-white">
+                    {check.label}
                   </div>
-                );
-              })}
-            </div>
-          )}
+                  {check.checked && check.checked_at && (
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      Completed {new Date(check.checked_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      {check.checked_by && check.checked_by !== 'current_user' && ` by ${check.checked_by}`}
+                    </div>
+                  )}
+                </div>
+                {check.checked && (
+                  <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                )}
+              </label>
+            ))}
+          </div>
         </div>
 
         {/* Employment Verification Section */}

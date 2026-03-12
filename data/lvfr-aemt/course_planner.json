@@ -923,24 +923,6 @@
       "color": "#F59E0B"
     },
     {
-      "id": "quiz-daily",
-      "name": "Daily Quiz (10 questions)",
-      "duration_min": 30,
-      "block_type": "quiz",
-      "min_instructors": 1,
-      "notes": "Previous day's chapters (quiz + review time)",
-      "color": "#EAB308"
-    },
-    {
-      "id": "quiz-daily-20",
-      "name": "Daily Quiz (20 questions)",
-      "duration_min": 40,
-      "block_type": "quiz",
-      "min_instructors": 1,
-      "notes": "For heavy chapters (Ch 7, Ch 10, etc.)",
-      "color": "#EAB308"
-    },
-    {
       "id": "grp-test",
       "name": "EMSTesting Group Testing",
       "duration_min": 30,
@@ -1083,6 +1065,384 @@
       "min_instructors": 1,
       "notes": "LVFR-specific resuscitation roles.",
       "color": "#F59E0B"
+    },
+    {
+      "id": "quiz-ch01",
+      "name": "Ch 1: EMS Systems Quiz",
+      "duration_min": 20,
+      "block_type": "quiz",
+      "chapter_id": "ch01",
+      "notes": "10 questions. Quiz 15 min, Review 5 min.",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "quiz-ch02",
+      "name": "Ch 2: Workforce Safety Quiz",
+      "duration_min": 20,
+      "block_type": "quiz",
+      "chapter_id": "ch02",
+      "notes": "10 questions. Quiz 15 min, Review 5 min.",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "quiz-ch03",
+      "name": "Ch 3: Legal/Ethics Quiz",
+      "duration_min": 20,
+      "block_type": "quiz",
+      "chapter_id": "ch03",
+      "notes": "10 questions. Quiz 15 min, Review 5 min.",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "quiz-ch04",
+      "name": "Ch 4: Communications Quiz",
+      "duration_min": 40,
+      "block_type": "quiz",
+      "chapter_id": "ch04",
+      "notes": "20 questions. Quiz 30 min, Review 10 min.",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "quiz-ch05",
+      "name": "Ch 5: Medical Terminology Quiz",
+      "duration_min": 30,
+      "block_type": "quiz",
+      "chapter_id": "ch05",
+      "notes": "15 questions. Quiz 23 min, Review 8 min.",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "quiz-ch06",
+      "name": "Ch 6: Lifting & Moving Quiz",
+      "duration_min": 20,
+      "block_type": "quiz",
+      "chapter_id": "ch06",
+      "notes": "10 questions. Quiz 15 min, Review 5 min.",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "quiz-ch07",
+      "name": "Ch 7: Human Body (A&P) Quiz",
+      "duration_min": 40,
+      "block_type": "quiz",
+      "chapter_id": "ch07",
+      "notes": "20 questions. Quiz 30 min, Review 10 min.",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "quiz-ch08",
+      "name": "Ch 8: Pathophysiology Quiz",
+      "duration_min": 40,
+      "block_type": "quiz",
+      "chapter_id": "ch08",
+      "notes": "20 questions. Quiz 30 min, Review 10 min.",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "quiz-ch09",
+      "name": "Ch 9: Life Span Development Quiz",
+      "duration_min": 40,
+      "block_type": "quiz",
+      "chapter_id": "ch09",
+      "notes": "20 questions. Quiz 30 min, Review 10 min.",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "quiz-ch10",
+      "name": "Ch 10: Patient Assessment Quiz",
+      "duration_min": 40,
+      "block_type": "quiz",
+      "chapter_id": "ch10",
+      "notes": "20 questions. Quiz 30 min, Review 10 min.",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "quiz-ch11",
+      "name": "Ch 11: Airway Management Quiz",
+      "duration_min": 40,
+      "block_type": "quiz",
+      "chapter_id": "ch11",
+      "notes": "20 questions. Quiz 30 min, Review 10 min.",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "quiz-ch12",
+      "name": "Ch 12: Pharmacology Quiz",
+      "duration_min": 40,
+      "block_type": "quiz",
+      "chapter_id": "ch12",
+      "notes": "20 questions. Quiz 30 min, Review 10 min.",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "quiz-ch13",
+      "name": "Ch 13: Vascular Access Quiz",
+      "duration_min": 40,
+      "block_type": "quiz",
+      "chapter_id": "ch13",
+      "notes": "20 questions. Quiz 30 min, Review 10 min.",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "quiz-ch14",
+      "name": "Ch 14: Shock Quiz",
+      "duration_min": 40,
+      "block_type": "quiz",
+      "chapter_id": "ch14",
+      "notes": "20 questions. Quiz 30 min, Review 10 min.",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "quiz-ch15",
+      "name": "Ch 15: BLS Resuscitation Quiz",
+      "duration_min": 40,
+      "block_type": "quiz",
+      "chapter_id": "ch15",
+      "notes": "20 questions. Quiz 30 min, Review 10 min.",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "quiz-ch16",
+      "name": "Ch 16: Medical Overview Quiz",
+      "duration_min": 20,
+      "block_type": "quiz",
+      "chapter_id": "ch16",
+      "notes": "10 questions. Quiz 15 min, Review 5 min.",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "quiz-ch17",
+      "name": "Ch 17: Respiratory Quiz",
+      "duration_min": 40,
+      "block_type": "quiz",
+      "chapter_id": "ch17",
+      "notes": "20 questions. Quiz 30 min, Review 10 min.",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "quiz-ch18",
+      "name": "Ch 18: Cardiovascular Quiz",
+      "duration_min": 40,
+      "block_type": "quiz",
+      "chapter_id": "ch18",
+      "notes": "20 questions. Quiz 30 min, Review 10 min.",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "quiz-ch19",
+      "name": "Ch 19: Neurologic Quiz",
+      "duration_min": 30,
+      "block_type": "quiz",
+      "chapter_id": "ch19",
+      "notes": "15 questions. Quiz 23 min, Review 8 min.",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "quiz-ch20",
+      "name": "Ch 20: GI/Urologic Quiz",
+      "duration_min": 40,
+      "block_type": "quiz",
+      "chapter_id": "ch20",
+      "notes": "20 questions. Quiz 30 min, Review 10 min.",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "quiz-ch21",
+      "name": "Ch 21: Endocrine/Hematologic Quiz",
+      "duration_min": 40,
+      "block_type": "quiz",
+      "chapter_id": "ch21",
+      "notes": "20 questions. Quiz 30 min, Review 10 min.",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "quiz-ch22",
+      "name": "Ch 22: Immunologic Quiz",
+      "duration_min": 40,
+      "block_type": "quiz",
+      "chapter_id": "ch22",
+      "notes": "20 questions. Quiz 30 min, Review 10 min.",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "quiz-ch23",
+      "name": "Ch 23: Toxicology Quiz",
+      "duration_min": 40,
+      "block_type": "quiz",
+      "chapter_id": "ch23",
+      "notes": "20 questions. Quiz 30 min, Review 10 min.",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "quiz-ch24",
+      "name": "Ch 24: Psychiatric Quiz",
+      "duration_min": 30,
+      "block_type": "quiz",
+      "chapter_id": "ch24",
+      "notes": "15 questions. Quiz 23 min, Review 8 min.",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "quiz-ch25",
+      "name": "Ch 25: Gynecologic Quiz",
+      "duration_min": 20,
+      "block_type": "quiz",
+      "chapter_id": "ch25",
+      "notes": "10 questions. Quiz 15 min, Review 5 min.",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "quiz-ch26",
+      "name": "Ch 26: Trauma Overview Quiz",
+      "duration_min": 20,
+      "block_type": "quiz",
+      "chapter_id": "ch26",
+      "notes": "10 questions. Quiz 15 min, Review 5 min.",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "quiz-ch27",
+      "name": "Ch 27: Bleeding Quiz",
+      "duration_min": 40,
+      "block_type": "quiz",
+      "chapter_id": "ch27",
+      "notes": "20 questions. Quiz 30 min, Review 10 min.",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "quiz-ch28",
+      "name": "Ch 28: Soft-Tissue Quiz",
+      "duration_min": 30,
+      "block_type": "quiz",
+      "chapter_id": "ch28",
+      "notes": "15 questions. Quiz 23 min, Review 8 min.",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "quiz-ch29",
+      "name": "Ch 29: Face & Neck Quiz",
+      "duration_min": 40,
+      "block_type": "quiz",
+      "chapter_id": "ch29",
+      "notes": "20 questions. Quiz 30 min, Review 10 min.",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "quiz-ch30",
+      "name": "Ch 30: Head & Spine Quiz",
+      "duration_min": 40,
+      "block_type": "quiz",
+      "chapter_id": "ch30",
+      "notes": "20 questions. Quiz 30 min, Review 10 min.",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "quiz-ch31",
+      "name": "Ch 31: Chest Injuries Quiz",
+      "duration_min": 40,
+      "block_type": "quiz",
+      "chapter_id": "ch31",
+      "notes": "20 questions. Quiz 30 min, Review 10 min.",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "quiz-ch32",
+      "name": "Ch 32: Abdominal/GU Quiz",
+      "duration_min": 30,
+      "block_type": "quiz",
+      "chapter_id": "ch32",
+      "notes": "15 questions. Quiz 23 min, Review 8 min.",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "quiz-ch33",
+      "name": "Ch 33: Orthopaedic Quiz",
+      "duration_min": 30,
+      "block_type": "quiz",
+      "chapter_id": "ch33",
+      "notes": "15 questions. Quiz 23 min, Review 8 min.",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "quiz-ch34",
+      "name": "Ch 34: Environmental Quiz",
+      "duration_min": 30,
+      "block_type": "quiz",
+      "chapter_id": "ch34",
+      "notes": "15 questions. Quiz 23 min, Review 8 min.",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "quiz-ch35",
+      "name": "Ch 35: OB/Neonatal Quiz",
+      "duration_min": 40,
+      "block_type": "quiz",
+      "chapter_id": "ch35",
+      "notes": "20 questions. Quiz 30 min, Review 10 min.",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "quiz-ch36",
+      "name": "Ch 36: Pediatrics Quiz",
+      "duration_min": 60,
+      "block_type": "quiz",
+      "chapter_id": "ch36",
+      "notes": "30 questions. Quiz 45 min, Review 15 min.",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "quiz-ch37",
+      "name": "Ch 37: Geriatrics Quiz",
+      "duration_min": 40,
+      "block_type": "quiz",
+      "chapter_id": "ch37",
+      "notes": "20 questions. Quiz 30 min, Review 10 min.",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "quiz-ch38",
+      "name": "Ch 38: Special Challenges Quiz",
+      "duration_min": 30,
+      "block_type": "quiz",
+      "chapter_id": "ch38",
+      "notes": "15 questions. Quiz 23 min, Review 8 min.",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "quiz-ch39",
+      "name": "Ch 39: Transport Ops Quiz",
+      "duration_min": 40,
+      "block_type": "quiz",
+      "chapter_id": "ch39",
+      "notes": "20 questions. Quiz 30 min, Review 10 min.",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "quiz-ch40",
+      "name": "Ch 40: Extrication/Hazmat Quiz",
+      "duration_min": 40,
+      "block_type": "quiz",
+      "chapter_id": "ch40",
+      "notes": "20 questions. Quiz 30 min, Review 10 min.",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "quiz-ch41",
+      "name": "Ch 41: Incident Management Quiz",
+      "duration_min": 40,
+      "block_type": "quiz",
+      "chapter_id": "ch41",
+      "notes": "20 questions. Quiz 30 min, Review 10 min.",
+      "color": "#f59e0b"
+    },
+    {
+      "id": "quiz-ch42",
+      "name": "Ch 42: Terrorism/Disaster Quiz",
+      "duration_min": 40,
+      "block_type": "quiz",
+      "chapter_id": "ch42",
+      "notes": "20 questions. Quiz 30 min, Review 10 min.",
+      "color": "#f59e0b"
     }
   ],
   "prerequisites": [
@@ -1599,6 +1959,216 @@
     {
       "block_id": "pharm-ckpt",
       "requires_block_id": "lec-ch12",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "quiz-ch01",
+      "requires_block_id": "lec-ch01",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "quiz-ch02",
+      "requires_block_id": "lec-ch02",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "quiz-ch03",
+      "requires_block_id": "lec-ch03",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "quiz-ch04",
+      "requires_block_id": "lec-ch04",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "quiz-ch05",
+      "requires_block_id": "lec-ch05",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "quiz-ch06",
+      "requires_block_id": "lec-ch06",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "quiz-ch07",
+      "requires_block_id": "lec-ch07",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "quiz-ch08",
+      "requires_block_id": "lec-ch08",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "quiz-ch09",
+      "requires_block_id": "lec-ch09",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "quiz-ch10",
+      "requires_block_id": "lec-ch10",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "quiz-ch11",
+      "requires_block_id": "lec-ch11",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "quiz-ch12",
+      "requires_block_id": "lec-ch12",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "quiz-ch13",
+      "requires_block_id": "lec-ch13",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "quiz-ch14",
+      "requires_block_id": "lec-ch14",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "quiz-ch15",
+      "requires_block_id": "lec-ch15",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "quiz-ch16",
+      "requires_block_id": "lec-ch16",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "quiz-ch17",
+      "requires_block_id": "lec-ch17",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "quiz-ch18",
+      "requires_block_id": "lec-ch18",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "quiz-ch19",
+      "requires_block_id": "lec-ch19",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "quiz-ch20",
+      "requires_block_id": "lec-ch20",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "quiz-ch21",
+      "requires_block_id": "lec-ch21",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "quiz-ch22",
+      "requires_block_id": "lec-ch22",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "quiz-ch23",
+      "requires_block_id": "lec-ch23",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "quiz-ch24",
+      "requires_block_id": "lec-ch24",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "quiz-ch25",
+      "requires_block_id": "lec-ch25",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "quiz-ch26",
+      "requires_block_id": "lec-ch26",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "quiz-ch27",
+      "requires_block_id": "lec-ch27",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "quiz-ch28",
+      "requires_block_id": "lec-ch28",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "quiz-ch29",
+      "requires_block_id": "lec-ch29",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "quiz-ch30",
+      "requires_block_id": "lec-ch30",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "quiz-ch31",
+      "requires_block_id": "lec-ch31",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "quiz-ch32",
+      "requires_block_id": "lec-ch32",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "quiz-ch33",
+      "requires_block_id": "lec-ch33",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "quiz-ch34",
+      "requires_block_id": "lec-ch34",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "quiz-ch35",
+      "requires_block_id": "lec-ch35",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "quiz-ch36",
+      "requires_block_id": "lec-ch36",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "quiz-ch37",
+      "requires_block_id": "lec-ch37",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "quiz-ch38",
+      "requires_block_id": "lec-ch38",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "quiz-ch39",
+      "requires_block_id": "lec-ch39",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "quiz-ch40",
+      "requires_block_id": "lec-ch40",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "quiz-ch41",
+      "requires_block_id": "lec-ch41",
+      "rule_type": "must_precede"
+    },
+    {
+      "block_id": "quiz-ch42",
+      "requires_block_id": "lec-ch42",
       "rule_type": "must_precede"
     }
   ],
