@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   ChevronLeft, ChevronRight, AlertTriangle, Check, MoreHorizontal,
   Search, Filter, LayoutGrid, Loader2, ChevronDown, ChevronUp,
-  GripVertical, X, Shield, Clock
+  GripVertical, X, Shield, Clock, Save, Plus, Calendar, User
 } from 'lucide-react';
 import { getInitials, emailToHue } from '@/lib/lvfr-utils';
 
@@ -75,6 +75,16 @@ interface InstructorAvailability {
   block_type: string;
 }
 
+interface TemplateInfo {
+  id: string;
+  name: string;
+  description: string | null;
+  total_weeks: number;
+  created_at: string;
+  has_snapshot: boolean;
+  placement_count: number;
+}
+
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const BLOCK_TYPE_LABELS: Record<string, string> = {
@@ -95,6 +105,20 @@ const DAY_LABELS = ['Tuesday', 'Wednesday', 'Thursday'];
 
 // Available minutes per day: 07:30–15:30 = 480min minus 60min lunch = 420min
 const AVAILABLE_MINUTES = 420;
+
+// Monday supplementary day content (Sun Kang's schedule) — read-only
+const MONDAY_SUPPLEMENTS: Record<number, { focus: string; detail: string }> = {
+  1:  { focus: 'Course Orientation', detail: 'EMSTesting setup, learning style inventory' },
+  2:  { focus: 'Test Prep', detail: 'Ch 1-6 review' },
+  3:  { focus: 'Test Prep', detail: 'Ch 7-10 review (A&P + Assessment)' },
+  4:  { focus: 'Module 1 Exam Prep', detail: 'Comprehensive Ch 1-10 review' },
+  5:  { focus: 'Airway/Respiratory Review', detail: 'Module 2 exam prep, Ch 11 & 17' },
+  6:  { focus: 'Cardio/Shock Review', detail: 'Module 3 exam prep, Ch 14-15 & 18' },
+  7:  { focus: 'Trauma Review', detail: 'Ch 26-30 high-yield topics' },
+  8:  { focus: 'Trauma/Medical Review', detail: 'Module 5 exam prep' },
+  9:  { focus: 'Medical Review', detail: 'Module 4 exam prep, Ch 16 & 19-25' },
+  10: { focus: 'Final Review', detail: 'Labor Day OR final review / independent study' },
+};
 
 // ─── Helper Functions ────────────────────────────────────────────────────────
 
@@ -118,6 +142,14 @@ function getDayDate(startDate: string, dayNumber: number): string {
   const weekIndex = Math.floor((dayNumber - 1) / 3);
   const dayInWeek = (dayNumber - 1) % 3;
   const daysToAdd = weekIndex * 7 + dayInWeek;
+  const d = new Date(startDate + 'T12:00:00');
+  d.setDate(d.getDate() + daysToAdd);
+  return d.toISOString().split('T')[0];
+}
+
+function getMondayDate(startDate: string, weekNumber: number): string {
+  // Monday is 1 day before Tuesday of that week
+  const daysToAdd = (weekNumber - 1) * 7 - 1;
   const d = new Date(startDate + 'T12:00:00');
   d.setDate(d.getDate() + daysToAdd);
   return d.toISOString().split('T')[0];
@@ -168,6 +200,45 @@ function CapacityBar({ used, total }: { used: number; total: number }) {
   );
 }
 
+function MondaySupplementCard({ weekNumber, startDate }: { weekNumber: number; startDate: string }) {
+  const supplement = MONDAY_SUPPLEMENTS[weekNumber];
+  if (!supplement) return null;
+
+  const mondayDate = getMondayDate(startDate, weekNumber);
+
+  return (
+    <div className="w-[180px] flex-shrink-0 rounded-lg border border-gray-200/60 dark:border-gray-700/60 bg-gray-100/50 dark:bg-gray-800/30 opacity-70">
+      <div className="px-3 py-2 border-b border-gray-200/60 dark:border-gray-700/60">
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+            Monday
+          </span>
+          <span className="text-[10px] text-gray-400 dark:text-gray-500">
+            {formatDate(mondayDate)}
+          </span>
+        </div>
+        <div className="text-[10px] text-gray-400 dark:text-gray-500">
+          Supplementary Day
+        </div>
+      </div>
+      <div className="px-3 py-3">
+        <div className="flex items-center gap-1.5 mb-2">
+          <User className="w-3 h-3 text-purple-500" />
+          <span className="text-[11px] font-medium text-purple-600 dark:text-purple-400">
+            Sun Kang
+          </span>
+        </div>
+        <div className="text-xs font-medium text-gray-600 dark:text-gray-300">
+          {supplement.focus}
+        </div>
+        <div className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
+          {supplement.detail}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function BlockBar({
   placement,
   violations,
@@ -197,11 +268,6 @@ function BlockBar({
   );
 
   const borderColor = hasViolation ? 'border-red-500' : '';
-  const leftBorderColor = hasViolation
-    ? 'border-l-red-500'
-    : block.color
-      ? ''
-      : 'border-l-gray-400';
 
   // Close menus on click outside
   useEffect(() => {
@@ -640,6 +706,270 @@ function ViolationBanner({
   );
 }
 
+// ─── Modal Components ────────────────────────────────────────────────────────
+
+function SaveTemplateModal({
+  instanceId,
+  onClose,
+  onSaved,
+}: {
+  instanceId: string;
+  onClose: () => void;
+  onSaved: (template: TemplateInfo) => void;
+}) {
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      const res = await fetch('/api/lvfr-aemt/planner/templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: name.trim(),
+          description: description.trim() || null,
+          source_instance_id: instanceId,
+        }),
+      });
+
+      const result = await res.json();
+      if (!res.ok) {
+        setError(result.error || 'Failed to save template');
+      } else {
+        onSaved(result.template);
+        onClose();
+      }
+    } catch {
+      setError('Failed to save template');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+            <Save className="w-5 h-5" />
+            Save as Template
+          </h2>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            Save the current schedule as a reusable template for future cohorts
+          </p>
+        </div>
+        <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Template Name *
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g., LVFR AEMT 10-Week Standard"
+              className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Description (optional)
+            </label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Standard sequence with Tuesday exams..."
+              className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 h-20 resize-none"
+            />
+          </div>
+          {error && (
+            <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
+          )}
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-xs font-medium rounded-md border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={saving || !name.trim()}
+              className="px-4 py-2 text-xs font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1.5"
+            >
+              {saving && <Loader2 className="w-3 h-3 animate-spin" />}
+              Save Template
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function NewFromTemplateModal({
+  templates,
+  onClose,
+  onCreated,
+}: {
+  templates: TemplateInfo[];
+  onClose: () => void;
+  onCreated: (instance: PlanInstance) => void;
+}) {
+  const [selectedTemplateId, setSelectedTemplateId] = useState(templates[0]?.id || '');
+  const [instanceName, setInstanceName] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedTemplateId || !instanceName.trim() || !startDate) return;
+
+    setCreating(true);
+    setError(null);
+
+    try {
+      const res = await fetch('/api/lvfr-aemt/planner/instances', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: instanceName.trim(),
+          start_date: startDate,
+          template_id: selectedTemplateId,
+        }),
+      });
+
+      const result = await res.json();
+      if (!res.ok) {
+        setError(result.error || 'Failed to create instance');
+      } else {
+        onCreated(result.instance);
+        onClose();
+      }
+    } catch {
+      setError('Failed to create instance');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+            <Plus className="w-5 h-5" />
+            New Plan from Template
+          </h2>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            Create a new plan instance with placements copied from a template
+          </p>
+        </div>
+        <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Template *
+            </label>
+            {templates.length === 0 ? (
+              <p className="text-xs text-gray-500 italic">No templates available. Save the current plan as a template first.</p>
+            ) : (
+              <div className="space-y-1.5">
+                {templates.map(t => (
+                  <label
+                    key={t.id}
+                    className={`flex items-center gap-3 p-2 rounded border cursor-pointer ${
+                      selectedTemplateId === t.id
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                        : 'border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="template"
+                      value={t.id}
+                      checked={selectedTemplateId === t.id}
+                      onChange={() => setSelectedTemplateId(t.id)}
+                      className="text-blue-600"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-medium text-gray-900 dark:text-gray-100">{t.name}</div>
+                      {t.description && (
+                        <div className="text-[10px] text-gray-500 dark:text-gray-400 truncate">{t.description}</div>
+                      )}
+                      <div className="text-[10px] text-gray-400">
+                        {t.placement_count} blocks &middot; {t.total_weeks} weeks
+                      </div>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Instance Name *
+            </label>
+            <input
+              type="text"
+              value={instanceName}
+              onChange={(e) => setInstanceName(e.target.value)}
+              placeholder="e.g., LVFR Academy 2027-2"
+              className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Start Date (first Tuesday) *
+            </label>
+            <div className="relative">
+              <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full pl-8 pr-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                required
+              />
+            </div>
+          </div>
+          {error && (
+            <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
+          )}
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-xs font-medium rounded-md border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={creating || !selectedTemplateId || !instanceName.trim() || !startDate || templates.length === 0}
+              className="px-4 py-2 text-xs font-medium rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1.5"
+            >
+              {creating && <Loader2 className="w-3 h-3 animate-spin" />}
+              Create Plan
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
 export default function CoursePlannerPage() {
@@ -649,6 +979,8 @@ export default function CoursePlannerPage() {
   const [allBlocks, setAllBlocks] = useState<ContentBlock[]>([]);
   const [prerequisites, setPrerequisites] = useState<Prerequisite[]>([]);
   const [availability, setAvailability] = useState<InstructorAvailability[]>([]);
+  const [allInstances, setAllInstances] = useState<PlanInstance[]>([]);
+  const [templates, setTemplates] = useState<TemplateInfo[]>([]);
 
   // UI state
   const [loading, setLoading] = useState(true);
@@ -662,6 +994,8 @@ export default function CoursePlannerPage() {
   const [dropTargetDay, setDropTargetDay] = useState<number | null>(null);
   const [validating, setValidating] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false);
+  const [showNewFromTemplateModal, setShowNewFromTemplateModal] = useState(false);
 
   // Drag counter for reliable drag-leave
   const dragCounters = useRef<Record<number, number>>({});
@@ -670,35 +1004,47 @@ export default function CoursePlannerPage() {
 
   // ─── Data Fetching ─────────────────────────────────────────────────────────
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        setLoading(true);
-        const [planRes, blocksRes, availRes] = await Promise.all([
-          fetch('/api/lvfr-aemt/planner'),
-          fetch('/api/lvfr-aemt/planner/blocks'),
-          fetch('/api/lvfr-aemt/planner/availability'),
-        ]);
+  const fetchPlanData = useCallback(async (instanceId?: string) => {
+    try {
+      setLoading(true);
+      const url = instanceId
+        ? `/api/lvfr-aemt/planner?instance_id=${instanceId}`
+        : '/api/lvfr-aemt/planner';
 
-        if (!planRes.ok) throw new Error('Failed to load plan');
+      const [planRes, blocksRes, availRes, instancesRes, templatesRes] = await Promise.all([
+        fetch(url),
+        fetch('/api/lvfr-aemt/planner/blocks'),
+        fetch('/api/lvfr-aemt/planner/availability'),
+        fetch('/api/lvfr-aemt/planner/instances'),
+        fetch('/api/lvfr-aemt/planner/templates'),
+      ]);
 
-        const planData = await planRes.json();
-        const blocksData = await blocksRes.json();
-        const availData = await availRes.json();
+      if (!planRes.ok) throw new Error('Failed to load plan');
 
-        setInstance(planData.instance);
-        setPlacements(planData.placements || []);
-        setAllBlocks(blocksData.blocks || []);
-        setPrerequisites(blocksData.prerequisites || []);
-        setAvailability(availData.availability || []);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load data');
-      } finally {
-        setLoading(false);
-      }
+      const planData = await planRes.json();
+      const blocksData = await blocksRes.json();
+      const availData = await availRes.json();
+      const instancesData = instancesRes.ok ? await instancesRes.json() : { instances: [] };
+      const templatesData = templatesRes.ok ? await templatesRes.json() : { templates: [] };
+
+      setInstance(planData.instance);
+      setPlacements(planData.placements || []);
+      setAllBlocks(blocksData.blocks || []);
+      setPrerequisites(blocksData.prerequisites || []);
+      setAvailability(availData.availability || []);
+      setAllInstances(instancesData.instances || []);
+      setTemplates(templatesData.templates || []);
+      setViolations([]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load data');
+    } finally {
+      setLoading(false);
     }
-    fetchData();
   }, []);
+
+  useEffect(() => {
+    fetchPlanData();
+  }, [fetchPlanData]);
 
   // ─── Computed Values ───────────────────────────────────────────────────────
 
@@ -725,6 +1071,11 @@ export default function CoursePlannerPage() {
   );
 
   // ─── Actions ───────────────────────────────────────────────────────────────
+
+  const switchInstance = useCallback((instanceId: string) => {
+    setCurrentWeek(1);
+    fetchPlanData(instanceId);
+  }, [fetchPlanData]);
 
   const handleDrop = useCallback(async (dayNumber: number, e: React.DragEvent) => {
     e.preventDefault();
@@ -783,11 +1134,9 @@ export default function CoursePlannerPage() {
         const result = await res.json();
 
         if (!res.ok) {
-          // Revert optimistic update
           setPlacements(prev => prev.filter(p => p.id !== tempId));
           alert(result.error || 'Failed to add block');
         } else {
-          // Replace temp with real
           setPlacements(prev =>
             prev.map(p => p.id === tempId ? { ...result.placement, content_block: block } : p)
           );
@@ -796,13 +1145,11 @@ export default function CoursePlannerPage() {
           }
         }
       } else if (data.type === 'placement') {
-        // Move placement from one day to another
         const sourcePlacement: Placement = data.placement;
         if (sourcePlacement.day_number === dayNumber) return;
 
         setSaving(true);
 
-        // Optimistic update
         const dayPlacements = placementsByDay.get(dayNumber) || [];
         const newStartTime = getNextAvailableTime(dayPlacements);
 
@@ -834,7 +1181,6 @@ export default function CoursePlannerPage() {
         const result = await res.json();
 
         if (!res.ok) {
-          // Revert
           setPlacements(prev =>
             prev.map(p =>
               p.id === sourcePlacement.id ? sourcePlacement : p
@@ -842,7 +1188,6 @@ export default function CoursePlannerPage() {
           );
           alert(result.error || 'Failed to move block');
         } else {
-          // Update with server data
           setPlacements(prev =>
             prev.map(p =>
               p.id === sourcePlacement.id
@@ -868,7 +1213,6 @@ export default function CoursePlannerPage() {
     const removed = placements.find(p => p.id === placementId);
     if (!removed) return;
 
-    // Optimistic
     setPlacements(prev => prev.filter(p => p.id !== placementId));
     setSaving(true);
 
@@ -877,7 +1221,6 @@ export default function CoursePlannerPage() {
         method: 'DELETE',
       });
       if (!res.ok) {
-        // Revert
         setPlacements(prev => [...prev, removed]);
         alert('Failed to remove block');
       }
@@ -898,7 +1241,6 @@ export default function CoursePlannerPage() {
     const original = placements.find(p => p.id === placementId);
     if (!original) return;
 
-    // Optimistic
     setPlacements(prev =>
       prev.map(p =>
         p.id === placementId
@@ -921,7 +1263,6 @@ export default function CoursePlannerPage() {
         }),
       });
       if (!res.ok) {
-        // Revert
         setPlacements(prev =>
           prev.map(p => p.id === placementId ? original : p)
         );
@@ -955,7 +1296,6 @@ export default function CoursePlannerPage() {
     if (!instance) return;
 
     if (instance.status === 'draft') {
-      // Validate first
       setPublishing(true);
       try {
         const valRes = await fetch('/api/lvfr-aemt/planner/validate', {
@@ -990,7 +1330,6 @@ export default function CoursePlannerPage() {
         setPublishing(false);
       }
     } else {
-      // Unpublish
       setPublishing(true);
       try {
         const res = await fetch(`/api/lvfr-aemt/planner/instances/${instance.id}/publish`, {
@@ -1083,13 +1422,46 @@ export default function CoursePlannerPage() {
                 <StatusBadge status={instance.status} />
                 {saving && <Loader2 className="w-4 h-4 animate-spin text-blue-500" />}
               </h1>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                {instance.name} &middot; Start: {formatDate(instance.start_date)}
-              </p>
+              <div className="flex items-center gap-2 mt-0.5">
+                {allInstances.length > 1 ? (
+                  <select
+                    value={instance.id}
+                    onChange={(e) => switchInstance(e.target.value)}
+                    className="text-xs border border-gray-200 dark:border-gray-600 rounded px-2 py-0.5 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                  >
+                    {allInstances.map(inst => (
+                      <option key={inst.id} value={inst.id}>
+                        {inst.name} ({inst.status})
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {instance.name}
+                  </span>
+                )}
+                <span className="text-xs text-gray-400 dark:text-gray-500">
+                  &middot; Start: {formatDate(instance.start_date)}
+                </span>
+              </div>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowSaveTemplateModal(true)}
+              className="px-3 py-1.5 text-xs font-medium rounded-md border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-1.5"
+            >
+              <Save className="w-3 h-3" />
+              Save Template
+            </button>
+            <button
+              onClick={() => setShowNewFromTemplateModal(true)}
+              className="px-3 py-1.5 text-xs font-medium rounded-md border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-1.5"
+            >
+              <Plus className="w-3 h-3" />
+              New from Template
+            </button>
             <button
               onClick={handleValidate}
               disabled={validating}
@@ -1159,6 +1531,9 @@ export default function CoursePlannerPage() {
 
         {/* Day columns */}
         <div className="flex-1 flex gap-3 p-3 overflow-x-auto">
+          {/* Monday supplement column */}
+          <MondaySupplementCard weekNumber={currentWeek} startDate={instance.start_date} />
+
           {weekDays.map((dayNumber) => {
             const dayPlacements = placementsByDay.get(dayNumber) || [];
             const date = instance.start_date
@@ -1185,6 +1560,27 @@ export default function CoursePlannerPage() {
           })}
         </div>
       </div>
+
+      {/* Modals */}
+      {showSaveTemplateModal && (
+        <SaveTemplateModal
+          instanceId={instance.id}
+          onClose={() => setShowSaveTemplateModal(false)}
+          onSaved={(template) => {
+            setTemplates(prev => [template, ...prev]);
+          }}
+        />
+      )}
+      {showNewFromTemplateModal && (
+        <NewFromTemplateModal
+          templates={templates}
+          onClose={() => setShowNewFromTemplateModal(false)}
+          onCreated={(newInstance) => {
+            setAllInstances(prev => [newInstance, ...prev]);
+            switchInstance(newInstance.id);
+          }}
+        />
+      )}
     </div>
   );
 }
