@@ -160,13 +160,171 @@ function formatDate(dateStr: string): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
+// Identify fixed blocks by name (not block_type, since Roll Call and Closeout are both 'admin')
+function getFixedRole(block: ContentBlock): 'roll_call' | 'lunch' | 'closeout' | 'group_testing' | null {
+  const name = block.name.toLowerCase();
+  if (name.includes('roll call')) return 'roll_call';
+  if (name === 'lunch') return 'lunch';
+  if (name.includes('closeout')) return 'closeout';
+  if (block.block_type === 'group_testing') return 'group_testing';
+  return null;
+}
+
+function timeToMinutes(t: string): number {
+  const [h, m] = t.split(':').map(Number);
+  return h * 60 + m;
+}
+
+function minutesToTime(mins: number): string {
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+}
+
+/**
+ * Recalculate times for all placements in a day, enforcing:
+ * - Roll Call at 07:30 (first)
+ * - Content blocks stack 07:30+ to 12:00, then 13:00+
+ * - Lunch ALWAYS at 12:00-13:00 (fixed, never moves)
+ * - Group Testing second-to-last
+ * - Closeout always last
+ * Returns new placements with corrected start_time, end_time, sort_order
+ */
+function recalculateDayTimes(dayPlacements: Placement[]): Placement[] {
+  if (dayPlacements.length === 0) return [];
+
+  // Separate by role (using name-based matching)
+  const rollCall = dayPlacements.filter(p => getFixedRole(p.content_block) === 'roll_call');
+  const lunch = dayPlacements.filter(p => getFixedRole(p.content_block) === 'lunch');
+  const closeout = dayPlacements.filter(p => getFixedRole(p.content_block) === 'closeout');
+  const groupTesting = dayPlacements.filter(p => getFixedRole(p.content_block) === 'group_testing');
+  const regular = dayPlacements.filter(p => getFixedRole(p.content_block) === null);
+
+  // Sort regular blocks by their existing sort_order, then start_time
+  regular.sort((a, b) => {
+    if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order;
+    return a.start_time.localeCompare(b.start_time);
+  });
+
+  const result: Placement[] = [];
+  let currentTime = 7 * 60 + 30; // 07:30 in minutes
+  let sortOrder = 0;
+
+  const LUNCH_START = 12 * 60; // 720
+  const LUNCH_END = 13 * 60;   // 780
+
+  // 1. Roll Call first (at 07:30)
+  for (const p of rollCall) {
+    const endTime = currentTime + p.duration_min;
+    result.push({
+      ...p,
+      start_time: minutesToTime(currentTime),
+      end_time: minutesToTime(endTime),
+      sort_order: sortOrder++,
+    });
+    currentTime = endTime;
+  }
+
+  // 2. Place regular content blocks, respecting lunch boundary
+  const afternoonQueue: Placement[] = [];
+
+  for (const p of regular) {
+    if (currentTime < LUNCH_START) {
+      if (currentTime + p.duration_min <= LUNCH_START) {
+        // Fits entirely before lunch
+        const endTime = currentTime + p.duration_min;
+        result.push({
+          ...p,
+          start_time: minutesToTime(currentTime),
+          end_time: minutesToTime(endTime),
+          sort_order: sortOrder++,
+        });
+        currentTime = endTime;
+      } else {
+        // Does NOT fit before lunch — push to afternoon
+        afternoonQueue.push(p);
+      }
+    } else {
+      // Already past lunch start — push to afternoon
+      afternoonQueue.push(p);
+    }
+  }
+
+  // 3. Lunch at 12:00-13:00 (always)
+  for (const p of lunch) {
+    result.push({
+      ...p,
+      start_time: '12:00',
+      end_time: '13:00',
+      duration_min: 60,
+      sort_order: sortOrder++,
+    });
+  }
+
+  // 4. Afternoon content blocks (starting at 13:00)
+  currentTime = LUNCH_END;
+
+  for (const p of afternoonQueue) {
+    const endTime = currentTime + p.duration_min;
+    result.push({
+      ...p,
+      start_time: minutesToTime(currentTime),
+      end_time: minutesToTime(endTime),
+      sort_order: sortOrder++,
+    });
+    currentTime = endTime;
+  }
+
+  // 5. Group Testing (second-to-last, after regular content)
+  for (const p of groupTesting) {
+    const endTime = currentTime + p.duration_min;
+    result.push({
+      ...p,
+      start_time: minutesToTime(currentTime),
+      end_time: minutesToTime(endTime),
+      sort_order: 998,
+    });
+    currentTime = endTime;
+  }
+
+  // 6. Closeout (always last)
+  for (const p of closeout) {
+    const endTime = currentTime + p.duration_min;
+    result.push({
+      ...p,
+      start_time: minutesToTime(currentTime),
+      end_time: minutesToTime(endTime),
+      sort_order: 999,
+    });
+    currentTime = endTime;
+  }
+
+  return result;
+}
+
 function getNextAvailableTime(dayPlacements: Placement[]): string {
   if (dayPlacements.length === 0) return '07:30';
-  const sorted = [...dayPlacements].sort((a, b) => a.end_time.localeCompare(b.end_time));
-  const lastEnd = sorted[sorted.length - 1].end_time;
-  // Skip lunch break
-  if (lastEnd >= '12:00' && lastEnd < '13:00') return '13:00';
+  // Use recalculated times to find next slot
+  const recalced = recalculateDayTimes(dayPlacements);
+  const contentBlocks = recalced.filter(p => {
+    const role = getFixedRole(p.content_block);
+    return role !== 'lunch' && role !== 'closeout' && role !== 'group_testing';
+  });
+  if (contentBlocks.length === 0) return '07:30';
+  const lastEnd = contentBlocks[contentBlocks.length - 1].end_time;
+  const lastEndMins = timeToMinutes(lastEnd);
+  // If we have hit lunch zone, jump to after lunch
+  if (lastEndMins >= 12 * 60 && lastEndMins < 13 * 60) return '13:00';
   return lastEnd;
+}
+
+function getBlockSortOrderFromName(blockName: string, blockType: string, currentCount: number): number {
+  const name = blockName.toLowerCase();
+  if (name.includes('roll call')) return 0;
+  if (name === 'lunch') return 500;
+  if (name.includes('closeout')) return 999;
+  if (blockType === 'group_testing') return 998;
+  return currentCount + 1;
 }
 
 function getTotalMinutes(dayPlacements: Placement[]): number {
@@ -446,10 +604,8 @@ function DayCard({
 }) {
   const dayInWeek = (dayNumber - 1) % 3;
   const totalMinutes = getTotalMinutes(placements);
-  const sorted = [...placements].sort((a, b) => {
-    if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order;
-    return a.start_time.localeCompare(b.start_time);
-  });
+  // Recalculate times enforcing: roll call > content > lunch@12:00 > content > group testing > closeout
+  const sorted = recalculateDayTimes(placements);
 
   return (
     <div
@@ -1114,7 +1270,7 @@ export default function CoursePlannerPage() {
           confirmed_at: null,
           custom_title: null,
           custom_notes: null,
-          sort_order: dayPlacements.length,
+          sort_order: getBlockSortOrderFromName(block.name, block.block_type, dayPlacements.length),
           content_block: block,
         };
         setPlacements(prev => [...prev, tempPlacement]);
@@ -1162,7 +1318,7 @@ export default function CoursePlannerPage() {
                   date: getDayDate(instance.start_date, dayNumber),
                   start_time: newStartTime,
                   end_time: addMinutesToTime(newStartTime, p.duration_min),
-                  sort_order: dayPlacements.length,
+                  sort_order: getBlockSortOrderFromName(sourcePlacement.content_block.name, sourcePlacement.content_block.block_type, dayPlacements.length),
                 }
               : p
           )
