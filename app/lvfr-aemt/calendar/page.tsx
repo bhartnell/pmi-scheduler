@@ -18,8 +18,11 @@ import {
   Save,
   LayoutGrid,
   List,
+  Users,
   X,
 } from 'lucide-react';
+import WeekStripView from '@/components/lvfr/WeekStripView';
+import type { GridDay, Instructor } from '@/components/lvfr/WeekStripView';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -92,11 +95,13 @@ export default function LVFRCalendarPage() {
   const [expandedDay, setExpandedDay] = useState<number | null>(null);
   const [editingNotes, setEditingNotes] = useState<Record<number, string>>({});
   const [saving, setSaving] = useState<number | null>(null);
-  const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
+  const [viewMode, setViewMode] = useState<'calendar' | 'list' | 'coverage'>('calendar');
   const [currentMonth, setCurrentMonth] = useState(6); // 0-indexed: 6 = July
   const [currentYear] = useState(2026);
   const [coverage, setCoverage] = useState<CoverageInfo[]>([]);
   const [selectedCalDay, setSelectedCalDay] = useState<CourseDay | null>(null);
+  const [schedulingGrid, setSchedulingGrid] = useState<GridDay[]>([]);
+  const [schedulingInstructors, setSchedulingInstructors] = useState<Instructor[]>([]);
 
   const isInstructor = ['superadmin', 'admin', 'lead_instructor', 'instructor', 'agency_liaison'].includes(userRole);
 
@@ -127,23 +132,28 @@ export default function LVFRCalendarPage() {
     }
   }, []);
 
-  // Fetch coverage data for calendar overlay
-  const fetchCoverage = useCallback(async () => {
+  // Fetch scheduling data for coverage overlay + week strip view
+  const fetchSchedulingData = useCallback(async () => {
     try {
       const res = await fetch('/api/lvfr-aemt/scheduling');
       if (res.ok) {
         const data = await res.json();
+        // Store full grid + instructors for WeekStripView
+        setSchedulingGrid(data.grid || []);
+        setSchedulingInstructors(data.instructors || []);
+        // Derive coverage dots for calendar view
         const coverageData: CoverageInfo[] = [];
-        for (const day of data.days || []) {
-          const dayAvail = (data.availability || []).filter(
-            (a: { date: string; am1_available: boolean }) =>
-              a.date?.split('T')[0] === day.date?.split('T')[0] && a.am1_available
+        for (const day of data.grid || []) {
+          const minBlock = Math.min(
+            day.blockCounts?.am1 ?? 0,
+            day.blockCounts?.mid ?? 0,
+            day.blockCounts?.pm1 ?? 0,
+            day.blockCounts?.pm2 ?? 0
           );
-          const assignment = (data.assignments || {})[day.day_number];
           coverageData.push({
             date: day.date?.split('T')[0] || day.date,
-            availableCount: dayAvail.length,
-            minRequired: assignment?.min_instructors || 1,
+            availableCount: minBlock,
+            minRequired: day.minInstructors || 1,
           });
         }
         setCoverage(coverageData);
@@ -158,8 +168,8 @@ export default function LVFRCalendarPage() {
   }, [fetchData]);
 
   useEffect(() => {
-    if (isInstructor) fetchCoverage();
-  }, [isInstructor, fetchCoverage]);
+    if (isInstructor) fetchSchedulingData();
+  }, [isInstructor, fetchSchedulingData]);
 
   const markDayComplete = async (dayNumber: number, chaptersCompleted: string[]) => {
     setSaving(dayNumber);
@@ -285,6 +295,17 @@ export default function LVFRCalendarPage() {
               >
                 <List className="h-4 w-4" />
                 List
+              </button>
+              <button
+                onClick={() => setViewMode('coverage')}
+                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                  viewMode === 'coverage'
+                    ? 'bg-white text-blue-600 shadow-sm dark:bg-gray-600 dark:text-blue-400'
+                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                }`}
+              >
+                <Users className="h-4 w-4" />
+                Coverage
               </button>
             </div>
           </div>
@@ -515,6 +536,27 @@ export default function LVFRCalendarPage() {
               </div>
             )}
           </>
+        )}
+
+        {/* ============================================================= */}
+        {/* COVERAGE VIEW (Week Strip)                                     */}
+        {/* ============================================================= */}
+        {viewMode === 'coverage' && isInstructor && (
+          <WeekStripView
+            grid={schedulingGrid}
+            instructors={schedulingInstructors}
+            onRefresh={() => {
+              fetchData();
+              fetchSchedulingData();
+            }}
+            isInstructor={isInstructor}
+          />
+        )}
+        {viewMode === 'coverage' && !isInstructor && (
+          <div className="rounded-xl border border-gray-200 bg-white p-8 text-center dark:border-gray-700 dark:bg-gray-800">
+            <Users className="mx-auto h-12 w-12 text-gray-300 dark:text-gray-600" />
+            <p className="mt-3 text-gray-500 dark:text-gray-400">Coverage view is available for instructors only.</p>
+          </div>
         )}
 
         {/* ============================================================= */}
