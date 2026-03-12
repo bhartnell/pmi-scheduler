@@ -404,6 +404,9 @@ function BlockBar({
   onRemove,
   onAssignInstructor,
   availableInstructors,
+  index,
+  onBlockDragOver,
+  onBlockDrop,
 }: {
   placement: Placement;
   violations: Violation[];
@@ -411,6 +414,9 @@ function BlockBar({
   onRemove: (id: string) => void;
   onAssignInstructor: (placementId: string, instructorId: string | null, instructorName: string | null) => void;
   availableInstructors: { id: string; name: string; email: string }[];
+  index: number;
+  onBlockDragOver?: (e: React.DragEvent, index: number) => void;
+  onBlockDrop?: (e: React.DragEvent, index: number) => void;
 }) {
   const [showMenu, setShowMenu] = useState(false);
   const [showInstructorDropdown, setShowInstructorDropdown] = useState(false);
@@ -441,8 +447,12 @@ function BlockBar({
     <div
       className={`group relative flex items-center gap-2 px-2 py-1.5 mb-1 rounded border-l-4 bg-white dark:bg-gray-800 border ${borderColor} ${hasViolation ? 'border-red-300 dark:border-red-700' : 'border-gray-200 dark:border-gray-700'} hover:shadow-sm transition-shadow ${!isReadOnly && !getFixedRole(block) ? 'cursor-grab active:cursor-grabbing' : getFixedRole(block) ? 'cursor-not-allowed opacity-80' : ''}`}
       style={{ borderLeftColor: hasViolation ? undefined : (block.color || '#9CA3AF') }}
-      draggable={!isReadOnly}
+      draggable={!isReadOnly && !getFixedRole(block)}
       onDragStart={(e) => {
+        if (getFixedRole(block)) {
+          e.preventDefault();
+          return;
+        }
         e.dataTransfer.setData('application/json', JSON.stringify({
           type: 'placement',
           placement: placement,
@@ -453,10 +463,25 @@ function BlockBar({
       onDragEnd={(e) => {
         (e.target as HTMLElement).style.opacity = '1';
       }}
+      onDragOver={(e) => {
+        if (getFixedRole(block)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        e.dataTransfer.dropEffect = 'move';
+        if (onBlockDragOver) onBlockDragOver(e, index);
+      }}
+      onDrop={(e) => {
+        if (getFixedRole(block)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (onBlockDrop) onBlockDrop(e, index);
+      }}
     >
       {/* Drag handle */}
       {!isReadOnly && (
-        <GripVertical className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 flex-shrink-0" />
+        getFixedRole(block)
+          ? <Shield className="w-3 h-3 text-gray-400 flex-shrink-0" />
+          : <GripVertical className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 flex-shrink-0" />
       )}
 
       {/* Time range */}
@@ -587,6 +612,8 @@ function DayCard({
   onRemovePlacement,
   onAssignInstructor,
   availableInstructors,
+  onBlockDragOver,
+  onBlockDrop,
 }: {
   dayNumber: number;
   date: string;
@@ -601,6 +628,8 @@ function DayCard({
   onRemovePlacement: (id: string) => void;
   onAssignInstructor: (placementId: string, instructorId: string | null, instructorName: string | null) => void;
   availableInstructors: { id: string; name: string; email: string }[];
+  onBlockDragOver?: (e: React.DragEvent, index: number) => void;
+  onBlockDrop?: (e: React.DragEvent, index: number) => void;
 }) {
   const dayInWeek = (dayNumber - 1) % 3;
   const totalMinutes = getTotalMinutes(placements);
@@ -644,7 +673,7 @@ function DayCard({
             {isDragOver ? 'Drop here' : 'No blocks scheduled'}
           </div>
         ) : (
-          sorted.map((placement) => (
+          sorted.map((placement, idx) => (
             <BlockBar
               key={placement.id}
               placement={placement}
@@ -653,6 +682,9 @@ function DayCard({
               onRemove={onRemovePlacement}
               onAssignInstructor={onAssignInstructor}
               availableInstructors={availableInstructors}
+              index={idx}
+              onBlockDragOver={onBlockDragOver}
+              onBlockDrop={onBlockDrop}
             />
           ))
         )}
@@ -1233,7 +1265,7 @@ export default function CoursePlannerPage() {
     fetchPlanData(instanceId);
   }, [fetchPlanData]);
 
-  const handleDrop = useCallback(async (dayNumber: number, e: React.DragEvent) => {
+  const handleDrop = useCallback(async (dayNumber: number, e: React.DragEvent, dropIndex?: number) => {
     e.preventDefault();
     dragCounters.current[dayNumber] = 0;
     setDropTargetDay(null);
@@ -1244,15 +1276,15 @@ export default function CoursePlannerPage() {
       const data = JSON.parse(e.dataTransfer.getData('application/json'));
 
       if (data.type === 'library') {
-        // Add block from library to day
+        // ── Add block from sidebar library onto a day ──
         const block: ContentBlock = data.block;
         const dayPlacements = placementsByDay.get(dayNumber) || [];
         const startTime = getNextAvailableTime(dayPlacements);
         const endTime = addMinutesToTime(startTime, block.duration_min);
+        const newSortOrder = getBlockSortOrderFromName(block.name, block.block_type, dayPlacements.length);
 
         setSaving(true);
 
-        // Optimistic update
         const tempId = 'temp-' + Date.now();
         const tempPlacement: Placement = {
           id: tempId,
@@ -1270,7 +1302,7 @@ export default function CoursePlannerPage() {
           confirmed_at: null,
           custom_title: null,
           custom_notes: null,
-          sort_order: getBlockSortOrderFromName(block.name, block.block_type, dayPlacements.length),
+          sort_order: newSortOrder,
           content_block: block,
         };
         setPlacements(prev => [...prev, tempPlacement]);
@@ -1284,6 +1316,7 @@ export default function CoursePlannerPage() {
             day_number: dayNumber,
             start_time: startTime,
             end_time: endTime,
+            sort_order: newSortOrder,
           }),
         });
 
@@ -1302,12 +1335,69 @@ export default function CoursePlannerPage() {
         }
       } else if (data.type === 'placement') {
         const sourcePlacement: Placement = data.placement;
-        if (sourcePlacement.day_number === dayNumber) return;
 
+        // Skip if dragging a fixed block
+        if (getFixedRole(sourcePlacement.content_block)) return;
+
+        // ── Within-day reorder ──
+        if (sourcePlacement.day_number === dayNumber) {
+          if (dropIndex === undefined) return; // No position info from day-level drop
+
+          const dayPlacements = placementsByDay.get(dayNumber) || [];
+          const sorted = recalculateDayTimes(dayPlacements);
+          const regularBlocks = sorted.filter(p => !getFixedRole(p.content_block));
+          const currentIdx = regularBlocks.findIndex(p => p.id === sourcePlacement.id);
+          if (currentIdx === -1 || currentIdx === dropIndex) return;
+
+          // Reorder: remove from current position, insert at dropIndex
+          const reordered = [...regularBlocks];
+          const [moved] = reordered.splice(currentIdx, 1);
+          reordered.splice(dropIndex > currentIdx ? dropIndex - 1 : dropIndex, 0, moved);
+
+          // Assign new sort_orders
+          const sortUpdates = reordered.map((p, i) => ({
+            id: p.id,
+            sort_order: i + 1,
+          }));
+
+          // Optimistic update
+          setSaving(true);
+          setPlacements(prev => prev.map(p => {
+            const update = sortUpdates.find(u => u.id === p.id);
+            return update ? { ...p, sort_order: update.sort_order } : p;
+          }));
+
+          // Persist sort_order changes
+          try {
+            await Promise.all(sortUpdates.map(u =>
+              fetch('/api/lvfr-aemt/planner/placements/move', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  placement_id: u.id,
+                  new_sort_order: u.sort_order,
+                }),
+              })
+            ));
+          } catch {
+            // Revert on failure - refetch from server
+            fetchPlanData(instance.id);
+          }
+
+          setSaving(false);
+          return;
+        }
+
+        // ── Cross-day move ──
         setSaving(true);
 
         const dayPlacements = placementsByDay.get(dayNumber) || [];
         const newStartTime = getNextAvailableTime(dayPlacements);
+        const newSortOrder = getBlockSortOrderFromName(
+          sourcePlacement.content_block.name,
+          sourcePlacement.content_block.block_type,
+          dayPlacements.length
+        );
 
         setPlacements(prev =>
           prev.map(p =>
@@ -1318,7 +1408,7 @@ export default function CoursePlannerPage() {
                   date: getDayDate(instance.start_date, dayNumber),
                   start_time: newStartTime,
                   end_time: addMinutesToTime(newStartTime, p.duration_min),
-                  sort_order: getBlockSortOrderFromName(sourcePlacement.content_block.name, sourcePlacement.content_block.block_type, dayPlacements.length),
+                  sort_order: newSortOrder,
                 }
               : p
           )
@@ -1361,7 +1451,7 @@ export default function CoursePlannerPage() {
     } finally {
       setSaving(false);
     }
-  }, [instance, isReadOnly, placementsByDay]);
+  }, [instance, isReadOnly, placementsByDay, fetchPlanData]);
 
   const handleRemovePlacement = useCallback(async (placementId: string) => {
     if (isReadOnly) return;
@@ -1539,6 +1629,18 @@ export default function CoursePlannerPage() {
     handleDrop(dayNumber, e);
   }, [handleDrop]);
 
+  // Per-block drag over handler (for within-day reorder)
+  const makeBlockDragOver = useCallback((_dayNumber: number) =>
+    (_e: React.DragEvent, _index: number) => {
+      // Visual drop indicator placeholder
+    }, []);
+
+  // Per-block drop handler (provides drop index for within-day reorder)
+  const makeBlockDrop = useCallback((dayNumber: number) =>
+    (e: React.DragEvent, index: number) => {
+      handleDrop(dayNumber, e, index);
+    }, [handleDrop]);
+
   // ─── Render ────────────────────────────────────────────────────────────────
 
   if (loading) {
@@ -1711,6 +1813,8 @@ export default function CoursePlannerPage() {
                 onRemovePlacement={handleRemovePlacement}
                 onAssignInstructor={handleAssignInstructor}
                 availableInstructors={uniqueInstructors}
+                onBlockDragOver={makeBlockDragOver(dayNumber)}
+                onBlockDrop={makeBlockDrop(dayNumber)}
               />
             );
           })}
