@@ -535,97 +535,98 @@ export default function LVFRCalendarPage() {
                             return order[a.level] - order[b.level];
                           });
 
-                        const assignedCount = (primary ? 1 : 0) + (secondary ? 1 : 0);
-                        const isCovered = assignedCount >= minNeeded;
+                        // Coverage based on AVAILABILITY (who can be there), not just formal assignments
+                        const availableFullOrPartial = availList.filter(i => i.level === 'full' || i.level === 'partial').length;
+                        const minBlockCount = cov?.availableCount ?? Math.min(
+                          gridDay?.blockCounts?.am1 ?? 0, gridDay?.blockCounts?.mid ?? 0,
+                          gridDay?.blockCounts?.pm1 ?? 0, gridDay?.blockCounts?.pm2 ?? 0
+                        );
+                        const isCovered = minBlockCount >= minNeeded;
+                        const isShort = !isCovered && minBlockCount > 0;
+
+                        // Split available instructors into "covering" (full/partial) and "unavailable"
+                        const coveringInstructors = availList.filter(i => i.level === 'full' || i.level === 'partial');
+                        const unavailableInstructors = availList.filter(i => i.level === 'unavailable');
 
                         return (
                           <div className="space-y-3">
-                            {/* Assigned Instructors */}
+                            {/* Coverage Status + Who's There */}
                             <div className={`rounded-lg p-3 ${
                               isCovered
                                 ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
+                                : isShort
+                                ? 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800'
                                 : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
                             }`}>
                               <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
                                   <Users className="h-4 w-4" />
-                                  Assigned ({assignedCount}/{minNeeded} needed)
+                                  Coverage ({availableFullOrPartial}/{minNeeded} needed)
                                 </div>
                                 {isCovered ? (
                                   <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400">Covered</span>
+                                ) : isShort ? (
+                                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400">Short</span>
                                 ) : (
-                                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400">Needs Coverage</span>
+                                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400">No Coverage</span>
                                 )}
                               </div>
-                              <div className="space-y-1.5">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-xs font-medium text-gray-400 dark:text-gray-500 w-6">P</span>
-                                  {primary ? (
-                                    <span className="flex items-center gap-2">
-                                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold text-white"
-                                        style={{ backgroundColor: `hsl(${emailToHue(primary.email)}, 55%, 45%)` }}>
-                                        {getInitials(primary.name)}
-                                      </span>
-                                      <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{primary.name}</span>
-                                    </span>
-                                  ) : (
-                                    <span className="text-sm italic text-gray-400 dark:text-gray-500">Not assigned</span>
-                                  )}
-                                </div>
-                                {(minNeeded > 1 || secondary) && (
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-xs font-medium text-gray-400 dark:text-gray-500 w-6">S</span>
-                                    {secondary ? (
-                                      <span className="flex items-center gap-2">
-                                        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold text-white"
-                                          style={{ backgroundColor: `hsl(${emailToHue(secondary.email)}, 55%, 45%)` }}>
-                                          {getInitials(secondary.name)}
+
+                              {/* Instructors covering this day */}
+                              {coveringInstructors.length > 0 ? (
+                                <div className="space-y-1.5">
+                                  {coveringInstructors.map((inst) => {
+                                    const isPrimary = inst.id === primaryId;
+                                    const isSecondary = inst.id === secondaryId;
+                                    const blocksAvail = inst.blocks
+                                      ? [inst.blocks.am1, inst.blocks.mid, inst.blocks.pm1, inst.blocks.pm2].filter(Boolean).length
+                                      : 0;
+                                    return (
+                                      <div key={inst.id} className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold text-white"
+                                            style={{ backgroundColor: `hsl(${emailToHue(inst.email)}, 55%, 45%)` }}>
+                                            {getInitials(inst.name)}
+                                          </span>
+                                          <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{inst.name}</span>
+                                          {isPrimary && <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400">Lead</span>}
+                                          {isSecondary && <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400">2nd</span>}
+                                        </div>
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                                          {inst.level === 'full' ? 'All day' : blocksAvail + '/4 blocks'}
                                         </span>
-                                        <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{secondary.name}</span>
-                                      </span>
-                                    ) : (
-                                      <span className="text-sm italic text-gray-400 dark:text-gray-500">Not assigned</span>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              ) : (
+                                <p className="text-sm italic text-gray-400 dark:text-gray-500">No instructors available</p>
+                              )}
+
                               {notes && (
                                 <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 border-t border-gray-200 dark:border-gray-600 pt-2">{notes}</p>
                               )}
                             </div>
 
-                            {/* Available Instructors */}
-                            <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3">
-                              <div className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
-                                Available This Day
-                              </div>
-                              <div className="space-y-1">
-                                {availList.map(inst => {
-                                  const dotColor = inst.level === 'full' ? 'bg-green-500' : inst.level === 'partial' ? 'bg-yellow-500' : 'bg-gray-400';
-                                  const blocksAvail = inst.blocks
-                                    ? [inst.blocks.am1, inst.blocks.mid, inst.blocks.pm1, inst.blocks.pm2].filter(Boolean).length
-                                    : 0;
-                                  const labelText = inst.level === 'full' ? 'All day' : inst.level === 'partial' ? blocksAvail + '/4 blocks' : 'Unavailable';
-                                  return (
-                                    <div key={inst.id} className="flex items-center justify-between">
-                                      <div className="flex items-center gap-2">
-                                        <span className={`inline-block h-2 w-2 rounded-full ${dotColor}`} />
-                                        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold text-white"
-                                          style={{ backgroundColor: `hsl(${emailToHue(inst.email)}, 55%, 45%)` }}>
-                                          {getInitials(inst.name)}
-                                        </span>
-                                        <span className={`text-sm ${inst.level === 'unavailable' ? 'text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300'}`}>
-                                          {inst.name}
-                                        </span>
-                                      </div>
-                                      <span className={`text-xs ${inst.level === 'unavailable' ? 'text-gray-400 dark:text-gray-500' : 'text-gray-500 dark:text-gray-400'}`}>
-                                        {labelText}
+                            {/* Unavailable instructors (collapsed/subtle) */}
+                            {unavailableInstructors.length > 0 && (
+                              <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+                                <div className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-2">
+                                  Unavailable ({unavailableInstructors.length})
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                  {unavailableInstructors.map(inst => (
+                                    <div key={inst.id} className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500">
+                                      <span className="inline-flex h-4 w-4 items-center justify-center rounded-full text-[8px] font-bold text-white opacity-50"
+                                        style={{ backgroundColor: `hsl(${emailToHue(inst.email)}, 55%, 45%)` }}>
+                                        {getInitials(inst.name)}
                                       </span>
+                                      {inst.name.split(' ')[0]}
                                     </div>
-                                  );
-                                })}
+                                  ))}
+                                </div>
                               </div>
-                            </div>
+                            )}
                           </div>
                         );
                       })()}
