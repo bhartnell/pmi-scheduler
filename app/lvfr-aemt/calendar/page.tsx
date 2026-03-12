@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import WeekStripView from '@/components/lvfr/WeekStripView';
 import type { GridDay, Instructor } from '@/components/lvfr/WeekStripView';
+import { getInitials, emailToHue, getAvailabilityLevel } from '@/lib/lvfr-utils';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -229,7 +230,26 @@ export default function LVFRCalendarPage() {
     return map;
   }, [coverage]);
 
-  // Course month range: July (6) to September (8) 2026
+  // Lookup from scheduling grid by date for rich day detail panel
+  const gridByDate = useMemo(() => {
+    const map: Record<string, GridDay> = {};
+    for (const g of schedulingGrid) {
+      const d = g.date?.split('T')[0] || g.date;
+      map[d] = g;
+    }
+    return map;
+  }, [schedulingGrid]);
+
+  // Instructor name lookup
+  const instructorMap = useMemo(() => {
+    const map: Record<string, Instructor> = {};
+    for (const inst of schedulingInstructors) {
+      map[inst.id] = inst;
+    }
+    return map;
+  }, [schedulingInstructors]);
+
+    // Course month range: July (6) to September (8) 2026
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'];
 
@@ -489,18 +509,122 @@ export default function LVFRCalendarPage() {
                           )}
                         </div>
                       )}
-                      {isInstructor && coverageByDate[selectedCalDay.date?.split('T')[0] || selectedCalDay.date] && (() => {
-                        const cov = coverageByDate[selectedCalDay.date?.split('T')[0] || selectedCalDay.date];
+{/* Instructor Coverage Detail */}
+                      {isInstructor && (() => {
+                        const dateKey = selectedCalDay.date?.split('T')[0] || selectedCalDay.date;
+                        const gridDay = gridByDate[dateKey];
+                        const cov = coverageByDate[dateKey];
+                        if (!gridDay && !cov) return null;
+
+                        const primaryId = gridDay?.assignment?.primary_instructor_id;
+                        const secondaryId = gridDay?.assignment?.secondary_instructor_id;
+                        const primary = primaryId ? instructorMap[primaryId] : null;
+                        const secondary = secondaryId ? instructorMap[secondaryId] : null;
+                        const minNeeded = gridDay?.minInstructors || cov?.minRequired || 1;
+                        const notes = gridDay?.assignment?.notes;
+
+                        // Build availability list sorted: full > partial > unavailable
+                        const availList = schedulingInstructors
+                          .map(inst => ({
+                            ...inst,
+                            blocks: gridDay?.perInstructor?.[inst.id],
+                            level: getAvailabilityLevel(gridDay?.perInstructor?.[inst.id]),
+                          }))
+                          .sort((a, b) => {
+                            const order: Record<string, number> = { full: 0, partial: 1, unavailable: 2 };
+                            return order[a.level] - order[b.level];
+                          });
+
+                        const assignedCount = (primary ? 1 : 0) + (secondary ? 1 : 0);
+                        const isCovered = assignedCount >= minNeeded;
+
                         return (
-                          <div className={`rounded-lg p-3 ${
-                            cov.availableCount >= cov.minRequired
-                              ? 'bg-green-50 dark:bg-green-900/20'
-                              : cov.availableCount > 0
-                              ? 'bg-yellow-50 dark:bg-yellow-900/20'
-                              : 'bg-red-50 dark:bg-red-900/20'
-                          }`}>
-                            <div className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                              Coverage: {cov.availableCount} / {cov.minRequired} instructors
+                          <div className="space-y-3">
+                            {/* Assigned Instructors */}
+                            <div className={`rounded-lg p-3 ${
+                              isCovered
+                                ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
+                                : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
+                            }`}>
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                  <Users className="h-4 w-4" />
+                                  Assigned ({assignedCount}/{minNeeded} needed)
+                                </div>
+                                {isCovered ? (
+                                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400">Covered</span>
+                                ) : (
+                                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400">Needs Coverage</span>
+                                )}
+                              </div>
+                              <div className="space-y-1.5">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-medium text-gray-400 dark:text-gray-500 w-6">P</span>
+                                  {primary ? (
+                                    <span className="flex items-center gap-2">
+                                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold text-white"
+                                        style={{ backgroundColor: `hsl(${emailToHue(primary.email)}, 55%, 45%)` }}>
+                                        {getInitials(primary.name)}
+                                      </span>
+                                      <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{primary.name}</span>
+                                    </span>
+                                  ) : (
+                                    <span className="text-sm italic text-gray-400 dark:text-gray-500">Not assigned</span>
+                                  )}
+                                </div>
+                                {(minNeeded > 1 || secondary) && (
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xs font-medium text-gray-400 dark:text-gray-500 w-6">S</span>
+                                    {secondary ? (
+                                      <span className="flex items-center gap-2">
+                                        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold text-white"
+                                          style={{ backgroundColor: `hsl(${emailToHue(secondary.email)}, 55%, 45%)` }}>
+                                          {getInitials(secondary.name)}
+                                        </span>
+                                        <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{secondary.name}</span>
+                                      </span>
+                                    ) : (
+                                      <span className="text-sm italic text-gray-400 dark:text-gray-500">Not assigned</span>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                              {notes && (
+                                <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 border-t border-gray-200 dark:border-gray-600 pt-2">{notes}</p>
+                              )}
+                            </div>
+
+                            {/* Available Instructors */}
+                            <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+                              <div className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
+                                Available This Day
+                              </div>
+                              <div className="space-y-1">
+                                {availList.map(inst => {
+                                  const dotColor = inst.level === 'full' ? 'bg-green-500' : inst.level === 'partial' ? 'bg-yellow-500' : 'bg-gray-400';
+                                  const blocksAvail = inst.blocks
+                                    ? [inst.blocks.am1, inst.blocks.mid, inst.blocks.pm1, inst.blocks.pm2].filter(Boolean).length
+                                    : 0;
+                                  const labelText = inst.level === 'full' ? 'All day' : inst.level === 'partial' ? blocksAvail + '/4 blocks' : 'Unavailable';
+                                  return (
+                                    <div key={inst.id} className="flex items-center justify-between">
+                                      <div className="flex items-center gap-2">
+                                        <span className={`inline-block h-2 w-2 rounded-full ${dotColor}`} />
+                                        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold text-white"
+                                          style={{ backgroundColor: `hsl(${emailToHue(inst.email)}, 55%, 45%)` }}>
+                                          {getInitials(inst.name)}
+                                        </span>
+                                        <span className={`text-sm ${inst.level === 'unavailable' ? 'text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300'}`}>
+                                          {inst.name}
+                                        </span>
+                                      </div>
+                                      <span className={`text-xs ${inst.level === 'unavailable' ? 'text-gray-400 dark:text-gray-500' : 'text-gray-500 dark:text-gray-400'}`}>
+                                        {labelText}
+                                      </span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
                             </div>
                           </div>
                         );
