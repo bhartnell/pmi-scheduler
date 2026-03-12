@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import {
   Calendar,
@@ -13,8 +13,12 @@ import {
   AlertCircle,
   ChevronDown,
   ChevronRight,
+  ChevronLeft,
   TrendingUp,
   Save,
+  LayoutGrid,
+  List,
+  X,
 } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
@@ -69,6 +73,12 @@ interface PaceInfo {
   status: 'on_track' | 'slightly_behind' | 'behind';
 }
 
+interface CoverageInfo {
+  date: string;
+  availableCount: number;
+  minRequired: number;
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -82,6 +92,11 @@ export default function LVFRCalendarPage() {
   const [expandedDay, setExpandedDay] = useState<number | null>(null);
   const [editingNotes, setEditingNotes] = useState<Record<number, string>>({});
   const [saving, setSaving] = useState<number | null>(null);
+  const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
+  const [currentMonth, setCurrentMonth] = useState(6); // 0-indexed: 6 = July
+  const [currentYear] = useState(2026);
+  const [coverage, setCoverage] = useState<CoverageInfo[]>([]);
+  const [selectedCalDay, setSelectedCalDay] = useState<CourseDay | null>(null);
 
   const isInstructor = ['superadmin', 'admin', 'lead_instructor', 'instructor', 'agency_liaison'].includes(userRole);
 
@@ -112,9 +127,39 @@ export default function LVFRCalendarPage() {
     }
   }, []);
 
+  // Fetch coverage data for calendar overlay
+  const fetchCoverage = useCallback(async () => {
+    try {
+      const res = await fetch('/api/lvfr-aemt/scheduling');
+      if (res.ok) {
+        const data = await res.json();
+        const coverageData: CoverageInfo[] = [];
+        for (const day of data.days || []) {
+          const dayAvail = (data.availability || []).filter(
+            (a: { date: string; am1_available: boolean }) =>
+              a.date?.split('T')[0] === day.date?.split('T')[0] && a.am1_available
+          );
+          const assignment = (data.assignments || {})[day.day_number];
+          coverageData.push({
+            date: day.date?.split('T')[0] || day.date,
+            availableCount: dayAvail.length,
+            minRequired: assignment?.min_instructors || 1,
+          });
+        }
+        setCoverage(coverageData);
+      }
+    } catch {
+      // Coverage is optional — don't block the page
+    }
+  }, []);
+
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  useEffect(() => {
+    if (isInstructor) fetchCoverage();
+  }, [isInstructor, fetchCoverage]);
 
   const markDayComplete = async (dayNumber: number, chaptersCompleted: string[]) => {
     setSaving(dayNumber);
@@ -140,12 +185,46 @@ export default function LVFRCalendarPage() {
   const today = new Date().toISOString().split('T')[0];
   const nextDay = days.find(d => d.date >= today && d.status !== 'completed');
 
-  // Group by week
+  // Group by week for list view
   const weeks: Record<number, CourseDay[]> = {};
   for (const d of days) {
     if (!weeks[d.week_number]) weeks[d.week_number] = [];
     weeks[d.week_number].push(d);
   }
+
+  // Build lookup maps for calendar view
+  const daysByDate = useMemo(() => {
+    const map: Record<string, CourseDay> = {};
+    for (const d of days) {
+      const dateStr = d.date?.split('T')[0] || d.date;
+      map[dateStr] = d;
+    }
+    return map;
+  }, [days]);
+
+  const suppByDate = useMemo(() => {
+    const map: Record<string, SupplementaryDay> = {};
+    for (const s of supplementaryDays) {
+      const dateStr = s.date?.split('T')[0] || s.date;
+      map[dateStr] = s;
+    }
+    return map;
+  }, [supplementaryDays]);
+
+  const coverageByDate = useMemo(() => {
+    const map: Record<string, CoverageInfo> = {};
+    for (const c of coverage) {
+      map[c.date] = c;
+    }
+    return map;
+  }, [coverage]);
+
+  // Course month range: July (6) to September (8) 2026
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'];
+
+  const canGoBack = currentMonth > 6;
+  const canGoForward = currentMonth < 8;
 
   if (loading) {
     return (
@@ -160,25 +239,53 @@ export default function LVFRCalendarPage() {
       {/* Header */}
       <div className="border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
         <div className="mx-auto max-w-7xl px-4 py-4">
-          <div className="flex items-center gap-4">
-            <Link
-              href="/lvfr-aemt"
-              className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Link>
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-blue-100 p-2 dark:bg-blue-900/30">
-                <Calendar className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Link
+                href="/lvfr-aemt"
+                className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Link>
+              <div className="flex items-center gap-3">
+                <div className="rounded-lg bg-blue-100 p-2 dark:bg-blue-900/30">
+                  <Calendar className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+                    Course Calendar
+                  </h1>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    LVFR AEMT — 30 instruction days
+                  </p>
+                </div>
               </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-                  Course Calendar
-                </h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  LVFR AEMT — 30 instruction days
-                </p>
-              </div>
+            </div>
+
+            {/* View toggle */}
+            <div className="flex items-center rounded-lg border border-gray-200 bg-gray-100 dark:border-gray-600 dark:bg-gray-700">
+              <button
+                onClick={() => setViewMode('calendar')}
+                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                  viewMode === 'calendar'
+                    ? 'bg-white text-blue-600 shadow-sm dark:bg-gray-600 dark:text-blue-400'
+                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                }`}
+              >
+                <LayoutGrid className="h-4 w-4" />
+                Calendar
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                  viewMode === 'list'
+                    ? 'bg-white text-blue-600 shadow-sm dark:bg-gray-600 dark:text-blue-400'
+                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
+                }`}
+              >
+                <List className="h-4 w-4" />
+                List
+              </button>
             </div>
           </div>
         </div>
@@ -238,59 +345,237 @@ export default function LVFRCalendarPage() {
           </div>
         )}
 
-        {/* Calendar Grid by Week */}
-        {Object.entries(weeks)
-          .sort(([a], [b]) => Number(a) - Number(b))
-          .map(([weekNum, weekDays]) => (
-            <div key={weekNum} className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-              <div className="border-b border-gray-200 px-4 py-3 dark:border-gray-700">
-                <h2 className="font-semibold text-gray-900 dark:text-white">
-                  Week {weekNum}
-                </h2>
-              </div>
-              <div className="divide-y divide-gray-100 dark:divide-gray-700">
-                {weekDays.map((day) => (
-                  <DayRow
-                    key={day.day_number}
-                    day={day}
-                    isInstructor={isInstructor}
-                    isExpanded={expandedDay === day.day_number}
-                    onToggle={() => setExpandedDay(expandedDay === day.day_number ? null : day.day_number)}
-                    notes={editingNotes[day.day_number] || day.completion_notes || ''}
-                    onNotesChange={(v) => setEditingNotes(prev => ({ ...prev, [day.day_number]: v }))}
-                    onMarkComplete={() => markDayComplete(day.day_number, day.chapters_covered || [])}
-                    saving={saving === day.day_number}
-                    today={today}
-                  />
-                ))}
-              </div>
-            </div>
-          ))}
-
-        {/* Supplementary Days */}
-        {supplementaryDays.length > 0 && (
-          <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-            <div className="border-b border-gray-200 px-4 py-3 dark:border-gray-700">
-              <h2 className="font-semibold text-gray-900 dark:text-white">
-                Supplementary Sessions (Mondays)
+        {/* ============================================================= */}
+        {/* CALENDAR VIEW                                                  */}
+        {/* ============================================================= */}
+        {viewMode === 'calendar' && (
+          <>
+            {/* Month navigation */}
+            <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-800">
+              <button
+                onClick={() => canGoBack && setCurrentMonth(m => m - 1)}
+                disabled={!canGoBack}
+                className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed dark:text-gray-400 dark:hover:bg-gray-700"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+                {monthNames[currentMonth]} {currentYear}
               </h2>
+              <button
+                onClick={() => canGoForward && setCurrentMonth(m => m + 1)}
+                disabled={!canGoForward}
+                className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed dark:text-gray-400 dark:hover:bg-gray-700"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
             </div>
-            <div className="divide-y divide-gray-100 dark:divide-gray-700">
-              {supplementaryDays.map((s) => (
-                <div key={s.id} className="flex items-center gap-4 px-4 py-3 opacity-70">
-                  <div className="w-20 text-sm text-gray-500 dark:text-gray-400">
-                    {new Date(s.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+
+            {/* Calendar legend */}
+            <div className="flex flex-wrap gap-4 text-xs text-gray-500 dark:text-gray-400">
+              <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded bg-blue-100 border border-blue-300 dark:bg-blue-900/40 dark:border-blue-700" /> Content</span>
+              <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded bg-orange-100 border border-orange-300 dark:bg-orange-900/40 dark:border-orange-700" /> Lab Day</span>
+              <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded bg-red-100 border border-red-300 dark:bg-red-900/40 dark:border-red-700" /> Exam Day</span>
+              <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded bg-gray-100 border border-gray-300 dark:bg-gray-700 dark:border-gray-600" /> Supplementary</span>
+              {isInstructor && (
+                <>
+                  <span className="flex items-center gap-1"><span className="inline-block w-2.5 h-2.5 rounded-full bg-green-500" /> Covered</span>
+                  <span className="flex items-center gap-1"><span className="inline-block w-2.5 h-2.5 rounded-full bg-yellow-500" /> Short</span>
+                  <span className="flex items-center gap-1"><span className="inline-block w-2.5 h-2.5 rounded-full bg-red-500" /> Gap</span>
+                </>
+              )}
+            </div>
+
+            {/* Monthly Grid */}
+            <MonthGrid
+              month={currentMonth}
+              year={currentYear}
+              daysByDate={daysByDate}
+              suppByDate={suppByDate}
+              coverageByDate={coverageByDate}
+              today={today}
+              isInstructor={isInstructor}
+              selectedDay={selectedCalDay}
+              onSelectDay={setSelectedCalDay}
+            />
+
+            {/* Selected Day Detail Panel */}
+            {selectedCalDay && (
+              <div className="rounded-xl border border-blue-200 bg-white dark:border-blue-800 dark:bg-gray-800 overflow-hidden">
+                <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-700">
+                  <h3 className="font-semibold text-gray-900 dark:text-white">
+                    Day {selectedCalDay.day_number} — {selectedCalDay.title || selectedCalDay.chapters_covered?.join(', ') || 'No title'}
+                  </h3>
+                  <button onClick={() => setSelectedCalDay(null)} className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700">
+                    <X className="h-4 w-4 text-gray-400" />
+                  </button>
+                </div>
+                <div className="px-4 py-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div>
+                      <div className="mb-2 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                        <Calendar className="h-4 w-4" />
+                        {new Date(selectedCalDay.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                      </div>
+                      {selectedCalDay.module?.name && (
+                        <div className="mb-3 text-sm text-gray-500 dark:text-gray-400">
+                          Module: {selectedCalDay.module.name}
+                        </div>
+                      )}
+                      <h4 className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">Chapters Covered</h4>
+                      {selectedCalDay.chapters_covered?.length > 0 ? (
+                        <ul className="space-y-1">
+                          {selectedCalDay.chapters_covered.map((ch) => (
+                            <li key={ch} className="text-sm text-gray-600 dark:text-gray-400">{ch}</li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-sm text-gray-400">No chapters listed</p>
+                      )}
+                    </div>
+                    <div className="space-y-3">
+                      {selectedCalDay.has_lab && (
+                        <div className="rounded-lg bg-orange-50 p-3 dark:bg-orange-900/20">
+                          <div className="flex items-center gap-2 text-sm font-semibold text-orange-700 dark:text-orange-400">
+                            <Beaker className="h-4 w-4" /> Lab Session
+                          </div>
+                          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{selectedCalDay.lab_name || 'Lab session scheduled'}</p>
+                        </div>
+                      )}
+                      {selectedCalDay.has_exam && (
+                        <div className="rounded-lg bg-red-50 p-3 dark:bg-red-900/20">
+                          <div className="flex items-center gap-2 text-sm font-semibold text-red-700 dark:text-red-400">
+                            <FileText className="h-4 w-4" /> Assessment
+                          </div>
+                          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{selectedCalDay.exam_name || 'Exam scheduled'}</p>
+                        </div>
+                      )}
+                      {selectedCalDay.has_quiz && selectedCalDay.quiz_chapters?.length > 0 && (
+                        <div className="rounded-lg bg-purple-50 p-3 dark:bg-purple-900/20">
+                          <div className="flex items-center gap-2 text-sm font-semibold text-purple-700 dark:text-purple-400">
+                            <BookOpen className="h-4 w-4" /> Quiz
+                          </div>
+                          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">Covers: {selectedCalDay.quiz_chapters.join(', ')}</p>
+                        </div>
+                      )}
+                      {selectedCalDay.status === 'completed' && (
+                        <div className="rounded-lg bg-green-50 p-3 dark:bg-green-900/20">
+                          <div className="flex items-center gap-2 text-sm font-semibold text-green-700 dark:text-green-400">
+                            <CheckCircle2 className="h-4 w-4" /> Completed
+                          </div>
+                          {selectedCalDay.completion_notes && (
+                            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{selectedCalDay.completion_notes}</p>
+                          )}
+                        </div>
+                      )}
+                      {isInstructor && coverageByDate[selectedCalDay.date?.split('T')[0] || selectedCalDay.date] && (() => {
+                        const cov = coverageByDate[selectedCalDay.date?.split('T')[0] || selectedCalDay.date];
+                        return (
+                          <div className={`rounded-lg p-3 ${
+                            cov.availableCount >= cov.minRequired
+                              ? 'bg-green-50 dark:bg-green-900/20'
+                              : cov.availableCount > 0
+                              ? 'bg-yellow-50 dark:bg-yellow-900/20'
+                              : 'bg-red-50 dark:bg-red-900/20'
+                          }`}>
+                            <div className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                              Coverage: {cov.availableCount} / {cov.minRequired} instructors
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
                   </div>
-                  <div className="flex-1 text-sm text-gray-700 dark:text-gray-300">
-                    {s.title}
-                  </div>
-                  {s.instructor && (
-                    <span className="text-xs text-gray-400">{s.instructor}</span>
+
+                  {/* Instructor mark complete */}
+                  {isInstructor && selectedCalDay.status !== 'completed' && (
+                    <div className="mt-4 border-t border-gray-200 pt-4 dark:border-gray-600">
+                      <div className="mb-3">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Completion Notes (optional)
+                        </label>
+                        <textarea
+                          value={editingNotes[selectedCalDay.day_number] || selectedCalDay.completion_notes || ''}
+                          onChange={(e) => setEditingNotes(prev => ({ ...prev, [selectedCalDay.day_number]: e.target.value }))}
+                          rows={2}
+                          className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-900 dark:text-white"
+                          placeholder="Any modifications or notes about this day..."
+                        />
+                      </div>
+                      <button
+                        onClick={() => markDayComplete(selectedCalDay.day_number, selectedCalDay.chapters_covered || [])}
+                        disabled={saving === selectedCalDay.day_number}
+                        className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                      >
+                        {saving === selectedCalDay.day_number ? 'Saving...' : <><Save className="h-4 w-4" /> Mark Day Complete</>}
+                      </button>
+                    </div>
                   )}
                 </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ============================================================= */}
+        {/* LIST VIEW                                                      */}
+        {/* ============================================================= */}
+        {viewMode === 'list' && (
+          <>
+            {Object.entries(weeks)
+              .sort(([a], [b]) => Number(a) - Number(b))
+              .map(([weekNum, weekDays]) => (
+                <div key={weekNum} className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+                  <div className="border-b border-gray-200 px-4 py-3 dark:border-gray-700">
+                    <h2 className="font-semibold text-gray-900 dark:text-white">
+                      Week {weekNum}
+                    </h2>
+                  </div>
+                  <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                    {weekDays.map((day) => (
+                      <DayRow
+                        key={day.day_number}
+                        day={day}
+                        isInstructor={isInstructor}
+                        isExpanded={expandedDay === day.day_number}
+                        onToggle={() => setExpandedDay(expandedDay === day.day_number ? null : day.day_number)}
+                        notes={editingNotes[day.day_number] || day.completion_notes || ''}
+                        onNotesChange={(v) => setEditingNotes(prev => ({ ...prev, [day.day_number]: v }))}
+                        onMarkComplete={() => markDayComplete(day.day_number, day.chapters_covered || [])}
+                        saving={saving === day.day_number}
+                        today={today}
+                      />
+                    ))}
+                  </div>
+                </div>
               ))}
-            </div>
-          </div>
+
+            {/* Supplementary Days */}
+            {supplementaryDays.length > 0 && (
+              <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+                <div className="border-b border-gray-200 px-4 py-3 dark:border-gray-700">
+                  <h2 className="font-semibold text-gray-900 dark:text-white">
+                    Supplementary Sessions (Mondays)
+                  </h2>
+                </div>
+                <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                  {supplementaryDays.map((s) => (
+                    <div key={s.id} className="flex items-center gap-4 px-4 py-3 opacity-70">
+                      <div className="w-20 text-sm text-gray-500 dark:text-gray-400">
+                        {new Date(s.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </div>
+                      <div className="flex-1 text-sm text-gray-700 dark:text-gray-300">
+                        {s.title}
+                      </div>
+                      {s.instructor && (
+                        <span className="text-xs text-gray-400">{s.instructor}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
@@ -298,7 +583,166 @@ export default function LVFRCalendarPage() {
 }
 
 // ---------------------------------------------------------------------------
-// Day Row Component
+// Month Grid Component
+// ---------------------------------------------------------------------------
+
+function MonthGrid({
+  month,
+  year,
+  daysByDate,
+  suppByDate,
+  coverageByDate,
+  today,
+  isInstructor,
+  selectedDay,
+  onSelectDay,
+}: {
+  month: number;
+  year: number;
+  daysByDate: Record<string, CourseDay>;
+  suppByDate: Record<string, SupplementaryDay>;
+  coverageByDate: Record<string, CoverageInfo>;
+  today: string;
+  isInstructor: boolean;
+  selectedDay: CourseDay | null;
+  onSelectDay: (d: CourseDay | null) => void;
+}) {
+  // Build calendar grid for the month
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  const startDow = firstDay.getDay(); // 0=Sun
+  const totalDays = lastDay.getDate();
+
+  const cells: Array<{ date: string; dayNum: number } | null> = [];
+
+  // Leading blanks
+  for (let i = 0; i < startDow; i++) cells.push(null);
+  // Days
+  for (let d = 1; d <= totalDays; d++) {
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    cells.push({ date: dateStr, dayNum: d });
+  }
+
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800 overflow-hidden">
+      {/* Day headers */}
+      <div className="grid grid-cols-7 border-b border-gray-200 dark:border-gray-700">
+        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+          <div key={d} className="px-1 py-2 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">
+            {d}
+          </div>
+        ))}
+      </div>
+
+      {/* Calendar cells */}
+      <div className="grid grid-cols-7">
+        {cells.map((cell, idx) => {
+          if (!cell) {
+            return <div key={`blank-${idx}`} className="min-h-[80px] sm:min-h-[100px] border-b border-r border-gray-100 dark:border-gray-700/50 bg-gray-50/50 dark:bg-gray-900/20" />;
+          }
+
+          const courseDay = daysByDate[cell.date];
+          const suppDay = suppByDate[cell.date];
+          const cov = coverageByDate[cell.date];
+          const isToday = cell.date === today;
+          const isSelected = selectedDay && courseDay && selectedDay.day_number === courseDay.day_number;
+
+          // Determine cell color
+          let cellBg = '';
+          let borderColor = '';
+          if (courseDay) {
+            if (courseDay.has_exam) {
+              cellBg = 'bg-red-50 dark:bg-red-900/20';
+              borderColor = 'border-red-200 dark:border-red-800';
+            } else if (courseDay.has_lab) {
+              cellBg = 'bg-orange-50 dark:bg-orange-900/20';
+              borderColor = 'border-orange-200 dark:border-orange-800';
+            } else {
+              cellBg = 'bg-blue-50 dark:bg-blue-900/20';
+              borderColor = 'border-blue-200 dark:border-blue-800';
+            }
+          } else if (suppDay) {
+            cellBg = 'bg-gray-100 dark:bg-gray-700/40';
+            borderColor = 'border-gray-300 dark:border-gray-600';
+          }
+
+          // Coverage dot
+          let covDot = '';
+          if (isInstructor && cov) {
+            if (cov.availableCount >= cov.minRequired) covDot = 'bg-green-500';
+            else if (cov.availableCount > 0) covDot = 'bg-yellow-500';
+            else covDot = 'bg-red-500';
+          }
+
+          const hasContent = courseDay || suppDay;
+
+          return (
+            <div
+              key={cell.date}
+              onClick={() => courseDay ? onSelectDay(isSelected ? null : courseDay) : undefined}
+              className={`min-h-[80px] sm:min-h-[100px] border-b border-r border-gray-100 dark:border-gray-700/50 p-1 sm:p-1.5 transition-colors ${cellBg} ${
+                hasContent && courseDay ? 'cursor-pointer hover:ring-2 hover:ring-blue-400 hover:ring-inset' : ''
+              } ${isSelected ? 'ring-2 ring-blue-500 ring-inset' : ''} ${
+                isToday ? 'ring-2 ring-blue-400 ring-inset' : ''
+              }`}
+            >
+              {/* Date number */}
+              <div className="flex items-start justify-between">
+                <span className={`text-xs font-medium ${
+                  isToday
+                    ? 'flex items-center justify-center w-5 h-5 rounded-full bg-blue-600 text-white'
+                    : hasContent
+                    ? 'text-gray-900 dark:text-white'
+                    : 'text-gray-400 dark:text-gray-600'
+                }`}>
+                  {cell.dayNum}
+                </span>
+                {covDot && <span className={`w-2 h-2 rounded-full ${covDot}`} />}
+              </div>
+
+              {/* Course day content */}
+              {courseDay && (
+                <div className="mt-0.5">
+                  <div className="flex items-center gap-1">
+                    <span className="text-[10px] font-bold text-gray-700 dark:text-gray-300">
+                      D{courseDay.day_number}
+                    </span>
+                    {courseDay.status === 'completed' && (
+                      <CheckCircle2 className="h-2.5 w-2.5 text-green-500" />
+                    )}
+                  </div>
+                  <div className="text-[10px] leading-tight text-gray-600 dark:text-gray-400 line-clamp-2 mt-0.5">
+                    {courseDay.title || courseDay.chapters_covered?.join(', ') || ''}
+                  </div>
+                  <div className="flex items-center gap-0.5 mt-0.5">
+                    {courseDay.has_lab && <Beaker className="h-2.5 w-2.5 text-orange-500" />}
+                    {courseDay.has_exam && <FileText className="h-2.5 w-2.5 text-red-500" />}
+                    {courseDay.has_quiz && <BookOpen className="h-2.5 w-2.5 text-purple-500" />}
+                  </div>
+                </div>
+              )}
+
+              {/* Supplementary day */}
+              {suppDay && !courseDay && (
+                <div className="mt-0.5">
+                  <div className="text-[10px] font-medium text-gray-500 dark:text-gray-400 leading-tight line-clamp-2">
+                    {suppDay.title}
+                  </div>
+                  {suppDay.instructor && (
+                    <div className="text-[9px] text-gray-400 mt-0.5">{suppDay.instructor}</div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Day Row Component (for list view)
 // ---------------------------------------------------------------------------
 
 function DayRow({
@@ -402,7 +846,6 @@ function DayRow({
       {isExpanded && (
         <div className="border-t border-gray-100 bg-gray-50/50 px-4 py-4 dark:border-gray-700 dark:bg-gray-800/50">
           <div className="grid gap-4 md:grid-cols-2">
-            {/* Chapters */}
             <div>
               <h4 className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
                 Chapters Covered
@@ -419,8 +862,6 @@ function DayRow({
                 <p className="text-sm text-gray-400">No chapters listed</p>
               )}
             </div>
-
-            {/* Details */}
             <div className="space-y-3">
               {day.has_lab && (
                 <div>
