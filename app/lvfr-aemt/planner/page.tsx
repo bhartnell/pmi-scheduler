@@ -161,12 +161,11 @@ function formatDate(dateStr: string): string {
 }
 
 // Identify fixed blocks by name (not block_type, since Roll Call and Closeout are both 'admin')
-function getFixedRole(block: ContentBlock): 'roll_call' | 'lunch' | 'closeout' | 'group_testing' | null {
+function getFixedRole(block: ContentBlock): 'roll_call' | 'lunch' | 'closeout' | null {
   const name = block.name.toLowerCase();
   if (name.includes('roll call')) return 'roll_call';
   if (name === 'lunch') return 'lunch';
   if (name.includes('closeout')) return 'closeout';
-  if (block.block_type === 'group_testing') return 'group_testing';
   return null;
 }
 
@@ -197,7 +196,6 @@ function recalculateDayTimes(dayPlacements: Placement[]): Placement[] {
   const rollCall = dayPlacements.filter(p => getFixedRole(p.content_block) === 'roll_call');
   const lunch = dayPlacements.filter(p => getFixedRole(p.content_block) === 'lunch');
   const closeout = dayPlacements.filter(p => getFixedRole(p.content_block) === 'closeout');
-  const groupTesting = dayPlacements.filter(p => getFixedRole(p.content_block) === 'group_testing');
   const regular = dayPlacements.filter(p => getFixedRole(p.content_block) === null);
 
   // Sort regular blocks by their existing sort_order, then start_time
@@ -275,19 +273,8 @@ function recalculateDayTimes(dayPlacements: Placement[]): Placement[] {
     currentTime = endTime;
   }
 
-  // 5. Group Testing (second-to-last, after regular content)
-  for (const p of groupTesting) {
-    const endTime = currentTime + p.duration_min;
-    result.push({
-      ...p,
-      start_time: minutesToTime(currentTime),
-      end_time: minutesToTime(endTime),
-      sort_order: 998,
-    });
-    currentTime = endTime;
-  }
 
-  // 6. Closeout (always last)
+  // 5. Closeout (always last)
   for (const p of closeout) {
     const endTime = currentTime + p.duration_min;
     result.push({
@@ -308,7 +295,7 @@ function getNextAvailableTime(dayPlacements: Placement[]): string {
   const recalced = recalculateDayTimes(dayPlacements);
   const contentBlocks = recalced.filter(p => {
     const role = getFixedRole(p.content_block);
-    return role !== 'lunch' && role !== 'closeout' && role !== 'group_testing';
+    return role !== 'lunch' && role !== 'closeout';
   });
   if (contentBlocks.length === 0) return '07:30';
   const lastEnd = contentBlocks[contentBlocks.length - 1].end_time;
@@ -323,7 +310,7 @@ function getBlockSortOrderFromName(blockName: string, blockType: string, current
   if (name.includes('roll call')) return 0;
   if (name === 'lunch') return 500;
   if (name.includes('closeout')) return 999;
-  if (blockType === 'group_testing') return 998;
+  if (blockType === 'group_testing') return currentCount + 50; // After regular content but movable
   return currentCount + 1;
 }
 
@@ -464,14 +451,12 @@ function BlockBar({
         (e.target as HTMLElement).style.opacity = '1';
       }}
       onDragOver={(e) => {
-        if (getFixedRole(block)) return;
         e.preventDefault();
         e.stopPropagation();
         e.dataTransfer.dropEffect = 'move';
         if (onBlockDragOver) onBlockDragOver(e, index);
       }}
       onDrop={(e) => {
-        if (getFixedRole(block)) return;
         e.preventDefault();
         e.stopPropagation();
         if (onBlockDrop) onBlockDrop(e, index);
