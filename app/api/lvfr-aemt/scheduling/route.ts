@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole, isAgencyRole } from '@/lib/permissions';
+import { getInstructorAvailability } from '@/lib/lvfr-availability';
 
 // ---------------------------------------------------------------------------
 // GET /api/lvfr-aemt/scheduling
 //
 // Full coverage grid data — all 30 days with per-instructor availability.
+// Uses dynamic calculation from lib/lvfr-availability.ts with manual overrides.
 // Instructor+ only (plus agency_liaison/agency_observer for read).
 // ---------------------------------------------------------------------------
 export async function GET(request: NextRequest) {
@@ -34,20 +36,6 @@ export async function GET(request: NextRequest) {
     .from('lvfr_aemt_instructor_assignments')
     .select('day_number, date, primary_instructor_id, secondary_instructor_id, additional_instructors, min_instructors, notes');
 
-  // Fetch instructor availability
-  let availQuery = supabase
-    .from('lvfr_aemt_instructor_availability')
-    .select('instructor_id, date, am1_available, mid_available, pm1_available, pm2_available, status, notes, source');
-
-  if (dayNumber) {
-    const dayData = (days || []).find(d => d.day_number === parseInt(dayNumber));
-    if (dayData) {
-      availQuery = availQuery.eq('date', dayData.date);
-    }
-  }
-
-  const { data: availability } = await availQuery;
-
   // Fetch LVFR instructors (agency_liaison with lvfr_aemt scope, plus regular instructors)
   const { data: instructors } = await supabase
     .from('lab_users')
@@ -61,23 +49,49 @@ export async function GET(request: NextRequest) {
     assignmentMap[a.day_number] = a;
   }
 
-  // Build availability map: instructorId → date → availability
+  // Build availability map from DYNAMIC CALCULATION (not static table)
   const availMap: Record<string, Record<string, {
     am1: boolean; mid: boolean; pm1: boolean; pm2: boolean; status: string;
   }>> = {};
-  for (const a of availability || []) {
-    if (!availMap[a.instructor_id]) availMap[a.instructor_id] = {};
-    availMap[a.instructor_id][a.date] = {
-      am1: a.am1_available,
-      mid: a.mid_available,
-      pm1: a.pm1_available,
-      pm2: a.pm2_available,
-      status: a.status,
+
+  for (const inst of instructors || []) {
+    availMap[inst.id] = {};
+    for (const day of days || []) {
+      const dateStr = typeof day.date === 'string' ? day.date.split('T')[0] : day.date;
+      const result = getInstructorAvailability(inst.name, new Date(dateStr + 'T12:00:00'));
+      if (result) {
+        availMap[inst.id][dateStr] = {
+          am1: result.blocks.am1,
+          mid: result.blocks.mid,
+          pm1: result.blocks.pm1,
+          pm2: result.blocks.pm2,
+          status: result.status,
+        };
+      }
+    }
+  }
+
+  // Layer manual overrides on top (manual_override rows take precedence)
+  const { data: overrides } = await supabase
+    .from('lvfr_aemt_instructor_availability')
+    .select('instructor_id, date, am1_available, mid_available, pm1_available, pm2_available, status')
+    .eq('source', 'manual_override');
+
+  for (const o of overrides || []) {
+    const dateStr = typeof o.date === 'string' ? o.date.split('T')[0] : o.date;
+    if (!availMap[o.instructor_id]) availMap[o.instructor_id] = {};
+    availMap[o.instructor_id][dateStr] = {
+      am1: o.am1_available,
+      mid: o.mid_available,
+      pm1: o.pm1_available,
+      pm2: o.pm2_available,
+      status: o.status,
     };
   }
 
   // Build coverage grid
   const grid = (days || []).map(day => {
+    const dateStr = typeof day.date === 'string' ? day.date.split('T')[0] : day.date;
     const assignment = assignmentMap[day.day_number];
     const minInstructors = assignment?.min_instructors || (day.has_lab ? 2 : 1);
 
@@ -86,7 +100,7 @@ export async function GET(request: NextRequest) {
     const perInstructor: Record<string, { am1: boolean; mid: boolean; pm1: boolean; pm2: boolean }> = {};
 
     for (const inst of instructors || []) {
-      const avail = availMap[inst.id]?.[day.date];
+      const avail = availMap[inst.id]?.[dateStr];
       if (avail) {
         perInstructor[inst.id] = {
           am1: avail.am1,
