@@ -2,7 +2,7 @@
 
 import { signOut, useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { Calendar, LogOut, Plus, ExternalLink, Eye, Trash2, Users, User } from 'lucide-react';
+import { Calendar, LogOut, Plus, ExternalLink, Eye, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { hasMinRole } from '@/lib/permissions';
@@ -16,10 +16,8 @@ export default function SchedulerHome() {
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
-  const [showAllPolls, setShowAllPolls] = useState(false);
+  const [showAllPolls, setShowAllPolls] = useState(true);
   const effectiveRole = useEffectiveRole(userRole);
-
-  const isAdmin = effectiveRole ? hasMinRole(effectiveRole, 'admin') : false;
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -39,36 +37,31 @@ export default function SchedulerHome() {
       // Fetch role for guard
       fetch('/api/instructor/me')
         .then(res => res.json())
-        .then(data => {
-          if (data.success && data.user?.role) {
-            setUserRole(data.user.role);
-            // Default to "All Polls" for admin+ roles
-            if (hasMinRole(data.user.role, 'admin')) {
-              setShowAllPolls(true);
-            }
-          }
-        })
+        .then(data => { if (data.success && data.user?.role) setUserRole(data.user.role); })
         .catch(() => {});
       fetchPolls();
     }
   }, [session]);
 
-  // Re-fetch when toggle changes
+  // Re-fetch when showAllPolls toggle changes
   useEffect(() => {
-    if (session?.user?.email) {
+    if (session?.user?.email && userRole) {
       fetchPolls();
     }
   }, [showAllPolls]);
 
   const fetchPolls = async () => {
-    setLoading(true);
+    // For admin/lead_instructor: show all polls by default
+    // For other roles: show only own polls
+    const isAdmin = userRole && hasMinRole(userRole, 'lead_instructor');
+
     let query = supabase
       .from('polls')
       .select('*')
       .order('created_at', { ascending: false });
 
-    // Only filter by creator if NOT showing all polls
-    if (!showAllPolls) {
+    // Only filter by creator for non-admin roles, or when admin chooses "My Polls"
+    if (!isAdmin || !showAllPolls) {
       query = query.eq('created_by', session?.user?.email);
     }
 
@@ -121,6 +114,8 @@ export default function SchedulerHome() {
     }
     return participantLink;
   };
+
+  const isAdmin = userRole && hasMinRole(userRole, 'lead_instructor');
 
   if (status === 'loading' || loading) {
     return (
@@ -177,30 +172,20 @@ export default function SchedulerHome() {
             <p className="text-gray-600 dark:text-gray-300">Create and manage availability polls</p>
           </div>
           <div className="flex items-center gap-3">
-            {/* My Polls / All Polls toggle for admin+ */}
+            {/* All Polls / My Polls toggle for admin+ */}
             {isAdmin && (
-              <div className="inline-flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden">
-                <button
-                  onClick={() => setShowAllPolls(false)}
-                  className={`px-3 py-2 text-sm font-medium flex items-center gap-1.5 ${
-                    !showAllPolls
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-                  }`}
-                >
-                  <User className="w-4 h-4" />
-                  My Polls
-                </button>
+              <div className="flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden text-sm">
                 <button
                   onClick={() => setShowAllPolls(true)}
-                  className={`px-3 py-2 text-sm font-medium flex items-center gap-1.5 ${
-                    showAllPolls
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
-                  }`}
+                  className={`px-3 py-2 ${showAllPolls ? 'bg-blue-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
                 >
-                  <Users className="w-4 h-4" />
                   All Polls
+                </button>
+                <button
+                  onClick={() => setShowAllPolls(false)}
+                  className={`px-3 py-2 ${!showAllPolls ? 'bg-blue-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+                >
+                  My Polls
                 </button>
               </div>
             )}
@@ -219,9 +204,7 @@ export default function SchedulerHome() {
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-8 text-center">
             <Calendar className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No polls yet</h3>
-            <p className="text-gray-600 dark:text-gray-300 mb-6">
-              {showAllPolls ? 'No polls have been created yet.' : 'Create your first scheduling poll to get started.'}
-            </p>
+            <p className="text-gray-600 dark:text-gray-300 mb-6">Create your first scheduling poll to get started.</p>
             <button
               onClick={() => router.push('/poll/create')}
               className="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
@@ -250,9 +233,10 @@ export default function SchedulerHome() {
                       }`}>
                         {poll.mode === 'individual' ? 'Individual' : 'Group'}
                       </span>
-                      {showAllPolls && poll.created_by && poll.created_by !== session.user?.email && (
-                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400">
-                          by {poll.created_by}
+                      {/* Show creator when viewing all polls */}
+                      {isAdmin && showAllPolls && poll.created_by && poll.created_by !== session?.user?.email && (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                          by {poll.created_by.split('@')[0]}
                         </span>
                       )}
                     </div>

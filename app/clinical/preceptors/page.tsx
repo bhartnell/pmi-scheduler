@@ -19,7 +19,7 @@ import {
   Copy,
   Building2
 } from 'lucide-react';
-import { canEditClinical, canAccessClinical, isSuperadmin, type Role } from '@/lib/permissions';
+import { canEditClinical, isSuperadmin, type Role } from '@/lib/permissions';
 import { parseDateSafe } from '@/lib/utils';
 import Breadcrumbs from '@/components/Breadcrumbs';
 

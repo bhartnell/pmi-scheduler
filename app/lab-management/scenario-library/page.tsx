@@ -27,7 +27,6 @@ import {
   Check,
   Loader2,
 } from 'lucide-react';
-import { canCreateScenarios } from '@/lib/permissions';
 
 // ---------------------------------------------------------------------------
 // Types

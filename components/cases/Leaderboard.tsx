@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Loader2, Trophy, Medal, Award, Users, Eye, EyeOff } from 'lucide-react';
+import { Trophy, Medal, Award, Users, Eye, EyeOff } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
 // Types

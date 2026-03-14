@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth } from '@/lib/api-auth';
-import { hasMinRole, type Role } from '@/lib/permissions';
+import { type Role } from '@/lib/permissions';
 
 // GET /api/lab-management/checklist-templates
 // List all templates, optionally filtered by station_type
