@@ -1,5 +1,6 @@
 'use client';
 
+import { formatCohortNumber } from '@/lib/format-cohort';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, Suspense, useMemo, useCallback, useRef } from 'react';
@@ -67,7 +68,7 @@ interface LabDayTemplate {
 
 interface Cohort {
   id: string;
-  cohort_number: number;
+  cohort_number: number | string;
   program: { abbreviation: string };
 }
 
@@ -173,7 +174,7 @@ interface Suggestion {
   week_offset: number | null;
   cohort: {
     id: string;
-    cohort_number: number;
+    cohort_number: number | string;
     program: { id: string; name: string; abbreviation: string };
   } | null;
   stations: SuggestionStation[];
@@ -658,7 +659,7 @@ function NewLabDayPageContent() {
     const cohortData = cohorts.find(c => c.id === selectedCohort);
     if (!cohortData) return 'Station';
 
-    const cohortAbbrev = `${cohortData.program.abbreviation}${cohortData.cohort_number}`;
+    const cohortAbbrev = `${cohortData.program.abbreviation}${formatCohortNumber(cohortData.cohort_number)}`;
 
     // Format date (e.g., "01/26/26")
     const dateStr = labDate ? new Date(labDate + 'T12:00:00').toLocaleDateString('en-US', {
@@ -1263,7 +1264,7 @@ function NewLabDayPageContent() {
                 <option value="">Select cohort...</option>
                 {cohorts.map(cohort => (
                   <option key={cohort.id} value={cohort.id}>
-                    {cohort.program.abbreviation} Group {cohort.cohort_number}
+                    {cohort.program.abbreviation} Group {formatCohortNumber(cohort.cohort_number)}
                   </option>
                 ))}
               </select>
@@ -1599,7 +1600,7 @@ function NewLabDayPageContent() {
                     </p>
                     {suggestions.map((suggestion) => {
                       const cohortLabel = suggestion.cohort
-                        ? `${suggestion.cohort.program.abbreviation} Group ${suggestion.cohort.cohort_number}`
+                        ? `${suggestion.cohort.program.abbreviation} Group ${formatCohortNumber(suggestion.cohort.cohort_number)}`
                         : 'Unknown Cohort';
                       const dateFormatted = new Date(suggestion.date + 'T12:00:00').toLocaleDateString('en-US', {
                         weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'

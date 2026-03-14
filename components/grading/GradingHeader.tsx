@@ -1,5 +1,6 @@
 'use client';
 
+import { formatCohortNumber } from '@/lib/format-cohort';
 import Link from 'next/link';
 import {
   ChevronRight,
@@ -55,7 +56,7 @@ export default function GradingHeader({
               Station {station.station_number} - Grade Rotation
             </h1>
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              {labDay.cohort.program.abbreviation} Group {labDay.cohort.cohort_number}
+              {labDay.cohort.program.abbreviation} Group {formatCohortNumber(labDay.cohort.cohort_number)}
             </p>
           </div>
           <div className="flex items-center gap-3">

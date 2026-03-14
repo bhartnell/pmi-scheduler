@@ -1,5 +1,6 @@
 'use client';
 
+import { formatCohortNumber } from '@/lib/format-cohort';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -164,7 +165,7 @@ export default function CohortManagementPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           program_id: createProgramId,
-          cohort_number: parseInt(createCohortNumber),
+          cohort_number: parseFloat(createCohortNumber),
           start_date: createStartDate || null,
           expected_end_date: createEndDate || null,
           current_semester: hasTemplates(createProgramId) && createSemester !== '' ? createSemester : null,
@@ -272,7 +273,7 @@ export default function CohortManagementPage() {
 
   const handleToggleActive = async (cohort: Cohort) => {
     const action = cohort.is_active ? 'deactivate' : 'activate';
-    if (!confirm(`Are you sure you want to ${action} ${cohort.program.abbreviation} Group ${cohort.cohort_number}?`)) {
+    if (!confirm(`Are you sure you want to ${action} ${cohort.program.abbreviation} Group ${formatCohortNumber(cohort.cohort_number)}?`)) {
       return;
     }
 
@@ -298,11 +299,11 @@ export default function CohortManagementPage() {
 
   const handleDelete = async (cohort: Cohort) => {
     if (cohort.student_count > 0) {
-      alert(`Cannot delete ${cohort.program.abbreviation} Group ${cohort.cohort_number} because it has ${cohort.student_count} students. Remove students first or mark as inactive.`);
+      alert(`Cannot delete ${cohort.program.abbreviation} Group ${formatCohortNumber(cohort.cohort_number)} because it has ${cohort.student_count} students. Remove students first or mark as inactive.`);
       return;
     }
 
-    if (!confirm(`Are you sure you want to delete ${cohort.program.abbreviation} Group ${cohort.cohort_number}? This cannot be undone.`)) {
+    if (!confirm(`Are you sure you want to delete ${cohort.program.abbreviation} Group ${formatCohortNumber(cohort.cohort_number)}? This cannot be undone.`)) {
       return;
     }
 
@@ -324,7 +325,7 @@ export default function CohortManagementPage() {
   };
 
   const handleArchive = async (cohort: Cohort) => {
-    const label = `${cohort.program.abbreviation} Group ${cohort.cohort_number}`;
+    const label = `${cohort.program.abbreviation} Group ${formatCohortNumber(cohort.cohort_number)}`;
     if (!confirm(`Archive ${label}?\n\nThis will hide the cohort from default views and prevent editing. You can unarchive it later.`)) {
       return;
     }
@@ -350,7 +351,7 @@ export default function CohortManagementPage() {
   };
 
   const handleUnarchive = async (cohort: Cohort) => {
-    const label = `${cohort.program.abbreviation} Group ${cohort.cohort_number}`;
+    const label = `${cohort.program.abbreviation} Group ${formatCohortNumber(cohort.cohort_number)}`;
     if (!confirm(`Unarchive ${label}? It will become visible in normal cohort views again.`)) {
       return;
     }
@@ -603,7 +604,7 @@ export default function CohortManagementPage() {
                       // Edit mode
                       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
                         <div className="font-medium text-gray-900 dark:text-white min-w-[120px]">
-                          {program.abbreviation} Group {cohort.cohort_number}
+                          {program.abbreviation} Group {formatCohortNumber(cohort.cohort_number)}
                         </div>
                         <div className="flex flex-wrap gap-2 flex-1 items-center">
                           {(program.abbreviation === 'PM' || program.abbreviation === 'PMD') ? (
@@ -670,7 +671,7 @@ export default function CohortManagementPage() {
                         <div className="flex items-center gap-4">
                           <div>
                             <div className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
-                              {program.abbreviation} Group {cohort.cohort_number}
+                              {program.abbreviation} Group {formatCohortNumber(cohort.cohort_number)}
                               {(program.abbreviation === 'PM' || program.abbreviation === 'PMD') && cohort.current_semester && (
                                 <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 text-xs rounded font-semibold">
                                   S{cohort.current_semester}
