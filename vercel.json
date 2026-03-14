@@ -71,6 +71,10 @@
     {
       "path": "/api/cron/debrief-reminder",
       "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/cron/data-export",
+      "schedule": "0 5 * * 0"
     }
   ]
 }

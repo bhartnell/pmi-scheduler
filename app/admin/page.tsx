@@ -322,6 +322,7 @@ function buildSections(pendingAccessRequests: number): AdminSection[] {
           title: 'Scheduled Exports',
           description: 'Configure automatic weekly or monthly report exports by email',
           color: 'bg-emerald-500',
+},        {          href: '/admin/data-exports',          icon: Download,          title: 'Data Export Archives',          description: 'Storage-backed weekly exports, semester archives, and manual backups with download links',          color: 'bg-teal-500',
         },
         {
           href: '/admin/certifications/verification',
