@@ -85,12 +85,13 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       program_schedule_id, room_id, day_of_week, start_time, end_time,
-      block_type, title, is_recurring, specific_date, sort_order
+      block_type, title, course_name, content_notes,
+      is_recurring, specific_date, sort_order
     } = body;
 
-    if (!program_schedule_id || !room_id || day_of_week === undefined || !start_time || !end_time) {
+    if (!program_schedule_id || day_of_week === undefined || !start_time || !end_time) {
       return NextResponse.json({
-        error: 'program_schedule_id, room_id, day_of_week, start_time, and end_time are required'
+        error: 'program_schedule_id, day_of_week, start_time, and end_time are required'
       }, { status: 400 });
     }
 
@@ -100,12 +101,14 @@ export async function POST(request: NextRequest) {
       .from('pmi_schedule_blocks')
       .insert({
         program_schedule_id,
-        room_id,
+        room_id: room_id ?? null,
         day_of_week,
         start_time,
         end_time,
-        block_type: block_type ?? 'class',
+        block_type: block_type ?? 'lecture',
         title: title ?? null,
+        course_name: course_name ?? null,
+        content_notes: content_notes ?? null,
         is_recurring: is_recurring ?? true,
         specific_date: specific_date ?? null,
         sort_order: sort_order ?? 0,
