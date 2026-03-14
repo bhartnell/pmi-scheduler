@@ -1,1089 +1,1190 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import Link from 'next/link';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  ArrowLeft, AlertTriangle, ChevronDown, ChevronUp, GripVertical,
-  Loader2, Calendar, Clock, MapPin, Trash2, X, Plus,
+  ChevronLeft, ChevronRight, AlertTriangle, Check, MoreHorizontal,
+  Search, Filter, LayoutGrid, Loader2, ChevronDown, ChevronUp,
+  GripVertical, X, Shield, Clock
 } from 'lucide-react';
-import type {
-  PmiSemester, PmiRoom, PmiProgramSchedule, PmiScheduleBlock,
-  PmiScheduleConflict, ScheduleBlockType,
-} from '@/types/semester-planner';
-import { DAY_SHORT, formatClassDays } from '@/types/semester-planner';
+import { getInitials, emailToHue } from '@/lib/lvfr-utils';
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// Constants
-// ═══════════════════════════════════════════════════════════════════════════════
+// ─── Types ───────────────────────────────────────────────────────────────────
 
-const GRID_START_HOUR = 7;
-const GRID_END_HOUR = 18;
-const SLOT_HEIGHT_PX = 28;
-const SLOTS_PER_HOUR = 2;
-const TOTAL_SLOTS = (GRID_END_HOUR - GRID_START_HOUR) * SLOTS_PER_HOUR;
-const VISIBLE_DAYS = [1, 2, 3, 4, 5]; // Mon-Fri
-const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
-
-const BLOCK_TYPES: { value: ScheduleBlockType; label: string }[] = [
-  { value: 'class', label: 'Class' },
-  { value: 'lab', label: 'Lab' },
-  { value: 'exam', label: 'Exam' },
-  { value: 'meeting', label: 'Meeting' },
-  { value: 'other', label: 'Other' },
-];
-
-const DURATION_OPTIONS = [
-  { value: 30, label: '30 min' },
-  { value: 60, label: '1 hr' },
-  { value: 90, label: '1.5 hr' },
-  { value: 120, label: '2 hr' },
-  { value: 150, label: '2.5 hr' },
-  { value: 180, label: '3 hr' },
-  { value: 240, label: '4 hr' },
-];
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// Helpers
-// ═══════════════════════════════════════════════════════════════════════════════
-
-function timeToMinutes(time: string): number {
-  const [h, m] = time.split(':').map(Number);
-  return h * 60 + m;
+interface ContentBlock {
+  id: string;
+  name: string;
+  duration_min: number;
+  block_type: string;
+  min_instructors: number;
+  equipment: string[] | null;
+  chapter_id: string | null;
+  module_id: string | null;
+  can_split: boolean;
+  notes: string | null;
+  color: string | null;
 }
 
-function minutesToTime(min: number): string {
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+interface Placement {
+  id: string;
+  instance_id: string;
+  content_block_id: string;
+  day_number: number;
+  date: string;
+  start_time: string;
+  end_time: string;
+  duration_min: number;
+  instructor_id: string | null;
+  instructor_name: string | null;
+  confirmed: boolean;
+  confirmed_by: string | null;
+  confirmed_at: string | null;
+  custom_title: string | null;
+  custom_notes: string | null;
+  sort_order: number;
+  content_block: ContentBlock;
 }
+
+interface PlanInstance {
+  id: string;
+  name: string;
+  start_date: string;
+  status: string;
+  template_id: string;
+  notes: string | null;
+}
+
+interface Prerequisite {
+  id: string;
+  block_id: string;
+  requires_block_id: string;
+  rule_type: string;
+}
+
+interface Violation {
+  block_id: string;
+  requires_block_id: string;
+  rule_type: string;
+  message: string;
+}
+
+interface InstructorAvailability {
+  date: string;
+  instructor_id: string;
+  instructor_name: string;
+  instructor_email: string;
+  block_type: string;
+}
+
+// ─── Constants ───────────────────────────────────────────────────────────────
+
+const BLOCK_TYPE_LABELS: Record<string, string> = {
+  lecture: 'Lectures',
+  lab: 'Labs',
+  activity: 'Activities',
+  exam: 'Exams',
+  quiz: 'Quizzes',
+  checkpoint: 'Checkpoints',
+  group_testing: 'Group Testing',
+  admin: 'Admin',
+  break: 'Breaks',
+};
+
+const BLOCK_TYPE_ORDER = ['lecture', 'lab', 'activity', 'exam', 'quiz', 'checkpoint', 'group_testing', 'admin', 'break'];
+
+const DAY_LABELS = ['Tuesday', 'Wednesday', 'Thursday'];
+
+// Available minutes per day: 07:30–15:30 = 480min minus 60min lunch = 420min
+const AVAILABLE_MINUTES = 420;
+
+// ─── Helper Functions ────────────────────────────────────────────────────────
 
 function formatTime(time: string): string {
-  const [h, m] = time.split(':').map(Number);
-  const period = h >= 12 ? 'PM' : 'AM';
-  const displayH = h === 0 ? 12 : h > 12 ? h - 12 : h;
-  return `${displayH}:${String(m).padStart(2, '0')} ${period}`;
+  const [h, m] = time.split(':');
+  const hour = parseInt(h);
+  const ampm = hour >= 12 ? 'PM' : 'AM';
+  const h12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+  return `${h12}:${m} ${ampm}`;
 }
 
-function addMinutesToTime(time: string, minutes: number): string {
-  return minutesToTime(timeToMinutes(time) + minutes);
+function addMinutesToTime(timeStr: string, minutes: number): string {
+  const [h, m] = timeStr.split(':').map(Number);
+  const total = h * 60 + m + minutes;
+  const newH = Math.floor(total / 60);
+  const newM = total % 60;
+  return String(newH).padStart(2, '0') + ':' + String(newM).padStart(2, '0');
 }
 
-function getBlockStyle(startTime: string, endTime: string, color: string): React.CSSProperties {
-  const startMin = timeToMinutes(startTime);
-  const endMin = timeToMinutes(endTime);
-  const gridStartMin = GRID_START_HOUR * 60;
-  const topPx = ((startMin - gridStartMin) / 30) * SLOT_HEIGHT_PX;
-  const heightPx = Math.max(((endMin - startMin) / 30) * SLOT_HEIGHT_PX, SLOT_HEIGHT_PX);
-  return {
-    position: 'absolute',
-    top: `${topPx}px`,
-    height: `${heightPx}px`,
-    left: '2px',
-    right: '2px',
-    backgroundColor: color + '20',
-    borderLeft: `3px solid ${color}`,
-    borderRadius: '4px',
-    zIndex: 10,
-  };
+function getDayDate(startDate: string, dayNumber: number): string {
+  const weekIndex = Math.floor((dayNumber - 1) / 3);
+  const dayInWeek = (dayNumber - 1) % 3;
+  const daysToAdd = weekIndex * 7 + dayInWeek;
+  const d = new Date(startDate + 'T12:00:00');
+  d.setDate(d.getDate() + daysToAdd);
+  return d.toISOString().split('T')[0];
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function getProgramLabel(program: PmiProgramSchedule): string {
-  const cohort = program.cohort as any;
-  const abbr = cohort?.program?.abbreviation || cohort?.program?.name || 'Prog';
-  const num = cohort?.cohort_number ?? '?';
-  return `${abbr} Grp ${num}`;
+function formatDate(dateStr: string): string {
+  const d = new Date(dateStr + 'T12:00:00');
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function getRoomName(block: PmiScheduleBlock): string {
-  const room = block.room as any;
-  return room?.name || 'No room';
+function getNextAvailableTime(dayPlacements: Placement[]): string {
+  if (dayPlacements.length === 0) return '07:30';
+  const sorted = [...dayPlacements].sort((a, b) => a.end_time.localeCompare(b.end_time));
+  const lastEnd = sorted[sorted.length - 1].end_time;
+  // Skip lunch break
+  if (lastEnd >= '12:00' && lastEnd < '13:00') return '13:00';
+  return lastEnd;
 }
 
-type DragPayload =
-  | { type: 'new'; programScheduleId: string; blockType: ScheduleBlockType; durationMin: number }
-  | { type: 'existing'; blockId: string; durationMin: number };
+function getTotalMinutes(dayPlacements: Placement[]): number {
+  return dayPlacements.reduce((sum, p) => sum + p.duration_min, 0);
+}
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// ConflictBanner
-// ═══════════════════════════════════════════════════════════════════════════════
+// ─── Sub-Components ──────────────────────────────────────────────────────────
 
-function ConflictBanner({
-  conflicts,
-}: {
-  conflicts: PmiScheduleConflict[];
-}) {
-  const [expanded, setExpanded] = useState(false);
-
-  if (conflicts.length === 0) return null;
-
+function StatusBadge({ status }: { status: string }) {
+  if (status === 'published') {
+    return (
+      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400">
+        <Check className="w-3 h-3" /> Published
+      </span>
+    );
+  }
   return (
-    <div className="mx-4 mt-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between px-4 py-2 text-sm font-medium text-red-800 dark:text-red-300"
-      >
-        <span className="flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4" />
-          {conflicts.length} room conflict{conflicts.length !== 1 ? 's' : ''} detected
-        </span>
-        {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-      </button>
-      {expanded && (
-        <div className="px-4 pb-3 space-y-1">
-          {conflicts.map((c, i) => (
-            <div key={i} className="text-xs text-red-700 dark:text-red-400">
-              <span className="font-medium">{c.room_name}</span> on {DAY_SHORT[c.day_of_week]}:
-              {' '}{formatTime(c.a_start)}–{formatTime(c.a_end)} overlaps {formatTime(c.b_start)}–{formatTime(c.b_end)}
-            </div>
-          ))}
-        </div>
-      )}
+    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400">
+      Draft
+    </span>
+  );
+}
+
+function CapacityBar({ used, total }: { used: number; total: number }) {
+  const pct = Math.min((used / total) * 100, 100);
+  const color = pct > 100 ? 'bg-red-500' : pct > 80 ? 'bg-yellow-500' : 'bg-green-500';
+  return (
+    <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+      <div className={`h-full ${color} rounded-full transition-all`} style={{ width: `${Math.min(pct, 100)}%` }} />
     </div>
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// TimeGridBlock
-// ═══════════════════════════════════════════════════════════════════════════════
-
-function TimeGridBlock({
-  block,
-  programColor,
-  programLabel,
-  hasConflict,
-  onClick,
-  onDragStart,
+function BlockBar({
+  placement,
+  violations,
+  isReadOnly,
+  onRemove,
+  onAssignInstructor,
+  availableInstructors,
 }: {
-  block: PmiScheduleBlock;
-  programColor: string;
-  programLabel: string;
-  hasConflict: boolean;
-  onClick: () => void;
-  onDragStart: (e: React.DragEvent) => void;
+  placement: Placement;
+  violations: Violation[];
+  isReadOnly: boolean;
+  onRemove: (id: string) => void;
+  onAssignInstructor: (placementId: string, instructorId: string | null, instructorName: string | null) => void;
+  availableInstructors: { id: string; name: string; email: string }[];
 }) {
-  const style = getBlockStyle(block.start_time, block.end_time, programColor);
-  const durationMin = timeToMinutes(block.end_time) - timeToMinutes(block.start_time);
-  const isCompact = durationMin <= 30;
-  const roomName = getRoomName(block);
+  const [showMenu, setShowMenu] = useState(false);
+  const [showInstructorDropdown, setShowInstructorDropdown] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const instructorRef = useRef<HTMLDivElement>(null);
+
+  const block = placement.content_block;
+  const hasViolation = violations.some(
+    v => v.block_id === block.id || v.requires_block_id === block.id
+  );
+  const blockViolations = violations.filter(
+    v => v.block_id === block.id || v.requires_block_id === block.id
+  );
+
+  const borderColor = hasViolation ? 'border-red-500' : '';
+  const leftBorderColor = hasViolation
+    ? 'border-l-red-500'
+    : block.color
+      ? ''
+      : 'border-l-gray-400';
+
+  // Close menus on click outside
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setShowMenu(false);
+      if (instructorRef.current && !instructorRef.current.contains(e.target as Node)) setShowInstructorDropdown(false);
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
 
   return (
     <div
-      draggable
-      onDragStart={onDragStart}
-      onClick={(e) => { e.stopPropagation(); onClick(); }}
-      style={style}
-      className={`cursor-pointer hover:opacity-90 transition-opacity overflow-hidden px-1.5 py-0.5 select-none
-        ${hasConflict ? 'border-2 border-dashed border-red-500 !bg-red-50 dark:!bg-red-900/30' : ''}
-      `}
+      className={`group relative flex items-center gap-2 px-2 py-1.5 mb-1 rounded border-l-4 bg-white dark:bg-gray-800 border ${borderColor} ${hasViolation ? 'border-red-300 dark:border-red-700' : 'border-gray-200 dark:border-gray-700'} hover:shadow-sm transition-shadow ${!isReadOnly ? 'cursor-grab active:cursor-grabbing' : ''}`}
+      style={{ borderLeftColor: hasViolation ? undefined : (block.color || '#9CA3AF') }}
+      draggable={!isReadOnly}
+      onDragStart={(e) => {
+        e.dataTransfer.setData('application/json', JSON.stringify({
+          type: 'placement',
+          placement: placement,
+        }));
+        e.dataTransfer.effectAllowed = 'move';
+        (e.target as HTMLElement).style.opacity = '0.4';
+      }}
+      onDragEnd={(e) => {
+        (e.target as HTMLElement).style.opacity = '1';
+      }}
     >
-      {isCompact ? (
-        <div className="flex items-center gap-1 text-[10px] font-medium text-gray-800 dark:text-gray-200 truncate">
-          {hasConflict && <AlertTriangle className="w-3 h-3 text-red-500 shrink-0" />}
-          <span className="truncate">{programLabel} · {roomName}</span>
-        </div>
-      ) : (
-        <>
-          <div className="flex items-center gap-1 text-[11px] font-semibold text-gray-900 dark:text-gray-100 truncate">
-            {hasConflict && <AlertTriangle className="w-3 h-3 text-red-500 shrink-0" />}
-            <GripVertical className="w-3 h-3 text-gray-400 shrink-0" />
-            <span className="truncate">{programLabel}</span>
-          </div>
-          <div className="flex items-center gap-1 text-[10px] text-gray-600 dark:text-gray-400 truncate">
-            <MapPin className="w-2.5 h-2.5 shrink-0" />
-            <span className="truncate">{roomName}</span>
-          </div>
-          <div className="text-[10px] text-gray-500 dark:text-gray-500">
-            {formatTime(block.start_time)}–{formatTime(block.end_time)}
-            {block.title && <span className="ml-1 italic">{block.title}</span>}
-          </div>
-        </>
+      {/* Drag handle */}
+      {!isReadOnly && (
+        <GripVertical className="w-3 h-3 text-gray-400 opacity-0 group-hover:opacity-100 flex-shrink-0" />
       )}
-    </div>
-  );
-}
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// ProgramSidebar
-// ═══════════════════════════════════════════════════════════════════════════════
+      {/* Time range */}
+      <span className="text-[10px] text-gray-500 dark:text-gray-400 font-mono flex-shrink-0 w-[72px]">
+        {formatTime(placement.start_time).replace(' ', '')}-{formatTime(placement.end_time).replace(' ', '')}
+      </span>
 
-function ProgramSidebar({
-  programs,
-  rooms,
-  roomFilter,
-  onRoomFilterChange,
-  blockType,
-  onBlockTypeChange,
-  durationMin,
-  onDurationChange,
-}: {
-  programs: PmiProgramSchedule[];
-  rooms: PmiRoom[];
-  roomFilter: string;
-  onRoomFilterChange: (v: string) => void;
-  blockType: ScheduleBlockType;
-  onBlockTypeChange: (v: ScheduleBlockType) => void;
-  durationMin: number;
-  onDurationChange: (v: number) => void;
-}) {
-  return (
-    <div className="w-[240px] shrink-0 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-y-auto">
-      {/* Programs */}
-      <div className="p-3 border-b border-gray-200 dark:border-gray-700">
-        <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Programs</h3>
-        <div className="space-y-1.5">
-          {programs.filter(p => p.is_active).map(prog => (
-            <div
-              key={prog.id}
-              draggable
-              onDragStart={(e) => {
-                const payload: DragPayload = {
-                  type: 'new',
-                  programScheduleId: prog.id,
-                  blockType,
-                  durationMin,
-                };
-                e.dataTransfer.setData('application/json', JSON.stringify(payload));
-                e.dataTransfer.effectAllowed = 'copy';
-              }}
-              className="flex items-center gap-2 p-2 rounded-lg border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-grab active:cursor-grabbing transition-colors"
-            >
-              <div
-                className="w-3 h-3 rounded-full shrink-0"
-                style={{ backgroundColor: prog.color }}
-              />
-              <div className="min-w-0">
-                <div className="text-xs font-medium text-gray-900 dark:text-gray-100 truncate">
-                  {getProgramLabel(prog)}
-                </div>
-                <div className="text-[10px] text-gray-500 dark:text-gray-400">
-                  {formatClassDays(prog.class_days)}
-                  {prog.label && prog.label !== getProgramLabel(prog) && (
-                    <span className="ml-1">· {prog.label}</span>
-                  )}
+      {/* Block info */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1">
+          <span className="text-xs font-medium text-gray-900 dark:text-gray-100 truncate">
+            {block.name}
+          </span>
+          {hasViolation && (
+            <div className="relative group/tooltip">
+              <AlertTriangle className="w-3 h-3 text-red-500 flex-shrink-0" />
+              <div className="absolute bottom-full left-0 mb-1 hidden group-hover/tooltip:block z-50">
+                <div className="bg-red-900 text-white text-[10px] rounded px-2 py-1 whitespace-nowrap shadow-lg">
+                  {blockViolations.map((v, i) => (
+                    <div key={i}>{v.message}</div>
+                  ))}
                 </div>
               </div>
             </div>
-          ))}
-          {programs.filter(p => p.is_active).length === 0 && (
-            <p className="text-xs text-gray-400 dark:text-gray-500 italic">No programs</p>
+          )}
+          {placement.confirmed && (
+            <Check className="w-3 h-3 text-green-500 flex-shrink-0" />
           )}
         </div>
       </div>
 
-      {/* Block settings */}
-      <div className="p-3 border-b border-gray-200 dark:border-gray-700 space-y-2">
-        <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">New Block Settings</h3>
-        <div>
-          <label className="text-[10px] text-gray-500 dark:text-gray-400">Type</label>
-          <select
-            value={blockType}
-            onChange={(e) => onBlockTypeChange(e.target.value as ScheduleBlockType)}
-            className="w-full text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-          >
-            {BLOCK_TYPES.map(bt => (
-              <option key={bt.value} value={bt.value}>{bt.label}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="text-[10px] text-gray-500 dark:text-gray-400">Duration</label>
-          <select
-            value={durationMin}
-            onChange={(e) => onDurationChange(Number(e.target.value))}
-            className="w-full text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-          >
-            {DURATION_OPTIONS.map(d => (
-              <option key={d.value} value={d.value}>{d.label}</option>
-            ))}
-          </select>
-        </div>
-      </div>
+      {/* Duration badge */}
+      <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 flex-shrink-0">
+        {block.duration_min}m
+      </span>
 
-      {/* Room filter */}
-      <div className="p-3 space-y-2">
-        <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Room Filter</h3>
-        <select
-          value={roomFilter}
-          onChange={(e) => onRoomFilterChange(e.target.value)}
-          className="w-full text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+      {/* Instructor chip */}
+      <div ref={instructorRef} className="relative flex-shrink-0">
+        <button
+          onClick={() => !isReadOnly && setShowInstructorDropdown(!showInstructorDropdown)}
+          className={`text-[10px] px-1.5 py-0.5 rounded-full flex items-center gap-1 ${
+            placement.instructor_name
+              ? 'text-white'
+              : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+          } ${!isReadOnly ? 'hover:ring-1 hover:ring-blue-400 cursor-pointer' : ''}`}
+          style={placement.instructor_name && placement.instructor_id ? {
+            backgroundColor: `hsl(${emailToHue(placement.instructor_id)}, 60%, 45%)`
+          } : undefined}
+          disabled={isReadOnly}
         >
-          <option value="all">All Rooms</option>
-          {rooms.filter(r => r.is_active).map(room => (
-            <option key={room.id} value={room.id}>{room.name}</option>
-          ))}
-        </select>
+          {placement.instructor_name
+            ? getInitials(placement.instructor_name)
+            : 'Unassigned'}
+        </button>
+
+        {showInstructorDropdown && (
+          <div className="absolute top-full right-0 mt-1 z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 min-w-[160px]">
+            <button
+              onClick={() => {
+                onAssignInstructor(placement.id, null, null);
+                setShowInstructorDropdown(false);
+              }}
+              className="w-full px-3 py-1.5 text-left text-xs text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700"
+            >
+              Unassign
+            </button>
+            {availableInstructors.map((inst) => (
+              <button
+                key={inst.id}
+                onClick={() => {
+                  onAssignInstructor(placement.id, inst.id, inst.name);
+                  setShowInstructorDropdown(false);
+                }}
+                className="w-full px-3 py-1.5 text-left text-xs text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
+              >
+                <span
+                  className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[9px] font-medium"
+                  style={{ backgroundColor: `hsl(${emailToHue(inst.email)}, 60%, 45%)` }}
+                >
+                  {getInitials(inst.name)}
+                </span>
+                {inst.name}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
+
+      {/* Action menu */}
+      {!isReadOnly && (
+        <div ref={menuRef} className="relative flex-shrink-0">
+          <button
+            onClick={() => setShowMenu(!showMenu)}
+            className="p-0.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 opacity-0 group-hover:opacity-100 transition-opacity"
+          >
+            <MoreHorizontal className="w-3 h-3 text-gray-400" />
+          </button>
+          {showMenu && (
+            <div className="absolute top-full right-0 mt-1 z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1 min-w-[120px]">
+              <button
+                onClick={() => {
+                  onRemove(placement.id);
+                  setShowMenu(false);
+                }}
+                className="w-full px-3 py-1.5 text-left text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
+              >
+                <X className="w-3 h-3" /> Remove
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// BlockEditModal
-// ═══════════════════════════════════════════════════════════════════════════════
-
-function BlockEditModal({
-  block,
-  rooms,
-  onSave,
-  onDelete,
-  onClose,
+function DayCard({
+  dayNumber,
+  date,
+  placements,
+  violations,
+  isReadOnly,
+  isDragOver,
+  onDragEnter,
+  onDragLeave,
+  onDragOver,
+  onDrop,
+  onRemovePlacement,
+  onAssignInstructor,
+  availableInstructors,
 }: {
-  block: PmiScheduleBlock;
-  rooms: PmiRoom[];
-  onSave: (id: string, updates: Record<string, unknown>) => Promise<void>;
-  onDelete: (id: string) => Promise<void>;
-  onClose: () => void;
+  dayNumber: number;
+  date: string;
+  placements: Placement[];
+  violations: Violation[];
+  isReadOnly: boolean;
+  isDragOver: boolean;
+  onDragEnter: (e: React.DragEvent) => void;
+  onDragLeave: (e: React.DragEvent) => void;
+  onDragOver: (e: React.DragEvent) => void;
+  onDrop: (e: React.DragEvent) => void;
+  onRemovePlacement: (id: string) => void;
+  onAssignInstructor: (placementId: string, instructorId: string | null, instructorName: string | null) => void;
+  availableInstructors: { id: string; name: string; email: string }[];
 }) {
-  const [roomId, setRoomId] = useState(block.room_id);
-  const [dayOfWeek, setDayOfWeek] = useState(block.day_of_week);
-  const [startTime, setStartTime] = useState(block.start_time);
-  const [endTime, setEndTime] = useState(block.end_time);
-  const [blockType, setBlockType] = useState(block.block_type);
-  const [title, setTitle] = useState(block.title || '');
-  const [saving, setSaving] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-
-  // Generate time options (30-min increments)
-  const timeOptions = useMemo(() => {
-    const opts: string[] = [];
-    for (let h = GRID_START_HOUR; h <= GRID_END_HOUR; h++) {
-      opts.push(`${String(h).padStart(2, '0')}:00`);
-      if (h < GRID_END_HOUR) opts.push(`${String(h).padStart(2, '0')}:30`);
-    }
-    return opts;
-  }, []);
-
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      await onSave(block.id, {
-        room_id: roomId,
-        day_of_week: dayOfWeek,
-        start_time: startTime,
-        end_time: endTime,
-        block_type: blockType,
-        title: title || null,
-      });
-      onClose();
-    } catch {
-      // Error handled by parent
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!confirmDelete) {
-      setConfirmDelete(true);
-      return;
-    }
-    setSaving(true);
-    try {
-      await onDelete(block.id);
-      onClose();
-    } catch {
-      // Error handled by parent
-    } finally {
-      setSaving(false);
-    }
-  };
+  const dayInWeek = (dayNumber - 1) % 3;
+  const totalMinutes = getTotalMinutes(placements);
+  const sorted = [...placements].sort((a, b) => {
+    if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order;
+    return a.start_time.localeCompare(b.start_time);
+  });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
-      <div
-        className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md mx-4 p-6"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Edit Block</h3>
-          <button onClick={onClose} className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
-            <X className="w-5 h-5 text-gray-500" />
-          </button>
+    <div
+      className={`flex-1 min-w-0 rounded-lg border ${
+        isDragOver
+          ? 'border-blue-500 border-dashed border-2 bg-blue-50/50 dark:bg-blue-900/10'
+          : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50'
+      } transition-colors`}
+      onDragEnter={onDragEnter}
+      onDragLeave={onDragLeave}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+    >
+      {/* Day header */}
+      <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between mb-1">
+          <div>
+            <span className="text-xs font-bold text-gray-900 dark:text-gray-100">
+              Day {dayNumber}
+            </span>
+            <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
+              {DAY_LABELS[dayInWeek]} {formatDate(date)}
+            </span>
+          </div>
+          <span className="text-[10px] text-gray-500 dark:text-gray-400">
+            {totalMinutes}/{AVAILABLE_MINUTES}m
+          </span>
         </div>
+        <CapacityBar used={totalMinutes} total={AVAILABLE_MINUTES} />
+      </div>
 
-        <div className="space-y-3">
-          <div>
-            <label className="text-xs text-gray-500 dark:text-gray-400">Room</label>
-            <select
-              value={roomId}
-              onChange={(e) => setRoomId(e.target.value)}
-              className="w-full text-sm px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            >
-              {rooms.filter(r => r.is_active).map(r => (
-                <option key={r.id} value={r.id}>{r.name}</option>
-              ))}
-            </select>
+      {/* Blocks list */}
+      <div className="p-2 min-h-[200px]">
+        {sorted.length === 0 ? (
+          <div className="flex items-center justify-center h-[200px] text-xs text-gray-400 dark:text-gray-500">
+            {isDragOver ? 'Drop here' : 'No blocks scheduled'}
           </div>
-
-          <div>
-            <label className="text-xs text-gray-500 dark:text-gray-400">Day</label>
-            <select
-              value={dayOfWeek}
-              onChange={(e) => setDayOfWeek(Number(e.target.value))}
-              className="w-full text-sm px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            >
-              {VISIBLE_DAYS.map(d => (
-                <option key={d} value={d}>{DAY_LABELS[d - 1]}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs text-gray-500 dark:text-gray-400">Start Time</label>
-              <select
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                className="w-full text-sm px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              >
-                {timeOptions.map(t => (
-                  <option key={t} value={t}>{formatTime(t)}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="text-xs text-gray-500 dark:text-gray-400">End Time</label>
-              <select
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-                className="w-full text-sm px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              >
-                {timeOptions.map(t => (
-                  <option key={t} value={t}>{formatTime(t)}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="text-xs text-gray-500 dark:text-gray-400">Block Type</label>
-            <select
-              value={blockType}
-              onChange={(e) => setBlockType(e.target.value as ScheduleBlockType)}
-              className="w-full text-sm px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-            >
-              {BLOCK_TYPES.map(bt => (
-                <option key={bt.value} value={bt.value}>{bt.label}</option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="text-xs text-gray-500 dark:text-gray-400">Title (optional)</label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g., Skills Lab"
-              className="w-full text-sm px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+        ) : (
+          sorted.map((placement) => (
+            <BlockBar
+              key={placement.id}
+              placement={placement}
+              violations={violations}
+              isReadOnly={isReadOnly}
+              onRemove={onRemovePlacement}
+              onAssignInstructor={onAssignInstructor}
+              availableInstructors={availableInstructors}
             />
+          ))
+        )}
+        {isDragOver && sorted.length > 0 && (
+          <div className="border-2 border-dashed border-blue-400 rounded p-2 text-center text-xs text-blue-500 mt-1">
+            Drop here
           </div>
-        </div>
-
-        <div className="flex items-center justify-between mt-6">
-          <button
-            onClick={handleDelete}
-            disabled={saving}
-            className={`flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg ${
-              confirmDelete
-                ? 'bg-red-600 text-white hover:bg-red-700'
-                : 'text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20'
-            }`}
-          >
-            <Trash2 className="w-4 h-4" />
-            {confirmDelete ? 'Confirm Delete' : 'Delete'}
-          </button>
-          <div className="flex gap-2">
-            <button
-              onClick={onClose}
-              className="px-4 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={saving || timeToMinutes(endTime) <= timeToMinutes(startTime)}
-              className="px-4 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-            >
-              {saving ? 'Saving...' : 'Save'}
-            </button>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// RoomPickerPopover
-// ═══════════════════════════════════════════════════════════════════════════════
-
-function RoomPickerPopover({
-  rooms,
-  onSelect,
-  onClose,
+function ContentLibrarySidebar({
+  allBlocks,
+  placedBlockIds,
+  searchTerm,
+  setSearchTerm,
+  typeFilter,
+  setTypeFilter,
+  expandedTypes,
+  toggleType,
+  isReadOnly,
 }: {
-  rooms: PmiRoom[];
-  onSelect: (roomId: string) => void;
-  onClose: () => void;
+  allBlocks: ContentBlock[];
+  placedBlockIds: Set<string>;
+  searchTerm: string;
+  setSearchTerm: (s: string) => void;
+  typeFilter: string;
+  setTypeFilter: (s: string) => void;
+  expandedTypes: Set<string>;
+  toggleType: (t: string) => void;
+  isReadOnly: boolean;
 }) {
+  // Group blocks by type
+  const grouped = BLOCK_TYPE_ORDER.reduce((acc, type) => {
+    const blocks = allBlocks.filter(b => b.block_type === type);
+    if (blocks.length > 0) acc[type] = blocks;
+    return acc;
+  }, {} as Record<string, ContentBlock[]>);
+
+  // Filter
+  const filteredGrouped = Object.entries(grouped).reduce((acc, [type, blocks]) => {
+    if (typeFilter !== 'all' && type !== typeFilter) return acc;
+    const filtered = blocks.filter(b =>
+      b.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    if (filtered.length > 0) acc[type] = filtered;
+    return acc;
+  }, {} as Record<string, ContentBlock[]>);
+
+  const unplacedCount = allBlocks.filter(b => !placedBlockIds.has(b.id)).length;
+
   return (
-    <div className="fixed inset-0 z-50" onClick={onClose}>
-      <div
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-2 min-w-[200px]"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="text-xs font-medium text-gray-500 dark:text-gray-400 px-2 py-1">Select Room</div>
-        {rooms.filter(r => r.is_active).map(room => (
-          <button
-            key={room.id}
-            onClick={() => onSelect(room.id)}
-            className="w-full text-left px-3 py-1.5 text-sm text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+    <div className="w-[280px] flex-shrink-0 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col h-full">
+      {/* Header */}
+      <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+          <LayoutGrid className="w-4 h-4" />
+          Content Library
+        </h3>
+        <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">
+          {unplacedCount} of {allBlocks.length} blocks unplaced
+        </p>
+      </div>
+
+      {/* Search */}
+      <div className="px-3 py-2 border-b border-gray-200 dark:border-gray-700 space-y-2">
+        <div className="relative">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search blocks..."
+            className="w-full pl-7 pr-3 py-1.5 text-xs border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder:text-gray-400"
+          />
+        </div>
+        <div className="relative">
+          <Filter className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+          <select
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value)}
+            className="w-full pl-7 pr-3 py-1.5 text-xs border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 appearance-none"
           >
-            {room.name}
-            {room.capacity && <span className="text-gray-400 ml-1">({room.capacity})</span>}
-          </button>
+            <option value="all">All Types</option>
+            {BLOCK_TYPE_ORDER.map(type => (
+              grouped[type] ? (
+                <option key={type} value={type}>
+                  {BLOCK_TYPE_LABELS[type] || type} ({grouped[type].length})
+                </option>
+              ) : null
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Block list */}
+      <div className="flex-1 overflow-y-auto">
+        {Object.entries(filteredGrouped).map(([type, blocks]) => (
+          <div key={type}>
+            <button
+              onClick={() => toggleType(type)}
+              className="w-full px-3 py-1.5 flex items-center justify-between text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 border-b border-gray-100 dark:border-gray-700/50"
+            >
+              <span className="flex items-center gap-1.5">
+                {expandedTypes.has(type) ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
+                {BLOCK_TYPE_LABELS[type] || type}
+              </span>
+              <span className="text-[10px] text-gray-400">
+                {blocks.filter(b => !placedBlockIds.has(b.id)).length}/{blocks.length}
+              </span>
+            </button>
+            {expandedTypes.has(type) && (
+              <div className="px-2 py-1">
+                {blocks.map(block => {
+                  const isPlaced = placedBlockIds.has(block.id);
+                  return (
+                    <div
+                      key={block.id}
+                      className={`flex items-center gap-2 px-2 py-1 rounded text-xs mb-0.5 ${
+                        isPlaced
+                          ? 'opacity-40 cursor-default'
+                          : isReadOnly
+                            ? 'cursor-default'
+                            : 'cursor-grab hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                      }`}
+                      draggable={!isPlaced && !isReadOnly}
+                      onDragStart={(e) => {
+                        if (isPlaced || isReadOnly) {
+                          e.preventDefault();
+                          return;
+                        }
+                        e.dataTransfer.setData('application/json', JSON.stringify({
+                          type: 'library',
+                          block: block,
+                        }));
+                        e.dataTransfer.effectAllowed = 'copy';
+                        (e.target as HTMLElement).style.opacity = '0.4';
+                      }}
+                      onDragEnd={(e) => {
+                        (e.target as HTMLElement).style.opacity = isPlaced ? '0.4' : '1';
+                      }}
+                    >
+                      <span
+                        className="w-2 h-2 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: block.color || '#9CA3AF' }}
+                      />
+                      <span className="truncate flex-1 text-gray-900 dark:text-gray-100">
+                        {block.name}
+                      </span>
+                      <span className="text-[10px] text-gray-400 flex-shrink-0">
+                        {block.duration_min}m
+                      </span>
+                      {isPlaced && <Check className="w-3 h-3 text-green-500 flex-shrink-0" />}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         ))}
       </div>
     </div>
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// Main Page Component
-// ═══════════════════════════════════════════════════════════════════════════════
+function ViolationBanner({
+  violations,
+  allBlocks,
+}: {
+  violations: Violation[];
+  allBlocks: ContentBlock[];
+}) {
+  const [expanded, setExpanded] = useState(false);
+  if (violations.length === 0) return null;
 
-export default function SemesterPlannerPage() {
+  const blockMap = new Map(allBlocks.map(b => [b.id, b]));
+
+  return (
+    <div className="mx-4 mt-2 rounded-lg border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full px-4 py-2 flex items-center justify-between text-sm"
+      >
+        <span className="flex items-center gap-2 text-red-700 dark:text-red-400 font-medium">
+          <AlertTriangle className="w-4 h-4" />
+          {violations.length} prerequisite violation{violations.length !== 1 ? 's' : ''} found
+        </span>
+        {expanded ? <ChevronUp className="w-4 h-4 text-red-500" /> : <ChevronDown className="w-4 h-4 text-red-500" />}
+      </button>
+      {expanded && (
+        <div className="px-4 pb-3 space-y-1">
+          {violations.map((v, i) => (
+            <div key={i} className="text-xs text-red-600 dark:text-red-400 flex items-start gap-2">
+              <span className="text-red-400 mt-0.5">-</span>
+              <span>
+                <strong>{blockMap.get(v.block_id)?.name || v.block_id}</strong>
+                {' '}{v.rule_type === 'must_precede' ? 'must come after' : v.rule_type === 'consecutive_day' ? 'must be within 2 days of' : 'relates to'}{' '}
+                <strong>{blockMap.get(v.requires_block_id)?.name || v.requires_block_id}</strong>
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Main Page ───────────────────────────────────────────────────────────────
+
+export default function CoursePlannerPage() {
   // Data state
-  const [semesters, setSemesters] = useState<PmiSemester[]>([]);
-  const [selectedSemesterId, setSelectedSemesterId] = useState<string>('');
-  const [rooms, setRooms] = useState<PmiRoom[]>([]);
-  const [programs, setPrograms] = useState<PmiProgramSchedule[]>([]);
-  const [blocks, setBlocks] = useState<PmiScheduleBlock[]>([]);
-  const [conflicts, setConflicts] = useState<PmiScheduleConflict[]>([]);
+  const [instance, setInstance] = useState<PlanInstance | null>(null);
+  const [placements, setPlacements] = useState<Placement[]>([]);
+  const [allBlocks, setAllBlocks] = useState<ContentBlock[]>([]);
+  const [prerequisites, setPrerequisites] = useState<Prerequisite[]>([]);
+  const [availability, setAvailability] = useState<InstructorAvailability[]>([]);
 
   // UI state
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [editingBlock, setEditingBlock] = useState<PmiScheduleBlock | null>(null);
-  const [roomFilter, setRoomFilter] = useState<string>('all');
-  const [dragBlockType, setDragBlockType] = useState<ScheduleBlockType>('class');
-  const [dragDuration, setDragDuration] = useState<number>(60);
-  const [dropTargetCell, setDropTargetCell] = useState<string | null>(null);
-  const [pendingDrop, setPendingDrop] = useState<{
-    day: number; startTime: string; payload: DragPayload;
-  } | null>(null);
+  const [currentWeek, setCurrentWeek] = useState(1);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [expandedTypes, setExpandedTypes] = useState<Set<string>>(new Set(BLOCK_TYPE_ORDER));
+  const [violations, setViolations] = useState<Violation[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [dropTargetDay, setDropTargetDay] = useState<number | null>(null);
+  const [validating, setValidating] = useState(false);
+  const [publishing, setPublishing] = useState(false);
 
-  // Drag ref
-  const dragCounters = useRef<Record<string, number>>({});
+  // Drag counter for reliable drag-leave
+  const dragCounters = useRef<Record<number, number>>({});
 
-  // ── Computed ──
+  const isReadOnly = instance?.status === 'published';
 
-  const programMap = useMemo(() => {
-    const map = new Map<string, PmiProgramSchedule>();
-    programs.forEach(p => map.set(p.id, p));
-    return map;
-  }, [programs]);
-
-  const conflictingBlockIds = useMemo(() => {
-    const ids = new Set<string>();
-    conflicts.forEach(c => { ids.add(c.block_a_id); ids.add(c.block_b_id); });
-    return ids;
-  }, [conflicts]);
-
-  const filteredBlocks = useMemo(() => {
-    if (roomFilter === 'all') return blocks;
-    return blocks.filter(b => b.room_id === roomFilter);
-  }, [blocks, roomFilter]);
-
-  // ── Time slots for the grid ──
-  const timeSlots = useMemo(() => {
-    const slots: string[] = [];
-    for (let i = 0; i < TOTAL_SLOTS; i++) {
-      const min = GRID_START_HOUR * 60 + i * 30;
-      slots.push(minutesToTime(min));
-    }
-    return slots;
-  }, []);
-
-  // ── Data fetching ──
-
-  const fetchSemesterData = useCallback(async (semesterId: string) => {
-    try {
-      const [progRes, blockRes, conflictRes] = await Promise.all([
-        fetch(`/api/scheduling/planner/programs?semester_id=${semesterId}`),
-        fetch(`/api/scheduling/planner/blocks?semester_id=${semesterId}`),
-        fetch(`/api/scheduling/planner/conflicts?semester_id=${semesterId}`),
-      ]);
-      const progData = await progRes.json();
-      const blockData = await blockRes.json();
-      const conflictData = await conflictRes.json();
-
-      setPrograms(progData.programs || []);
-      setBlocks(blockData.blocks || []);
-      setConflicts(conflictData.conflicts || []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load semester data');
-    }
-  }, []);
-
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [semRes, roomRes] = await Promise.all([
-        fetch('/api/scheduling/planner/semesters'),
-        fetch('/api/scheduling/planner/rooms'),
-      ]);
-      const semData = await semRes.json();
-      const roomData = await roomRes.json();
-      setSemesters(semData.semesters || []);
-      setRooms(roomData.rooms || []);
-
-      const activeSemesters = semData.semesters || [];
-      if (activeSemesters.length > 0) {
-        const sid = activeSemesters[0].id;
-        setSelectedSemesterId(sid);
-        await fetchSemesterData(sid);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load');
-    } finally {
-      setLoading(false);
-    }
-  }, [fetchSemesterData]);
+  // ─── Data Fetching ─────────────────────────────────────────────────────────
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    async function fetchData() {
+      try {
+        setLoading(true);
+        const [planRes, blocksRes, availRes] = await Promise.all([
+          fetch('/api/lvfr-aemt/planner'),
+          fetch('/api/lvfr-aemt/planner/blocks'),
+          fetch('/api/lvfr-aemt/planner/availability'),
+        ]);
 
-  const switchSemester = useCallback(async (semId: string) => {
-    setSelectedSemesterId(semId);
-    setLoading(true);
-    await fetchSemesterData(semId);
-    setLoading(false);
-  }, [fetchSemesterData]);
+        if (!planRes.ok) throw new Error('Failed to load plan');
 
-  // ── Conflict refresh ──
+        const planData = await planRes.json();
+        const blocksData = await blocksRes.json();
+        const availData = await availRes.json();
 
-  const refreshConflicts = useCallback(async () => {
-    if (!selectedSemesterId) return;
-    try {
-      const res = await fetch(`/api/scheduling/planner/conflicts?semester_id=${selectedSemesterId}`);
-      const data = await res.json();
-      setConflicts(data.conflicts || []);
-    } catch {
-      // Non-fatal
+        setInstance(planData.instance);
+        setPlacements(planData.placements || []);
+        setAllBlocks(blocksData.blocks || []);
+        setPrerequisites(blocksData.prerequisites || []);
+        setAvailability(availData.availability || []);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load data');
+      } finally {
+        setLoading(false);
+      }
     }
-  }, [selectedSemesterId]);
+    fetchData();
+  }, []);
 
-  // ── Block CRUD ──
+  // ─── Computed Values ───────────────────────────────────────────────────────
 
-  const createBlock = useCallback(async (
-    programScheduleId: string, roomId: string, dayOfWeek: number,
-    startTime: string, endTime: string, blockType: ScheduleBlockType,
-  ) => {
-    setSaving(true);
-    const tempId = 'temp-' + Date.now();
-    const program = programMap.get(programScheduleId);
+  const weekDays = [
+    (currentWeek - 1) * 3 + 1,
+    (currentWeek - 1) * 3 + 2,
+    (currentWeek - 1) * 3 + 3,
+  ];
 
-    // Optimistic insert
-    const tempBlock: PmiScheduleBlock = {
-      id: tempId,
-      program_schedule_id: programScheduleId,
-      room_id: roomId,
-      day_of_week: dayOfWeek,
-      start_time: startTime,
-      end_time: endTime,
-      block_type: blockType,
-      title: null,
-      is_recurring: true,
-      specific_date: null,
-      sort_order: 0,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      room: rooms.find(r => r.id === roomId),
-      program_schedule: program,
-    };
-    setBlocks(prev => [...prev, tempBlock]);
+  const placedBlockIds = new Set(placements.map(p => p.content_block_id));
+
+  const placementsByDay = new Map<number, Placement[]>();
+  for (const p of placements) {
+    const day = p.day_number;
+    if (!placementsByDay.has(day)) placementsByDay.set(day, []);
+    placementsByDay.get(day)!.push(p);
+  }
+
+  // Get unique instructors from availability data
+  const uniqueInstructors = Array.from(
+    new Map(
+      availability.map(a => [a.instructor_id, { id: a.instructor_id, name: a.instructor_name, email: a.instructor_email }])
+    ).values()
+  );
+
+  // ─── Actions ───────────────────────────────────────────────────────────────
+
+  const handleDrop = useCallback(async (dayNumber: number, e: React.DragEvent) => {
+    e.preventDefault();
+    dragCounters.current[dayNumber] = 0;
+    setDropTargetDay(null);
+
+    if (isReadOnly || !instance) return;
 
     try {
-      const res = await fetch('/api/scheduling/planner/blocks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          program_schedule_id: programScheduleId,
-          room_id: roomId,
-          day_of_week: dayOfWeek,
+      const data = JSON.parse(e.dataTransfer.getData('application/json'));
+
+      if (data.type === 'library') {
+        // Add block from library to day
+        const block: ContentBlock = data.block;
+        const dayPlacements = placementsByDay.get(dayNumber) || [];
+        const startTime = getNextAvailableTime(dayPlacements);
+        const endTime = addMinutesToTime(startTime, block.duration_min);
+
+        setSaving(true);
+
+        // Optimistic update
+        const tempId = 'temp-' + Date.now();
+        const tempPlacement: Placement = {
+          id: tempId,
+          instance_id: instance.id,
+          content_block_id: block.id,
+          day_number: dayNumber,
+          date: getDayDate(instance.start_date, dayNumber),
           start_time: startTime,
           end_time: endTime,
-          block_type: blockType,
-        }),
-      });
-      const result = await res.json();
+          duration_min: block.duration_min,
+          instructor_id: null,
+          instructor_name: null,
+          confirmed: false,
+          confirmed_by: null,
+          confirmed_at: null,
+          custom_title: null,
+          custom_notes: null,
+          sort_order: dayPlacements.length,
+          content_block: block,
+        };
+        setPlacements(prev => [...prev, tempPlacement]);
 
-      if (!res.ok) {
-        setBlocks(prev => prev.filter(b => b.id !== tempId));
-        alert(result.error || 'Failed to create block');
-      } else {
-        setBlocks(prev => prev.map(b => b.id === tempId ? result.block : b));
-        await refreshConflicts();
+        const res = await fetch('/api/lvfr-aemt/planner/placements', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            instance_id: instance.id,
+            content_block_id: block.id,
+            day_number: dayNumber,
+            start_time: startTime,
+            end_time: endTime,
+          }),
+        });
+
+        const result = await res.json();
+
+        if (!res.ok) {
+          // Revert optimistic update
+          setPlacements(prev => prev.filter(p => p.id !== tempId));
+          alert(result.error || 'Failed to add block');
+        } else {
+          // Replace temp with real
+          setPlacements(prev =>
+            prev.map(p => p.id === tempId ? { ...result.placement, content_block: block } : p)
+          );
+          if (result.violations?.length > 0) {
+            setViolations(prev => [...prev, ...result.violations]);
+          }
+        }
+      } else if (data.type === 'placement') {
+        // Move placement from one day to another
+        const sourcePlacement: Placement = data.placement;
+        if (sourcePlacement.day_number === dayNumber) return;
+
+        setSaving(true);
+
+        // Optimistic update
+        const dayPlacements = placementsByDay.get(dayNumber) || [];
+        const newStartTime = getNextAvailableTime(dayPlacements);
+
+        setPlacements(prev =>
+          prev.map(p =>
+            p.id === sourcePlacement.id
+              ? {
+                  ...p,
+                  day_number: dayNumber,
+                  date: getDayDate(instance.start_date, dayNumber),
+                  start_time: newStartTime,
+                  end_time: addMinutesToTime(newStartTime, p.duration_min),
+                  sort_order: dayPlacements.length,
+                }
+              : p
+          )
+        );
+
+        const res = await fetch('/api/lvfr-aemt/planner/placements/move', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            placement_id: sourcePlacement.id,
+            new_day_number: dayNumber,
+            new_start_time: newStartTime,
+          }),
+        });
+
+        const result = await res.json();
+
+        if (!res.ok) {
+          // Revert
+          setPlacements(prev =>
+            prev.map(p =>
+              p.id === sourcePlacement.id ? sourcePlacement : p
+            )
+          );
+          alert(result.error || 'Failed to move block');
+        } else {
+          // Update with server data
+          setPlacements(prev =>
+            prev.map(p =>
+              p.id === sourcePlacement.id
+                ? { ...result.placement, content_block: sourcePlacement.content_block }
+                : p
+            )
+          );
+          if (result.violations?.length > 0) {
+            setViolations(prev => [...prev, ...result.violations]);
+          }
+        }
       }
     } catch {
-      setBlocks(prev => prev.filter(b => b.id !== tempId));
+      // Invalid drag data, ignore
     } finally {
       setSaving(false);
     }
-  }, [programMap, rooms, refreshConflicts]);
+  }, [instance, isReadOnly, placementsByDay]);
 
-  const updateBlock = useCallback(async (id: string, updates: Record<string, unknown>) => {
+  const handleRemovePlacement = useCallback(async (placementId: string) => {
+    if (isReadOnly) return;
+
+    const removed = placements.find(p => p.id === placementId);
+    if (!removed) return;
+
+    // Optimistic
+    setPlacements(prev => prev.filter(p => p.id !== placementId));
     setSaving(true);
-    const original = blocks.find(b => b.id === id);
-
-    // Optimistic update
-    setBlocks(prev => prev.map(b => b.id === id ? { ...b, ...updates } : b));
 
     try {
-      const res = await fetch(`/api/scheduling/planner/blocks/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updates),
-      });
-      const result = await res.json();
-
-      if (!res.ok) {
-        if (original) setBlocks(prev => prev.map(b => b.id === id ? original : b));
-        alert(result.error || 'Failed to update block');
-      } else {
-        setBlocks(prev => prev.map(b => b.id === id ? result.block : b));
-        await refreshConflicts();
-      }
-    } catch {
-      if (original) setBlocks(prev => prev.map(b => b.id === id ? original : b));
-    } finally {
-      setSaving(false);
-    }
-  }, [blocks, refreshConflicts]);
-
-  const deleteBlock = useCallback(async (id: string) => {
-    setSaving(true);
-    const original = blocks.find(b => b.id === id);
-    setBlocks(prev => prev.filter(b => b.id !== id));
-
-    try {
-      const res = await fetch(`/api/scheduling/planner/blocks/${id}`, {
+      const res = await fetch(`/api/lvfr-aemt/planner/placements/${placementId}`, {
         method: 'DELETE',
       });
       if (!res.ok) {
-        if (original) setBlocks(prev => [...prev, original]);
-        const result = await res.json();
-        alert(result.error || 'Failed to delete block');
-      } else {
-        await refreshConflicts();
+        // Revert
+        setPlacements(prev => [...prev, removed]);
+        alert('Failed to remove block');
       }
     } catch {
-      if (original) setBlocks(prev => [...prev, original]);
+      setPlacements(prev => [...prev, removed]);
     } finally {
       setSaving(false);
     }
-  }, [blocks, refreshConflicts]);
+  }, [isReadOnly, placements]);
 
-  // ── Drag and Drop ──
+  const handleAssignInstructor = useCallback(async (
+    placementId: string,
+    instructorId: string | null,
+    instructorName: string | null
+  ) => {
+    if (isReadOnly || !instance) return;
 
-  const handleDragEnter = useCallback((cellKey: string) => (e: React.DragEvent) => {
-    e.preventDefault();
-    dragCounters.current[cellKey] = (dragCounters.current[cellKey] || 0) + 1;
-    if (dragCounters.current[cellKey] === 1) {
-      setDropTargetCell(cellKey);
-    }
-  }, []);
+    const original = placements.find(p => p.id === placementId);
+    if (!original) return;
 
-  const handleDragLeave = useCallback((cellKey: string) => () => {
-    dragCounters.current[cellKey] = (dragCounters.current[cellKey] || 0) - 1;
-    if (dragCounters.current[cellKey] <= 0) {
-      dragCounters.current[cellKey] = 0;
-      setDropTargetCell(prev => prev === cellKey ? null : prev);
-    }
-  }, []);
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'copy';
-  }, []);
-
-  const handleDrop = useCallback(async (day: number, slotTime: string, e: React.DragEvent) => {
-    e.preventDefault();
-    setDropTargetCell(null);
-    Object.keys(dragCounters.current).forEach(k => { dragCounters.current[k] = 0; });
+    // Optimistic
+    setPlacements(prev =>
+      prev.map(p =>
+        p.id === placementId
+          ? { ...p, instructor_id: instructorId, instructor_name: instructorName }
+          : p
+      )
+    );
 
     try {
-      const payload: DragPayload = JSON.parse(e.dataTransfer.getData('application/json'));
-
-      if (payload.type === 'new') {
-        const endTime = addMinutesToTime(slotTime, payload.durationMin);
-
-        if (roomFilter !== 'all') {
-          // Room is already selected
-          await createBlock(payload.programScheduleId, roomFilter, day, slotTime, endTime, payload.blockType);
-        } else {
-          // Need room selection
-          setPendingDrop({ day, startTime: slotTime, payload });
-        }
-      } else if (payload.type === 'existing') {
-        const block = blocks.find(b => b.id === payload.blockId);
-        if (!block) return;
-
-        const endTime = addMinutesToTime(slotTime, payload.durationMin);
-        await updateBlock(block.id, {
-          day_of_week: day,
-          start_time: slotTime,
-          end_time: endTime,
-        });
+      const res = await fetch('/api/lvfr-aemt/planner/placements', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          instance_id: instance.id,
+          content_block_id: original.content_block_id,
+          day_number: original.day_number,
+          start_time: original.start_time,
+          end_time: original.end_time,
+          instructor_id: instructorId,
+        }),
+      });
+      if (!res.ok) {
+        // Revert
+        setPlacements(prev =>
+          prev.map(p => p.id === placementId ? original : p)
+        );
       }
     } catch {
-      // Invalid drag data
+      setPlacements(prev =>
+        prev.map(p => p.id === placementId ? original : p)
+      );
     }
-  }, [roomFilter, createBlock, updateBlock, blocks]);
+  }, [isReadOnly, instance, placements]);
 
-  const handleRoomSelect = useCallback(async (roomId: string) => {
-    if (!pendingDrop) return;
-    const { day, startTime, payload } = pendingDrop;
-    setPendingDrop(null);
-
-    if (payload.type === 'new') {
-      const endTime = addMinutesToTime(startTime, payload.durationMin);
-      await createBlock(payload.programScheduleId, roomId, day, startTime, endTime, payload.blockType);
+  const handleValidate = useCallback(async () => {
+    if (!instance) return;
+    setValidating(true);
+    try {
+      const res = await fetch('/api/lvfr-aemt/planner/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ instance_id: instance.id }),
+      });
+      const result = await res.json();
+      setViolations(result.violations || []);
+    } catch {
+      alert('Validation failed');
+    } finally {
+      setValidating(false);
     }
-  }, [pendingDrop, createBlock]);
+  }, [instance]);
 
-  // ── Render ──
+  const handlePublishToggle = useCallback(async () => {
+    if (!instance) return;
 
-  if (loading && blocks.length === 0) {
+    if (instance.status === 'draft') {
+      // Validate first
+      setPublishing(true);
+      try {
+        const valRes = await fetch('/api/lvfr-aemt/planner/validate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ instance_id: instance.id }),
+        });
+        const valResult = await valRes.json();
+
+        if (valResult.violations?.length > 0) {
+          setViolations(valResult.violations);
+          const proceed = confirm(
+            `There are ${valResult.violations.length} prerequisite violations. Publish anyway?`
+          );
+          if (!proceed) {
+            setPublishing(false);
+            return;
+          }
+        }
+
+        const res = await fetch(`/api/lvfr-aemt/planner/instances/${instance.id}/publish`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'publish' }),
+        });
+        if (res.ok) {
+          setInstance(prev => prev ? { ...prev, status: 'published' } : prev);
+        }
+      } catch {
+        alert('Failed to publish');
+      } finally {
+        setPublishing(false);
+      }
+    } else {
+      // Unpublish
+      setPublishing(true);
+      try {
+        const res = await fetch(`/api/lvfr-aemt/planner/instances/${instance.id}/publish`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'unpublish' }),
+        });
+        if (res.ok) {
+          setInstance(prev => prev ? { ...prev, status: 'draft' } : prev);
+        }
+      } catch {
+        alert('Failed to unpublish');
+      } finally {
+        setPublishing(false);
+      }
+    }
+  }, [instance]);
+
+  const toggleType = useCallback((type: string) => {
+    setExpandedTypes(prev => {
+      const next = new Set(prev);
+      if (next.has(type)) next.delete(type);
+      else next.add(type);
+      return next;
+    });
+  }, []);
+
+  // ─── Drag handlers for DayCards ────────────────────────────────────────────
+
+  const makeDragEnter = useCallback((dayNumber: number) => (e: React.DragEvent) => {
+    e.preventDefault();
+    dragCounters.current[dayNumber] = (dragCounters.current[dayNumber] || 0) + 1;
+    setDropTargetDay(dayNumber);
+  }, []);
+
+  const makeDragLeave = useCallback((dayNumber: number) => (e: React.DragEvent) => {
+    e.preventDefault();
+    dragCounters.current[dayNumber] = (dragCounters.current[dayNumber] || 0) - 1;
+    if (dragCounters.current[dayNumber] <= 0) {
+      dragCounters.current[dayNumber] = 0;
+      setDropTargetDay(prev => prev === dayNumber ? null : prev);
+    }
+  }, []);
+
+  const makeDragOver = useCallback(() => (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  }, []);
+
+  const makeHandleDrop = useCallback((dayNumber: number) => (e: React.DragEvent) => {
+    handleDrop(dayNumber, e);
+  }, [handleDrop]);
+
+  // ─── Render ────────────────────────────────────────────────────────────────
+
+  if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="flex items-center gap-3 text-gray-500 dark:text-gray-400">
-          <Loader2 className="w-6 h-6 animate-spin" />
-          <span>Loading Semester Planner...</span>
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+      </div>
+    );
+  }
+
+  if (error || !instance) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-3" />
+          <p className="text-lg text-gray-900 dark:text-gray-100">{error || 'No plan instance found'}</p>
+          <a href="/lvfr-aemt" className="text-blue-500 hover:underline text-sm mt-2 inline-block">
+            Back to dashboard
+          </a>
         </div>
       </div>
     );
   }
-
-  if (error && blocks.length === 0) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <AlertTriangle className="w-12 h-12 text-red-400 mb-4" />
-        <p className="text-gray-600 dark:text-gray-400 mb-4">{error}</p>
-        <Link href="/scheduling" className="text-blue-600 hover:underline text-sm">← Back to Scheduling</Link>
-      </div>
-    );
-  }
-
-  const selectedSemester = semesters.find(s => s.id === selectedSemesterId);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col">
+    <div className="h-screen flex flex-col bg-white dark:bg-gray-900">
       {/* Header */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
+      <div className="flex-shrink-0 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Link
-              href="/scheduling"
-              className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+            <a href="/lvfr-aemt" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+              <ChevronLeft className="w-5 h-5" />
+            </a>
+            <div>
+              <h1 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                Course Planner
+                <StatusBadge status={instance.status} />
+                {saving && <Loader2 className="w-4 h-4 animate-spin text-blue-500" />}
+              </h1>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {instance.name} &middot; Start: {formatDate(instance.start_date)}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleValidate}
+              disabled={validating}
+              className="px-3 py-1.5 text-xs font-medium rounded-md border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 flex items-center gap-1.5"
             >
-              <ArrowLeft className="w-4 h-4 text-gray-500" />
-            </Link>
-            <div className="flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-blue-500" />
-              <h1 className="text-lg font-semibold text-gray-900 dark:text-white">Semester Planner</h1>
-            </div>
-
-            {/* Semester selector */}
-            {semesters.length > 0 && (
-              <select
-                value={selectedSemesterId}
-                onChange={(e) => switchSemester(e.target.value)}
-                className="ml-3 text-sm px-3 py-1 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-              >
-                {semesters.map(s => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
-            )}
+              {validating ? <Loader2 className="w-3 h-3 animate-spin" /> : <Shield className="w-3 h-3" />}
+              Validate
+            </button>
+            <button
+              onClick={handlePublishToggle}
+              disabled={publishing}
+              className={`px-3 py-1.5 text-xs font-medium rounded-md flex items-center gap-1.5 disabled:opacity-50 ${
+                instance.status === 'published'
+                  ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-400'
+                  : 'bg-green-600 text-white hover:bg-green-700'
+              }`}
+            >
+              {publishing && <Loader2 className="w-3 h-3 animate-spin" />}
+              {instance.status === 'published' ? 'Unpublish' : 'Publish'}
+            </button>
           </div>
+        </div>
 
-          <div className="flex items-center gap-3">
-            {saving && (
-              <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-                <Loader2 className="w-3 h-3 animate-spin" />
-                Saving...
-              </span>
-            )}
-            {conflicts.length > 0 && (
-              <span className="flex items-center gap-1 px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded text-xs font-medium">
-                <AlertTriangle className="w-3 h-3" />
-                {conflicts.length} conflict{conflicts.length !== 1 ? 's' : ''}
-              </span>
-            )}
-            {selectedSemester && (
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                {selectedSemester.start_date} – {selectedSemester.end_date}
-              </span>
-            )}
+        {/* Week Navigator */}
+        <div className="flex items-center justify-center gap-4 mt-2">
+          <button
+            onClick={() => setCurrentWeek(w => Math.max(1, w - 1))}
+            disabled={currentWeek === 1}
+            className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <div className="text-center">
+            <span className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+              Week {currentWeek} of 10
+            </span>
+            <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
+              Days {weekDays[0]}–{weekDays[2]}
+            </span>
           </div>
+          <button
+            onClick={() => setCurrentWeek(w => Math.min(10, w + 1))}
+            disabled={currentWeek === 10}
+            className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
         </div>
       </div>
 
-      {/* Conflict banner */}
-      <ConflictBanner conflicts={conflicts} />
+      {/* Violation Banner */}
+      <ViolationBanner violations={violations} allBlocks={allBlocks} />
 
-      {/* Main content */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar */}
-        <ProgramSidebar
-          programs={programs}
-          rooms={rooms}
-          roomFilter={roomFilter}
-          onRoomFilterChange={setRoomFilter}
-          blockType={dragBlockType}
-          onBlockTypeChange={setDragBlockType}
-          durationMin={dragDuration}
-          onDurationChange={setDragDuration}
+      {/* Main content: sidebar + day columns */}
+      <div className="flex-1 flex overflow-hidden">
+        <ContentLibrarySidebar
+          allBlocks={allBlocks}
+          placedBlockIds={placedBlockIds}
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          typeFilter={typeFilter}
+          setTypeFilter={setTypeFilter}
+          expandedTypes={expandedTypes}
+          toggleType={toggleType}
+          isReadOnly={isReadOnly}
         />
 
-        {/* Time grid */}
-        <div className="flex-1 overflow-auto p-4">
-          <div className="inline-block min-w-full">
-            {/* Day headers */}
-            <div className="flex sticky top-0 z-20 bg-gray-50 dark:bg-gray-900">
-              <div className="w-16 shrink-0" /> {/* Time label spacer */}
-              {VISIBLE_DAYS.map((day, i) => (
-                <div
-                  key={day}
-                  className="flex-1 min-w-[160px] text-center py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700"
-                >
-                  {DAY_LABELS[i]}
-                </div>
-              ))}
-            </div>
-
-            {/* Grid body */}
-            <div className="flex">
-              {/* Time labels */}
-              <div className="w-16 shrink-0">
-                {timeSlots.map((slot, idx) => (
-                  <div
-                    key={slot}
-                    style={{ height: `${SLOT_HEIGHT_PX}px` }}
-                    className="flex items-center justify-end pr-2"
-                  >
-                    {idx % 2 === 0 && (
-                      <span className="text-[10px] text-gray-400 dark:text-gray-500">
-                        {formatTime(slot)}
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {/* Day columns */}
-              {VISIBLE_DAYS.map((day, dayIdx) => {
-                const dayBlocks = filteredBlocks.filter(b => b.day_of_week === day);
-
-                return (
-                  <div
-                    key={day}
-                    className="flex-1 min-w-[160px] relative border-l border-gray-200 dark:border-gray-700"
-                    style={{ height: `${TOTAL_SLOTS * SLOT_HEIGHT_PX}px` }}
-                  >
-                    {/* Slot backgrounds (drop targets) */}
-                    {timeSlots.map((slot) => {
-                      const cellKey = `${day}-${slot}`;
-                      const isTarget = dropTargetCell === cellKey;
-
-                      return (
-                        <div
-                          key={slot}
-                          style={{ height: `${SLOT_HEIGHT_PX}px` }}
-                          className={`border-b border-gray-100 dark:border-gray-800 transition-colors
-                            ${isTarget ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700 border-dashed' : ''}
-                          `}
-                          onDragEnter={handleDragEnter(cellKey)}
-                          onDragLeave={handleDragLeave(cellKey)}
-                          onDragOver={handleDragOver}
-                          onDrop={(e) => handleDrop(day, slot, e)}
-                        />
-                      );
-                    })}
-
-                    {/* Rendered blocks (absolute positioned) */}
-                    {dayBlocks.map(block => {
-                      const program = programMap.get(block.program_schedule_id);
-                      const color = program?.color || '#6B7280';
-                      const label = program ? getProgramLabel(program) : 'Unknown';
-                      const hasConflict = conflictingBlockIds.has(block.id);
-                      const durationMin = timeToMinutes(block.end_time) - timeToMinutes(block.start_time);
-
-                      return (
-                        <TimeGridBlock
-                          key={block.id}
-                          block={block}
-                          programColor={color}
-                          programLabel={label}
-                          hasConflict={hasConflict}
-                          onClick={() => setEditingBlock(block)}
-                          onDragStart={(e) => {
-                            const payload: DragPayload = {
-                              type: 'existing',
-                              blockId: block.id,
-                              durationMin,
-                            };
-                            e.dataTransfer.setData('application/json', JSON.stringify(payload));
-                            e.dataTransfer.effectAllowed = 'move';
-                          }}
-                        />
-                      );
-                    })}
-
-                    {/* Noon line */}
-                    <div
-                      className="absolute left-0 right-0 border-t border-dashed border-gray-300 dark:border-gray-600 pointer-events-none"
-                      style={{ top: `${((12 * 60 - GRID_START_HOUR * 60) / 30) * SLOT_HEIGHT_PX}px` }}
-                    >
-                      <span className="absolute -top-2.5 left-1 text-[9px] text-gray-400 dark:text-gray-500 bg-gray-50 dark:bg-gray-900 px-0.5">
-                        Noon
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+        {/* Day columns */}
+        <div className="flex-1 flex gap-3 p-3 overflow-x-auto">
+          {weekDays.map((dayNumber) => {
+            const dayPlacements = placementsByDay.get(dayNumber) || [];
+            const date = instance.start_date
+              ? getDayDate(instance.start_date, dayNumber)
+              : '';
+            return (
+              <DayCard
+                key={dayNumber}
+                dayNumber={dayNumber}
+                date={date}
+                placements={dayPlacements}
+                violations={violations}
+                isReadOnly={isReadOnly}
+                isDragOver={dropTargetDay === dayNumber}
+                onDragEnter={makeDragEnter(dayNumber)}
+                onDragLeave={makeDragLeave(dayNumber)}
+                onDragOver={makeDragOver()}
+                onDrop={makeHandleDrop(dayNumber)}
+                onRemovePlacement={handleRemovePlacement}
+                onAssignInstructor={handleAssignInstructor}
+                availableInstructors={uniqueInstructors}
+              />
+            );
+          })}
         </div>
       </div>
-
-      {/* Edit modal */}
-      {editingBlock && (
-        <BlockEditModal
-          block={editingBlock}
-          rooms={rooms}
-          onSave={updateBlock}
-          onDelete={deleteBlock}
-          onClose={() => setEditingBlock(null)}
-        />
-      )}
-
-      {/* Room picker popover */}
-      {pendingDrop && (
-        <RoomPickerPopover
-          rooms={rooms}
-          onSelect={handleRoomSelect}
-          onClose={() => setPendingDrop(null)}
-        />
-      )}
     </div>
   );
 }

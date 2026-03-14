@@ -58,17 +58,19 @@ export interface PmiProgramSchedule {
   semester?: PmiSemester;
 }
 
-export type ScheduleBlockType = 'class' | 'lab' | 'exam' | 'meeting' | 'other';
+export type ScheduleBlockType = 'class' | 'lecture' | 'lab' | 'clinical' | 'exam' | 'study' | 'admin' | 'meeting' | 'other';
 
 export interface PmiScheduleBlock {
   id: string;
   program_schedule_id: string;
-  room_id: string;
+  room_id: string | null;
   day_of_week: number;
   start_time: string;
   end_time: string;
   block_type: ScheduleBlockType;
   title: string | null;
+  course_name: string | null;
+  content_notes: string | null;
   is_recurring: boolean;
   specific_date: string | null;
   sort_order: number;

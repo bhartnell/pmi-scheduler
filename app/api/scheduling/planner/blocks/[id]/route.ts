@@ -26,6 +26,8 @@ export async function PUT(
     if (body.end_time !== undefined) updates.end_time = body.end_time;
     if (body.block_type !== undefined) updates.block_type = body.block_type;
     if (body.title !== undefined) updates.title = body.title;
+    if (body.course_name !== undefined) updates.course_name = body.course_name;
+    if (body.content_notes !== undefined) updates.content_notes = body.content_notes;
     if (body.is_recurring !== undefined) updates.is_recurring = body.is_recurring;
     if (body.specific_date !== undefined) updates.specific_date = body.specific_date;
     if (body.sort_order !== undefined) updates.sort_order = body.sort_order;
@@ -45,6 +47,10 @@ export async function PUT(
             id, cohort_number,
             program:programs(id, name, abbreviation)
           )
+        ),
+        instructors:pmi_block_instructors(
+          id, role,
+          instructor:lab_users!pmi_block_instructors_instructor_id_fkey(id, name, email)
         )
       `)
       .single();
