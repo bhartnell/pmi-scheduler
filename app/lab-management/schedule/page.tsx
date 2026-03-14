@@ -1,5 +1,6 @@
 'use client';
 
+import { formatCohortNumber } from '@/lib/format-cohort';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, useRef, useMemo, Suspense } from 'react';
@@ -40,7 +41,7 @@ import Breadcrumbs from '@/components/Breadcrumbs';
 
 interface Cohort {
   id: string;
-  cohort_number: number;
+  cohort_number: number | string;
   program: {
     name: string;
     abbreviation: string;
@@ -82,7 +83,7 @@ interface PrintLabDay {
   notes: string | null;
   cohort: {
     id: string;
-    cohort_number: number;
+    cohort_number: number | string;
     program: {
       name: string;
       abbreviation: string;
@@ -113,7 +114,7 @@ interface LabDay {
   num_rotations: number;
   cohort: {
     id: string;
-    cohort_number: number;
+    cohort_number: number | string;
     program: {
       abbreviation: string;
     };
@@ -670,7 +671,7 @@ const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number
     return dayLabs.map(ld => {
       const parts = [];
       if (ld.cohort) {
-        parts.push(`${ld.cohort.program.abbreviation} G${ld.cohort.cohort_number}`);
+        parts.push(`${ld.cohort.program.abbreviation} G${formatCohortNumber(ld.cohort.cohort_number)}`);
       }
       if (ld.week_number && ld.day_number) {
         parts.push(`W${ld.week_number}D${ld.day_number}`);
@@ -690,7 +691,7 @@ const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number
 
     const events = labDays.map(ld => {
       const cohortName = ld.cohort
-        ? `${ld.cohort.program.abbreviation} Group ${ld.cohort.cohort_number}`
+        ? `${ld.cohort.program.abbreviation} Group ${formatCohortNumber(ld.cohort.cohort_number)}`
         : '';
       const titlePart = ld.title || cohortName || `Lab Day ${ld.date}`;
       const descParts: string[] = [];
@@ -1057,7 +1058,7 @@ const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number
                   <option value="">All Cohorts</option>
                   {cohorts.map(cohort => (
                     <option key={cohort.id} value={cohort.id}>
-                      {cohort.program.abbreviation} Group {cohort.cohort_number}
+                      {cohort.program.abbreviation} Group {formatCohortNumber(cohort.cohort_number)}
                     </option>
                   ))}
                 </select>
@@ -1095,7 +1096,7 @@ const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number
                       <div className="flex items-center justify-between mb-3">
                         <div>
                           <h4 className="font-semibold text-lg text-gray-900 dark:text-white">
-                            {labDay.cohort.program.abbreviation} Group {labDay.cohort.cohort_number}
+                            {labDay.cohort.program.abbreviation} Group {formatCohortNumber(labDay.cohort.cohort_number)}
                           </h4>
                           <p className="text-sm text-gray-600 dark:text-gray-400">
                             {labDay.title || (labDay.week_number && labDay.day_number
@@ -1354,7 +1355,7 @@ const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number
                         >
                           {/* Cohort badge */}
                           <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200 mb-1">
-                            {labDay.cohort.program.abbreviation} G{labDay.cohort.cohort_number}
+                            {labDay.cohort.program.abbreviation} G{formatCohortNumber(labDay.cohort.cohort_number)}
                           </span>
 
                           {/* Title / week-day info */}
@@ -1581,10 +1582,10 @@ const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number
                         key={labDay.id}
                         href={`/lab-management/schedule/${labDay.id}`}
                         className="block px-1.5 py-1 text-xs rounded bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/70"
-                        title={labDay.title || `${labDay.cohort.program.abbreviation} G${labDay.cohort.cohort_number}`}
+                        title={labDay.title || `${labDay.cohort.program.abbreviation} G${formatCohortNumber(labDay.cohort.cohort_number)}`}
                       >
                         <div className="font-medium truncate">
-                          {labDay.cohort.program.abbreviation} G{labDay.cohort.cohort_number}
+                          {labDay.cohort.program.abbreviation} G{formatCohortNumber(labDay.cohort.cohort_number)}
                           {labDay.stations.length > 0 && (
                             <span className="text-blue-600 dark:text-blue-400 ml-1">
                               ({labDay.stations.length})
@@ -1670,7 +1671,7 @@ const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="font-medium text-gray-900 dark:text-white">
-                          {labDay.cohort.program.abbreviation} Group {labDay.cohort.cohort_number}
+                          {labDay.cohort.program.abbreviation} Group {formatCohortNumber(labDay.cohort.cohort_number)}
                         </div>
                         <div className="text-sm text-gray-600 dark:text-gray-400">
                           {labDay.semester && labDay.week_number && labDay.day_number
@@ -1740,7 +1741,7 @@ const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number
           <h1 className="text-2xl font-bold text-gray-900">{getPrintTitle()}</h1>
           {selectedCohort && cohorts.find(c => c.id === selectedCohort) && (
             <p className="text-sm text-gray-600 mt-0.5">
-              Cohort: {cohorts.find(c => c.id === selectedCohort)!.program.abbreviation} Group {cohorts.find(c => c.id === selectedCohort)!.cohort_number}
+              Cohort: {cohorts.find(c => c.id === selectedCohort)!.program.abbreviation} Group {formatCohortNumber(cohorts.find(c => c.id === selectedCohort)!.cohort_number)}
             </p>
           )}
           <p className="text-xs text-gray-400 mt-1">
@@ -1772,7 +1773,7 @@ const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number
                         <div className="flex items-start justify-between gap-2 mb-2">
                           <div>
                             <span className="inline-block text-xs font-bold bg-blue-100 text-blue-800 px-2 py-0.5 rounded mr-2">
-                              {labDay.cohort.program.abbreviation} G{labDay.cohort.cohort_number}
+                              {labDay.cohort.program.abbreviation} G{formatCohortNumber(labDay.cohort.cohort_number)}
                             </span>
                             {labDay.title && (
                               <span className="text-sm font-semibold text-gray-800">{labDay.title}</span>
@@ -1886,7 +1887,7 @@ const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number
                             </div>
                             {dayLabDays.slice(0, 3).map(ld => (
                               <div key={ld.id} className="text-[9px] leading-tight text-blue-800 bg-blue-100 rounded px-0.5 mb-0.5 truncate">
-                                {ld.cohort.program.abbreviation} G{ld.cohort.cohort_number}
+                                {ld.cohort.program.abbreviation} G{formatCohortNumber(ld.cohort.cohort_number)}
                                 {ld.start_time && ` ${formatTime(ld.start_time)}`}
                               </div>
                             ))}
@@ -1918,7 +1919,7 @@ const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number
                             {today && <span className="ml-1 text-blue-600">(Today)</span>}
                           </span>
                           <span className="inline-block text-xs font-bold bg-blue-100 text-blue-800 px-2 py-0.5 rounded mr-2">
-                            {labDay.cohort.program.abbreviation} G{labDay.cohort.cohort_number}
+                            {labDay.cohort.program.abbreviation} G{formatCohortNumber(labDay.cohort.cohort_number)}
                           </span>
                           {labDay.title && (
                             <span className="text-sm font-semibold text-gray-800">{labDay.title}</span>

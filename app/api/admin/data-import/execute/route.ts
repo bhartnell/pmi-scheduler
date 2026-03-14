@@ -211,8 +211,8 @@ async function executeStudents(
       // Resolve cohort
       let cohortId: string | null = null;
       if (row.cohort_number?.trim()) {
-        const cohortNum = parseInt(row.cohort_number.trim());
-        const cohortMatch = cohortList.find((c) => c.cohort_number === cohortNum);
+        const cohortNum = parseFloat(row.cohort_number.trim());
+        const cohortMatch = cohortList.find((c) => Number(c.cohort_number) === cohortNum);
         if (cohortMatch) {
           cohortId = cohortMatch.id;
         } else {

@@ -223,9 +223,9 @@ async function previewStudents(
 
     // Validate cohort
     if (row.cohort_number?.trim()) {
-      const cohortNum = parseInt(row.cohort_number.trim());
+      const cohortNum = parseFloat(row.cohort_number.trim());
       const cohortMatch = cohortList.find(
-        (c) => c.cohort_number === cohortNum
+        (c) => Number(c.cohort_number) === cohortNum
       );
       if (!cohortMatch) {
         issues.push(`Cohort #${row.cohort_number} not found`);

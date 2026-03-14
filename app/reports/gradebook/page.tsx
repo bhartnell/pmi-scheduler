@@ -21,6 +21,7 @@ import {
   Filter,
   Printer,
 } from 'lucide-react';
+import { formatCohortNumber } from '@/lib/format-cohort';
 
 // ─────────────────────────────────────────────────
 // Types
@@ -28,7 +29,7 @@ import {
 
 interface Cohort {
   id: string;
-  cohort_number: number;
+  cohort_number: number | string;
   program: { abbreviation: string };
 }
 
@@ -447,7 +448,7 @@ export default function GradebookPage() {
                 <option value="">Select cohort...</option>
                 {cohorts.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {(c.program as any)?.abbreviation || 'Unknown'} Group {c.cohort_number}
+                    {(c.program as any)?.abbreviation || 'Unknown'} Group {formatCohortNumber(c.cohort_number)}
                   </option>
                 ))}
               </select>

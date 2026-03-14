@@ -1,5 +1,6 @@
 'use client';
 
+import { formatCohortNumber } from '@/lib/format-cohort';
 import { useSession } from 'next-auth/react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -1377,7 +1378,7 @@ export default function LabDayPage() {
     const startDate = parseLocalDate(dateStr, labDay.start_time, 8);
     const endDate = parseLocalDate(dateStr, labDay.end_time, 17);
 
-    const cohortName = `${labDay.cohort.program.abbreviation} Group ${labDay.cohort.cohort_number}`;
+    const cohortName = `${labDay.cohort.program.abbreviation} Group ${formatCohortNumber(labDay.cohort.cohort_number)}`;
     const stationList = labDay.stations
       .map((s: Station) => getStationTitle(s))
       .join(', ');
@@ -1418,7 +1419,7 @@ export default function LabDayPage() {
   const handlePrint = () => {
     if (!labDay) return;
 
-    const cohortName = `${labDay.cohort.program.abbreviation} Group ${labDay.cohort.cohort_number}`;
+    const cohortName = `${labDay.cohort.program.abbreviation} Group ${formatCohortNumber(labDay.cohort.cohort_number)}`;
     const dateStr = formatDate(labDay.date);
     const timeStr = labDay.start_time
       ? `${formatTime(labDay.start_time)}${labDay.end_time ? ` - ${formatTime(labDay.end_time)}` : ''}`
@@ -1522,7 +1523,7 @@ export default function LabDayPage() {
   const handlePrintRoster = () => {
     if (!labDay) return;
 
-    const cohortName = `${labDay.cohort.program.abbreviation} Group ${labDay.cohort.cohort_number}`;
+    const cohortName = `${labDay.cohort.program.abbreviation} Group ${formatCohortNumber(labDay.cohort.cohort_number)}`;
     let html = printHeader('Lab Day Roster', `${cohortName} — ${formatDate(labDay.date)}`);
 
     html += '<div class="two-col" style="margin-bottom: 12px; font-size: 12px;">';
@@ -1620,7 +1621,7 @@ export default function LabDayPage() {
     printHiddenElements.forEach(el => (el as HTMLElement).style.display = 'none');
     printBlockElements.forEach(el => (el as HTMLElement).style.display = 'block');
 
-    const cohortName = `${labDay?.cohort.program.abbreviation}-G${labDay?.cohort.cohort_number}`;
+    const cohortName = `${labDay?.cohort.program.abbreviation}-G${formatCohortNumber(labDay?.cohort.cohort_number)}`;
     const dateStr = labDay?.date || new Date().toISOString().split('T')[0];
 
     const options = {
@@ -2478,7 +2479,7 @@ export default function LabDayPage() {
         <h1 className="text-2xl font-bold text-center">LAB DAY SCHEDULE</h1>
         <div className="mt-2 flex justify-between text-sm">
           <div>
-            <p><strong>Cohort:</strong> {labDay.cohort.program.abbreviation} Group {labDay.cohort.cohort_number}</p>
+            <p><strong>Cohort:</strong> {labDay.cohort.program.abbreviation} Group {formatCohortNumber(labDay.cohort.cohort_number)}</p>
             <p><strong>Date:</strong> {formatDate(labDay.date)}</p>
             {(labDay.start_time || labDay.end_time) && (
               <p><strong>Time:</strong> {formatTime(labDay.start_time)}{labDay.end_time ? ` - ${formatTime(labDay.end_time)}` : ''}</p>
@@ -2669,7 +2670,7 @@ export default function LabDayPage() {
           <div className="mb-6 grid grid-cols-2 gap-4 text-sm">
             <div>
               <p><strong>Date:</strong> {formatDate(labDay.date)}</p>
-              <p><strong>Cohort:</strong> {labDay.cohort.program.abbreviation} Group {labDay.cohort.cohort_number}</p>
+              <p><strong>Cohort:</strong> {labDay.cohort.program.abbreviation} Group {formatCohortNumber(labDay.cohort.cohort_number)}</p>
               {labDay.title && <p><strong>Lab:</strong> {labDay.title}</p>}
             </div>
             <div>
@@ -2842,7 +2843,7 @@ export default function LabDayPage() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <Breadcrumbs
-                entityTitle={labDay.title || `${labDay.cohort.program.abbreviation} Group ${labDay.cohort.cohort_number}`}
+                entityTitle={labDay.title || `${labDay.cohort.program.abbreviation} Group ${formatCohortNumber(labDay.cohort.cohort_number)}`}
                 className="mb-1"
               />
               <Link
@@ -4044,7 +4045,7 @@ export default function LabDayPage() {
                     type="button"
                     onClick={() => {
                       if (!labDay) return;
-                      const cohortAbbrev = labDay.cohort.program.abbreviation + labDay.cohort.cohort_number;
+                      const cohortAbbrev = labDay.cohort.program.abbreviation + formatCohortNumber(labDay.cohort.cohort_number);
                       const dateStr = new Date(labDay.date + 'T12:00:00').toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: '2-digit' });
                       let suffix = '';
                       if (editForm.station_type === 'scenario' && editForm.scenario_id) {

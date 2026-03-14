@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 
 interface Cohort {
   id: string;
-  cohort_number: number;
+  cohort_number: number | string;
   program: {
     id: string;
     name: string;

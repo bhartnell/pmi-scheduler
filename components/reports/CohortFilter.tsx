@@ -1,10 +1,11 @@
 'use client';
 
+import { formatCohortNumber } from '@/lib/format-cohort';
 import React, { useEffect, useState } from 'react';
 
 interface Cohort {
   id: string;
-  cohort_number: number;
+  cohort_number: number | string;
   program: { abbreviation: string; name: string } | null;
   status?: string;
 }
@@ -51,7 +52,7 @@ export default function CohortFilter({ value, onChange, className = '' }: Cohort
         <option value="">All Cohorts</option>
         {cohorts.map((c) => (
           <option key={c.id} value={c.id}>
-            {c.program?.abbreviation || 'PMD'} Cohort {c.cohort_number}
+            {c.program?.abbreviation || 'PMD'} Cohort {formatCohortNumber(c.cohort_number)}
             {c.status === 'archived' ? ' (Archived)' : ''}
           </option>
         ))}

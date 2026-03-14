@@ -1,5 +1,6 @@
 'use client';
 
+import { formatCohortNumber } from '@/lib/format-cohort';
 import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -28,7 +29,7 @@ interface LabDay {
   title: string | null;
   cohort: {
     id: string;
-    cohort_number: number;
+    cohort_number: number | string;
     program: {
       name: string;
       abbreviation: string;
@@ -535,7 +536,7 @@ export default function NewStationPage() {
             <Link href="/lab-management/schedule" className="hover:text-blue-600 dark:hover:text-blue-400">Schedule</Link>
             <ChevronRight className="w-4 h-4" />
             <Link href={`/lab-management/schedule/${labDayId}`} className="hover:text-blue-600 dark:hover:text-blue-400">
-              {labDay.cohort.program.abbreviation} Group {labDay.cohort.cohort_number}
+              {labDay.cohort.program.abbreviation} Group {formatCohortNumber(labDay.cohort.cohort_number)}
             </Link>
             <ChevronRight className="w-4 h-4" />
             <span>New Station</span>
