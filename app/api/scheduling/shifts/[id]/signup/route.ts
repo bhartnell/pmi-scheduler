@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { createNotification } from '@/lib/notifications';
 
 // Helper to get current user
 async function getCurrentUser(email: string) {
@@ -132,7 +132,26 @@ export async function POST(
       throw error;
     }
 
-    // TODO: Notify shift creator of new signup
+    // Notify shift creator of new signup (fire-and-forget)
+    if (shift.created_by) {
+      const { data: creator } = await supabase
+        .from('lab_users')
+        .select('email')
+        .eq('id', shift.created_by)
+        .single();
+
+      if (creator?.email) {
+        createNotification({
+          userEmail: creator.email,
+          type: 'shift_available',
+          title: 'New shift signup',
+          message: `${currentUser.name || 'An instructor'} signed up for "${shift.title || 'a shift'}".`,
+          linkUrl: `/scheduling/shifts`,
+          referenceType: 'open_shift',
+          referenceId: shiftId,
+        }).catch(() => {});
+      }
+    }
 
     return NextResponse.json({ success: true, signup });
   } catch (error) {
@@ -196,7 +215,34 @@ export async function DELETE(
       // Calendar sync is best-effort
     }
 
-    // TODO: Notify shift creator if was confirmed
+    // Notify shift creator if the signup was confirmed (fire-and-forget)
+    if (signup.status === 'confirmed') {
+      const { data: shift } = await supabase
+        .from('open_shifts')
+        .select('title, created_by')
+        .eq('id', shiftId)
+        .single();
+
+      if (shift?.created_by) {
+        const { data: creator } = await supabase
+          .from('lab_users')
+          .select('email')
+          .eq('id', shift.created_by)
+          .single();
+
+        if (creator?.email) {
+          createNotification({
+            userEmail: creator.email,
+            type: 'shift_confirmed',
+            title: 'Instructor withdrew from shift',
+            message: `${currentUser.name || 'An instructor'} withdrew from "${shift.title || 'a shift'}" (was confirmed).`,
+            linkUrl: `/scheduling/shifts`,
+            referenceType: 'open_shift',
+            referenceId: shiftId,
+          }).catch(() => {});
+        }
+      }
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

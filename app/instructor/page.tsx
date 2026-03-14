@@ -19,7 +19,7 @@ import {
   BarChart3,
   Timer,
 } from 'lucide-react';
-import { canAccessAdmin, canManageContent, hasMinRole } from '@/lib/permissions';
+import { canAccessAdmin, hasMinRole } from '@/lib/permissions';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import type { CurrentUser } from '@/types';

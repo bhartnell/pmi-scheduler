@@ -16,7 +16,6 @@ import {
   Filter,
 } from 'lucide-react';
 import LabHeader from '@/components/LabHeader';
-import { hasMinRole } from '@/lib/permissions';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

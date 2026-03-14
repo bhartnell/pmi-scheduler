@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { isDirector } from '@/lib/endorsements';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { createNotification } from '@/lib/notifications';
 
 // Helper to get current user
 async function getCurrentUser(email: string) {
@@ -123,7 +123,33 @@ export async function POST(
       }
     }
 
-    // TODO: Notify instructor of confirmation/decline
+    // Notify instructor of confirmation/decline (fire-and-forget)
+    const instructor = Array.isArray(signup.instructor) ? signup.instructor[0] : signup.instructor;
+    const shift = Array.isArray(signup.shift) ? signup.shift[0] : signup.shift;
+    if (instructor?.email) {
+      const shiftLabel = shift?.title || 'a shift';
+      if (action === 'confirm') {
+        createNotification({
+          userEmail: instructor.email,
+          type: 'shift_confirmed',
+          title: 'Shift signup confirmed',
+          message: `Your signup for "${shiftLabel}" has been confirmed by ${currentUser.name || 'an admin'}.`,
+          linkUrl: `/scheduling/shifts`,
+          referenceType: 'shift_signup',
+          referenceId: signupId,
+        }).catch(() => {});
+      } else {
+        createNotification({
+          userEmail: instructor.email,
+          type: 'shift_confirmed',
+          title: 'Shift signup declined',
+          message: `Your signup for "${shiftLabel}" was declined. Reason: ${reason}`,
+          linkUrl: `/scheduling/shifts`,
+          referenceType: 'shift_signup',
+          referenceId: signupId,
+        }).catch(() => {});
+      }
+    }
 
     return NextResponse.json({ success: true, signup: updated });
   } catch (error) {

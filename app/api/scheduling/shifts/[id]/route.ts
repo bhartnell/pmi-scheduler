@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { isDirector } from '@/lib/endorsements';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { createBulkNotifications } from '@/lib/notifications';
 
 // Helper to get current user
 async function getCurrentUser(email: string) {
@@ -224,7 +224,27 @@ export async function DELETE(
       // Calendar sync is best-effort
     }
 
-    // TODO: Notify all signed up instructors that shift is cancelled
+    // Notify all signed-up instructors that the shift is cancelled (fire-and-forget)
+    if (shift?.signups && shift.signups.length > 0) {
+      const notifications = shift.signups
+        .map((s: { instructor: { id: string; name: string; email: string } | { id: string; name: string; email: string }[] | null }) => {
+          const instr = Array.isArray(s.instructor) ? s.instructor[0] : s.instructor;
+          return instr?.email ? {
+            userEmail: instr.email,
+            type: 'shift_confirmed' as const,
+            title: 'Shift cancelled',
+            message: `The shift "${shift.title || 'Untitled'}" has been cancelled by ${currentUser.name || 'an admin'}.`,
+            linkUrl: `/scheduling/shifts`,
+            referenceType: 'open_shift',
+            referenceId: id,
+          } : null;
+        })
+        .filter(Boolean) as Parameters<typeof createBulkNotifications>[0];
+
+      if (notifications.length > 0) {
+        createBulkNotifications(notifications).catch(() => {});
+      }
+    }
 
     return NextResponse.json({ success: true, shift });
   } catch (error) {

@@ -323,16 +323,12 @@ function ObserversTab({ eventId, event, onRefresh }: { eventId: string; event: O
     } catch { /* ignore */ }
   };
 
-  // TODO: PUT /api/osce/events/[id]/observers/[observerId] does not exist yet
-  // For now the edit modal collects data but save will only work once the API is created
   const handleSaveObserver = async (isEdit: boolean) => {
     setFormSaving(true);
     setFormError(null);
 
     try {
       if (isEdit && showEditModal) {
-        // TODO: Implement PUT /api/osce/events/[id]/observers/[observerId]
-        // For now, show a message
         const res = await fetch(`/api/osce/events/${eventId}/observers/${showEditModal}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -350,14 +346,11 @@ function ObserversTab({ eventId, event, onRefresh }: { eventId: string; event: O
         });
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
-          setFormError(data.error || 'Failed to update observer. The PUT endpoint may not exist yet.');
+          setFormError(data.error || 'Failed to update observer');
           setFormSaving(false);
           return;
         }
       } else {
-        // POST /api/osce/events/[id]/observers doesn't have a POST handler for admin add yet
-        // TODO: Add POST handler for admin observer creation
-        // Trying the public registration endpoint pattern
         const res = await fetch(`/api/osce/events/${eventId}/observers`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -452,10 +445,15 @@ function ObserversTab({ eventId, event, onRefresh }: { eventId: string; event: O
 
   // Toggle block for an observer via direct API calls
   const toggleBlock = async (observerId: string, blockId: string, currentlyAssigned: boolean) => {
-    // TODO: These endpoints may need to be created
-    // POST /api/osce/events/[id]/observers/[observerId]/blocks { block_id } to add
-    // DELETE /api/osce/events/[id]/observers/[observerId]/blocks { block_id } to remove
-    // For now, optimistic UI update
+    // Optimistic UI update
+    const observer = observers.find(o => o.id === observerId);
+    if (!observer) return;
+
+    const currentBlockIds = observer.blocks.map(b => b.block_id);
+    const newBlockIds = currentlyAssigned
+      ? currentBlockIds.filter(id => id !== blockId)
+      : [...currentBlockIds, blockId];
+
     setObservers(prev => prev.map(o => {
       if (o.id !== observerId) return o;
       if (currentlyAssigned) {
@@ -476,7 +474,21 @@ function ObserversTab({ eventId, event, onRefresh }: { eventId: string; event: O
         };
       }
     }));
-    // TODO: Make API call to persist the change
+
+    // Persist via PUT endpoint
+    try {
+      const res = await fetch(`/api/osce/events/${eventId}/observers/${observerId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ block_ids: newBlockIds }),
+      });
+      if (!res.ok) {
+        // Revert optimistic update on failure
+        fetchObservers();
+      }
+    } catch {
+      fetchObservers();
+    }
   };
 
   const filtered = observers.filter(o => {

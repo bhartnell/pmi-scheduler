@@ -27,7 +27,7 @@ import {
   Bell,
   Loader2
 } from 'lucide-react';
-import { canEditClinical, isSuperadmin, type Role } from '@/lib/permissions';
+import { canEditClinical, type Role } from '@/lib/permissions';
 import { parseDateSafe } from '@/lib/utils';
 import Breadcrumbs from '@/components/Breadcrumbs';
 

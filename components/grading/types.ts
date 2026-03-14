@@ -2,7 +2,14 @@
 
 // Helper function to safely handle array/string fields
 export const toArray = (value: any): string[] => {
-  if (Array.isArray(value)) return value;
+  if (Array.isArray(value)) {
+    return value.map((item: any) => {
+      if (typeof item === 'string') return item;
+      if (typeof item === 'object' && item !== null && item.description) return item.description;
+      if (typeof item === 'object' && item !== null) return JSON.stringify(item);
+      return String(item);
+    });
+  }
   if (typeof value === 'string' && value.trim()) return [value];
   return [];
 };

@@ -16,6 +16,7 @@ export default function SchedulerHome() {
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [showAllPolls, setShowAllPolls] = useState(true);
   const effectiveRole = useEffectiveRole(userRole);
 
   useEffect(() => {
@@ -42,12 +43,29 @@ export default function SchedulerHome() {
     }
   }, [session]);
 
+  // Re-fetch when showAllPolls toggle changes
+  useEffect(() => {
+    if (session?.user?.email && userRole) {
+      fetchPolls();
+    }
+  }, [showAllPolls]);
+
   const fetchPolls = async () => {
-    const { data, error } = await supabase
+    // For admin/lead_instructor: show all polls by default
+    // For other roles: show only own polls
+    const isAdmin = userRole && hasMinRole(userRole, 'lead_instructor');
+
+    let query = supabase
       .from('polls')
       .select('*')
-      .eq('created_by', session?.user?.email)
       .order('created_at', { ascending: false });
+
+    // Only filter by creator for non-admin roles, or when admin chooses "My Polls"
+    if (!isAdmin || !showAllPolls) {
+      query = query.eq('created_by', session?.user?.email);
+    }
+
+    const { data, error } = await query;
 
     if (data) {
       setPolls(data);
@@ -96,6 +114,8 @@ export default function SchedulerHome() {
     }
     return participantLink;
   };
+
+  const isAdmin = userRole && hasMinRole(userRole, 'lead_instructor');
 
   if (status === 'loading' || loading) {
     return (
@@ -151,13 +171,32 @@ export default function SchedulerHome() {
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Scheduling Polls</h1>
             <p className="text-gray-600 dark:text-gray-300">Create and manage availability polls</p>
           </div>
-          <button
-            onClick={() => router.push('/poll/create')}
-            className="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors shadow-md"
-          >
-            <Plus className="w-5 h-5" />
-            Create New Poll
-          </button>
+          <div className="flex items-center gap-3">
+            {/* All Polls / My Polls toggle for admin+ */}
+            {isAdmin && (
+              <div className="flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden text-sm">
+                <button
+                  onClick={() => setShowAllPolls(true)}
+                  className={`px-3 py-2 ${showAllPolls ? 'bg-blue-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+                >
+                  All Polls
+                </button>
+                <button
+                  onClick={() => setShowAllPolls(false)}
+                  className={`px-3 py-2 ${!showAllPolls ? 'bg-blue-600 text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+                >
+                  My Polls
+                </button>
+              </div>
+            )}
+            <button
+              onClick={() => router.push('/poll/create')}
+              className="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors shadow-md"
+            >
+              <Plus className="w-5 h-5" />
+              Create New Poll
+            </button>
+          </div>
         </div>
 
         {/* Polls List */}
@@ -194,6 +233,12 @@ export default function SchedulerHome() {
                       }`}>
                         {poll.mode === 'individual' ? 'Individual' : 'Group'}
                       </span>
+                      {/* Show creator when viewing all polls */}
+                      {isAdmin && showAllPolls && poll.created_by && poll.created_by !== session?.user?.email && (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                          by {poll.created_by.split('@')[0]}
+                        </span>
+                      )}
                     </div>
                   </div>
 

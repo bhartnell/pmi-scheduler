@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
-import { getSupabaseAdmin } from '@/lib/supabase';
 
 // ---------------------------------------------------------------------------
 // Types for imported scenario data
@@ -81,7 +80,7 @@ interface ParsedScenario {
   instructor_notes: string | null;
   learning_objectives: string[];
   phases: Record<string, unknown>[];
-  critical_actions: { id: string; description: string }[];
+  critical_actions: string[];
   debrief_points: string[];
   initial_vitals: Record<string, string> | null;
   general_impression: string | null;
@@ -238,11 +237,7 @@ function parseScenario(imported: ImportedScenario, index: number): PreviewScenar
   const phases = buildPhases(imported);
 
   // Build critical actions
-  const criticalActionsRaw = toArray(imported.critical_actions);
-  const criticalActions = criticalActionsRaw.map((desc, i) => ({
-    id: `critical-import-${Date.now()}-${i}`,
-    description: desc,
-  }));
+  const criticalActions = toArray(imported.critical_actions);
 
   // Build SAMPLE history
   const sampleHistory: Record<string, string> = {};

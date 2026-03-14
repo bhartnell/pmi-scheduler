@@ -39,6 +39,7 @@ export async function POST(
       result,
       notes,
       flagged_items,
+      station_id,
     } = body;
 
     // -----------------------------------------------
@@ -80,7 +81,7 @@ export async function POST(
     // Verify the skill sheet exists
     const { data: sheet, error: sheetError } = await supabase
       .from('skill_sheets')
-      .select('id')
+      .select('id, skill_name')
       .eq('id', skillSheetId)
       .single();
 
@@ -124,6 +125,37 @@ export async function POST(
         );
       }
       throw evalError;
+    }
+
+    // ---------------------------------------------------------------------------
+    // Fix 2: Also create/update a station_completions record so the skill sheet
+    // grade appears in the station grading view for this student.
+    // ---------------------------------------------------------------------------
+    if (station_id && student_id) {
+      try {
+        // Map skill sheet result to station_completions result
+        const completionResult = result === 'pass' ? 'pass'
+          : result === 'fail' ? 'incomplete'
+          : 'needs_review'; // remediation → needs_review
+
+        await supabase
+          .from('station_completions')
+          .upsert({
+            student_id,
+            station_id,
+            result: completionResult,
+            completed_at: new Date().toISOString(),
+            logged_by: currentUser.id,
+            lab_day_id: lab_day_id || null,
+            notes: `Skill sheet: ${sheet?.skill_name || 'Unknown'} — ${evaluation_type} ${result}${notes ? '. ' + notes : ''}`,
+          }, { onConflict: 'student_id,station_id,lab_day_id' })
+          .select('id')
+          .single();
+        // Ignore errors — station_completions upsert is best-effort
+      } catch {
+        // Non-critical: don't fail the evaluation if the station completion link fails
+        console.warn('Failed to upsert station_completions for skill sheet evaluation');
+      }
     }
 
     return NextResponse.json({ success: true, evaluation });

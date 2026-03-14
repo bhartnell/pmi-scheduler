@@ -66,6 +66,8 @@ interface SkillSheetPanelProps {
   studentName?: string;
   /** Lab day ID from the grading page context */
   labDayId?: string;
+  /** Station pool ID — when provided, skill sheet result also saves to station_completions */
+  stationPoolId?: string;
 }
 
 // ─── Constants ──────────────────────────────────────────────────────────────
@@ -119,6 +121,7 @@ export default function SkillSheetPanel({
   studentId,
   studentName,
   labDayId,
+  stationPoolId,
 }: SkillSheetPanelProps) {
   const [sheet, setSheet] = useState<SkillSheet | null>(null);
   const [loading, setLoading] = useState(true);
@@ -228,6 +231,7 @@ export default function SkillSheetPanel({
           result: evaluationResult,
           notes: notes.trim() || null,
           flagged_items: flaggedItems,
+          station_id: stationPoolId || null,
         }),
       });
 

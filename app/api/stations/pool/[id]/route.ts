@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { hasMinRole, canManageContent } from '@/lib/permissions';
+import { hasMinRole } from '@/lib/permissions';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
 // Helper to get current user with role
