@@ -7,6 +7,10 @@ import {
   GripVertical, X, Shield, Clock
 } from 'lucide-react';
 import { getInitials, emailToHue } from '@/lib/lvfr-utils';
+import { safeArray } from '@/lib/safe-array';
+
+// SAFETY: All .map() calls must use safeArray() or Array.isArray() guards.
+// API responses may return objects, null, or undefined instead of arrays.
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -251,7 +255,7 @@ function BlockBar({
               <AlertTriangle className="w-3 h-3 text-red-500 flex-shrink-0" />
               <div className="absolute bottom-full left-0 mb-1 hidden group-hover/tooltip:block z-50">
                 <div className="bg-red-900 text-white text-[10px] rounded px-2 py-1 whitespace-nowrap shadow-lg">
-                  {blockViolations.map((v, i) => (
+                  {safeArray(blockViolations).map((v, i) => (
                     <div key={i}>{v.message}</div>
                   ))}
                 </div>
@@ -299,7 +303,7 @@ function BlockBar({
             >
               Unassign
             </button>
-            {availableInstructors.map((inst) => (
+            {safeArray(availableInstructors).map((inst) => (
               <button
                 key={inst.id}
                 onClick={() => {
@@ -467,7 +471,7 @@ function ContentLibrarySidebar({
 }) {
   // Group blocks by type
   const grouped = BLOCK_TYPE_ORDER.reduce((acc, type) => {
-    const blocks = allBlocks.filter(b => b.block_type === type);
+    const blocks = safeArray(allBlocks).filter(b => b.block_type === type);
     if (blocks.length > 0) acc[type] = blocks;
     return acc;
   }, {} as Record<string, ContentBlock[]>);
@@ -475,14 +479,14 @@ function ContentLibrarySidebar({
   // Filter
   const filteredGrouped = Object.entries(grouped).reduce((acc, [type, blocks]) => {
     if (typeFilter !== 'all' && type !== typeFilter) return acc;
-    const filtered = blocks.filter(b =>
+    const filtered = safeArray(blocks).filter(b =>
       b.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
     if (filtered.length > 0) acc[type] = filtered;
     return acc;
   }, {} as Record<string, ContentBlock[]>);
 
-  const unplacedCount = allBlocks.filter(b => !placedBlockIds.has(b.id)).length;
+  const unplacedCount = safeArray(allBlocks).filter(b => !placedBlockIds.has(b.id)).length;
 
   return (
     <div className="w-[280px] flex-shrink-0 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex flex-col h-full">
@@ -546,7 +550,7 @@ function ContentLibrarySidebar({
             </button>
             {expandedTypes.has(type) && (
               <div className="px-2 py-1">
-                {blocks.map(block => {
+                {safeArray(blocks).map(block => {
                   const isPlaced = placedBlockIds.has(block.id);
                   return (
                     <div
@@ -606,9 +610,9 @@ function ViolationBanner({
   allBlocks: ContentBlock[];
 }) {
   const [expanded, setExpanded] = useState(false);
-  if (violations.length === 0) return null;
+  if (!Array.isArray(violations) || violations.length === 0) return null;
 
-  const blockMap = new Map(allBlocks.map(b => [b.id, b]));
+  const blockMap = new Map(safeArray(allBlocks).map(b => [b.id, b]));
 
   return (
     <div className="mx-4 mt-2 rounded-lg border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20">
@@ -624,7 +628,7 @@ function ViolationBanner({
       </button>
       {expanded && (
         <div className="px-4 pb-3 space-y-1">
-          {violations.map((v, i) => (
+          {safeArray(violations).map((v, i) => (
             <div key={i} className="text-xs text-red-600 dark:text-red-400 flex items-start gap-2">
               <span className="text-red-400 mt-0.5">-</span>
               <span>
@@ -687,10 +691,10 @@ export default function CoursePlannerPage() {
         const availData = await availRes.json();
 
         setInstance(planData.instance);
-        setPlacements(planData.placements || []);
-        setAllBlocks(blocksData.blocks || []);
-        setPrerequisites(blocksData.prerequisites || []);
-        setAvailability(availData.availability || []);
+        setPlacements(safeArray(planData.placements));
+        setAllBlocks(safeArray(blocksData.blocks));
+        setPrerequisites(safeArray(blocksData.prerequisites));
+        setAvailability(safeArray(availData.availability));
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load data');
       } finally {
@@ -708,10 +712,10 @@ export default function CoursePlannerPage() {
     (currentWeek - 1) * 3 + 3,
   ];
 
-  const placedBlockIds = new Set(placements.map(p => p.content_block_id));
+  const placedBlockIds = new Set(safeArray(placements).map(p => p.content_block_id));
 
   const placementsByDay = new Map<number, Placement[]>();
-  for (const p of placements) {
+  for (const p of safeArray(placements)) {
     const day = p.day_number;
     if (!placementsByDay.has(day)) placementsByDay.set(day, []);
     placementsByDay.get(day)!.push(p);
@@ -720,7 +724,7 @@ export default function CoursePlannerPage() {
   // Get unique instructors from availability data
   const uniqueInstructors = Array.from(
     new Map(
-      availability.map(a => [a.instructor_id, { id: a.instructor_id, name: a.instructor_name, email: a.instructor_email }])
+      safeArray(availability).map(a => [a.instructor_id, { id: a.instructor_id, name: a.instructor_name, email: a.instructor_email }])
     ).values()
   );
 
@@ -766,7 +770,7 @@ export default function CoursePlannerPage() {
           sort_order: dayPlacements.length,
           content_block: block,
         };
-        setPlacements(prev => [...prev, tempPlacement]);
+        setPlacements(prev => [...safeArray(prev), tempPlacement]);
 
         const res = await fetch('/api/lvfr-aemt/planner/placements', {
           method: 'PUT',
@@ -784,15 +788,15 @@ export default function CoursePlannerPage() {
 
         if (!res.ok) {
           // Revert optimistic update
-          setPlacements(prev => prev.filter(p => p.id !== tempId));
+          setPlacements(prev => safeArray(prev).filter(p => p.id !== tempId));
           alert(result.error || 'Failed to add block');
         } else {
           // Replace temp with real
           setPlacements(prev =>
-            prev.map(p => p.id === tempId ? { ...result.placement, content_block: block } : p)
+          safeArray(prev).map(p => p.id === tempId ? { ...result.placement, content_block: block } : p)
           );
-          if (result.violations?.length > 0) {
-            setViolations(prev => [...prev, ...result.violations]);
+          if (Array.isArray(result.violations) && result.violations.length > 0) {
+            setViolations(prev => [...safeArray(prev), ...safeArray(result.violations)]);
           }
         }
       } else if (data.type === 'placement') {
@@ -807,7 +811,7 @@ export default function CoursePlannerPage() {
         const newStartTime = getNextAvailableTime(dayPlacements);
 
         setPlacements(prev =>
-          prev.map(p =>
+          safeArray(prev).map(p =>
             p.id === sourcePlacement.id
               ? {
                   ...p,
@@ -836,7 +840,7 @@ export default function CoursePlannerPage() {
         if (!res.ok) {
           // Revert
           setPlacements(prev =>
-            prev.map(p =>
+          safeArray(prev).map(p =>
               p.id === sourcePlacement.id ? sourcePlacement : p
             )
           );
@@ -844,14 +848,14 @@ export default function CoursePlannerPage() {
         } else {
           // Update with server data
           setPlacements(prev =>
-            prev.map(p =>
+          safeArray(prev).map(p =>
               p.id === sourcePlacement.id
                 ? { ...result.placement, content_block: sourcePlacement.content_block }
                 : p
             )
           );
-          if (result.violations?.length > 0) {
-            setViolations(prev => [...prev, ...result.violations]);
+          if (Array.isArray(result.violations) && result.violations.length > 0) {
+            setViolations(prev => [...safeArray(prev), ...safeArray(result.violations)]);
           }
         }
       }
@@ -869,7 +873,7 @@ export default function CoursePlannerPage() {
     if (!removed) return;
 
     // Optimistic
-    setPlacements(prev => prev.filter(p => p.id !== placementId));
+    setPlacements(prev => safeArray(prev).filter(p => p.id !== placementId));
     setSaving(true);
 
     try {
@@ -878,11 +882,11 @@ export default function CoursePlannerPage() {
       });
       if (!res.ok) {
         // Revert
-        setPlacements(prev => [...prev, removed]);
+        setPlacements(prev => [...safeArray(prev), removed]);
         alert('Failed to remove block');
       }
     } catch {
-      setPlacements(prev => [...prev, removed]);
+      setPlacements(prev => [...safeArray(prev), removed]);
     } finally {
       setSaving(false);
     }
@@ -900,7 +904,7 @@ export default function CoursePlannerPage() {
 
     // Optimistic
     setPlacements(prev =>
-      prev.map(p =>
+          safeArray(prev).map(p =>
         p.id === placementId
           ? { ...p, instructor_id: instructorId, instructor_name: instructorName }
           : p
@@ -923,12 +927,12 @@ export default function CoursePlannerPage() {
       if (!res.ok) {
         // Revert
         setPlacements(prev =>
-          prev.map(p => p.id === placementId ? original : p)
+          safeArray(prev).map(p => p.id === placementId ? original : p)
         );
       }
     } catch {
       setPlacements(prev =>
-        prev.map(p => p.id === placementId ? original : p)
+          safeArray(prev).map(p => p.id === placementId ? original : p)
       );
     }
   }, [isReadOnly, instance, placements]);
@@ -943,7 +947,7 @@ export default function CoursePlannerPage() {
         body: JSON.stringify({ instance_id: instance.id }),
       });
       const result = await res.json();
-      setViolations(result.violations || []);
+      setViolations(safeArray(result.violations));
     } catch {
       alert('Validation failed');
     } finally {
@@ -965,8 +969,8 @@ export default function CoursePlannerPage() {
         });
         const valResult = await valRes.json();
 
-        if (valResult.violations?.length > 0) {
-          setViolations(valResult.violations);
+        if (Array.isArray(valResult.violations) && valResult.violations.length > 0) {
+          setViolations(safeArray(valResult.violations));
           const proceed = confirm(
             `There are ${valResult.violations.length} prerequisite violations. Publish anyway?`
           );
