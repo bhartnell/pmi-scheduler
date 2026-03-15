@@ -191,6 +191,140 @@ function getSemesterHints(semesterName: string, programLabel: string): string[] 
   return null;
 }
 
+// ─── Overlap Layout ──────────────────────────────────────────────────────────
+
+interface BlockLayout {
+  block: PmiScheduleBlock;
+  column: number;   // 0-based column index within overlap group
+  totalColumns: number; // total columns in this overlap group
+}
+
+/**
+ * Calculate side-by-side layout for overlapping blocks (Google Calendar style).
+ * Returns blocks with column positions so they render side by side.
+ */
+function calculateBlockLayouts(blocks: PmiScheduleBlock[]): BlockLayout[] {
+  if (blocks.length === 0) return [];
+
+  // Sort by start_time, then by end_time descending (longer blocks first)
+  const sorted = [...blocks].sort((a, b) => {
+    const startDiff = timeToMinutes(a.start_time) - timeToMinutes(b.start_time);
+    if (startDiff !== 0) return startDiff;
+    return timeToMinutes(b.end_time) - timeToMinutes(a.end_time);
+  });
+
+  // Assign columns using a greedy algorithm
+  const columns: { endTime: number; blockId: string }[][] = [];
+  const blockColumnMap = new Map<string, number>();
+
+  for (const block of sorted) {
+    const startMin = timeToMinutes(block.start_time);
+
+    // Find first column where this block fits (no overlap)
+    let placed = false;
+    for (let col = 0; col < columns.length; col++) {
+      const lastInCol = columns[col][columns[col].length - 1];
+      if (lastInCol.endTime <= startMin) {
+        columns[col].push({ endTime: timeToMinutes(block.end_time), blockId: block.id });
+        blockColumnMap.set(block.id, col);
+        placed = true;
+        break;
+      }
+    }
+
+    if (!placed) {
+      columns.push([{ endTime: timeToMinutes(block.end_time), blockId: block.id }]);
+      blockColumnMap.set(block.id, columns.length - 1);
+    }
+  }
+
+  // Build overlap groups to determine totalColumns per block
+  // Two blocks overlap if their time ranges intersect
+  const overlapGroups: Set<string>[] = [];
+
+  for (let i = 0; i < sorted.length; i++) {
+    const a = sorted[i];
+    const aStart = timeToMinutes(a.start_time);
+    const aEnd = timeToMinutes(a.end_time);
+
+    // Find which group this block belongs to
+    let group: Set<string> | null = null;
+    for (const g of overlapGroups) {
+      for (const existingId of g) {
+        const existing = sorted.find(b => b.id === existingId)!;
+        const bStart = timeToMinutes(existing.start_time);
+        const bEnd = timeToMinutes(existing.end_time);
+        if (aStart < bEnd && aEnd > bStart) {
+          group = g;
+          break;
+        }
+      }
+      if (group) break;
+    }
+
+    if (group) {
+      group.add(a.id);
+    } else {
+      overlapGroups.push(new Set([a.id]));
+    }
+  }
+
+  // Merge overlapping groups that share time ranges
+  let merged = true;
+  while (merged) {
+    merged = false;
+    for (let i = 0; i < overlapGroups.length; i++) {
+      for (let j = i + 1; j < overlapGroups.length; j++) {
+        // Check if any block in group i overlaps any block in group j
+        let overlap = false;
+        for (const idA of overlapGroups[i]) {
+          const a = sorted.find(b => b.id === idA)!;
+          const aStart = timeToMinutes(a.start_time);
+          const aEnd = timeToMinutes(a.end_time);
+          for (const idB of overlapGroups[j]) {
+            const b = sorted.find(bl => bl.id === idB)!;
+            const bStart = timeToMinutes(b.start_time);
+            const bEnd = timeToMinutes(b.end_time);
+            if (aStart < bEnd && aEnd > bStart) {
+              overlap = true;
+              break;
+            }
+          }
+          if (overlap) break;
+        }
+        if (overlap) {
+          for (const id of overlapGroups[j]) {
+            overlapGroups[i].add(id);
+          }
+          overlapGroups.splice(j, 1);
+          merged = true;
+          break;
+        }
+      }
+      if (merged) break;
+    }
+  }
+
+  // Map block id → total columns in its group
+  const blockTotalColumns = new Map<string, number>();
+  for (const group of overlapGroups) {
+    // Total columns = max column index + 1 among blocks in this group
+    let maxCol = 0;
+    for (const id of group) {
+      maxCol = Math.max(maxCol, blockColumnMap.get(id) || 0);
+    }
+    for (const id of group) {
+      blockTotalColumns.set(id, maxCol + 1);
+    }
+  }
+
+  return blocks.map(block => ({
+    block,
+    column: blockColumnMap.get(block.id) || 0,
+    totalColumns: blockTotalColumns.get(block.id) || 1,
+  }));
+}
+
 // ─── Sub-Components ───────────────────────────────────────────────────────────
 
 function TimeGridBlock({
@@ -198,11 +332,15 @@ function TimeGridBlock({
   program,
   onClick,
   semesterStartDate,
+  column = 0,
+  totalColumns = 1,
 }: {
   block: PmiScheduleBlock;
   program: PmiProgramSchedule | undefined;
   onClick: () => void;
   semesterStartDate: string | null;
+  column?: number;
+  totalColumns?: number;
 }) {
   const top = getBlockTop(block.start_time);
   const height = getBlockHeight(block.start_time, block.end_time);
@@ -236,12 +374,15 @@ function TimeGridBlock({
         }));
         e.dataTransfer.effectAllowed = 'move';
       }}
-      className="absolute left-1 right-1 rounded-md px-1.5 py-0.5 text-left overflow-hidden hover:ring-2 hover:ring-white/40 transition-shadow cursor-pointer group"
+      className="absolute rounded-md px-1.5 py-0.5 text-left overflow-hidden hover:ring-2 hover:ring-white/40 transition-shadow cursor-pointer group"
       style={{
         top: `${top}px`,
         height: `${height}px`,
+        left: totalColumns > 1 ? `calc(${(column / totalColumns) * 100}% + 2px)` : '4px',
+        width: totalColumns > 1 ? `calc(${(1 / totalColumns) * 100}% - 4px)` : 'calc(100% - 8px)',
         backgroundColor: `${color}CC`, // Strong color background for readability
         borderLeft: `3px solid ${color}`,
+        zIndex: column + 1,
       }}
     >
       {/* Badges */}
@@ -2157,6 +2298,9 @@ export default function SemesterPlannerPage() {
       const newStartTime = minutesToTime(newStartMin);
       const newEndTime = minutesToTime(newEndMin);
 
+      // If dropped back on the same position, cancel silently
+      if (newDate === data.originalDate && newStartTime === data.originalStartTime) return;
+
       if (data.recurringGroupId) {
         setPendingDrop({
           blockId: data.blockId,
@@ -2520,13 +2664,15 @@ export default function SemesterPlannerPage() {
                         );
                       })}
 
-                      {safeArray(dayBlocks).map(block => (
+                      {calculateBlockLayouts(safeArray(dayBlocks)).map(({ block, column: col, totalColumns: total }) => (
                         <TimeGridBlock
                           key={block.id}
                           block={block}
                           program={block.program_schedule_id ? programMap.get(block.program_schedule_id) : undefined}
                           onClick={() => setEditingBlock(block as Partial<PmiScheduleBlock> & { day_of_week: number })}
                           semesterStartDate={semesterStartDate}
+                          column={col}
+                          totalColumns={total}
                         />
                       ))}
                     </div>
