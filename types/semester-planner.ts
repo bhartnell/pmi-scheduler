@@ -62,7 +62,8 @@ export type ScheduleBlockType = 'class' | 'lecture' | 'lab' | 'clinical' | 'exam
 
 export interface PmiScheduleBlock {
   id: string;
-  program_schedule_id: string;
+  program_schedule_id: string | null;  // nullable — unlinked blocks have no program
+  semester_id: string;                  // direct semester reference
   room_id: string | null;
   day_of_week: number;
   start_time: string;
@@ -71,6 +72,7 @@ export interface PmiScheduleBlock {
   title: string | null;
   course_name: string | null;
   content_notes: string | null;
+  color: string | null;                // block-level color override
   is_recurring: boolean;
   specific_date: string | null;
   sort_order: number;
