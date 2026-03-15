@@ -21,32 +21,41 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'program_type is required' }, { status: 400 });
     }
 
-    // Map program_type string to program name for matching
-    // programs.name is 'EMT', 'AEMT', or 'Paramedic'
-    const programNameMap: Record<string, string> = {
-      emt: 'EMT',
-      aemt: 'AEMT',
-      paramedic: 'Paramedic',
-    };
-    const programName = programNameMap[programType.toLowerCase()];
-    if (!programName) {
-      return NextResponse.json({ error: `Unknown program type: ${programType}` }, { status: 400 });
-    }
+    // 1. Find matching programs — search by name, abbreviation, and display_name flexibly
+    const searchTerm = programType.toLowerCase();
 
-    // 1. Find the program ID
-    const { data: programs, error: progError } = await supabase
+    // Fetch ALL programs and filter in JS for maximum flexibility
+    const { data: allPrograms, error: progError } = await supabase
       .from('programs')
-      .select('id, name, abbreviation')
-      .ilike('name', programName);
+      .select('id, name, display_name, abbreviation')
+      .eq('is_active', true);
 
     if (progError) throw progError;
-    if (!programs || programs.length === 0) {
-      return NextResponse.json({ cohorts: [] });
+
+    // Match program by name, abbreviation, or display_name (case-insensitive)
+    const matchedPrograms = (allPrograms || []).filter(p => {
+      const name = (p.name || '').toLowerCase();
+      const abbr = (p.abbreviation || '').toLowerCase();
+      const display = (p.display_name || '').toLowerCase();
+      return (
+        name === searchTerm ||
+        abbr === searchTerm ||
+        name.includes(searchTerm) ||
+        searchTerm.includes(name) ||
+        abbr.includes(searchTerm) ||
+        display.includes(searchTerm)
+      );
+    });
+
+    if (matchedPrograms.length === 0) {
+      console.log(`[planner/cohorts] No programs matched for "${programType}". Available:`,
+        (allPrograms || []).map(p => `${p.name} (${p.abbreviation})`));
+      return NextResponse.json({ cohorts: [], debug: { searched: searchTerm, available: (allPrograms || []).map(p => p.name) } });
     }
 
-    const programIds = programs.map(p => p.id);
+    const programIds = matchedPrograms.map(p => p.id);
 
-    // 2. Get all active cohorts for this program
+    // 2. Get all active cohorts for matched programs
     const { data: cohorts, error: cohortError } = await supabase
       .from('cohorts')
       .select('id, cohort_number, start_date, expected_end_date, is_active, program_id, semester, program:programs(id, name, abbreviation)')
@@ -57,8 +66,8 @@ export async function GET(request: NextRequest) {
     if (cohortError) throw cohortError;
 
     // 3. If semester_id provided, check which cohorts already have program_schedules
-    let linkedCohortIds: Set<string> = new Set();
-    let existingSchedules: Record<string, string> = {}; // cohort_id → program_schedule_id
+    const linkedCohortIds: Set<string> = new Set();
+    const existingSchedules: Record<string, string> = {}; // cohort_id → program_schedule_id
 
     if (semesterId) {
       const { data: schedules, error: schedError } = await supabase
