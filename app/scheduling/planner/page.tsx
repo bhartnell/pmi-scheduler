@@ -779,6 +779,7 @@ interface WizardState {
   programType: string;
   semesterNumber: number | null;
   programScheduleId: string;
+  cohortId: string;           // selected cohort ID (may not have a program_schedule yet)
   dayMapping: Record<number, number>;
   instructorId: string;
   clearExisting: boolean;
@@ -788,13 +789,12 @@ interface WizardState {
 }
 
 function GenerateWizard({
-  programs,
   instructors,
   semesterId,
   onGenerate,
   onClose,
 }: {
-  programs: PmiProgramSchedule[];
+  programs?: PmiProgramSchedule[]; // kept for backwards compat but no longer used
   instructors: { id: string; name: string; email: string }[];
   semesterId: string;
   onGenerate: (result: { blocks: PmiScheduleBlock[]; online_courses: { course_code: string; course_name: string; duration_type: string }[] }) => void;
@@ -805,6 +805,7 @@ function GenerateWizard({
     programType: '',
     semesterNumber: null,
     programScheduleId: '',
+    cohortId: '',
     dayMapping: {},
     instructorId: '',
     clearExisting: false,
@@ -818,17 +819,17 @@ function GenerateWizard({
   const [error, setError] = useState<string | null>(null);
   const [labTemplateInfo, setLabTemplateInfo] = useState<LabTemplateInfo | null>(null);
 
-  const safePrograms = safeArray(programs);
-  const safeInstructors = safeArray(instructors);
+  // Cohorts fetched by program type (includes both linked and unlinked)
+  interface CohortOption {
+    id: string;
+    cohort_number: number;
+    program?: { id: string; name: string; abbreviation: string };
+    has_program_schedule: boolean;
+    program_schedule_id: string | null;
+  }
+  const [cohortOptions, setCohortOptions] = useState<CohortOption[]>([]);
 
-  // Filter programs to match the selected program type
-  const filteredPrograms = safePrograms.filter(ps => {
-    const progName = (ps.cohort?.program?.name || ps.cohort?.program?.abbreviation || '').toLowerCase();
-    const abbr = (ps.cohort?.program?.abbreviation || '').toLowerCase();
-    const selected = wizard.programType.toLowerCase();
-    // Match "paramedic" → "Paramedic" or "PM", "emt" → "EMT", etc.
-    return progName.includes(selected) || abbr.includes(selected) || selected.includes(abbr);
-  });
+  const safeInstructors = safeArray(instructors);
 
   const dayIndices = [...new Set(safeArray(templates).filter(t => !t.is_online).map(t => t.day_index))].sort();
   const needsSemester = wizard.programType === 'paramedic';
@@ -840,13 +841,16 @@ function GenerateWizard({
       let url = `/api/scheduling/planner/templates?program_type=${progType}`;
       if (semNum !== null) url += `&semester_number=${semNum}`;
 
-      // Load course templates and lab templates in parallel
+      // Load course templates, lab templates, and cohorts in parallel
       let labUrl = `/api/scheduling/planner/lab-templates?program=${progType}`;
       if (semNum !== null) labUrl += `&semester=${semNum}`;
 
-      const [res, labRes] = await Promise.all([
+      const cohortUrl = `/api/scheduling/planner/cohorts?program_type=${progType}&semester_id=${semesterId}`;
+
+      const [res, labRes, cohortRes] = await Promise.all([
         fetch(url),
         fetch(labUrl),
+        fetch(cohortUrl),
       ]);
 
       const data = await res.json();
@@ -860,12 +864,20 @@ function GenerateWizard({
       } catch {
         setLabTemplateInfo({ available: false, message: 'Could not check lab templates' });
       }
+
+      // Cohort options (non-critical)
+      try {
+        const cohortData = await cohortRes.json();
+        setCohortOptions(safeArray(cohortData.cohorts));
+      } catch {
+        setCohortOptions([]);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load templates');
     } finally {
       setLoadingTemplates(false);
     }
-  }, []);
+  }, [semesterId]);
 
   const goNext = () => {
     if (wizard.step === 1 && needsSemester) {
@@ -910,6 +922,28 @@ function GenerateWizard({
     setGenerating(true);
     setError(null);
     try {
+      let programScheduleId = wizard.programScheduleId;
+
+      // If a cohort is selected but has no program_schedule yet, auto-create one
+      if (wizard.cohortId && !programScheduleId) {
+        const classDays = Object.values(wizard.dayMapping);
+        const createRes = await fetch('/api/scheduling/planner/programs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            semester_id: semesterId,
+            cohort_id: wizard.cohortId,
+            class_days: classDays,
+            color: PROGRAM_TYPES.find(p => p.value === wizard.programType)?.color || '#3B82F6',
+          }),
+        });
+        const createData = await createRes.json();
+        if (createRes.ok && createData.program) {
+          programScheduleId = createData.program.id;
+        }
+        // Non-fatal if this fails — generation can proceed without a program_schedule link
+      }
+
       const res = await fetch('/api/scheduling/planner/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -917,14 +951,14 @@ function GenerateWizard({
           program_type: wizard.programType,
           semester_number: wizard.semesterNumber,
           semester_id: semesterId,
-          program_schedule_id: wizard.programScheduleId || null,
+          program_schedule_id: programScheduleId || null,
           day_mapping: wizard.dayMapping,
           instructor_id: wizard.instructorId || null,
           clear_existing: wizard.clearExisting,
           start_date: wizard.startDate,
           load_lab_template: wizard.loadLabTemplate,
           lab_template_id: wizard.labTemplateId || null,
-          cohort_id: filteredPrograms.find(p => p.id === wizard.programScheduleId)?.cohort_id || null,
+          cohort_id: wizard.cohortId || null,
         }),
       });
       const result = await res.json();
@@ -1072,26 +1106,38 @@ function GenerateWizard({
                     <p className="text-xs text-gray-400 mt-1">15 weeks of dated blocks will be generated from this date</p>
                   </div>
 
-                  {/* Program Schedule link */}
+                  {/* Cohort link */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Link to Cohort (optional)
                     </label>
                     <select
-                      value={wizard.programScheduleId}
-                      onChange={(e) => setWizard(prev => ({ ...prev, programScheduleId: e.target.value }))}
+                      value={wizard.cohortId}
+                      onChange={(e) => {
+                        const cohortId = e.target.value;
+                        const match = cohortOptions.find(c => c.id === cohortId);
+                        setWizard(prev => ({
+                          ...prev,
+                          cohortId,
+                          programScheduleId: match?.program_schedule_id || '',
+                        }));
+                      }}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
                     >
                       <option value="">No cohort link (standalone)</option>
-                      {filteredPrograms.map(ps => (
-                        <option key={ps.id} value={ps.id}>
-                          {getProgramLabel(ps)} — {formatClassDays(safeArray(ps.class_days))}
-                        </option>
-                      ))}
+                      {cohortOptions.map(c => {
+                        const abbr = c.program?.abbreviation || c.program?.name || '';
+                        return (
+                          <option key={c.id} value={c.id}>
+                            {abbr} Cohort {c.cohort_number}
+                            {c.has_program_schedule ? '' : ' (will auto-link)'}
+                          </option>
+                        );
+                      })}
                     </select>
-                    {filteredPrograms.length === 0 && (
+                    {cohortOptions.length === 0 && wizard.programType && (
                       <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                        No {wizard.programType.toUpperCase()} cohorts linked to this semester. You can still generate a standalone schedule.
+                        No active {wizard.programType.toUpperCase()} cohorts found. You can still generate a standalone schedule.
                       </p>
                     )}
                   </div>
@@ -1142,7 +1188,7 @@ function GenerateWizard({
                     </select>
                   </div>
 
-                  {wizard.programScheduleId && (
+                  {(wizard.programScheduleId || wizard.cohortId) && (
                     <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
                       <input
                         type="checkbox"
@@ -1185,7 +1231,7 @@ function GenerateWizard({
                             {' · '}{labTemplateInfo.template_count} lab day{labTemplateInfo.template_count !== 1 ? 's' : ''}
                           </div>
                         )}
-                        {wizard.loadLabTemplate && !wizard.programScheduleId && (
+                        {wizard.loadLabTemplate && !wizard.cohortId && (
                           <div className="mt-1 ml-6 text-xs text-orange-500">
                             A cohort link is recommended to properly assign lab days
                           </div>
