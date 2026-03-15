@@ -113,12 +113,22 @@ export async function POST(request: NextRequest) {
 
     const blocksToInsert: Record<string, unknown>[] = [];
 
+    // Build course-level recurring group IDs (same course across all days shares one ID)
+    const courseGroupIds = new Map<string, string>();
+    for (const t of onGroundTemplates) {
+      const courseKey = `${t.course_code}|${t.course_name}|${t.duration_type}`;
+      if (!courseGroupIds.has(courseKey)) {
+        courseGroupIds.set(courseKey, randomUUID());
+      }
+    }
+
     for (const t of onGroundTemplates) {
       const weekday = dayIndexToWeekday[t.day_index];
       if (weekday === undefined) continue;
 
-      // Create a recurring_group_id for this template's recurring series
-      const recurringGroupId = randomUUID();
+      // Use course-level recurring_group_id so same course on different days shares one ID
+      const courseKey = `${t.course_code}|${t.course_name}|${t.duration_type}`;
+      const recurringGroupId = courseGroupIds.get(courseKey)!;
 
       // Find the first occurrence of this weekday
       const firstDate = findFirstOccurrence(semesterStart, weekday);

@@ -223,46 +223,58 @@ function TimeGridBlock({
   return (
     <button
       onClick={onClick}
-      className="absolute left-1 right-1 rounded-md px-1.5 py-0.5 text-left overflow-hidden border border-black/10 hover:ring-2 hover:ring-blue-400 transition-shadow cursor-pointer group"
+      draggable={true}
+      onDragStart={(e) => {
+        e.dataTransfer.setData('application/json', JSON.stringify({
+          blockId: block.id,
+          originalDate: block.date,
+          originalStartTime: block.start_time,
+          originalEndTime: block.end_time,
+          recurringGroupId: block.recurring_group_id,
+          courseName: block.course_name,
+          dayOfWeek: block.day_of_week,
+        }));
+        e.dataTransfer.effectAllowed = 'move';
+      }}
+      className="absolute left-1 right-1 rounded-md px-1.5 py-0.5 text-left overflow-hidden hover:ring-2 hover:ring-white/40 transition-shadow cursor-pointer group"
       style={{
         top: `${top}px`,
         height: `${height}px`,
-        backgroundColor: color + '22',
-        borderLeftColor: color,
-        borderLeftWidth: '3px',
+        backgroundColor: color,
+        borderLeft: '3px solid rgba(255,255,255,0.3)',
       }}
     >
       {/* Badges */}
       <div className="absolute top-0.5 right-0.5 flex gap-0.5">
         {isLastFirstHalf && (
-          <span className="text-[7px] px-1 py-0 rounded bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 font-bold">Last</span>
+          <span className="text-[7px] px-1 py-0 rounded bg-black/20 text-white font-bold">Last</span>
         )}
         {isFirstSecondHalf && (
-          <span className="text-[7px] px-1 py-0 rounded bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 font-bold">New</span>
+          <span className="text-[7px] px-1 py-0 rounded bg-black/20 text-white font-bold">New</span>
         )}
         {isModified && (
-          <span className="text-[7px] px-1 py-0 rounded bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 font-bold">Mod</span>
+          <span className="text-[7px] px-1 py-0 rounded bg-black/20 text-yellow-200 font-bold">Mod</span>
         )}
       </div>
-      <div className="text-[10px] font-semibold truncate pr-6" style={{ color }}>
+      <div className="text-[10px] font-bold truncate pr-6 text-white drop-shadow-sm">
         {block.course_name || block.title || block.block_type}
       </div>
-      <div className="text-[9px] text-gray-500 dark:text-gray-400 truncate">
+      <div className="text-[9px] text-white/70 truncate">
         {formatTime(block.start_time)}-{formatTime(block.end_time)}
       </div>
       {block.room && (
-        <div className="text-[9px] text-gray-400 dark:text-gray-500 truncate flex items-center gap-0.5">
+        <div className="text-[9px] text-white/60 truncate flex items-center gap-0.5">
           <MapPin className="w-2.5 h-2.5" />
           {block.room.name}
         </div>
       )}
       {instructors.length > 0 && (
-        <div className="text-[9px] text-gray-400 truncate">
+        <div className="text-[9px] text-white/60 truncate">
           {safeArray(instructors).map(i => getInitials(i.instructor?.name || '')).join(', ')}
         </div>
       )}
       {block.week_number && height >= 60 && (
-        <div className="text-[8px] text-gray-300 dark:text-gray-600">W{block.week_number}</div>
+        <div className="text-[8px] text-white/40">W{block.week_number}</div>
       )}
     </button>
   );
@@ -273,16 +285,21 @@ function TimeGridBlock({
 function RecurringActionDialog({
   action,
   blockDate,
+  dayOfWeek,
+  courseName,
   onChoice,
   onClose,
 }: {
   action: 'move' | 'delete' | 'edit';
   blockDate: string | null;
+  dayOfWeek?: number;
+  courseName?: string | null;
   onChoice: (mode: 'this' | 'this_and_future' | 'all') => void;
   onClose: () => void;
 }) {
   const dateLabel = blockDate || 'this date';
   const actionVerb = action === 'delete' ? 'Delete' : action === 'move' ? 'Move' : 'Update';
+  const dayName = dayOfWeek !== undefined ? DAY_NAMES[dayOfWeek] : '';
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40">
@@ -305,15 +322,15 @@ function RecurringActionDialog({
             onClick={() => onChoice('this_and_future')}
             className="w-full px-4 py-2.5 text-left text-sm rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100"
           >
-            <div className="font-medium">This and all future classes</div>
-            <div className="text-xs text-gray-500 dark:text-gray-400">Affects {dateLabel} and every occurrence after</div>
+            <div className="font-medium">This and all future {dayName}s</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">Affects {dateLabel} and every {dayName} after</div>
           </button>
           <button
             onClick={() => onChoice('all')}
             className="w-full px-4 py-2.5 text-left text-sm rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100"
           >
-            <div className="font-medium">All classes in this series</div>
-            <div className="text-xs text-gray-500 dark:text-gray-400">Affects every occurrence, past and future</div>
+            <div className="font-medium">All days of {courseName || 'this course'}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">Every occurrence of this course, all days, all weeks</div>
           </button>
         </div>
         <button
@@ -721,6 +738,8 @@ function BlockEditModal({
         <RecurringActionDialog
           action="edit"
           blockDate={block.date || null}
+          dayOfWeek={block.day_of_week}
+          courseName={block.course_name}
           onChoice={(mode) => {
             setShowRecurringDialog(null);
             onSave(buildPayload(), mode);
@@ -733,6 +752,8 @@ function BlockEditModal({
         <RecurringActionDialog
           action="delete"
           blockDate={block.date || null}
+          dayOfWeek={block.day_of_week}
+          courseName={block.course_name}
           onChoice={(mode) => {
             setShowRecurringDialog(null);
             onDelete(mode);
@@ -1474,8 +1495,8 @@ function MonthView({
                         <button
                           key={b.id}
                           onClick={(e) => { e.stopPropagation(); onBlockClick(b); }}
-                          className="w-full text-left rounded px-1 py-0 text-[9px] truncate hover:opacity-80"
-                          style={{ backgroundColor: color + '22', color, borderLeft: `2px solid ${color}` }}
+                          className="w-full text-left rounded px-1 py-0 text-[9px] truncate hover:opacity-80 text-white"
+                          style={{ backgroundColor: color, borderLeft: '2px solid rgba(255,255,255,0.3)' }}
                         >
                           {formatTime(b.start_time).replace(' ', '')} {b.course_name || b.title || b.block_type}
                         </button>
@@ -1520,6 +1541,16 @@ export default function SemesterPlannerPage() {
   const [roomFilter, setRoomFilter] = useState<string>('');
   const [editingBlock, setEditingBlock] = useState<(Partial<PmiScheduleBlock> & { day_of_week: number }) | null>(null);
   const [showWizard, setShowWizard] = useState(false);
+  const [dragOverCell, setDragOverCell] = useState<string | null>(null);
+  const [pendingDrop, setPendingDrop] = useState<{
+    blockId: string;
+    recurringGroupId: string | null;
+    courseName: string | null;
+    dayOfWeek: number;
+    newDate: string;
+    newStartTime: string;
+    newEndTime: string;
+  } | null>(null);
 
   const gridRef = useRef<HTMLDivElement>(null);
 
@@ -1756,6 +1787,72 @@ export default function SemesterPlannerPage() {
     setShowWizard(false);
     setOnlineCourses(prev => [...prev, ...safeArray(result.online_courses)]);
     loadSemesterData();
+  }, [loadSemesterData]);
+
+  const handleDrop = useCallback((date: Date, hour: number, e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOverCell(null);
+    try {
+      const data = JSON.parse(e.dataTransfer.getData('application/json'));
+      if (!data.blockId) return;
+
+      const originalStartMin = timeToMinutes(data.originalStartTime);
+      const originalEndMin = timeToMinutes(data.originalEndTime);
+      const duration = originalEndMin - originalStartMin;
+      const newStartMin = hour * 60;
+      const newEndMin = newStartMin + duration;
+
+      const newDate = formatDateStr(date);
+      const newStartTime = minutesToTime(newStartMin);
+      const newEndTime = minutesToTime(newEndMin);
+
+      if (data.recurringGroupId) {
+        setPendingDrop({
+          blockId: data.blockId,
+          recurringGroupId: data.recurringGroupId,
+          courseName: data.courseName,
+          dayOfWeek: data.dayOfWeek,
+          newDate,
+          newStartTime,
+          newEndTime,
+        });
+      } else {
+        // Direct update for non-recurring blocks
+        handleSaveBlockDirect(data.blockId, {
+          date: newDate,
+          day_of_week: date.getDay(),
+          start_time: newStartTime,
+          end_time: newEndTime,
+        });
+      }
+    } catch {
+      // Invalid drag data
+    }
+  }, []);
+
+  const handleSaveBlockDirect = useCallback(async (blockId: string, updates: Record<string, unknown>, updateMode?: string) => {
+    setSaving(true);
+    try {
+      const payload = { ...updates };
+      if (updateMode) {
+        payload.update_mode = updateMode;
+      }
+      const res = await fetch(`/api/scheduling/planner/blocks/${blockId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const result = await res.json();
+        alert(result.error || 'Failed to move block');
+        return;
+      }
+      await loadSemesterData();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Move failed');
+    } finally {
+      setSaving(false);
+    }
   }, [loadSemesterData]);
 
   // ─── Week Navigation ───────────────────────────────────────────────────────
@@ -2047,15 +2144,22 @@ export default function SemesterPlannerPage() {
                       }`}
                       style={{ height: `${timeSlots.length * SLOT_HEIGHT}px` }}
                     >
-                      {timeSlots.map(hour => (
-                        <div
-                          key={hour}
-                          className="border-b border-gray-100 dark:border-gray-800 hover:bg-blue-50/30 dark:hover:bg-blue-900/10 cursor-pointer transition-colors"
-                          style={{ height: `${SLOT_HEIGHT}px` }}
-                          onDoubleClick={() => handleQuickAdd(date, hour)}
-                          title={`Double-click to add block at ${hour > 12 ? hour - 12 : hour}:00 ${hour >= 12 ? 'PM' : 'AM'}`}
-                        />
-                      ))}
+                      {timeSlots.map(hour => {
+                        const cellKey = `${dateStr}-${hour}`;
+                        return (
+                          <div
+                            key={hour}
+                            className={`border-b border-gray-100 dark:border-gray-800 hover:bg-blue-50/30 dark:hover:bg-blue-900/10 cursor-pointer transition-colors ${
+                              dragOverCell === cellKey ? 'bg-blue-100 dark:bg-blue-900/30 ring-2 ring-blue-400 ring-inset' : ''
+                            }`}
+                            style={{ height: `${SLOT_HEIGHT}px` }}
+                            onClick={() => handleQuickAdd(date, hour)}
+                            onDragOver={(e) => { e.preventDefault(); setDragOverCell(cellKey); }}
+                            onDragLeave={() => setDragOverCell(null)}
+                            onDrop={(e) => handleDrop(date, hour, e)}
+                          />
+                        );
+                      })}
 
                       {safeArray(dayBlocks).map(block => (
                         <TimeGridBlock
@@ -2099,6 +2203,28 @@ export default function SemesterPlannerPage() {
           semesterId={selectedSemesterId}
           onGenerate={handleGenerated}
           onClose={() => setShowWizard(false)}
+        />
+      )}
+
+      {/* Drag-drop recurring action dialog */}
+      {pendingDrop && (
+        <RecurringActionDialog
+          action="move"
+          blockDate={pendingDrop.newDate}
+          dayOfWeek={pendingDrop.dayOfWeek}
+          courseName={pendingDrop.courseName}
+          onChoice={(mode) => {
+            const { blockId, newDate, newStartTime, newEndTime } = pendingDrop;
+            const newDow = new Date(newDate + 'T00:00:00').getDay();
+            setPendingDrop(null);
+            handleSaveBlockDirect(blockId, {
+              date: newDate,
+              day_of_week: newDow,
+              start_time: newStartTime,
+              end_time: newEndTime,
+            }, mode);
+          }}
+          onClose={() => setPendingDrop(null)}
         />
       )}
     </div>
