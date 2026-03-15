@@ -34,9 +34,11 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
+    const { update_mode } = body; // 'this' | 'this_and_future' | 'all'
+
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
 
-    // Convert empty strings to null for FK/optional columns
+    // Build update payload
     if (body.program_schedule_id !== undefined) updates.program_schedule_id = body.program_schedule_id || null;
     if (body.room_id !== undefined) updates.room_id = body.room_id || null;
     if (body.day_of_week !== undefined) {
@@ -53,10 +55,50 @@ export async function PUT(
     if (body.color !== undefined) updates.color = body.color || null;
     if (body.is_recurring !== undefined) updates.is_recurring = body.is_recurring;
     if (body.specific_date !== undefined) updates.specific_date = body.specific_date || null;
+    if (body.date !== undefined) updates.date = body.date || null;
+    if (body.week_number !== undefined) updates.week_number = body.week_number;
     if (body.sort_order !== undefined) updates.sort_order = body.sort_order;
 
     const supabase = getSupabaseAdmin();
 
+    // Handle batch updates for recurring blocks
+    if (update_mode === 'this_and_future' || update_mode === 'all') {
+      // First get the target block to find its recurring_group_id and date
+      const { data: targetBlock, error: fetchError } = await supabase
+        .from('pmi_schedule_blocks')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      if (targetBlock?.recurring_group_id) {
+        let batchQuery = supabase
+          .from('pmi_schedule_blocks')
+          .update(updates)
+          .eq('recurring_group_id', targetBlock.recurring_group_id);
+
+        if (update_mode === 'this_and_future' && targetBlock.date) {
+          batchQuery = batchQuery.gte('date', targetBlock.date);
+        }
+
+        const { error: batchError } = await batchQuery;
+        if (batchError) throw batchError;
+
+        // Return the updated target block
+        const { data: updatedBlock, error: refetchError } = await supabase
+          .from('pmi_schedule_blocks')
+          .select(BLOCK_SELECT)
+          .eq('id', id)
+          .single();
+
+        if (refetchError) throw refetchError;
+
+        return NextResponse.json({ block: updatedBlock, batch_updated: true });
+      }
+    }
+
+    // Single block update (default)
     const { data, error } = await supabase
       .from('pmi_schedule_blocks')
       .update(updates)
@@ -92,8 +134,39 @@ export async function DELETE(
     }
 
     const { id } = await params;
+    const { searchParams } = new URL(request.url);
+    const deleteMode = searchParams.get('mode'); // 'this' | 'this_and_future' | 'all'
+
     const supabase = getSupabaseAdmin();
 
+    if (deleteMode === 'this_and_future' || deleteMode === 'all') {
+      // Get the block first
+      const { data: targetBlock, error: fetchError } = await supabase
+        .from('pmi_schedule_blocks')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      if (targetBlock?.recurring_group_id) {
+        let deleteQuery = supabase
+          .from('pmi_schedule_blocks')
+          .delete()
+          .eq('recurring_group_id', targetBlock.recurring_group_id);
+
+        if (deleteMode === 'this_and_future' && targetBlock.date) {
+          deleteQuery = deleteQuery.gte('date', targetBlock.date);
+        }
+
+        const { error: batchError } = await deleteQuery;
+        if (batchError) throw batchError;
+
+        return NextResponse.json({ success: true, batch_deleted: true });
+      }
+    }
+
+    // Single delete
     const { error } = await supabase
       .from('pmi_schedule_blocks')
       .delete()

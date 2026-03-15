@@ -29,17 +29,18 @@ export async function GET(request: NextRequest) {
     const semesterId = searchParams.get('semester_id');
     const roomId = searchParams.get('room_id');
     const programScheduleId = searchParams.get('program_schedule_id');
+    const dateFrom = searchParams.get('date_from');  // YYYY-MM-DD
+    const dateTo = searchParams.get('date_to');      // YYYY-MM-DD
 
     if (!semesterId) {
       return NextResponse.json({ error: 'semester_id is required' }, { status: 400 });
     }
 
-    // Query blocks directly by semester_id (catches both linked and unlinked blocks)
     let query = supabase
       .from('pmi_schedule_blocks')
       .select(BLOCK_SELECT)
       .eq('semester_id', semesterId)
-      .order('day_of_week')
+      .order('date', { ascending: true, nullsFirst: false })
       .order('start_time');
 
     if (roomId) {
@@ -48,6 +49,14 @@ export async function GET(request: NextRequest) {
 
     if (programScheduleId) {
       query = query.eq('program_schedule_id', programScheduleId);
+    }
+
+    // Date range filtering for calendar view
+    if (dateFrom) {
+      query = query.gte('date', dateFrom);
+    }
+    if (dateTo) {
+      query = query.lte('date', dateTo);
     }
 
     const { data, error } = await query;
@@ -75,14 +84,19 @@ export async function POST(request: NextRequest) {
     const {
       program_schedule_id, semester_id, room_id, day_of_week, start_time, end_time,
       block_type, title, course_name, content_notes, color,
-      is_recurring, specific_date, sort_order
+      is_recurring, specific_date, sort_order, date, week_number, recurring_group_id
     } = body;
 
-    const dayNum = typeof day_of_week === 'string' ? parseInt(day_of_week, 10) : day_of_week;
-    if (!semester_id || dayNum === undefined || isNaN(dayNum) || !start_time || !end_time) {
+    if (!semester_id || !start_time || !end_time) {
       return NextResponse.json({
-        error: 'semester_id, day_of_week, start_time, and end_time are required'
+        error: 'semester_id, start_time, and end_time are required'
       }, { status: 400 });
+    }
+
+    // Derive day_of_week from date if not provided
+    let dayNum = typeof day_of_week === 'string' ? parseInt(day_of_week, 10) : day_of_week;
+    if ((dayNum === undefined || isNaN(dayNum)) && date) {
+      dayNum = new Date(date + 'T00:00:00').getDay();
     }
 
     const supabase = getSupabaseAdmin();
@@ -93,7 +107,7 @@ export async function POST(request: NextRequest) {
         program_schedule_id: program_schedule_id || null,
         semester_id,
         room_id: room_id || null,
-        day_of_week: dayNum,
+        day_of_week: dayNum ?? null,
         start_time,
         end_time,
         block_type: block_type || 'other',
@@ -101,8 +115,11 @@ export async function POST(request: NextRequest) {
         course_name: course_name || null,
         content_notes: content_notes || null,
         color: color || null,
-        is_recurring: is_recurring ?? true,
+        is_recurring: is_recurring ?? false,
         specific_date: specific_date ?? null,
+        date: date || null,
+        week_number: week_number ?? null,
+        recurring_group_id: recurring_group_id || null,
         sort_order: sort_order ?? 0,
       })
       .select(BLOCK_SELECT)

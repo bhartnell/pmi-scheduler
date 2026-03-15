@@ -75,6 +75,9 @@ export interface PmiScheduleBlock {
   color: string | null;                // block-level color override
   is_recurring: boolean;
   specific_date: string | null;
+  date: string | null;                 // actual calendar date (YYYY-MM-DD)
+  week_number: number | null;          // week 1-15 within semester
+  recurring_group_id: string | null;   // links all instances of same recurring class
   sort_order: number;
   created_at: string;
   updated_at: string;
