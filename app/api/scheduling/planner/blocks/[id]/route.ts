@@ -79,7 +79,9 @@ export async function PUT(
           .eq('recurring_group_id', targetBlock.recurring_group_id);
 
         if (update_mode === 'this_and_future' && targetBlock.date) {
-          batchQuery = batchQuery.gte('date', targetBlock.date);
+          batchQuery = batchQuery
+            .gte('date', targetBlock.date)
+            .eq('day_of_week', targetBlock.day_of_week);
         }
 
         const { error: batchError } = await batchQuery;
@@ -156,7 +158,9 @@ export async function DELETE(
           .eq('recurring_group_id', targetBlock.recurring_group_id);
 
         if (deleteMode === 'this_and_future' && targetBlock.date) {
-          deleteQuery = deleteQuery.gte('date', targetBlock.date);
+          deleteQuery = deleteQuery
+            .gte('date', targetBlock.date)
+            .eq('day_of_week', targetBlock.day_of_week);
         }
 
         const { error: batchError } = await deleteQuery;
