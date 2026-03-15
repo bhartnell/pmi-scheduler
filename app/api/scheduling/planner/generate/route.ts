@@ -2,6 +2,24 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole } from '@/lib/permissions';
+import { randomUUID } from 'crypto';
+
+// Helper: add days to a date
+function addDays(date: Date, days: number): Date {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+}
+
+// Helper: format date as YYYY-MM-DD
+function formatDate(date: Date): string {
+  return date.toISOString().split('T')[0];
+}
+
+// Helper: get JS day of week (0=Sun) from Date
+function getDow(date: Date): number {
+  return date.getDay();
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,11 +40,15 @@ export async function POST(request: NextRequest) {
       day_mapping,       // { 1: 4, 2: 5 } → day_index 1 maps to Thursday (4), etc.
       instructor_id,
       clear_existing,    // if true, delete existing blocks for this program_schedule before generating
+      start_date,        // YYYY-MM-DD — the first day of the semester
+      load_lab_template, // if true, also apply lab template during generation
+      lab_template_id,   // specific lab template to use (optional — uses most recent if not provided)
+      cohort_id,         // needed for lab template application
     } = body;
 
-    if (!program_type || !semester_id || !day_mapping) {
+    if (!program_type || !semester_id || !day_mapping || !start_date) {
       return NextResponse.json({
-        error: 'program_type, semester_id, and day_mapping are required'
+        error: 'program_type, semester_id, day_mapping, and start_date are required'
       }, { status: 400 });
     }
 
@@ -66,15 +88,62 @@ export async function POST(request: NextRequest) {
       if (delError) throw delError;
     }
 
-    // 3. Generate blocks from templates (skip online courses — they go to sidebar)
+    // 3. Calculate all 15 weeks of actual dates
+    const semesterStart = new Date(start_date + 'T00:00:00');
+
+    // Build a map from day_index → actual weekday number (0-6, Sun-Sat)
+    // day_mapping: { "1": 4, "2": 5 } means Day 1 → Thursday (4), Day 2 → Friday (5)
+    const dayIndexToWeekday: Record<number, number> = {};
+    for (const [indexStr, weekday] of Object.entries(day_mapping)) {
+      dayIndexToWeekday[parseInt(indexStr)] = weekday as number;
+    }
+
+    // Find the first occurrence of each mapped weekday from start_date
+    function findFirstOccurrence(startDate: Date, targetDow: number): Date {
+      const d = new Date(startDate);
+      const currentDow = getDow(d);
+      let daysUntil = targetDow - currentDow;
+      if (daysUntil < 0) daysUntil += 7;
+      return addDays(d, daysUntil);
+    }
+
+    // 4. Generate blocks from templates
     const onGroundTemplates = templates.filter(t => !t.is_online);
     const onlineTemplates = templates.filter(t => t.is_online);
 
-    const blocksToInsert = onGroundTemplates.map(t => {
-      const dayOfWeek = day_mapping[String(t.day_index)] ?? day_mapping[t.day_index];
-      if (dayOfWeek === undefined) return null;
+    const blocksToInsert: Record<string, unknown>[] = [];
 
-      // Build title with duration hint
+    for (const t of onGroundTemplates) {
+      const weekday = dayIndexToWeekday[t.day_index];
+      if (weekday === undefined) continue;
+
+      // Create a recurring_group_id for this template's recurring series
+      const recurringGroupId = randomUUID();
+
+      // Find the first occurrence of this weekday
+      const firstDate = findFirstOccurrence(semesterStart, weekday);
+
+      // Determine which weeks this course runs
+      let startWeek = 1;
+      let endWeek = 15;
+
+      if (t.duration_type === 'first_half') {
+        // Weeks 1-8, but the LAST class is on Week 8 Day 1
+        startWeek = 1;
+        endWeek = 8;
+      } else if (t.duration_type === 'second_half') {
+        // Starting Week 8 Day 2 through Week 15
+        // For Day 2 templates, start at week 8
+        // For Day 1 templates, start at week 9
+        if (t.day_index === 1) {
+          startWeek = 9;
+        } else {
+          startWeek = 8;
+        }
+        endWeek = 15;
+      }
+
+      // Build title
       let title = `${t.course_code} ${t.course_name}`;
       if (t.duration_type === 'first_half') {
         title += ' (Wks 1-8)';
@@ -82,21 +151,29 @@ export async function POST(request: NextRequest) {
         title += ' (Wks 9-15)';
       }
 
-      return {
-        semester_id,
-        program_schedule_id: program_schedule_id || null,
-        day_of_week: dayOfWeek,
-        start_time: t.start_time,
-        end_time: t.end_time,
-        block_type: t.block_type || 'lecture',
-        title,
-        course_name: `${t.course_code} ${t.course_name}`,
-        content_notes: t.notes || null,
-        color: t.color || null,
-        is_recurring: true,
-        sort_order: t.sort_order || 0,
-      };
-    }).filter(Boolean);
+      // Generate one block per week
+      for (let week = startWeek; week <= endWeek; week++) {
+        const blockDate = addDays(firstDate, (week - 1) * 7);
+
+        blocksToInsert.push({
+          semester_id,
+          program_schedule_id: program_schedule_id || null,
+          day_of_week: weekday,
+          date: formatDate(blockDate),
+          week_number: week,
+          recurring_group_id: recurringGroupId,
+          start_time: t.start_time,
+          end_time: t.end_time,
+          block_type: t.block_type || 'lecture',
+          title,
+          course_name: `${t.course_code} ${t.course_name}`,
+          content_notes: t.notes || null,
+          color: t.color || null,
+          is_recurring: true,
+          sort_order: t.sort_order || 0,
+        });
+      }
+    }
 
     if (blocksToInsert.length === 0) {
       return NextResponse.json({
@@ -104,36 +181,187 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    const { data: createdBlocks, error: insertError } = await supabase
-      .from('pmi_schedule_blocks')
-      .insert(blocksToInsert)
-      .select('*');
+    // Insert in batches of 100 to avoid payload limits
+    const allCreated: Record<string, unknown>[] = [];
+    for (let i = 0; i < blocksToInsert.length; i += 100) {
+      const batch = blocksToInsert.slice(i, i + 100);
+      const { data: createdBlocks, error: insertError } = await supabase
+        .from('pmi_schedule_blocks')
+        .insert(batch)
+        .select('*');
 
-    if (insertError) throw insertError;
+      if (insertError) throw insertError;
+      if (createdBlocks) allCreated.push(...createdBlocks);
+    }
 
-    // 4. Assign instructor to all created blocks if provided
-    if (instructor_id && createdBlocks && createdBlocks.length > 0) {
-      const instructorAssignments = createdBlocks.map(block => ({
-        schedule_block_id: block.id,
+    // 5. Assign instructor to all created blocks if provided
+    if (instructor_id && allCreated.length > 0) {
+      const instructorAssignments = allCreated.map(block => ({
+        schedule_block_id: (block as { id: string }).id,
         instructor_id,
         role: 'primary',
       }));
 
-      await supabase
-        .from('pmi_block_instructors')
-        .insert(instructorAssignments);
+      // Insert in batches
+      for (let i = 0; i < instructorAssignments.length; i += 100) {
+        const batch = instructorAssignments.slice(i, i + 100);
+        await supabase
+          .from('pmi_block_instructors')
+          .insert(batch);
+      }
+    }
+
+    // 6. Optionally apply lab template
+    let labResult: { created_count: number; errors?: string[] } | null = null;
+
+    if (load_lab_template && cohort_id) {
+      try {
+        // Determine which lab template to use
+        const semNum = semester_number || 1;
+
+        let labTemplateQuery = supabase
+          .from('lab_day_templates')
+          .select(`
+            id, name, description, week_number, day_number, category,
+            instructor_count, is_anchor, anchor_type, requires_review, review_notes,
+            stations:lab_template_stations(
+              id, sort_order, station_type, station_name, skills, scenario_id,
+              scenario_title, difficulty, notes, metadata
+            )
+          `)
+          .eq('program', program_type)
+          .eq('semester', semNum)
+          .order('week_number', { ascending: true });
+
+        // If a specific template ID is provided, filter to that template's program/semester set
+        if (lab_template_id) {
+          // First get the template to find its program/semester
+          const { data: specificTpl } = await supabase
+            .from('lab_day_templates')
+            .select('program, semester')
+            .eq('id', lab_template_id)
+            .single();
+
+          if (specificTpl) {
+            labTemplateQuery = supabase
+              .from('lab_day_templates')
+              .select(`
+                id, name, description, week_number, day_number, category,
+                instructor_count, is_anchor, anchor_type, requires_review, review_notes,
+                stations:lab_template_stations(
+                  id, sort_order, station_type, station_name, skills, scenario_id,
+                  scenario_title, difficulty, notes, metadata
+                )
+              `)
+              .eq('program', specificTpl.program)
+              .eq('semester', specificTpl.semester)
+              .order('week_number', { ascending: true });
+          }
+        }
+
+        const { data: labTemplates, error: labTplError } = await labTemplateQuery;
+
+        if (labTplError) {
+          console.error('Error fetching lab templates:', labTplError);
+        } else if (labTemplates && labTemplates.length > 0) {
+          // Sort by week_number, day_number
+          const sortedLab = [...labTemplates].sort((a, b) => {
+            const weekDiff = (a.week_number || 1) - (b.week_number || 1);
+            return weekDiff !== 0 ? weekDiff : (a.day_number || 1) - (b.day_number || 1);
+          });
+
+          const labErrors: string[] = [];
+          let labCreated = 0;
+
+          for (const tpl of sortedLab) {
+            const weekNum = tpl.week_number || 1;
+            const dayNum = tpl.day_number || 1;
+
+            // Calculate date: find the day_index from day_number
+            // Day 1 → mapped to first class day, Day 2 → second class day
+            const mappedWeekday = dayIndexToWeekday[dayNum];
+            if (mappedWeekday === undefined) continue;
+
+            const firstDate = findFirstOccurrence(semesterStart, mappedWeekday);
+            const labDate = addDays(firstDate, (weekNum - 1) * 7);
+            const labDateStr = formatDate(labDate);
+
+            const displayTitle = tpl.name || `Week ${weekNum} Day ${dayNum}`;
+
+            // Create the lab day
+            const { data: labDay, error: labDayError } = await supabase
+              .from('lab_days')
+              .insert({
+                cohort_id,
+                date: labDateStr,
+                title: displayTitle,
+                semester: semNum,
+                week_number: weekNum,
+                day_number: dayNum,
+                notes: tpl.description || null,
+                source_template_id: tpl.id,
+              })
+              .select('id')
+              .single();
+
+            if (labDayError) {
+              labErrors.push(`W${weekNum}D${dayNum}: ${labDayError.message}`);
+              continue;
+            }
+
+            labCreated++;
+
+            // Create stations
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const tplStations = (tpl as Record<string, unknown>).stations as Array<any> | undefined;
+            if (tplStations && tplStations.length > 0 && labDay) {
+              const stationsToInsert = tplStations.map((s: {
+                sort_order?: number; station_type?: string; station_name?: string;
+                scenario_id?: string; notes?: string; metadata?: Record<string, unknown>;
+              }) => ({
+                lab_day_id: labDay.id,
+                station_number: s.sort_order || 1,
+                station_type: s.station_type || 'scenario',
+                scenario_id: s.scenario_id || null,
+                custom_title: s.station_name || null,
+                documentation_required: false,
+                platinum_required: false,
+                station_notes: s.notes || null,
+                metadata: s.metadata && Object.keys(s.metadata).length > 0 ? s.metadata : {},
+              }));
+
+              const { error: stationsError } = await supabase
+                .from('lab_stations')
+                .insert(stationsToInsert);
+
+              if (stationsError) {
+                labErrors.push(`W${weekNum}D${dayNum} stations: ${stationsError.message}`);
+              }
+            }
+          }
+
+          labResult = {
+            created_count: labCreated,
+            errors: labErrors.length > 0 ? labErrors : undefined,
+          };
+        }
+      } catch (labErr) {
+        console.error('Lab template application error:', labErr);
+        labResult = { created_count: 0, errors: ['Failed to apply lab template'] };
+      }
     }
 
     return NextResponse.json({
-      blocks: createdBlocks || [],
+      blocks: allCreated,
       online_courses: onlineTemplates.map(t => ({
         course_code: t.course_code,
         course_name: t.course_name,
         duration_type: t.duration_type,
         notes: t.notes,
       })),
-      generated_count: createdBlocks?.length || 0,
+      generated_count: allCreated.length,
       online_count: onlineTemplates.length,
+      lab_template: labResult,
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';

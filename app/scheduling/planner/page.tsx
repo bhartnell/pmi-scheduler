@@ -17,7 +17,6 @@ import {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const DAYS_OF_WEEK = [1, 2, 3, 4, 5, 6]; // Mon-Sat
 const TIME_START = 7;  // 7 AM
 const TIME_END = 18;   // 6 PM
 const SLOT_HEIGHT = 48; // px per hour
@@ -80,7 +79,7 @@ const PROGRAM_TYPES = [
   { value: 'aemt', label: 'AEMT', color: '#EAB308' },
 ];
 
-// ─── Helper Functions ─────────────────────────────────────────────────────────
+// ─── Date Helpers ─────────────────────────────────────────────────────────────
 
 function formatTime(time: string): string {
   const parts = time.split(':');
@@ -111,6 +110,50 @@ function getBlockHeight(startTime: string, endTime: string): number {
   const startMin = timeToMinutes(startTime);
   const endMin = timeToMinutes(endTime);
   return Math.max(((endMin - startMin) / 60) * SLOT_HEIGHT, 20);
+}
+
+function addDays(date: Date, days: number): Date {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+}
+
+function formatDateStr(date: Date): string {
+  return date.toISOString().split('T')[0];
+}
+
+function formatDateShort(date: Date): string {
+  return `${date.getMonth() + 1}/${date.getDate()}`;
+}
+
+function formatDateLong(date: Date): string {
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+}
+
+function getMonday(date: Date): Date {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day; // Monday = 1
+  d.setDate(d.getDate() + diff);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function isSameDay(a: Date, b: Date): boolean {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+function isToday(date: Date): boolean {
+  return isSameDay(date, new Date());
+}
+
+function getWeekNumber(date: Date, semesterStart: Date | null): number | null {
+  if (!semesterStart) return null;
+  const start = getMonday(semesterStart);
+  const current = getMonday(date);
+  const diff = current.getTime() - start.getTime();
+  return Math.floor(diff / (7 * 24 * 60 * 60 * 1000)) + 1;
 }
 
 function getProgramLabel(ps: PmiProgramSchedule): string {
@@ -154,15 +197,28 @@ function TimeGridBlock({
   block,
   program,
   onClick,
+  semesterStartDate,
 }: {
   block: PmiScheduleBlock;
   program: PmiProgramSchedule | undefined;
   onClick: () => void;
+  semesterStartDate: string | null;
 }) {
   const top = getBlockTop(block.start_time);
   const height = getBlockHeight(block.start_time, block.end_time);
   const color = block.color || program?.color || '#6B7280';
   const instructors = safeArray(block.instructors);
+
+  // Determine if this block has been modified from its recurring pattern
+  // A block is "modified" if it has a recurring_group_id but its own content differs
+  // For now, we check if content_notes contains "[modified]" marker
+  const isModified = block.recurring_group_id && block.content_notes?.includes('[modified]');
+
+  // Half-semester badges
+  const isLastFirstHalf = block.week_number === 8 && block.title?.includes('Wks 1-8');
+  const isFirstSecondHalf = block.title?.includes('Wks 9-15') && (
+    (block.week_number === 8) || (block.week_number === 9)
+  );
 
   return (
     <button
@@ -176,7 +232,19 @@ function TimeGridBlock({
         borderLeftWidth: '3px',
       }}
     >
-      <div className="text-[10px] font-semibold truncate" style={{ color }}>
+      {/* Badges */}
+      <div className="absolute top-0.5 right-0.5 flex gap-0.5">
+        {isLastFirstHalf && (
+          <span className="text-[7px] px-1 py-0 rounded bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 font-bold">Last</span>
+        )}
+        {isFirstSecondHalf && (
+          <span className="text-[7px] px-1 py-0 rounded bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 font-bold">New</span>
+        )}
+        {isModified && (
+          <span className="text-[7px] px-1 py-0 rounded bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400 font-bold">Mod</span>
+        )}
+      </div>
+      <div className="text-[10px] font-semibold truncate pr-6" style={{ color }}>
         {block.course_name || block.title || block.block_type}
       </div>
       <div className="text-[9px] text-gray-500 dark:text-gray-400 truncate">
@@ -193,9 +261,73 @@ function TimeGridBlock({
           {safeArray(instructors).map(i => getInitials(i.instructor?.name || '')).join(', ')}
         </div>
       )}
+      {block.week_number && height >= 60 && (
+        <div className="text-[8px] text-gray-300 dark:text-gray-600">W{block.week_number}</div>
+      )}
     </button>
   );
 }
+
+// ─── Recurring Action Dialog ──────────────────────────────────────────────────
+
+function RecurringActionDialog({
+  action,
+  blockDate,
+  onChoice,
+  onClose,
+}: {
+  action: 'move' | 'delete' | 'edit';
+  blockDate: string | null;
+  onChoice: (mode: 'this' | 'this_and_future' | 'all') => void;
+  onClose: () => void;
+}) {
+  const dateLabel = blockDate || 'this date';
+  const actionVerb = action === 'delete' ? 'Delete' : action === 'move' ? 'Move' : 'Update';
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-sm mx-4 p-5">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-3">
+          {actionVerb} recurring class?
+        </h3>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+          This is part of a recurring series. How would you like to apply this change?
+        </p>
+        <div className="space-y-2">
+          <button
+            onClick={() => onChoice('this')}
+            className="w-full px-4 py-2.5 text-left text-sm rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100"
+          >
+            <div className="font-medium">Just this class ({dateLabel})</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">Only affects this single date</div>
+          </button>
+          <button
+            onClick={() => onChoice('this_and_future')}
+            className="w-full px-4 py-2.5 text-left text-sm rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100"
+          >
+            <div className="font-medium">This and all future classes</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">Affects {dateLabel} and every occurrence after</div>
+          </button>
+          <button
+            onClick={() => onChoice('all')}
+            className="w-full px-4 py-2.5 text-left text-sm rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100"
+          >
+            <div className="font-medium">All classes in this series</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">Affects every occurrence, past and future</div>
+          </button>
+        </div>
+        <button
+          onClick={onClose}
+          className="w-full mt-3 px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Block Edit Modal ─────────────────────────────────────────────────────────
 
 function BlockEditModal({
   block,
@@ -215,16 +347,18 @@ function BlockEditModal({
   instructors: { id: string; name: string; email: string }[];
   semesterId: string;
   semesters: PmiSemester[];
-  onSave: (data: Record<string, unknown>) => void;
-  onDelete?: () => void;
+  onSave: (data: Record<string, unknown>, mode?: 'this' | 'this_and_future' | 'all') => void;
+  onDelete?: (mode?: 'this' | 'this_and_future' | 'all') => void;
   onClose: () => void;
   saving: boolean;
 }) {
   const isNew = !block.id;
   const hasProgram = !!block.program_schedule_id;
+  const isRecurring = !!block.recurring_group_id;
 
   const [isLinked, setIsLinked] = useState(hasProgram);
   const [customHex, setCustomHex] = useState('');
+  const [showRecurringDialog, setShowRecurringDialog] = useState<'save' | 'delete' | null>(null);
   const [formData, setFormData] = useState({
     program_schedule_id: block.program_schedule_id || '',
     room_id: block.room_id || '',
@@ -237,6 +371,7 @@ function BlockEditModal({
     content_notes: block.content_notes || '',
     color: block.color || '',
     instructor_id: '',
+    date: block.date || '',
   });
 
   useEffect(() => {
@@ -277,7 +412,7 @@ function BlockEditModal({
     }
   };
 
-  const handleSubmit = () => {
+  const buildPayload = (): Record<string, unknown> => {
     const payload: Record<string, unknown> = {
       day_of_week: formData.day_of_week,
       start_time: formData.start_time,
@@ -286,6 +421,10 @@ function BlockEditModal({
       content_notes: formData.content_notes || null,
       color: formData.color || null,
     };
+
+    if (formData.date) {
+      payload.date = formData.date;
+    }
 
     if (isLinked) {
       payload.program_schedule_id = formData.program_schedule_id || null;
@@ -303,255 +442,316 @@ function BlockEditModal({
       payload.instructor_id = formData.instructor_id;
     }
 
-    onSave(payload);
+    return payload;
+  };
+
+  const handleSubmit = () => {
+    if (!isNew && isRecurring) {
+      setShowRecurringDialog('save');
+    } else {
+      onSave(buildPayload());
+    }
+  };
+
+  const handleDelete = () => {
+    if (isRecurring && onDelete) {
+      setShowRecurringDialog('delete');
+    } else if (onDelete) {
+      onDelete('this');
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-            {isNew ? 'Add Schedule Block' : 'Edit Schedule Block'}
-          </h3>
-          <button onClick={onClose} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700">
-            <X className="w-5 h-5 text-gray-500" />
-          </button>
-        </div>
-
-        <div className="px-5 pt-4 pb-2">
-          <div className="inline-flex rounded-lg border border-gray-200 dark:border-gray-600 overflow-hidden">
-            <button
-              onClick={() => setIsLinked(false)}
-              className={`px-4 py-1.5 text-sm font-medium flex items-center gap-1.5 transition-colors ${
-                !isLinked
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
-              }`}
-            >
-              <Unlink className="w-3.5 h-3.5" />
-              Simple
-            </button>
-            <button
-              onClick={() => setIsLinked(true)}
-              className={`px-4 py-1.5 text-sm font-medium flex items-center gap-1.5 transition-colors ${
-                isLinked
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
-              }`}
-            >
-              <Link className="w-3.5 h-3.5" />
-              Linked to Program
-            </button>
-          </div>
-        </div>
-
-        <div className="px-5 py-4 space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Title</label>
-            <input
-              type="text"
-              value={formData.title}
-              onChange={(e) => setField('title', e.target.value)}
-              placeholder="Block title / label"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400"
-            />
-          </div>
-
-          <div className="grid grid-cols-3 gap-3">
+    <>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-700">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Day</label>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                {isNew ? 'Add Schedule Block' : 'Edit Schedule Block'}
+              </h3>
+              {block.date && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  {new Date(block.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                  {block.week_number ? ` · Week ${block.week_number}` : ''}
+                </p>
+              )}
+            </div>
+            <button onClick={onClose} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700">
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
+
+          <div className="px-5 pt-4 pb-2">
+            <div className="inline-flex rounded-lg border border-gray-200 dark:border-gray-600 overflow-hidden">
+              <button
+                onClick={() => setIsLinked(false)}
+                className={`px-4 py-1.5 text-sm font-medium flex items-center gap-1.5 transition-colors ${
+                  !isLinked
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
+                }`}
+              >
+                <Unlink className="w-3.5 h-3.5" />
+                Simple
+              </button>
+              <button
+                onClick={() => setIsLinked(true)}
+                className={`px-4 py-1.5 text-sm font-medium flex items-center gap-1.5 transition-colors ${
+                  isLinked
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
+                }`}
+              >
+                <Link className="w-3.5 h-3.5" />
+                Linked to Program
+              </button>
+            </div>
+          </div>
+
+          <div className="px-5 py-4 space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Title</label>
+              <input
+                type="text"
+                value={formData.title}
+                onChange={(e) => setField('title', e.target.value)}
+                placeholder="Block title / label"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400"
+              />
+            </div>
+
+            {/* Date + time row */}
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date</label>
+                <input
+                  type="date"
+                  value={formData.date}
+                  onChange={(e) => {
+                    setField('date', e.target.value);
+                    // Auto-set day_of_week from date
+                    if (e.target.value) {
+                      const d = new Date(e.target.value + 'T00:00:00');
+                      setField('day_of_week', d.getDay());
+                    }
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start</label>
+                <input
+                  type="time"
+                  value={formData.start_time}
+                  onChange={(e) => setField('start_time', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End</label>
+                <input
+                  type="time"
+                  value={formData.end_time}
+                  onChange={(e) => setField('end_time', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Color</label>
+              <div className="flex items-center gap-2 flex-wrap">
+                {COLOR_PRESETS.map(preset => (
+                  <button
+                    key={preset.hex}
+                    onClick={() => setField('color', preset.hex)}
+                    className={`w-7 h-7 rounded-full border-2 transition-transform ${
+                      formData.color === preset.hex ? 'border-gray-900 dark:border-white scale-110' : 'border-transparent hover:scale-105'
+                    }`}
+                    style={{ backgroundColor: preset.hex }}
+                    title={`${preset.name} (${preset.label})`}
+                  />
+                ))}
+                <input
+                  type="text"
+                  placeholder="#hex"
+                  value={customHex}
+                  onChange={handleCustomHex}
+                  className="w-20 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder:text-gray-400"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Instructor</label>
               <select
-                value={formData.day_of_week}
-                onChange={(e) => setField('day_of_week', parseInt(e.target.value))}
+                value={formData.instructor_id}
+                onChange={(e) => setField('instructor_id', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
               >
-                {DAYS_OF_WEEK.map(d => (
-                  <option key={d} value={d}>{DAY_NAMES[d]}</option>
+                <option value="">No instructor</option>
+                {safeArray(safeInstructors).map(inst => (
+                  <option key={inst.id} value={inst.id}>{inst.name}</option>
                 ))}
               </select>
             </div>
+
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start</label>
-              <input
-                type="time"
-                value={formData.start_time}
-                onChange={(e) => setField('start_time', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>
+              <textarea
+                value={formData.content_notes}
+                onChange={(e) => setField('content_notes', e.target.value)}
+                rows={2}
+                placeholder="Content notes, topics covered, etc."
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 resize-none"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End</label>
-              <input
-                type="time"
-                value={formData.end_time}
-                onChange={(e) => setField('end_time', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
-              />
-            </div>
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Color</label>
-            <div className="flex items-center gap-2 flex-wrap">
-              {COLOR_PRESETS.map(preset => (
-                <button
-                  key={preset.hex}
-                  onClick={() => setField('color', preset.hex)}
-                  className={`w-7 h-7 rounded-full border-2 transition-transform ${
-                    formData.color === preset.hex ? 'border-gray-900 dark:border-white scale-110' : 'border-transparent hover:scale-105'
-                  }`}
-                  style={{ backgroundColor: preset.hex }}
-                  title={`${preset.name} (${preset.label})`}
-                />
-              ))}
-              <input
-                type="text"
-                placeholder="#hex"
-                value={customHex}
-                onChange={handleCustomHex}
-                className="w-20 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder:text-gray-400"
-              />
-            </div>
-          </div>
+            {isLinked && (
+              <>
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                  <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                    <Link className="w-3 h-3" />
+                    Program Link
+                  </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Instructor</label>
-            <select
-              value={formData.instructor_id}
-              onChange={(e) => setField('instructor_id', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
-            >
-              <option value="">No instructor</option>
-              {safeArray(safeInstructors).map(inst => (
-                <option key={inst.id} value={inst.id}>{inst.name}</option>
-              ))}
-            </select>
-          </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Program / Cohort</label>
+                    <select
+                      value={formData.program_schedule_id}
+                      onChange={(e) => setField('program_schedule_id', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
+                    >
+                      <option value="">Select program...</option>
+                      {safePrograms.map(ps => (
+                        <option key={ps.id} value={ps.id}>
+                          {getProgramLabel(ps)} — {formatClassDays(safeArray(ps.class_days))}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>
-            <textarea
-              value={formData.content_notes}
-              onChange={(e) => setField('content_notes', e.target.value)}
-              rows={2}
-              placeholder="Content notes, topics covered, etc."
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 resize-none"
-            />
-          </div>
-
-          {isLinked && (
-            <>
-              <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-                <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                  <Link className="w-3 h-3" />
-                  Program Link
+                  {hints && (
+                    <div className="mt-2 px-3 py-2 rounded-md bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-xs text-blue-700 dark:text-blue-300">
+                      {semCode} {progType}: {safeArray(hints).join(', ')}
+                    </div>
+                  )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Program / Cohort</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Course Name</label>
+                  <input
+                    type="text"
+                    value={formData.course_name}
+                    onChange={(e) => setField('course_name', e.target.value)}
+                    placeholder="e.g., Anatomy & Physiology"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Room</label>
                   <select
-                    value={formData.program_schedule_id}
-                    onChange={(e) => setField('program_schedule_id', e.target.value)}
+                    value={formData.room_id}
+                    onChange={(e) => setField('room_id', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
                   >
-                    <option value="">Select program...</option>
-                    {safePrograms.map(ps => (
-                      <option key={ps.id} value={ps.id}>
-                        {getProgramLabel(ps)} — {formatClassDays(safeArray(ps.class_days))}
-                      </option>
+                    <option value="">No room</option>
+                    {Object.entries(roomsByType).map(([type, typeRooms]) => (
+                      <optgroup key={type} label={ROOM_TYPE_LABELS[type] || type}>
+                        {safeArray(typeRooms).map(room => (
+                          <option key={room.id} value={room.id}>
+                            {room.name} {room.capacity ? `(${room.capacity})` : ''}
+                          </option>
+                        ))}
+                      </optgroup>
                     ))}
                   </select>
                 </div>
 
-                {hints && (
-                  <div className="mt-2 px-3 py-2 rounded-md bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-xs text-blue-700 dark:text-blue-300">
-                    <span className="mr-1">{'\uD83D\uDCA1'}</span>
-                    {semCode} {progType}: {safeArray(hints).join(', ')}
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Course Name</label>
-                <input
-                  type="text"
-                  value={formData.course_name}
-                  onChange={(e) => setField('course_name', e.target.value)}
-                  placeholder="e.g., Anatomy & Physiology"
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Room</label>
-                <select
-                  value={formData.room_id}
-                  onChange={(e) => setField('room_id', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
-                >
-                  <option value="">No room</option>
-                  {Object.entries(roomsByType).map(([type, typeRooms]) => (
-                    <optgroup key={type} label={ROOM_TYPE_LABELS[type] || type}>
-                      {safeArray(typeRooms).map(room => (
-                        <option key={room.id} value={room.id}>
-                          {room.name} {room.capacity ? `(${room.capacity})` : ''}
-                        </option>
-                      ))}
-                    </optgroup>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Block Type</label>
-                <select
-                  value={formData.block_type}
-                  onChange={(e) => setField('block_type', e.target.value as ScheduleBlockType)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
-                >
-                  {BLOCK_TYPE_OPTIONS.map(opt => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
-              </div>
-            </>
-          )}
-        </div>
-
-        <div className="flex items-center justify-between px-5 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 rounded-b-xl">
-          <div>
-            {!isNew && onDelete && (
-              <button
-                onClick={onDelete}
-                className="px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg flex items-center gap-1.5"
-              >
-                <Trash2 className="w-4 h-4" /> Delete
-              </button>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Block Type</label>
+                  <select
+                    value={formData.block_type}
+                    onChange={(e) => setField('block_type', e.target.value as ScheduleBlockType)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
+                  >
+                    {BLOCK_TYPE_OPTIONS.map(opt => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </>
             )}
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={saving}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-50 flex items-center gap-1.5"
-            >
-              {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-              {isNew ? 'Add Block' : 'Save Changes'}
-            </button>
+
+          <div className="flex items-center justify-between px-5 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 rounded-b-xl">
+            <div>
+              {!isNew && onDelete && (
+                <button
+                  onClick={handleDelete}
+                  className="px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg flex items-center gap-1.5"
+                >
+                  <Trash2 className="w-4 h-4" /> Delete
+                </button>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={onClose}
+                className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={saving}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                {isNew ? 'Add Block' : 'Save Changes'}
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+
+      {showRecurringDialog === 'save' && (
+        <RecurringActionDialog
+          action="edit"
+          blockDate={block.date || null}
+          onChoice={(mode) => {
+            setShowRecurringDialog(null);
+            onSave(buildPayload(), mode);
+          }}
+          onClose={() => setShowRecurringDialog(null)}
+        />
+      )}
+
+      {showRecurringDialog === 'delete' && onDelete && (
+        <RecurringActionDialog
+          action="delete"
+          blockDate={block.date || null}
+          onChoice={(mode) => {
+            setShowRecurringDialog(null);
+            onDelete(mode);
+          }}
+          onClose={() => setShowRecurringDialog(null)}
+        />
+      )}
+    </>
   );
 }
 
 // ─── Generate Semester Wizard ─────────────────────────────────────────────────
+
+interface LabTemplateInfo {
+  available: boolean;
+  template_count?: number;
+  most_recent?: { id: string; name: string; display: string };
+  message?: string;
+}
 
 interface WizardState {
   step: number;
@@ -561,6 +761,9 @@ interface WizardState {
   dayMapping: Record<number, number>;
   instructorId: string;
   clearExisting: boolean;
+  startDate: string;
+  loadLabTemplate: boolean;
+  labTemplateId: string;
 }
 
 function GenerateWizard({
@@ -584,30 +787,49 @@ function GenerateWizard({
     dayMapping: {},
     instructorId: '',
     clearExisting: false,
+    startDate: '',
+    loadLabTemplate: false,
+    labTemplateId: '',
   });
   const [templates, setTemplates] = useState<PmiCourseTemplate[]>([]);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [labTemplateInfo, setLabTemplateInfo] = useState<LabTemplateInfo | null>(null);
 
   const safePrograms = safeArray(programs);
   const safeInstructors = safeArray(instructors);
 
-  // Determine how many unique day indices the templates use
   const dayIndices = [...new Set(safeArray(templates).filter(t => !t.is_online).map(t => t.day_index))].sort();
   const needsSemester = wizard.programType === 'paramedic';
 
-  // Load templates when program type + semester selected
   const loadTemplates = useCallback(async (progType: string, semNum: number | null) => {
     setLoadingTemplates(true);
     setError(null);
     try {
       let url = `/api/scheduling/planner/templates?program_type=${progType}`;
       if (semNum !== null) url += `&semester_number=${semNum}`;
-      const res = await fetch(url);
+
+      // Load course templates and lab templates in parallel
+      let labUrl = `/api/scheduling/planner/lab-templates?program=${progType}`;
+      if (semNum !== null) labUrl += `&semester=${semNum}`;
+
+      const [res, labRes] = await Promise.all([
+        fetch(url),
+        fetch(labUrl),
+      ]);
+
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to load templates');
       setTemplates(safeArray(data.templates));
+
+      // Lab template info (non-critical — don't throw on failure)
+      try {
+        const labData = await labRes.json();
+        setLabTemplateInfo(labData as LabTemplateInfo);
+      } catch {
+        setLabTemplateInfo({ available: false, message: 'Could not check lab templates' });
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load templates');
     } finally {
@@ -615,7 +837,6 @@ function GenerateWizard({
     }
   }, []);
 
-  // Step navigation
   const goNext = () => {
     if (wizard.step === 1 && needsSemester) {
       setWizard(prev => ({ ...prev, step: 2 }));
@@ -638,18 +859,23 @@ function GenerateWizard({
     }
   };
 
-  // Can we advance?
   const canAdvance = () => {
     if (wizard.step === 1) return !!wizard.programType;
     if (wizard.step === 2) return wizard.semesterNumber !== null;
     if (wizard.step === 3) {
-      // All day indices must be mapped
-      return dayIndices.every(di => wizard.dayMapping[di] !== undefined);
+      return dayIndices.every(di => wizard.dayMapping[di] !== undefined) && !!wizard.startDate;
     }
     return true;
   };
 
-  // Generate
+  // Calculate preview: how many total blocks will be generated
+  const previewCount = safeArray(templates).filter(t => !t.is_online).reduce((total, t) => {
+    let weeks = 15;
+    if (t.duration_type === 'first_half') weeks = 8;
+    else if (t.duration_type === 'second_half') weeks = 8; // 8 to 15 = 8 weeks
+    return total + weeks;
+  }, 0);
+
   const handleGenerate = async () => {
     setGenerating(true);
     setError(null);
@@ -665,6 +891,10 @@ function GenerateWizard({
           day_mapping: wizard.dayMapping,
           instructor_id: wizard.instructorId || null,
           clear_existing: wizard.clearExisting,
+          start_date: wizard.startDate,
+          load_lab_template: wizard.loadLabTemplate,
+          lab_template_id: wizard.labTemplateId || null,
+          cohort_id: safePrograms.find(p => p.id === wizard.programScheduleId)?.cohort_id || null,
         }),
       });
       const result = await res.json();
@@ -677,22 +907,25 @@ function GenerateWizard({
     }
   };
 
-  // Preview: on-ground templates grouped by mapped day
   const previewBlocks = safeArray(templates)
     .filter(t => !t.is_online)
     .map(t => {
       const mappedDay = wizard.dayMapping[t.day_index];
-      return { ...t, mappedDay };
+      let weeks = 15;
+      if (t.duration_type === 'first_half') weeks = 8;
+      else if (t.duration_type === 'second_half') weeks = 8;
+      return { ...t, mappedDay, weeks };
     })
     .filter(t => t.mappedDay !== undefined)
     .sort((a, b) => (a.mappedDay! - b.mappedDay!) || (a.start_time < b.start_time ? -1 : 1));
 
   const onlinePreview = safeArray(templates).filter(t => t.is_online);
 
+  const DAYS_OF_WEEK = [1, 2, 3, 4, 5, 6];
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-xl mx-4 max-h-[90vh] overflow-y-auto">
-        {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-700">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
             <Wand2 className="w-5 h-5 text-purple-500" />
@@ -703,7 +936,6 @@ function GenerateWizard({
           </button>
         </div>
 
-        {/* Step indicator */}
         <div className="px-5 pt-4 pb-2">
           <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
             {[1, 2, 3, 4].map(s => {
@@ -750,10 +982,7 @@ function GenerateWizard({
                         : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
                     }`}
                   >
-                    <div
-                      className="w-8 h-8 rounded-full mx-auto mb-2"
-                      style={{ backgroundColor: pt.color }}
-                    />
+                    <div className="w-8 h-8 rounded-full mx-auto mb-2" style={{ backgroundColor: pt.color }} />
                     <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{pt.label}</div>
                   </button>
                 ))}
@@ -761,7 +990,7 @@ function GenerateWizard({
             </div>
           )}
 
-          {/* Step 2: Pick Semester (Paramedic only) */}
+          {/* Step 2: Pick Semester */}
           {wizard.step === 2 && (
             <div className="space-y-3">
               <p className="text-sm text-gray-600 dark:text-gray-400">Select the semester for Paramedic program.</p>
@@ -796,10 +1025,24 @@ function GenerateWizard({
               ) : (
                 <>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Map template days to actual weekdays and set instructor.
+                    Set start date, map template days to actual weekdays, and choose instructor.
                   </p>
 
-                  {/* Program Schedule (cohort) link — optional */}
+                  {/* Start Date */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Semester Start Date <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={wizard.startDate}
+                      onChange={(e) => setWizard(prev => ({ ...prev, startDate: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">15 weeks of dated blocks will be generated from this date</p>
+                  </div>
+
+                  {/* Program Schedule link */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Link to Cohort (optional)
@@ -821,7 +1064,7 @@ function GenerateWizard({
                   {/* Day mapping */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Day Mapping
+                      Day Mapping <span className="text-red-500">*</span>
                     </label>
                     <div className="space-y-2">
                       {dayIndices.map(di => (
@@ -848,7 +1091,6 @@ function GenerateWizard({
                     </div>
                   </div>
 
-                  {/* Instructor */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Primary Instructor (optional)
@@ -865,7 +1107,6 @@ function GenerateWizard({
                     </select>
                   </div>
 
-                  {/* Clear existing */}
                   {wizard.programScheduleId && (
                     <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
                       <input
@@ -877,6 +1118,46 @@ function GenerateWizard({
                       Clear existing blocks for this cohort before generating
                     </label>
                   )}
+
+                  {/* Lab Template Loading (optional) */}
+                  <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-2">
+                    <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                      Lab Template (Optional)
+                    </div>
+                    {labTemplateInfo === null ? (
+                      <div className="text-xs text-gray-400">Checking for lab templates...</div>
+                    ) : !labTemplateInfo.available ? (
+                      <label className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500 cursor-not-allowed">
+                        <input type="checkbox" disabled className="rounded border-gray-300 opacity-50" />
+                        <span>
+                          {labTemplateInfo.message || `No lab template found for ${wizard.programType}${wizard.semesterNumber ? ` S${wizard.semesterNumber}` : ''}`}
+                        </span>
+                      </label>
+                    ) : (
+                      <>
+                        <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                          <input
+                            type="checkbox"
+                            checked={wizard.loadLabTemplate}
+                            onChange={(e) => setWizard(prev => ({ ...prev, loadLabTemplate: e.target.checked }))}
+                            className="rounded border-gray-300"
+                          />
+                          Load lab template for this semester
+                        </label>
+                        {wizard.loadLabTemplate && labTemplateInfo.most_recent && (
+                          <div className="mt-1 ml-6 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 rounded px-2 py-1">
+                            {labTemplateInfo.most_recent.display}
+                            {' · '}{labTemplateInfo.template_count} lab day{labTemplateInfo.template_count !== 1 ? 's' : ''}
+                          </div>
+                        )}
+                        {wizard.loadLabTemplate && !wizard.programScheduleId && (
+                          <div className="mt-1 ml-6 text-xs text-orange-500">
+                            A cohort link is recommended to properly assign lab days
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
                 </>
               )}
             </div>
@@ -885,23 +1166,20 @@ function GenerateWizard({
           {/* Step 4: Review & Generate */}
           {wizard.step === 4 && (
             <div className="space-y-4">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Review the blocks that will be created. {previewBlocks.length} on-ground blocks
-                {onlinePreview.length > 0 ? ` + ${onlinePreview.length} online courses` : ''}.
-              </p>
+              <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 px-3 py-2 text-sm text-blue-700 dark:text-blue-300">
+                Starting {wizard.startDate} — generating <strong>{previewCount} dated blocks</strong> across 15 weeks
+                {onlinePreview.length > 0 ? ` + ${onlinePreview.length} online courses` : ''}
+                {wizard.loadLabTemplate && labTemplateInfo?.available ? ' + lab template' : ''}.
+              </div>
 
-              {/* On-ground preview */}
               <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
                 <div className="bg-gray-50 dark:bg-gray-700/50 px-3 py-2 text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
-                  Schedule Blocks
+                  Course Templates → Dated Blocks
                 </div>
                 <div className="divide-y divide-gray-100 dark:divide-gray-700 max-h-[300px] overflow-y-auto">
                   {previewBlocks.map((t, i) => (
                     <div key={i} className="px-3 py-2 flex items-center gap-3">
-                      <div
-                        className="w-2 h-8 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: t.color || '#3B82F6' }}
-                      />
+                      <div className="w-2 h-8 rounded-full flex-shrink-0" style={{ backgroundColor: t.color || '#3B82F6' }} />
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                           {t.course_code} {t.course_name}
@@ -910,7 +1188,7 @@ function GenerateWizard({
                         </div>
                         <div className="text-xs text-gray-500 dark:text-gray-400">
                           {DAY_NAMES[t.mappedDay!]} {formatTime(t.start_time)}-{formatTime(t.end_time)}
-                          {' · '}{t.block_type}
+                          {' · '}{t.weeks} weeks · {t.block_type}
                         </div>
                       </div>
                     </div>
@@ -918,7 +1196,6 @@ function GenerateWizard({
                 </div>
               </div>
 
-              {/* Online preview */}
               {onlinePreview.length > 0 && (
                 <div className="border border-purple-200 dark:border-purple-800 rounded-lg overflow-hidden">
                   <div className="bg-purple-50 dark:bg-purple-900/20 px-3 py-2 text-xs font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-wider flex items-center gap-1.5">
@@ -972,7 +1249,7 @@ function GenerateWizard({
                 className="px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-lg disabled:opacity-50 flex items-center gap-1.5"
               >
                 {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
-                Generate {previewBlocks.length} Blocks
+                Generate {previewCount} Blocks
               </button>
             )}
           </div>
@@ -1044,7 +1321,6 @@ function ProgramSidebar({
         )}
       </div>
 
-      {/* Online Courses Panel */}
       {safeArray(onlineCourses).length > 0 && (
         <>
           <div className="px-3 py-3 border-t border-b border-gray-200 dark:border-gray-700">
@@ -1094,6 +1370,131 @@ function ConflictBanner({ conflicts }: { conflicts: PmiScheduleConflict[] }) {
   );
 }
 
+// ─── Month View Component ─────────────────────────────────────────────────────
+
+function MonthView({
+  currentDate,
+  blocks,
+  programMap,
+  onDayClick,
+  onBlockClick,
+  semesterStartDate,
+}: {
+  currentDate: Date;
+  blocks: PmiScheduleBlock[];
+  programMap: Map<string, PmiProgramSchedule>;
+  onDayClick: (date: Date) => void;
+  onBlockClick: (block: PmiScheduleBlock) => void;
+  semesterStartDate: string | null;
+}) {
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+  const firstDayOfMonth = new Date(year, month, 1);
+  const lastDayOfMonth = new Date(year, month + 1, 0);
+
+  // Start grid on Sunday before first day
+  const startDay = new Date(firstDayOfMonth);
+  startDay.setDate(startDay.getDate() - startDay.getDay());
+
+  // End grid on Saturday after last day
+  const endDay = new Date(lastDayOfMonth);
+  endDay.setDate(endDay.getDate() + (6 - endDay.getDay()));
+
+  // Build weeks
+  const weeks: Date[][] = [];
+  let current = new Date(startDay);
+  while (current <= endDay) {
+    const week: Date[] = [];
+    for (let i = 0; i < 7; i++) {
+      week.push(new Date(current));
+      current.setDate(current.getDate() + 1);
+    }
+    weeks.push(week);
+  }
+
+  // Group blocks by date
+  const blocksByDate = new Map<string, PmiScheduleBlock[]>();
+  for (const b of blocks) {
+    if (b.date) {
+      const key = b.date;
+      if (!blocksByDate.has(key)) blocksByDate.set(key, []);
+      blocksByDate.get(key)!.push(b);
+    }
+  }
+
+  return (
+    <div className="flex-1 overflow-auto">
+      <div className="min-w-[720px]">
+        {/* Day names header */}
+        <div className="grid grid-cols-7 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10 bg-white dark:bg-gray-800">
+          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+            <div key={d} className="px-2 py-2 text-center text-sm font-semibold text-gray-900 dark:text-gray-100 border-r border-gray-100 dark:border-gray-700/50 last:border-r-0">
+              {d}
+            </div>
+          ))}
+        </div>
+
+        {/* Weeks */}
+        {weeks.map((week, wi) => (
+          <div key={wi} className="grid grid-cols-7 border-b border-gray-100 dark:border-gray-800">
+            {week.map((day, di) => {
+              const dateStr = formatDateStr(day);
+              const dayBlocks = blocksByDate.get(dateStr) || [];
+              const isCurrentMonth = day.getMonth() === month;
+              const isTodayDate = isToday(day);
+              const weekNum = semesterStartDate ? getWeekNumber(day, new Date(semesterStartDate + 'T00:00:00')) : null;
+
+              return (
+                <div
+                  key={di}
+                  onClick={() => onDayClick(day)}
+                  className={`min-h-[100px] border-r border-gray-100 dark:border-gray-700/50 last:border-r-0 p-1 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 ${
+                    !isCurrentMonth ? 'bg-gray-50/50 dark:bg-gray-900/30' : ''
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-0.5">
+                    <span className={`text-xs font-medium px-1 rounded ${
+                      isTodayDate
+                        ? 'bg-blue-600 text-white'
+                        : isCurrentMonth
+                          ? 'text-gray-900 dark:text-gray-100'
+                          : 'text-gray-400 dark:text-gray-600'
+                    }`}>
+                      {day.getDate()}
+                    </span>
+                    {weekNum && weekNum >= 1 && weekNum <= 15 && di === 1 && (
+                      <span className="text-[9px] text-gray-400 dark:text-gray-600">W{weekNum}</span>
+                    )}
+                  </div>
+                  <div className="space-y-0.5">
+                    {dayBlocks.slice(0, 3).map(b => {
+                      const program = b.program_schedule_id ? programMap.get(b.program_schedule_id) : undefined;
+                      const color = b.color || program?.color || '#6B7280';
+                      return (
+                        <button
+                          key={b.id}
+                          onClick={(e) => { e.stopPropagation(); onBlockClick(b); }}
+                          className="w-full text-left rounded px-1 py-0 text-[9px] truncate hover:opacity-80"
+                          style={{ backgroundColor: color + '22', color, borderLeft: `2px solid ${color}` }}
+                        >
+                          {formatTime(b.start_time).replace(' ', '')} {b.course_name || b.title || b.block_type}
+                        </button>
+                      );
+                    })}
+                    {dayBlocks.length > 3 && (
+                      <div className="text-[9px] text-gray-400 pl-1">+{dayBlocks.length - 3} more</div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function SemesterPlannerPage() {
@@ -1107,6 +1508,10 @@ export default function SemesterPlannerPage() {
   const [instructors, setInstructors] = useState<{ id: string; name: string; email: string }[]>([]);
   const [onlineCourses, setOnlineCourses] = useState<{ course_code: string; course_name: string; duration_type: string }[]>([]);
 
+  // Calendar state
+  const [viewMode, setViewMode] = useState<'week' | 'month'>('week');
+  const [currentWeekStart, setCurrentWeekStart] = useState<Date>(getMonday(new Date()));
+
   // UI state
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -1117,6 +1522,22 @@ export default function SemesterPlannerPage() {
   const [showWizard, setShowWizard] = useState(false);
 
   const gridRef = useRef<HTMLDivElement>(null);
+
+  // ─── Semester start date (for week number calc) ────────────────────────────
+
+  const selectedSemester = safeArray(semesters).find(s => s.id === selectedSemesterId);
+  const semesterStartDate = selectedSemester?.start_date || null;
+
+  // ─── Week navigation dates ─────────────────────────────────────────────────
+
+  const weekDays: Date[] = [];
+  for (let i = 0; i < 6; i++) { // Mon-Sat (skip Sunday for display)
+    weekDays.push(addDays(currentWeekStart, i));
+  }
+  const weekEnd = addDays(currentWeekStart, 5);
+  const weekNumber = semesterStartDate
+    ? getWeekNumber(currentWeekStart, new Date(semesterStartDate + 'T00:00:00'))
+    : null;
 
   // ─── Data Fetching ────────────────────────────────────────────────────────
 
@@ -1142,6 +1563,10 @@ export default function SemesterPlannerPage() {
         const active = semList.find(s => s.is_active);
         if (active) {
           setSelectedSemesterId(active.id);
+          // Navigate to semester start date week
+          if (active.start_date) {
+            setCurrentWeekStart(getMonday(new Date(active.start_date + 'T00:00:00')));
+          }
         } else if (semList.length > 0) {
           setSelectedSemesterId(semList[0].id);
         }
@@ -1158,9 +1583,25 @@ export default function SemesterPlannerPage() {
     if (!selectedSemesterId) return;
     try {
       setLoading(true);
+
+      // For week view, fetch blocks in date range; for month view, broader range
+      let dateFrom: string, dateTo: string;
+      if (viewMode === 'week') {
+        dateFrom = formatDateStr(currentWeekStart);
+        dateTo = formatDateStr(addDays(currentWeekStart, 6));
+      } else {
+        // Month view — get the full month range including overflow
+        const year = currentWeekStart.getFullYear();
+        const month = currentWeekStart.getMonth();
+        const firstOfMonth = new Date(year, month, 1);
+        const lastOfMonth = new Date(year, month + 1, 0);
+        dateFrom = formatDateStr(addDays(firstOfMonth, -7));
+        dateTo = formatDateStr(addDays(lastOfMonth, 7));
+      }
+
       const [progRes, blockRes, conflictRes] = await Promise.all([
         fetch(`/api/scheduling/planner/programs?semester_id=${selectedSemesterId}`),
-        fetch(`/api/scheduling/planner/blocks?semester_id=${selectedSemesterId}`),
+        fetch(`/api/scheduling/planner/blocks?semester_id=${selectedSemesterId}&date_from=${dateFrom}&date_to=${dateTo}`),
         fetch(`/api/scheduling/planner/conflicts?semester_id=${selectedSemesterId}`),
       ]);
 
@@ -1176,7 +1617,7 @@ export default function SemesterPlannerPage() {
     } finally {
       setLoading(false);
     }
-  }, [selectedSemesterId]);
+  }, [selectedSemesterId, currentWeekStart, viewMode]);
 
   useEffect(() => {
     loadSemesterData();
@@ -1192,11 +1633,12 @@ export default function SemesterPlannerPage() {
     return true;
   });
 
-  const blocksByDay = new Map<number, PmiScheduleBlock[]>();
+  // Group blocks by date for week view
+  const blocksByDate = new Map<string, PmiScheduleBlock[]>();
   for (const b of visibleBlocks) {
-    const day = b.day_of_week;
-    if (!blocksByDay.has(day)) blocksByDay.set(day, []);
-    blocksByDay.get(day)!.push(b);
+    const key = b.date || `dow-${b.day_of_week}`;
+    if (!blocksByDate.has(key)) blocksByDate.set(key, []);
+    blocksByDate.get(key)!.push(b);
   }
 
   const timeSlots: number[] = [];
@@ -1215,7 +1657,7 @@ export default function SemesterPlannerPage() {
     });
   }, []);
 
-  const handleSaveBlock = useCallback(async (formData: Record<string, unknown>) => {
+  const handleSaveBlock = useCallback(async (formData: Record<string, unknown>, updateMode?: 'this' | 'this_and_future' | 'all') => {
     if (!selectedSemesterId) return;
     setSaving(true);
 
@@ -1229,6 +1671,9 @@ export default function SemesterPlannerPage() {
       const payload = { ...formData };
       if (isNew) {
         payload.semester_id = selectedSemesterId;
+      }
+      if (updateMode) {
+        payload.update_mode = updateMode;
       }
 
       const instructorId = payload.instructor_id as string | undefined;
@@ -1260,32 +1705,24 @@ export default function SemesterPlannerPage() {
         }
       }
 
-      if (isNew) {
-        setBlocks(prev => [...safeArray(prev), savedBlock]);
-      } else {
-        setBlocks(prev =>
-          safeArray(prev).map(b => b.id === editingBlock!.id ? savedBlock : b)
-        );
-      }
-
       setEditingBlock(null);
 
-      const conflictRes = await fetch(`/api/scheduling/planner/conflicts?semester_id=${selectedSemesterId}`);
-      const conflictData = await conflictRes.json();
-      setConflicts(safeArray(conflictData.conflicts));
+      // Reload all data to reflect batch changes
+      await loadSemesterData();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Save failed');
     } finally {
       setSaving(false);
     }
-  }, [selectedSemesterId, editingBlock]);
+  }, [selectedSemesterId, editingBlock, loadSemesterData]);
 
-  const handleDeleteBlock = useCallback(async () => {
+  const handleDeleteBlock = useCallback(async (mode?: 'this' | 'this_and_future' | 'all') => {
     if (!editingBlock?.id || !selectedSemesterId) return;
     setSaving(true);
 
     try {
-      const res = await fetch(`/api/scheduling/planner/blocks/${editingBlock.id}`, {
+      const modeParam = mode ? `?mode=${mode}` : '';
+      const res = await fetch(`/api/scheduling/planner/blocks/${editingBlock.id}${modeParam}`, {
         method: 'DELETE',
       });
       if (!res.ok) {
@@ -1294,24 +1731,21 @@ export default function SemesterPlannerPage() {
         return;
       }
 
-      setBlocks(prev => safeArray(prev).filter(b => b.id !== editingBlock.id));
       setEditingBlock(null);
-
-      const conflictRes = await fetch(`/api/scheduling/planner/conflicts?semester_id=${selectedSemesterId}`);
-      const conflictData = await conflictRes.json();
-      setConflicts(safeArray(conflictData.conflicts));
+      await loadSemesterData();
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Delete failed');
     } finally {
       setSaving(false);
     }
-  }, [editingBlock, selectedSemesterId]);
+  }, [editingBlock, selectedSemesterId, loadSemesterData]);
 
-  const handleQuickAdd = useCallback((dayOfWeek: number, hour: number) => {
+  const handleQuickAdd = useCallback((date: Date, hour: number) => {
     const startTime = minutesToTime(hour * 60);
     const endTime = minutesToTime((hour + 1) * 60);
     setEditingBlock({
-      day_of_week: dayOfWeek,
+      day_of_week: date.getDay(),
+      date: formatDateStr(date),
       start_time: startTime,
       end_time: endTime,
       block_type: 'lecture',
@@ -1319,12 +1753,26 @@ export default function SemesterPlannerPage() {
   }, []);
 
   const handleGenerated = useCallback((result: { blocks: PmiScheduleBlock[]; online_courses: { course_code: string; course_name: string; duration_type: string }[] }) => {
-    // Add generated blocks to state and reload full data
     setShowWizard(false);
     setOnlineCourses(prev => [...prev, ...safeArray(result.online_courses)]);
-    // Reload to get fully-joined block data
     loadSemesterData();
   }, [loadSemesterData]);
+
+  // ─── Week Navigation ───────────────────────────────────────────────────────
+
+  const goToPrevWeek = () => setCurrentWeekStart(addDays(currentWeekStart, -7));
+  const goToNextWeek = () => setCurrentWeekStart(addDays(currentWeekStart, 7));
+  const goToToday = () => setCurrentWeekStart(getMonday(new Date()));
+  const goToPrevMonth = () => {
+    const d = new Date(currentWeekStart);
+    d.setMonth(d.getMonth() - 1);
+    setCurrentWeekStart(getMonday(d));
+  };
+  const goToNextMonth = () => {
+    const d = new Date(currentWeekStart);
+    d.setMonth(d.getMonth() + 1);
+    setCurrentWeekStart(getMonday(d));
+  };
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
@@ -1366,7 +1814,7 @@ export default function SemesterPlannerPage() {
                 {loading && <Loader2 className="w-4 h-4 animate-spin text-blue-500" />}
               </h1>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                Weekly schedule grid &middot; PMI Program Scheduling
+                Date-based calendar &middot; PMI Program Scheduling
               </p>
             </div>
           </div>
@@ -1375,7 +1823,13 @@ export default function SemesterPlannerPage() {
             {/* Semester selector */}
             <select
               value={selectedSemesterId}
-              onChange={(e) => setSelectedSemesterId(e.target.value)}
+              onChange={(e) => {
+                setSelectedSemesterId(e.target.value);
+                const sem = safeArray(semesters).find(s => s.id === e.target.value);
+                if (sem?.start_date) {
+                  setCurrentWeekStart(getMonday(new Date(sem.start_date + 'T00:00:00')));
+                }
+              }}
               className="px-3 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
             >
               {safeArray(semesters).map(s => (
@@ -1400,7 +1854,7 @@ export default function SemesterPlannerPage() {
               </select>
             </div>
 
-            {/* Generate semester button */}
+            {/* Generate */}
             <button
               onClick={() => setShowWizard(true)}
               className="px-3 py-1.5 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-lg flex items-center gap-1.5"
@@ -1408,9 +1862,18 @@ export default function SemesterPlannerPage() {
               <Wand2 className="w-4 h-4" /> Generate
             </button>
 
-            {/* Add block button */}
+            {/* Add block */}
             <button
-              onClick={() => setEditingBlock({ day_of_week: 1, start_time: '08:00', end_time: '09:00', block_type: 'lecture' })}
+              onClick={() => {
+                const today = new Date();
+                setEditingBlock({
+                  day_of_week: today.getDay(),
+                  date: formatDateStr(today),
+                  start_time: '08:00',
+                  end_time: '09:00',
+                  block_type: 'lecture',
+                });
+              }}
               className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg flex items-center gap-1.5"
             >
               <Plus className="w-4 h-4" /> Add Block
@@ -1429,6 +1892,69 @@ export default function SemesterPlannerPage() {
         </div>
       </div>
 
+      {/* Week/Month navigation bar */}
+      <div className="flex-shrink-0 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 px-4 py-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={viewMode === 'week' ? goToPrevWeek : goToPrevMonth}
+              className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <button
+              onClick={viewMode === 'week' ? goToNextWeek : goToNextMonth}
+              className="p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+            <button
+              onClick={goToToday}
+              className="px-3 py-1 text-xs font-medium rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+            >
+              Today
+            </button>
+            <h2 className="text-sm font-semibold text-gray-900 dark:text-gray-100 ml-2">
+              {viewMode === 'week' ? (
+                <>
+                  {weekNumber && weekNumber >= 1 && weekNumber <= 15 && (
+                    <span className="text-blue-600 dark:text-blue-400 mr-1">Week {weekNumber}:</span>
+                  )}
+                  {formatDateLong(currentWeekStart)} – {formatDateLong(weekEnd)}
+                </>
+              ) : (
+                <>
+                  {currentWeekStart.toLocaleString('default', { month: 'long', year: 'numeric' })}
+                </>
+              )}
+            </h2>
+          </div>
+
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setViewMode('week')}
+              className={`px-3 py-1 text-xs font-medium rounded-lg ${
+                viewMode === 'week'
+                  ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+              }`}
+            >
+              Week
+            </button>
+            <button
+              onClick={() => setViewMode('month')}
+              className={`px-3 py-1 text-xs font-medium rounded-lg ${
+                viewMode === 'month'
+                  ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+              }`}
+            >
+              Month
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Conflict banner */}
       <ConflictBanner conflicts={conflicts} />
 
@@ -1442,78 +1968,111 @@ export default function SemesterPlannerPage() {
           onlineCourses={onlineCourses}
         />
 
-        {/* Time grid */}
-        <div className="flex-1 overflow-auto" ref={gridRef}>
-          <div className="min-w-[720px]">
-            {/* Day headers */}
-            <div className="flex border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10 bg-white dark:bg-gray-800">
-              <div className="w-16 flex-shrink-0 border-r border-gray-200 dark:border-gray-700" />
-              {DAYS_OF_WEEK.map(day => {
-                const dayBlocks = blocksByDay.get(day) || [];
-                return (
-                  <div
-                    key={day}
-                    className="flex-1 min-w-0 px-2 py-2 text-center border-r border-gray-100 dark:border-gray-700/50 last:border-r-0"
-                  >
-                    <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">
-                      {DAY_SHORT[day]}
-                    </div>
-                    <div className="text-[10px] text-gray-400 dark:text-gray-500">
-                      {dayBlocks.length} block{dayBlocks.length !== 1 ? 's' : ''}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+        {/* Calendar View */}
+        {viewMode === 'month' ? (
+          <MonthView
+            currentDate={currentWeekStart}
+            blocks={visibleBlocks}
+            programMap={programMap}
+            onDayClick={(date) => {
+              setCurrentWeekStart(getMonday(date));
+              setViewMode('week');
+            }}
+            onBlockClick={(block) => setEditingBlock(block as Partial<PmiScheduleBlock> & { day_of_week: number })}
+            semesterStartDate={semesterStartDate}
+          />
+        ) : (
+          /* Week View - Time Grid */
+          <div className="flex-1 overflow-auto" ref={gridRef}>
+            <div className="min-w-[720px]">
+              {/* Day headers with actual dates */}
+              <div className="flex border-b border-gray-200 dark:border-gray-700 sticky top-0 z-10 bg-white dark:bg-gray-800">
+                <div className="w-16 flex-shrink-0 border-r border-gray-200 dark:border-gray-700" />
+                {weekDays.map((date, i) => {
+                  const dateStr = formatDateStr(date);
+                  const dayBlocks = blocksByDate.get(dateStr) || [];
+                  const isTodayDate = isToday(date);
 
-            {/* Grid body */}
-            <div className="flex relative">
-              <div className="w-16 flex-shrink-0 border-r border-gray-200 dark:border-gray-700">
-                {timeSlots.map(hour => (
-                  <div
-                    key={hour}
-                    className="border-b border-gray-100 dark:border-gray-800 text-right pr-2 text-[10px] text-gray-400 dark:text-gray-500"
-                    style={{ height: `${SLOT_HEIGHT}px` }}
-                  >
-                    <span className="relative -top-2">
-                      {hour === 0 ? '12 AM' : hour <= 12 ? `${hour} AM` : `${hour - 12} PM`}
-                    </span>
-                  </div>
-                ))}
+                  return (
+                    <div
+                      key={i}
+                      className={`flex-1 min-w-0 px-2 py-2 text-center border-r border-gray-100 dark:border-gray-700/50 last:border-r-0 ${
+                        isTodayDate ? 'bg-blue-50 dark:bg-blue-900/10' : ''
+                      }`}
+                    >
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        {DAY_SHORT[date.getDay()]}
+                      </div>
+                      <div className={`text-lg font-bold ${
+                        isTodayDate
+                          ? 'text-blue-600 dark:text-blue-400'
+                          : 'text-gray-900 dark:text-gray-100'
+                      }`}>
+                        {date.getDate()}
+                      </div>
+                      <div className="text-[10px] text-gray-400 dark:text-gray-500">
+                        {dayBlocks.length} block{dayBlocks.length !== 1 ? 's' : ''}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
 
-              {DAYS_OF_WEEK.map(day => {
-                const dayBlocks = blocksByDay.get(day) || [];
-                return (
-                  <div
-                    key={day}
-                    className="flex-1 min-w-0 border-r border-gray-100 dark:border-gray-700/50 last:border-r-0 relative"
-                    style={{ height: `${timeSlots.length * SLOT_HEIGHT}px` }}
-                  >
-                    {timeSlots.map(hour => (
-                      <div
-                        key={hour}
-                        className="border-b border-gray-100 dark:border-gray-800 hover:bg-blue-50/30 dark:hover:bg-blue-900/10 cursor-pointer transition-colors"
-                        style={{ height: `${SLOT_HEIGHT}px` }}
-                        onDoubleClick={() => handleQuickAdd(day, hour)}
-                        title={`Double-click to add block at ${hour > 12 ? hour - 12 : hour}:00 ${hour >= 12 ? 'PM' : 'AM'}`}
-                      />
-                    ))}
+              {/* Grid body */}
+              <div className="flex relative">
+                <div className="w-16 flex-shrink-0 border-r border-gray-200 dark:border-gray-700">
+                  {timeSlots.map(hour => (
+                    <div
+                      key={hour}
+                      className="border-b border-gray-100 dark:border-gray-800 text-right pr-2 text-[10px] text-gray-400 dark:text-gray-500"
+                      style={{ height: `${SLOT_HEIGHT}px` }}
+                    >
+                      <span className="relative -top-2">
+                        {hour === 0 ? '12 AM' : hour <= 12 ? `${hour} AM` : `${hour - 12} PM`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
 
-                    {safeArray(dayBlocks).map(block => (
-                      <TimeGridBlock
-                        key={block.id}
-                        block={block}
-                        program={block.program_schedule_id ? programMap.get(block.program_schedule_id) : undefined}
-                        onClick={() => setEditingBlock(block)}
-                      />
-                    ))}
-                  </div>
-                );
-              })}
+                {weekDays.map((date, i) => {
+                  const dateStr = formatDateStr(date);
+                  const dayBlocks = blocksByDate.get(dateStr) || [];
+                  const isTodayDate = isToday(date);
+
+                  return (
+                    <div
+                      key={i}
+                      className={`flex-1 min-w-0 border-r border-gray-100 dark:border-gray-700/50 last:border-r-0 relative ${
+                        isTodayDate ? 'bg-blue-50/30 dark:bg-blue-900/5' : ''
+                      }`}
+                      style={{ height: `${timeSlots.length * SLOT_HEIGHT}px` }}
+                    >
+                      {timeSlots.map(hour => (
+                        <div
+                          key={hour}
+                          className="border-b border-gray-100 dark:border-gray-800 hover:bg-blue-50/30 dark:hover:bg-blue-900/10 cursor-pointer transition-colors"
+                          style={{ height: `${SLOT_HEIGHT}px` }}
+                          onDoubleClick={() => handleQuickAdd(date, hour)}
+                          title={`Double-click to add block at ${hour > 12 ? hour - 12 : hour}:00 ${hour >= 12 ? 'PM' : 'AM'}`}
+                        />
+                      ))}
+
+                      {safeArray(dayBlocks).map(block => (
+                        <TimeGridBlock
+                          key={block.id}
+                          block={block}
+                          program={block.program_schedule_id ? programMap.get(block.program_schedule_id) : undefined}
+                          onClick={() => setEditingBlock(block as Partial<PmiScheduleBlock> & { day_of_week: number })}
+                          semesterStartDate={semesterStartDate}
+                        />
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Block edit modal */}
