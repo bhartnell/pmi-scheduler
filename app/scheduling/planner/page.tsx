@@ -236,45 +236,45 @@ function TimeGridBlock({
         }));
         e.dataTransfer.effectAllowed = 'move';
       }}
-      className="absolute left-1 right-1 rounded-md px-1.5 py-0.5 text-left overflow-hidden hover:ring-2 hover:ring-white/40 transition-shadow cursor-pointer group"
+      className="absolute left-1 right-1 rounded-md px-1.5 py-0.5 text-left overflow-hidden hover:ring-2 hover:ring-blue-400/60 transition-shadow cursor-pointer group"
       style={{
         top: `${top}px`,
         height: `${height}px`,
-        backgroundColor: color,
-        borderLeft: '3px solid rgba(255,255,255,0.3)',
+        backgroundColor: `${color}33`, // ~20% opacity
+        borderLeft: `3px solid ${color}`,
       }}
     >
       {/* Badges */}
       <div className="absolute top-0.5 right-0.5 flex gap-0.5">
         {isLastFirstHalf && (
-          <span className="text-[7px] px-1 py-0 rounded bg-black/20 text-white font-bold">Last</span>
+          <span className="text-[7px] px-1 py-0 rounded text-white font-bold" style={{ backgroundColor: `${color}CC` }}>Last</span>
         )}
         {isFirstSecondHalf && (
-          <span className="text-[7px] px-1 py-0 rounded bg-black/20 text-white font-bold">New</span>
+          <span className="text-[7px] px-1 py-0 rounded text-white font-bold" style={{ backgroundColor: `${color}CC` }}>New</span>
         )}
         {isModified && (
-          <span className="text-[7px] px-1 py-0 rounded bg-black/20 text-yellow-200 font-bold">Mod</span>
+          <span className="text-[7px] px-1 py-0 rounded text-yellow-200 font-bold" style={{ backgroundColor: `${color}CC` }}>Mod</span>
         )}
       </div>
-      <div className="text-[10px] font-bold truncate pr-6 text-white drop-shadow-sm">
+      <div className="text-[10px] font-bold truncate pr-6 text-gray-900 dark:text-white">
         {block.course_name || block.title || block.block_type}
       </div>
-      <div className="text-[9px] text-white/70 truncate">
+      <div className="text-[9px] text-gray-600 dark:text-gray-300 truncate">
         {formatTime(block.start_time)}-{formatTime(block.end_time)}
       </div>
       {block.room && (
-        <div className="text-[9px] text-white/60 truncate flex items-center gap-0.5">
+        <div className="text-[9px] text-gray-500 dark:text-gray-400 truncate flex items-center gap-0.5">
           <MapPin className="w-2.5 h-2.5" />
           {block.room.name}
         </div>
       )}
       {instructors.length > 0 && (
-        <div className="text-[9px] text-white/60 truncate">
+        <div className="text-[9px] text-gray-500 dark:text-gray-400 truncate">
           {safeArray(instructors).map(i => getInitials(i.instructor?.name || '')).join(', ')}
         </div>
       )}
       {block.week_number && height >= 60 && (
-        <div className="text-[8px] text-white/40">W{block.week_number}</div>
+        <div className="text-[8px] text-gray-400 dark:text-gray-500">W{block.week_number}</div>
       )}
     </button>
   );
@@ -1495,8 +1495,8 @@ function MonthView({
                         <button
                           key={b.id}
                           onClick={(e) => { e.stopPropagation(); onBlockClick(b); }}
-                          className="w-full text-left rounded px-1 py-0 text-[9px] truncate hover:opacity-80 text-white"
-                          style={{ backgroundColor: color, borderLeft: '2px solid rgba(255,255,255,0.3)' }}
+                          className="w-full text-left rounded px-1 py-0 text-[9px] truncate hover:opacity-80 text-gray-900 dark:text-white font-medium"
+                          style={{ backgroundColor: `${color}33`, borderLeft: `2px solid ${color}` }}
                         >
                           {formatTime(b.start_time).replace(' ', '')} {b.course_name || b.title || b.block_type}
                         </button>
