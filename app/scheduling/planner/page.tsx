@@ -1,9 +1,12 @@
 'use client';
+// SAFETY: All .map() calls must use safeArray() or Array.isArray() guards.
+// API responses may return objects, null, or undefined instead of arrays.
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   ChevronLeft, Plus, X, Calendar, Download, AlertTriangle,
-  Loader2, Clock, MapPin, Users, Filter, Eye, EyeOff, Pencil, Trash2
+  Loader2, Clock, MapPin, Users, Filter, Eye, EyeOff, Pencil, Trash2,
+  Link, Unlink,
 } from 'lucide-react';
 import { safeArray } from '@/lib/safe-array';
 import {
@@ -12,14 +15,11 @@ import {
   formatClassDays,
 } from '@/types/semester-planner';
 
-// SAFETY: All .map() calls must use safeArray() or Array.isArray() guards.
-// API responses may return objects, null, or undefined instead of arrays.
-
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const DAYS_OF_WEEK = [1, 2, 3, 4, 5, 6]; // Mon–Sat
-const TIME_START = 7; // 7 AM
-const TIME_END = 18;  // 6 PM
+const DAYS_OF_WEEK = [1, 2, 3, 4, 5, 6]; // Mon-Sat
+const TIME_START = 7;  // 7 AM
+const TIME_END = 18;   // 6 PM
 const SLOT_HEIGHT = 48; // px per hour
 
 const BLOCK_TYPE_OPTIONS: { value: ScheduleBlockType; label: string }[] = [
@@ -40,6 +40,38 @@ const ROOM_TYPE_LABELS: Record<string, string> = {
   computer_lab: 'Computer Labs',
   commons: 'Commons',
   other: 'Other',
+};
+
+const COLOR_PRESETS = [
+  { name: 'Blue', label: 'Paramedic', hex: '#3B82F6' },
+  { name: 'Green', label: 'EMT', hex: '#22C55E' },
+  { name: 'Yellow', label: 'AEMT', hex: '#EAB308' },
+  { name: 'Purple', label: 'DE/Online', hex: '#8B5CF6' },
+  { name: 'Gray', label: 'Admin', hex: '#6B7280' },
+  { name: 'Red', label: 'Exam', hex: '#EF4444' },
+];
+
+const SEMESTER_HINTS: Record<string, Record<string, string[]>> = {
+  S1: {
+    Paramedic: ['Labs (skills stations, scenarios)', 'A&P review'],
+    AEMT: ['Labs (IV access, airway, assessment)', 'Skills tracking'],
+    EMT: ['Labs (BLS skills, splinting, assessment)', 'Skills tracking'],
+  },
+  S2: {
+    Paramedic: ['Labs + clinical readiness checkboxes', 'Pharmacology', 'Cardiology'],
+    AEMT: ['Skills tracking (NREMT skill sheets)', 'Limited clinical'],
+    EMT: ['Skills tracking (NREMT EMT sheets)', 'Minimal clinical'],
+  },
+  S3: {
+    Paramedic: ['Clinical hours tracker', 'Ride-along scheduling', 'Hospital rotations'],
+    AEMT: ['Clinical hours', 'Field experience'],
+    EMT: ['Clinical hours', 'Certification prep'],
+  },
+  S4: {
+    Paramedic: ['Field internship tracker', 'Preceptor assignments', 'Board prep'],
+    AEMT: ['Board prep', 'Capstone'],
+    EMT: ['NREMT prep'],
+  },
 };
 
 // ─── Helper Functions ─────────────────────────────────────────────────────────
@@ -86,6 +118,32 @@ function getProgramLabel(ps: PmiProgramSchedule): string {
   return 'Unknown Program';
 }
 
+function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .map(w => w[0] || '')
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+}
+
+function getSemesterHints(semesterName: string, programLabel: string): string[] | null {
+  // Extract semester code like "S1", "S2" from semester name
+  const semMatch = semesterName.match(/S(\d)/i);
+  if (!semMatch) return null;
+  const semCode = `S${semMatch[1]}`;
+  const semHints = SEMESTER_HINTS[semCode];
+  if (!semHints) return null;
+
+  // Try to match program type from label
+  for (const progType of Object.keys(semHints)) {
+    if (programLabel.toLowerCase().includes(progType.toLowerCase())) {
+      return semHints[progType];
+    }
+  }
+  return null;
+}
+
 // ─── Sub-Components ───────────────────────────────────────────────────────────
 
 function TimeGridBlock({
@@ -99,7 +157,7 @@ function TimeGridBlock({
 }) {
   const top = getBlockTop(block.start_time);
   const height = getBlockHeight(block.start_time, block.end_time);
-  const color = program?.color || '#6B7280';
+  const color = block.color || program?.color || '#6B7280';
   const instructors = safeArray(block.instructors);
 
   return (
@@ -121,13 +179,14 @@ function TimeGridBlock({
         {formatTime(block.start_time)}-{formatTime(block.end_time)}
       </div>
       {block.room && (
-        <div className="text-[9px] text-gray-400 dark:text-gray-500 truncate">
+        <div className="text-[9px] text-gray-400 dark:text-gray-500 truncate flex items-center gap-0.5">
+          <MapPin className="w-2.5 h-2.5" />
           {block.room.name}
         </div>
       )}
       {instructors.length > 0 && (
         <div className="text-[9px] text-gray-400 truncate">
-          {instructors.map(i => i.instructor?.name?.split(' ')[0] || '').join(', ')}
+          {safeArray(instructors).map(i => getInitials(i.instructor?.name || '')).join(', ')}
         </div>
       )}
     </button>
@@ -138,6 +197,9 @@ function BlockEditModal({
   block,
   programs,
   rooms,
+  instructors,
+  semesterId,
+  semesters,
   onSave,
   onDelete,
   onClose,
@@ -146,26 +208,48 @@ function BlockEditModal({
   block: Partial<PmiScheduleBlock> & { day_of_week: number };
   programs: PmiProgramSchedule[];
   rooms: PmiRoom[];
+  instructors: { id: string; name: string; email: string }[];
+  semesterId: string;
+  semesters: PmiSemester[];
   onSave: (data: Record<string, unknown>) => void;
   onDelete?: () => void;
   onClose: () => void;
   saving: boolean;
 }) {
   const isNew = !block.id;
+  const hasProgram = !!block.program_schedule_id;
+
+  const [isLinked, setIsLinked] = useState(hasProgram);
+  const [customHex, setCustomHex] = useState('');
   const [formData, setFormData] = useState({
     program_schedule_id: block.program_schedule_id || '',
     room_id: block.room_id || '',
     day_of_week: block.day_of_week,
     start_time: block.start_time || '08:00',
     end_time: block.end_time || '09:00',
-    block_type: block.block_type || 'lecture' as ScheduleBlockType,
+    block_type: (block.block_type || 'lecture') as ScheduleBlockType,
     title: block.title || '',
     course_name: block.course_name || '',
     content_notes: block.content_notes || '',
+    color: block.color || '',
+    instructor_id: '', // for new assignment
   });
+
+  // Pre-fill instructor from existing block instructors
+  useEffect(() => {
+    const blockInstructors = safeArray(block.instructors);
+    if (blockInstructors.length > 0 && blockInstructors[0].instructor_id) {
+      setFormData(prev => ({ ...prev, instructor_id: blockInstructors[0].instructor_id }));
+    }
+  }, [block.instructors]);
 
   const safePrograms = safeArray(programs);
   const safeRooms = safeArray(rooms);
+  const safeInstructors = safeArray(instructors);
+
+  const setField = (field: string, value: unknown) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
 
   // Group rooms by type
   const roomsByType = safeRooms.reduce((acc, room) => {
@@ -175,9 +259,58 @@ function BlockEditModal({
     return acc;
   }, {} as Record<string, PmiRoom[]>);
 
+  // Semester hints
+  const selectedProgram = safePrograms.find(p => p.id === formData.program_schedule_id);
+  const selectedSemester = safeArray(semesters).find(s => s.id === semesterId);
+  const hints = selectedProgram && selectedSemester
+    ? getSemesterHints(selectedSemester.name, getProgramLabel(selectedProgram))
+    : null;
+  const semCode = selectedSemester?.name?.match(/S(\d)/i)?.[0]?.toUpperCase() || '';
+  const progType = selectedProgram ? getProgramLabel(selectedProgram).split(' ')[0] : '';
+
+  const handleCustomHex = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setCustomHex(val);
+    // Auto-apply valid hex
+    if (/^#[0-9A-Fa-f]{6}$/.test(val)) {
+      setField('color', val);
+    }
+  };
+
+  const handleSubmit = () => {
+    const payload: Record<string, unknown> = {
+      day_of_week: formData.day_of_week,
+      start_time: formData.start_time,
+      end_time: formData.end_time,
+      title: formData.title || null,
+      content_notes: formData.content_notes || null,
+      color: formData.color || null,
+    };
+
+    if (isLinked) {
+      payload.program_schedule_id = formData.program_schedule_id || null;
+      payload.room_id = formData.room_id || null;
+      payload.block_type = formData.block_type;
+      payload.course_name = formData.course_name || null;
+    } else {
+      payload.program_schedule_id = null;
+      payload.room_id = null;
+      payload.block_type = 'other';
+      payload.course_name = null;
+    }
+
+    // Pass instructor_id through for the parent to handle
+    if (formData.instructor_id) {
+      payload.instructor_id = formData.instructor_id;
+    }
+
+    onSave(payload);
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+        {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-700">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
             {isNew ? 'Add Schedule Block' : 'Edit Schedule Block'}
@@ -187,33 +320,56 @@ function BlockEditModal({
           </button>
         </div>
 
+        {/* Mode toggle */}
+        <div className="px-5 pt-4 pb-2">
+          <div className="inline-flex rounded-lg border border-gray-200 dark:border-gray-600 overflow-hidden">
+            <button
+              onClick={() => setIsLinked(false)}
+              className={`px-4 py-1.5 text-sm font-medium flex items-center gap-1.5 transition-colors ${
+                !isLinked
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
+              }`}
+            >
+              <Unlink className="w-3.5 h-3.5" />
+              Simple
+            </button>
+            <button
+              onClick={() => setIsLinked(true)}
+              className={`px-4 py-1.5 text-sm font-medium flex items-center gap-1.5 transition-colors ${
+                isLinked
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
+              }`}
+            >
+              <Link className="w-3.5 h-3.5" />
+              Linked to Program
+            </button>
+          </div>
+        </div>
+
         <div className="px-5 py-4 space-y-4">
-          {/* Program */}
+          {/* Title */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Program *
+              Title
             </label>
-            <select
-              value={formData.program_schedule_id}
-              onChange={(e) => setFormData(prev => ({ ...prev, program_schedule_id: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
-            >
-              <option value="">Select program...</option>
-              {safePrograms.map(ps => (
-                <option key={ps.id} value={ps.id}>
-                  {getProgramLabel(ps)} — {formatClassDays(safeArray(ps.class_days))}
-                </option>
-              ))}
-            </select>
+            <input
+              type="text"
+              value={formData.title}
+              onChange={(e) => setField('title', e.target.value)}
+              placeholder="Block title / label"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400"
+            />
           </div>
 
           {/* Day + Time row */}
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Day *</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Day</label>
               <select
                 value={formData.day_of_week}
-                onChange={(e) => setFormData(prev => ({ ...prev, day_of_week: parseInt(e.target.value) }))}
+                onChange={(e) => setField('day_of_week', parseInt(e.target.value))}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
               >
                 {DAYS_OF_WEEK.map(d => (
@@ -222,82 +378,65 @@ function BlockEditModal({
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start *</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start</label>
               <input
                 type="time"
                 value={formData.start_time}
-                onChange={(e) => setFormData(prev => ({ ...prev, start_time: e.target.value }))}
+                onChange={(e) => setField('start_time', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End *</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End</label>
               <input
                 type="time"
                 value={formData.end_time}
-                onChange={(e) => setFormData(prev => ({ ...prev, end_time: e.target.value }))}
+                onChange={(e) => setField('end_time', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
               />
             </div>
           </div>
 
-          {/* Block type + Room row */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Type</label>
-              <select
-                value={formData.block_type}
-                onChange={(e) => setFormData(prev => ({ ...prev, block_type: e.target.value as ScheduleBlockType }))}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
-              >
-                {BLOCK_TYPE_OPTIONS.map(opt => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Room</label>
-              <select
-                value={formData.room_id}
-                onChange={(e) => setFormData(prev => ({ ...prev, room_id: e.target.value }))}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
-              >
-                <option value="">No room</option>
-                {Object.entries(roomsByType).map(([type, typeRooms]) => (
-                  <optgroup key={type} label={ROOM_TYPE_LABELS[type] || type}>
-                    {safeArray(typeRooms).map(room => (
-                      <option key={room.id} value={room.id}>
-                        {room.name} {room.capacity ? `(${room.capacity})` : ''}
-                      </option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
+          {/* Color picker */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Color</label>
+            <div className="flex items-center gap-2 flex-wrap">
+              {COLOR_PRESETS.map(preset => (
+                <button
+                  key={preset.hex}
+                  onClick={() => setField('color', preset.hex)}
+                  className={`w-7 h-7 rounded-full border-2 transition-transform ${
+                    formData.color === preset.hex ? 'border-gray-900 dark:border-white scale-110' : 'border-transparent hover:scale-105'
+                  }`}
+                  style={{ backgroundColor: preset.hex }}
+                  title={`${preset.name} (${preset.label})`}
+                />
+              ))}
+              <input
+                type="text"
+                placeholder="#hex"
+                value={customHex}
+                onChange={handleCustomHex}
+                className="w-20 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder:text-gray-400"
+              />
             </div>
           </div>
 
-          {/* Course name */}
+          {/* Instructor */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Course Name</label>
-            <input
-              type="text"
-              value={formData.course_name}
-              onChange={(e) => setFormData(prev => ({ ...prev, course_name: e.target.value }))}
-              placeholder="e.g., Anatomy & Physiology"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400"
-            />
-          </div>
-
-          {/* Title */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Title / Label</label>
-            <input
-              type="text"
-              value={formData.title}
-              onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
-              placeholder="Optional display label"
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400"
-            />
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Instructor</label>
+            <select
+              value={formData.instructor_id}
+              onChange={(e) => setField('instructor_id', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
+            >
+              <option value="">No instructor</option>
+              {safeArray(safeInstructors).map(inst => (
+                <option key={inst.id} value={inst.id}>
+                  {inst.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Notes */}
@@ -305,14 +444,101 @@ function BlockEditModal({
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>
             <textarea
               value={formData.content_notes}
-              onChange={(e) => setFormData(prev => ({ ...prev, content_notes: e.target.value }))}
+              onChange={(e) => setField('content_notes', e.target.value)}
               rows={2}
               placeholder="Content notes, topics covered, etc."
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 resize-none"
             />
           </div>
+
+          {/* ── Linked Mode Fields ── */}
+          {isLinked && (
+            <>
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                  <Link className="w-3 h-3" />
+                  Program Link
+                </div>
+
+                {/* Program / Cohort */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Program / Cohort
+                  </label>
+                  <select
+                    value={formData.program_schedule_id}
+                    onChange={(e) => setField('program_schedule_id', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
+                  >
+                    <option value="">Select program...</option>
+                    {safePrograms.map(ps => (
+                      <option key={ps.id} value={ps.id}>
+                        {getProgramLabel(ps)} — {formatClassDays(safeArray(ps.class_days))}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Semester hints */}
+                {hints && (
+                  <div className="mt-2 px-3 py-2 rounded-md bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-xs text-blue-700 dark:text-blue-300">
+                    <span className="mr-1">{'\uD83D\uDCA1'}</span>
+                    {semCode} {progType}: {safeArray(hints).join(', ')}
+                  </div>
+                )}
+              </div>
+
+              {/* Course name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Course Name</label>
+                <input
+                  type="text"
+                  value={formData.course_name}
+                  onChange={(e) => setField('course_name', e.target.value)}
+                  placeholder="e.g., Anatomy & Physiology"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400"
+                />
+              </div>
+
+              {/* Room */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Room</label>
+                <select
+                  value={formData.room_id}
+                  onChange={(e) => setField('room_id', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
+                >
+                  <option value="">No room</option>
+                  {Object.entries(roomsByType).map(([type, typeRooms]) => (
+                    <optgroup key={type} label={ROOM_TYPE_LABELS[type] || type}>
+                      {safeArray(typeRooms).map(room => (
+                        <option key={room.id} value={room.id}>
+                          {room.name} {room.capacity ? `(${room.capacity})` : ''}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+              </div>
+
+              {/* Block type */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Block Type</label>
+                <select
+                  value={formData.block_type}
+                  onChange={(e) => setField('block_type', e.target.value as ScheduleBlockType)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
+                >
+                  {BLOCK_TYPE_OPTIONS.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+            </>
+          )}
         </div>
 
+        {/* Footer */}
         <div className="flex items-center justify-between px-5 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 rounded-b-xl">
           <div>
             {!isNew && onDelete && (
@@ -332,8 +558,8 @@ function BlockEditModal({
               Cancel
             </button>
             <button
-              onClick={() => onSave(formData)}
-              disabled={saving || !formData.program_schedule_id}
+              onClick={handleSubmit}
+              disabled={saving}
               className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-50 flex items-center gap-1.5"
             >
               {saving && <Loader2 className="w-4 h-4 animate-spin" />}
@@ -441,6 +667,7 @@ export default function SemesterPlannerPage() {
   const [blocks, setBlocks] = useState<PmiScheduleBlock[]>([]);
   const [rooms, setRooms] = useState<PmiRoom[]>([]);
   const [conflicts, setConflicts] = useState<PmiScheduleConflict[]>([]);
+  const [instructors, setInstructors] = useState<{ id: string; name: string; email: string }[]>([]);
 
   // UI state
   const [loading, setLoading] = useState(true);
@@ -454,22 +681,25 @@ export default function SemesterPlannerPage() {
 
   // ─── Data Fetching ────────────────────────────────────────────────────────
 
-  // Load semesters + rooms on mount
+  // Load semesters + rooms + instructors on mount
   useEffect(() => {
     async function loadInitial() {
       try {
         setLoading(true);
-        const [semRes, roomRes] = await Promise.all([
+        const [semRes, roomRes, instRes] = await Promise.all([
           fetch('/api/scheduling/planner/semesters?active_only=false'),
           fetch('/api/scheduling/planner/rooms'),
+          fetch('/api/scheduling/planner/instructors'),
         ]);
 
         const semData = await semRes.json();
         const roomData = await roomRes.json();
+        const instData = await instRes.json();
 
         const semList = safeArray<PmiSemester>(semData.semesters);
         setSemesters(semList);
         setRooms(safeArray(roomData.rooms));
+        setInstructors(safeArray(instData.instructors));
 
         // Auto-select first active semester or first semester
         const active = semList.find(s => s.is_active);
@@ -522,7 +752,7 @@ export default function SemesterPlannerPage() {
 
   // Filter blocks by hidden programs and room filter
   const visibleBlocks = safeArray(blocks).filter(b => {
-    if (hiddenPrograms.has(b.program_schedule_id)) return false;
+    if (b.program_schedule_id && hiddenPrograms.has(b.program_schedule_id)) return false;
     if (roomFilter && b.room_id !== roomFilter) return false;
     return true;
   });
@@ -563,10 +793,20 @@ export default function SemesterPlannerPage() {
         : `/api/scheduling/planner/blocks/${editingBlock!.id}`;
       const method = isNew ? 'POST' : 'PUT';
 
+      // Inject semester_id for new blocks
+      const payload = { ...formData };
+      if (isNew) {
+        payload.semester_id = selectedSemesterId;
+      }
+
+      // Extract instructor_id before sending block payload
+      const instructorId = payload.instructor_id as string | undefined;
+      delete payload.instructor_id;
+
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       const result = await res.json();
@@ -575,11 +815,26 @@ export default function SemesterPlannerPage() {
         return;
       }
 
+      const savedBlock = result.block;
+
+      // Assign instructor if provided on new blocks
+      if (isNew && instructorId && savedBlock?.id) {
+        try {
+          await fetch(`/api/scheduling/planner/blocks/${savedBlock.id}/instructors`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ instructor_id: instructorId, role: 'primary' }),
+          });
+        } catch {
+          // Instructor assignment is non-critical; block was still saved
+        }
+      }
+
       if (isNew) {
-        setBlocks(prev => [...safeArray(prev), result.block]);
+        setBlocks(prev => [...safeArray(prev), savedBlock]);
       } else {
         setBlocks(prev =>
-          safeArray(prev).map(b => b.id === editingBlock!.id ? result.block : b)
+          safeArray(prev).map(b => b.id === editingBlock!.id ? savedBlock : b)
         );
       }
 
@@ -598,7 +853,6 @@ export default function SemesterPlannerPage() {
 
   const handleDeleteBlock = useCallback(async () => {
     if (!editingBlock?.id || !selectedSemesterId) return;
-    if (!confirm('Delete this schedule block?')) return;
     setSaving(true);
 
     try {
@@ -659,8 +913,6 @@ export default function SemesterPlannerPage() {
       </div>
     );
   }
-
-  const selectedSemester = safeArray(semesters).find(s => s.id === selectedSemesterId);
 
   return (
     <div className="h-screen flex flex-col bg-white dark:bg-gray-900">
@@ -814,7 +1066,7 @@ export default function SemesterPlannerPage() {
                       <TimeGridBlock
                         key={block.id}
                         block={block}
-                        program={programMap.get(block.program_schedule_id)}
+                        program={block.program_schedule_id ? programMap.get(block.program_schedule_id) : undefined}
                         onClick={() => setEditingBlock(block)}
                       />
                     ))}
@@ -832,6 +1084,9 @@ export default function SemesterPlannerPage() {
           block={editingBlock}
           programs={programs}
           rooms={rooms}
+          instructors={instructors}
+          semesterId={selectedSemesterId}
+          semesters={semesters}
           onSave={handleSaveBlock}
           onDelete={editingBlock.id ? handleDeleteBlock : undefined}
           onClose={() => setEditingBlock(null)}

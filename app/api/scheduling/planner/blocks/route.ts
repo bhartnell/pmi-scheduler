@@ -3,6 +3,22 @@ import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole } from '@/lib/permissions';
 
+const BLOCK_SELECT = `
+  *,
+  room:pmi_rooms!pmi_schedule_blocks_room_id_fkey(id, name, room_type, capacity),
+  program_schedule:pmi_program_schedules!pmi_schedule_blocks_program_schedule_id_fkey(
+    id, class_days, color, label,
+    cohort:cohorts!pmi_program_schedules_cohort_id_fkey(
+      id, cohort_number,
+      program:programs(id, name, abbreviation)
+    )
+  ),
+  instructors:pmi_block_instructors(
+    id, role,
+    instructor:lab_users!pmi_block_instructors_instructor_id_fkey(id, name, email)
+  )
+`;
+
 export async function GET(request: NextRequest) {
   try {
     const auth = await requireAuth();
@@ -18,38 +34,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'semester_id is required' }, { status: 400 });
     }
 
-    // Get all program_schedule IDs for this semester first
-    const { data: schedules, error: schedError } = await supabase
-      .from('pmi_program_schedules')
-      .select('id')
-      .eq('semester_id', semesterId)
-      .eq('is_active', true);
-
-    if (schedError) throw schedError;
-
-    const scheduleIds = (schedules || []).map(s => s.id);
-    if (scheduleIds.length === 0) {
-      return NextResponse.json({ blocks: [] });
-    }
-
+    // Query blocks directly by semester_id (catches both linked and unlinked blocks)
     let query = supabase
       .from('pmi_schedule_blocks')
-      .select(`
-        *,
-        room:pmi_rooms!pmi_schedule_blocks_room_id_fkey(id, name, room_type, capacity),
-        program_schedule:pmi_program_schedules!pmi_schedule_blocks_program_schedule_id_fkey(
-          id, class_days, color, label,
-          cohort:cohorts!pmi_program_schedules_cohort_id_fkey(
-            id, cohort_number,
-            program:programs(id, name, abbreviation)
-          )
-        ),
-        instructors:pmi_block_instructors(
-          id, role,
-          instructor:lab_users!pmi_block_instructors_instructor_id_fkey(id, name, email)
-        )
-      `)
-      .in('program_schedule_id', scheduleIds)
+      .select(BLOCK_SELECT)
+      .eq('semester_id', semesterId)
       .order('day_of_week')
       .order('start_time');
 
@@ -84,15 +73,15 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const {
-      program_schedule_id, room_id, day_of_week, start_time, end_time,
-      block_type, title, course_name, content_notes,
+      program_schedule_id, semester_id, room_id, day_of_week, start_time, end_time,
+      block_type, title, course_name, content_notes, color,
       is_recurring, specific_date, sort_order
     } = body;
 
     const dayNum = typeof day_of_week === 'string' ? parseInt(day_of_week, 10) : day_of_week;
-    if (!program_schedule_id || dayNum === undefined || isNaN(dayNum) || !start_time || !end_time) {
+    if (!semester_id || dayNum === undefined || isNaN(dayNum) || !start_time || !end_time) {
       return NextResponse.json({
-        error: 'program_schedule_id, day_of_week, start_time, and end_time are required'
+        error: 'semester_id, day_of_week, start_time, and end_time are required'
       }, { status: 400 });
     }
 
@@ -101,30 +90,22 @@ export async function POST(request: NextRequest) {
     const { data, error } = await supabase
       .from('pmi_schedule_blocks')
       .insert({
-        program_schedule_id,
-        room_id: room_id || null,  // || catches empty string from form selects
+        program_schedule_id: program_schedule_id || null,
+        semester_id,
+        room_id: room_id || null,
         day_of_week: dayNum,
         start_time,
         end_time,
-        block_type: block_type ?? 'lecture',
+        block_type: block_type || 'other',
         title: title || null,
         course_name: course_name || null,
         content_notes: content_notes || null,
+        color: color || null,
         is_recurring: is_recurring ?? true,
         specific_date: specific_date ?? null,
         sort_order: sort_order ?? 0,
       })
-      .select(`
-        *,
-        room:pmi_rooms!pmi_schedule_blocks_room_id_fkey(id, name, room_type, capacity),
-        program_schedule:pmi_program_schedules!pmi_schedule_blocks_program_schedule_id_fkey(
-          id, class_days, color, label,
-          cohort:cohorts!pmi_program_schedules_cohort_id_fkey(
-            id, cohort_number,
-            program:programs(id, name, abbreviation)
-          )
-        )
-      `)
+      .select(BLOCK_SELECT)
       .single();
 
     if (error) throw error;

@@ -3,6 +3,22 @@ import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole } from '@/lib/permissions';
 
+const BLOCK_SELECT = `
+  *,
+  room:pmi_rooms!pmi_schedule_blocks_room_id_fkey(id, name, room_type, capacity),
+  program_schedule:pmi_program_schedules!pmi_schedule_blocks_program_schedule_id_fkey(
+    id, class_days, color, label,
+    cohort:cohorts!pmi_program_schedules_cohort_id_fkey(
+      id, cohort_number,
+      program:programs(id, name, abbreviation)
+    )
+  ),
+  instructors:pmi_block_instructors(
+    id, role,
+    instructor:lab_users!pmi_block_instructors_instructor_id_fkey(id, name, email)
+  )
+`;
+
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -21,6 +37,7 @@ export async function PUT(
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
 
     // Convert empty strings to null for FK/optional columns
+    if (body.program_schedule_id !== undefined) updates.program_schedule_id = body.program_schedule_id || null;
     if (body.room_id !== undefined) updates.room_id = body.room_id || null;
     if (body.day_of_week !== undefined) {
       updates.day_of_week = typeof body.day_of_week === 'string'
@@ -33,6 +50,7 @@ export async function PUT(
     if (body.title !== undefined) updates.title = body.title || null;
     if (body.course_name !== undefined) updates.course_name = body.course_name || null;
     if (body.content_notes !== undefined) updates.content_notes = body.content_notes || null;
+    if (body.color !== undefined) updates.color = body.color || null;
     if (body.is_recurring !== undefined) updates.is_recurring = body.is_recurring;
     if (body.specific_date !== undefined) updates.specific_date = body.specific_date || null;
     if (body.sort_order !== undefined) updates.sort_order = body.sort_order;
@@ -43,21 +61,7 @@ export async function PUT(
       .from('pmi_schedule_blocks')
       .update(updates)
       .eq('id', id)
-      .select(`
-        *,
-        room:pmi_rooms!pmi_schedule_blocks_room_id_fkey(id, name, room_type, capacity),
-        program_schedule:pmi_program_schedules!pmi_schedule_blocks_program_schedule_id_fkey(
-          id, class_days, color, label,
-          cohort:cohorts!pmi_program_schedules_cohort_id_fkey(
-            id, cohort_number,
-            program:programs(id, name, abbreviation)
-          )
-        ),
-        instructors:pmi_block_instructors(
-          id, role,
-          instructor:lab_users!pmi_block_instructors_instructor_id_fkey(id, name, email)
-        )
-      `)
+      .select(BLOCK_SELECT)
       .single();
 
     if (error) throw error;
