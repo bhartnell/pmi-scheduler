@@ -6,7 +6,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   ChevronLeft, Plus, X, Calendar, Download, AlertTriangle,
   Loader2, Clock, MapPin, Users, Filter, Eye, EyeOff, Trash2,
-  Link, Unlink, Wand2, ChevronRight, Monitor,
+  Link, Unlink, Wand2, ChevronRight, Monitor, Repeat,
 } from 'lucide-react';
 import { safeArray } from '@/lib/safe-array';
 import {
@@ -346,6 +346,23 @@ function RecurringActionDialog({
 
 // ─── Block Edit Modal ─────────────────────────────────────────────────────────
 
+type RepeatType = 'none' | 'weekly_single' | 'weekly_multi' | 'weekdays';
+type DurationType = 'full' | 'first_half' | 'second_half' | 'custom';
+
+const REPEAT_OPTIONS: { value: RepeatType; label: string }[] = [
+  { value: 'none', label: 'Does not repeat' },
+  { value: 'weekly_single', label: 'Weekly' },
+  { value: 'weekly_multi', label: 'Weekly on multiple days' },
+  { value: 'weekdays', label: 'Every weekday (Mon-Fri)' },
+];
+
+const DURATION_OPTIONS: { value: DurationType; label: string }[] = [
+  { value: 'full', label: 'Full semester (15 weeks)' },
+  { value: 'first_half', label: 'First half (weeks 1-8)' },
+  { value: 'second_half', label: 'Second half (weeks 8-15)' },
+  { value: 'custom', label: 'Custom end date' },
+];
+
 function BlockEditModal({
   block,
   programs,
@@ -354,6 +371,7 @@ function BlockEditModal({
   semesterId,
   semesters,
   onSave,
+  onSaveRecurring,
   onDelete,
   onClose,
   saving,
@@ -365,6 +383,7 @@ function BlockEditModal({
   semesterId: string;
   semesters: PmiSemester[];
   onSave: (data: Record<string, unknown>, mode?: 'this' | 'this_and_future' | 'all') => void;
+  onSaveRecurring: (data: Record<string, unknown>) => void;
   onDelete?: (mode?: 'this' | 'this_and_future' | 'all') => void;
   onClose: () => void;
   saving: boolean;
@@ -376,6 +395,14 @@ function BlockEditModal({
   const [isLinked, setIsLinked] = useState(hasProgram);
   const [customHex, setCustomHex] = useState('');
   const [showRecurringDialog, setShowRecurringDialog] = useState<'save' | 'delete' | null>(null);
+
+  // Repeat/recurrence state (only for new blocks)
+  const [repeatType, setRepeatType] = useState<RepeatType>('none');
+  const [repeatDays, setRepeatDays] = useState<Set<number>>(new Set([block.day_of_week]));
+  const [durationType, setDurationType] = useState<DurationType>('full');
+  const [untilDate, setUntilDate] = useState('');
+  const [dayTimes, setDayTimes] = useState<Record<number, { start_time: string; end_time: string }>>({});
+
   const [formData, setFormData] = useState({
     program_schedule_id: block.program_schedule_id || '',
     room_id: block.room_id || '',
@@ -463,6 +490,52 @@ function BlockEditModal({
   };
 
   const handleSubmit = () => {
+    // New block with repeat → create recurring series
+    if (isNew && repeatType !== 'none') {
+      const selectedSemester = safeArray(semesters).find(s => s.id === semesterId);
+      let days: number[];
+      if (repeatType === 'weekdays') {
+        days = [1, 2, 3, 4, 5];
+      } else if (repeatType === 'weekly_multi') {
+        days = Array.from(repeatDays).sort();
+      } else {
+        // weekly_single — use the block's day_of_week
+        const d = formData.date ? new Date(formData.date + 'T00:00:00').getDay() : formData.day_of_week;
+        days = [d];
+      }
+
+      // Build per-day time overrides
+      const timesMap: Record<string, { start_time: string; end_time: string }> = {};
+      for (const d of days) {
+        if (dayTimes[d]) {
+          timesMap[String(d)] = dayTimes[d];
+        }
+      }
+
+      const recurringPayload: Record<string, unknown> = {
+        semester_id: semesterId,
+        repeat_days: days,
+        day_times: Object.keys(timesMap).length > 0 ? timesMap : undefined,
+        start_date: formData.date || selectedSemester?.start_date || '',
+        duration_type: durationType,
+        until_date: durationType === 'custom' ? untilDate : undefined,
+        start_time: formData.start_time,
+        end_time: formData.end_time,
+        title: formData.title || null,
+        course_name: isLinked ? (formData.course_name || null) : null,
+        block_type: isLinked ? formData.block_type : 'other',
+        color: formData.color || null,
+        content_notes: formData.content_notes || null,
+        program_schedule_id: isLinked ? (formData.program_schedule_id || null) : null,
+        room_id: isLinked ? (formData.room_id || null) : null,
+        instructor_id: formData.instructor_id || null,
+        semester_start_date: selectedSemester?.start_date || null,
+      };
+
+      onSaveRecurring(recurringPayload);
+      return;
+    }
+
     if (!isNew && isRecurring) {
       setShowRecurringDialog('save');
     } else {
@@ -575,6 +648,119 @@ function BlockEditModal({
                 />
               </div>
             </div>
+
+            {/* Repeat options (new blocks only) */}
+            {isNew && (
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Repeat className="w-4 h-4 text-gray-400" />
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Repeat</label>
+                </div>
+                <select
+                  value={repeatType}
+                  onChange={(e) => {
+                    const val = e.target.value as RepeatType;
+                    setRepeatType(val);
+                    if (val === 'weekly_single') {
+                      const d = formData.date ? new Date(formData.date + 'T00:00:00').getDay() : formData.day_of_week;
+                      setRepeatDays(new Set([d]));
+                    } else if (val === 'weekdays') {
+                      setRepeatDays(new Set([1, 2, 3, 4, 5]));
+                    }
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
+                >
+                  {REPEAT_OPTIONS.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+
+                {repeatType === 'weekly_multi' && (
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {[1, 2, 3, 4, 5, 6].map(d => (
+                      <button
+                        key={d}
+                        type="button"
+                        onClick={() => {
+                          setRepeatDays(prev => {
+                            const next = new Set(prev);
+                            if (next.has(d)) next.delete(d);
+                            else next.add(d);
+                            return next;
+                          });
+                        }}
+                        className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
+                          repeatDays.has(d)
+                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                            : 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        {DAY_SHORT[d]}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Per-day time overrides for multi-day repeat */}
+                {repeatType === 'weekly_multi' && repeatDays.size > 1 && (
+                  <div className="mt-3 space-y-2 bg-gray-50 dark:bg-gray-700/30 rounded-lg p-3">
+                    <div className="text-xs font-medium text-gray-500 dark:text-gray-400">Time per day (optional — defaults to times above)</div>
+                    {Array.from(repeatDays).sort().map(d => (
+                      <div key={d} className="flex items-center gap-2">
+                        <span className="text-xs text-gray-600 dark:text-gray-400 w-12">{DAY_SHORT[d]}:</span>
+                        <input
+                          type="time"
+                          value={dayTimes[d]?.start_time || formData.start_time}
+                          onChange={(e) => setDayTimes(prev => ({
+                            ...prev,
+                            [d]: { ...prev[d], start_time: e.target.value, end_time: prev[d]?.end_time || formData.end_time }
+                          }))}
+                          className="flex-1 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        />
+                        <span className="text-xs text-gray-400">-</span>
+                        <input
+                          type="time"
+                          value={dayTimes[d]?.end_time || formData.end_time}
+                          onChange={(e) => setDayTimes(prev => ({
+                            ...prev,
+                            [d]: { start_time: prev[d]?.start_time || formData.start_time, end_time: e.target.value }
+                          }))}
+                          className="flex-1 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {repeatType !== 'none' && (
+                  <div className="mt-2 grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Duration</label>
+                      <select
+                        value={durationType}
+                        onChange={(e) => setDurationType(e.target.value as DurationType)}
+                        className="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-xs text-gray-900 dark:text-gray-100"
+                      >
+                        {DURATION_OPTIONS.map(opt => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    {durationType === 'custom' && (
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Until</label>
+                        <input
+                          type="date"
+                          value={untilDate}
+                          onChange={(e) => setUntilDate(e.target.value)}
+                          className="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-xs text-gray-900 dark:text-gray-100"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Color</label>
@@ -727,7 +913,7 @@ function BlockEditModal({
                 className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-50 flex items-center gap-1.5"
               >
                 {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                {isNew ? 'Add Block' : 'Save Changes'}
+                {isNew && repeatType !== 'none' ? 'Create Recurring Series' : isNew ? 'Add Block' : 'Save Changes'}
               </button>
             </div>
           </div>
@@ -819,6 +1005,15 @@ function GenerateWizard({
   const [error, setError] = useState<string | null>(null);
   const [labTemplateInfo, setLabTemplateInfo] = useState<LabTemplateInfo | null>(null);
 
+  // Existing blocks check for duplicate prevention
+  interface ExistingBlocksInfo {
+    has_existing: boolean;
+    total_count: number;
+    courses: { course_name: string; block_count: number }[];
+  }
+  const [existingBlocks, setExistingBlocks] = useState<ExistingBlocksInfo | null>(null);
+  const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
+
   // Cohorts fetched by program type (includes both linked and unlinked)
   interface CohortOption {
     id: string;
@@ -879,7 +1074,7 @@ function GenerateWizard({
     }
   }, [semesterId]);
 
-  const goNext = () => {
+  const goNext = async () => {
     if (wizard.step === 1 && needsSemester) {
       setWizard(prev => ({ ...prev, step: 2 }));
     } else if (wizard.step === 1 && !needsSemester) {
@@ -889,6 +1084,22 @@ function GenerateWizard({
       loadTemplates(wizard.programType, wizard.semesterNumber);
       setWizard(prev => ({ ...prev, step: 3 }));
     } else if (wizard.step === 3) {
+      // Check for existing blocks before proceeding to review
+      try {
+        let checkUrl = `/api/scheduling/planner/blocks/check-existing?semester_id=${semesterId}`;
+        if (wizard.programScheduleId) {
+          checkUrl += `&program_schedule_id=${wizard.programScheduleId}`;
+        }
+        const checkRes = await fetch(checkUrl);
+        const checkData = await checkRes.json();
+        if (checkRes.ok && checkData.has_existing) {
+          setExistingBlocks(checkData as ExistingBlocksInfo);
+          setShowDuplicateDialog(true);
+          return; // Don't advance yet — wait for user choice
+        }
+      } catch {
+        // Non-critical — proceed without check
+      }
       setWizard(prev => ({ ...prev, step: 4 }));
     }
   };
@@ -1336,6 +1547,61 @@ function GenerateWizard({
           </div>
         </div>
       </div>
+
+      {/* Duplicate blocks dialog */}
+      {showDuplicateDialog && existingBlocks && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-md mx-4 p-5">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2 flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-amber-500" />
+              Existing blocks found
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+              This semester already has <strong>{existingBlocks.total_count} blocks</strong>:
+            </p>
+            <div className="max-h-[200px] overflow-y-auto mb-4 space-y-1">
+              {existingBlocks.courses.map((c, i) => (
+                <div key={i} className="text-xs text-gray-600 dark:text-gray-400 flex justify-between px-2 py-1 rounded bg-gray-50 dark:bg-gray-700/50">
+                  <span>{c.course_name}</span>
+                  <span className="text-gray-400">{c.block_count} blocks</span>
+                </div>
+              ))}
+            </div>
+            <div className="space-y-2">
+              <button
+                onClick={() => {
+                  setShowDuplicateDialog(false);
+                  setWizard(prev => ({ ...prev, clearExisting: false, step: 4 }));
+                }}
+                className="w-full px-4 py-2.5 text-left text-sm rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100"
+              >
+                <div className="font-medium">Add new courses only</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  Only creates blocks for templates not already present
+                </div>
+              </button>
+              <button
+                onClick={() => {
+                  setShowDuplicateDialog(false);
+                  setWizard(prev => ({ ...prev, clearExisting: true, step: 4 }));
+                }}
+                className="w-full px-4 py-2.5 text-left text-sm rounded-lg border border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-900/20 text-gray-900 dark:text-gray-100"
+              >
+                <div className="font-medium text-red-600 dark:text-red-400">Clear and regenerate</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  Deletes all {existingBlocks.total_count} existing blocks and recreates everything
+                </div>
+              </button>
+              <button
+                onClick={() => setShowDuplicateDialog(false)}
+                className="w-full px-4 py-2 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1810,6 +2076,28 @@ export default function SemesterPlannerPage() {
     }
   }, [selectedSemesterId, editingBlock, loadSemesterData]);
 
+  const handleSaveRecurring = useCallback(async (data: Record<string, unknown>) => {
+    setSaving(true);
+    try {
+      const res = await fetch('/api/scheduling/planner/blocks/recurring', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      const result = await res.json();
+      if (!res.ok) {
+        alert(result.error || 'Failed to create recurring blocks');
+        return;
+      }
+      setEditingBlock(null);
+      await loadSemesterData();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to create recurring blocks');
+    } finally {
+      setSaving(false);
+    }
+  }, [loadSemesterData]);
+
   const handleDeleteBlock = useCallback(async (mode?: 'this' | 'this_and_future' | 'all') => {
     if (!editingBlock?.id || !selectedSemesterId) return;
     setSaving(true);
@@ -2260,6 +2548,7 @@ export default function SemesterPlannerPage() {
           semesterId={selectedSemesterId}
           semesters={semesters}
           onSave={handleSaveBlock}
+          onSaveRecurring={handleSaveRecurring}
           onDelete={editingBlock.id ? handleDeleteBlock : undefined}
           onClose={() => setEditingBlock(null)}
           saving={saving}
