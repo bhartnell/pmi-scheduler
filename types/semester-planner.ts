@@ -110,6 +110,30 @@ export interface PmiInstructorWorkload {
   instructor?: { id: string; name: string; email: string };
 }
 
+// ── Course Templates ──
+
+export type ProgramType = 'paramedic' | 'emt' | 'aemt' | 'other';
+export type DurationType = 'full' | 'first_half' | 'second_half';
+
+export interface PmiCourseTemplate {
+  id: string;
+  program_type: ProgramType;
+  semester_number: number | null;
+  course_code: string;
+  course_name: string;
+  duration_type: DurationType;
+  day_index: number;
+  start_time: string;
+  end_time: string;
+  block_type: string;
+  is_online: boolean;
+  replaces_course_id: string | null;
+  color: string | null;
+  notes: string | null;
+  sort_order: number;
+  created_at: string;
+}
+
 // ── View types ──
 
 export interface PmiScheduleConflict {
