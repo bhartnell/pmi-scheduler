@@ -821,6 +821,15 @@ function GenerateWizard({
   const safePrograms = safeArray(programs);
   const safeInstructors = safeArray(instructors);
 
+  // Filter programs to match the selected program type
+  const filteredPrograms = safePrograms.filter(ps => {
+    const progName = (ps.cohort?.program?.name || ps.cohort?.program?.abbreviation || '').toLowerCase();
+    const abbr = (ps.cohort?.program?.abbreviation || '').toLowerCase();
+    const selected = wizard.programType.toLowerCase();
+    // Match "paramedic" → "Paramedic" or "PM", "emt" → "EMT", etc.
+    return progName.includes(selected) || abbr.includes(selected) || selected.includes(abbr);
+  });
+
   const dayIndices = [...new Set(safeArray(templates).filter(t => !t.is_online).map(t => t.day_index))].sort();
   const needsSemester = wizard.programType === 'paramedic';
 
@@ -915,7 +924,7 @@ function GenerateWizard({
           start_date: wizard.startDate,
           load_lab_template: wizard.loadLabTemplate,
           lab_template_id: wizard.labTemplateId || null,
-          cohort_id: safePrograms.find(p => p.id === wizard.programScheduleId)?.cohort_id || null,
+          cohort_id: filteredPrograms.find(p => p.id === wizard.programScheduleId)?.cohort_id || null,
         }),
       });
       const result = await res.json();
@@ -1073,13 +1082,18 @@ function GenerateWizard({
                       onChange={(e) => setWizard(prev => ({ ...prev, programScheduleId: e.target.value }))}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
                     >
-                      <option value="">No cohort link</option>
-                      {safePrograms.map(ps => (
+                      <option value="">No cohort link (standalone)</option>
+                      {filteredPrograms.map(ps => (
                         <option key={ps.id} value={ps.id}>
                           {getProgramLabel(ps)} — {formatClassDays(safeArray(ps.class_days))}
                         </option>
                       ))}
                     </select>
+                    {filteredPrograms.length === 0 && (
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                        No {wizard.programType.toUpperCase()} cohorts linked to this semester. You can still generate a standalone schedule.
+                      </p>
+                    )}
                   </div>
 
                   {/* Day mapping */}
