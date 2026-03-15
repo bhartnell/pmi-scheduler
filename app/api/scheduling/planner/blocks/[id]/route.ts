@@ -20,16 +20,21 @@ export async function PUT(
     const body = await request.json();
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
 
-    if (body.room_id !== undefined) updates.room_id = body.room_id;
-    if (body.day_of_week !== undefined) updates.day_of_week = body.day_of_week;
+    // Convert empty strings to null for FK/optional columns
+    if (body.room_id !== undefined) updates.room_id = body.room_id || null;
+    if (body.day_of_week !== undefined) {
+      updates.day_of_week = typeof body.day_of_week === 'string'
+        ? parseInt(body.day_of_week, 10)
+        : body.day_of_week;
+    }
     if (body.start_time !== undefined) updates.start_time = body.start_time;
     if (body.end_time !== undefined) updates.end_time = body.end_time;
     if (body.block_type !== undefined) updates.block_type = body.block_type;
-    if (body.title !== undefined) updates.title = body.title;
-    if (body.course_name !== undefined) updates.course_name = body.course_name;
-    if (body.content_notes !== undefined) updates.content_notes = body.content_notes;
+    if (body.title !== undefined) updates.title = body.title || null;
+    if (body.course_name !== undefined) updates.course_name = body.course_name || null;
+    if (body.content_notes !== undefined) updates.content_notes = body.content_notes || null;
     if (body.is_recurring !== undefined) updates.is_recurring = body.is_recurring;
-    if (body.specific_date !== undefined) updates.specific_date = body.specific_date;
+    if (body.specific_date !== undefined) updates.specific_date = body.specific_date || null;
     if (body.sort_order !== undefined) updates.sort_order = body.sort_order;
 
     const supabase = getSupabaseAdmin();
@@ -60,8 +65,12 @@ export async function PUT(
     return NextResponse.json({ block: data });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
-    console.error('Update schedule block error:', err);
-    return NextResponse.json({ error: message }, { status: 500 });
+    const detail = (err as { details?: string })?.details || '';
+    console.error('Update schedule block error:', { message, detail, err });
+    return NextResponse.json({
+      error: message,
+      detail: detail || undefined,
+    }, { status: 500 });
   }
 }
 
