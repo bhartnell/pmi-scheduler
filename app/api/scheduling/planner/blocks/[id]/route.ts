@@ -73,19 +73,26 @@ export async function PUT(
       if (fetchError) throw fetchError;
 
       if (targetBlock?.recurring_group_id) {
+        // For 'all' mode: update ALL blocks with this recurring_group_id (all days, all weeks)
+        // For 'this_and_future': update same day_of_week blocks from this date forward
         let batchQuery = supabase
           .from('pmi_schedule_blocks')
           .update(updates)
           .eq('recurring_group_id', targetBlock.recurring_group_id);
 
         if (update_mode === 'this_and_future' && targetBlock.date) {
+          // Only filter by day_of_week + date for "this and future" — NOT for "all"
           batchQuery = batchQuery
             .gte('date', targetBlock.date)
             .eq('day_of_week', targetBlock.day_of_week);
         }
+        // 'all' mode: no additional filters — updates every block with this recurring_group_id
 
-        const { error: batchError } = await batchQuery;
+        const { data: batchResult, error: batchError } = await batchQuery.select('id');
         if (batchError) throw batchError;
+
+        const updatedCount = batchResult?.length || 0;
+        console.log(`Batch update mode=${update_mode}: recurring_group_id=${targetBlock.recurring_group_id}, updated ${updatedCount} blocks`);
 
         // Return the updated target block
         const { data: updatedBlock, error: refetchError } = await supabase
@@ -96,7 +103,7 @@ export async function PUT(
 
         if (refetchError) throw refetchError;
 
-        return NextResponse.json({ block: updatedBlock, batch_updated: true });
+        return NextResponse.json({ block: updatedBlock, batch_updated: true, updated_count: updatedCount });
       }
     }
 

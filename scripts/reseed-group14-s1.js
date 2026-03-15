@@ -1,219 +1,195 @@
 #!/usr/bin/env node
-// Reseed Group 14 S1 schedule with corrected templates and course-level recurring_group_id
-// Usage: node scripts/reseed-group14-s1.js
-//
-// Prerequisites: .env.local with SUPABASE_DB_URL or NEXT_PUBLIC_SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY
+// Re-seed Group 14 S1 schedule with FIXED:
+// 1. Course-level recurring_group_id (same course shares ONE ID across all days)
+// 2. Lab label: "S1 Lab" instead of "Pharm Lab"
+// 3. Proper half-semester transition
 
+const { createClient } = require('@supabase/supabase-js');
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
-const { randomUUID } = require('crypto');
 
-// ─── Load env ──────────────────────────────────────────────────────────────────
+// Load .env.local
 const envPath = path.join(__dirname, '..', '.env.local');
 const envContent = fs.readFileSync(envPath, 'utf8');
-const env = {};
 for (const line of envContent.split('\n')) {
-  const trimmed = line.trim();
-  if (!trimmed || trimmed.startsWith('#')) continue;
-  const eqIdx = trimmed.indexOf('=');
-  if (eqIdx > 0) {
-    env[trimmed.slice(0, eqIdx).trim()] = trimmed.slice(eqIdx + 1).trim();
+  const eq = line.indexOf('=');
+  if (eq > 0 && !line.startsWith('#')) {
+    const key = line.slice(0, eq).trim();
+    const val = line.slice(eq + 1).trim();
+    if (!process.env[key]) process.env[key] = val;
   }
 }
 
-const SUPABASE_URL = env.NEXT_PUBLIC_SUPABASE_URL;
-const SUPABASE_KEY = env.SUPABASE_SERVICE_ROLE_KEY;
+async function reseed() {
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+  );
 
-if (!SUPABASE_URL || !SUPABASE_KEY) {
-  console.error('Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in .env.local');
-  process.exit(1);
-}
+  // 1. Fix lab label in course templates
+  console.log('=== Step 1: Fix lab template labels ===');
+  const { data: labTemplates } = await supabase
+    .from('pmi_course_templates')
+    .select('id, course_code, course_name, block_type')
+    .eq('program_type', 'paramedic')
+    .eq('semester_number', 1)
+    .eq('block_type', 'lab');
 
-// ─── Supabase REST helpers ─────────────────────────────────────────────────────
-async function supabaseQuery(table, { method = 'GET', params = {}, body = null, headers = {} } = {}) {
-  let url = `${SUPABASE_URL}/rest/v1/${table}`;
-  const qs = new URLSearchParams(params).toString();
-  if (qs) url += '?' + qs;
-
-  const opts = {
-    method,
-    headers: {
-      'apikey': SUPABASE_KEY,
-      'Authorization': `Bearer ${SUPABASE_KEY}`,
-      'Content-Type': 'application/json',
-      'Prefer': method === 'POST' ? 'return=representation' : method === 'DELETE' ? 'return=minimal' : 'return=representation',
-      ...headers,
-    },
-  };
-  if (body) opts.body = JSON.stringify(body);
-
-  const res = await fetch(url, opts);
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Supabase ${method} ${table}: ${res.status} ${text}`);
-  }
-  if (method === 'DELETE') return null;
-  return res.json();
-}
-
-// ─── Date helpers ──────────────────────────────────────────────────────────────
-function addDays(date, days) {
-  const r = new Date(date);
-  r.setDate(r.getDate() + days);
-  return r;
-}
-
-function formatDate(date) {
-  return date.toISOString().split('T')[0];
-}
-
-function findFirstOccurrence(startDate, targetDow) {
-  const d = new Date(startDate);
-  let daysUntil = targetDow - d.getDay();
-  if (daysUntil < 0) daysUntil += 7;
-  return addDays(d, daysUntil);
-}
-
-// ─── Main ──────────────────────────────────────────────────────────────────────
-async function main() {
-  console.log('=== Reseed Group 14 S1 ===');
-
-  // 1. Fix template labels — rename "Pharm Lab" to "S1 Lab" for S1 templates
-  console.log('\n1. Fixing template labels...');
-  const templates = await supabaseQuery('pmi_course_templates', {
-    params: {
-      select: 'id,course_code,course_name,semester_number,day_index',
-      program_type: 'eq.paramedic',
-      semester_number: 'eq.1',
-    },
-  });
-
-  for (const t of templates) {
-    if (t.course_name && t.course_name.toLowerCase().includes('pharm lab')) {
-      console.log(`  Renaming "${t.course_code} ${t.course_name}" → "S1 Lab"`);
-      await supabaseQuery('pmi_course_templates', {
-        method: 'PATCH',
-        params: { id: `eq.${t.id}` },
-        body: { course_name: 'S1 Lab' },
-      });
+  if (labTemplates && labTemplates.length > 0) {
+    for (const lt of labTemplates) {
+      const oldName = lt.course_name;
+      // Fix any lab named "Pharm Lab" or generic "Lab" to "S1 Lab"
+      if (oldName && (oldName.includes('Pharm') || oldName === 'Lab' || oldName.includes('EMS 211'))) {
+        const { error } = await supabase
+          .from('pmi_course_templates')
+          .update({ course_name: 'S1 Lab' })
+          .eq('id', lt.id);
+        if (error) {
+          console.log('  Warning updating template:', error.message);
+        } else {
+          console.log('  Fixed:', lt.course_code, oldName, '->', 'S1 Lab');
+        }
+      } else {
+        console.log('  OK:', lt.course_code, oldName, '(no change needed)');
+      }
     }
-  }
-
-  // 2. Find the PM Grp14 semester/program_schedule
-  console.log('\n2. Finding PM Grp14 program schedule...');
-  const schedules = await supabaseQuery('pmi_program_schedules', {
-    params: {
-      select: 'id,semester_id,cohort_id,label,cohort:cohorts(id,cohort_number,program:programs(id,abbreviation))',
-    },
-  });
-
-  const grp14Schedule = schedules.find(s => {
-    if (s.label && s.label.includes('14')) return true;
-    if (s.cohort && s.cohort.cohort_number === 14) return true;
-    return false;
-  });
-
-  if (!grp14Schedule) {
-    console.error('Could not find Group 14 program schedule. Creating blocks without program_schedule link.');
   } else {
-    console.log(`  Found: ${grp14Schedule.label || `Cohort ${grp14Schedule.cohort?.cohort_number}`} (${grp14Schedule.id})`);
+    console.log('  No lab templates found for paramedic S1');
   }
 
-  // 3. Find active semester
-  console.log('\n3. Finding active semester...');
-  const semesters = await supabaseQuery('pmi_semesters', {
-    params: {
-      select: 'id,name,is_active',
-      is_active: 'eq.true',
-    },
-  });
+  // 2. Find active semester
+  console.log('\n=== Step 2: Find semester & cohort ===');
+  const { data: semesters } = await supabase
+    .from('pmi_semesters')
+    .select('id, name')
+    .eq('is_active', true)
+    .limit(1);
 
-  const semester = semesters[0];
-  if (!semester) {
-    console.error('No active semester found');
-    process.exit(1);
+  const semester = semesters && semesters[0];
+  if (!semester) { console.log('No active semester'); return; }
+  console.log('Semester:', semester.name, semester.id);
+
+  // 3. Find Group 14 program schedule
+  const { data: cohorts } = await supabase
+    .from('cohorts')
+    .select('id, cohort_number')
+    .gte('cohort_number', 14)
+    .lt('cohort_number', 15)
+    .limit(1);
+
+  if (!cohorts || cohorts.length === 0) { console.log('No Group 14 cohort'); return; }
+  const cohortId = cohorts[0].id;
+  console.log('Cohort:', cohorts[0].cohort_number, cohortId);
+
+  const { data: ps } = await supabase
+    .from('pmi_program_schedules')
+    .select('id')
+    .eq('cohort_id', cohortId)
+    .eq('semester_id', semester.id)
+    .limit(1);
+
+  if (!ps || ps.length === 0) { console.log('No program schedule for Group 14'); return; }
+  const psId = ps[0].id;
+  console.log('Program schedule:', psId);
+
+  // 4. Delete ALL existing blocks for this program schedule
+  console.log('\n=== Step 3: Delete existing blocks ===');
+  const { data: existing, error: countErr } = await supabase
+    .from('pmi_schedule_blocks')
+    .select('id', { count: 'exact' })
+    .eq('program_schedule_id', psId);
+
+  console.log('Existing blocks to delete:', existing ? existing.length : 0);
+
+  if (existing && existing.length > 0) {
+    const { error: delErr } = await supabase
+      .from('pmi_schedule_blocks')
+      .delete()
+      .eq('program_schedule_id', psId);
+    if (delErr) { console.error('Delete error:', delErr.message); return; }
+    console.log('Deleted successfully');
   }
-  console.log(`  Active semester: ${semester.name} (${semester.id})`);
 
-  const semesterId = grp14Schedule?.semester_id || semester.id;
+  // 5. Re-fetch templates (with fixed labels)
+  console.log('\n=== Step 4: Fetch updated templates ===');
+  const { data: templates, error: tplErr } = await supabase
+    .from('pmi_course_templates')
+    .select('*')
+    .eq('program_type', 'paramedic')
+    .eq('semester_number', 1)
+    .order('sort_order')
+    .order('day_index')
+    .order('start_time');
 
-  // 4. Delete existing blocks
-  console.log('\n4. Deleting existing Group 14 S1 blocks...');
-  if (grp14Schedule) {
-    await supabaseQuery('pmi_schedule_blocks', {
-      method: 'DELETE',
-      params: {
-        program_schedule_id: `eq.${grp14Schedule.id}`,
-        semester_id: `eq.${semesterId}`,
-      },
-    });
-    console.log('  Deleted existing blocks.');
-  }
+  if (tplErr) { console.error('Template error:', tplErr); return; }
+  console.log('Templates:', templates.length);
+  templates.forEach(t => console.log('  ', t.course_code, t.course_name, 'Day', t.day_index, t.start_time + '-' + t.end_time, t.duration_type || 'full'));
 
-  // 5. Fetch fresh templates
-  console.log('\n5. Loading S1 templates...');
-  const freshTemplates = await supabaseQuery('pmi_course_templates', {
-    params: {
-      select: '*',
-      program_type: 'eq.paramedic',
-      semester_number: 'eq.1',
-      order: 'sort_order,day_index,start_time',
-    },
-  });
-
-  console.log(`  Found ${freshTemplates.length} templates`);
-
-  const onGround = freshTemplates.filter(t => !t.is_online);
-  const online = freshTemplates.filter(t => t.is_online);
-
-  // 6. Generate dated blocks
-  console.log('\n6. Generating dated blocks...');
+  // 6. Generate blocks with COURSE-LEVEL recurring_group_id
+  console.log('\n=== Step 5: Generate with course-level grouping ===');
+  const dayMap = { 1: 4, 2: 5 }; // Day 1 = Thursday, Day 2 = Friday
   const startDate = new Date('2026-01-22T00:00:00');
-  const dayMapping = { 1: 4, 2: 5 }; // Day 1 → Thursday, Day 2 → Friday
 
-  // Build course-level recurring group IDs
+  function addDays(d, n) { const r = new Date(d); r.setDate(r.getDate() + n); return r; }
+  function fmt(d) { return d.toISOString().split('T')[0]; }
+  function findFirst(start, dow) { const d = new Date(start); let diff = dow - d.getDay(); if (diff < 0) diff += 7; return addDays(d, diff); }
+
+  const onGround = templates.filter(t => !t.is_online);
+  const online = templates.filter(t => t.is_online);
+
+  // KEY FIX: Build course-level group IDs BEFORE the loop
+  // Same course across different days shares ONE recurring_group_id
   const courseGroupIds = new Map();
   for (const t of onGround) {
-    const key = `${t.course_code}|${t.course_name}|${t.duration_type}`;
-    if (!courseGroupIds.has(key)) courseGroupIds.set(key, randomUUID());
+    const courseKey = [t.course_code, t.course_name, t.duration_type || 'full'].join('|');
+    if (!courseGroupIds.has(courseKey)) {
+      courseGroupIds.set(courseKey, crypto.randomUUID());
+    }
   }
 
-  const blocksToInsert = [];
+  console.log('\nCourse groups (shared recurring_group_id):');
+  for (const [key, id] of courseGroupIds) {
+    const matchingTemplates = onGround.filter(t => [t.course_code, t.course_name, t.duration_type || 'full'].join('|') === key);
+    const days = matchingTemplates.map(t => 'Day' + t.day_index).join(', ');
+    console.log('  ', key, '->', id.slice(0, 8) + '...', '(' + days + ')');
+  }
 
+  const blocks = [];
   for (const t of onGround) {
-    const weekday = dayMapping[t.day_index];
-    if (weekday === undefined) continue;
+    const wd = dayMap[t.day_index];
+    if (wd === undefined) continue;
 
-    const courseKey = `${t.course_code}|${t.course_name}|${t.duration_type}`;
-    const recurringGroupId = courseGroupIds.get(courseKey);
+    const courseKey = [t.course_code, t.course_name, t.duration_type || 'full'].join('|');
+    const groupId = courseGroupIds.get(courseKey); // SHARED across days!
 
-    const firstDate = findFirstOccurrence(startDate, weekday);
+    const firstDate = findFirst(startDate, wd);
 
     let startWeek = 1, endWeek = 15;
-    if (t.duration_type === 'first_half') {
-      endWeek = 8;
-    } else if (t.duration_type === 'second_half') {
+    if (t.duration_type === 'first_half') { startWeek = 1; endWeek = 8; }
+    else if (t.duration_type === 'second_half') {
       startWeek = t.day_index === 1 ? 9 : 8;
+      endWeek = 15;
     }
 
-    let title = `${t.course_code} ${t.course_name}`;
+    let title = t.course_code + ' ' + t.course_name;
     if (t.duration_type === 'first_half') title += ' (Wks 1-8)';
     else if (t.duration_type === 'second_half') title += ' (Wks 9-15)';
 
-    for (let week = startWeek; week <= endWeek; week++) {
-      const blockDate = addDays(firstDate, (week - 1) * 7);
-      blocksToInsert.push({
-        semester_id: semesterId,
-        program_schedule_id: grp14Schedule?.id || null,
-        day_of_week: weekday,
-        date: formatDate(blockDate),
-        week_number: week,
-        recurring_group_id: recurringGroupId,
+    for (let w = startWeek; w <= endWeek; w++) {
+      const blockDate = addDays(firstDate, (w - 1) * 7);
+      blocks.push({
+        semester_id: semester.id,
+        program_schedule_id: psId,
+        day_of_week: wd,
+        date: fmt(blockDate),
+        week_number: w,
+        recurring_group_id: groupId,
         start_time: t.start_time,
         end_time: t.end_time,
         block_type: t.block_type || 'lecture',
         title,
-        course_name: `${t.course_code} ${t.course_name}`,
+        course_name: t.course_code + ' ' + t.course_name,
         content_notes: t.notes || null,
         color: t.color || null,
         is_recurring: true,
@@ -222,46 +198,72 @@ async function main() {
     }
   }
 
-  console.log(`  Generated ${blocksToInsert.length} blocks to insert`);
+  console.log('\nTotal blocks to insert:', blocks.length);
 
   // 7. Insert in batches
-  console.log('\n7. Inserting blocks...');
-  let inserted = 0;
-  for (let i = 0; i < blocksToInsert.length; i += 50) {
-    const batch = blocksToInsert.slice(i, i + 50);
-    const result = await supabaseQuery('pmi_schedule_blocks', {
-      method: 'POST',
-      body: batch,
-    });
-    inserted += result.length;
-    process.stdout.write(`  Inserted ${inserted}/${blocksToInsert.length}\r`);
+  for (let i = 0; i < blocks.length; i += 50) {
+    const batch = blocks.slice(i, i + 50);
+    const { error } = await supabase.from('pmi_schedule_blocks').insert(batch);
+    if (error) { console.error('Insert error at', i, ':', error.message); return; }
   }
-  console.log(`\n  Total inserted: ${inserted}`);
 
   // 8. Verify course-level grouping
-  console.log('\n8. Verifying course-level recurring_group_id...');
-  const groupCheck = new Map();
-  for (const b of blocksToInsert) {
-    const gid = b.recurring_group_id;
-    if (!groupCheck.has(gid)) groupCheck.set(gid, new Set());
-    groupCheck.get(gid).add(b.day_of_week);
+  console.log('\n=== Step 6: Verify grouping ===');
+  const { data: allBlocks } = await supabase
+    .from('pmi_schedule_blocks')
+    .select('recurring_group_id, course_name, day_of_week, date')
+    .eq('program_schedule_id', psId)
+    .not('date', 'is', null)
+    .order('recurring_group_id')
+    .order('date');
+
+  if (allBlocks) {
+    // Group by recurring_group_id
+    const groups = {};
+    for (const b of allBlocks) {
+      const gid = b.recurring_group_id || 'none';
+      if (!groups[gid]) groups[gid] = { course: b.course_name, days: new Set(), count: 0 };
+      groups[gid].days.add(b.day_of_week);
+      groups[gid].count++;
+    }
+
+    console.log('\nRecurring groups:');
+    for (const [gid, info] of Object.entries(groups)) {
+      const dayNames = { 4: 'Thu', 5: 'Fri' };
+      const days = [...info.days].map(d => dayNames[d] || d).join('+');
+      console.log('  ', gid.slice(0, 8) + '...', info.course, '|', days, '|', info.count, 'blocks');
+    }
+
+    // Check: Does EMS 141 share one group across Thu + Fri?
+    const ems141Groups = Object.entries(groups).filter(([, info]) => info.course && info.course.includes('141'));
+    if (ems141Groups.length > 0) {
+      for (const [gid, info] of ems141Groups) {
+        if (info.days.size >= 2) {
+          console.log('\n  OK: EMS 141 shares one group across', info.days.size, 'days,', info.count, 'blocks total');
+        } else {
+          console.log('\n  WARNING: EMS 141 only on', info.days.size, 'day(s) in group', gid.slice(0, 8));
+        }
+      }
+    }
   }
 
-  for (const [gid, days] of groupCheck) {
-    const sample = blocksToInsert.find(b => b.recurring_group_id === gid);
-    const daysArr = [...days].sort();
-    const dayNames = daysArr.map(d => ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d]);
-    console.log(`  ${sample.course_name}: ${dayNames.join(' + ')} (${blocksToInsert.filter(b => b.recurring_group_id === gid).length} blocks)`);
-  }
+  console.log('\nTotal:', allBlocks ? allBlocks.length : 0, 'blocks inserted');
 
-  // 9. Summary
-  console.log('\n=== Done ===');
-  console.log(`Blocks inserted: ${inserted}`);
-  console.log(`Course groups: ${courseGroupIds.size}`);
-  console.log(`Online courses: ${online.map(t => `${t.course_code} ${t.course_name}`).join(', ') || 'none'}`);
+  // Show first few
+  const { data: first } = await supabase
+    .from('pmi_schedule_blocks')
+    .select('date, week_number, course_name, start_time, end_time, day_of_week')
+    .eq('program_schedule_id', psId)
+    .not('date', 'is', null)
+    .order('date')
+    .order('start_time')
+    .limit(10);
+
+  if (first) {
+    console.log('\nFirst 10 blocks:');
+    const dayNames = { 4: 'Thu', 5: 'Fri' };
+    first.forEach(b => console.log('  ', b.date, 'W' + b.week_number, dayNames[b.day_of_week] || b.day_of_week, b.course_name, b.start_time + '-' + b.end_time));
+  }
 }
 
-main().catch(err => {
-  console.error('Fatal error:', err);
-  process.exit(1);
-});
+reseed().catch(console.error);
