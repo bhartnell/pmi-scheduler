@@ -33,6 +33,8 @@ export async function PUT(
     if (body.sort_order !== undefined) updates.sort_order = body.sort_order;
     if (body.program_type !== undefined) updates.program_type = body.program_type;
     if (body.semester_number !== undefined) updates.semester_number = body.semester_number;
+    if (body.default_instructor_id !== undefined) updates.default_instructor_id = body.default_instructor_id || null;
+    if (body.default_instructor_name !== undefined) updates.default_instructor_name = body.default_instructor_name || null;
 
     const supabase = getSupabaseAdmin();
 

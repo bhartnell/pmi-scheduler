@@ -134,6 +134,8 @@ export interface PmiCourseTemplate {
   color: string | null;
   notes: string | null;
   sort_order: number;
+  default_instructor_id: string | null;
+  default_instructor_name: string | null;
   created_at: string;
 }
 

@@ -38,6 +38,12 @@ function formatTime(time: string): string {
   return `${h12}:${m} ${ampm}`;
 }
 
+interface Instructor {
+  id: string;
+  name: string;
+  email: string;
+}
+
 interface TemplateFormData {
   program_type: string;
   semester_number: number | null;
@@ -52,6 +58,8 @@ interface TemplateFormData {
   color: string;
   notes: string;
   sort_order: number;
+  default_instructor_id: string;
+  default_instructor_name: string;
 }
 
 function emptyForm(programType: string, semesterNumber: number | null): TemplateFormData {
@@ -69,6 +77,8 @@ function emptyForm(programType: string, semesterNumber: number | null): Template
     color: '#3B82F6',
     notes: '',
     sort_order: 0,
+    default_instructor_id: '',
+    default_instructor_name: '',
   };
 }
 
@@ -82,6 +92,9 @@ export default function TemplateEditorPage() {
   // Filters
   const [selectedProgram, setSelectedProgram] = useState('paramedic');
   const [selectedSemester, setSelectedSemester] = useState<number | null>(1);
+
+  // Instructors for dropdown
+  const [instructors, setInstructors] = useState<Instructor[]>([]);
 
   // Edit state
   const [editingTemplate, setEditingTemplate] = useState<PmiCourseTemplate | null>(null);
@@ -113,6 +126,22 @@ export default function TemplateEditorPage() {
     loadTemplates();
   }, [loadTemplates]);
 
+  // Load instructors once on mount
+  useEffect(() => {
+    async function loadInstructors() {
+      try {
+        const res = await fetch('/api/users/list');
+        const data = await res.json();
+        if (res.ok && data.users) {
+          setInstructors(safeArray(data.users));
+        }
+      } catch {
+        // Non-critical — instructor dropdown will just be empty
+      }
+    }
+    loadInstructors();
+  }, []);
+
   const setField = (field: keyof TemplateFormData, value: unknown) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
@@ -133,6 +162,8 @@ export default function TemplateEditorPage() {
       color: t.color || '#3B82F6',
       notes: t.notes || '',
       sort_order: t.sort_order || 0,
+      default_instructor_id: t.default_instructor_id || '',
+      default_instructor_name: t.default_instructor_name || '',
     });
     setShowForm(true);
   };
@@ -337,6 +368,11 @@ export default function TemplateEditorPage() {
                                   {formatTime(t.start_time)} - {formatTime(t.end_time)}
                                 </span>
                                 <span className="capitalize">{t.block_type}</span>
+                                {t.default_instructor_name && (
+                                  <span className="text-purple-600 dark:text-purple-400">
+                                    {t.default_instructor_name}
+                                  </span>
+                                )}
                                 {t.notes && <span className="truncate max-w-[200px]">{t.notes}</span>}
                               </div>
                             </div>
@@ -531,6 +567,28 @@ export default function TemplateEditorPage() {
                 />
                 Online / Distance Education
               </label>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Default Instructor</label>
+                <select
+                  value={formData.default_instructor_id}
+                  onChange={(e) => {
+                    const selectedId = e.target.value;
+                    const selectedInstructor = instructors.find(i => i.id === selectedId);
+                    setField('default_instructor_id', selectedId);
+                    setField('default_instructor_name', selectedInstructor?.name || '');
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
+                >
+                  <option value="">No default (use wizard fallback)</option>
+                  {instructors.map(inst => (
+                    <option key={inst.id} value={inst.id}>{inst.name}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                  Auto-assigned when generating a semester. Editable per-block after generation.
+                </p>
+              </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>

@@ -204,13 +204,33 @@ export async function POST(request: NextRequest) {
       if (createdBlocks) allCreated.push(...createdBlocks);
     }
 
-    // 5. Assign instructor to all created blocks if provided
-    if (instructor_id && allCreated.length > 0) {
-      const instructorAssignments = allCreated.map(block => ({
-        schedule_block_id: (block as { id: string }).id,
-        instructor_id,
-        role: 'primary',
-      }));
+    // 5. Assign instructors — per-template default_instructor_id takes priority, fallback to wizard instructor_id
+    // Build a map from recurring_group_id → template's default_instructor_id
+    const groupToDefaultInstructor = new Map<string, string>();
+    for (const t of onGroundTemplates) {
+      if (t.default_instructor_id) {
+        const courseKey = `${t.course_code}|${t.course_name}|${t.duration_type}`;
+        const groupId = courseGroupIds.get(courseKey);
+        if (groupId) {
+          groupToDefaultInstructor.set(groupId, t.default_instructor_id);
+        }
+      }
+    }
+
+    if (allCreated.length > 0 && (instructor_id || groupToDefaultInstructor.size > 0)) {
+      const instructorAssignments = allCreated
+        .map(block => {
+          const b = block as { id: string; recurring_group_id?: string };
+          // Use template default instructor if available, otherwise fall back to wizard instructor
+          const assignedInstructor = (b.recurring_group_id && groupToDefaultInstructor.get(b.recurring_group_id)) || instructor_id;
+          if (!assignedInstructor) return null;
+          return {
+            schedule_block_id: b.id,
+            instructor_id: assignedInstructor,
+            role: 'primary',
+          };
+        })
+        .filter(Boolean);
 
       // Insert in batches
       for (let i = 0; i < instructorAssignments.length; i += 100) {

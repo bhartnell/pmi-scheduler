@@ -53,6 +53,7 @@ export async function POST(request: NextRequest) {
       program_type, semester_number, course_code, course_name,
       duration_type, day_index, start_time, end_time,
       block_type, is_online, color, notes, sort_order,
+      default_instructor_id, default_instructor_name,
     } = body;
 
     if (!program_type || !course_code || !course_name || day_index === undefined || !start_time || !end_time) {
@@ -77,6 +78,8 @@ export async function POST(request: NextRequest) {
         color: color || null,
         notes: notes || null,
         sort_order: sort_order ?? 0,
+        default_instructor_id: default_instructor_id || null,
+        default_instructor_name: default_instructor_name || null,
       })
       .select('*')
       .single();
