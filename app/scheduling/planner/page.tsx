@@ -20,6 +20,7 @@ import {
 const TIME_START = 7;  // 7 AM
 const TIME_END = 18;   // 6 PM
 const SLOT_HEIGHT = 48; // px per hour
+const HALF_SLOT_HEIGHT = SLOT_HEIGHT / 2; // 24px per 30 min
 
 const BLOCK_TYPE_OPTIONS: { value: ScheduleBlockType; label: string }[] = [
   { value: 'class', label: 'Class' },
@@ -198,11 +199,13 @@ function TimeGridBlock({
   program,
   onClick,
   semesterStartDate,
+  dimmed,
 }: {
   block: PmiScheduleBlock;
   program: PmiProgramSchedule | undefined;
   onClick: () => void;
   semesterStartDate: string | null;
+  dimmed?: boolean;
 }) {
   const top = getBlockTop(block.start_time);
   const height = getBlockHeight(block.start_time, block.end_time);
@@ -242,6 +245,7 @@ function TimeGridBlock({
         height: `${height}px`,
         backgroundColor: `${color}CC`, // Strong color background for readability
         borderLeft: `3px solid ${color}`,
+        opacity: dimmed ? 0.15 : 1,
       }}
     >
       {/* Badges */}
@@ -268,10 +272,12 @@ function TimeGridBlock({
           {block.room.name}
         </div>
       )}
-      {instructors.length > 0 && (
-        <div className="text-[9px] text-white/70 truncate">
-          {safeArray(instructors).map(i => getInitials(i.instructor?.name || '')).join(', ')}
+      {instructors.length > 0 ? (
+        <div className="text-[9px] text-white/80 truncate">
+          {safeArray(instructors).map(i => i.instructor?.name?.split(' ')[0] || '?').join(', ')}
         </div>
+      ) : (
+        <div className="text-[9px] text-orange-200 truncate">Unassigned</div>
       )}
       {block.week_number && height >= 60 && (
         <div className="text-[8px] text-white/50">W{block.week_number}</div>
@@ -1539,6 +1545,7 @@ export default function SemesterPlannerPage() {
   const [error, setError] = useState<string | null>(null);
   const [hiddenPrograms, setHiddenPrograms] = useState<Set<string>>(new Set());
   const [roomFilter, setRoomFilter] = useState<string>('');
+  const [selectedInstructor, setSelectedInstructor] = useState<string>('');
   const [editingBlock, setEditingBlock] = useState<(Partial<PmiScheduleBlock> & { day_of_week: number }) | null>(null);
   const [showWizard, setShowWizard] = useState(false);
   const [dragOverCell, setDragOverCell] = useState<string | null>(null);
@@ -1774,9 +1781,10 @@ export default function SemesterPlannerPage() {
     }
   }, [editingBlock, selectedSemesterId, loadSemesterData]);
 
-  const handleQuickAdd = useCallback((date: Date, hour: number) => {
-    const startTime = minutesToTime(hour * 60);
-    const endTime = minutesToTime((hour + 1) * 60);
+  const handleQuickAdd = useCallback((date: Date, hour: number, halfMin: number = 0) => {
+    const startMinutes = hour * 60 + halfMin;
+    const startTime = minutesToTime(startMinutes);
+    const endTime = minutesToTime(startMinutes + 60);
     setEditingBlock({
       day_of_week: date.getDay(),
       date: formatDateStr(date),
@@ -1792,7 +1800,7 @@ export default function SemesterPlannerPage() {
     loadSemesterData();
   }, [loadSemesterData]);
 
-  const handleDrop = useCallback((date: Date, hour: number, e: React.DragEvent) => {
+  const handleDrop = useCallback((date: Date, startMinutes: number, e: React.DragEvent) => {
     e.preventDefault();
     setDragOverCell(null);
     try {
@@ -1802,7 +1810,7 @@ export default function SemesterPlannerPage() {
       const originalStartMin = timeToMinutes(data.originalStartTime);
       const originalEndMin = timeToMinutes(data.originalEndTime);
       const duration = originalEndMin - originalStartMin;
-      const newStartMin = hour * 60;
+      const newStartMin = startMinutes;
       const newEndMin = newStartMin + duration;
 
       const newDate = formatDateStr(date);
@@ -1952,6 +1960,35 @@ export default function SemesterPlannerPage() {
                   <option key={r.id} value={r.id}>{r.name}</option>
                 ))}
               </select>
+            </div>
+
+            {/* Instructor filter */}
+            <div className="relative">
+              <Users className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+              <select
+                value={selectedInstructor}
+                onChange={(e) => setSelectedInstructor(e.target.value)}
+                className="pl-8 pr-3 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              >
+                <option value="">All Instructors</option>
+                {safeArray(instructors).map(inst => (
+                  <option key={inst.id} value={inst.id}>{inst.name}</option>
+                ))}
+              </select>
+              {selectedInstructor && (() => {
+                const instName = safeArray(instructors).find(i => i.id === selectedInstructor)?.name?.split(' ')[0] || '';
+                const weekHours = safeArray(visibleBlocks).filter(b =>
+                  safeArray(b.instructors).some(bi => bi.instructor_id === selectedInstructor)
+                ).reduce((sum, b) => {
+                  const dur = (timeToMinutes(b.end_time) - timeToMinutes(b.start_time)) / 60;
+                  return sum + dur;
+                }, 0);
+                return (
+                  <span className="ml-2 text-xs text-blue-600 dark:text-blue-400 font-medium">
+                    {instName}: {weekHours.toFixed(1)} hrs/week
+                  </span>
+                );
+              })()}
             </div>
 
             {/* Edit Templates */}
@@ -2130,14 +2167,19 @@ export default function SemesterPlannerPage() {
               <div className="flex relative">
                 <div className="w-16 flex-shrink-0 border-r border-gray-200 dark:border-gray-700">
                   {timeSlots.map(hour => (
-                    <div
-                      key={hour}
-                      className="border-b border-gray-100 dark:border-gray-800 text-right pr-2 text-[10px] text-gray-400 dark:text-gray-500"
-                      style={{ height: `${SLOT_HEIGHT}px` }}
-                    >
-                      <span className="relative -top-2">
-                        {hour === 0 ? '12 AM' : hour <= 12 ? `${hour} AM` : `${hour - 12} PM`}
-                      </span>
+                    <div key={hour}>
+                      <div
+                        className="border-b border-gray-100 dark:border-gray-800 text-right pr-2 text-[10px] text-gray-400 dark:text-gray-500"
+                        style={{ height: `${HALF_SLOT_HEIGHT}px` }}
+                      >
+                        <span className="relative -top-2">
+                          {hour === 0 ? '12 AM' : hour <= 12 ? `${hour} AM` : `${hour - 12} PM`}
+                        </span>
+                      </div>
+                      <div
+                        className="border-b border-dashed border-gray-100/50 dark:border-gray-800/30 text-right pr-2 text-[10px] text-gray-300 dark:text-gray-600"
+                        style={{ height: `${HALF_SLOT_HEIGHT}px` }}
+                      />
                     </div>
                   ))}
                 </div>
@@ -2156,31 +2198,38 @@ export default function SemesterPlannerPage() {
                       style={{ height: `${timeSlots.length * SLOT_HEIGHT}px` }}
                     >
                       {timeSlots.map(hour => {
-                        const cellKey = `${dateStr}-${hour}`;
+                        return [0, 30].map(halfMin => {
+                          const cellKey = `${dateStr}-${hour}-${halfMin}`;
+                          const cellMinutes = hour * 60 + halfMin;
+                          return (
+                            <div
+                              key={cellKey}
+                              className={`border-b ${halfMin === 0 ? 'border-gray-100 dark:border-gray-800' : 'border-dashed border-gray-100/50 dark:border-gray-800/30'} hover:bg-blue-50/30 dark:hover:bg-blue-900/10 cursor-pointer transition-colors ${
+                                dragOverCell === cellKey ? 'bg-blue-100 dark:bg-blue-900/30 ring-2 ring-blue-400 ring-inset' : ''
+                              }`}
+                              style={{ height: `${HALF_SLOT_HEIGHT}px` }}
+                              onClick={() => handleQuickAdd(date, hour, halfMin)}
+                              onDragOver={(e) => { e.preventDefault(); setDragOverCell(cellKey); }}
+                              onDragLeave={() => setDragOverCell(null)}
+                              onDrop={(e) => handleDrop(date, cellMinutes, e)}
+                            />
+                          );
+                        });
+                      })}
+
+                      {safeArray(dayBlocks).map(block => {
+                        const isDimmed = !!selectedInstructor && !safeArray(block.instructors).some(i => i.instructor_id === selectedInstructor);
                         return (
-                          <div
-                            key={hour}
-                            className={`border-b border-gray-100 dark:border-gray-800 hover:bg-blue-50/30 dark:hover:bg-blue-900/10 cursor-pointer transition-colors ${
-                              dragOverCell === cellKey ? 'bg-blue-100 dark:bg-blue-900/30 ring-2 ring-blue-400 ring-inset' : ''
-                            }`}
-                            style={{ height: `${SLOT_HEIGHT}px` }}
-                            onClick={() => handleQuickAdd(date, hour)}
-                            onDragOver={(e) => { e.preventDefault(); setDragOverCell(cellKey); }}
-                            onDragLeave={() => setDragOverCell(null)}
-                            onDrop={(e) => handleDrop(date, hour, e)}
+                          <TimeGridBlock
+                            key={block.id}
+                            block={block}
+                            program={block.program_schedule_id ? programMap.get(block.program_schedule_id) : undefined}
+                            onClick={() => setEditingBlock(block as Partial<PmiScheduleBlock> & { day_of_week: number })}
+                            semesterStartDate={semesterStartDate}
+                            dimmed={isDimmed}
                           />
                         );
                       })}
-
-                      {safeArray(dayBlocks).map(block => (
-                        <TimeGridBlock
-                          key={block.id}
-                          block={block}
-                          program={block.program_schedule_id ? programMap.get(block.program_schedule_id) : undefined}
-                          onClick={() => setEditingBlock(block as Partial<PmiScheduleBlock> & { day_of_week: number })}
-                          semesterStartDate={semesterStartDate}
-                        />
-                      ))}
                     </div>
                   );
                 })}
