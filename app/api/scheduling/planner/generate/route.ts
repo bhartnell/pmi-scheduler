@@ -138,13 +138,17 @@ export async function POST(request: NextRequest) {
       let endWeek = 15;
 
       if (t.duration_type === 'first_half') {
-        // Weeks 1-8, but the LAST class is on Week 8 Day 1
+        // First half = 15 class days total
+        // Day 1: weeks 1-8 (8 class days on Day 1)
+        // Day 2: weeks 1-7 (7 class days on Day 2)
+        // Total: 8 + 7 = 15 class days
         startWeek = 1;
-        endWeek = 8;
+        endWeek = t.day_index === 1 ? 8 : 7;
       } else if (t.duration_type === 'second_half') {
-        // Starting Week 8 Day 2 through Week 15
-        // For Day 2 templates, start at week 8
-        // For Day 1 templates, start at week 9
+        // Second half = 15 class days total
+        // Day 2: weeks 8-15 (8 class days on Day 2, starting W8D2)
+        // Day 1: weeks 9-15 (7 class days on Day 1)
+        // Total: 8 + 7 = 15 class days
         if (t.day_index === 1) {
           startWeek = 9;
         } else {
@@ -153,12 +157,13 @@ export async function POST(request: NextRequest) {
         endWeek = 15;
       }
 
-      // Build title
-      let title = `${t.course_code} ${t.course_name}`;
+      // Build title — use course_name as-is if it looks like a standalone label (e.g. "S1 Lab")
+      const nameAlreadyHasCode = t.course_name.includes(t.course_code);
+      let title = nameAlreadyHasCode ? t.course_name : `${t.course_code} ${t.course_name}`;
       if (t.duration_type === 'first_half') {
-        title += ' (Wks 1-8)';
+        title += ` (Wks 1-${endWeek})`;
       } else if (t.duration_type === 'second_half') {
-        title += ' (Wks 9-15)';
+        title += ` (Wks ${startWeek}-15)`;
       }
 
       // Generate one block per week
@@ -176,7 +181,7 @@ export async function POST(request: NextRequest) {
           end_time: t.end_time,
           block_type: t.block_type || 'lecture',
           title,
-          course_name: `${t.course_code} ${t.course_name}`,
+          course_name: nameAlreadyHasCode ? t.course_name : `${t.course_code} ${t.course_name}`,
           content_notes: t.notes || null,
           color: t.color || null,
           is_recurring: true,
