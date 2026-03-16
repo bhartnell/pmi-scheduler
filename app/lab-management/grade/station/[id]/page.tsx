@@ -74,6 +74,7 @@ export default function GradeStationPage() {
 
   // Skill sheet panel state
   const [panelSheetId, setPanelSheetId] = useState<string | null>(null);
+  const [useEmbeddedSkillSheet, setUseEmbeddedSkillSheet] = useState(false);
 
   // Evaluation tracking for auto-advance
   const [evaluatedStudents, setEvaluatedStudents] = useState<Record<string, string>>({});
@@ -176,6 +177,24 @@ export default function GradeStationPage() {
       }
     }
   }, [station]);
+
+  // Auto-open embedded skill sheet when available for skills stations
+  useEffect(() => {
+    if (isSkillsStation && station && Object.keys(skillSheetIds).length > 0) {
+      // Find the main skill's sheet ID
+      let mainSkillName = station.skill_name || station.custom_title;
+      if (mainSkillName) {
+        const prefixMatch = mainSkillName.match(/^[A-Za-z0-9]+\s+\d{1,2}\/\d{1,2}\/\d{2,4}\s*[-–]\s*(.+)$/);
+        if (prefixMatch) mainSkillName = prefixMatch[1].trim();
+      }
+      const sheetId = skillSheetIds[mainSkillName || '']
+        || Object.values(skillSheetIds)[0];
+      if (sheetId) {
+        setPanelSheetId(sheetId);
+        setUseEmbeddedSkillSheet(true);
+      }
+    }
+  }, [isSkillsStation, station, skillSheetIds]);
 
   const fetchStation = async () => {
     try {
@@ -580,6 +599,47 @@ export default function GradeStationPage() {
         onSave={handleSave}
       />
 
+      {/* Embedded Skill Sheet Mode: Skills station with skill sheet available */}
+      {useEmbeddedSkillSheet && panelSheetId ? (
+        <main className="max-w-2xl mx-auto px-4 py-4 space-y-4 pb-4">
+          {/* Student Selection (compact) */}
+          <StudentSelection
+            isSkillsStation={isSkillsStation}
+            station={station}
+            allStudents={allStudents}
+            labGroups={labGroups}
+            selectedGroupId={selectedGroupId}
+            selectedStudentId={selectedStudentId}
+            teamLeaderId={teamLeaderId}
+            rotationNumber={rotationNumber}
+            onSetSelectedGroupId={setSelectedGroupId}
+            onSetSelectedStudentId={setSelectedStudentId}
+            onSetTeamLeaderId={setTeamLeaderId}
+            onSetRotationNumber={setRotationNumber}
+            triggerAutoSave={triggerAutoSave}
+            evaluatedStudents={evaluatedStudents}
+            inProgressStudents={inProgressStudents}
+          />
+
+          {/* Embedded Skill Sheet — full width, independently scrollable */}
+          <div className="min-h-[60vh]">
+            <SkillSheetPanel
+              sheetId={panelSheetId}
+              onClose={() => {
+                setUseEmbeddedSkillSheet(false);
+                setPanelSheetId(null);
+              }}
+              studentId={selectedStudentId || undefined}
+              studentName={selectedStudentName}
+              labDayId={station?.lab_day?.id}
+              stationPoolId={stationId}
+              studentQueue={studentQueue}
+              onEvaluationSaved={handleEvaluationSaved}
+              embedded={true}
+            />
+          </div>
+        </main>
+      ) : (
       <main className="max-w-2xl mx-auto px-4 py-4 space-y-4 pb-20">
         {/* Scenario/Skills Station Info */}
         <ScenarioGrading
@@ -770,9 +830,10 @@ export default function GradeStationPage() {
           )}
         </div>
       </main>
+      )}
 
-      {/* Skill Sheet Slide-Out Panel */}
-      {panelSheetId && (
+      {/* Skill Sheet Slide-Out Panel (only in non-embedded mode) */}
+      {panelSheetId && !useEmbeddedSkillSheet && (
         <SkillSheetPanel
           sheetId={panelSheetId}
           onClose={() => setPanelSheetId(null)}
