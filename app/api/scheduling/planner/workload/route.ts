@@ -72,23 +72,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Semester not found' }, { status: 404 });
     }
 
-    // Get all blocks with instructors for this semester
-    const { data: schedules } = await supabase
-      .from('pmi_program_schedules')
-      .select('id')
-      .eq('semester_id', semester_id)
-      .eq('is_active', true);
-
-    const scheduleIds = (schedules || []).map(s => s.id);
-
-    if (scheduleIds.length === 0) {
-      return NextResponse.json({ message: 'No active program schedules', recalculated: 0 });
-    }
-
+    // Get blocks by semester_id (catches both linked and unlinked blocks)
     const { data: blocks } = await supabase
       .from('pmi_schedule_blocks')
       .select(`
-        id, start_time, end_time, day_of_week,
+        id, start_time, end_time, day_of_week, title, course_name, date, is_recurring,
         program_schedule:pmi_program_schedules!pmi_schedule_blocks_program_schedule_id_fkey(
           id,
           cohort:cohorts!pmi_program_schedules_cohort_id_fkey(
@@ -97,7 +85,7 @@ export async function POST(request: NextRequest) {
         ),
         instructors:pmi_block_instructors(instructor_id)
       `)
-      .in('program_schedule_id', scheduleIds);
+      .eq('semester_id', semester_id);
 
     // Calculate weeks
     const start = new Date(semester.start_date + 'T00:00:00');
@@ -114,22 +102,136 @@ export async function POST(request: NextRequest) {
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const ps = block.program_schedule as any;
-      const programName: string = ps?.cohort?.program?.name || 'Unknown';
+      const programName: string = ps?.cohort?.program?.name || block.title || block.course_name || 'Unlinked';
 
       for (const assignment of (block.instructors || [])) {
         const instrId = assignment.instructor_id;
         if (!workloadMap.has(instrId)) workloadMap.set(instrId, new Map());
         const instrMap = workloadMap.get(instrId)!;
 
-        // This block applies to every week (recurring)
-        for (let w = 1; w <= totalWeeks; w++) {
-          if (!instrMap.has(w)) instrMap.set(w, { hours: 0, blocks: 0, programs: new Set() });
-          const entry = instrMap.get(w)!;
-          entry.hours += hours;
-          entry.blocks += 1;
-          entry.programs.add(programName);
+        if (block.is_recurring || !block.date) {
+          // Recurring block applies to every week
+          for (let w = 1; w <= totalWeeks; w++) {
+            if (!instrMap.has(w)) instrMap.set(w, { hours: 0, blocks: 0, programs: new Set() });
+            const entry = instrMap.get(w)!;
+            entry.hours += hours;
+            entry.blocks += 1;
+            entry.programs.add(programName);
+          }
+        } else {
+          // Date-specific block — calculate which week it falls in
+          const blockDate = new Date(block.date + 'T00:00:00');
+          const weekNum = Math.ceil((blockDate.getTime() - start.getTime()) / (7 * 24 * 60 * 60 * 1000));
+          if (weekNum >= 1 && weekNum <= totalWeeks) {
+            if (!instrMap.has(weekNum)) instrMap.set(weekNum, { hours: 0, blocks: 0, programs: new Set() });
+            const entry = instrMap.get(weekNum)!;
+            entry.hours += hours;
+            entry.blocks += 1;
+            entry.programs.add(programName);
+          }
         }
       }
+    }
+
+    // ── Lab station hours ──
+    // Get all lab_days within the semester date range
+    const { data: labDays } = await supabase
+      .from('lab_days')
+      .select('id, date')
+      .gte('date', semester.start_date)
+      .lte('date', semester.end_date);
+
+    if (labDays && labDays.length > 0) {
+      const labDayIds = labDays.map(ld => ld.id);
+
+      // Get stations for these lab days
+      const { data: labStations } = await supabase
+        .from('lab_stations')
+        .select('id')
+        .in('lab_day_id', labDayIds);
+
+      const stationIds = (labStations || []).map(s => s.id);
+
+      if (stationIds.length > 0) {
+        // Get station assignments with rotation duration
+        const { data: stationAssignments } = await supabase
+          .from('station_instructors')
+          .select(`
+            user_id,
+            station:lab_stations!station_instructors_station_id_fkey(
+              id, rotation_minutes, num_rotations, lab_day_id
+            )
+          `)
+          .in('station_id', stationIds);
+
+        // Build a map of lab_day_id -> date for week calculation
+        const labDayDateMap = new Map<string, string>();
+        for (const ld of labDays) labDayDateMap.set(ld.id, ld.date);
+
+        for (const sa of (stationAssignments || [])) {
+          if (!sa.user_id) continue;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const station = sa.station as any;
+          if (!station?.lab_day_id) continue;
+
+          const labDate = labDayDateMap.get(station.lab_day_id);
+          if (!labDate) continue;
+
+          // Calculate hours for this station assignment
+          const rotMinutes = station.rotation_minutes || 30;
+          const numRotations = station.num_rotations || 1;
+          const stationHours = (rotMinutes * numRotations) / 60;
+
+          // Calculate which week this falls in
+          const labDateObj = new Date(labDate + 'T00:00:00');
+          const weekNum = Math.ceil((labDateObj.getTime() - start.getTime()) / (7 * 24 * 60 * 60 * 1000));
+          if (weekNum < 1 || weekNum > totalWeeks) continue;
+
+          if (!workloadMap.has(sa.user_id)) workloadMap.set(sa.user_id, new Map());
+          const instrMap = workloadMap.get(sa.user_id)!;
+          if (!instrMap.has(weekNum)) instrMap.set(weekNum, { hours: 0, blocks: 0, programs: new Set() });
+          const entry = instrMap.get(weekNum)!;
+          entry.hours += stationHours;
+          entry.blocks += 1;
+          entry.programs.add('Lab');
+        }
+      }
+    }
+
+    // ── LVFR hours ──
+    try {
+      const { data: lvfrAssignments } = await supabase
+        .from('lvfr_aemt_instructor_assignments')
+        .select('date, primary_instructor_id, secondary_instructor_id, additional_instructors')
+        .gte('date', semester.start_date)
+        .lte('date', semester.end_date);
+
+      const LVFR_HOURS_PER_DAY = 8; // Standard LVFR day
+
+      for (const la of (lvfrAssignments || [])) {
+        const assignDate = new Date(la.date + 'T00:00:00');
+        const weekNum = Math.ceil((assignDate.getTime() - start.getTime()) / (7 * 24 * 60 * 60 * 1000));
+        if (weekNum < 1 || weekNum > totalWeeks) continue;
+
+        const instructorIds: string[] = [];
+        if (la.primary_instructor_id) instructorIds.push(la.primary_instructor_id);
+        if (la.secondary_instructor_id) instructorIds.push(la.secondary_instructor_id);
+        if (la.additional_instructors && Array.isArray(la.additional_instructors)) {
+          instructorIds.push(...la.additional_instructors);
+        }
+
+        for (const instrId of instructorIds) {
+          if (!workloadMap.has(instrId)) workloadMap.set(instrId, new Map());
+          const instrMap = workloadMap.get(instrId)!;
+          if (!instrMap.has(weekNum)) instrMap.set(weekNum, { hours: 0, blocks: 0, programs: new Set() });
+          const entry = instrMap.get(weekNum)!;
+          entry.hours += LVFR_HOURS_PER_DAY;
+          entry.blocks += 1;
+          entry.programs.add('LVFR');
+        }
+      }
+    } catch {
+      // LVFR table may not exist — skip
     }
 
     // Upsert workload records

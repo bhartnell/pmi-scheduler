@@ -566,6 +566,29 @@ function BlockEditModal({
     date: block.date || '',
   });
 
+  const [labDayLink, setLabDayLink] = useState<{ id: string; title: string | null; date: string } | null>(null);
+  const [labDayLoading, setLabDayLoading] = useState(false);
+
+  // Look up lab day when block has a date and is type 'lab'
+  useEffect(() => {
+    const blockDate = formData.date || block.date;
+    if (!blockDate) return;
+
+    setLabDayLoading(true);
+    fetch(`/api/lab-management/lab-days?date=${blockDate}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.labDays && data.labDays.length > 0) {
+          const ld = data.labDays[0];
+          setLabDayLink({ id: ld.id, title: ld.title, date: ld.date });
+        } else {
+          setLabDayLink(null);
+        }
+      })
+      .catch(() => setLabDayLink(null))
+      .finally(() => setLabDayLoading(false));
+  }, [formData.date, block.date]);
+
   useEffect(() => {
     const blockInstructors = safeArray(block.instructors);
     if (blockInstructors.length > 0 && blockInstructors[0].instructor_id) {
@@ -958,6 +981,54 @@ function BlockEditModal({
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 resize-none"
               />
             </div>
+
+            {/* Lab Day Cross-Reference */}
+            {(formData.block_type === 'lab' || block.block_type === 'lab') && (formData.date || block.date) && (
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
+                <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                  <Calendar className="w-3 h-3" />
+                  Lab Day
+                </div>
+                {labDayLoading ? (
+                  <div className="flex items-center gap-2 text-xs text-gray-400">
+                    <Loader2 className="w-3 h-3 animate-spin" /> Checking for lab day...
+                  </div>
+                ) : labDayLink ? (
+                  <a
+                    href={`/lab-management/schedule/${labDayLink.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
+                  >
+                    <Calendar className="w-4 h-4 text-green-600 dark:text-green-400" />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-green-800 dark:text-green-300">
+                        {labDayLink.title || `Lab Day — ${new Date(labDayLink.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+                      </div>
+                      <div className="text-xs text-green-600 dark:text-green-400">
+                        Open lab day details
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-green-400" />
+                  </a>
+                ) : (
+                  <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800">
+                    <div>
+                      <div className="text-sm text-yellow-800 dark:text-yellow-300">No lab day created</div>
+                      <div className="text-xs text-yellow-600 dark:text-yellow-400">for {formData.date || block.date}</div>
+                    </div>
+                    <a
+                      href={`/lab-management/schedule/new?date=${formData.date || block.date}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-2 py-1 text-xs font-medium bg-yellow-600 text-white rounded hover:bg-yellow-700 transition-colors"
+                    >
+                      Create Lab Day
+                    </a>
+                  </div>
+                )}
+              </div>
+            )}
 
             {isLinked && (
               <>
