@@ -74,6 +74,7 @@ export default function GradeStationPage() {
 
   // Skill sheet panel state
   const [panelSheetId, setPanelSheetId] = useState<string | null>(null);
+  const [useEmbeddedSkillSheet, setUseEmbeddedSkillSheet] = useState(false);
 
   // Computed values
   const selectedGroup = labGroups.find(g => g.id === selectedGroupId);
@@ -169,6 +170,24 @@ export default function GradeStationPage() {
       }
     }
   }, [station]);
+
+  // Auto-open embedded skill sheet when available for skills stations
+  useEffect(() => {
+    if (isSkillsStation && station && Object.keys(skillSheetIds).length > 0) {
+      // Find the main skill's sheet ID
+      let mainSkillName = station.skill_name || station.custom_title;
+      if (mainSkillName) {
+        const prefixMatch = mainSkillName.match(/^[A-Za-z0-9]+\s+\d{1,2}\/\d{1,2}\/\d{2,4}\s*[-–]\s*(.+)$/);
+        if (prefixMatch) mainSkillName = prefixMatch[1].trim();
+      }
+      const sheetId = skillSheetIds[mainSkillName || '']
+        || Object.values(skillSheetIds)[0];
+      if (sheetId) {
+        setPanelSheetId(sheetId);
+        setUseEmbeddedSkillSheet(true);
+      }
+    }
+  }, [isSkillsStation, station, skillSheetIds]);
 
   const fetchStation = async () => {
     try {
@@ -550,167 +569,215 @@ export default function GradeStationPage() {
         onSave={handleSave}
       />
 
-      <main className="max-w-2xl mx-auto px-4 py-4 space-y-4 pb-20">
-        {/* Scenario/Skills Station Info */}
-        <ScenarioGrading
-          station={station}
-          showScenarioDetails={showScenarioDetails}
-          onToggleScenarioDetails={() => setShowScenarioDetails(!showScenarioDetails)}
-          skillSheetIds={skillSheetIds}
-          onOpenSkillSheet={(sheetId) => setPanelSheetId(sheetId)}
-        />
-
-        {/* Student/Group Selection */}
-        <StudentSelection
-          isSkillsStation={isSkillsStation}
-          station={station}
-          allStudents={allStudents}
-          labGroups={labGroups}
-          selectedGroupId={selectedGroupId}
-          selectedStudentId={selectedStudentId}
-          teamLeaderId={teamLeaderId}
-          rotationNumber={rotationNumber}
-          onSetSelectedGroupId={setSelectedGroupId}
-          onSetSelectedStudentId={setSelectedStudentId}
-          onSetTeamLeaderId={setTeamLeaderId}
-          onSetRotationNumber={setRotationNumber}
-          triggerAutoSave={triggerAutoSave}
-        />
-
-        {/* Critical Actions */}
-        {scenario?.critical_actions && toArray(scenario.critical_actions).length > 0 && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-            <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-3">
-              <AlertTriangle className="w-5 h-5 text-red-500" />
-              Critical Actions
-            </h2>
-            <div className="space-y-2">
-              {toArray(scenario.critical_actions).map((action, index) => (
-                <label
-                  key={index}
-                  className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer ${
-                    criticalActions[`action-${index}`] ? 'bg-green-50 dark:bg-green-900/30' : 'bg-red-50 dark:bg-red-900/30'
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={criticalActions[`action-${index}`] || false}
-                    onChange={(e) => {
-                      setCriticalActions(prev => ({
-                        ...prev,
-                        [`action-${index}`]: e.target.checked
-                      }));
-                      triggerAutoSave();
-                    }}
-                    className="mt-1 w-5 h-5"
-                  />
-                  <span className={`text-sm ${
-                    criticalActions[`action-${index}`] ? 'text-green-800 dark:text-green-300' : 'text-red-800 dark:text-red-300'
-                  }`}>
-                    {action}
-                  </span>
-                  {criticalActions[`action-${index}`] ? (
-                    <CheckCircle className="w-5 h-5 text-green-500" />
-                  ) : (
-                    <XCircle className="w-5 h-5 text-red-500 ml-auto shrink-0" />
-                  )}
-                </label>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Evaluation Criteria */}
-        <EvaluationCriteria
-          activeCriteria={activeCriteria}
-          criteriaRatings={criteriaRatings}
-          isSkillsStation={isSkillsStation}
-          satisfactoryCount={satisfactoryCount}
-          needsImprovementCount={needsImprovementCount}
-          unsatisfactoryCount={unsatisfactoryCount}
-          allRated={allRated}
-          totalCriteria={totalCriteria}
-          skillsPass={skillsPass}
-          skillsNeedsPractice={skillsNeedsPractice}
-          phase1Pass={phase1Pass}
-          phase2Pass={phase2Pass}
-          onUpdateRating={updateRating}
-          onUpdateNotes={updateNotes}
-        />
-
-        {/* Overall Comments */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <h2 className="font-semibold text-gray-900 dark:text-white mb-3">Overall Comments</h2>
-          <textarea
-            value={overallComments}
-            onChange={(e) => {
-              setOverallComments(e.target.value);
-              triggerAutoSave();
-            }}
-            placeholder="Additional comments, feedback, or observations..."
-            rows={4}
-            className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+      {/* Embedded Skill Sheet Mode: Skills station with skill sheet available */}
+      {useEmbeddedSkillSheet && panelSheetId ? (
+        <main className="max-w-2xl mx-auto px-4 py-4 space-y-4 pb-4">
+          {/* Student Selection (compact) */}
+          <StudentSelection
+            isSkillsStation={isSkillsStation}
+            station={station}
+            allStudents={allStudents}
+            labGroups={labGroups}
+            selectedGroupId={selectedGroupId}
+            selectedStudentId={selectedStudentId}
+            teamLeaderId={teamLeaderId}
+            rotationNumber={rotationNumber}
+            onSetSelectedGroupId={setSelectedGroupId}
+            onSetSelectedStudentId={setSelectedStudentId}
+            onSetTeamLeaderId={setTeamLeaderId}
+            onSetRotationNumber={setRotationNumber}
+            triggerAutoSave={triggerAutoSave}
           />
-        </div>
 
-        {/* Flagging Section */}
-        <FlaggingPanel
-          issueLevel={issueLevel}
-          flagCategories={flagCategories}
-          onSetIssueLevel={setIssueLevel}
-          onSetFlagCategories={setFlagCategories}
-          triggerAutoSave={triggerAutoSave}
-        />
-
-        {/* Debrief Points */}
-        {scenario?.debrief_points && toArray(scenario.debrief_points).length > 0 && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-            <h2 className="font-semibold text-gray-900 dark:text-white mb-3">Debrief Discussion Points</h2>
-            <ul className="space-y-2">
-              {toArray(scenario.debrief_points).map((point, index) => (
-                <li key={index} className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
-                  <span className="text-blue-500 dark:text-blue-400">•</span>
-                  {point}
-                </li>
-              ))}
-            </ul>
+          {/* Embedded Skill Sheet — full width, independently scrollable */}
+          <div className="min-h-[60vh]">
+            <SkillSheetPanel
+              sheetId={panelSheetId}
+              onClose={() => {
+                setUseEmbeddedSkillSheet(false);
+                setPanelSheetId(null);
+              }}
+              studentId={selectedStudentId || undefined}
+              studentName={
+                selectedStudentId
+                  ? (() => {
+                      const s = allStudents.find(s => s.id === selectedStudentId);
+                      return s ? `${s.first_name} ${s.last_name}` : undefined;
+                    })()
+                  : undefined
+              }
+              labDayId={station?.lab_day?.id}
+              embedded={true}
+            />
           </div>
-        )}
+        </main>
+      ) : (
+        <main className="max-w-2xl mx-auto px-4 py-4 space-y-4 pb-20">
+          {/* Scenario/Skills Station Info */}
+          <ScenarioGrading
+            station={station}
+            showScenarioDetails={showScenarioDetails}
+            onToggleScenarioDetails={() => setShowScenarioDetails(!showScenarioDetails)}
+            skillSheetIds={skillSheetIds}
+            onOpenSkillSheet={(sheetId) => setPanelSheetId(sheetId)}
+          />
 
-        {/* Save Button (Bottom) */}
-        <div className="sticky bottom-4">
-          <button
-            onClick={handleSave}
-            disabled={saving || (isSkillsStation ? !selectedStudentId : (!allRated || !selectedGroupId || !teamLeaderId))}
-            className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed shadow-lg"
-          >
-            {saving ? (
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-            ) : (
-              <Save className="w-5 h-5" />
-            )}
-            {saving ? 'Saving Assessment...' : 'Save Assessment'}
-          </button>
-          {isSkillsStation ? (
-            !selectedStudentId && (
-              <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-2">
-                Select a student to save
-              </p>
-            )
-          ) : (
-            (!selectedGroupId || !teamLeaderId || !allRated) && (
-              <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-2">
-                {!selectedGroupId ? 'Select a lab group' :
-                 !teamLeaderId ? 'Select a team leader' :
-                 `Rate all ${totalCriteria} criteria to save`}
-              </p>
-            )
+          {/* Student/Group Selection */}
+          <StudentSelection
+            isSkillsStation={isSkillsStation}
+            station={station}
+            allStudents={allStudents}
+            labGroups={labGroups}
+            selectedGroupId={selectedGroupId}
+            selectedStudentId={selectedStudentId}
+            teamLeaderId={teamLeaderId}
+            rotationNumber={rotationNumber}
+            onSetSelectedGroupId={setSelectedGroupId}
+            onSetSelectedStudentId={setSelectedStudentId}
+            onSetTeamLeaderId={setTeamLeaderId}
+            onSetRotationNumber={setRotationNumber}
+            triggerAutoSave={triggerAutoSave}
+          />
+
+          {/* Critical Actions */}
+          {scenario?.critical_actions && toArray(scenario.critical_actions).length > 0 && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+              <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-3">
+                <AlertTriangle className="w-5 h-5 text-red-500" />
+                Critical Actions
+              </h2>
+              <div className="space-y-2">
+                {toArray(scenario.critical_actions).map((action, index) => (
+                  <label
+                    key={index}
+                    className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer ${
+                      criticalActions[`action-${index}`] ? 'bg-green-50 dark:bg-green-900/30' : 'bg-red-50 dark:bg-red-900/30'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={criticalActions[`action-${index}`] || false}
+                      onChange={(e) => {
+                        setCriticalActions(prev => ({
+                          ...prev,
+                          [`action-${index}`]: e.target.checked
+                        }));
+                        triggerAutoSave();
+                      }}
+                      className="mt-1 w-5 h-5"
+                    />
+                    <span className={`text-sm ${
+                      criticalActions[`action-${index}`] ? 'text-green-800 dark:text-green-300' : 'text-red-800 dark:text-red-300'
+                    }`}>
+                      {action}
+                    </span>
+                    {criticalActions[`action-${index}`] ? (
+                      <CheckCircle className="w-5 h-5 text-green-500" />
+                    ) : (
+                      <XCircle className="w-5 h-5 text-red-500 ml-auto shrink-0" />
+                    )}
+                  </label>
+                ))}
+              </div>
+            </div>
           )}
-        </div>
-      </main>
 
-      {/* Skill Sheet Slide-Out Panel */}
-      {panelSheetId && (
+          {/* Evaluation Criteria */}
+          <EvaluationCriteria
+            activeCriteria={activeCriteria}
+            criteriaRatings={criteriaRatings}
+            isSkillsStation={isSkillsStation}
+            satisfactoryCount={satisfactoryCount}
+            needsImprovementCount={needsImprovementCount}
+            unsatisfactoryCount={unsatisfactoryCount}
+            allRated={allRated}
+            totalCriteria={totalCriteria}
+            skillsPass={skillsPass}
+            skillsNeedsPractice={skillsNeedsPractice}
+            phase1Pass={phase1Pass}
+            phase2Pass={phase2Pass}
+            onUpdateRating={updateRating}
+            onUpdateNotes={updateNotes}
+          />
+
+          {/* Overall Comments */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+            <h2 className="font-semibold text-gray-900 dark:text-white mb-3">Overall Comments</h2>
+            <textarea
+              value={overallComments}
+              onChange={(e) => {
+                setOverallComments(e.target.value);
+                triggerAutoSave();
+              }}
+              placeholder="Additional comments, feedback, or observations..."
+              rows={4}
+              className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+            />
+          </div>
+
+          {/* Flagging Section */}
+          <FlaggingPanel
+            issueLevel={issueLevel}
+            flagCategories={flagCategories}
+            onSetIssueLevel={setIssueLevel}
+            onSetFlagCategories={setFlagCategories}
+            triggerAutoSave={triggerAutoSave}
+          />
+
+          {/* Debrief Points */}
+          {scenario?.debrief_points && toArray(scenario.debrief_points).length > 0 && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+              <h2 className="font-semibold text-gray-900 dark:text-white mb-3">Debrief Discussion Points</h2>
+              <ul className="space-y-2">
+                {toArray(scenario.debrief_points).map((point, index) => (
+                  <li key={index} className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
+                    <span className="text-blue-500 dark:text-blue-400">•</span>
+                    {point}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Save Button (Bottom) */}
+          <div className="sticky bottom-4">
+            <button
+              onClick={handleSave}
+              disabled={saving || (isSkillsStation ? !selectedStudentId : (!allRated || !selectedGroupId || !teamLeaderId))}
+              className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed shadow-lg"
+            >
+              {saving ? (
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+              ) : (
+                <Save className="w-5 h-5" />
+              )}
+              {saving ? 'Saving...' : (
+                isSkillsStation && selectedStudentId
+                  ? `Save — ${allStudents.find(s => s.id === selectedStudentId)?.first_name || ''} ${allStudents.find(s => s.id === selectedStudentId)?.last_name || ''}`
+                  : 'Save Assessment'
+              )}
+            </button>
+            {isSkillsStation ? (
+              !selectedStudentId && (
+                <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-2">
+                  Select a student to save
+                </p>
+              )
+            ) : (
+              (!selectedGroupId || !teamLeaderId || !allRated) && (
+                <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-2">
+                  {!selectedGroupId ? 'Select a lab group' :
+                   !teamLeaderId ? 'Select a team leader' :
+                   `Rate all ${totalCriteria} criteria to save`}
+                </p>
+              )
+            )}
+          </div>
+        </main>
+      )}
+
+      {/* Skill Sheet Slide-Out Panel (only in non-embedded mode) */}
+      {panelSheetId && !useEmbeddedSkillSheet && (
         <SkillSheetPanel
           sheetId={panelSheetId}
           onClose={() => setPanelSheetId(null)}
