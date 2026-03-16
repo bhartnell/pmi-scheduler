@@ -117,7 +117,11 @@ export async function POST(request: NextRequest) {
       // Flagging fields
       flagged_for_review: body.flagged_for_review || false,
       issue_level: body.issue_level || 'none',
-      flag_categories: body.flag_categories || null
+      flag_categories: body.flag_categories || null,
+
+      // Email and status fields
+      email_status: body.email_status || 'pending',
+      status: body.status || 'complete',
     };
 
     const { data, error } = await supabase

@@ -34,6 +34,8 @@ export type EmailTemplate =
   | 'shift_confirmed'
   | 'lab_assigned'
   | 'lab_reminder'
+  | 'skill_evaluation'
+  | 'scenario_feedback'
   | 'general';
 
 interface EmailData {
@@ -194,6 +196,95 @@ const templates: Record<EmailTemplate, (data: Record<string, unknown>) => { subj
         </p>
       </div>
       ${emailButton('View Lab Details', `${APP_URL}/lab-management/schedule`, '#f59e0b')}
+    `
+  }),
+
+  scenario_feedback: (data) => ({
+    subject: `[PMI] Scenario Feedback — ${data.scenarioTitle}${data.date ? ` (${data.date})` : ''}`,
+    html: `
+      <h2 style="color: #111827; margin: 0 0 16px 0; font-size: 20px;">
+        Scenario Feedback
+      </h2>
+      <p style="color: #374151; margin: 0 0 16px 0; font-size: 16px; line-height: 1.5;">
+        Hi ${data.studentFirstName},
+      </p>
+      <p style="color: #374151; margin: 0 0 16px 0; font-size: 14px; line-height: 1.5;">
+        Here is the team feedback from your scenario evaluation:
+      </p>
+
+      ${data.patientAge || data.chiefComplaint ? `
+        <div style="background-color: #f3f4f6; border-radius: 8px; padding: 16px; margin: 16px 0;">
+          <h3 style="color: #111827; margin: 0 0 8px 0; font-size: 14px; font-weight: 700;">SCENARIO SUMMARY</h3>
+          ${data.patientAge ? `<p style="color: #374151; margin: 0; font-size: 13px;"><strong>Patient:</strong> ${data.patientAge}${data.patientSex ? ` ${data.patientSex}` : ''}</p>` : ''}
+          ${data.chiefComplaint ? `<p style="color: #374151; margin: 0; font-size: 13px;"><strong>Chief Complaint:</strong> ${data.chiefComplaint}</p>` : ''}
+          ${data.dispatchInfo ? `<p style="color: #374151; margin: 0; font-size: 13px;"><strong>Dispatch:</strong> ${data.dispatchInfo}</p>` : ''}
+        </div>
+      ` : ''}
+
+      <div style="background-color: #eff6ff; border-radius: 8px; padding: 16px; margin: 16px 0; border-left: 4px solid #3b82f6;">
+        <h3 style="color: #111827; margin: 0 0 8px 0; font-size: 14px; font-weight: 700;">TEAM PERFORMANCE</h3>
+        <p style="color: #374151; margin: 0 0 8px 0; font-size: 13px;"><strong>Team Leader:</strong> ${data.teamLeaderName || 'N/A'}</p>
+        ${data.criteriaRatings ? `<div style="font-size: 13px; color: #374151; line-height: 1.8;">${data.criteriaRatings}</div>` : ''}
+        <p style="color: #374151; margin: 8px 0 0 0; font-size: 13px;"><strong>Overall Score:</strong> ${data.overallScore || 'N/A'}</p>
+      </div>
+
+      ${data.criticalActions ? `
+        <div style="background-color: #fef2f2; border-radius: 8px; padding: 16px; margin: 16px 0; border-left: 4px solid #ef4444;">
+          <h3 style="color: #111827; margin: 0 0 8px 0; font-size: 14px; font-weight: 700;">CRITICAL ACTIONS</h3>
+          <div style="font-size: 13px; color: #374151; line-height: 1.8;">${data.criticalActions}</div>
+        </div>
+      ` : ''}
+
+      ${data.comments ? `
+        <div style="background-color: #f3f4f6; border-radius: 8px; padding: 16px; margin: 16px 0;">
+          <h3 style="color: #111827; margin: 0 0 8px 0; font-size: 14px; font-weight: 700;">EVALUATOR COMMENTS</h3>
+          <p style="color: #374151; margin: 0; font-size: 13px;">${data.comments}</p>
+        </div>
+      ` : ''}
+
+      <p style="color: #6b7280; margin: 16px 0 0 0; font-size: 13px;">
+        Evaluator: ${data.evaluatorName}
+      </p>
+      <p style="color: #dc2626; margin: 12px 0 0 0; font-size: 13px; font-weight: 600;">
+        Remember to chart this scenario in Platinum Planner.
+      </p>
+    `
+  }),
+
+  skill_evaluation: (data) => ({
+    subject: `[PMI] Skill Evaluation Results — ${data.skillName}${data.date ? ` (${data.date})` : ''}`,
+    html: `
+      <h2 style="color: #111827; margin: 0 0 16px 0; font-size: 20px;">
+        Skill Evaluation Results
+      </h2>
+      <p style="color: #374151; margin: 0 0 16px 0; font-size: 16px; line-height: 1.5;">
+        Hi ${data.studentFirstName},
+      </p>
+      <p style="color: #374151; margin: 0 0 16px 0; font-size: 16px; line-height: 1.5;">
+        Your skill evaluation results from today's lab:
+      </p>
+      <div style="background-color: ${data.result === 'pass' ? '#ecfdf5' : data.result === 'fail' ? '#fef2f2' : '#fffbeb'}; border-radius: 8px; padding: 16px; margin: 16px 0; border-left: 4px solid ${data.result === 'pass' ? '#10b981' : data.result === 'fail' ? '#ef4444' : '#f59e0b'};">
+        <h3 style="color: #111827; margin: 0 0 8px 0; font-size: 18px;">
+          ${data.skillName}
+        </h3>
+        <p style="color: #374151; margin: 0; font-size: 14px;">
+          <strong>Mode:</strong> ${data.evaluationType === 'formative' ? 'Formative' : 'Final Competency'}<br>
+          <strong>Steps Completed:</strong> ${data.stepsCompleted || 'N/A'}<br>
+          ${data.criticalSteps ? `<strong>Critical Steps:</strong> ${data.criticalSteps}<br>` : ''}
+          <strong>Result:</strong> <span style="font-weight: 700; color: ${data.result === 'pass' ? '#10b981' : data.result === 'fail' ? '#ef4444' : '#f59e0b'};">${String(data.result).toUpperCase()}</span>
+        </p>
+      </div>
+      ${data.notes ? `
+        <div style="background-color: #f3f4f6; border-radius: 8px; padding: 16px; margin: 16px 0;">
+          <p style="color: #374151; margin: 0; font-size: 14px;">
+            <strong>Evaluator Comments:</strong> ${data.notes}
+          </p>
+        </div>
+      ` : ''}
+      <p style="color: #6b7280; margin: 16px 0 0 0; font-size: 14px;">
+        Evaluator: ${data.evaluatorName}
+      </p>
+      ${data.evaluationId ? emailButton('View Full Results', `${APP_URL}/student/skill-evaluations/${data.evaluationId}`, data.result === 'pass' ? '#10b981' : '#2563eb') : ''}
     `
   }),
 
@@ -399,6 +490,63 @@ export async function sendLabReminderEmail(
     to: toEmail,
     subject: `[PMI] Reminder: ${data.labName} tomorrow`,
     template: 'lab_reminder',
+    data
+  });
+}
+
+/**
+ * Send skill evaluation results email to a student.
+ * @param toEmail - Student email address
+ * @param data - Evaluation information
+ */
+export async function sendSkillEvaluationEmail(
+  toEmail: string,
+  data: {
+    evaluationId: string;
+    studentFirstName: string;
+    skillName: string;
+    evaluationType: string;
+    result: string;
+    stepsCompleted?: string;
+    criticalSteps?: string;
+    notes?: string;
+    evaluatorName: string;
+    date?: string;
+  }
+) {
+  return sendEmail({
+    to: toEmail,
+    subject: `[PMI] Skill Evaluation Results — ${data.skillName}${data.date ? ` (${data.date})` : ''}`,
+    template: 'skill_evaluation',
+    data
+  });
+}
+
+/**
+ * Send scenario feedback email to a student (team member).
+ */
+export async function sendScenarioFeedbackEmail(
+  toEmail: string,
+  data: {
+    studentFirstName: string;
+    scenarioTitle: string;
+    patientAge?: string;
+    patientSex?: string;
+    chiefComplaint?: string;
+    dispatchInfo?: string;
+    teamLeaderName?: string;
+    criteriaRatings?: string;
+    overallScore?: string;
+    criticalActions?: string;
+    comments?: string;
+    evaluatorName: string;
+    date?: string;
+  }
+) {
+  return sendEmail({
+    to: toEmail,
+    subject: `[PMI] Scenario Feedback — ${data.scenarioTitle}${data.date ? ` (${data.date})` : ''}`,
+    template: 'scenario_feedback',
     data
   });
 }
