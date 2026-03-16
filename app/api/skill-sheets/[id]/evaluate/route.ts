@@ -40,6 +40,7 @@ export async function POST(
       notes,
       flagged_items,
       station_id,
+      step_details,
     } = body;
 
     // -----------------------------------------------
@@ -113,6 +114,7 @@ export async function POST(
         evaluator_id: currentUser.id,
         notes: notes || null,
         flagged_items: flagged_items || null,
+        step_details: step_details || null,
       })
       .select('*')
       .single();

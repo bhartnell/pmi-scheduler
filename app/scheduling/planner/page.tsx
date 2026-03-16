@@ -9,6 +9,7 @@ import {
   Link, Unlink, Wand2, ChevronRight, Monitor, Repeat,
 } from 'lucide-react';
 import { safeArray } from '@/lib/safe-array';
+import { formatInstructorName, formatInstructorDropdown } from '@/lib/format-name';
 import {
   PmiSemester, PmiRoom, PmiProgramSchedule, PmiScheduleBlock,
   PmiScheduleConflict, ScheduleBlockType, PmiCourseTemplate,
@@ -415,7 +416,7 @@ function TimeGridBlock({
       )}
       {instructors.length > 0 ? (
         <div className="text-[9px] text-white/80 truncate">
-          {safeArray(instructors).map(i => i.instructor?.name?.split(' ')[0] || '?').join(', ')}
+          {safeArray(instructors).map(i => formatInstructorName(i.instructor?.name || '')).join(', ')}
         </div>
       ) : (
         <div className="text-[9px] text-orange-200 truncate">Unassigned</div>
@@ -2465,12 +2466,12 @@ export default function SemesterPlannerPage() {
                 >
                   <option value="">All Instructors</option>
                   {safeArray(instructors).map(inst => (
-                    <option key={inst.id} value={inst.id}>{inst.name}</option>
+                    <option key={inst.id} value={inst.id}>{formatInstructorDropdown(inst.name)}</option>
                   ))}
                 </select>
               </div>
               {selectedInstructor && (() => {
-                const instName = safeArray(instructors).find(i => i.id === selectedInstructor)?.name?.split(' ')[0] || '';
+                const instName = formatInstructorName(safeArray(instructors).find(i => i.id === selectedInstructor)?.name || '');
                 const weekHours = safeArray(visibleBlocks).filter(b =>
                   safeArray(b.instructors).some(bi => bi.instructor_id === selectedInstructor)
                 ).reduce((sum, b) => {

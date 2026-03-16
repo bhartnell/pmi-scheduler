@@ -1,6 +1,7 @@
 'use client';
 
 import { formatCohortNumber } from '@/lib/format-cohort';
+import { formatInstructorName } from '@/lib/format-name';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, useRef, useMemo, Suspense } from 'react';
@@ -1130,7 +1131,7 @@ const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number
                               }`}
                             >
                               {r.role === 'lab_lead' ? 'Lead' : r.role === 'roamer' ? 'Roamer' : 'Observer'}:
-                              {' '}{r.instructor_name || r.instructor_email?.split('@')[0] || '?'}
+                              {' '}{formatInstructorName(r.instructor_name || '') || r.instructor_email?.split('@')[0] || '?'}
                               {r.instructor_email && todayAvailability.has(r.instructor_email.toLowerCase()) && (
                                 <CalendarAvailabilityDot
                                   status={todayAvailability.get(r.instructor_email.toLowerCase())!.status}
@@ -1396,13 +1397,13 @@ const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number
                               {labLeads.map((r) => (
                                 <div key={r.id} className="flex items-center gap-1 text-[10px] leading-tight">
                                   <span className="flex-shrink-0 px-1 py-px rounded bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 font-semibold">Lead</span>
-                                  <span className="text-gray-700 dark:text-gray-300 truncate">{r.instructor_name || r.instructor_email?.split('@')[0] || '?'}</span>
+                                  <span className="text-gray-700 dark:text-gray-300 truncate">{formatInstructorName(r.instructor_name || '') || r.instructor_email?.split('@')[0] || '?'}</span>
                                 </div>
                               ))}
                               {roamers.map((r) => (
                                 <div key={r.id} className="flex items-center gap-1 text-[10px] leading-tight">
                                   <span className="flex-shrink-0 px-1 py-px rounded bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300 font-semibold">Roam</span>
-                                  <span className="text-gray-700 dark:text-gray-300 truncate">{r.instructor_name || r.instructor_email?.split('@')[0] || '?'}</span>
+                                  <span className="text-gray-700 dark:text-gray-300 truncate">{formatInstructorName(r.instructor_name || '') || r.instructor_email?.split('@')[0] || '?'}</span>
                                 </div>
                               ))}
                               {stationInstructors.length > 0 && (
@@ -1697,8 +1698,8 @@ const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number
                           const shiftSignups = labDay.shift_signups;
                           if (leads.length === 0 && roams.length === 0 && stnInstructors.length === 0 && (!shiftSignups || shiftSignups.confirmed.length === 0)) return null;
                           const mainParts: string[] = [];
-                          leads.forEach(r => mainParts.push(`Lead: ${r.instructor_name || r.instructor_email?.split('@')[0] || '?'}`));
-                          roams.forEach(r => mainParts.push(`Roamer: ${r.instructor_name || r.instructor_email?.split('@')[0] || '?'}`));
+                          leads.forEach(r => mainParts.push(`Lead: ${formatInstructorName(r.instructor_name || '') || r.instructor_email?.split('@')[0] || '?'}`));
+                          roams.forEach(r => mainParts.push(`Roamer: ${formatInstructorName(r.instructor_name || '') || r.instructor_email?.split('@')[0] || '?'}`));
                           if (stnInstructors.length > 0) {
                             mainParts.push(stnInstructors.slice(0, 3).join(', ') + (stnInstructors.length > 3 ? ` +${stnInstructors.length - 3}` : ''));
                           }

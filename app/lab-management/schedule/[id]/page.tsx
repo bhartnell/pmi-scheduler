@@ -1,6 +1,7 @@
 'use client';
 
 import { formatCohortNumber } from '@/lib/format-cohort';
+import { formatInstructorName } from '@/lib/format-name';
 import { useSession } from 'next-auth/react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -3321,7 +3322,7 @@ export default function LabDayPage() {
                               className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300"
                             >
                               <CheckCircle className="w-3 h-3" />
-                              {signup.instructor?.name || signup.instructor?.email?.split('@')[0] || 'Unknown'}
+                              {formatInstructorName(signup.instructor?.name || '') || signup.instructor?.email?.split('@')[0] || 'Unknown'}
                             </span>
                           ))}
                         </div>
@@ -3333,7 +3334,7 @@ export default function LabDayPage() {
                           {pending.map(signup => (
                             <div key={signup.id} className="flex items-center justify-between gap-2 px-2 py-1.5 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
                               <span className="text-sm text-gray-900 dark:text-white">
-                                {signup.instructor?.name || signup.instructor?.email?.split('@')[0] || 'Unknown'}
+                                {formatInstructorName(signup.instructor?.name || '') || signup.instructor?.email?.split('@')[0] || 'Unknown'}
                               </span>
                               {userRole && (userRole === 'admin' || userRole === 'superadmin' || userRole === 'lead_instructor') && (
                                 <div className="flex items-center gap-1.5">

@@ -52,6 +52,7 @@ export async function GET(request: NextRequest) {
         result,
         notes,
         flagged_items,
+        step_details,
         created_at,
         skill_sheet:skill_sheets(id, skill_name),
         student:students(id, first_name, last_name),

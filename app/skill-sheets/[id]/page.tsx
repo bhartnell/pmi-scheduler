@@ -24,6 +24,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { openPrintWindow, printHeader, printFooter, escapeHtml } from '@/lib/print-utils';
+import { formatInstructorName } from '@/lib/format-name';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -173,6 +174,10 @@ function SkillSheetDetailContent() {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
+  // Sequence tracking for formative mode: step_number → sequence_number (order performed)
+  const [stepSequence, setStepSequence] = useState<Record<number, number>>({});
+  const nextSequenceNumber = Object.keys(stepSequence).length + 1;
+
   // ─── Data Fetching ────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -287,6 +292,36 @@ function SkillSheetDetailContent() {
     }));
   };
 
+  // Toggle step completion with sequence numbering (formative mode)
+  const toggleStepComplete = (stepNumber: number) => {
+    setStepSequence(prev => {
+      if (prev[stepNumber] !== undefined) {
+        // Uncomplete: remove this step and renumber subsequent ones
+        const removedSeq = prev[stepNumber];
+        const next: Record<number, number> = {};
+        for (const [sn, seq] of Object.entries(prev)) {
+          const snNum = parseInt(sn);
+          if (snNum === stepNumber) continue; // remove this one
+          if (seq > removedSeq) {
+            next[snNum] = seq - 1; // shift down
+          } else {
+            next[snNum] = seq;
+          }
+        }
+        return next;
+      } else {
+        // Complete: assign next sequence number
+        const maxSeq = Object.values(prev).length;
+        return { ...prev, [stepNumber]: maxSeq + 1 };
+      }
+    });
+    // Also toggle the mark
+    setStepMarks(prev => ({
+      ...prev,
+      [stepNumber]: prev[stepNumber] === 'pass' ? null : 'pass',
+    }));
+  };
+
   const toggleNoteExpand = (stepNumber: number) => {
     setExpandedNotes(prev => {
       const next = new Set(prev);
@@ -301,6 +336,7 @@ function SkillSheetDetailContent() {
 
   const resetForm = () => {
     setStepMarks({});
+    setStepSequence({});
     setNotes('');
     setResult('pass');
     setSelectedStudentId('');
@@ -327,6 +363,16 @@ function SkillSheetDetailContent() {
         status: mark,
       }));
 
+    // Build step details with sequence numbers (formative mode)
+    const stepDetails = mode === 'formative' && sheet ? sheet.steps.map(s => ({
+      step_id: s.id,
+      step_number: s.step_number,
+      completed: stepSequence[s.step_number] !== undefined,
+      sequence_number: stepSequence[s.step_number] ?? null,
+      mark: stepMarks[s.step_number] || null,
+      is_critical: s.is_critical,
+    })) : undefined;
+
     const evaluationType = mode === 'formative' ? 'formative' : 'final_competency';
     const evaluationResult = mode === 'formative' ? 'pass' : result;
 
@@ -342,6 +388,7 @@ function SkillSheetDetailContent() {
           result: evaluationResult,
           notes: notes.trim() || null,
           flagged_items: flaggedItems,
+          step_details: stepDetails || undefined,
         }),
       });
 
@@ -355,6 +402,7 @@ function SkillSheetDetailContent() {
         );
         // Reset for next student
         setStepMarks({});
+        setStepSequence({});
         setNotes('');
         setResult('pass');
         setSelectedStudentId('');
@@ -452,6 +500,79 @@ function SkillSheetDetailContent() {
 
     html += printFooter();
     openPrintWindow(`Skill Sheet - ${sheet.skill_name}`, html);
+  };
+
+  const handlePrintScoreSheet = () => {
+    if (!sheet) return;
+
+    const student = students.find(s => s.id === selectedStudentId);
+    const labDay = labDays.find(ld => ld.id === selectedLabDayId);
+    const evaluatorName = formatInstructorName(session?.user?.name || '');
+    const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+    const totalSteps = sheet.steps.length;
+    const completedSteps = Object.keys(stepSequence).length;
+    const criticalSteps = sheet.steps.filter(s => s.is_critical);
+    const completedCritical = criticalSteps.filter(s => stepSequence[s.step_number] !== undefined).length;
+
+    let html = printHeader('Skill Evaluation Score Sheet', 'PMI Paramedic Program');
+
+    // Header info
+    html += '<div style="margin-bottom: 16px; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px;">';
+    html += `<table style="width: 100%; border-collapse: collapse;">`;
+    html += `<tr><td style="padding: 4px 8px; font-weight: 600; width: 120px;">Student:</td><td style="padding: 4px 8px;">${student ? escapeHtml(`${student.last_name}, ${student.first_name}`) : 'Not selected'}</td></tr>`;
+    html += `<tr><td style="padding: 4px 8px; font-weight: 600;">Skill:</td><td style="padding: 4px 8px;">${escapeHtml(sheet.skill_name)}</td></tr>`;
+    html += `<tr><td style="padding: 4px 8px; font-weight: 600;">Date:</td><td style="padding: 4px 8px;">${today}</td></tr>`;
+    html += `<tr><td style="padding: 4px 8px; font-weight: 600;">Evaluator:</td><td style="padding: 4px 8px;">${escapeHtml(evaluatorName)}</td></tr>`;
+    if (labDay) {
+      html += `<tr><td style="padding: 4px 8px; font-weight: 600;">Lab Day:</td><td style="padding: 4px 8px;">${escapeHtml(labDay.title)}</td></tr>`;
+    }
+    html += '</table></div>';
+
+    // Steps table
+    const groups = groupStepsByPhase(sheet.steps);
+    const phases = getOrderedPhases(groups);
+
+    phases.forEach(phase => {
+      const phaseLabel = PHASE_LABELS[phase] || phase.charAt(0).toUpperCase() + phase.slice(1);
+      const phaseSteps = groups[phase];
+
+      html += `<h2>${escapeHtml(phaseLabel)}</h2>`;
+      html += '<table><thead><tr><th style="width: 35px;">#</th><th>Step</th><th style="width: 55px; text-align: center;">Order</th><th style="width: 30px; text-align: center;"></th></tr></thead><tbody>';
+      phaseSteps.forEach(step => {
+        const seq = stepSequence[step.step_number];
+        const isComplete = seq !== undefined;
+        const isCritical = step.is_critical;
+        html += `<tr${isCritical ? ' style="background: #fef2f2;"' : ''}>
+          <td style="text-align: center; font-weight: 600;">${step.step_number}</td>
+          <td>${escapeHtml(step.instruction)}${isCritical ? ' <strong style="color: #c00; font-size: 10px;">*</strong>' : ''}</td>
+          <td style="text-align: center; font-weight: 600; color: ${isComplete ? '#16a34a' : '#9ca3af'};">${isComplete ? seq : '-'}</td>
+          <td style="text-align: center;">${isComplete ? '<strong style="color: #16a34a;">&#10003;</strong>' : ''}</td>
+        </tr>`;
+      });
+      html += '</tbody></table>';
+    });
+
+    // Result summary
+    html += '<div style="margin-top: 16px; padding: 12px; border: 2px solid #e5e7eb; border-radius: 8px; background: #f9fafb;">';
+    html += `<p style="font-size: 14px; font-weight: 700;">Steps: ${completedSteps}/${totalSteps} &nbsp;&nbsp; Critical: ${completedCritical}/${criticalSteps.length}</p>`;
+    html += '</div>';
+
+    // Comments
+    if (notes.trim()) {
+      html += '<div style="margin-top: 12px;"><h3 style="font-size: 13px; font-weight: bold; margin-bottom: 4px;">Comments:</h3>';
+      html += `<p style="font-size: 12px; white-space: pre-wrap;">${escapeHtml(notes)}</p></div>`;
+    }
+
+    // Signature line
+    html += '<div style="margin-top: 32px; border-top: 1px solid #d1d5db; padding-top: 16px;">';
+    html += '<table style="width: 100%;"><tr>';
+    html += '<td style="width: 50%;"><p style="font-size: 12px; color: #6b7280;">Evaluator Signature: _________________________</p></td>';
+    html += '<td style="width: 50%;"><p style="font-size: 12px; color: #6b7280;">Date: _________________________</p></td>';
+    html += '</tr></table></div>';
+
+    html += printFooter();
+    openPrintWindow(`Score Sheet - ${sheet.skill_name}${student ? ` - ${student.last_name}` : ''}`, html);
   };
 
   const handleModeChange = (newMode: DisplayMode) => {
@@ -780,6 +901,40 @@ function SkillSheetDetailContent() {
           </div>
         )}
 
+        {/* Running count (formative mode) */}
+        {mode === 'formative' && sheet.steps.length > 0 && (
+          <div className="mb-4 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm px-4 py-3 no-print">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`text-2xl font-bold ${
+                  Object.keys(stepSequence).length === sheet.steps.length
+                    ? 'text-green-600 dark:text-green-400'
+                    : 'text-blue-600 dark:text-blue-400'
+                }`}>
+                  {Object.keys(stepSequence).length} <span className="text-sm font-normal text-gray-400">of</span> {sheet.steps.length}
+                </div>
+                <span className="text-sm text-gray-600 dark:text-gray-400">steps completed</span>
+              </div>
+              {Object.keys(stepSequence).length > 0 && (
+                <div className="flex items-center gap-2 text-xs text-gray-500">
+                  <span>Critical: {sheet.steps.filter(s => s.is_critical && stepSequence[s.step_number] !== undefined).length}/{sheet.steps.filter(s => s.is_critical).length}</span>
+                </div>
+              )}
+            </div>
+            {/* Progress bar */}
+            <div className="mt-2 h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-300 ${
+                  Object.keys(stepSequence).length === sheet.steps.length
+                    ? 'bg-green-500'
+                    : 'bg-blue-500'
+                }`}
+                style={{ width: `${(Object.keys(stepSequence).length / sheet.steps.length) * 100}%` }}
+              />
+            </div>
+          </div>
+        )}
+
         {/* Steps by Phase */}
         <div className="space-y-4">
           {orderedPhases.map(phase => {
@@ -830,6 +985,8 @@ function SkillSheetDetailContent() {
                         onSetMark={(mark) => setStepMarkDirect(step.step_number, mark)}
                         noteExpanded={expandedNotes.has(step.step_number)}
                         onToggleNote={() => toggleNoteExpand(step.step_number)}
+                        sequenceNumber={stepSequence[step.step_number] ?? null}
+                        onToggleComplete={() => toggleStepComplete(step.step_number)}
                       />
                     ))}
                   </div>
@@ -898,13 +1055,23 @@ function SkillSheetDetailContent() {
               className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
             <div className="mt-4 flex items-center justify-between">
-              <button
-                onClick={resetForm}
-                className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm"
-              >
-                <RotateCcw className="w-4 h-4" />
-                Reset
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={resetForm}
+                  className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-sm"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  Reset
+                </button>
+                <button
+                  onClick={handlePrintScoreSheet}
+                  disabled={Object.keys(stepSequence).length === 0}
+                  className="flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-40 transition-colors text-sm"
+                >
+                  <Printer className="w-4 h-4" />
+                  Print Score Sheet
+                </button>
+              </div>
               <button
                 onClick={handleSave}
                 disabled={saving || !selectedStudentId}
@@ -1009,9 +1176,11 @@ interface StepRowProps {
   onSetMark: (mark: StepMark) => void;
   noteExpanded: boolean;
   onToggleNote: () => void;
+  sequenceNumber?: number | null;
+  onToggleComplete?: () => void;
 }
 
-function StepRow({ step, mode, mark, onCycleMark, onSetMark, noteExpanded, onToggleNote }: StepRowProps) {
+function StepRow({ step, mode, mark, onCycleMark, onSetMark, noteExpanded, onToggleNote, sequenceNumber, onToggleComplete }: StepRowProps) {
   const isCritical = step.is_critical;
 
   // Teaching mode
@@ -1040,10 +1209,11 @@ function StepRow({ step, mode, mark, onCycleMark, onSetMark, noteExpanded, onTog
     );
   }
 
-  // Formative mode
+  // Formative mode — numbered completion tracking
   if (mode === 'formative') {
+    const isComplete = sequenceNumber != null;
     return (
-      <div className={`px-4 py-3 ${isCritical ? 'bg-red-50 dark:bg-red-900/20' : ''}`}>
+      <div className={`px-4 py-3 transition-colors ${isCritical ? 'bg-red-50 dark:bg-red-900/20' : ''} ${isComplete ? 'bg-green-50 dark:bg-green-900/10' : ''}`}>
         <div className="flex items-start gap-3">
           <span className="text-sm font-mono text-gray-400 dark:text-gray-500 mt-0.5 w-6 text-right flex-shrink-0">
             {step.step_number}.
@@ -1052,7 +1222,9 @@ function StepRow({ step, mode, mark, onCycleMark, onSetMark, noteExpanded, onTog
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
                 <div className="flex items-start gap-2">
-                  <p className="text-sm text-gray-900 dark:text-white">{step.instruction}</p>
+                  <p className={`text-sm ${isComplete ? 'text-gray-500 dark:text-gray-400 line-through' : 'text-gray-900 dark:text-white'}`}>
+                    {step.instruction}
+                  </p>
                   {isCritical && (
                     <span className="flex-shrink-0 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30">
                       CRITICAL
@@ -1071,40 +1243,23 @@ function StepRow({ step, mode, mark, onCycleMark, onSetMark, noteExpanded, onTog
                   <p className="mt-1 text-xs italic text-gray-500 dark:text-gray-400">{step.detail_notes}</p>
                 )}
               </div>
-              {/* Three-state buttons */}
-              <div className="flex items-center gap-1 flex-shrink-0">
+              {/* Complete button with sequence number */}
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {isComplete && (
+                  <span className="w-7 h-7 rounded-full bg-green-600 text-white text-xs font-bold flex items-center justify-center">
+                    {sequenceNumber}
+                  </span>
+                )}
                 <button
-                  onClick={() => onSetMark('pass')}
-                  className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
-                    mark === 'pass'
-                      ? 'bg-green-500 text-white'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 hover:bg-green-100 dark:hover:bg-green-900/30'
+                  onClick={onToggleComplete}
+                  className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all ${
+                    isComplete
+                      ? 'bg-green-500 text-white shadow-sm'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 hover:bg-green-100 dark:hover:bg-green-900/30 hover:text-green-600'
                   }`}
-                  title="Pass"
+                  title={isComplete ? `Completed #${sequenceNumber} — tap to undo` : 'Mark as completed'}
                 >
-                  <CheckCircle className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => onSetMark('fail')}
-                  className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
-                    mark === 'fail'
-                      ? 'bg-red-500 text-white'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 hover:bg-red-100 dark:hover:bg-red-900/30'
-                  }`}
-                  title="Fail"
-                >
-                  <XCircle className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => onSetMark('caution')}
-                  className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
-                    mark === 'caution'
-                      ? 'bg-amber-500 text-white'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 hover:bg-amber-100 dark:hover:bg-amber-900/30'
-                  }`}
-                  title="Caution"
-                >
-                  <AlertTriangle className="w-4 h-4" />
+                  <CheckCircle className="w-5 h-5" />
                 </button>
               </div>
             </div>
