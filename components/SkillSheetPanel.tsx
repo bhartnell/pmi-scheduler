@@ -23,6 +23,10 @@ import {
   Send,
   Clock,
   Ban,
+  Plus,
+  Trash2,
+  Edit2,
+  Eye,
 } from 'lucide-react';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -65,6 +69,20 @@ interface SkillSheet {
 type DisplayMode = 'teaching' | 'formative' | 'final';
 type StepMark = 'pass' | 'fail' | 'caution' | null;
 type EmailPreference = 'pending' | 'queued' | 'sent' | 'do_not_send';
+
+interface ExistingEvaluation {
+  id: string;
+  evaluation_type: string;
+  result: string;
+  notes: string | null;
+  step_marks: Record<string, string> | null;
+  step_details: any[] | null;
+  email_status: string;
+  status: string;
+  attempt_number: number;
+  created_at: string;
+  evaluator: { id: string; name: string } | null;
+}
 
 interface StudentInfo {
   id: string;
@@ -175,6 +193,12 @@ export default function SkillSheetPanel({
   const [sendingEmail, setSendingEmail] = useState(false);
   const [batchEmailProgress, setBatchEmailProgress] = useState<{ sent: number; total: number } | null>(null);
 
+  // Existing evaluation state
+  const [existingEvals, setExistingEvals] = useState<ExistingEvaluation[]>([]);
+  const [evalViewMode, setEvalViewMode] = useState<'new' | 'existing'>('new');
+  const [expandedEvalId, setExpandedEvalId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
   // ─── Data Fetching ──────────────────────────────────────────────────────
 
   const fetchSheet = useCallback(async () => {
@@ -198,6 +222,34 @@ export default function SkillSheetPanel({
   useEffect(() => {
     fetchSheet();
   }, [fetchSheet]);
+
+  // Fetch existing evaluations when student changes
+  const fetchExistingEvals = useCallback(async () => {
+    if (!studentId || !sheetId) {
+      setExistingEvals([]);
+      return;
+    }
+    try {
+      const res = await fetch(`/api/skill-sheets/${sheetId}/evaluations?student_id=${studentId}`);
+      const data = await res.json();
+      if (data.success && Array.isArray(data.evaluations)) {
+        setExistingEvals(data.evaluations);
+        const completedEvals = data.evaluations.filter((e: ExistingEvaluation) => e.status === 'complete');
+        if (completedEvals.length > 0 && (mode === 'formative' || mode === 'final')) {
+          setEvalViewMode('existing');
+          setExpandedEvalId(completedEvals[0].id);
+        } else {
+          setEvalViewMode('new');
+        }
+      }
+    } catch {
+      // Non-critical
+    }
+  }, [studentId, sheetId, mode]);
+
+  useEffect(() => {
+    fetchExistingEvals();
+  }, [fetchExistingEvals]);
 
   // Close on Escape key
   useEffect(() => {
@@ -317,7 +369,7 @@ export default function SkillSheetPanel({
           notes: notes.trim() || null,
           flagged_items: flaggedItems,
           station_id: stationPoolId || null,
-          email_status: saveStatus === 'in_progress' ? 'pending' : (mode === 'final' ? 'do_not_send' : emailPref),
+          email_status: saveStatus === 'in_progress' ? 'pending' : (mode === 'final' ? 'do_not_send' : (emailPref === 'sent' ? 'queued' : emailPref)),
           step_marks: Object.keys(stepMarksToSave).length > 0 ? stepMarksToSave : null,
           step_details: stepDetails || null,
           status: saveStatus,
@@ -415,6 +467,60 @@ export default function SkillSheetPanel({
       showToast('Failed to send batch emails', 'error');
       setBatchEmailProgress(null);
     }
+  };
+
+  const handleDeleteEval = async (evalId: string) => {
+    try {
+      const res = await fetch(`/api/skill-sheets/${sheetId}/evaluations?evaluation_id=${evalId}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('Evaluation deleted', 'success');
+        setConfirmDeleteId(null);
+        setExistingEvals(prev => prev.filter(e => e.id !== evalId));
+        const remaining = existingEvals.filter(e => e.id !== evalId);
+        if (remaining.filter(e => e.status === 'complete').length === 0) {
+          setEvalViewMode('new');
+        }
+        if (onEvaluationSaved && studentId) {
+          onEvaluationSaved(studentId, '', 'complete');
+        }
+      } else {
+        showToast(data.error || 'Failed to delete', 'error');
+      }
+    } catch {
+      showToast('Failed to delete evaluation', 'error');
+    }
+  };
+
+  const handleEditEval = (evalItem: ExistingEvaluation) => {
+    if (evalItem.step_marks) {
+      const marks: Record<number, StepMark> = {};
+      for (const [key, val] of Object.entries(evalItem.step_marks)) {
+        marks[parseInt(key)] = val as StepMark;
+      }
+      setStepMarks(marks);
+    }
+    if (evalItem.step_details && Array.isArray(evalItem.step_details)) {
+      const seq: Record<number, number> = {};
+      for (const detail of evalItem.step_details) {
+        if (detail.completed && detail.sequence_number != null) {
+          seq[detail.step_number] = detail.sequence_number;
+        }
+      }
+      setStepSequence(seq);
+    }
+    setNotes(evalItem.notes || '');
+    setResult(evalItem.result as 'pass' | 'fail' | 'remediation');
+    setMode(evalItem.evaluation_type === 'formative' ? 'formative' : 'final');
+    setEvalViewMode('new');
+  };
+
+  const handleNewAttempt = () => {
+    resetForm();
+    setMode('formative');
+    setEvalViewMode('new');
   };
 
   // ─── Render ─────────────────────────────────────────────────────────────
@@ -658,6 +764,23 @@ export default function SkillSheetPanel({
             </div>
           ) : sheet ? (
             <div className="p-4 space-y-4 pb-24">
+              {/* Existing evaluation summary */}
+              {evalViewMode === 'existing' && existingEvals.length > 0 && (mode === 'formative' || mode === 'final') && sheet && (
+                <ExistingEvalSummary
+                  evaluations={existingEvals}
+                  expandedId={expandedEvalId}
+                  onToggleExpand={(id) => setExpandedEvalId(expandedEvalId === id ? null : id)}
+                  onEdit={handleEditEval}
+                  onNewAttempt={handleNewAttempt}
+                  onDelete={(id) => setConfirmDeleteId(id)}
+                  confirmDeleteId={confirmDeleteId}
+                  onConfirmDelete={handleDeleteEval}
+                  onCancelDelete={() => setConfirmDeleteId(null)}
+                  sheet={sheet}
+                />
+              )}
+
+              {(evalViewMode === 'new' || mode === 'teaching') && (<>
               {/* Canonical skill scope notes */}
               {sheet.canonical_skill?.scope_notes && (
                 <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
@@ -932,6 +1055,7 @@ export default function SkillSheetPanel({
                   </div>
                 </div>
               )}
+              </>)}
             </div>
           ) : null}
         </div>
@@ -1089,6 +1213,23 @@ export default function SkillSheetPanel({
             </div>
           ) : sheet ? (
             <div className="p-4 space-y-4">
+              {/* Existing evaluation summary */}
+              {evalViewMode === 'existing' && existingEvals.length > 0 && (mode === 'formative' || mode === 'final') && sheet && (
+                <ExistingEvalSummary
+                  evaluations={existingEvals}
+                  expandedId={expandedEvalId}
+                  onToggleExpand={(id) => setExpandedEvalId(expandedEvalId === id ? null : id)}
+                  onEdit={handleEditEval}
+                  onNewAttempt={handleNewAttempt}
+                  onDelete={(id) => setConfirmDeleteId(id)}
+                  confirmDeleteId={confirmDeleteId}
+                  onConfirmDelete={handleDeleteEval}
+                  onCancelDelete={() => setConfirmDeleteId(null)}
+                  sheet={sheet}
+                />
+              )}
+
+              {(evalViewMode === 'new' || mode === 'teaching') && (<>
               {/* Canonical skill scope notes */}
               {sheet.canonical_skill?.scope_notes && (
                 <div className="flex items-start gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
@@ -1376,6 +1517,7 @@ export default function SkillSheetPanel({
                   </div>
                 </div>
               )}
+              </>)}
             </div>
           ) : null}
         </div>
@@ -1564,6 +1706,224 @@ function PanelStepRow({
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─── Existing Evaluation Summary ─────────────────────────────────────────────
+
+function ExistingEvalSummary({
+  evaluations,
+  expandedId,
+  onToggleExpand,
+  onEdit,
+  onNewAttempt,
+  onDelete,
+  confirmDeleteId,
+  onConfirmDelete,
+  onCancelDelete,
+  sheet,
+}: {
+  evaluations: ExistingEvaluation[];
+  expandedId: string | null;
+  onToggleExpand: (id: string) => void;
+  onEdit: (evalItem: ExistingEvaluation) => void;
+  onNewAttempt: () => void;
+  onDelete: (id: string) => void;
+  confirmDeleteId: string | null;
+  onConfirmDelete: (id: string) => void;
+  onCancelDelete: () => void;
+  sheet: SkillSheet;
+}) {
+  const completedEvals = evaluations.filter(e => e.status === 'complete');
+  const totalSteps = sheet.steps.length;
+  const criticalCount = sheet.steps.filter(s => s.is_critical).length;
+
+  if (completedEvals.length === 0) return null;
+
+  return (
+    <div className="space-y-3">
+      {completedEvals.length > 1 && (
+        <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
+          {completedEvals.length} attempts
+        </p>
+      )}
+
+      {completedEvals.map((ev) => {
+        const isExpanded = expandedId === ev.id;
+        const stepMarks = ev.step_marks as Record<string, string> | null;
+        const passedSteps = stepMarks ? Object.values(stepMarks).filter(m => m === 'pass').length : 0;
+        const criticalPassed = stepMarks
+          ? sheet.steps.filter(s => s.is_critical && stepMarks[String(s.step_number)] === 'pass').length
+          : 0;
+        const evalDate = new Date(ev.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        const evaluatorName = ev.evaluator?.name
+          ? `${ev.evaluator.name.split(' ')[0][0]}. ${ev.evaluator.name.split(' ').slice(1).join(' ')}`
+          : 'Unknown';
+        const isConfirming = confirmDeleteId === ev.id;
+
+        return (
+          <div key={ev.id} className={`rounded-lg border overflow-hidden ${
+            ev.result === 'pass' ? 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/10' :
+            ev.result === 'fail' ? 'border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/10' :
+            'border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/10'
+          }`}>
+            {/* Summary row */}
+            <div className="px-3 py-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase ${
+                    ev.result === 'pass' ? 'bg-green-500 text-white' :
+                    ev.result === 'fail' ? 'bg-red-500 text-white' :
+                    'bg-amber-500 text-white'
+                  }`}>
+                    {ev.result}
+                  </span>
+                  {completedEvals.length > 1 && (
+                    <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                      Attempt {ev.attempt_number || 1}
+                    </span>
+                  )}
+                </div>
+                <span className="text-[10px] text-gray-400">{evalDate}</span>
+              </div>
+              <div className="flex items-center gap-3 mt-1 text-[10px] text-gray-500 dark:text-gray-400">
+                <span>Steps: {passedSteps}/{totalSteps}</span>
+                <span>Critical: {criticalPassed}/{criticalCount}</span>
+                <span>By: {evaluatorName}</span>
+              </div>
+              {ev.email_status && (
+                <span className={`inline-block mt-1 px-1.5 py-0.5 rounded text-[9px] ${
+                  ev.email_status === 'sent' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                  ev.email_status === 'queued' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
+                  ev.email_status === 'do_not_send' ? 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400' :
+                  'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                }`}>
+                  Email: {ev.email_status === 'do_not_send' ? 'Do not send' : ev.email_status}
+                </span>
+              )}
+            </div>
+
+            {/* Action buttons */}
+            <div className="px-3 py-2 border-t border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50">
+              {isConfirming ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-red-600 dark:text-red-400 flex-1">Delete this evaluation?</span>
+                  <button
+                    onClick={() => onConfirmDelete(ev.id)}
+                    className="px-2 py-1 bg-red-600 text-white rounded text-[10px] font-medium hover:bg-red-700"
+                  >
+                    Yes, Delete
+                  </button>
+                  <button
+                    onClick={onCancelDelete}
+                    className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-[10px] font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <button
+                    onClick={() => onToggleExpand(ev.id)}
+                    className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-[10px] font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  >
+                    <span className="flex items-center gap-1">
+                      <Eye className="w-3 h-3" />
+                      {isExpanded ? 'Hide' : 'View Results'}
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => onEdit(ev)}
+                    className="px-2 py-1 border border-blue-300 dark:border-blue-600 rounded text-[10px] font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                  >
+                    <span className="flex items-center gap-1">
+                      <Edit2 className="w-3 h-3" />
+                      Edit
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => onDelete(ev.id)}
+                    className="px-2 py-1 border border-red-300 dark:border-red-600 rounded text-[10px] font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                  >
+                    <span className="flex items-center gap-1">
+                      <Trash2 className="w-3 h-3" />
+                      Delete
+                    </span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Expanded step details */}
+            {isExpanded && ev.step_details && Array.isArray(ev.step_details) && (
+              <div className="px-3 py-2 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+                <div className="space-y-1">
+                  {[...ev.step_details]
+                    .sort((a: any, b: any) => (a.sequence_number || 999) - (b.sequence_number || 999))
+                    .map((detail: any) => (
+                      <div key={detail.step_number} className="flex items-center gap-2 text-[10px]">
+                        {detail.completed ? (
+                          <span className="w-4 h-4 rounded-full bg-green-600 text-white text-[8px] font-bold flex items-center justify-center flex-shrink-0">
+                            {detail.sequence_number}
+                          </span>
+                        ) : (
+                          <span className="w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0" />
+                        )}
+                        <span className={`${detail.completed ? 'text-gray-500 line-through' : 'text-gray-900 dark:text-white'} ${detail.is_critical ? 'font-medium' : ''}`}>
+                          {detail.step_number}. {sheet.steps.find(s => s.step_number === detail.step_number)?.instruction || `Step ${detail.step_number}`}
+                        </span>
+                        {detail.is_critical && (
+                          <span className="px-1 rounded text-[8px] font-bold text-red-600 bg-red-50 dark:bg-red-900/30 dark:text-red-400">C</span>
+                        )}
+                      </div>
+                    ))}
+                </div>
+                {ev.notes && (
+                  <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+                    <p className="text-[10px] text-gray-500 dark:text-gray-400 italic">{ev.notes}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Expanded step marks fallback (when no step_details) */}
+            {isExpanded && !ev.step_details && ev.step_marks && (
+              <div className="px-3 py-2 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+                <div className="space-y-1">
+                  {sheet.steps.map(step => {
+                    const mark = (ev.step_marks as Record<string, string>)?.[String(step.step_number)];
+                    return (
+                      <div key={step.step_number} className="flex items-center gap-2 text-[10px]">
+                        <span className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 text-[8px] ${
+                          mark === 'pass' ? 'bg-green-500 text-white' :
+                          mark === 'fail' ? 'bg-red-500 text-white' :
+                          mark === 'caution' ? 'bg-amber-500 text-white' :
+                          'bg-gray-200 dark:bg-gray-700'
+                        }`}>
+                          {mark === 'pass' ? '\u2713' : mark === 'fail' ? '\u2717' : mark === 'caution' ? '!' : ''}
+                        </span>
+                        <span className={step.is_critical ? 'font-medium' : ''}>
+                          {step.step_number}. {step.instruction.substring(0, 60)}{step.instruction.length > 60 ? '...' : ''}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      {/* New Attempt button */}
+      <button
+        onClick={onNewAttempt}
+        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+      >
+        <Plus className="w-4 h-4" />
+        New Attempt
+      </button>
     </div>
   );
 }

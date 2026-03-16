@@ -2,7 +2,8 @@
 // SAFETY: All .map() calls must use safeArray() or Array.isArray() guards.
 // API responses may return objects, null, or undefined instead of arrays.
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   ChevronLeft, Plus, X, Calendar, Download, AlertTriangle,
   Loader2, Clock, MapPin, Users, Filter, Eye, EyeOff, Trash2,
@@ -1198,16 +1199,20 @@ function GenerateWizard({
   semesterId,
   onGenerate,
   onClose,
+  initialProgramType,
+  initialCohortId,
 }: {
   programs?: PmiProgramSchedule[]; // kept for backwards compat but no longer used
   instructors: { id: string; name: string; email: string }[];
   semesterId: string;
   onGenerate: (result: { blocks: PmiScheduleBlock[]; online_courses: { course_code: string; course_name: string; duration_type: string }[] }) => void;
   onClose: () => void;
+  initialProgramType?: string;
+  initialCohortId?: string;
 }) {
   const [wizard, setWizard] = useState<WizardState>({
-    step: 1,
-    programType: '',
+    step: initialProgramType ? 2 : 1,
+    programType: initialProgramType || '',
     semesterNumber: null,
     programScheduleId: '',
     cohortId: '',
@@ -2063,7 +2068,15 @@ function MonthView({
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
-export default function SemesterPlannerPage() {
+export default function SemesterPlannerPageWrapper() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" /></div>}>
+      <SemesterPlannerPage />
+    </Suspense>
+  );
+}
+
+function SemesterPlannerPage() {
   // Data state
   const [semesters, setSemesters] = useState<PmiSemester[]>([]);
   const [selectedSemesterId, setSelectedSemesterId] = useState<string>('');
@@ -2087,6 +2100,8 @@ export default function SemesterPlannerPage() {
   const [selectedInstructor, setSelectedInstructor] = useState<string>('');
   const [editingBlock, setEditingBlock] = useState<(Partial<PmiScheduleBlock> & { day_of_week: number }) | null>(null);
   const [showWizard, setShowWizard] = useState(false);
+  const searchParams = useSearchParams();
+  const wizardAutoOpened = useRef(false);
   const [dragOverCell, setDragOverCell] = useState<string | null>(null);
   const [pendingDrop, setPendingDrop] = useState<{
     blockId: string;
@@ -2202,6 +2217,14 @@ export default function SemesterPlannerPage() {
   useEffect(() => {
     loadSemesterData();
   }, [loadSemesterData]);
+
+  // Auto-open wizard from ?generate=true query param (e.g., from cohort page)
+  useEffect(() => {
+    if (!loading && !wizardAutoOpened.current && searchParams.get('generate') === 'true') {
+      wizardAutoOpened.current = true;
+      setShowWizard(true);
+    }
+  }, [loading, searchParams]);
 
   // ─── Computed ─────────────────────────────────────────────────────────────
 
@@ -2832,6 +2855,8 @@ export default function SemesterPlannerPage() {
           semesterId={selectedSemesterId}
           onGenerate={handleGenerated}
           onClose={() => setShowWizard(false)}
+          initialProgramType={searchParams.get('program') || undefined}
+          initialCohortId={searchParams.get('cohortId') || undefined}
         />
       )}
 

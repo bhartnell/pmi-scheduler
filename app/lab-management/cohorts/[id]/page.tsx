@@ -934,6 +934,15 @@ export default function CohortHubPage() {
                 }}
               />
             )}
+            {!cohort?.is_archived && (
+              <ToolCard
+                icon={Calendar}
+                title="Generate Class Schedule"
+                status="Open planner wizard"
+                actionLabel="Generate"
+                href={`/scheduling/planner?generate=true&cohortId=${cohortId}&program=${encodeURIComponent(cohort?.program?.abbreviation?.toLowerCase() || '')}`}
+              />
+            )}
           </div>
         </div>
 
