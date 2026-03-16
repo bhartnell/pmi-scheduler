@@ -38,6 +38,12 @@ export async function GET(request: NextRequest) {
       .order('date', { ascending: true })
       .range(offset, offset + limit - 1);
 
+    // Exact date match (used by planner cross-reference)
+    const exactDate = searchParams.get('date');
+    if (exactDate) {
+      query = query.eq('date', exactDate);
+    }
+
     if (cohortId) {
       query = query.eq('cohort_id', cohortId);
     }

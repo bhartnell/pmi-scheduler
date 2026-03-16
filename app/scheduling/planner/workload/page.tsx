@@ -15,13 +15,12 @@ import type { PmiSemester, PmiInstructorWorkload } from '@/types/semester-planne
 
 const HEAT_LEVELS = [
   { max: 0, label: 'None', bg: 'bg-gray-50 dark:bg-gray-800', text: 'text-gray-400 dark:text-gray-500' },
-  { max: 10, label: 'Light', bg: 'bg-green-50 dark:bg-green-900/20', text: 'text-green-700 dark:text-green-400' },
-  { max: 20, label: 'Moderate', bg: 'bg-blue-50 dark:bg-blue-900/20', text: 'text-blue-700 dark:text-blue-400' },
-  { max: 30, label: 'Heavy', bg: 'bg-amber-50 dark:bg-amber-900/20', text: 'text-amber-700 dark:text-amber-400' },
+  { max: 20, label: 'Normal', bg: 'bg-green-50 dark:bg-green-900/20', text: 'text-green-700 dark:text-green-400' },
+  { max: 30, label: 'Heavy', bg: 'bg-yellow-50 dark:bg-yellow-900/20', text: 'text-yellow-700 dark:text-yellow-400' },
   { max: Infinity, label: 'Overloaded', bg: 'bg-red-50 dark:bg-red-900/20', text: 'text-red-700 dark:text-red-400' },
 ];
 
-const OVERLOAD_THRESHOLD = 20;
+const OVERLOAD_THRESHOLD = 30;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Helpers
@@ -219,12 +218,25 @@ function InstructorDetailRow({
         className="px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700"
       >
         <div className="space-y-3">
-          {/* Programs */}
+          {/* Program breakdown */}
           <div>
-            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Programs: </span>
-            <span className="text-xs text-gray-700 dark:text-gray-300">
-              {data.programs.length > 0 ? data.programs.join(', ') : 'None assigned'}
-            </span>
+            <span className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Hours by Source</span>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+              {data.programs.length > 0 ? data.programs.map(program => {
+                return (
+                  <div key={program} className="flex items-center gap-2 text-xs">
+                    <span className={`w-2 h-2 rounded-full ${
+                      program === 'Lab' ? 'bg-emerald-400' :
+                      program === 'LVFR' ? 'bg-orange-400' :
+                      'bg-blue-400'
+                    }`} />
+                    <span className="text-gray-700 dark:text-gray-300">{program}</span>
+                  </div>
+                );
+              }) : (
+                <span className="text-xs text-gray-400 dark:text-gray-500">None assigned</span>
+              )}
+            </div>
           </div>
 
           {/* Weekly bar chart */}
@@ -376,7 +388,11 @@ function HeatMapTable({
                       const hours = w?.total_hours || 0;
                       const heat = getHeatColor(hours);
                       return (
-                        <td key={wk} className={`px-1 py-1.5 text-center ${heat.bg}`}>
+                        <td
+                          key={wk}
+                          className={`px-1 py-1.5 text-center ${heat.bg}`}
+                          title={`Week ${wk}${weekDates.has(wk) ? ` (${formatWeekLabel(weekDates.get(wk)!)})` : ''}: ${hours}h across ${w?.block_count || 0} blocks\nPrograms: ${(w?.programs || []).join(', ') || 'None'}`}
+                        >
                           <span className={`text-xs font-medium ${heat.text}`}>
                             {hours > 0 ? hours : '—'}
                           </span>

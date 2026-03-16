@@ -3,7 +3,7 @@
 import { formatCohortNumber } from '@/lib/format-cohort';
 import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import {
   ChevronRight,
@@ -121,6 +121,9 @@ export default function NewStationPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [selectedInstructor, setSelectedInstructor] = useState('');
+  const [instructorAvailability, setInstructorAvailability] = useState<any[]>([]);
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
+  const [instructorDropdownOpen, setInstructorDropdownOpen] = useState(false);
 
   // Drill documents state
   const [drillDocuments, setDrillDocuments] = useState<DrillDocument[]>([]);
@@ -194,6 +197,46 @@ export default function NewStationPage() {
     };
     fetchDrillDocs();
   }, [stationType, selectedDrillIds]);
+
+  // Fetch instructor availability when labDay is loaded
+  useEffect(() => {
+    if (!labDay?.date) return;
+    setAvailabilityLoading(true);
+    fetch(`/api/lab-management/instructor-availability?date=${labDay.date}&start_time=08:00&end_time=17:00&lab_day_id=${labDay.id}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) setInstructorAvailability(data.instructors || []);
+      })
+      .catch(() => {})
+      .finally(() => setAvailabilityLoading(false));
+  }, [labDay?.date, labDay?.id]);
+
+  // Availability lookup map
+  const availabilityMap = useMemo(() => {
+    const map = new Map<string, any>();
+    for (const a of instructorAvailability) {
+      if (a.id) map.set(a.id, a);
+      if (a.email) map.set(a.email.toLowerCase(), a);
+    }
+    return map;
+  }, [instructorAvailability]);
+
+  function getAvailInfo(instructor: Instructor) {
+    return availabilityMap.get(instructor.id) || availabilityMap.get(instructor.email?.toLowerCase());
+  }
+
+  // Sort instructors by availability: available first, then same-day, then unavailable
+  const sortedInstructors = useMemo(() => {
+    if (instructorAvailability.length === 0) return instructors;
+    return [...instructors].sort((a, b) => {
+      const availA = getAvailInfo(a);
+      const availB = getAvailInfo(b);
+      const scoreA = !availA ? 1 : !availA.available ? 2 : availA.same_day_stations?.length > 0 ? 1 : 0;
+      const scoreB = !availB ? 1 : !availB.available ? 2 : availB.same_day_stations?.length > 0 ? 1 : 0;
+      if (scoreA !== scoreB) return scoreA - scoreB;
+      return a.name.localeCompare(b.name);
+    });
+  }, [instructors, instructorAvailability]);
 
   const fetchData = async () => {
     try {
@@ -1022,19 +1065,104 @@ export default function NewStationPage() {
                 )}
               </div>
 
-              <select
-                value={selectedInstructor}
-                onChange={(e) => handleInstructorChange(e.target.value)}
-                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-800"
-              >
-                <option value="">Select instructor...</option>
-                {instructors.map((instructor) => (
-                  <option key={instructor.id} value={`${instructor.name}|${instructor.email}`}>
-                    {instructor.name} ({instructor.email})
-                  </option>
-                ))}
-                <option value="custom">+ Add custom name...</option>
-              </select>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setInstructorDropdownOpen(!instructorDropdownOpen)}
+                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-800 text-left flex items-center justify-between"
+                >
+                  <span className={selectedInstructor && selectedInstructor !== 'custom' ? '' : 'text-gray-400 dark:text-gray-500'}>
+                    {selectedInstructor && selectedInstructor !== 'custom'
+                      ? (() => {
+                          const [name] = selectedInstructor.split('|');
+                          const inst = instructors.find(i => i.name === name);
+                          const avail = inst ? getAvailInfo(inst) : null;
+                          return (
+                            <span className="flex items-center gap-2">
+                              {avail && !avail.available && <span className="w-2 h-2 rounded-full bg-red-500 inline-block flex-shrink-0" />}
+                              {avail && avail.available && avail.same_day_stations?.length > 0 && <span className="w-2 h-2 rounded-full bg-yellow-500 inline-block flex-shrink-0" />}
+                              {avail && avail.available && (!avail.same_day_stations || avail.same_day_stations.length === 0) && <span className="w-2 h-2 rounded-full bg-green-500 inline-block flex-shrink-0" />}
+                              <span>{name}</span>
+                            </span>
+                          );
+                        })()
+                      : isCustomInstructor
+                        ? '+ Custom instructor'
+                        : 'Select instructor...'}
+                  </span>
+                  <ChevronRight className={`w-4 h-4 transition-transform ${instructorDropdownOpen ? 'rotate-90' : ''}`} />
+                </button>
+
+                {instructorDropdownOpen && (
+                  <div className="absolute z-20 mt-1 w-full bg-white dark:bg-gray-800 border dark:border-gray-600 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                    {/* Clear selection */}
+                    <button
+                      type="button"
+                      onClick={() => { handleInstructorChange(''); setInstructorDropdownOpen(false); }}
+                      className="w-full px-3 py-2 text-left text-sm text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    >
+                      Select instructor...
+                    </button>
+
+                    {availabilityLoading && (
+                      <div className="px-3 py-1 text-xs text-gray-400 italic">Loading availability...</div>
+                    )}
+
+                    {sortedInstructors.map((instructor) => {
+                      const avail = getAvailInfo(instructor);
+                      const isUnavailable = avail && !avail.available;
+                      const isSameDay = avail && avail.available && avail.same_day_stations?.length > 0;
+                      const isAvailable = avail && avail.available && (!avail.same_day_stations || avail.same_day_stations.length === 0);
+
+                      return (
+                        <button
+                          key={instructor.id}
+                          type="button"
+                          onClick={() => {
+                            handleInstructorChange(`${instructor.name}|${instructor.email}`);
+                            setInstructorDropdownOpen(false);
+                          }}
+                          className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between gap-2 ${
+                            isUnavailable ? 'opacity-50' : ''
+                          }`}
+                        >
+                          <span className={`flex items-center gap-2 ${isUnavailable ? 'line-through text-gray-400' : 'text-gray-900 dark:text-white'}`}>
+                            {isUnavailable && <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />}
+                            {isSameDay && <span className="w-2 h-2 rounded-full bg-yellow-500 flex-shrink-0" />}
+                            {isAvailable && <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />}
+                            {!avail && <span className="w-2 h-2 rounded-full bg-gray-300 flex-shrink-0" />}
+                            {instructor.name}
+                          </span>
+                          <span className="flex-shrink-0">
+                            {isUnavailable && (
+                              <span className="text-xs text-red-500">
+                                {avail.conflicts?.[0]?.title || 'Unavailable'}
+                              </span>
+                            )}
+                            {isSameDay && (
+                              <span className="text-xs text-yellow-600 dark:text-yellow-400">
+                                {avail.same_day_hours || avail.same_day_stations.length}h today
+                              </span>
+                            )}
+                            {isAvailable && (
+                              <span className="text-xs text-green-600 dark:text-green-400">Available</span>
+                            )}
+                          </span>
+                        </button>
+                      );
+                    })}
+
+                    {/* Custom option */}
+                    <button
+                      type="button"
+                      onClick={() => { handleInstructorChange('custom'); setInstructorDropdownOpen(false); }}
+                      className="w-full px-3 py-2 text-left text-sm text-blue-600 dark:text-blue-400 hover:bg-gray-100 dark:hover:bg-gray-700 border-t dark:border-gray-600"
+                    >
+                      + Add custom name...
+                    </button>
+                  </div>
+                )}
+              </div>
 
               {isCustomInstructor && (
                 <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
