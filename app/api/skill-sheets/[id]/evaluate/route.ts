@@ -107,6 +107,23 @@ export async function POST(
       throw sheetError;
     }
 
+    // Determine attempt number for this student + skill sheet
+    let attemptNumber = 1;
+    try {
+      const { data: prevEvals } = await supabase
+        .from('student_skill_evaluations')
+        .select('attempt_number')
+        .eq('skill_sheet_id', skillSheetId)
+        .eq('student_id', student_id)
+        .order('attempt_number', { ascending: false })
+        .limit(1);
+      if (prevEvals && prevEvals.length > 0 && prevEvals[0].attempt_number) {
+        attemptNumber = prevEvals[0].attempt_number + 1;
+      }
+    } catch {
+      // attempt_number column may not exist yet — use default 1
+    }
+
     // Determine email_status: final_competency always do_not_send, in_progress always pending
     const resolvedEmailStatus = isInProgress
       ? 'pending'
@@ -132,6 +149,8 @@ export async function POST(
         flagged_items: flagged_items || null,
         email_status: resolvedEmailStatus,
         step_marks: step_marks || null,
+        step_details: body.step_details || null,
+        attempt_number: attemptNumber,
         status: isInProgress ? 'in_progress' : 'complete',
       })
       .select('*')

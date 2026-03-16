@@ -596,7 +596,7 @@ export default function GradeStationPage() {
         selectedStudentId={selectedStudentId}
         selectedGroupId={selectedGroupId}
         teamLeaderId={teamLeaderId}
-        onSave={handleSave}
+        onSave={() => handleSave()}
       />
 
       {/* Embedded Skill Sheet Mode: Skills station with skill sheet available */}
@@ -669,8 +669,8 @@ export default function GradeStationPage() {
           inProgressStudents={inProgressStudents}
         />
 
-        {/* Critical Actions */}
-        {scenario?.critical_actions && toArray(scenario.critical_actions).length > 0 && (
+        {/* Critical Actions — ONLY for scenario stations */}
+        {!isSkillsStation && scenario?.critical_actions && toArray(scenario.critical_actions).length > 0 && (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
             <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-3">
               <AlertTriangle className="w-5 h-5 text-red-500" />
@@ -712,8 +712,8 @@ export default function GradeStationPage() {
           </div>
         )}
 
-        {/* Evaluation Criteria */}
-        <EvaluationCriteria
+        {/* Evaluation Criteria — ONLY for scenario stations, NEVER for skill sheet stations */}
+        {!isSkillsStation && <EvaluationCriteria
           activeCriteria={activeCriteria}
           criteriaRatings={criteriaRatings}
           isSkillsStation={isSkillsStation}
@@ -728,34 +728,38 @@ export default function GradeStationPage() {
           phase2Pass={phase2Pass}
           onUpdateRating={updateRating}
           onUpdateNotes={updateNotes}
-        />
+        />}
 
-        {/* Overall Comments */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <h2 className="font-semibold text-gray-900 dark:text-white mb-3">Overall Comments</h2>
-          <textarea
-            value={overallComments}
-            onChange={(e) => {
-              setOverallComments(e.target.value);
-              triggerAutoSave();
-            }}
-            placeholder="Additional comments, feedback, or observations..."
-            rows={4}
-            className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+        {/* Overall Comments — ONLY for scenario stations */}
+        {!isSkillsStation && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+            <h2 className="font-semibold text-gray-900 dark:text-white mb-3">Overall Comments</h2>
+            <textarea
+              value={overallComments}
+              onChange={(e) => {
+                setOverallComments(e.target.value);
+                triggerAutoSave();
+              }}
+              placeholder="Additional comments, feedback, or observations..."
+              rows={4}
+              className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+            />
+          </div>
+        )}
+
+        {/* Flagging Section — ONLY for scenario stations */}
+        {!isSkillsStation && (
+          <FlaggingPanel
+            issueLevel={issueLevel}
+            flagCategories={flagCategories}
+            onSetIssueLevel={setIssueLevel}
+            onSetFlagCategories={setFlagCategories}
+            triggerAutoSave={triggerAutoSave}
           />
-        </div>
+        )}
 
-        {/* Flagging Section */}
-        <FlaggingPanel
-          issueLevel={issueLevel}
-          flagCategories={flagCategories}
-          onSetIssueLevel={setIssueLevel}
-          onSetFlagCategories={setFlagCategories}
-          triggerAutoSave={triggerAutoSave}
-        />
-
-        {/* Debrief Points */}
-        {scenario?.debrief_points && toArray(scenario.debrief_points).length > 0 && (
+        {/* Debrief Points — ONLY for scenario stations */}
+        {!isSkillsStation && scenario?.debrief_points && toArray(scenario.debrief_points).length > 0 && (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
             <h2 className="font-semibold text-gray-900 dark:text-white mb-3">Debrief Discussion Points</h2>
             <ul className="space-y-2">
@@ -769,66 +773,60 @@ export default function GradeStationPage() {
           </div>
         )}
 
-        {/* Save Buttons (Bottom) */}
-        <div className="sticky bottom-4 space-y-2">
-          {/* Finish Later */}
-          <button
-            onClick={() => handleSave('pending', 'in_progress')}
-            disabled={saving || (isSkillsStation ? !selectedStudentId : !selectedGroupId)}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-amber-400 dark:border-amber-600 text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/40 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg font-medium"
-          >
-            <Save className="w-5 h-5" />
-            Finish Later
-          </button>
-
-          {/* Primary save: Send Later */}
-          <button
-            onClick={() => handleSave('queued')}
-            disabled={saving || (isSkillsStation ? !selectedStudentId : (!allRated || !selectedGroupId || !teamLeaderId))}
-            className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed shadow-lg font-medium"
-          >
-            {saving ? (
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-            ) : (
+        {/* Save Buttons (Bottom) — ONLY for scenario stations */}
+        {!isSkillsStation && (
+          <div className="sticky bottom-4 space-y-2">
+            {/* Finish Later */}
+            <button
+              onClick={() => handleSave('pending', 'in_progress')}
+              disabled={saving || !selectedGroupId}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-amber-400 dark:border-amber-600 text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/40 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg font-medium"
+            >
               <Save className="w-5 h-5" />
-            )}
-            {saving ? 'Saving...' : `Save — Send Later${selectedStudentName ? ` (${selectedStudentName})` : ''}`}
-          </button>
-
-          {/* Secondary options */}
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={() => handleSave('sent')}
-              disabled={saving || (isSkillsStation ? !selectedStudentId : (!allRated || !selectedGroupId || !teamLeaderId))}
-              className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium shadow"
-            >
-              Save — Send Now
+              Finish Later
             </button>
-            <button
-              onClick={() => handleSave('do_not_send')}
-              disabled={saving || (isSkillsStation ? !selectedStudentId : (!allRated || !selectedGroupId || !teamLeaderId))}
-              className="flex items-center justify-center gap-1.5 px-3 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium shadow bg-white dark:bg-gray-800"
-            >
-              Do Not Send
-            </button>
-          </div>
 
-          {isSkillsStation ? (
-            !selectedStudentId && (
-              <p className="text-center text-sm text-gray-500 dark:text-gray-400">
-                Select a student to save
-              </p>
-            )
-          ) : (
-            (!selectedGroupId || !teamLeaderId || !allRated) && (
+            {/* Primary save: Send Later */}
+            <button
+              onClick={() => handleSave('queued')}
+              disabled={saving || !allRated || !selectedGroupId || !teamLeaderId}
+              className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed shadow-lg font-medium"
+            >
+              {saving ? (
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+              ) : (
+                <Save className="w-5 h-5" />
+              )}
+              {saving ? 'Saving...' : `Save — Send Later${selectedStudentName ? ` (${selectedStudentName})` : ''}`}
+            </button>
+
+            {/* Secondary options */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => handleSave('sent')}
+                disabled={saving || !allRated || !selectedGroupId || !teamLeaderId}
+                className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium shadow"
+              >
+                Save — Send Now
+              </button>
+              <button
+                onClick={() => handleSave('do_not_send')}
+                disabled={saving || !allRated || !selectedGroupId || !teamLeaderId}
+                className="flex items-center justify-center gap-1.5 px-3 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium shadow bg-white dark:bg-gray-800"
+              >
+                Do Not Send
+              </button>
+            </div>
+
+            {(!selectedGroupId || !teamLeaderId || !allRated) && (
               <p className="text-center text-sm text-gray-500 dark:text-gray-400">
                 {!selectedGroupId ? 'Select a lab group' :
                  !teamLeaderId ? 'Select a team leader' :
                  `Rate all ${totalCriteria} criteria to save`}
               </p>
-            )
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </main>
       )}
 

@@ -161,6 +161,13 @@ export default function SkillSheetPanel({
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
+  // ===== FORMATIVE NUMBERED COMPLETION =====
+  // DO NOT REPLACE with pass/fail/caution icons.
+  // Each step gets a single tap target that assigns a sequence number.
+  // This has been accidentally reverted 3 times — preserve this code.
+  // ==========================================
+  const [stepSequence, setStepSequence] = useState<Record<number, number>>({});
+
   // Post-save state
   const [lastSavedEvalId, setLastSavedEvalId] = useState<string | null>(null);
   const [justSavedStudentName, setJustSavedStudentName] = useState<string | null>(null);
@@ -224,8 +231,38 @@ export default function SkillSheetPanel({
     }));
   };
 
+  // Toggle step completion with sequence numbering (formative mode)
+  const toggleStepComplete = (stepNumber: number) => {
+    setStepSequence(prev => {
+      if (prev[stepNumber] !== undefined) {
+        // Uncomplete: remove this step and renumber subsequent ones
+        const removedSeq = prev[stepNumber];
+        const next: Record<number, number> = {};
+        for (const [sn, seq] of Object.entries(prev)) {
+          const snNum = parseInt(sn);
+          if (snNum === stepNumber) continue;
+          if (seq > removedSeq) {
+            next[snNum] = seq - 1;
+          } else {
+            next[snNum] = seq;
+          }
+        }
+        return next;
+      } else {
+        const maxSeq = Object.values(prev).length;
+        return { ...prev, [stepNumber]: maxSeq + 1 };
+      }
+    });
+    // Also toggle the pass mark so step_marks saves correctly
+    setStepMarks(prev => ({
+      ...prev,
+      [stepNumber]: prev[stepNumber] === 'pass' ? null : 'pass',
+    }));
+  };
+
   const resetForm = () => {
     setStepMarks({});
+    setStepSequence({});
     setNotes('');
     setResult('pass');
   };
@@ -257,6 +294,16 @@ export default function SkillSheetPanel({
       if (val) stepMarksToSave[key] = val;
     }
 
+    // Build step details with sequence numbers (formative mode)
+    const stepDetails = mode === 'formative' && sheet ? sheet.steps.map(s => ({
+      step_id: s.id,
+      step_number: s.step_number,
+      completed: stepSequence[s.step_number] !== undefined,
+      sequence_number: stepSequence[s.step_number] ?? null,
+      mark: stepMarks[s.step_number] || null,
+      is_critical: s.is_critical,
+    })) : undefined;
+
     setSaving(true);
     try {
       const res = await fetch(`/api/skill-sheets/${sheetId}/evaluate`, {
@@ -272,6 +319,7 @@ export default function SkillSheetPanel({
           station_id: stationPoolId || null,
           email_status: saveStatus === 'in_progress' ? 'pending' : (mode === 'final' ? 'do_not_send' : emailPref),
           step_marks: Object.keys(stepMarksToSave).length > 0 ? stepMarksToSave : null,
+          step_details: stepDetails || null,
           status: saveStatus,
         }),
       });
@@ -480,6 +528,51 @@ export default function SkillSheetPanel({
 
   // ─── Embedded mode ────────────────────────────────────────────────────────
   if (embedded) {
+    // Completion screen for embedded mode
+    if (showCompletionScreen) {
+      const completedCount = studentQueue?.filter(s => s.evaluated).length || 0;
+      const totalCount = studentQueue?.length || 0;
+      return (
+        <div className="flex flex-col h-full bg-white dark:bg-gray-900 rounded-lg shadow-lg overflow-hidden">
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+            <PartyPopper className="w-16 h-16 text-green-500 mb-4" />
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+              All students evaluated!
+            </h2>
+            <div className="flex items-center gap-2 text-green-600 dark:text-green-400 mb-6">
+              <CheckCircle className="w-5 h-5" />
+              <span className="font-semibold">{completedCount}/{totalCount} students completed</span>
+            </div>
+            <div className="w-full max-w-sm space-y-3">
+              <button
+                onClick={() => handlePrint()}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+              >
+                <Printer className="w-5 h-5" />
+                Print All Score Sheets
+              </button>
+              <button
+                onClick={handleBatchEmail}
+                disabled={batchEmailProgress !== null}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium disabled:opacity-50"
+              >
+                <Mail className="w-5 h-5" />
+                {batchEmailProgress
+                  ? `${batchEmailProgress.sent} emails sent`
+                  : 'Email All Results'}
+              </button>
+              <button
+                onClick={onClose}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 font-medium"
+              >
+                Back to Lab Day
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="flex flex-col h-full bg-white dark:bg-gray-900 rounded-lg shadow-lg overflow-hidden">
         {panelInner}
@@ -538,7 +631,7 @@ export default function SkillSheetPanel({
               </div>
               {mode === 'formative' && sheet.steps.length > 0 && (
                 <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                  {Object.keys(stepMarks).filter(k => stepMarks[Number(k)] !== null).length}/{sheet.steps.length} completed
+                  {Object.keys(stepSequence).length}/{sheet.steps.length} completed
                 </span>
               )}
             </div>
@@ -644,6 +737,8 @@ export default function SkillSheetPanel({
                               mode={mode}
                               mark={stepMarks[step.step_number] || null}
                               onSetMark={(mark) => setStepMarkDirect(step.step_number, mark)}
+                              sequenceNumber={stepSequence[step.step_number] ?? null}
+                              onToggleComplete={() => toggleStepComplete(step.step_number)}
                             />
                           ))}
                         </div>
@@ -1073,6 +1168,8 @@ export default function SkillSheetPanel({
                               mode={mode}
                               mark={stepMarks[step.step_number] || null}
                               onSetMark={(mark) => setStepMarkDirect(step.step_number, mark)}
+                              sequenceNumber={stepSequence[step.step_number] ?? null}
+                              onToggleComplete={() => toggleStepComplete(step.step_number)}
                             />
                           ))}
                         </div>
@@ -1305,11 +1402,15 @@ function PanelStepRow({
   mode,
   mark,
   onSetMark,
+  sequenceNumber,
+  onToggleComplete,
 }: {
   step: Step;
   mode: DisplayMode;
   mark: StepMark;
   onSetMark: (mark: StepMark) => void;
+  sequenceNumber?: number | null;
+  onToggleComplete?: () => void;
 }) {
   const isCritical = step.is_critical;
   const [noteExpanded, setNoteExpanded] = useState(false);
@@ -1350,9 +1451,75 @@ function PanelStepRow({
     );
   }
 
-  // Formative / Final mode - interactive
+  // ===== FORMATIVE NUMBERED COMPLETION =====
+  // DO NOT REPLACE with pass/fail/caution icons.
+  // Each step gets a single tap target that assigns a sequence number.
+  // This has been accidentally reverted 3 times — preserve this code.
+  // ==========================================
+  if (mode === 'formative') {
+    const isComplete = sequenceNumber != null;
+    return (
+      <div className={`px-3 py-2 transition-colors ${isCritical ? 'bg-red-50 dark:bg-red-900/20' : ''} ${isComplete ? 'bg-green-50 dark:bg-green-900/10' : ''}`}>
+        <div className="flex items-start gap-2">
+          <span className="text-xs font-mono text-gray-400 mt-0.5 w-5 text-right flex-shrink-0">
+            {step.step_number}.
+          </span>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start gap-1.5">
+                  <p className={`text-xs ${isComplete ? 'text-gray-500 dark:text-gray-400 line-through' : 'text-gray-900 dark:text-white'}`}>
+                    {step.instruction}
+                  </p>
+                  {isCritical && (
+                    <span className="flex-shrink-0 px-1 py-0.5 rounded text-[10px] font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30">
+                      CRITICAL
+                    </span>
+                  )}
+                </div>
+                {step.detail_notes && (
+                  <>
+                    <button
+                      onClick={() => setNoteExpanded(!noteExpanded)}
+                      className="mt-0.5 text-[10px] text-blue-600 dark:text-blue-400 hover:underline"
+                    >
+                      {noteExpanded ? 'Hide notes' : 'Show notes'}
+                    </button>
+                    {noteExpanded && (
+                      <p className="mt-0.5 text-[10px] italic text-gray-500 dark:text-gray-400">{step.detail_notes}</p>
+                    )}
+                  </>
+                )}
+              </div>
+              {/* Single tap target: numbered completion */}
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                {isComplete && (
+                  <span className="w-6 h-6 rounded-full bg-green-600 text-white text-[10px] font-bold flex items-center justify-center">
+                    {sequenceNumber}
+                  </span>
+                )}
+                <button
+                  onClick={onToggleComplete}
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
+                    isComplete
+                      ? 'bg-green-500 text-white shadow-sm'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 hover:bg-green-100 dark:hover:bg-green-900/30 hover:text-green-600'
+                  }`}
+                  title={isComplete ? `Completed #${sequenceNumber} — tap to undo` : 'Mark as completed'}
+                >
+                  <CheckCircle className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Final mode - pass/fail icons
   return (
-    <div className={`px-3 py-2 ${isCritical ? (mode === 'final' ? 'bg-red-50 dark:bg-red-900/20' : '') : ''}`}>
+    <div className={`px-3 py-2 ${isCritical ? 'bg-red-50 dark:bg-red-900/20' : ''}`}>
       <div className="flex items-start gap-2">
         <span className="text-xs font-mono text-gray-400 mt-0.5 w-5 text-right flex-shrink-0">
           {step.step_number}.
@@ -1369,7 +1536,7 @@ function PanelStepRow({
                 )}
               </div>
             </div>
-            {/* Mark buttons */}
+            {/* Final mode: Pass/Fail buttons */}
             <div className="flex items-center gap-0.5 flex-shrink-0">
               <button
                 onClick={() => onSetMark('pass')}
@@ -1393,19 +1560,6 @@ function PanelStepRow({
               >
                 <XCircle className="w-3.5 h-3.5" />
               </button>
-              {mode === 'formative' && (
-                <button
-                  onClick={() => onSetMark('caution')}
-                  className={`w-7 h-7 rounded flex items-center justify-center transition-colors ${
-                    mark === 'caution'
-                      ? 'bg-amber-500 text-white'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-400 hover:bg-amber-100 dark:hover:bg-amber-900/30'
-                  }`}
-                  title="Caution"
-                >
-                  <AlertTriangle className="w-3.5 h-3.5" />
-                </button>
-              )}
             </div>
           </div>
         </div>
