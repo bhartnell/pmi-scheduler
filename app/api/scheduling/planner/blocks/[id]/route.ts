@@ -73,11 +73,19 @@ export async function PUT(
       if (fetchError) throw fetchError;
 
       if (targetBlock?.recurring_group_id) {
+        // For batch updates, strip per-instance fields that should NOT propagate
+        // (each block has its own unique date, day_of_week, and week_number)
+        const batchUpdates = { ...updates };
+        delete batchUpdates.date;
+        delete batchUpdates.day_of_week;
+        delete batchUpdates.week_number;
+        delete batchUpdates.specific_date;
+
         // For 'all' mode: update ALL blocks with this recurring_group_id (all days, all weeks)
         // For 'this_and_future': update same day_of_week blocks from this date forward
         let batchQuery = supabase
           .from('pmi_schedule_blocks')
-          .update(updates)
+          .update(batchUpdates)
           .eq('recurring_group_id', targetBlock.recurring_group_id);
 
         if (update_mode === 'this_and_future' && targetBlock.date) {
