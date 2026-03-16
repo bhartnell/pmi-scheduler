@@ -16,6 +16,13 @@ import {
   Save,
   RotateCcw,
   Info,
+  Printer,
+  Mail,
+  ArrowRight,
+  PartyPopper,
+  Send,
+  Clock,
+  Ban,
 } from 'lucide-react';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -57,6 +64,15 @@ interface SkillSheet {
 
 type DisplayMode = 'teaching' | 'formative' | 'final';
 type StepMark = 'pass' | 'fail' | 'caution' | null;
+type EmailPreference = 'pending' | 'queued' | 'sent' | 'do_not_send';
+
+interface StudentInfo {
+  id: string;
+  name: string;
+  evaluated?: boolean;
+  evaluationId?: string;
+  inProgress?: boolean;
+}
 
 interface SkillSheetPanelProps {
   sheetId: string;
@@ -68,6 +84,10 @@ interface SkillSheetPanelProps {
   labDayId?: string;
   /** Station pool ID — when provided, skill sheet result also saves to station_completions */
   stationPoolId?: string;
+  /** List of all students for auto-advance flow */
+  studentQueue?: StudentInfo[];
+  /** Callback when evaluation is saved — parent can update its state */
+  onEvaluationSaved?: (studentId: string, evaluationId: string, status: 'complete' | 'in_progress') => void;
 }
 
 // ─── Constants ──────────────────────────────────────────────────────────────
@@ -122,6 +142,8 @@ export default function SkillSheetPanel({
   studentName,
   labDayId,
   stationPoolId,
+  studentQueue,
+  onEvaluationSaved,
 }: SkillSheetPanelProps) {
   const [sheet, setSheet] = useState<SkillSheet | null>(null);
   const [loading, setLoading] = useState(true);
@@ -135,6 +157,13 @@ export default function SkillSheetPanel({
   const [result, setResult] = useState<'pass' | 'fail' | 'remediation'>('pass');
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  // Post-save state
+  const [lastSavedEvalId, setLastSavedEvalId] = useState<string | null>(null);
+  const [justSavedStudentName, setJustSavedStudentName] = useState<string | null>(null);
+  const [showCompletionScreen, setShowCompletionScreen] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [batchEmailProgress, setBatchEmailProgress] = useState<{ sent: number; total: number } | null>(null);
 
   // ─── Data Fetching ──────────────────────────────────────────────────────
 
@@ -198,13 +227,13 @@ export default function SkillSheetPanel({
     setResult('pass');
   };
 
-  const handleSave = async () => {
+  const handleSave = async (emailPref: EmailPreference = 'queued', saveStatus: 'complete' | 'in_progress' = 'complete') => {
     if (!studentId) {
       showToast('No student selected on the grading page', 'error');
       return;
     }
 
-    if (mode === 'final' && result !== 'pass' && !notes.trim()) {
+    if (saveStatus === 'complete' && mode === 'final' && result !== 'pass' && !notes.trim()) {
       showToast('Remediation plan is required for non-pass results', 'error');
       return;
     }
@@ -219,6 +248,12 @@ export default function SkillSheetPanel({
     const evaluationType = mode === 'formative' ? 'formative' : 'final_competency';
     const evaluationResult = mode === 'formative' ? 'pass' : result;
 
+    // Build step_marks as a serializable object
+    const stepMarksToSave: Record<string, string> = {};
+    for (const [key, val] of Object.entries(stepMarks)) {
+      if (val) stepMarksToSave[key] = val;
+    }
+
     setSaving(true);
     try {
       const res = await fetch(`/api/skill-sheets/${sheetId}/evaluate`, {
@@ -232,20 +267,61 @@ export default function SkillSheetPanel({
           notes: notes.trim() || null,
           flagged_items: flaggedItems,
           station_id: stationPoolId || null,
+          email_status: saveStatus === 'in_progress' ? 'pending' : (mode === 'final' ? 'do_not_send' : emailPref),
+          step_marks: Object.keys(stepMarksToSave).length > 0 ? stepMarksToSave : null,
+          status: saveStatus,
         }),
       });
 
       const data = await res.json();
       if (data.success) {
+        const evalId = data.evaluation?.id;
+        setLastSavedEvalId(evalId || null);
+        setJustSavedStudentName(studentName || null);
+
+        // Notify parent
+        if (onEvaluationSaved && studentId && evalId) {
+          onEvaluationSaved(studentId, evalId, saveStatus);
+        }
+
+        // Show toast
         showToast(
-          mode === 'formative'
-            ? 'Formative evaluation saved'
-            : 'Competency evaluation recorded',
+          saveStatus === 'in_progress'
+            ? `Progress saved — ${studentName || 'Student'}`
+            : `Saved — ${studentName || 'Student'}, ${sheet?.skill_name || 'Skill'}`,
           'success'
         );
-        setStepMarks({});
-        setNotes('');
-        setResult('pass');
+
+        // If Send Now, fire the email immediately
+        if (saveStatus === 'complete' && emailPref === 'sent' && evalId) {
+          setSendingEmail(true);
+          try {
+            await fetch('/api/skill-sheets/evaluations/send-email', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ evaluation_id: evalId }),
+            });
+          } catch {
+            console.warn('Failed to send immediate email');
+          }
+          setSendingEmail(false);
+        }
+
+        // Only reset and advance for complete saves
+        if (saveStatus === 'complete') {
+          resetForm();
+        }
+
+        // Check if all students done (only for complete saves)
+        if (saveStatus === 'complete' && studentQueue) {
+          const updatedQueue = studentQueue.map(s =>
+            s.id === studentId ? { ...s, evaluated: true, evaluationId: evalId } : s
+          );
+          const allDone = updatedQueue.every(s => s.evaluated);
+          if (allDone) {
+            setShowCompletionScreen(true);
+          }
+        }
       } else {
         showToast(data.error || 'Failed to save evaluation', 'error');
       }
@@ -256,11 +332,106 @@ export default function SkillSheetPanel({
     setSaving(false);
   };
 
+  const handlePrint = (evaluationId?: string) => {
+    if (evaluationId) {
+      window.open(`/api/skill-sheets/evaluations/print?evaluation_id=${evaluationId}`, '_blank');
+    } else if (labDayId) {
+      window.open(`/api/skill-sheets/evaluations/batch-print?lab_day_id=${labDayId}`, '_blank');
+    }
+  };
+
+  const handleBatchEmail = async () => {
+    if (!labDayId) return;
+    setBatchEmailProgress({ sent: 0, total: 0 });
+    try {
+      const res = await fetch('/api/skill-sheets/evaluations/send-batch-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lab_day_id: labDayId }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setBatchEmailProgress({ sent: data.sent, total: data.sent + data.skipped + data.errors });
+        showToast(
+          `${data.sent} email${data.sent !== 1 ? 's' : ''} sent${data.doNotSendCount ? `, ${data.doNotSendCount} excluded` : ''}`,
+          'success'
+        );
+      } else {
+        showToast(data.error || 'Failed to send emails', 'error');
+        setBatchEmailProgress(null);
+      }
+    } catch {
+      showToast('Failed to send batch emails', 'error');
+      setBatchEmailProgress(null);
+    }
+  };
+
   // ─── Render ─────────────────────────────────────────────────────────────
 
   const stepsByPhase = sheet ? groupStepsByPhase(sheet.steps) : {};
   const orderedPhases = sheet ? getOrderedPhases(stepsByPhase) : [];
   const sourceBadge = sheet ? (SOURCE_BADGE[sheet.source] || SOURCE_BADGE.publisher) : null;
+
+  // Completion screen
+  if (showCompletionScreen) {
+    const completedCount = studentQueue?.filter(s => s.evaluated).length || 0;
+    const totalCount = studentQueue?.length || 0;
+
+    return (
+      <>
+        <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
+        <div className="fixed inset-y-0 right-0 z-50 w-full sm:w-[60%] md:w-[55%] lg:w-[50%] max-w-3xl bg-white dark:bg-gray-900 shadow-2xl flex flex-col animate-slide-in-right">
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+            <PartyPopper className="w-16 h-16 text-green-500 mb-4" />
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+              All students evaluated for this station!
+            </h2>
+            <div className="flex items-center gap-2 text-green-600 dark:text-green-400 mb-6">
+              <CheckCircle className="w-5 h-5" />
+              <span className="font-semibold">{completedCount}/{totalCount} students completed</span>
+            </div>
+
+            <div className="w-full max-w-sm space-y-3">
+              <button
+                onClick={() => handlePrint()}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+              >
+                <Printer className="w-5 h-5" />
+                Print All Score Sheets
+              </button>
+
+              <button
+                onClick={handleBatchEmail}
+                disabled={batchEmailProgress !== null}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium disabled:opacity-50"
+              >
+                <Mail className="w-5 h-5" />
+                {batchEmailProgress
+                  ? `${batchEmailProgress.sent} emails sent`
+                  : 'Email Results to Students'}
+              </button>
+
+              <button
+                onClick={onClose}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 font-medium"
+              >
+                Back to Lab Day
+              </button>
+            </div>
+          </div>
+        </div>
+        <style jsx global>{`
+          @keyframes slide-in-right {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+          }
+          .animate-slide-in-right {
+            animation: slide-in-right 0.25s ease-out;
+          }
+        `}</style>
+      </>
+    );
+  }
 
   return (
     <>
@@ -300,14 +471,66 @@ export default function SkillSheetPanel({
               </div>
             )}
           </div>
+
+          {/* Post-save actions */}
+          {lastSavedEvalId && (
+            <button
+              onClick={() => handlePrint(lastSavedEvalId)}
+              className="mr-2 p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              title="Print last evaluation"
+            >
+              <Printer className="w-4 h-4" />
+            </button>
+          )}
+
           <button
             onClick={onClose}
-            className="ml-3 p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
+            className="ml-1 p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
             title="Close (Esc)"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        {/* Just-saved transition banner */}
+        {justSavedStudentName && studentName && justSavedStudentName !== studentName && (
+          <div className="px-4 py-2 bg-green-50 dark:bg-green-900/20 border-b border-green-200 dark:border-green-800 flex-shrink-0">
+            <p className="text-xs text-green-800 dark:text-green-300 flex items-center gap-1">
+              <CheckCircle className="w-3.5 h-3.5" />
+              Completed: {justSavedStudentName}
+              <ArrowRight className="w-3 h-3 mx-1" />
+              Now grading: <strong>{studentName}</strong>
+            </p>
+          </div>
+        )}
+
+        {/* Student queue progress */}
+        {studentQueue && studentQueue.length > 1 && (mode === 'formative' || mode === 'final') && (
+          <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex-shrink-0">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                {studentQueue.filter(s => s.evaluated).length}/{studentQueue.length} students evaluated
+              </span>
+              <div className="flex gap-1">
+                {studentQueue.map((s) => (
+                  <div
+                    key={s.id}
+                    className={`w-2.5 h-2.5 rounded-full ${
+                      s.evaluated
+                        ? 'bg-green-500'
+                        : s.inProgress
+                        ? 'bg-amber-500'
+                        : s.id === studentId
+                        ? 'bg-blue-500'
+                        : 'bg-gray-300 dark:bg-gray-600'
+                    }`}
+                    title={`${s.name}${s.evaluated ? ' ✓' : s.inProgress ? ' ⏳' : ''}`}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Mode Toggle */}
         {sheet && (
@@ -514,14 +737,49 @@ export default function SkillSheetPanel({
                       <RotateCcw className="w-3.5 h-3.5" />
                       Reset
                     </button>
+                  </div>
+
+                  {/* Formative Save Options — four buttons */}
+                  <div className="mt-3 space-y-2">
                     <button
-                      onClick={handleSave}
+                      onClick={() => handleSave('pending', 'in_progress')}
                       disabled={saving || !studentId}
-                      className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-medium"
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2 border-2 border-amber-400 dark:border-amber-600 text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/40 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
                     >
-                      {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                      Save Formative
+                      <Save className="w-4 h-4" />
+                      Finish Later
                     </button>
+                    <button
+                      onClick={() => handleSave('queued')}
+                      disabled={saving || !studentId}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                    >
+                      {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Clock className="w-4 h-4" />}
+                      Save — Send Later
+                    </button>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => handleSave('sent')}
+                        disabled={saving || sendingEmail || !studentId}
+                        className="flex items-center justify-center gap-1.5 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-medium"
+                      >
+                        {sendingEmail ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                        Save — Send Now
+                      </button>
+                      <button
+                        onClick={() => handleSave('do_not_send')}
+                        disabled={saving || !studentId}
+                        className="flex items-center justify-center gap-1.5 px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-medium"
+                      >
+                        <Ban className="w-3.5 h-3.5" />
+                        Do Not Send
+                      </button>
+                    </div>
+                    {studentName && (
+                      <p className="text-[10px] text-gray-400 text-center">
+                        Saving for: {studentName}
+                      </p>
+                    )}
                   </div>
                 </div>
               )}
@@ -571,18 +829,19 @@ export default function SkillSheetPanel({
                     />
                   </div>
 
-                  <div className="flex items-center justify-between">
+                  <div className="space-y-2">
                     <button
-                      onClick={resetForm}
-                      className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 text-xs"
+                      onClick={() => handleSave('pending', 'in_progress')}
+                      disabled={saving || !studentId}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2 border-2 border-amber-400 dark:border-amber-600 text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/40 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
                     >
-                      <RotateCcw className="w-3.5 h-3.5" />
-                      Reset
+                      <Save className="w-4 h-4" />
+                      Finish Later
                     </button>
                     <button
-                      onClick={handleSave}
+                      onClick={() => handleSave('do_not_send')}
                       disabled={saving || !studentId}
-                      className={`flex items-center gap-1.5 px-4 py-1.5 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed text-xs font-medium ${
+                      className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium ${
                         result === 'fail'
                           ? 'bg-red-600 hover:bg-red-700'
                           : result === 'remediation'
@@ -590,8 +849,21 @@ export default function SkillSheetPanel({
                           : 'bg-green-600 hover:bg-green-700'
                       }`}
                     >
-                      {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ClipboardCheck className="w-3.5 h-3.5" />}
-                      Submit Competency
+                      {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Shield className="w-4 h-4" />}
+                      Submit Competency{studentName ? ` — ${studentName}` : ''}
+                    </button>
+                    <p className="text-[10px] text-gray-400 text-center">
+                      Final evaluations are not emailed to students
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-start">
+                    <button
+                      onClick={resetForm}
+                      className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 text-xs"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      Reset
                     </button>
                   </div>
                 </div>

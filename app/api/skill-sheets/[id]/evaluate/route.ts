@@ -40,6 +40,9 @@ export async function POST(
       notes,
       flagged_items,
       station_id,
+      email_status,
+      step_marks,
+      status: evalStatus,
     } = body;
 
     // -----------------------------------------------
@@ -60,16 +63,19 @@ export async function POST(
       );
     }
 
+    // For in_progress saves, result defaults to 'pass' (provisional)
+    const isInProgress = evalStatus === 'in_progress';
+
     const validResults = ['pass', 'fail', 'remediation'];
-    if (!result || !validResults.includes(result)) {
+    if (!isInProgress && (!result || !validResults.includes(result))) {
       return NextResponse.json(
         { success: false, error: 'result must be "pass", "fail", or "remediation"' },
         { status: 400 }
       );
     }
 
-    // If final_competency and not a pass, notes (remediation plan) is required
-    if (evaluation_type === 'final_competency' && result !== 'pass' && !notes) {
+    // If final_competency and not a pass, notes (remediation plan) is required (skip for in_progress)
+    if (!isInProgress && evaluation_type === 'final_competency' && result !== 'pass' && !notes) {
       return NextResponse.json(
         { success: false, error: 'notes (remediation plan) are required when final_competency result is not "pass"' },
         { status: 400 }
@@ -101,6 +107,17 @@ export async function POST(
       throw sheetError;
     }
 
+    // Determine email_status: final_competency always do_not_send, in_progress always pending
+    const resolvedEmailStatus = isInProgress
+      ? 'pending'
+      : evaluation_type === 'final_competency'
+        ? 'do_not_send'
+        : (email_status && ['pending', 'sent', 'do_not_send', 'queued'].includes(email_status))
+          ? email_status
+          : 'pending';
+
+    const resolvedResult = isInProgress ? (result || 'pass') : result;
+
     // Create the evaluation record
     const { data: evaluation, error: evalError } = await supabase
       .from('student_skill_evaluations')
@@ -109,10 +126,13 @@ export async function POST(
         student_id,
         lab_day_id: lab_day_id || null,
         evaluation_type,
-        result,
+        result: resolvedResult,
         evaluator_id: currentUser.id,
         notes: notes || null,
         flagged_items: flagged_items || null,
+        email_status: resolvedEmailStatus,
+        step_marks: step_marks || null,
+        status: isInProgress ? 'in_progress' : 'complete',
       })
       .select('*')
       .single();

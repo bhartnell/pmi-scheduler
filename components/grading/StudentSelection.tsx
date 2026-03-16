@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Users, Star } from 'lucide-react';
+import { Users, Star, CheckCircle, Clock } from 'lucide-react';
 import StudentPicker from '@/components/StudentPicker';
 import type { Student, LabGroup, Station } from './types';
 
@@ -19,6 +19,10 @@ interface StudentSelectionProps {
   onSetTeamLeaderId: (id: string) => void;
   onSetRotationNumber: (num: number) => void;
   triggerAutoSave: () => void;
+  /** Map of student ID -> evaluation ID for completed evaluations */
+  evaluatedStudents?: Record<string, string>;
+  /** Map of student ID -> evaluation ID for in-progress evaluations */
+  inProgressStudents?: Record<string, string>;
 }
 
 export default function StudentSelection({
@@ -35,17 +39,39 @@ export default function StudentSelection({
   onSetTeamLeaderId,
   onSetRotationNumber,
   triggerAutoSave,
+  evaluatedStudents = {},
+  inProgressStudents = {},
 }: StudentSelectionProps) {
   const selectedGroup = labGroups.find(g => g.id === selectedGroupId);
+  const completedCount = Object.keys(evaluatedStudents).length;
+  const inProgressCount = Object.keys(inProgressStudents).length;
 
   if (isSkillsStation) {
     return (
-      /* Skills Station: Simple student dropdown */
+      /* Skills Station: Simple student dropdown + status list */
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 space-y-4">
-        <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-          <Users className="w-5 h-5 text-green-600 dark:text-green-400" />
-          Select Student
-        </h2>
+        <div className="flex items-center justify-between">
+          <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+            <Users className="w-5 h-5 text-green-600 dark:text-green-400" />
+            Select Student
+          </h2>
+          {(completedCount > 0 || inProgressCount > 0) && (
+            <div className="flex items-center gap-2">
+              {inProgressCount > 0 && (
+                <span className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5" />
+                  {inProgressCount} in progress
+                </span>
+              )}
+              {completedCount > 0 && (
+                <span className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+                  <CheckCircle className="w-3.5 h-3.5" />
+                  {completedCount}/{allStudents.length}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Student Selection with Photos */}
         <div>
@@ -68,6 +94,49 @@ export default function StudentSelection({
             />
           )}
         </div>
+
+        {/* Student status list — only show when we have tracking data */}
+        {(completedCount > 0 || inProgressCount > 0) && (
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
+            <div className="space-y-1">
+              {allStudents.map(student => {
+                const isEvaluated = !!evaluatedStudents[student.id];
+                const isInProgress = !!inProgressStudents[student.id] && !isEvaluated;
+                const isSelected = student.id === selectedStudentId;
+
+                return (
+                  <button
+                    key={student.id}
+                    onClick={() => {
+                      onSetSelectedStudentId(student.id);
+                      triggerAutoSave();
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-1.5 rounded text-left text-sm ${
+                      isSelected
+                        ? 'bg-blue-50 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-700'
+                        : 'hover:bg-gray-50 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    <span className={`${isEvaluated ? 'text-gray-400 line-through' : 'text-gray-900 dark:text-white'}`}>
+                      {student.first_name} {student.last_name}
+                    </span>
+                    {isEvaluated ? (
+                      <span className="text-green-500 flex items-center gap-1 text-xs">
+                        <CheckCircle className="w-3.5 h-3.5" /> completed
+                      </span>
+                    ) : isInProgress ? (
+                      <span className="text-amber-500 flex items-center gap-1 text-xs">
+                        <Clock className="w-3.5 h-3.5" /> in progress
+                      </span>
+                    ) : (
+                      <span className="w-3 h-3 rounded-full border-2 border-gray-300 dark:border-gray-600" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Rotation Number (optional for skills) */}
         <div>

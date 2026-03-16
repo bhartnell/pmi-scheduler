@@ -75,6 +75,10 @@ export default function GradeStationPage() {
   // Skill sheet panel state
   const [panelSheetId, setPanelSheetId] = useState<string | null>(null);
 
+  // Evaluation tracking for auto-advance
+  const [evaluatedStudents, setEvaluatedStudents] = useState<Record<string, string>>({});
+  const [inProgressStudents, setInProgressStudents] = useState<Record<string, string>>({});
+
   // Computed values
   const selectedGroup = labGroups.find(g => g.id === selectedGroupId);
   const satisfactoryCount = criteriaRatings.filter(r => r.rating === 'S').length;
@@ -84,12 +88,19 @@ export default function GradeStationPage() {
   const totalCriteria = criteriaRatings.length;
 
   // Pass calculation - different for skills vs scenario
-  // Skills: Pass (4/4), Needs Practice (3/4), Fail (<3/4)
-  // Scenario: Phase 1 (6/8), Phase 2 (7/8)
   const skillsPass = satisfactoryCount === 4;
   const skillsNeedsPractice = satisfactoryCount >= 3 && satisfactoryCount < 4;
   const phase1Pass = isSkillsStation ? skillsPass : satisfactoryCount >= 6;
   const phase2Pass = isSkillsStation ? skillsPass : satisfactoryCount >= 7;
+
+  // Build student queue for the skill sheet panel
+  const studentQueue = allStudents.map(s => ({
+    id: s.id,
+    name: `${s.first_name} ${s.last_name}`,
+    evaluated: !!evaluatedStudents[s.id],
+    evaluationId: evaluatedStudents[s.id] || inProgressStudents[s.id] || undefined,
+    inProgress: !!inProgressStudents[s.id] && !evaluatedStudents[s.id],
+  }));
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -152,12 +163,8 @@ export default function GradeStationPage() {
           allSkillNames.push(cs.name);
         }
       }
-      // Also look up the station's main skill name
-      // custom_title may include cohort/date prefix like "EMT4 03/04/26 - Skill Name"
-      // Strip the prefix to get just the skill name for lookup
       let mainSkillName = station.skill_name || station.custom_title;
       if (mainSkillName) {
-        // Strip "COHORT MM/DD/YY - " prefix pattern
         const prefixMatch = mainSkillName.match(/^[A-Za-z0-9]+\s+\d{1,2}\/\d{1,2}\/\d{2,4}\s*[-–]\s*(.+)$/);
         if (prefixMatch) {
           mainSkillName = prefixMatch[1].trim();
@@ -196,7 +203,6 @@ export default function GradeStationPage() {
         setSkillSheetIds(data.results);
       }
     } catch {
-      // Fallback to individual lookups if bulk endpoint not available
       const results: Record<string, string> = {};
       await Promise.all(
         skillNames.map(async (skillName) => {
@@ -215,7 +221,6 @@ export default function GradeStationPage() {
 
   const fetchLabGroups = async (cohortId: string) => {
     try {
-      // Fetch groups with members included in a single request
       const res = await fetch(`/api/lab-management/groups?cohortId=${cohortId}&include=members`);
       const data = await res.json();
       if (data.success && data.groups) {
@@ -260,7 +265,6 @@ export default function GradeStationPage() {
     setCriteriaRatings(prev =>
       prev.map(r => {
         if (r.criteria_id === criteriaId) {
-          // Toggle behavior: clicking selected rating deselects it
           return { ...r, rating: r.rating === rating ? null : rating };
         }
         return r;
@@ -276,17 +280,45 @@ export default function GradeStationPage() {
     triggerAutoSave();
   };
 
-  const handleSave = async () => {
+  // Handle evaluation saved from SkillSheetPanel — auto-advance to next student
+  const handleEvaluationSaved = useCallback((savedStudentId: string, evaluationId: string, evalStatus: 'complete' | 'in_progress') => {
+    if (evalStatus === 'in_progress') {
+      // Track as in-progress, don't advance
+      setInProgressStudents(prev => ({ ...prev, [savedStudentId]: evaluationId }));
+      return;
+    }
+
+    // Mark as completed
+    setEvaluatedStudents(prev => ({ ...prev, [savedStudentId]: evaluationId }));
+    // Remove from in-progress if it was there
+    setInProgressStudents(prev => {
+      const next = { ...prev };
+      delete next[savedStudentId];
+      return next;
+    });
+
+    // Auto-advance to next unevaluated, unstarted student (skip in-progress)
+    const updatedEvaluated = { ...evaluatedStudents, [savedStudentId]: evaluationId };
+    const nextStudent = allStudents.find(s =>
+      !updatedEvaluated[s.id] && !inProgressStudents[s.id] && s.id !== savedStudentId
+    );
+    if (nextStudent) {
+      setTimeout(() => {
+        setSelectedStudentId(nextStudent.id);
+      }, 500);
+    }
+  }, [allStudents, evaluatedStudents, inProgressStudents]);
+
+  const handleSave = async (emailPref: string = 'queued', saveAsStatus: string = 'complete') => {
+    const isInProgress = saveAsStatus === 'in_progress';
+
     // Validation - different for skills vs scenario stations
     if (isSkillsStation) {
-      // Skills station: just need a student selected
       if (!selectedStudentId) {
         alert('Please select a student');
         return;
       }
-      // Ratings are optional for skills stations
-    } else {
-      // Scenario station: need group, team lead, and all ratings
+    } else if (!isInProgress) {
       if (!selectedGroupId) {
         alert('Please select a lab group');
         return;
@@ -300,7 +332,6 @@ export default function GradeStationPage() {
         return;
       }
 
-      // Validation: Require notes for Needs Improvement or Unsatisfactory ratings
       const missingNotes = criteriaRatings.filter(r =>
         (r.rating === 'NI' || r.rating === 'U') && (!r.notes || r.notes.trim() === '')
       );
@@ -310,37 +341,35 @@ export default function GradeStationPage() {
         return;
       }
 
-      // Validation: If flagged for follow-up, require at least one category selected
       if (issueLevel === 'needs_followup' && flagCategories.length === 0) {
         alert('Please select at least one category when flagging for follow-up');
+        return;
+      }
+    } else {
+      // In-progress: only need group selected for scenarios
+      if (!selectedGroupId) {
+        alert('Please select a lab group');
         return;
       }
     }
 
     setSaving(true);
     try {
-      // Build payload with EXACT DB column names only
-      // Schema: id, lab_station_id, lab_day_id, cohort_id, rotation_number,
-      // team_lead_id, graded_by, criteria_ratings, overall_comments, overall_score,
-      // flagged_for_review, issue_level, flag_categories, created_at
       const payload = {
-        // Required fields
         lab_station_id: stationId,
         lab_day_id: station?.lab_day?.id,
         cohort_id: station?.lab_day?.cohort?.id,
         rotation_number: rotationNumber,
-        // Optional fields
         team_lead_id: isSkillsStation ? null : teamLeaderId,
         graded_by: session?.user?.email,
-        // JSONB criteria ratings
         criteria_ratings: criteriaRatings,
-        // Comments and score
         overall_comments: overallComments,
         overall_score: satisfactoryCount,
-        // Flagging fields
         issue_level: issueLevel,
         flag_categories: flagCategories.length > 0 ? flagCategories : null,
-        flagged_for_review: issueLevel === 'needs_followup'
+        flagged_for_review: issueLevel === 'needs_followup',
+        email_status: isInProgress ? 'pending' : emailPref,
+        status: saveAsStatus,
       };
 
       const res = await fetch('/api/lab-management/assessments/scenario', {
@@ -351,7 +380,6 @@ export default function GradeStationPage() {
 
       const data = await res.json();
       if (data.success) {
-        // Only log team lead for scenario stations
         if (!isSkillsStation && teamLeaderId) {
           await fetch('/api/lab-management/team-leads', {
             method: 'POST',
@@ -368,8 +396,24 @@ export default function GradeStationPage() {
         }
 
         setHasUnsavedChanges(false);
-        alert('Assessment saved successfully!');
-        router.push(`/lab-management/schedule/${station?.lab_day?.id}`);
+
+        // If Send Now, fire scenario email immediately
+        if (!isInProgress && emailPref === 'sent' && data.assessment?.id) {
+          try {
+            await fetch('/api/lab-management/assessments/scenario/send-email', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ assessment_id: data.assessment.id }),
+            });
+          } catch { /* non-critical */ }
+        }
+
+        if (isInProgress) {
+          alert('Progress saved — you can continue later');
+        } else {
+          alert('Assessment saved successfully!');
+          router.push(`/lab-management/schedule/${station?.lab_day?.id}`);
+        }
       } else {
         alert('Failed to save: ' + (data.error || 'Unknown error'));
       }
@@ -380,9 +424,8 @@ export default function GradeStationPage() {
     setSaving(false);
   };
 
-  // Auto-save function (no validation, silent save)
+  // Auto-save function
   const autoSave = useCallback(async () => {
-    // Skip auto-save if no meaningful data yet
     if (isSkillsStation && !selectedStudentId) return;
     if (!isSkillsStation && !selectedGroupId) return;
 
@@ -402,7 +445,9 @@ export default function GradeStationPage() {
         overall_score: satisfactoryCount,
         issue_level: issueLevel,
         flag_categories: flagCategories.length > 0 ? flagCategories : null,
-        flagged_for_review: issueLevel === 'needs_followup'
+        flagged_for_review: issueLevel === 'needs_followup',
+        email_status: 'pending',
+        status: 'in_progress',
       };
 
       const res = await fetch('/api/lab-management/assessments/scenario', {
@@ -413,25 +458,8 @@ export default function GradeStationPage() {
 
       const data = await res.json();
       if (data.success) {
-        // Only log team lead for scenario stations
-        if (!isSkillsStation && teamLeaderId) {
-          await fetch('/api/lab-management/team-leads', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              student_id: teamLeaderId,
-              lab_station_id: stationId,
-              scenario_type: station?.scenario?.category || 'General',
-              date: station?.lab_day?.date,
-              performance_score: satisfactoryCount,
-              notes: `Rotation ${rotationNumber}: ${satisfactoryCount}/8 S ratings`
-            })
-          });
-        }
-
         setSaveStatus('saved');
 
-        // Clear "saved" indicator after 3 seconds
         if (savedIndicatorTimerRef.current) {
           clearTimeout(savedIndicatorTimerRef.current);
         }
@@ -465,12 +493,10 @@ export default function GradeStationPage() {
   const triggerAutoSave = useCallback(() => {
     setHasUnsavedChanges(true);
 
-    // Clear existing timer
     if (autoSaveTimerRef.current) {
       clearTimeout(autoSaveTimerRef.current);
     }
 
-    // Set new 2-second debounce timer
     autoSaveTimerRef.current = setTimeout(() => {
       autoSave();
     }, 2000);
@@ -524,9 +550,13 @@ export default function GradeStationPage() {
 
   const scenario = station.scenario;
 
+  // Get selected student name
+  const selectedStudent = allStudents.find(s => s.id === selectedStudentId);
+  const selectedStudentName = selectedStudent ? `${selectedStudent.first_name} ${selectedStudent.last_name}` : undefined;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-      {/* Timer Banner - shows synchronized timer for all instructors */}
+      {/* Timer Banner */}
       {station?.lab_day?.id && (
         <TimerBanner
           labDayId={station.lab_day.id}
@@ -575,6 +605,8 @@ export default function GradeStationPage() {
           onSetTeamLeaderId={setTeamLeaderId}
           onSetRotationNumber={setRotationNumber}
           triggerAutoSave={triggerAutoSave}
+          evaluatedStudents={evaluatedStudents}
+          inProgressStudents={inProgressStudents}
         />
 
         {/* Critical Actions */}
@@ -677,29 +709,59 @@ export default function GradeStationPage() {
           </div>
         )}
 
-        {/* Save Button (Bottom) */}
-        <div className="sticky bottom-4">
+        {/* Save Buttons (Bottom) */}
+        <div className="sticky bottom-4 space-y-2">
+          {/* Finish Later */}
           <button
-            onClick={handleSave}
+            onClick={() => handleSave('pending', 'in_progress')}
+            disabled={saving || (isSkillsStation ? !selectedStudentId : !selectedGroupId)}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-amber-400 dark:border-amber-600 text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/40 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg font-medium"
+          >
+            <Save className="w-5 h-5" />
+            Finish Later
+          </button>
+
+          {/* Primary save: Send Later */}
+          <button
+            onClick={() => handleSave('queued')}
             disabled={saving || (isSkillsStation ? !selectedStudentId : (!allRated || !selectedGroupId || !teamLeaderId))}
-            className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed shadow-lg"
+            className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed shadow-lg font-medium"
           >
             {saving ? (
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
             ) : (
               <Save className="w-5 h-5" />
             )}
-            {saving ? 'Saving Assessment...' : 'Save Assessment'}
+            {saving ? 'Saving...' : `Save — Send Later${selectedStudentName ? ` (${selectedStudentName})` : ''}`}
           </button>
+
+          {/* Secondary options */}
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => handleSave('sent')}
+              disabled={saving || (isSkillsStation ? !selectedStudentId : (!allRated || !selectedGroupId || !teamLeaderId))}
+              className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium shadow"
+            >
+              Save — Send Now
+            </button>
+            <button
+              onClick={() => handleSave('do_not_send')}
+              disabled={saving || (isSkillsStation ? !selectedStudentId : (!allRated || !selectedGroupId || !teamLeaderId))}
+              className="flex items-center justify-center gap-1.5 px-3 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium shadow bg-white dark:bg-gray-800"
+            >
+              Do Not Send
+            </button>
+          </div>
+
           {isSkillsStation ? (
             !selectedStudentId && (
-              <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-2">
+              <p className="text-center text-sm text-gray-500 dark:text-gray-400">
                 Select a student to save
               </p>
             )
           ) : (
             (!selectedGroupId || !teamLeaderId || !allRated) && (
-              <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-2">
+              <p className="text-center text-sm text-gray-500 dark:text-gray-400">
                 {!selectedGroupId ? 'Select a lab group' :
                  !teamLeaderId ? 'Select a team leader' :
                  `Rate all ${totalCriteria} criteria to save`}
@@ -715,15 +777,11 @@ export default function GradeStationPage() {
           sheetId={panelSheetId}
           onClose={() => setPanelSheetId(null)}
           studentId={selectedStudentId || undefined}
-          studentName={
-            selectedStudentId
-              ? (() => {
-                  const s = allStudents.find(s => s.id === selectedStudentId);
-                  return s ? `${s.first_name} ${s.last_name}` : undefined;
-                })()
-              : undefined
-          }
+          studentName={selectedStudentName}
           labDayId={station?.lab_day?.id}
+          stationPoolId={stationId}
+          studentQueue={isSkillsStation ? studentQueue : undefined}
+          onEvaluationSaved={handleEvaluationSaved}
         />
       )}
     </div>
