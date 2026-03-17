@@ -57,13 +57,31 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabaseAdmin();
 
+    // If no explicit color provided, look up the cohort's program to assign the right default
+    let resolvedColor = color;
+    if (!resolvedColor) {
+      const { data: cohortData } = await supabase
+        .from('cohorts')
+        .select('program:programs(abbreviation)')
+        .eq('id', cohort_id)
+        .single();
+      const abbr = ((cohortData?.program as { abbreviation?: string } | null)?.abbreviation || '').toLowerCase();
+      const PROGRAM_COLORS: Record<string, string> = {
+        emt: '#22C55E',
+        aemt: '#EAB308',
+        paramedic: '#3B82F6',
+        pm: '#3B82F6',
+      };
+      resolvedColor = PROGRAM_COLORS[abbr] || '#3B82F6';
+    }
+
     const { data, error } = await supabase
       .from('pmi_program_schedules')
       .insert({
         semester_id,
         cohort_id,
         class_days,
-        color: color ?? '#3B82F6',
+        color: resolvedColor,
         label: label ?? null,
         notes: notes ?? null,
       })

@@ -77,10 +77,17 @@ const SEMESTER_HINTS: Record<string, Record<string, string[]>> = {
 };
 
 const PROGRAM_TYPES = [
-  { value: 'paramedic', label: 'Paramedic', color: '#3B82F6' },
-  { value: 'emt', label: 'EMT', color: '#22C55E' },
-  { value: 'aemt', label: 'AEMT', color: '#EAB308' },
+  { value: 'paramedic', label: 'Paramedic', color: '#3B82F6', hint: '2 days/wk · Thu/Fri typical' },
+  { value: 'emt', label: 'EMT', color: '#22C55E', hint: '4 days/wk · Mon-Thu 9AM-12PM' },
+  { value: 'aemt', label: 'AEMT', color: '#EAB308', hint: '2 days/wk · Mon/Tue 8:30-5' },
 ];
+
+// Default day mappings for each program type — saves clicks in the wizard
+const DEFAULT_DAY_MAPPINGS: Record<string, Record<number, number>> = {
+  emt: { 1: 1, 2: 2, 3: 3, 4: 4 },       // Mon-Thu
+  aemt: { 1: 1, 2: 2 },                     // Mon/Tue
+  paramedic: { 1: 4, 2: 5 },                // Thu/Fri
+};
 
 // ─── Date Helpers ─────────────────────────────────────────────────────────────
 
@@ -1216,7 +1223,7 @@ function GenerateWizard({
     semesterNumber: null,
     programScheduleId: '',
     cohortId: '',
-    dayMapping: {},
+    dayMapping: initialProgramType ? (DEFAULT_DAY_MAPPINGS[initialProgramType] || {}) : {},
     instructorId: '',
     clearExisting: false,
     startDate: '',
@@ -1474,7 +1481,12 @@ function GenerateWizard({
                 {PROGRAM_TYPES.map(pt => (
                   <button
                     key={pt.value}
-                    onClick={() => setWizard(prev => ({ ...prev, programType: pt.value, semesterNumber: null }))}
+                    onClick={() => setWizard(prev => ({
+                      ...prev,
+                      programType: pt.value,
+                      semesterNumber: null,
+                      dayMapping: DEFAULT_DAY_MAPPINGS[pt.value] || {},
+                    }))}
                     className={`p-4 rounded-lg border-2 text-center transition-all ${
                       wizard.programType === pt.value
                         ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
@@ -1483,6 +1495,9 @@ function GenerateWizard({
                   >
                     <div className="w-8 h-8 rounded-full mx-auto mb-2" style={{ backgroundColor: pt.color }} />
                     <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{pt.label}</div>
+                    {pt.hint && (
+                      <div className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">{pt.hint}</div>
+                    )}
                   </button>
                 ))}
               </div>
