@@ -146,12 +146,12 @@ async function getWeekDetail(semesterId: string, instructorId: string, weekNumbe
     const b = ib.block as any;
     if (!b) continue;
 
-    // Check if this block is in the right week
+    // Derive week from date (don't trust stored week_number — it can be wrong)
     let blockWeek: number | null = null;
-    if (b.week_number) {
-      blockWeek = b.week_number;
-    } else if (b.date) {
+    if (b.date) {
       blockWeek = calcWeekNum(b.date, semStart);
+    } else if (b.week_number) {
+      blockWeek = b.week_number; // fallback only if no date
     }
     if (blockWeek !== weekNumber) continue;
 
@@ -302,12 +302,12 @@ export async function POST(request: NextRequest) {
       const ps = block.program_schedule as any;
       const programName: string = ps?.cohort?.program?.name || block.title || block.course_name || 'Unlinked';
 
-      // Determine which week this block belongs to
+      // Derive week from date (don't trust stored week_number — it can be wrong)
       let weekNum: number | null = null;
-      if (block.week_number) {
-        weekNum = block.week_number;
-      } else if (block.date) {
+      if (block.date) {
         weekNum = calcWeekNum(block.date, start);
+      } else if (block.week_number) {
+        weekNum = block.week_number; // fallback only if no date
       }
       // Skip blocks with no week info
       if (weekNum === null || weekNum < 1 || weekNum > totalWeeks) continue;
