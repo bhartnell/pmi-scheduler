@@ -72,7 +72,13 @@ interface InstructorAvailability {
   instructor_id: string;
   instructor_name: string;
   instructor_email: string;
-  block_type: string;
+  am1: boolean;
+  mid: boolean;
+  pm1: boolean;
+  pm2: boolean;
+  status: string;
+  label: string;
+  notes: string;
 }
 
 interface TemplateInfo {
@@ -443,11 +449,13 @@ function BlockBar({
       style={{ borderLeftColor: hasViolation ? undefined : (block.color || '#9CA3AF') }}
       draggable={!isReadOnly}
       onDragStart={(e) => {
+        console.log('[BlockBar DragStart]', block.name, placement.id, 'day', placement.day_number);
         e.dataTransfer.setData('application/json', JSON.stringify({
           type: 'placement',
           placement: placement,
         }));
-        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', placement.id);
+        e.dataTransfer.effectAllowed = 'copyMove';
         (e.target as HTMLElement).style.opacity = '0.4';
       }}
       onDragEnd={(e) => {
@@ -587,6 +595,7 @@ function DayCard({
   onRemovePlacement,
   onAssignInstructor,
   availableInstructors,
+  dayAvailability,
 }: {
   dayNumber: number;
   date: string;
@@ -601,6 +610,7 @@ function DayCard({
   onRemovePlacement: (id: string) => void;
   onAssignInstructor: (placementId: string, instructorId: string | null, instructorName: string | null) => void;
   availableInstructors: { id: string; name: string; email: string }[];
+  dayAvailability: InstructorAvailability[];
 }) {
   const dayInWeek = (dayNumber - 1) % 3;
   const totalMinutes = getTotalMinutes(placements);
@@ -635,6 +645,44 @@ function DayCard({
           </span>
         </div>
         <CapacityBar used={totalMinutes} total={AVAILABLE_MINUTES} />
+        {/* Instructor availability chips */}
+        {dayAvailability.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-1.5">
+            {dayAvailability.map((a) => {
+              const trueCount = [a.am1, a.mid, a.pm1, a.pm2].filter(Boolean).length;
+              const bg = trueCount === 4
+                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                : trueCount === 0
+                  ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                  : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
+              return (
+                <div key={a.instructor_id} className="relative group/avail">
+                  <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-medium ${bg}`}>
+                    {getInitials(a.instructor_name)}
+                    {trueCount < 4 && trueCount > 0 ? ` ${trueCount}/4` : ''}
+                  </span>
+                  <div className="absolute bottom-full left-0 mb-1 hidden group-hover/avail:block z-50">
+                    <div className="bg-gray-900 text-white text-[10px] rounded px-2 py-1 whitespace-nowrap shadow-lg">
+                      <div className="font-medium">{a.instructor_name}</div>
+                      <div>{a.label}</div>
+                      {a.notes && <div className="text-gray-300">{a.notes}</div>}
+                      <div className="flex gap-1 mt-0.5">
+                        {(['AM1', 'MID', 'PM1', 'PM2'] as const).map((lbl, i) => {
+                          const vals = [a.am1, a.mid, a.pm1, a.pm2];
+                          return (
+                            <span key={lbl} className={`px-1 rounded text-[8px] ${vals[i] ? 'bg-green-600' : 'bg-red-600'}`}>
+                              {lbl}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Blocks list */}
@@ -786,11 +834,15 @@ function ContentLibrarySidebar({
                           e.preventDefault();
                           return;
                         }
-                        e.dataTransfer.setData('application/json', JSON.stringify({
+                        console.log('[Sidebar DragStart]', block.name, block.id);
+                        const payload = JSON.stringify({
                           type: 'library',
                           block: block,
-                        }));
-                        e.dataTransfer.effectAllowed = 'copy';
+                        });
+                        e.dataTransfer.setData('application/json', payload);
+                        // Also set a plain-text fallback so dataTransfer.types is never empty
+                        e.dataTransfer.setData('text/plain', block.id);
+                        e.dataTransfer.effectAllowed = 'copyMove';
                         (e.target as HTMLElement).style.opacity = '0.4';
                       }}
                       onDragEnd={(e) => {
@@ -1226,6 +1278,14 @@ export default function CoursePlannerPage() {
     ).values()
   );
 
+  // Build availability lookup by date for DayCard display
+  const availabilityByDate = new Map<string, InstructorAvailability[]>();
+  for (const a of availability) {
+    const dateStr = a.date.split('T')[0];
+    if (!availabilityByDate.has(dateStr)) availabilityByDate.set(dateStr, []);
+    availabilityByDate.get(dateStr)!.push(a);
+  }
+
   // ─── Actions ───────────────────────────────────────────────────────────────
 
   const switchInstance = useCallback((instanceId: string) => {
@@ -1235,16 +1295,22 @@ export default function CoursePlannerPage() {
 
   const handleDrop = useCallback(async (dayNumber: number, e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     dragCounters.current[dayNumber] = 0;
     setDropTargetDay(null);
 
     if (isReadOnly || !instance) return;
 
+    console.log('[DayCard Drop] day', dayNumber, 'types:', Array.from(e.dataTransfer.types));
+
     try {
-      const data = JSON.parse(e.dataTransfer.getData('application/json'));
+      const raw = e.dataTransfer.getData('application/json');
+      console.log('[DayCard Drop] raw data:', raw?.substring(0, 120));
+      const data = JSON.parse(raw);
 
       if (data.type === 'library') {
         // Add block from library to day
+        console.log('[DayCard Drop] Library block →', data.block?.name, '→ day', dayNumber);
         const block: ContentBlock = data.block;
         const dayPlacements = placementsByDay.get(dayNumber) || [];
         const startTime = getNextAvailableTime(dayPlacements);
@@ -1302,6 +1368,7 @@ export default function CoursePlannerPage() {
         }
       } else if (data.type === 'placement') {
         const sourcePlacement: Placement = data.placement;
+        console.log('[DayCard Drop] Move placement', sourcePlacement.content_block?.name, 'from day', sourcePlacement.day_number, '→ day', dayNumber);
         if (sourcePlacement.day_number === dayNumber) return;
 
         setSaving(true);
@@ -1356,8 +1423,8 @@ export default function CoursePlannerPage() {
           }
         }
       }
-    } catch {
-      // Invalid drag data, ignore
+    } catch (err) {
+      console.error('[DayCard Drop] Error parsing drag data:', err);
     } finally {
       setSaving(false);
     }
@@ -1517,12 +1584,17 @@ export default function CoursePlannerPage() {
 
   const makeDragEnter = useCallback((dayNumber: number) => (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     dragCounters.current[dayNumber] = (dragCounters.current[dayNumber] || 0) + 1;
+    if (dragCounters.current[dayNumber] === 1) {
+      console.log('[DayCard DragEnter] day', dayNumber);
+    }
     setDropTargetDay(dayNumber);
   }, []);
 
   const makeDragLeave = useCallback((dayNumber: number) => (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     dragCounters.current[dayNumber] = (dragCounters.current[dayNumber] || 0) - 1;
     if (dragCounters.current[dayNumber] <= 0) {
       dragCounters.current[dayNumber] = 0;
@@ -1532,7 +1604,8 @@ export default function CoursePlannerPage() {
 
   const makeDragOver = useCallback(() => (e: React.DragEvent) => {
     e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'copy';
   }, []);
 
   const makeHandleDrop = useCallback((dayNumber: number) => (e: React.DragEvent) => {
@@ -1711,6 +1784,7 @@ export default function CoursePlannerPage() {
                 onRemovePlacement={handleRemovePlacement}
                 onAssignInstructor={handleAssignInstructor}
                 availableInstructors={uniqueInstructors}
+                dayAvailability={availabilityByDate.get(date) || []}
               />
             );
           })}

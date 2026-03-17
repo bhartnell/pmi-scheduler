@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import {
-  ChevronLeft, Plus, X, Save, Trash2, Loader2, BookOpen, Clock, Pencil,
+  ChevronLeft, Plus, X, Save, Trash2, Loader2, BookOpen, Clock, Pencil, CalendarDays,
 } from 'lucide-react';
 import { safeArray } from '@/lib/safe-array';
 import { PmiCourseTemplate } from '@/types/semester-planner';
+import { activeWeeksLabel } from '@/lib/active-weeks';
 
 const PROGRAM_TYPES = [
   { value: 'paramedic', label: 'Paramedic', color: '#3B82F6' },
@@ -52,6 +53,7 @@ interface TemplateFormData {
   color: string;
   notes: string;
   sort_order: number;
+  active_weeks: string;
 }
 
 function emptyForm(programType: string, semesterNumber: number | null): TemplateFormData {
@@ -69,6 +71,7 @@ function emptyForm(programType: string, semesterNumber: number | null): Template
     color: '#3B82F6',
     notes: '',
     sort_order: 0,
+    active_weeks: 'all',
   };
 }
 
@@ -133,6 +136,7 @@ export default function TemplateEditorPage() {
       color: t.color || '#3B82F6',
       notes: t.notes || '',
       sort_order: t.sort_order || 0,
+      active_weeks: t.active_weeks || 'all',
     });
     setShowForm(true);
   };
@@ -330,6 +334,12 @@ export default function TemplateEditorPage() {
                                     {t.duration_type === 'first_half' ? 'Wks 1-8' : 'Wks 9-15'}
                                   </span>
                                 )}
+                                {t.active_weeks && t.active_weeks !== 'all' && (
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-amber-100 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 flex items-center gap-0.5">
+                                    <CalendarDays className="w-2.5 h-2.5" />
+                                    Wks {activeWeeksLabel(t.active_weeks)}
+                                  </span>
+                                )}
                               </div>
                               <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                                 <span className="flex items-center gap-1">
@@ -499,6 +509,40 @@ export default function TemplateEditorPage() {
                     ))}
                   </select>
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Weeks Active
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={formData.active_weeks}
+                    onChange={(e) => setField('active_weeks', e.target.value)}
+                    placeholder="all"
+                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
+                  />
+                  <div className="flex gap-1">
+                    {['all', '1-9', '10-15', '1-15'].map(preset => (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => setField('active_weeks', preset)}
+                        className={`px-2 py-1 text-xs rounded border transition-colors ${
+                          formData.active_weeks === preset
+                            ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+                            : 'border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        {preset === 'all' ? 'All' : `${preset}`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">
+                  Use &quot;all&quot; for every week, or specify ranges like &quot;1-9&quot; or &quot;1-8,10,12-15&quot;
+                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-3">

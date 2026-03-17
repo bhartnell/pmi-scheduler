@@ -33,6 +33,7 @@ export async function PUT(
     if (body.sort_order !== undefined) updates.sort_order = body.sort_order;
     if (body.program_type !== undefined) updates.program_type = body.program_type;
     if (body.semester_number !== undefined) updates.semester_number = body.semester_number;
+    if (body.active_weeks !== undefined) updates.active_weeks = body.active_weeks || 'all';
 
     const supabase = getSupabaseAdmin();
 

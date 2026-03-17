@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     const {
       program_type, semester_number, course_code, course_name,
       duration_type, day_index, start_time, end_time,
-      block_type, is_online, color, notes, sort_order,
+      block_type, is_online, color, notes, sort_order, active_weeks,
     } = body;
 
     if (!program_type || !course_code || !course_name || day_index === undefined || !start_time || !end_time) {
@@ -77,6 +77,7 @@ export async function POST(request: NextRequest) {
         color: color || null,
         notes: notes || null,
         sort_order: sort_order ?? 0,
+        active_weeks: active_weeks || 'all',
       })
       .select('*')
       .single();

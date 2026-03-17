@@ -134,6 +134,7 @@ export interface PmiCourseTemplate {
   color: string | null;
   notes: string | null;
   sort_order: number;
+  active_weeks: string;
   created_at: string;
 }
 

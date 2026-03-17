@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole } from '@/lib/permissions';
 import { randomUUID } from 'crypto';
+import { parseActiveWeeks } from '@/lib/active-weeks';
 
 // Helper: add days to a date
 function addDays(date: Date, days: number): Date {
@@ -153,6 +154,11 @@ export async function POST(request: NextRequest) {
         endWeek = 15;
       }
 
+      // Parse active_weeks to determine which specific weeks this template runs
+      // This allows mid-semester day reduction (e.g., AEMT Day 2 only weeks 1-9)
+      const activeWeeksSpec = t.active_weeks || 'all';
+      const activeWeeksList = parseActiveWeeks(activeWeeksSpec, endWeek);
+
       // Build title
       let title = `${t.course_code} ${t.course_name}`;
       if (t.duration_type === 'first_half') {
@@ -163,6 +169,8 @@ export async function POST(request: NextRequest) {
 
       // Generate one block per week
       for (let week = startWeek; week <= endWeek; week++) {
+        // Skip weeks not in the active weeks list
+        if (!activeWeeksList.includes(week)) continue;
         const blockDate = addDays(firstDate, (week - 1) * 7);
 
         blocksToInsert.push({
