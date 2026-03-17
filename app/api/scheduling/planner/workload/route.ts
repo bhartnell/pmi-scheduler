@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
     const { data: blocks } = await supabase
       .from('pmi_schedule_blocks')
       .select(`
-        id, start_time, end_time, day_of_week, title, course_name, date, is_recurring,
+        id, start_time, end_time, day_of_week, title, course_name, date, week_number,
         program_schedule:pmi_program_schedules!pmi_schedule_blocks_program_schedule_id_fkey(
           id,
           cohort:cohorts!pmi_program_schedules_cohort_id_fkey(
@@ -109,26 +109,28 @@ export async function POST(request: NextRequest) {
         if (!workloadMap.has(instrId)) workloadMap.set(instrId, new Map());
         const instrMap = workloadMap.get(instrId)!;
 
-        if (block.is_recurring || !block.date) {
-          // Recurring block applies to every week
-          for (let w = 1; w <= totalWeeks; w++) {
-            if (!instrMap.has(w)) instrMap.set(w, { hours: 0, blocks: 0, programs: new Set() });
-            const entry = instrMap.get(w)!;
-            entry.hours += hours;
-            entry.blocks += 1;
-            entry.programs.add(programName);
-          }
-        } else {
-          // Date-specific block — calculate which week it falls in
+        // Determine which week this block belongs to:
+        // 1. Use week_number if set (recurring blocks are expanded per-week with week_number)
+        // 2. Fall back to calculating from date
+        // 3. Skip blocks with neither (shouldn't happen but safety check)
+        let weekNum: number | null = null;
+
+        if (block.week_number) {
+          weekNum = block.week_number;
+        } else if (block.date) {
           const blockDate = new Date(block.date + 'T00:00:00');
-          const weekNum = Math.ceil((blockDate.getTime() - start.getTime()) / (7 * 24 * 60 * 60 * 1000));
-          if (weekNum >= 1 && weekNum <= totalWeeks) {
-            if (!instrMap.has(weekNum)) instrMap.set(weekNum, { hours: 0, blocks: 0, programs: new Set() });
-            const entry = instrMap.get(weekNum)!;
-            entry.hours += hours;
-            entry.blocks += 1;
-            entry.programs.add(programName);
-          }
+          weekNum = Math.ceil((blockDate.getTime() - start.getTime()) / (7 * 24 * 60 * 60 * 1000));
+        }
+        // Note: blocks without week_number AND without date are skipped.
+        // The old code treated these as "recurring across all weeks" which caused
+        // massive inflation (18x) since recurring blocks are already expanded per-week.
+
+        if (weekNum !== null && weekNum >= 1 && weekNum <= totalWeeks) {
+          if (!instrMap.has(weekNum)) instrMap.set(weekNum, { hours: 0, blocks: 0, programs: new Set() });
+          const entry = instrMap.get(weekNum)!;
+          entry.hours += hours;
+          entry.blocks += 1;
+          entry.programs.add(programName);
         }
       }
     }
