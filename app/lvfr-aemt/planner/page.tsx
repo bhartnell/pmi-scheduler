@@ -440,11 +440,13 @@ function BlockBar({
           e.preventDefault();
           return;
         }
+        console.log('[BlockBar DragStart]', block.name, placement.id, 'day', placement.day_number);
         e.dataTransfer.setData('application/json', JSON.stringify({
           type: 'placement',
           placement: placement,
         }));
-        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', placement.id);
+        e.dataTransfer.effectAllowed = 'copyMove';
         (e.target as HTMLElement).style.opacity = '0.4';
       }}
       onDragEnd={(e) => {
@@ -453,7 +455,7 @@ function BlockBar({
       onDragOver={(e) => {
         e.preventDefault();
         e.stopPropagation();
-        e.dataTransfer.dropEffect = 'move';
+        e.dataTransfer.dropEffect = 'copy';
         if (onBlockDragOver) onBlockDragOver(e, index);
       }}
       onDrop={(e) => {
@@ -803,11 +805,14 @@ function ContentLibrarySidebar({
                           e.preventDefault();
                           return;
                         }
-                        e.dataTransfer.setData('application/json', JSON.stringify({
+                        console.log('[Sidebar DragStart]', block.name, block.id);
+                        const payload = JSON.stringify({
                           type: 'library',
                           block: block,
-                        }));
-                        e.dataTransfer.effectAllowed = 'copy';
+                        });
+                        e.dataTransfer.setData('application/json', payload);
+                        e.dataTransfer.setData('text/plain', block.id);
+                        e.dataTransfer.effectAllowed = 'copyMove';
                         (e.target as HTMLElement).style.opacity = '0.4';
                       }}
                       onDragEnd={(e) => {
@@ -1252,16 +1257,22 @@ export default function CoursePlannerPage() {
 
   const handleDrop = useCallback(async (dayNumber: number, e: React.DragEvent, dropIndex?: number) => {
     e.preventDefault();
+    e.stopPropagation();
     dragCounters.current[dayNumber] = 0;
     setDropTargetDay(null);
 
     if (isReadOnly || !instance) return;
 
+    console.log('[DayCard Drop] day', dayNumber, 'types:', Array.from(e.dataTransfer.types));
+
     try {
-      const data = JSON.parse(e.dataTransfer.getData('application/json'));
+      const raw = e.dataTransfer.getData('application/json');
+      console.log('[DayCard Drop] raw data:', raw?.substring(0, 120));
+      const data = JSON.parse(raw);
 
       if (data.type === 'library') {
         // ── Add block from sidebar library onto a day ──
+        console.log('[DayCard Drop] Library block →', data.block?.name, '→ day', dayNumber);
         const block: ContentBlock = data.block;
         const dayPlacements = placementsByDay.get(dayNumber) || [];
         const startTime = getNextAvailableTime(dayPlacements);
@@ -1320,6 +1331,7 @@ export default function CoursePlannerPage() {
         }
       } else if (data.type === 'placement') {
         const sourcePlacement: Placement = data.placement;
+        console.log('[DayCard Drop] Move placement', sourcePlacement.content_block?.name, 'from day', sourcePlacement.day_number, '→ day', dayNumber);
 
         // Skip if dragging a fixed block
         if (getFixedRole(sourcePlacement.content_block)) return;
@@ -1431,8 +1443,8 @@ export default function CoursePlannerPage() {
           }
         }
       }
-    } catch {
-      // Invalid drag data, ignore
+    } catch (err) {
+      console.error('[DayCard Drop] Error parsing drag data:', err);
     } finally {
       setSaving(false);
     }
@@ -1592,12 +1604,17 @@ export default function CoursePlannerPage() {
 
   const makeDragEnter = useCallback((dayNumber: number) => (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     dragCounters.current[dayNumber] = (dragCounters.current[dayNumber] || 0) + 1;
+    if (dragCounters.current[dayNumber] === 1) {
+      console.log('[DayCard DragEnter] day', dayNumber);
+    }
     setDropTargetDay(dayNumber);
   }, []);
 
   const makeDragLeave = useCallback((dayNumber: number) => (e: React.DragEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     dragCounters.current[dayNumber] = (dragCounters.current[dayNumber] || 0) - 1;
     if (dragCounters.current[dayNumber] <= 0) {
       dragCounters.current[dayNumber] = 0;
@@ -1607,7 +1624,8 @@ export default function CoursePlannerPage() {
 
   const makeDragOver = useCallback(() => (e: React.DragEvent) => {
     e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'copy';
   }, []);
 
   const makeHandleDrop = useCallback((dayNumber: number) => (e: React.DragEvent) => {
