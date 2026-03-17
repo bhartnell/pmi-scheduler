@@ -366,6 +366,19 @@ export default function SchedulerReportsPage() {
         {!loading && (
           <div className="space-y-6">
 
+            {/* Quick link to Workload Tracker */}
+            <Link
+              href="/scheduling/planner/workload"
+              className="flex items-center gap-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-xl p-4 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition-colors group"
+            >
+              <BarChart3 className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+              <div className="flex-1">
+                <span className="font-medium text-indigo-900 dark:text-indigo-300">Instructor Workload Tracker</span>
+                <span className="ml-2 text-sm text-indigo-600 dark:text-indigo-400">Weekly hours heatmap &amp; overload alerts</span>
+              </div>
+              <span className="text-indigo-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-300">&rarr;</span>
+            </Link>
+
             {/* ══════════════════════════════════════════════════════════════════
                 SECTION 1: Missed Shift Opportunities
             ══════════════════════════════════════════════════════════════════ */}

@@ -332,6 +332,27 @@ export default function SchedulingPage() {
             </Link>
           )}
 
+          {/* Instructor Workload — visible to lead_instructors and above */}
+          {effectiveRole && hasMinRole(effectiveRole, 'lead_instructor') && (
+            <Link
+              href="/scheduling/planner/workload"
+              className="bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-shadow p-6 group"
+            >
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl flex items-center justify-center group-hover:bg-indigo-200 dark:group-hover:bg-indigo-900/50 transition-colors">
+                  <BarChart3 className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Instructor Workload</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Weekly hours heatmap and overload tracking
+                  </p>
+                </div>
+                <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300" />
+              </div>
+            </Link>
+          )}
+
           {/* Director-only sections */}
           {(userIsDirector || isAdmin) && (
             <>

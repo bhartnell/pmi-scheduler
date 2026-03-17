@@ -7,7 +7,7 @@ import { useSearchParams } from 'next/navigation';
 import {
   ChevronLeft, Plus, X, Calendar, Download, AlertTriangle,
   Loader2, Clock, MapPin, Users, Filter, Eye, EyeOff, Trash2,
-  Link, Unlink, Wand2, ChevronRight, Monitor, Repeat,
+  Link, Unlink, Wand2, ChevronRight, Monitor, Repeat, BarChart3,
 } from 'lucide-react';
 import { safeArray } from '@/lib/safe-array';
 import { formatInstructorName, formatInstructorDropdown } from '@/lib/format-name';
@@ -2622,6 +2622,14 @@ function SemesterPlannerPage() {
                 <Download className="w-4 h-4" /> ICS
               </a>
             )}
+
+            {/* Workload Tracker */}
+            <a
+              href="/scheduling/planner/workload"
+              className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg flex items-center gap-1.5"
+            >
+              <BarChart3 className="w-4 h-4 text-indigo-500" /> Workload
+            </a>
           </div>
         </div>
       </div>
