@@ -17,6 +17,9 @@ interface BlockDetail {
 
 interface WeekEntry {
   hours: number;
+  classHours: number;
+  labHours: number;
+  lvfrHours: number;
   blocks: number;
   programs: Set<string>;
   details: BlockDetail[];
@@ -38,7 +41,7 @@ function getOrCreateWeek(
   if (!workloadMap.has(instrId)) workloadMap.set(instrId, new Map());
   const instrMap = workloadMap.get(instrId)!;
   if (!instrMap.has(weekNum)) {
-    instrMap.set(weekNum, { hours: 0, blocks: 0, programs: new Set(), details: [], timeSlots: new Set() });
+    instrMap.set(weekNum, { hours: 0, classHours: 0, labHours: 0, lvfrHours: 0, blocks: 0, programs: new Set(), details: [], timeSlots: new Set() });
   }
   return instrMap.get(weekNum)!;
 }
@@ -325,6 +328,7 @@ export async function POST(request: NextRequest) {
         entry.timeSlots.add(slotKey);
 
         entry.hours += hours;
+        entry.classHours += hours;
         entry.blocks += 1;
         entry.programs.add(programName);
         entry.details.push({
@@ -394,6 +398,7 @@ export async function POST(request: NextRequest) {
           entry.timeSlots.add(slotKey);
 
           entry.hours += stationHours;
+          entry.labHours += stationHours;
           entry.blocks += 1;
           entry.programs.add('Lab');
           entry.details.push({
@@ -438,6 +443,7 @@ export async function POST(request: NextRequest) {
           entry.timeSlots.add(slotKey);
 
           entry.hours += LVFR_HOURS_PER_DAY;
+          entry.lvfrHours += LVFR_HOURS_PER_DAY;
           entry.blocks += 1;
           entry.programs.add('LVFR');
           entry.details.push({
@@ -480,6 +486,9 @@ export async function POST(request: NextRequest) {
           week_number: week,
           week_start_date: weekStartDate.toISOString().split('T')[0],
           total_hours: totalHours,
+          class_hours: Math.round(data.classHours * 100) / 100,
+          lab_hours: Math.round(data.labHours * 100) / 100,
+          lvfr_hours: Math.round(data.lvfrHours * 100) / 100,
           block_count: data.blocks,
           programs: Array.from(data.programs),
           updated_at: new Date().toISOString(),

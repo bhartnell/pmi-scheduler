@@ -38,13 +38,19 @@ export async function POST(request: NextRequest) {
       semester_id,
       program_schedule_id,
       day_mapping,       // { 1: 4, 2: 5 } → day_index 1 maps to Thursday (4), etc.
-      instructor_id,
+      instructor_id,     // legacy single instructor support
+      instructor_ids,    // array of instructor IDs (new multi-instructor support)
       clear_existing,    // if true, delete existing blocks for this program_schedule before generating
       start_date,        // YYYY-MM-DD — the first day of the semester
       load_lab_template, // if true, also apply lab template during generation
       lab_template_id,   // specific lab template to use (optional — uses most recent if not provided)
       cohort_id,         // needed for lab template application
     } = body;
+
+    // Normalize instructor IDs: support both legacy single and new multi-instructor
+    const globalInstructorIds: string[] = Array.isArray(instructor_ids)
+      ? instructor_ids
+      : (instructor_id ? [instructor_id] : []);
 
     if (!program_type || !semester_id || !day_mapping || !start_date) {
       return NextResponse.json({
@@ -209,33 +215,37 @@ export async function POST(request: NextRequest) {
       if (createdBlocks) allCreated.push(...createdBlocks);
     }
 
-    // 5. Assign instructors — per-template default_instructor_id takes priority, fallback to wizard instructor_id
-    // Build a map from recurring_group_id → template's default_instructor_id
-    const groupToDefaultInstructor = new Map<string, string>();
+    // 5. Assign instructors to all created blocks
+    // Build a map of recurring_group_id -> template default_instructor_ids (array)
+    const templateInstructorMap = new Map<string, string[]>();
     for (const t of onGroundTemplates) {
-      if (t.default_instructor_id) {
-        const courseKey = `${t.course_code}|${t.course_name}|${t.duration_type}`;
-        const groupId = courseGroupIds.get(courseKey);
-        if (groupId) {
-          groupToDefaultInstructor.set(groupId, t.default_instructor_id);
-        }
+      const courseKey = `${t.course_code}|${t.course_name}|${t.duration_type}`;
+      const groupId = courseGroupIds.get(courseKey);
+      if (groupId) {
+        const tplInstructors = Array.isArray(t.default_instructor_ids) ? t.default_instructor_ids : [];
+        templateInstructorMap.set(groupId, tplInstructors);
       }
     }
 
-    if (allCreated.length > 0 && (instructor_id || groupToDefaultInstructor.size > 0)) {
-      const instructorAssignments = allCreated
-        .map(block => {
-          const b = block as { id: string; recurring_group_id?: string };
-          // Use template default instructor if available, otherwise fall back to wizard instructor
-          const assignedInstructor = (b.recurring_group_id && groupToDefaultInstructor.get(b.recurring_group_id)) || instructor_id;
-          if (!assignedInstructor) return null;
-          return {
-            schedule_block_id: b.id,
-            instructor_id: assignedInstructor,
+    if (allCreated.length > 0) {
+      const instructorAssignments: { schedule_block_id: string; instructor_id: string; role: string }[] = [];
+
+      for (const block of allCreated) {
+        const blockId = (block as { id: string }).id;
+        const blockGroupId = (block as { recurring_group_id?: string }).recurring_group_id;
+
+        // Use per-template instructors if available, otherwise fall back to global wizard selection
+        const tplInstructors = blockGroupId ? (templateInstructorMap.get(blockGroupId) || []) : [];
+        const effectiveInstructors = tplInstructors.length > 0 ? tplInstructors : globalInstructorIds;
+
+        for (const instId of effectiveInstructors) {
+          instructorAssignments.push({
+            schedule_block_id: blockId,
+            instructor_id: instId,
             role: 'primary',
-          };
-        })
-        .filter(Boolean);
+          });
+        }
+      }
 
       // Insert in batches
       for (let i = 0; i < instructorAssignments.length; i += 100) {

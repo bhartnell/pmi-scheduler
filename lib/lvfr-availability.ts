@@ -22,6 +22,39 @@ export interface InstructorDayAvailability {
 
 export type CoverageStatus = 'covered' | 'short' | 'gap';
 
+// Spec-aligned convenience types (used by external consumers)
+export interface TimeSlot {
+  start: string; // e.g. "07:30"
+  end: string;   // e.g. "10:00"
+}
+
+export interface AvailabilityBlocks {
+  status: 'unavailable' | 'am_only' | 'pm_only' | 'split' | 'available';
+  available_slots?: TimeSlot[];
+  note?: string;
+}
+
+/** Convert an InstructorDayAvailability to the simpler AvailabilityBlocks format */
+export function toAvailabilityBlocks(ida: InstructorDayAvailability): AvailabilityBlocks {
+  const slots: TimeSlot[] = [];
+  if (ida.blocks.am1) slots.push({ start: '07:30', end: '10:00' });
+  if (ida.blocks.mid) slots.push({ start: '10:00', end: '12:00' });
+  if (ida.blocks.pm1) slots.push({ start: '13:00', end: '14:30' });
+  if (ida.blocks.pm2) slots.push({ start: '14:30', end: '15:30' });
+
+  let status: AvailabilityBlocks['status'];
+  const allBlocks = [ida.blocks.am1, ida.blocks.mid, ida.blocks.pm1, ida.blocks.pm2];
+  const trueCount = allBlocks.filter(Boolean).length;
+
+  if (trueCount === 0) status = 'unavailable';
+  else if (trueCount === 4) status = 'available';
+  else if (ida.blocks.am1 && !ida.blocks.pm1 && !ida.blocks.pm2) status = 'am_only';
+  else if (!ida.blocks.am1 && (ida.blocks.pm1 || ida.blocks.pm2)) status = 'pm_only';
+  else status = 'split';
+
+  return { status, available_slots: slots.length > 0 ? slots : undefined, note: ida.notes || undefined };
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Constants
 // ═══════════════════════════════════════════════════════════════════════════════

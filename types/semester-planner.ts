@@ -106,6 +106,9 @@ export interface PmiInstructorWorkload {
   week_number: number;
   week_start_date: string;
   total_hours: number;
+  class_hours: number;
+  lab_hours: number;
+  lvfr_hours: number;
   block_count: number;
   programs: string[];
   updated_at: string;
@@ -134,8 +137,10 @@ export interface PmiCourseTemplate {
   color: string | null;
   notes: string | null;
   sort_order: number;
+  active_weeks: string;
   default_instructor_id: string | null;
   default_instructor_name: string | null;
+  default_instructor_ids: string[];
   created_at: string;
 }
 

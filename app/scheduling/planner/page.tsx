@@ -423,8 +423,19 @@ function TimeGridBlock({
         </div>
       )}
       {instructors.length > 0 ? (
-        <div className="text-[9px] text-white/80 truncate">
-          {safeArray(instructors).map(i => formatInstructorName(i.instructor?.name || '')).join(', ')}
+        <div
+          className="text-[9px] text-white/80 truncate"
+          title={instructors.map(i => i.instructor?.name || '?').join(', ')}
+        >
+          {(() => {
+            const names = instructors.map(i => {
+              const name = i.instructor?.name || '?';
+              const parts = name.split(' ');
+              return parts.length >= 2 ? `${parts[0][0]}. ${parts.slice(1).join(' ')}` : name;
+            });
+            if (names.length <= 2) return names.join(', ');
+            return `${names[0]} +${names.length - 1} others`;
+          })()}
         </div>
       ) : (
         <div className="text-[9px] text-orange-200 truncate">Unassigned</div>
@@ -570,12 +581,13 @@ function BlockEditModal({
     course_name: block.course_name || '',
     content_notes: block.content_notes || '',
     color: block.color || '',
-    instructor_id: '',
+    instructor_ids: [] as string[],
     date: block.date || '',
   });
 
   const [labDayLink, setLabDayLink] = useState<{ id: string; title: string | null; date: string } | null>(null);
   const [labDayLoading, setLabDayLoading] = useState(false);
+  const [instructorDropdownOpen, setInstructorDropdownOpen] = useState(false);
 
   // Look up lab day when block has a date and is type 'lab'
   useEffect(() => {
@@ -599,8 +611,9 @@ function BlockEditModal({
 
   useEffect(() => {
     const blockInstructors = safeArray(block.instructors);
-    if (blockInstructors.length > 0 && blockInstructors[0].instructor_id) {
-      setFormData(prev => ({ ...prev, instructor_id: blockInstructors[0].instructor_id }));
+    if (blockInstructors.length > 0) {
+      const ids = blockInstructors.map(bi => bi.instructor_id).filter(Boolean);
+      setFormData(prev => ({ ...prev, instructor_ids: ids }));
     }
   }, [block.instructors]);
 
@@ -661,8 +674,8 @@ function BlockEditModal({
       payload.course_name = null;
     }
 
-    if (formData.instructor_id) {
-      payload.instructor_id = formData.instructor_id;
+    if (formData.instructor_ids.length > 0) {
+      payload.instructor_ids = formData.instructor_ids;
     }
 
     return payload;
@@ -707,7 +720,7 @@ function BlockEditModal({
         content_notes: formData.content_notes || null,
         program_schedule_id: isLinked ? (formData.program_schedule_id || null) : null,
         room_id: isLinked ? (formData.room_id || null) : null,
-        instructor_id: formData.instructor_id || null,
+        instructor_ids: formData.instructor_ids.length > 0 ? formData.instructor_ids : null,
         semester_start_date: selectedSemester?.start_date || null,
       };
 
@@ -966,17 +979,71 @@ function BlockEditModal({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Instructor</label>
-              <select
-                value={formData.instructor_id}
-                onChange={(e) => setField('instructor_id', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
-              >
-                <option value="">No instructor</option>
-                {safeArray(safeInstructors).map(inst => (
-                  <option key={inst.id} value={inst.id}>{inst.name}</option>
-                ))}
-              </select>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Instructors</label>
+              <div className="border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 px-2 py-1.5 min-h-[38px]">
+                <div className="flex flex-wrap gap-1.5 items-center">
+                  {formData.instructor_ids.map(id => {
+                    const inst = safeInstructors.find(i => i.id === id);
+                    if (!inst) return null;
+                    const nameParts = inst.name.split(' ');
+                    const shortName = nameParts.length >= 2
+                      ? `${nameParts[0][0]}. ${nameParts.slice(1).join(' ')}`
+                      : inst.name;
+                    return (
+                      <span
+                        key={id}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 text-xs font-medium"
+                      >
+                        {shortName}
+                        <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({
+                            ...prev,
+                            instructor_ids: prev.instructor_ids.filter(iid => iid !== id),
+                          }))}
+                          className="hover:text-red-600 dark:hover:text-red-400 ml-0.5"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    );
+                  })}
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setInstructorDropdownOpen(!instructorDropdownOpen)}
+                      className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600 border border-dashed border-gray-300 dark:border-gray-500"
+                    >
+                      <Plus className="w-3 h-3" /> Add
+                    </button>
+                    {instructorDropdownOpen && (
+                      <div className="absolute left-0 top-full mt-1 z-10 w-56 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                        {safeInstructors
+                          .filter(inst => !formData.instructor_ids.includes(inst.id))
+                          .map(inst => (
+                            <button
+                              key={inst.id}
+                              type="button"
+                              onClick={() => {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  instructor_ids: [...prev.instructor_ids, inst.id],
+                                }));
+                                setInstructorDropdownOpen(false);
+                              }}
+                              className="w-full text-left px-3 py-2 text-sm text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-600"
+                            >
+                              {inst.name}
+                            </button>
+                          ))}
+                        {safeInstructors.filter(inst => !formData.instructor_ids.includes(inst.id)).length === 0 && (
+                          <div className="px-3 py-2 text-sm text-gray-400">All instructors assigned</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div>
@@ -1194,7 +1261,7 @@ interface WizardState {
   programScheduleId: string;
   cohortId: string;           // selected cohort ID (may not have a program_schedule yet)
   dayMapping: Record<number, number>;
-  instructorId: string;
+  instructorIds: string[];
   clearExisting: boolean;
   startDate: string;
   loadLabTemplate: boolean;
@@ -1224,7 +1291,7 @@ function GenerateWizard({
     programScheduleId: '',
     cohortId: '',
     dayMapping: initialProgramType ? (DEFAULT_DAY_MAPPINGS[initialProgramType] || {}) : {},
-    instructorId: '',
+    instructorIds: [],
     clearExisting: false,
     startDate: '',
     loadLabTemplate: false,
@@ -1395,7 +1462,7 @@ function GenerateWizard({
           semester_id: semesterId,
           program_schedule_id: programScheduleId || null,
           day_mapping: wizard.dayMapping,
-          instructor_id: wizard.instructorId || null,
+          instructor_ids: wizard.instructorIds.length > 0 ? wizard.instructorIds : null,
           clear_existing: wizard.clearExisting,
           start_date: wizard.startDate,
           load_lab_template: wizard.loadLabTemplate,
@@ -1624,18 +1691,57 @@ function GenerateWizard({
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Primary Instructor (optional)
+                      Instructors (optional)
                     </label>
-                    <select
-                      value={wizard.instructorId}
-                      onChange={(e) => setWizard(prev => ({ ...prev, instructorId: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
-                    >
-                      <option value="">No instructor</option>
-                      {safeInstructors.map(inst => (
-                        <option key={inst.id} value={inst.id}>{inst.name}</option>
-                      ))}
-                    </select>
+                    <div className="border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 px-2 py-1.5 min-h-[38px]">
+                      <div className="flex flex-wrap gap-1.5 items-center">
+                        {wizard.instructorIds.map(id => {
+                          const inst = safeInstructors.find(i => i.id === id);
+                          if (!inst) return null;
+                          const nameParts = inst.name.split(' ');
+                          const shortName = nameParts.length >= 2
+                            ? `${nameParts[0][0]}. ${nameParts.slice(1).join(' ')}`
+                            : inst.name;
+                          return (
+                            <span
+                              key={id}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 text-xs font-medium"
+                            >
+                              {shortName}
+                              <button
+                                type="button"
+                                onClick={() => setWizard(prev => ({
+                                  ...prev,
+                                  instructorIds: prev.instructorIds.filter(iid => iid !== id),
+                                }))}
+                                className="hover:text-red-600 dark:hover:text-red-400 ml-0.5"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </span>
+                          );
+                        })}
+                        <select
+                          value=""
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              setWizard(prev => ({
+                                ...prev,
+                                instructorIds: [...prev.instructorIds, e.target.value],
+                              }));
+                            }
+                          }}
+                          className="text-xs border-0 bg-transparent text-gray-500 dark:text-gray-400 py-0.5 focus:ring-0 cursor-pointer"
+                        >
+                          <option value="">+ Add instructor</option>
+                          {safeInstructors
+                            .filter(inst => !wizard.instructorIds.includes(inst.id))
+                            .map(inst => (
+                              <option key={inst.id} value={inst.id}>{inst.name}</option>
+                            ))}
+                        </select>
+                      </div>
+                    </div>
                   </div>
 
                   {(wizard.programScheduleId || wizard.cohortId) && (
@@ -1958,10 +2064,19 @@ function ConflictBanner({ conflicts }: { conflicts: PmiScheduleConflict[] }) {
 
 // ─── Month View Component ─────────────────────────────────────────────────────
 
+interface LabDayOverlayItem {
+  id: string;
+  date: string;
+  title: string | null;
+  cohort?: { id: string; cohort_number: number; program: { name: string; abbreviation: string } | null } | null;
+  stations?: { instructor_name: string | null; instructor_email: string | null }[];
+}
+
 function MonthView({
   currentDate,
   blocks,
   programMap,
+  labDaysByDate,
   onDayClick,
   onBlockClick,
   semesterStartDate,
@@ -1969,6 +2084,7 @@ function MonthView({
   currentDate: Date;
   blocks: PmiScheduleBlock[];
   programMap: Map<string, PmiProgramSchedule>;
+  labDaysByDate: Map<string, LabDayOverlayItem[]>;
   onDayClick: (date: Date) => void;
   onBlockClick: (block: PmiScheduleBlock) => void;
   semesterStartDate: string | null;
@@ -2026,6 +2142,7 @@ function MonthView({
             {week.map((day, di) => {
               const dateStr = formatDateStr(day);
               const dayBlocks = blocksByDate.get(dateStr) || [];
+              const dayLabDays = labDaysByDate.get(dateStr) || [];
               const isCurrentMonth = day.getMonth() === month;
               const isTodayDate = isToday(day);
               const weekNum = semesterStartDate ? getWeekNumber(day, new Date(semesterStartDate + 'T00:00:00')) : null;
@@ -2053,6 +2170,26 @@ function MonthView({
                     )}
                   </div>
                   <div className="space-y-0.5">
+                    {/* Lab day overlays */}
+                    {dayLabDays.map(ld => {
+                      const instructorNames = (ld.stations || [])
+                        .map(s => s.instructor_name)
+                        .filter(Boolean)
+                        .filter((v, i, a) => a.indexOf(v) === i)
+                        .slice(0, 2);
+                      return (
+                        <a
+                          key={ld.id}
+                          href={`/lab-management/schedule/${ld.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-full block text-left rounded px-1 py-0 text-[9px] truncate hover:opacity-80 font-medium bg-orange-50 dark:bg-orange-900/20 text-orange-800 dark:text-orange-300"
+                          style={{ borderLeft: '2px solid #F97316' }}
+                          title={`Lab: ${ld.title || 'Lab Day'}\n${instructorNames.join(', ') || 'No instructors'}`}
+                        >
+                          Lab {ld.cohort?.program?.abbreviation || ''} {instructorNames.length > 0 ? `· ${instructorNames.join(', ')}` : ''}
+                        </a>
+                      );
+                    })}
                     {dayBlocks.slice(0, 3).map(b => {
                       const program = b.program_schedule_id ? programMap.get(b.program_schedule_id) : undefined;
                       const color = b.color || program?.color || '#6B7280';
@@ -2101,6 +2238,7 @@ function SemesterPlannerPage() {
   const [conflicts, setConflicts] = useState<PmiScheduleConflict[]>([]);
   const [instructors, setInstructors] = useState<{ id: string; name: string; email: string }[]>([]);
   const [onlineCourses, setOnlineCourses] = useState<{ course_code: string; course_name: string; duration_type: string }[]>([]);
+  const [labDaysOverlay, setLabDaysOverlay] = useState<LabDayOverlayItem[]>([]);
 
   // Calendar state
   const [viewMode, setViewMode] = useState<'week' | 'month'>('week');
@@ -2208,19 +2346,22 @@ function SemesterPlannerPage() {
         dateTo = formatDateStr(addDays(lastOfMonth, 7));
       }
 
-      const [progRes, blockRes, conflictRes] = await Promise.all([
+      const [progRes, blockRes, conflictRes, labDayRes] = await Promise.all([
         fetch(`/api/scheduling/planner/programs?semester_id=${selectedSemesterId}`),
         fetch(`/api/scheduling/planner/blocks?semester_id=${selectedSemesterId}&date_from=${dateFrom}&date_to=${dateTo}`),
         fetch(`/api/scheduling/planner/conflicts?semester_id=${selectedSemesterId}`),
+        fetch(`/api/lab-management/lab-days?startDate=${dateFrom}&endDate=${dateTo}&limit=100`),
       ]);
 
       const progData = await progRes.json();
       const blockData = await blockRes.json();
       const conflictData = await conflictRes.json();
+      const labDayData = await labDayRes.json();
 
       setPrograms(safeArray(progData.programs));
       setBlocks(safeArray(blockData.blocks));
       setConflicts(safeArray(conflictData.conflicts));
+      setLabDaysOverlay(safeArray(labDayData.labDays));
       hasLoadedSemesterData.current = true;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load semester data');
@@ -2259,6 +2400,13 @@ function SemesterPlannerPage() {
     blocksByDate.get(key)!.push(b);
   }
 
+  // Group lab days by date for overlay
+  const labDaysByDate = new Map<string, LabDayOverlayItem[]>();
+  for (const ld of labDaysOverlay) {
+    if (!labDaysByDate.has(ld.date)) labDaysByDate.set(ld.date, []);
+    labDaysByDate.get(ld.date)!.push(ld);
+  }
+
   const timeSlots: number[] = [];
   for (let h = TIME_START; h < TIME_END; h++) {
     timeSlots.push(h);
@@ -2294,8 +2442,8 @@ function SemesterPlannerPage() {
         payload.update_mode = updateMode;
       }
 
-      const instructorId = payload.instructor_id as string | undefined;
-      delete payload.instructor_id;
+      const instructorIds = payload.instructor_ids as string[] | undefined;
+      delete payload.instructor_ids;
 
       const res = await fetch(url, {
         method,
@@ -2310,14 +2458,33 @@ function SemesterPlannerPage() {
       }
 
       const savedBlock = result.block;
+      const blockId = savedBlock?.id || editingBlock?.id;
 
-      if (isNew && instructorId && savedBlock?.id) {
+      // Sync instructors: delete removed, add new ones
+      if (blockId) {
         try {
-          await fetch(`/api/scheduling/planner/blocks/${savedBlock.id}/instructors`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ instructor_id: instructorId, role: 'primary' }),
-          });
+          const existingInstructors = safeArray(editingBlock?.instructors).map(i => i.instructor_id);
+          const newIds = instructorIds || [];
+
+          // Remove instructors no longer in the list
+          const toRemove = existingInstructors.filter(id => !newIds.includes(id));
+          for (const removeId of toRemove) {
+            await fetch(`/api/scheduling/planner/blocks/${blockId}/instructors`, {
+              method: 'DELETE',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ instructor_id: removeId }),
+            });
+          }
+
+          // Add new instructors
+          const toAdd = newIds.filter(id => !existingInstructors.includes(id));
+          for (const addId of toAdd) {
+            await fetch(`/api/scheduling/planner/blocks/${blockId}/instructors`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ instructor_id: addId, role: 'primary' }),
+            });
+          }
         } catch {
           // Instructor assignment is non-critical
         }
@@ -2731,6 +2898,7 @@ function SemesterPlannerPage() {
             currentDate={currentWeekStart}
             blocks={visibleBlocks}
             programMap={programMap}
+            labDaysByDate={labDaysByDate}
             onDayClick={(date) => {
               setCurrentWeekStart(getMonday(date));
               setViewMode('week');
@@ -2770,6 +2938,17 @@ function SemesterPlannerPage() {
                       <div className="text-[10px] text-gray-400 dark:text-gray-500">
                         {dayBlocks.length} block{dayBlocks.length !== 1 ? 's' : ''}
                       </div>
+                      {/* Lab day overlay badges */}
+                      {(labDaysByDate.get(dateStr) || []).map(ld => (
+                        <a
+                          key={ld.id}
+                          href={`/lab-management/schedule/${ld.id}`}
+                          className="block mt-1 px-1 py-0.5 text-[9px] leading-tight rounded border border-orange-400 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 hover:bg-orange-100 dark:hover:bg-orange-900/40 truncate"
+                          title={ld.title || 'Lab Day'}
+                        >
+                          🔬 {ld.cohort?.program?.abbreviation || 'Lab'}{ld.cohort ? ` C${ld.cohort.cohort_number}` : ''}
+                        </a>
+                      ))}
                     </div>
                   );
                 })}

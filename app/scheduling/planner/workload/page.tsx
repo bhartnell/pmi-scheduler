@@ -54,6 +54,9 @@ interface InstructorData {
   instructor: { id: string; name: string; email: string };
   weeks: Map<number, PmiInstructorWorkload>;
   totalHours: number;
+  totalClassHours: number;
+  totalLabHours: number;
+  totalLvfrHours: number;
   avgHours: number;
   maxHours: number;
   programs: string[];
@@ -69,6 +72,9 @@ function buildInstructorWeekMap(workload: PmiInstructorWorkload[]): Map<string, 
         instructor: w.instructor || { id: instrId, name: 'Unknown', email: '' },
         weeks: new Map(),
         totalHours: 0,
+        totalClassHours: 0,
+        totalLabHours: 0,
+        totalLvfrHours: 0,
         avgHours: 0,
         maxHours: 0,
         programs: [],
@@ -77,6 +83,9 @@ function buildInstructorWeekMap(workload: PmiInstructorWorkload[]): Map<string, 
     const entry = map.get(instrId)!;
     entry.weeks.set(w.week_number, w);
     entry.totalHours += w.total_hours;
+    entry.totalClassHours += (w.class_hours || 0);
+    entry.totalLabHours += (w.lab_hours || 0);
+    entry.totalLvfrHours += (w.lvfr_hours || 0);
     if (w.total_hours > entry.maxHours) entry.maxHours = w.total_hours;
 
     for (const p of (w.programs || [])) {
@@ -360,44 +369,71 @@ function InstructorDetailRow({
         className="px-4 py-3 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700"
       >
         <div className="space-y-3">
-          {/* Program breakdown */}
+          {/* Hour breakdown summary */}
           <div>
             <span className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Hours by Source</span>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-              {data.programs.length > 0 ? data.programs.map(program => (
-                <div key={program} className="flex items-center gap-2 text-xs">
-                  <span className={`w-2 h-2 rounded-full ${
-                    program === 'Lab' ? 'bg-emerald-400' :
-                    program === 'LVFR' ? 'bg-orange-400' :
-                    'bg-blue-400'
-                  }`} />
-                  <span className="text-gray-700 dark:text-gray-300">{program}</span>
+            <div className="flex flex-wrap gap-3">
+              {data.totalClassHours > 0 && (
+                <div className="flex items-center gap-1.5 text-xs">
+                  <span className="w-2.5 h-2.5 rounded-full bg-blue-400" />
+                  <span className="text-gray-700 dark:text-gray-300">Classes: {Math.round(data.totalClassHours * 10) / 10}h</span>
                 </div>
-              )) : (
-                <span className="text-xs text-gray-400 dark:text-gray-500">None assigned</span>
               )}
+              {data.totalLabHours > 0 && (
+                <div className="flex items-center gap-1.5 text-xs">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                  <span className="text-gray-700 dark:text-gray-300">Labs: {Math.round(data.totalLabHours * 10) / 10}h</span>
+                </div>
+              )}
+              {data.totalLvfrHours > 0 && (
+                <div className="flex items-center gap-1.5 text-xs">
+                  <span className="w-2.5 h-2.5 rounded-full bg-orange-400" />
+                  <span className="text-gray-700 dark:text-gray-300">LVFR: {Math.round(data.totalLvfrHours * 10) / 10}h</span>
+                </div>
+              )}
+              <div className="flex items-center gap-1.5 text-xs font-semibold">
+                <span className="text-gray-700 dark:text-gray-300">Total: {data.totalHours}h</span>
+              </div>
+            </div>
+            {/* Per-program list */}
+            <div className="mt-1.5 flex flex-wrap gap-2">
+              {data.programs.filter(p => p !== 'Lab' && p !== 'LVFR').map(program => (
+                <span key={program} className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />{program}
+                </span>
+              ))}
             </div>
           </div>
 
-          {/* Weekly bar chart */}
+          {/* Weekly stacked bar chart */}
           <div>
             <span className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Weekly Hours</span>
             <div className="flex items-end gap-1" style={{ height: '60px' }}>
               {weekNumbers.map(wk => {
                 const w = data.weeks.get(wk);
                 const hours = w?.total_hours || 0;
+                const classH = w?.class_hours || 0;
+                const labH = w?.lab_hours || 0;
+                const lvfrH = w?.lvfr_hours || 0;
                 const pct = Math.max((hours / maxHoursInAnyWeek) * 100, 2);
-                const isOverloaded = hours > OVERLOAD_THRESHOLD;
+                const classPct = hours > 0 ? (classH / hours) * pct : 0;
+                const labPct = hours > 0 ? (labH / hours) * pct : 0;
+                const lvfrPct = hours > 0 ? (lvfrH / hours) * pct : 0;
+                const breakdownParts: string[] = [];
+                if (classH > 0) breakdownParts.push(`Classes: ${classH}h`);
+                if (labH > 0) breakdownParts.push(`Labs: ${labH}h`);
+                if (lvfrH > 0) breakdownParts.push(`LVFR: ${lvfrH}h`);
                 return (
                   <div
                     key={wk}
                     className="flex flex-col items-center flex-1 min-w-0"
-                    title={`Wk ${wk} (${weekDates.has(wk) ? formatWeekLabel(weekDates.get(wk)!) : ''}): ${hours}h`}
+                    title={`Wk ${wk} (${weekDates.has(wk) ? formatWeekLabel(weekDates.get(wk)!) : ''}): ${hours}h\n${breakdownParts.join(', ')}`}
                   >
-                    <div
-                      className={`w-full rounded-t ${isOverloaded ? 'bg-red-400 dark:bg-red-500' : 'bg-blue-400 dark:bg-blue-500'}`}
-                      style={{ height: `${pct}%`, minHeight: hours > 0 ? '4px' : '0px' }}
-                    />
+                    <div className="w-full flex flex-col-reverse" style={{ height: `${pct}%`, minHeight: hours > 0 ? '4px' : '0px' }}>
+                      {classPct > 0 && <div className="w-full bg-blue-400 dark:bg-blue-500" style={{ height: `${(classPct / pct) * 100}%`, minHeight: '1px' }} />}
+                      {labPct > 0 && <div className="w-full bg-emerald-400 dark:bg-emerald-500" style={{ height: `${(labPct / pct) * 100}%`, minHeight: '1px' }} />}
+                      {lvfrPct > 0 && <div className="w-full bg-orange-400 dark:bg-orange-500 rounded-t" style={{ height: `${(lvfrPct / pct) * 100}%`, minHeight: '1px' }} />}
+                    </div>
                   </div>
                 );
               })}
@@ -533,20 +569,40 @@ function HeatMapTable({
                     {weekNumbers.map(wk => {
                       const w = instrData.weeks.get(wk);
                       const hours = w?.total_hours || 0;
+                      const classH = w?.class_hours || 0;
+                      const labH = w?.lab_hours || 0;
+                      const lvfrH = w?.lvfr_hours || 0;
                       const heat = getHeatColor(hours);
                       const isSelected = selectedCell?.instructorId === instrData.instructor.id && selectedCell?.weekNumber === wk;
+                      const breakdownParts: string[] = [];
+                      if (classH > 0) breakdownParts.push(`Classes: ${classH}h`);
+                      if (labH > 0) breakdownParts.push(`Labs: ${labH}h`);
+                      if (lvfrH > 0) breakdownParts.push(`LVFR: ${lvfrH}h`);
                       return (
                         <td
                           key={wk}
                           className={`px-1 py-1.5 text-center cursor-pointer transition-all ${heat.bg} ${
                             isSelected ? 'ring-2 ring-blue-500 ring-inset' : 'hover:ring-1 hover:ring-blue-300 hover:ring-inset'
                           }`}
-                          title={`Click for detail — Week ${wk}: ${hours}h, ${w?.block_count || 0} blocks`}
+                          title={`Week ${wk}: ${hours}h\n${breakdownParts.join(', ') || 'No hours'}\n${w?.block_count || 0} blocks — Click for detail`}
                           onClick={() => onCellClick(instrData.instructor.id, wk)}
                         >
-                          <span className={`text-xs font-medium ${heat.text}`}>
-                            {hours > 0 ? hours : '—'}
-                          </span>
+                          {hours > 0 ? (
+                            <div className="flex flex-col items-center gap-0.5">
+                              <span className={`text-xs font-medium ${heat.text}`}>
+                                {hours}
+                              </span>
+                              {(labH > 0 || lvfrH > 0) && (
+                                <div className="flex gap-px justify-center">
+                                  {classH > 0 && <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />}
+                                  {labH > 0 && <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />}
+                                  {lvfrH > 0 && <div className="w-1.5 h-1.5 rounded-full bg-orange-400" />}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <span className={`text-xs font-medium ${heat.text}`}>—</span>
+                          )}
                         </td>
                       );
                     })}
@@ -606,18 +662,35 @@ function HeatMapTable({
 
 function HeatLegend() {
   return (
-    <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
-      <span className="font-medium">Legend:</span>
-      {HEAT_LEVELS.map((level, i) => (
-        <div key={i} className="flex items-center gap-1.5">
-          <div className={`w-4 h-3 rounded ${level.bg} border border-gray-200 dark:border-gray-600`} />
-          <span>
-            {level.label}
-            {level.max < Infinity && level.max > 0 ? ` (≤${level.max}h)` : level.max === Infinity ? ` (>${HEAT_LEVELS[HEAT_LEVELS.length - 2].max}h)` : ''}
-          </span>
+    <div className="flex flex-wrap items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="font-medium">Heat:</span>
+        {HEAT_LEVELS.map((level, i) => (
+          <div key={i} className="flex items-center gap-1.5">
+            <div className={`w-4 h-3 rounded ${level.bg} border border-gray-200 dark:border-gray-600`} />
+            <span>
+              {level.label}
+              {level.max < Infinity && level.max > 0 ? ` (≤${level.max}h)` : level.max === Infinity ? ` (>${HEAT_LEVELS[HEAT_LEVELS.length - 2].max}h)` : ''}
+            </span>
+          </div>
+        ))}
+      </div>
+      <div className="flex flex-wrap items-center gap-3 border-l border-gray-200 dark:border-gray-700 pl-4">
+        <span className="font-medium">Source:</span>
+        <div className="flex items-center gap-1.5">
+          <div className="w-2.5 h-2.5 rounded-full bg-blue-400" />
+          <span>Classes</span>
         </div>
-      ))}
-      <span className="ml-2 text-[10px] text-gray-400">Click any cell to see block detail</span>
+        <div className="flex items-center gap-1.5">
+          <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+          <span>Labs</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-2.5 h-2.5 rounded-full bg-orange-400" />
+          <span>LVFR</span>
+        </div>
+      </div>
+      <span className="text-[10px] text-gray-400">Click any cell to see block detail</span>
     </div>
   );
 }

@@ -35,6 +35,7 @@ export async function PUT(
     if (body.semester_number !== undefined) updates.semester_number = body.semester_number;
     if (body.default_instructor_id !== undefined) updates.default_instructor_id = body.default_instructor_id || null;
     if (body.default_instructor_name !== undefined) updates.default_instructor_name = body.default_instructor_name || null;
+    if (body.default_instructor_ids !== undefined) updates.default_instructor_ids = Array.isArray(body.default_instructor_ids) ? body.default_instructor_ids : [];
 
     const supabase = getSupabaseAdmin();
 

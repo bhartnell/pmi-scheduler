@@ -54,6 +54,7 @@ export async function POST(request: NextRequest) {
       duration_type, day_index, start_time, end_time,
       block_type, is_online, color, notes, sort_order,
       default_instructor_id, default_instructor_name,
+      default_instructor_ids,
     } = body;
 
     if (!program_type || !course_code || !course_name || day_index === undefined || !start_time || !end_time) {
@@ -80,6 +81,7 @@ export async function POST(request: NextRequest) {
         sort_order: sort_order ?? 0,
         default_instructor_id: default_instructor_id || null,
         default_instructor_name: default_instructor_name || null,
+        default_instructor_ids: Array.isArray(default_instructor_ids) ? default_instructor_ids : [],
       })
       .select('*')
       .single();

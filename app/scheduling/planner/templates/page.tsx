@@ -60,6 +60,7 @@ interface TemplateFormData {
   sort_order: number;
   default_instructor_id: string;
   default_instructor_name: string;
+  default_instructor_ids: string[];
 }
 
 function emptyForm(programType: string, semesterNumber: number | null): TemplateFormData {
@@ -79,6 +80,7 @@ function emptyForm(programType: string, semesterNumber: number | null): Template
     sort_order: 0,
     default_instructor_id: '',
     default_instructor_name: '',
+    default_instructor_ids: [],
   };
 }
 
@@ -164,6 +166,7 @@ export default function TemplateEditorPage() {
       sort_order: t.sort_order || 0,
       default_instructor_id: t.default_instructor_id || '',
       default_instructor_name: t.default_instructor_name || '',
+      default_instructor_ids: safeArray(t.default_instructor_ids),
     });
     setShowForm(true);
   };
@@ -368,11 +371,20 @@ export default function TemplateEditorPage() {
                                   {formatTime(t.start_time)} - {formatTime(t.end_time)}
                                 </span>
                                 <span className="capitalize">{t.block_type}</span>
-                                {t.default_instructor_name && (
+                                {safeArray(t.default_instructor_ids).length > 0 ? (
+                                  <span className="text-purple-600 dark:text-purple-400">
+                                    {safeArray(t.default_instructor_ids).map(id => {
+                                      const inst = instructors.find(i => i.id === id);
+                                      if (!inst) return null;
+                                      const parts = inst.name.split(' ');
+                                      return parts.length >= 2 ? `${parts[0][0]}. ${parts[parts.length - 1]}` : inst.name;
+                                    }).filter(Boolean).join(', ')}
+                                  </span>
+                                ) : t.default_instructor_name ? (
                                   <span className="text-purple-600 dark:text-purple-400">
                                     {t.default_instructor_name}
                                   </span>
-                                )}
+                                ) : null}
                                 {t.notes && <span className="truncate max-w-[200px]">{t.notes}</span>}
                               </div>
                             </div>
@@ -569,22 +581,64 @@ export default function TemplateEditorPage() {
               </label>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Default Instructor</label>
-                <select
-                  value={formData.default_instructor_id}
-                  onChange={(e) => {
-                    const selectedId = e.target.value;
-                    const selectedInstructor = instructors.find(i => i.id === selectedId);
-                    setField('default_instructor_id', selectedId);
-                    setField('default_instructor_name', selectedInstructor?.name || '');
-                  }}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
-                >
-                  <option value="">No default (use wizard fallback)</option>
-                  {instructors.map(inst => (
-                    <option key={inst.id} value={inst.id}>{inst.name}</option>
-                  ))}
-                </select>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Default Instructors</label>
+                <div className="border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 px-2 py-1.5 min-h-[38px]">
+                  <div className="flex flex-wrap gap-1.5 items-center">
+                    {formData.default_instructor_ids.map(id => {
+                      const inst = instructors.find(i => i.id === id);
+                      if (!inst) return null;
+                      const nameParts = inst.name.split(' ');
+                      const shortName = nameParts.length >= 2
+                        ? `${nameParts[0][0]}. ${nameParts.slice(1).join(' ')}`
+                        : inst.name;
+                      return (
+                        <span
+                          key={id}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 text-xs font-medium"
+                        >
+                          {shortName}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newIds = formData.default_instructor_ids.filter((iid: string) => iid !== id);
+                              setField('default_instructor_ids', newIds);
+                              // Keep legacy field in sync with first instructor
+                              const firstInst = newIds.length > 0 ? instructors.find(i => i.id === newIds[0]) : null;
+                              setField('default_instructor_id', firstInst?.id || '');
+                              setField('default_instructor_name', firstInst?.name || '');
+                            }}
+                            className="hover:text-red-600 dark:hover:text-red-400 ml-0.5"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      );
+                    })}
+                    <select
+                      value=""
+                      onChange={(e) => {
+                        if (e.target.value) {
+                          const newIds = [...formData.default_instructor_ids, e.target.value];
+                          setField('default_instructor_ids', newIds);
+                          // Keep legacy field in sync with first instructor
+                          if (newIds.length === 1) {
+                            const inst = instructors.find(i => i.id === e.target.value);
+                            setField('default_instructor_id', inst?.id || '');
+                            setField('default_instructor_name', inst?.name || '');
+                          }
+                        }
+                      }}
+                      className="text-xs border-0 bg-transparent text-gray-500 dark:text-gray-400 py-0.5 focus:ring-0 cursor-pointer"
+                    >
+                      <option value="">+ Add instructor</option>
+                      {instructors
+                        .filter(inst => !formData.default_instructor_ids.includes(inst.id))
+                        .map(inst => (
+                          <option key={inst.id} value={inst.id}>{inst.name}</option>
+                        ))}
+                    </select>
+                  </div>
+                </div>
                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                   Auto-assigned when generating a semester. Editable per-block after generation.
                 </p>
