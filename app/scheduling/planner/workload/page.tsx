@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
+import React from 'react';
 import {
   ArrowLeft, Loader2, Calendar, RefreshCw, Download,
   Users, Clock, AlertTriangle, BarChart3, ChevronDown, ChevronUp,
-  Search, Filter,
+  Search, Filter, X,
 } from 'lucide-react';
 import type { PmiSemester, PmiInstructorWorkload } from '@/types/semester-planner';
 
@@ -22,6 +23,8 @@ const HEAT_LEVELS = [
 
 const OVERLOAD_THRESHOLD = 30;
 
+const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Helpers
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -37,6 +40,14 @@ function formatWeekLabel(dateStr: string): string {
   const date = new Date(dateStr + 'T00:00:00');
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   return `${months[date.getMonth()]} ${date.getDate()}`;
+}
+
+function formatTime(t: string): string {
+  if (!t) return '';
+  const [h, m] = t.split(':').map(Number);
+  const ampm = h >= 12 ? 'pm' : 'am';
+  const hour = h > 12 ? h - 12 : h === 0 ? 12 : h;
+  return `${hour}:${String(m).padStart(2, '0')}${ampm}`;
 }
 
 interface InstructorData {
@@ -68,13 +79,11 @@ function buildInstructorWeekMap(workload: PmiInstructorWorkload[]): Map<string, 
     entry.totalHours += w.total_hours;
     if (w.total_hours > entry.maxHours) entry.maxHours = w.total_hours;
 
-    // Collect unique programs
     for (const p of (w.programs || [])) {
       if (!entry.programs.includes(p)) entry.programs.push(p);
     }
   }
 
-  // Calculate averages
   for (const entry of map.values()) {
     const weekCount = entry.weeks.size;
     entry.avgHours = weekCount > 0 ? Math.round((entry.totalHours / weekCount) * 10) / 10 : 0;
@@ -82,6 +91,142 @@ function buildInstructorWeekMap(workload: PmiInstructorWorkload[]): Map<string, 
   }
 
   return map;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// BlockDetail types
+// ═══════════════════════════════════════════════════════════════════════════════
+
+interface BlockDetailItem {
+  title: string;
+  start_time: string;
+  end_time: string;
+  hours: number;
+  day_of_week: number | null;
+  date: string | null;
+  room: string | null;
+  source: string;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// WeekDetailPanel — shown when a cell is clicked
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function WeekDetailPanel({
+  instructorName,
+  weekNumber,
+  weekDate,
+  semesterId,
+  instructorId,
+  onClose,
+}: {
+  instructorName: string;
+  weekNumber: number;
+  weekDate: string;
+  semesterId: string;
+  instructorId: string;
+  onClose: () => void;
+}) {
+  const [details, setDetails] = useState<BlockDetailItem[]>([]);
+  const [totalHours, setTotalHours] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      try {
+        setLoading(true);
+        const res = await fetch(
+          `/api/scheduling/planner/workload?semester_id=${semesterId}&instructor_id=${instructorId}&week_number=${weekNumber}`
+        );
+        if (!res.ok) throw new Error('Failed to load detail');
+        const data = await res.json();
+        if (!cancelled) {
+          setDetails(data.details || []);
+          setTotalHours(data.totalHours || 0);
+        }
+      } catch (err) {
+        console.error('Detail load error:', err);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [semesterId, instructorId, weekNumber]);
+
+  // Group details by day
+  const dayGroups = useMemo(() => {
+    const groups = new Map<string, BlockDetailItem[]>();
+    for (const d of details) {
+      let dayLabel: string;
+      if (d.date) {
+        const dt = new Date(d.date + 'T00:00:00');
+        dayLabel = `${DAY_NAMES[dt.getDay()]} ${d.date}`;
+      } else if (d.day_of_week !== null && d.day_of_week !== undefined) {
+        dayLabel = DAY_NAMES[d.day_of_week] || `Day ${d.day_of_week}`;
+      } else {
+        dayLabel = 'Other';
+      }
+      if (!groups.has(dayLabel)) groups.set(dayLabel, []);
+      groups.get(dayLabel)!.push(d);
+    }
+    return groups;
+  }, [details]);
+
+  return (
+    <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-lg p-4 my-2">
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <span className="font-medium text-gray-900 dark:text-white text-sm">{instructorName}</span>
+          <span className="text-gray-500 dark:text-gray-400 text-sm"> — Week {weekNumber}</span>
+          {weekDate && <span className="text-gray-400 dark:text-gray-500 text-xs ml-1">({formatWeekLabel(weekDate)})</span>}
+        </div>
+        <button onClick={onClose} className="p-1 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded">
+          <X className="w-4 h-4 text-gray-400" />
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="flex items-center gap-2 py-4 justify-center">
+          <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+          <span className="text-xs text-gray-500">Loading blocks...</span>
+        </div>
+      ) : details.length === 0 ? (
+        <p className="text-xs text-gray-500 text-center py-2">No blocks found for this week</p>
+      ) : (
+        <div className="space-y-3">
+          {Array.from(dayGroups.entries()).map(([dayLabel, dayDetails]) => (
+            <div key={dayLabel}>
+              <div className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">{dayLabel}</div>
+              <div className="space-y-0.5">
+                {dayDetails.map((d, i) => (
+                  <div key={i} className="flex items-center gap-2 text-xs">
+                    <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+                      d.source === 'lab' ? 'bg-emerald-400' :
+                      d.source === 'lvfr' ? 'bg-orange-400' :
+                      'bg-blue-400'
+                    }`} />
+                    <span className="text-gray-800 dark:text-gray-200 flex-1 truncate">{d.title}</span>
+                    {d.start_time && d.end_time && (
+                      <span className="text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                        {formatTime(d.start_time)}–{formatTime(d.end_time)}
+                      </span>
+                    )}
+                    <span className="text-gray-600 dark:text-gray-300 font-medium whitespace-nowrap">{d.hours}h</span>
+                    {d.room && <span className="text-gray-400 text-[10px]">({d.room})</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+          <div className="border-t border-blue-200 dark:border-blue-800 pt-2 text-right">
+            <span className="text-xs font-semibold text-gray-900 dark:text-white">{totalHours}h total</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -101,13 +246,11 @@ function SummaryCards({
     const instructors = Array.from(instructorMap.values());
     const totalInstructors = instructors.length;
 
-    // Average weekly hours across all instructors
     const allAvgs = instructors.map(i => i.avgHours);
     const overallAvg = totalInstructors > 0
       ? Math.round((allAvgs.reduce((a, b) => a + b, 0) / totalInstructors) * 10) / 10
       : 0;
 
-    // Peak week — highest total hours across all instructors in a single week
     let peakWeek = 0;
     let peakWeekHours = 0;
     for (const wk of weekNumbers) {
@@ -125,7 +268,6 @@ function SummaryCards({
       ? `Wk ${peakWeek} (${formatWeekLabel(weekDates.get(peakWeek)!)})`
       : '—';
 
-    // Max individual — instructor with highest single-week hours
     let maxInstructor = '—';
     let maxHours = 0;
     let maxWeek = 0;
@@ -197,7 +339,7 @@ function SummaryCards({
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// InstructorDetailRow
+// InstructorDetailRow — expanded view with bar chart
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function InstructorDetailRow({
@@ -222,18 +364,16 @@ function InstructorDetailRow({
           <div>
             <span className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1 block">Hours by Source</span>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-              {data.programs.length > 0 ? data.programs.map(program => {
-                return (
-                  <div key={program} className="flex items-center gap-2 text-xs">
-                    <span className={`w-2 h-2 rounded-full ${
-                      program === 'Lab' ? 'bg-emerald-400' :
-                      program === 'LVFR' ? 'bg-orange-400' :
-                      'bg-blue-400'
-                    }`} />
-                    <span className="text-gray-700 dark:text-gray-300">{program}</span>
-                  </div>
-                );
-              }) : (
+              {data.programs.length > 0 ? data.programs.map(program => (
+                <div key={program} className="flex items-center gap-2 text-xs">
+                  <span className={`w-2 h-2 rounded-full ${
+                    program === 'Lab' ? 'bg-emerald-400' :
+                    program === 'LVFR' ? 'bg-orange-400' :
+                    'bg-blue-400'
+                  }`} />
+                  <span className="text-gray-700 dark:text-gray-300">{program}</span>
+                </div>
+              )) : (
                 <span className="text-xs text-gray-400 dark:text-gray-500">None assigned</span>
               )}
             </div>
@@ -299,12 +439,18 @@ function HeatMapTable({
   weekDates,
   expandedInstructor,
   onToggleExpand,
+  selectedCell,
+  onCellClick,
+  semesterId,
 }: {
   instructors: InstructorData[];
   weekNumbers: number[];
   weekDates: Map<number, string>;
   expandedInstructor: string | null;
   onToggleExpand: (id: string) => void;
+  selectedCell: { instructorId: string; weekNumber: number } | null;
+  onCellClick: (instructorId: string, weekNumber: number) => void;
+  semesterId: string;
 }) {
   if (instructors.length === 0) {
     return (
@@ -320,7 +466,6 @@ function HeatMapTable({
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            {/* Week number row */}
             <tr className="border-b border-gray-200 dark:border-gray-700">
               <th className="sticky left-0 z-20 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 min-w-[160px]">
                 Instructor
@@ -337,7 +482,6 @@ function HeatMapTable({
                 Avg
               </th>
             </tr>
-            {/* Date row */}
             <tr className="border-b border-gray-200 dark:border-gray-700">
               <th className="sticky left-0 z-20 bg-gray-50 dark:bg-gray-800 px-3 py-1 text-left text-[10px] text-gray-400 dark:text-gray-500" />
               {weekNumbers.map(wk => (
@@ -353,15 +497,18 @@ function HeatMapTable({
             {instructors.map((instrData) => {
               const isExpanded = expandedInstructor === instrData.instructor.id;
               const isOverloaded = instrData.maxHours > OVERLOAD_THRESHOLD;
+              const hasDetailOpen = selectedCell?.instructorId === instrData.instructor.id;
 
               return (
                 <React.Fragment key={instrData.instructor.id}>
                   <tr
-                    className="border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50/50 dark:hover:bg-gray-700/20 cursor-pointer transition-colors"
-                    onClick={() => onToggleExpand(instrData.instructor.id)}
+                    className="border-b border-gray-100 dark:border-gray-700/50 hover:bg-gray-50/50 dark:hover:bg-gray-700/20 transition-colors"
                   >
                     {/* Instructor name (sticky) */}
-                    <td className="sticky left-0 z-10 bg-white dark:bg-gray-800 px-3 py-2 border-r border-gray-100 dark:border-gray-700/50">
+                    <td
+                      className="sticky left-0 z-10 bg-white dark:bg-gray-800 px-3 py-2 border-r border-gray-100 dark:border-gray-700/50 cursor-pointer"
+                      onClick={() => onToggleExpand(instrData.instructor.id)}
+                    >
                       <div className="flex items-center gap-1.5">
                         {isExpanded ? (
                           <ChevronUp className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
@@ -382,16 +529,20 @@ function HeatMapTable({
                       </div>
                     </td>
 
-                    {/* Week cells */}
+                    {/* Week cells — clickable for detail */}
                     {weekNumbers.map(wk => {
                       const w = instrData.weeks.get(wk);
                       const hours = w?.total_hours || 0;
                       const heat = getHeatColor(hours);
+                      const isSelected = selectedCell?.instructorId === instrData.instructor.id && selectedCell?.weekNumber === wk;
                       return (
                         <td
                           key={wk}
-                          className={`px-1 py-1.5 text-center ${heat.bg}`}
-                          title={`Week ${wk}${weekDates.has(wk) ? ` (${formatWeekLabel(weekDates.get(wk)!)})` : ''}: ${hours}h across ${w?.block_count || 0} blocks\nPrograms: ${(w?.programs || []).join(', ') || 'None'}`}
+                          className={`px-1 py-1.5 text-center cursor-pointer transition-all ${heat.bg} ${
+                            isSelected ? 'ring-2 ring-blue-500 ring-inset' : 'hover:ring-1 hover:ring-blue-300 hover:ring-inset'
+                          }`}
+                          title={`Click for detail — Week ${wk}: ${hours}h, ${w?.block_count || 0} blocks`}
+                          onClick={() => onCellClick(instrData.instructor.id, wk)}
                         >
                           <span className={`text-xs font-medium ${heat.text}`}>
                             {hours > 0 ? hours : '—'}
@@ -415,13 +566,29 @@ function HeatMapTable({
                     </td>
                   </tr>
 
-                  {/* Expanded detail */}
+                  {/* Expanded bar chart detail */}
                   {isExpanded && (
                     <InstructorDetailRow
                       data={instrData}
                       weekNumbers={weekNumbers}
                       weekDates={weekDates}
                     />
+                  )}
+
+                  {/* Week block detail panel — shown below this instructor's row */}
+                  {hasDetailOpen && selectedCell && (
+                    <tr>
+                      <td colSpan={weekNumbers.length + 3} className="px-4 py-0">
+                        <WeekDetailPanel
+                          instructorName={instrData.instructor.name}
+                          weekNumber={selectedCell.weekNumber}
+                          weekDate={weekDates.get(selectedCell.weekNumber) || ''}
+                          semesterId={semesterId}
+                          instructorId={instrData.instructor.id}
+                          onClose={() => onCellClick('', 0)}
+                        />
+                      </td>
+                    </tr>
                   )}
                 </React.Fragment>
               );
@@ -450,6 +617,7 @@ function HeatLegend() {
           </span>
         </div>
       ))}
+      <span className="ml-2 text-[10px] text-gray-400">Click any cell to see block detail</span>
     </div>
   );
 }
@@ -457,8 +625,6 @@ function HeatLegend() {
 // ═══════════════════════════════════════════════════════════════════════════════
 // Main Page Component
 // ═══════════════════════════════════════════════════════════════════════════════
-
-import React from 'react';
 
 export default function WorkloadTrackerPage() {
   // ── Data state ──
@@ -473,13 +639,18 @@ export default function WorkloadTrackerPage() {
   const [filterText, setFilterText] = useState('');
   const [showOverloadedOnly, setShowOverloadedOnly] = useState(false);
   const [expandedInstructor, setExpandedInstructor] = useState<string | null>(null);
+  const [selectedCell, setSelectedCell] = useState<{ instructorId: string; weekNumber: number } | null>(null);
 
   // ── Computed data ──
   const instructorMap = useMemo(() => buildInstructorWeekMap(workload), [workload]);
 
+  // Only show weeks that have actual data (at least one instructor with hours > 0)
   const weekNumbers = useMemo(() => {
-    const nums = new Set(workload.map(w => w.week_number));
-    return Array.from(nums).sort((a, b) => a - b);
+    const numsWithData = new Set<number>();
+    for (const w of workload) {
+      if (w.total_hours > 0) numsWithData.add(w.week_number);
+    }
+    return Array.from(numsWithData).sort((a, b) => a - b);
   }, [workload]);
 
   const weekDates = useMemo(() => {
@@ -549,6 +720,7 @@ export default function WorkloadTrackerPage() {
   const switchSemester = useCallback(async (semId: string) => {
     setSelectedSemesterId(semId);
     setExpandedInstructor(null);
+    setSelectedCell(null);
     setFilterText('');
     await fetchWorkload(semId);
   }, [fetchWorkload]);
@@ -557,6 +729,7 @@ export default function WorkloadTrackerPage() {
     if (!selectedSemesterId || recalculating) return;
     try {
       setRecalculating(true);
+      setSelectedCell(null);
       const res = await fetch('/api/scheduling/planner/workload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -566,7 +739,8 @@ export default function WorkloadTrackerPage() {
         const data = await res.json();
         throw new Error(data.error || 'Failed to recalculate');
       }
-      // Re-fetch updated workload
+      const result = await res.json();
+      console.log('Recalculate result:', result); // Debug info in console
       await fetchWorkload(selectedSemesterId);
     } catch (err) {
       console.error('Recalculate error:', err);
@@ -575,6 +749,20 @@ export default function WorkloadTrackerPage() {
       setRecalculating(false);
     }
   }, [selectedSemesterId, recalculating, fetchWorkload]);
+
+  // ── Cell click handler ──
+  const handleCellClick = useCallback((instructorId: string, weekNumber: number) => {
+    if (!instructorId) {
+      setSelectedCell(null);
+      return;
+    }
+    // Toggle: if same cell, close it
+    if (selectedCell?.instructorId === instructorId && selectedCell?.weekNumber === weekNumber) {
+      setSelectedCell(null);
+    } else {
+      setSelectedCell({ instructorId, weekNumber });
+    }
+  }, [selectedCell]);
 
   // ── CSV Export ──
   const handleExportCSV = useCallback(() => {
@@ -682,7 +870,6 @@ export default function WorkloadTrackerPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Recalculate button */}
             <button
               onClick={handleRecalculate}
               disabled={recalculating}
@@ -696,7 +883,6 @@ export default function WorkloadTrackerPage() {
               Recalculate
             </button>
 
-            {/* Export button */}
             <button
               onClick={handleExportCSV}
               disabled={filteredInstructors.length === 0}
@@ -766,6 +952,7 @@ export default function WorkloadTrackerPage() {
               </label>
               <span className="text-xs text-gray-400 dark:text-gray-500">
                 {filteredInstructors.length} of {instructorMap.size} instructor{instructorMap.size !== 1 ? 's' : ''}
+                {' · '}{weekNumbers.length} weeks shown
               </span>
             </div>
 
@@ -783,6 +970,9 @@ export default function WorkloadTrackerPage() {
               weekDates={weekDates}
               expandedInstructor={expandedInstructor}
               onToggleExpand={toggleExpand}
+              selectedCell={selectedCell}
+              onCellClick={handleCellClick}
+              semesterId={selectedSemesterId}
             />
 
             {/* ── Legend ── */}
