@@ -87,6 +87,7 @@ import DebriefSection from '@/components/lab-day/DebriefSection';
 import DebriefNotesSection from '@/components/lab-day/DebriefNotesSection';
 import StationCards from '@/components/lab-day/StationCards';
 import StudentRatingsSection from '@/components/lab-day/StudentRatingsSection';
+import IndividualTestingGrid from '@/components/lab-day/IndividualTestingGrid';
 
 export default function LabDayPage() {
   const { data: session, status } = useSession();
@@ -291,6 +292,10 @@ export default function LabDayPage() {
   const [quickAddType, setQuickAddType] = useState('scenario');
   const [quickAddTitle, setQuickAddTitle] = useState('');
   const [quickAddSaving, setQuickAddSaving] = useState(false);
+
+  // Lab mode state (group_rotations vs individual_testing)
+  const [labMode, setLabMode] = useState<'group_rotations' | 'individual_testing'>('group_rotations');
+  const [labModeLoading, setLabModeLoading] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -1156,6 +1161,9 @@ export default function LabDayPage() {
 
       if (labDayData.success) {
         setLabDay(labDayData.labDay);
+        if (labDayData.labDay?.lab_mode) {
+          setLabMode(labDayData.labDay.lab_mode);
+        }
       } else {
         console.error('Failed to fetch lab day:', labDayData.error);
       }
@@ -1370,6 +1378,28 @@ export default function LabDayPage() {
     if (station.scenario) return station.scenario.title;
     if (station.skill_name) return station.skill_name;
     return `Station ${station.station_number}`;
+  };
+
+  const handleToggleLabMode = async (newMode: 'group_rotations' | 'individual_testing') => {
+    if (newMode === labMode || labModeLoading) return;
+    setLabModeLoading(true);
+    try {
+      const res = await fetch(`/api/lab-management/lab-days/${labDayId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lab_mode: newMode }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        console.error('Failed to update lab mode:', data.error);
+      } else {
+        setLabMode(newMode);
+      }
+    } catch (err) {
+      console.error('Error updating lab mode:', err);
+    } finally {
+      setLabModeLoading(false);
+    }
   };
 
   const handleExportCalendar = () => {
@@ -3439,6 +3469,43 @@ export default function LabDayPage() {
             </button>
           )}
         </div>
+
+        {/* Lab Mode Toggle */}
+        <div className="flex items-center gap-2 mb-4 print:hidden">
+          <span className="text-xs font-medium text-gray-500 dark:text-gray-400 mr-1">Mode:</span>
+          <button
+            onClick={() => handleToggleLabMode('group_rotations')}
+            disabled={labModeLoading}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
+              labMode === 'group_rotations'
+                ? 'bg-blue-600 text-white border-blue-600 dark:bg-blue-500 dark:border-blue-500'
+                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-750'
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5" />
+            Group Rotations
+          </button>
+          <button
+            onClick={() => handleToggleLabMode('individual_testing')}
+            disabled={labModeLoading}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${
+              labMode === 'individual_testing'
+                ? 'bg-blue-600 text-white border-blue-600 dark:bg-blue-500 dark:border-blue-500'
+                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-750'
+            }`}
+          >
+            <ClipboardCheck className="w-3.5 h-3.5" />
+            Individual Testing
+          </button>
+          {labModeLoading && <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-400" />}
+        </div>
+
+        {/* Individual Testing Grid (shown when in individual_testing mode) */}
+        {labMode === 'individual_testing' && (
+          <div className="mb-6">
+            <IndividualTestingGrid labDayId={labDayId as string} />
+          </div>
+        )}
 
         {/* Stations Grid */}
         <StationCards
