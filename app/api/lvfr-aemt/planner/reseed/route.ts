@@ -25,6 +25,60 @@ type BlockType = 'lecture' | 'lab' | 'exam' | 'quiz' | 'activity' | 'group_testi
 // ─── Instructor name keys ───────────────────────────────────────────────────
 type InstructorKey = 'Ben' | 'Jimi' | 'Trevor';
 
+// ─── Course day metadata from course_calendar.json ──────────────────────────
+interface CourseDayMeta {
+  day_number: number;
+  date: string;
+  dow: string;
+  week: number;
+  title: string;
+  day_type: string;
+  chapters_covered: string[];
+  has_lab: boolean;
+  lab_name?: string;
+  has_exam: boolean;
+  exam_name?: string;
+  exam_questions?: number;
+  quiz_chapters: string[];
+  primary_instructor: string;
+  instructor_note: string;
+  min_instructors: number;
+  module_id?: string;
+}
+
+const COURSE_DAYS: CourseDayMeta[] = [
+  { day_number: 1, date: '2026-07-07', dow: 'Tuesday', week: 1, title: 'EMS Systems, Safety & Wellness, Legal/Ethics', day_type: 'new_content', chapters_covered: ['ch01','ch02','ch03'], has_lab: false, has_exam: false, quiz_chapters: [], primary_instructor: 'Ben Hartnell', instructor_note: 'Full day — Pima adjusted. Only instructor available.', min_instructors: 1, module_id: 'mod1' },
+  { day_number: 2, date: '2026-07-08', dow: 'Wednesday', week: 1, title: 'Communications, Med Terminology, Lifting & Moving', day_type: 'new_content', chapters_covered: ['ch04','ch05','ch06'], has_lab: false, has_exam: false, quiz_chapters: ['ch01','ch02','ch03'], primary_instructor: 'Ben Hartnell', instructor_note: 'Full day. Only instructor available.', min_instructors: 1, module_id: 'mod1' },
+  { day_number: 3, date: '2026-07-09', dow: 'Thursday', week: 1, title: 'EMT Competency Checkoffs + Lifting & Moving Lab', day_type: 'lab_day', chapters_covered: ['ch06'], has_lab: true, lab_name: 'Lifting & Moving', has_exam: false, quiz_chapters: ['ch04','ch05','ch06'], primary_instructor: 'Trevor Paul', instructor_note: 'Trevor leads. Jimi PM. Ben oversight/PM for lab.', min_instructors: 2, module_id: 'mod1' },
+  { day_number: 4, date: '2026-07-14', dow: 'Tuesday', week: 2, title: 'Ch 1-6 Exam + Human Body (A&P)', day_type: 'exam_and_content', chapters_covered: ['ch07'], has_lab: false, has_exam: true, exam_name: 'Ch 1-6 Sub-Module', exam_questions: 35, quiz_chapters: [], primary_instructor: 'Ben Hartnell', instructor_note: 'Ben AM only. PM coverage TBD.', min_instructors: 1, module_id: 'mod1' },
+  { day_number: 5, date: '2026-07-15', dow: 'Wednesday', week: 2, title: 'Pathophysiology, Life Span Development', day_type: 'new_content', chapters_covered: ['ch08','ch09'], has_lab: false, has_exam: false, quiz_chapters: ['ch07'], primary_instructor: 'Trevor Paul', instructor_note: 'Trevor leads. Jimi PM. Ben oversight.', min_instructors: 1, module_id: 'mod1' },
+  { day_number: 6, date: '2026-07-16', dow: 'Thursday', week: 2, title: 'Patient Assessment + Practice', day_type: 'new_content', chapters_covered: ['ch10'], has_lab: false, has_exam: false, quiz_chapters: ['ch08','ch09'], primary_instructor: 'Jimi Vargas', instructor_note: 'Jimi leads, Trevor assists. Ben at PALS.', min_instructors: 1, module_id: 'mod1' },
+  { day_number: 7, date: '2026-07-21', dow: 'Tuesday', week: 3, title: 'Ch 10 Exam + Pharmacology + Vascular Access + Med Admin Lab', day_type: 'exam_and_content', chapters_covered: ['ch12','ch13'], has_lab: true, lab_name: 'Med Admin (IM/SQ/IN/Neb)', has_exam: true, exam_name: 'Ch 10 Assessment Exam', exam_questions: 45, quiz_chapters: [], primary_instructor: 'Jimi Vargas', instructor_note: 'Jimi leads all day. Ben oversight AM.', min_instructors: 1, module_id: 'mod1' },
+  { day_number: 8, date: '2026-07-22', dow: 'Wednesday', week: 3, title: 'IV Manikin Arms AM + Live Sticks PM', day_type: 'lab_day', chapters_covered: ['ch13'], has_lab: true, lab_name: 'IV Access — LIVE STICKS', has_exam: false, quiz_chapters: ['ch12','ch13'], primary_instructor: 'Jimi Vargas', instructor_note: 'Jimi leads. Ben + Pima Cadre PM for live stick safety.', min_instructors: 3, module_id: 'mod1' },
+  { day_number: 9, date: '2026-07-23', dow: 'Thursday', week: 3, title: 'Sub-Module Exam + IV Math + Checkoffs', day_type: 'exam_and_practice', chapters_covered: [], has_lab: false, has_exam: true, exam_name: 'Ch 7-9, 12-13 Sub-Module', exam_questions: 65, quiz_chapters: [], primary_instructor: 'Jimi Vargas', instructor_note: 'Jimi + Trevor. Ben oversight.', min_instructors: 1, module_id: 'mod1' },
+  { day_number: 10, date: '2026-07-28', dow: 'Tuesday', week: 4, title: 'Airway Management + Respiratory Emergencies', day_type: 'new_content', chapters_covered: ['ch11','ch17'], has_lab: false, has_exam: false, quiz_chapters: [], primary_instructor: 'Jimi Vargas', instructor_note: 'Jimi leads. Heavy lecture day (350 min). Ben oversight AM.', min_instructors: 1, module_id: 'mod3' },
+  { day_number: 11, date: '2026-07-29', dow: 'Wednesday', week: 4, title: 'Shock Lecture + Airway Lab PM', day_type: 'new_content', chapters_covered: ['ch14'], has_lab: true, lab_name: 'Airway Management', has_exam: false, quiz_chapters: ['ch11','ch17'], primary_instructor: 'Jimi Vargas', instructor_note: 'Jimi leads AM. All 3 for airway lab PM.', min_instructors: 3, module_id: 'mod3' },
+  { day_number: 12, date: '2026-07-30', dow: 'Thursday', week: 4, title: 'BLS Resuscitation + Cardiovascular + BLS Lab PM', day_type: 'new_content', chapters_covered: ['ch15','ch18'], has_lab: true, lab_name: 'BLS / CPR / AED', has_exam: false, quiz_chapters: ['ch14'], primary_instructor: 'Jimi Vargas', instructor_note: 'Jimi leads. All 3 for BLS lab PM.', min_instructors: 2, module_id: 'mod3' },
+  { day_number: 13, date: '2026-08-04', dow: 'Tuesday', week: 5, title: 'Resuscitation Exam + Trauma begins', day_type: 'exam_and_content', chapters_covered: ['ch26','ch27','ch28'], has_lab: false, has_exam: true, exam_name: 'Resuscitation Module', exam_questions: 75, quiz_chapters: [], primary_instructor: 'Jimi Vargas', instructor_note: 'Jimi leads. Ben oversight for exam.', min_instructors: 1, module_id: 'mod3' },
+  { day_number: 14, date: '2026-08-05', dow: 'Wednesday', week: 5, title: 'Face/Neck + Head/Spine + Stop the Bleed Lab', day_type: 'new_content', chapters_covered: ['ch29','ch30'], has_lab: true, lab_name: 'Stop the Bleed', has_exam: false, quiz_chapters: ['ch26','ch27','ch28'], primary_instructor: 'Jimi Vargas', instructor_note: 'Jimi leads. Ben PM for lab.', min_instructors: 2, module_id: 'mod5' },
+  { day_number: 15, date: '2026-08-06', dow: 'Thursday', week: 5, title: 'Chest + Abdominal/GU + C-Spine Lab', day_type: 'new_content', chapters_covered: ['ch31','ch32'], has_lab: true, lab_name: 'C-Spine Immobilization', has_exam: false, quiz_chapters: ['ch29','ch30'], primary_instructor: 'Trevor Paul', instructor_note: 'Trevor leads. Ben PM for lab. Jimi on shift.', min_instructors: 2, module_id: 'mod5' },
+  { day_number: 16, date: '2026-08-11', dow: 'Tuesday', week: 6, title: 'Orthopaedic + Trauma Cases + Checkoffs', day_type: 'new_content', chapters_covered: ['ch33'], has_lab: false, has_exam: false, quiz_chapters: ['ch31','ch32'], primary_instructor: 'Jimi Vargas', instructor_note: 'Jimi leads. Ben oversight (Pima lighter).', min_instructors: 1, module_id: 'mod5' },
+  { day_number: 17, date: '2026-08-12', dow: 'Wednesday', week: 6, title: 'Environmental + Splinting Lab PM', day_type: 'new_content', chapters_covered: ['ch34'], has_lab: true, lab_name: 'Splinting', has_exam: false, quiz_chapters: ['ch33'], primary_instructor: 'Trevor Paul', instructor_note: 'Trevor leads. Ben PM for lab. Jimi on shift.', min_instructors: 2, module_id: 'mod5' },
+  { day_number: 18, date: '2026-08-13', dow: 'Thursday', week: 6, title: 'Trauma Review + Lab Reps + Checkoffs', day_type: 'review_practice', chapters_covered: [], has_lab: true, lab_name: 'Trauma skill reps', has_exam: false, quiz_chapters: ['ch34'], primary_instructor: 'Trevor Paul', instructor_note: 'Trevor + Ben. Jimi on shift. Catch-up day.', min_instructors: 1, module_id: 'mod5' },
+  { day_number: 19, date: '2026-08-18', dow: 'Tuesday', week: 7, title: 'Trauma Exam + Medical Overview + Neuro', day_type: 'exam_and_content', chapters_covered: ['ch16','ch19'], has_lab: false, has_exam: true, exam_name: 'Trauma Module', exam_questions: 65, quiz_chapters: [], primary_instructor: 'Ben Hartnell', instructor_note: 'Ben solo full day (Pima off week).', min_instructors: 1, module_id: 'mod5' },
+  { day_number: 20, date: '2026-08-19', dow: 'Wednesday', week: 7, title: 'GI/Urologic + Endocrine + Immunologic', day_type: 'new_content', chapters_covered: ['ch20','ch21','ch22'], has_lab: false, has_exam: false, quiz_chapters: ['ch16','ch19'], primary_instructor: 'Ben Hartnell', instructor_note: 'Ben solo full day (Pima off week).', min_instructors: 1, module_id: 'mod4' },
+  { day_number: 21, date: '2026-08-20', dow: 'Thursday', week: 7, title: 'Toxicology + Psychiatric + Gynecologic (all medical done)', day_type: 'new_content', chapters_covered: ['ch23','ch24','ch25'], has_lab: false, has_exam: false, quiz_chapters: ['ch20','ch21','ch22'], primary_instructor: 'Trevor Paul', instructor_note: 'Trevor + Ben. Jimi PM. All medical complete.', min_instructors: 1, module_id: 'mod4' },
+  { day_number: 22, date: '2026-08-25', dow: 'Tuesday', week: 8, title: 'Medical Exam + OB/Neonatal Care', day_type: 'exam_and_content', chapters_covered: ['ch35'], has_lab: false, has_exam: true, exam_name: 'Medical Module', exam_questions: 65, quiz_chapters: [], primary_instructor: 'Ben Hartnell', instructor_note: 'Ben solo full day. Ch 23-25 quizzes done Monday.', min_instructors: 1, module_id: 'mod4' },
+  { day_number: 23, date: '2026-08-26', dow: 'Wednesday', week: 8, title: 'Pediatrics Day 1 (~270 of 320 min)', day_type: 'new_content', chapters_covered: ['ch36'], has_lab: false, has_exam: false, quiz_chapters: ['ch35'], primary_instructor: 'Trevor Paul', instructor_note: 'Trevor leads. Ben full day. Jimi PM.', min_instructors: 1, module_id: 'mod6' },
+  { day_number: 24, date: '2026-08-27', dow: 'Thursday', week: 8, title: 'Peds finish + Geriatrics + Special Challenges + OB Lab', day_type: 'new_content', chapters_covered: ['ch36','ch37','ch38'], has_lab: true, lab_name: 'OB Delivery / NRP', has_exam: false, quiz_chapters: [], primary_instructor: 'Jimi Vargas', instructor_note: 'All 3 instructors. OB Lab PM.', min_instructors: 2, module_id: 'mod6' },
+  { day_number: 25, date: '2026-09-01', dow: 'Tuesday', week: 9, title: 'Special Pop Exam + EMS Ops (all 4 chapters)', day_type: 'exam_and_content', chapters_covered: ['ch39','ch40','ch41','ch42'], has_lab: false, has_exam: true, exam_name: 'Special Populations Module', exam_questions: 55, quiz_chapters: [], primary_instructor: 'Ben Hartnell', instructor_note: 'Ben leads. Jimi PM. All 42 chapters complete.', min_instructors: 1, module_id: 'mod6' },
+  { day_number: 26, date: '2026-09-02', dow: 'Wednesday', week: 9, title: 'EMS Ops Exam + Comprehensive Review', day_type: 'exam_and_review', chapters_covered: [], has_lab: false, has_exam: true, exam_name: 'EMS Operations Module', exam_questions: 35, quiz_chapters: [], primary_instructor: 'Jimi Vargas', instructor_note: 'Jimi + Ben. Review + skills PM.', min_instructors: 1, module_id: 'mod7' },
+  { day_number: 27, date: '2026-09-03', dow: 'Thursday', week: 9, title: 'Review + Skills Checkoff Marathon', day_type: 'review_practice', chapters_covered: [], has_lab: false, has_exam: false, quiz_chapters: [], primary_instructor: 'Jimi Vargas', instructor_note: 'All 3 instructors. 3 simultaneous skills stations.', min_instructors: 1 },
+  { day_number: 28, date: '2026-09-08', dow: 'Tuesday', week: 10, title: 'Review + Skills Remediation + Exam Prep', day_type: 'review_practice', chapters_covered: [], has_lab: false, has_exam: false, quiz_chapters: [], primary_instructor: 'Jimi Vargas', instructor_note: 'Jimi + Ben. Practice exam format.', min_instructors: 1 },
+  { day_number: 29, date: '2026-09-09', dow: 'Wednesday', week: 10, title: 'Final Review + Practice Scenarios', day_type: 'review_practice', chapters_covered: [], has_lab: false, has_exam: false, quiz_chapters: [], primary_instructor: 'Jimi Vargas', instructor_note: 'All 3 instructors. Last day before final.', min_instructors: 1 },
+  { day_number: 30, date: '2026-09-10', dow: 'Thursday', week: 10, title: 'COMPREHENSIVE FINAL EXAM + Course Closeout', day_type: 'final_exam', chapters_covered: [], has_lab: false, has_exam: true, exam_name: 'Comprehensive Final', exam_questions: 150, quiz_chapters: [], primary_instructor: 'Jimi Vargas', instructor_note: 'All 3 instructors. NREMT briefing + closeout PM.', min_instructors: 1 },
+];
+
 // ─── Full 30-day schedule data ──────────────────────────────────────────────
 interface RawBlock {
   start: string;
@@ -477,6 +531,40 @@ export async function POST() {
     }
   }
 
+  // 1b. Update instance start_date to 2026-07-07
+  if (instance.start_date !== '2026-07-07') {
+    await supabase
+      .from('lvfr_aemt_plan_instances')
+      .update({ start_date: '2026-07-07', updated_at: new Date().toISOString() })
+      .eq('id', instance.id);
+    instance.start_date = '2026-07-07';
+  }
+
+  // 1c. Upsert lvfr_aemt_course_days with metadata from course_calendar.json
+  for (const day of COURSE_DAYS) {
+    const { error: dayErr } = await supabase
+      .from('lvfr_aemt_course_days')
+      .upsert({
+        day_number: day.day_number,
+        date: day.date,
+        day_of_week: day.dow,
+        week_number: day.week,
+        title: day.title,
+        day_type: day.day_type,
+        chapters_covered: day.chapters_covered,
+        has_lab: day.has_lab,
+        lab_name: day.lab_name || null,
+        has_exam: day.has_exam,
+        exam_name: day.exam_name || null,
+        has_quiz: day.quiz_chapters.length > 0,
+        quiz_chapters: day.quiz_chapters,
+        module_id: day.module_id || null,
+      }, { onConflict: 'day_number' });
+    if (dayErr) {
+      console.error(`Failed to upsert course day ${day.day_number}:`, dayErr.message);
+    }
+  }
+
   // 2. Look up instructor IDs from lab_users
   const instructorEmails: Record<InstructorKey, string> = {
     Ben: 'bhartnell@pmi.edu',
@@ -702,6 +790,7 @@ export async function POST() {
     inserted: insertedCount,
     content_blocks_created: newBlocks.length,
     content_blocks_reused: blockArray.length - newBlocks.length,
+    course_days_upserted: COURSE_DAYS.length,
     instructor_ids: instructorIds,
     errors: errors.length > 0 ? errors : undefined,
     date_range: {
