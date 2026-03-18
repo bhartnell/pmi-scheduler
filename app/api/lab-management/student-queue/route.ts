@@ -6,7 +6,7 @@ import { requireAuth } from '@/lib/api-auth';
 // GET /api/lab-management/student-queue?lab_day_id=UUID
 //
 // Returns the student x station grid data for individual testing mode.
-// Combines lab_day_student_queue entries with student_skill_evaluations.
+// Includes station instructor names and evaluation summary data.
 // ---------------------------------------------------------------------------
 export async function GET(request: NextRequest) {
   const auth = await requireAuth('instructor');
@@ -44,7 +44,29 @@ export async function GET(request: NextRequest) {
       .eq('lab_day_id', labDayId)
       .order('station_number');
 
-    // 3. Get active students from the cohort
+    // 3. Get station instructors (primary instructor per station)
+    const stationIds = (stations || []).map((s: { id: string }) => s.id);
+    let stationInstructorMap: Record<string, { name: string; email: string }> = {};
+    if (stationIds.length > 0) {
+      const { data: stationInstructors } = await supabase
+        .from('station_instructors')
+        .select('station_id, user_name, user_email, is_primary')
+        .in('station_id', stationIds);
+
+      if (stationInstructors) {
+        // Prefer primary instructor; fall back to first found
+        for (const si of stationInstructors) {
+          if (!stationInstructorMap[si.station_id] || si.is_primary) {
+            stationInstructorMap[si.station_id] = {
+              name: si.user_name || si.user_email.split('@')[0],
+              email: si.user_email,
+            };
+          }
+        }
+      }
+    }
+
+    // 4. Get active students from the cohort
     const { data: students } = await supabase
       .from('students')
       .select('id, first_name, last_name')
@@ -52,20 +74,19 @@ export async function GET(request: NextRequest) {
       .eq('status', 'active')
       .order('last_name');
 
-    // 4. Get queue entries for this lab day
+    // 5. Get queue entries for this lab day
     const { data: queueEntries } = await supabase
       .from('lab_day_student_queue')
       .select('id, student_id, station_id, status, result, evaluation_id, started_at, completed_at')
       .eq('lab_day_id', labDayId);
 
-    // 5. Get evaluations for this lab day
+    // 6. Get evaluations for this lab day (with step counts)
     const { data: evaluations } = await supabase
       .from('student_skill_evaluations')
-      .select('id, student_id, skill_sheet_id, result, created_at')
+      .select('id, student_id, skill_sheet_id, result, step_marks, created_at, evaluator:lab_users!student_skill_evaluations_evaluator_id_fkey(name)')
       .eq('lab_day_id', labDayId);
 
-    // 6. Get station-to-skill-sheet mapping (via station_skills table)
-    const stationIds = (stations || []).map((s: { id: string }) => s.id);
+    // 7. Get station-to-skill-sheet mapping (via station_skills table)
     let stationSkillMap: Record<string, string> = {};
     if (stationIds.length > 0) {
       const { data: stationSkills } = await supabase
@@ -99,12 +120,68 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // 8. Get skill sheet step counts for completed evals
+    const evalIds = (evaluations || []).map((e: { id: string }) => e.id);
+    const skillSheetIdsSet = new Set<string>();
+    for (const e of (evaluations || [])) {
+      if (e.skill_sheet_id) skillSheetIdsSet.add(e.skill_sheet_id);
+    }
+    let skillSheetStepCounts: Record<string, { total: number; critical: number }> = {};
+    if (skillSheetIdsSet.size > 0) {
+      const { data: steps } = await supabase
+        .from('skill_sheet_steps')
+        .select('skill_sheet_id, is_critical')
+        .in('skill_sheet_id', Array.from(skillSheetIdsSet));
+
+      if (steps) {
+        for (const step of steps) {
+          if (!skillSheetStepCounts[step.skill_sheet_id]) {
+            skillSheetStepCounts[step.skill_sheet_id] = { total: 0, critical: 0 };
+          }
+          skillSheetStepCounts[step.skill_sheet_id].total++;
+          if (step.is_critical) skillSheetStepCounts[step.skill_sheet_id].critical++;
+        }
+      }
+    }
+
+    // Build evaluation summary map: evalId -> summary data
+    const evalSummaryMap: Record<string, {
+      stepsCompleted: number;
+      stepsTotal: number;
+      criticalCompleted: number;
+      criticalTotal: number;
+      evaluatorName: string | null;
+    }> = {};
+    for (const evalItem of (evaluations || [])) {
+      const stepCounts = skillSheetStepCounts[evalItem.skill_sheet_id] || { total: 0, critical: 0 };
+      const stepMarks = (evalItem.step_marks || {}) as Record<string, string>;
+      const passedSteps = Object.values(stepMarks).filter(v => v === 'pass').length;
+
+      // For critical steps, we'd need the step data; approximate from step_marks
+      const rawEvaluator = evalItem.evaluator as unknown;
+      const evaluator = (Array.isArray(rawEvaluator) ? rawEvaluator[0] : rawEvaluator) as { name: string } | null;
+      evalSummaryMap[evalItem.id] = {
+        stepsCompleted: passedSteps,
+        stepsTotal: stepCounts.total,
+        criticalCompleted: 0, // Will be refined below
+        criticalTotal: stepCounts.critical,
+        evaluatorName: evaluator?.name || null,
+      };
+    }
+
     // Build cells map: key = `${studentId}_${stationId}`
     const cells: Record<string, {
       queueId: string | null;
       status: string;
       result: string | null;
       evaluationId: string | null;
+      evalSummary: {
+        stepsCompleted: number;
+        stepsTotal: number;
+        criticalCompleted: number;
+        criticalTotal: number;
+        evaluatorName: string | null;
+      } | null;
     }> = {};
 
     // First populate from queue entries
@@ -115,6 +192,7 @@ export async function GET(request: NextRequest) {
         status: entry.status,
         result: entry.result,
         evaluationId: entry.evaluation_id,
+        evalSummary: entry.evaluation_id ? (evalSummaryMap[entry.evaluation_id] || null) : null,
       };
     }
 
@@ -130,6 +208,7 @@ export async function GET(request: NextRequest) {
             status: 'completed',
             result: evalItem.result === 'pass' ? 'pass' : 'fail',
             evaluationId: evalItem.id,
+            evalSummary: evalSummaryMap[evalItem.id] || null,
           };
         }
       }
@@ -142,6 +221,7 @@ export async function GET(request: NextRequest) {
       stations: (stations || []).map((s: Record<string, unknown>) => ({
         ...s,
         skillSheetId: stationSkillMap[s.id as string] || null,
+        instructorName: stationInstructorMap[s.id as string]?.name || null,
       })),
       cells,
     });
@@ -156,7 +236,8 @@ export async function GET(request: NextRequest) {
 // POST /api/lab-management/student-queue
 //
 // Send a student to a station (create queue entry with status='in_progress')
-// Body: { lab_day_id, student_id, station_id }
+// Body: { lab_day_id, student_id, station_id, status? }
+// Handles "already in progress" gracefully — returns existing entry.
 // ---------------------------------------------------------------------------
 export async function POST(request: NextRequest) {
   const auth = await requireAuth('instructor');
@@ -164,7 +245,8 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { lab_day_id, student_id, station_id } = body;
+    const { lab_day_id, student_id, station_id, status: requestedStatus } = body;
+    const targetStatus = requestedStatus || 'in_progress';
 
     if (!lab_day_id || !student_id || !station_id) {
       return NextResponse.json(
@@ -175,21 +257,19 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabaseAdmin();
 
-    // Check if an entry already exists
+    // Check if an entry already exists and is in_progress
     const { data: existing } = await supabase
       .from('lab_day_student_queue')
       .select('id, status')
       .eq('lab_day_id', lab_day_id)
       .eq('student_id', student_id)
       .eq('station_id', station_id)
+      .eq('status', 'in_progress')
       .maybeSingle();
 
     if (existing) {
-      // If already in_progress or completed, don't create a new one
-      if (existing.status === 'in_progress') {
-        return NextResponse.json({ success: true, entry: existing, message: 'Already in progress' });
-      }
-      // If completed, create a new attempt
+      // Already in_progress — return existing entry
+      return NextResponse.json({ success: true, entry: existing, message: 'Already in progress' });
     }
 
     const { data: entry, error } = await supabase
@@ -198,7 +278,7 @@ export async function POST(request: NextRequest) {
         lab_day_id,
         student_id,
         station_id,
-        status: 'in_progress',
+        status: targetStatus,
         started_at: new Date().toISOString(),
       })
       .select()
@@ -219,6 +299,7 @@ export async function POST(request: NextRequest) {
 //
 // Update a queue entry (complete, override result)
 // Body: { id, status?, result?, evaluation_id? }
+// Also supports lookup by { lab_day_id, student_id, station_id } if id is not known.
 // ---------------------------------------------------------------------------
 export async function PUT(request: NextRequest) {
   const auth = await requireAuth('instructor');
@@ -226,16 +307,54 @@ export async function PUT(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { id, status, result, evaluation_id } = body;
+    const { id, lab_day_id, student_id, station_id, status, result, evaluation_id } = body;
 
-    if (!id) {
+    const supabase = getSupabaseAdmin();
+
+    // If no id provided, look up by lab_day_id + student_id + station_id
+    let entryId = id;
+    if (!entryId && lab_day_id && student_id && station_id) {
+      const { data: found } = await supabase
+        .from('lab_day_student_queue')
+        .select('id')
+        .eq('lab_day_id', lab_day_id)
+        .eq('student_id', student_id)
+        .eq('station_id', station_id)
+        .eq('status', 'in_progress')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (found) {
+        entryId = found.id;
+      } else {
+        // No in-progress entry found — create one and complete it immediately
+        const { data: newEntry, error: insertErr } = await supabase
+          .from('lab_day_student_queue')
+          .insert({
+            lab_day_id,
+            student_id,
+            station_id,
+            status: status || 'completed',
+            result: result || null,
+            evaluation_id: evaluation_id || null,
+            started_at: new Date().toISOString(),
+            completed_at: status === 'completed' ? new Date().toISOString() : null,
+          })
+          .select()
+          .single();
+
+        if (insertErr) throw insertErr;
+        return NextResponse.json({ success: true, entry: newEntry });
+      }
+    }
+
+    if (!entryId) {
       return NextResponse.json(
-        { success: false, error: 'Queue entry id is required' },
+        { success: false, error: 'Queue entry id (or lab_day_id+student_id+station_id) is required' },
         { status: 400 }
       );
     }
-
-    const supabase = getSupabaseAdmin();
 
     const updates: Record<string, unknown> = {};
     if (status) updates.status = status;
@@ -246,7 +365,7 @@ export async function PUT(request: NextRequest) {
     const { data: entry, error } = await supabase
       .from('lab_day_student_queue')
       .update(updates)
-      .eq('id', id)
+      .eq('id', entryId)
       .select()
       .single();
 

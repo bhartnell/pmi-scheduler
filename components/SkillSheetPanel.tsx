@@ -267,6 +267,22 @@ export default function SkillSheetPanel({
     fetchExistingEvals();
   }, [fetchExistingEvals]);
 
+  // Track student queue: mark as in_progress when panel opens with a student for a station
+  useEffect(() => {
+    if (studentId && labDayId && stationPoolId) {
+      fetch('/api/lab-management/student-queue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lab_day_id: labDayId,
+          student_id: studentId,
+          station_id: stationPoolId,
+          status: 'in_progress',
+        }),
+      }).catch(() => { /* non-blocking */ });
+    }
+  }, [studentId, labDayId, stationPoolId]);
+
   // Close on Escape key
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -401,6 +417,23 @@ export default function SkillSheetPanel({
         // Notify parent
         if (onEvaluationSaved && studentId && evalId) {
           onEvaluationSaved(studentId, evalId, saveStatus);
+        }
+
+        // Update student queue (fire-and-forget, non-blocking)
+        if (labDayId && studentId && stationPoolId) {
+          const queueResult = saveStatus === 'complete' ? (evaluationResult === 'pass' ? 'pass' : 'fail') : undefined;
+          fetch('/api/lab-management/student-queue', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              lab_day_id: labDayId,
+              student_id: studentId,
+              station_id: stationPoolId,
+              status: saveStatus === 'complete' ? 'completed' : 'in_progress',
+              result: queueResult || null,
+              evaluation_id: evalId || null,
+            }),
+          }).catch(() => { /* non-blocking */ });
         }
 
         // Show toast
