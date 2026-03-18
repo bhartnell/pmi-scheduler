@@ -3500,9 +3500,9 @@ export default function LabDayPage() {
           {labModeLoading && <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-400" />}
         </div>
 
-        {/* Individual Testing Grid (shown when in individual_testing mode) */}
+        {/* Individual Testing Grid (shown when in individual_testing mode, replaces attendance) */}
         {labMode === 'individual_testing' && (
-          <div className="mb-6">
+          <div className="mt-6 print:hidden">
             <IndividualTestingGrid labDayId={labDayId as string} />
           </div>
         )}
@@ -3662,8 +3662,8 @@ export default function LabDayPage() {
           </div>
         )}
 
-        {/* Student Attendance */}
-        {labDay.cohort?.id && (
+        {/* Student Attendance (only shown in group_rotations mode) */}
+        {labDay.cohort?.id && labMode !== 'individual_testing' && (
           <div className="mt-6 print:hidden">
             <AttendanceSection
               labDayId={labDayId}

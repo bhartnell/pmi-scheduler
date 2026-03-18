@@ -6,16 +6,17 @@ import {
   X,
   Clock,
   Circle,
-  Minus,
   Eye,
   RotateCcw,
   Edit2,
   Loader2,
-  ChevronDown,
   RefreshCw,
   Users,
   BarChart3,
+  Printer,
 } from 'lucide-react';
+
+// ─── Types ──────────────────────────────────────────────────────────────────
 
 interface Student {
   id: string;
@@ -30,7 +31,16 @@ interface GridStation {
   custom_title: string | null;
   skill_name: string | null;
   skillSheetId: string | null;
+  instructorName: string | null;
   scenario?: { id: string; title: string } | null;
+}
+
+interface EvalSummary {
+  stepsCompleted: number;
+  stepsTotal: number;
+  criticalCompleted: number;
+  criticalTotal: number;
+  evaluatorName: string | null;
 }
 
 interface CellData {
@@ -38,11 +48,14 @@ interface CellData {
   status: string; // 'queued' | 'in_progress' | 'completed'
   result: string | null; // 'pass' | 'fail' | 'incomplete'
   evaluationId: string | null;
+  evalSummary: EvalSummary | null;
 }
 
 interface IndividualTestingGridProps {
   labDayId: string;
 }
+
+// ─── Component ──────────────────────────────────────────────────────────────
 
 export default function IndividualTestingGrid({ labDayId }: IndividualTestingGridProps) {
   const [students, setStudents] = useState<Student[]>([]);
@@ -52,17 +65,7 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
   const [refreshing, setRefreshing] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [popoverCell, setPopoverCell] = useState<string | null>(null);
-  const [isMobile, setIsMobile] = useState(false);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
-
-  // Detect mobile
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768);
-    check();
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
-  }, []);
 
   // Close popover on outside click
   useEffect(() => {
@@ -74,6 +77,8 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
+
+  // ─── Data fetching ──────────────────────────────────────────────────────
 
   const fetchGrid = useCallback(async (isBackground = false) => {
     if (!isBackground) setLoading(true);
@@ -95,20 +100,20 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
     }
   }, [labDayId]);
 
-  // Initial fetch + polling every 12 seconds
+  // Initial fetch + polling every 5 seconds
   useEffect(() => {
     fetchGrid();
-    pollRef.current = setInterval(() => fetchGrid(true), 12000);
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
+    const interval = setInterval(() => fetchGrid(true), 5000);
+    return () => clearInterval(interval);
   }, [fetchGrid]);
+
+  // ─── Actions ────────────────────────────────────────────────────────────
 
   const handleCellClick = async (studentId: string, stationId: string) => {
     const key = `${studentId}_${stationId}`;
     const cell = cells[key];
 
-    // If empty cell, start in_progress
+    // Empty cell → send to station (mark in_progress)
     if (!cell || !cell.status) {
       setActionLoading(key);
       try {
@@ -130,6 +135,7 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
               status: 'in_progress',
               result: null,
               evaluationId: null,
+              evalSummary: null,
             },
           }));
         }
@@ -141,16 +147,9 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
       return;
     }
 
-    // If completed, show popover
-    if (cell.status === 'completed') {
+    // Completed or in_progress → show popover
+    if (cell.status === 'completed' || cell.status === 'in_progress') {
       setPopoverCell(popoverCell === key ? null : key);
-      return;
-    }
-
-    // If in_progress, also show popover (to allow marking complete/cancelling)
-    if (cell.status === 'in_progress') {
-      setPopoverCell(popoverCell === key ? null : key);
-      return;
     }
   };
 
@@ -206,6 +205,7 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
             status: 'in_progress',
             result: null,
             evaluationId: null,
+            evalSummary: null,
           },
         }));
       }
@@ -217,6 +217,8 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
     }
   };
 
+  // ─── Helpers ────────────────────────────────────────────────────────────
+
   const getStationTitle = (station: GridStation) => {
     if (station.custom_title) return station.custom_title;
     if (station.scenario) return station.scenario.title;
@@ -224,11 +226,23 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
     return `Station ${station.station_number}`;
   };
 
-  // Summary calculations
+  const formatInstructor = (name: string | null) => {
+    if (!name) return null;
+    // "Benjamin Hartnell" → "B. Hartnell"
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return `${parts[0][0]}. ${parts[parts.length - 1]}`;
+    }
+    return name;
+  };
+
+  // ─── Summary calculations ──────────────────────────────────────────────
+
+  const totalCompleted = Object.values(cells).filter(c => c.status === 'completed').length;
+  const totalCells = students.length * stations.length;
+
   const stationSummary = stations.map(station => {
-    let completed = 0;
-    let passed = 0;
-    let failed = 0;
+    let completed = 0, passed = 0, failed = 0;
     for (const student of students) {
       const cell = cells[`${student.id}_${station.id}`];
       if (cell?.status === 'completed') {
@@ -251,59 +265,89 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
 
   const studentsFullyDone = studentSummary.filter(s => s.completed === s.total && s.total > 0).length;
 
-  const renderCellContent = (studentId: string, stationId: string) => {
+  // ─── Cell rendering ────────────────────────────────────────────────────
+
+  const renderBadge = (studentId: string, stationId: string) => {
     const key = `${studentId}_${stationId}`;
     const cell = cells[key];
     const isLoading = actionLoading === key;
 
     if (isLoading) {
       return (
-        <div className="flex items-center justify-center w-full h-full">
-          <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
-        </div>
+        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-400">
+          <Loader2 className="w-4 h-4 animate-spin" />
+        </span>
       );
     }
 
     if (!cell || !cell.status) {
       return (
-        <div className="flex items-center justify-center w-full h-full text-gray-300 hover:text-gray-500 cursor-pointer transition-colors" title="Click to start">
-          <Circle className="w-5 h-5" />
-        </div>
+        <button
+          onClick={() => handleCellClick(studentId, stationId)}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors cursor-pointer"
+          title="Click to send to station"
+        >
+          <Circle className="w-4 h-4" />
+          <span className="hidden sm:inline">Not Started</span>
+        </button>
       );
     }
 
     if (cell.status === 'in_progress') {
       return (
-        <div className="flex items-center justify-center w-full h-full text-amber-500 cursor-pointer" title="In Progress">
-          <Clock className="w-5 h-5 animate-pulse" />
-        </div>
+        <button
+          onClick={() => handleCellClick(studentId, stationId)}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 cursor-pointer"
+          title="In Progress"
+        >
+          <Clock className="w-4 h-4 animate-pulse" />
+          <span className="hidden sm:inline">In Progress</span>
+        </button>
       );
     }
 
     if (cell.status === 'completed') {
       if (cell.result === 'pass') {
         return (
-          <div className="flex items-center justify-center w-full h-full text-green-600 cursor-pointer" title="Pass">
-            <Check className="w-5 h-5 stroke-[3]" />
-          </div>
+          <button
+            onClick={() => handleCellClick(studentId, stationId)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800 cursor-pointer"
+            title="Pass"
+          >
+            <Check className="w-4 h-4 stroke-[3]" />
+            <span className="hidden sm:inline">Pass</span>
+          </button>
         );
       }
       if (cell.result === 'fail') {
         return (
-          <div className="flex items-center justify-center w-full h-full text-red-500 cursor-pointer" title="Fail">
-            <X className="w-5 h-5 stroke-[3]" />
-          </div>
+          <button
+            onClick={() => handleCellClick(studentId, stationId)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 cursor-pointer"
+            title="Fail"
+          >
+            <X className="w-4 h-4 stroke-[3]" />
+            <span className="hidden sm:inline">Fail</span>
+          </button>
         );
       }
+      // Completed but no pass/fail
       return (
-        <div className="flex items-center justify-center w-full h-full text-gray-400 cursor-pointer" title="Incomplete">
-          <Minus className="w-5 h-5" />
-        </div>
+        <button
+          onClick={() => handleCellClick(studentId, stationId)}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-pointer"
+          title="Completed"
+        >
+          <Check className="w-4 h-4" />
+          <span className="hidden sm:inline">Done</span>
+        </button>
       );
     }
 
     return null;
   };
+
+  // ─── Popover ────────────────────────────────────────────────────────────
 
   const renderPopover = (studentId: string, stationId: string) => {
     const key = `${studentId}_${stationId}`;
@@ -315,53 +359,96 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
     return (
       <div
         ref={popoverRef}
-        className="absolute z-50 top-full left-1/2 -translate-x-1/2 mt-1 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-2 min-w-[160px]"
+        className="absolute z-50 mt-1 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 p-3 min-w-[220px]"
+        style={{ top: '100%', left: '50%', transform: 'translateX(-50%)' }}
       >
+        {/* Completed popover: show eval summary + actions */}
+        {cell.status === 'completed' && (
+          <div className="space-y-2">
+            {/* Result badge */}
+            <div className="flex items-center gap-2 pb-2 border-b border-gray-100 dark:border-gray-700">
+              <span className={`text-sm font-semibold ${cell.result === 'pass' ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
+                Result: {cell.result === 'pass' ? 'Pass' : 'Fail'}
+              </span>
+            </div>
+
+            {/* Eval summary */}
+            {cell.evalSummary && (
+              <div className="text-xs text-gray-500 dark:text-gray-400 space-y-0.5">
+                {cell.evalSummary.stepsTotal > 0 && (
+                  <div>Score: {cell.evalSummary.stepsCompleted}/{cell.evalSummary.stepsTotal} steps</div>
+                )}
+                {cell.evalSummary.criticalTotal > 0 && (
+                  <div>Critical: {cell.evalSummary.criticalCompleted}/{cell.evalSummary.criticalTotal}</div>
+                )}
+                {cell.evalSummary.evaluatorName && (
+                  <div>Evaluator: {cell.evalSummary.evaluatorName}</div>
+                )}
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="space-y-1 pt-1">
+              {cell.evaluationId && (
+                <a
+                  href={`/skill-sheets/evaluations/${cell.evaluationId}`}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Eye className="w-4 h-4" /> View Full Score Sheet
+                </a>
+              )}
+              {cell.evaluationId && (
+                <a
+                  href={`/api/skill-sheets/evaluations/print?id=${cell.evaluationId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Printer className="w-4 h-4" /> Print Score Sheet
+                </a>
+              )}
+              <button
+                onClick={(e) => { e.stopPropagation(); handleNewAttempt(studentId, stationId); }}
+                className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg"
+              >
+                <RotateCcw className="w-4 h-4" /> New Attempt
+              </button>
+              <div className="border-t border-gray-100 dark:border-gray-700 my-1" />
+              <button
+                onClick={(e) => { e.stopPropagation(); handleOverrideResult(key, cell.result === 'pass' ? 'fail' : 'pass'); }}
+                className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
+              >
+                <Edit2 className="w-4 h-4" /> Override to {cell.result === 'pass' ? 'Fail' : 'Pass'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* In-progress popover: mark pass/fail */}
         {cell.status === 'in_progress' && (
-          <>
+          <div className="space-y-1">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Manual override:</p>
             <button
               onClick={(e) => { e.stopPropagation(); handleOverrideResult(key, 'pass'); }}
-              className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 rounded"
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg"
             >
               <Check className="w-4 h-4" /> Mark Pass
             </button>
             <button
               onClick={(e) => { e.stopPropagation(); handleOverrideResult(key, 'fail'); }}
-              className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded"
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg"
             >
               <X className="w-4 h-4" /> Mark Fail
             </button>
-          </>
-        )}
-        {cell.status === 'completed' && (
-          <>
-            {cell.evaluationId && (
-              <a
-                href={`/skill-sheets/evaluations/${cell.evaluationId}`}
-                className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <Eye className="w-4 h-4" /> View Score Sheet
-              </a>
-            )}
-            <button
-              onClick={(e) => { e.stopPropagation(); handleNewAttempt(studentId, stationId); }}
-              className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded"
-            >
-              <RotateCcw className="w-4 h-4" /> New Attempt
-            </button>
-            <div className="border-t border-gray-200 dark:border-gray-700 my-1" />
-            <button
-              onClick={(e) => { e.stopPropagation(); handleOverrideResult(key, cell.result === 'pass' ? 'fail' : 'pass'); }}
-              className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 rounded"
-            >
-              <Edit2 className="w-4 h-4" /> Override to {cell.result === 'pass' ? 'Fail' : 'Pass'}
-            </button>
-          </>
+          </div>
         )}
       </div>
     );
   };
+
+  // ─── Loading / empty states ─────────────────────────────────────────────
 
   if (loading) {
     return (
@@ -382,195 +469,135 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
     );
   }
 
-  // Mobile card view
-  if (isMobile) {
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
-            <BarChart3 className="w-4 h-4" />
-            Individual Testing
-          </h3>
-          <button
-            onClick={() => fetchGrid(true)}
-            className="text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1"
-          >
-            <RefreshCw className={`w-3 h-3 ${refreshing ? 'animate-spin' : ''}`} />
-            Refresh
-          </button>
-        </div>
+  // ─── Render ─────────────────────────────────────────────────────────────
 
-        {/* Overall summary */}
-        <div className="bg-blue-50 dark:bg-blue-900/30 rounded-lg p-3 text-sm">
-          <span className="font-medium text-blue-800 dark:text-blue-200">
-            Students done with all stations: {studentsFullyDone}/{students.length}
-          </span>
-        </div>
-
-        {students.map(student => {
-          const summary = studentSummary.find(s => s.studentId === student.id);
-          const pct = summary && summary.total > 0 ? Math.round((summary.completed / summary.total) * 100) : 0;
-
-          return (
-            <div key={student.id} className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h4 className="font-medium text-gray-900 dark:text-gray-100">
-                  {student.last_name}, {student.first_name}
-                </h4>
-                <span className="text-xs text-gray-500">{summary?.completed}/{summary?.total} stations</span>
-              </div>
-
-              {/* Progress bar */}
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-3">
-                <div
-                  className="bg-blue-500 h-2 rounded-full transition-all"
-                  style={{ width: `${pct}%` }}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                {stations.map(station => {
-                  const key = `${student.id}_${station.id}`;
-                  const cell = cells[key];
-
-                  return (
-                    <div
-                      key={station.id}
-                      className="relative flex items-center gap-2 p-2 rounded-lg border border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer"
-                      onClick={() => handleCellClick(student.id, station.id)}
-                    >
-                      <div className="w-6 h-6 flex-shrink-0">
-                        {renderCellContent(student.id, station.id)}
-                      </div>
-                      <span className="text-xs text-gray-600 dark:text-gray-400 truncate">
-                        S{station.station_number}
-                      </span>
-                      {renderPopover(student.id, station.id)}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    );
-  }
-
-  // Desktop table view
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+      {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
-          <BarChart3 className="w-4 h-4" />
-          Individual Testing Grid
+        <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+          <BarChart3 className="w-5 h-5 text-blue-500" />
+          Individual Testing Tracker
         </h3>
-        <div className="flex items-center gap-3">
-          <span className="text-xs text-gray-500">
-            All stations done: <strong>{studentsFullyDone}/{students.length}</strong>
+        <div className="flex items-center gap-4">
+          <span className="text-sm text-gray-500 dark:text-gray-400">
+            <strong className="text-gray-700 dark:text-gray-300">{totalCompleted}/{totalCells}</strong> complete
           </span>
           <button
             onClick={() => fetchGrid(true)}
             className="text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1 hover:underline"
           >
-            <RefreshCw className={`w-3 h-3 ${refreshing ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
             Refresh
           </button>
         </div>
       </div>
 
+      {/* Grid */}
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full">
+          {/* Column headers: station info */}
           <thead>
-            <tr className="bg-gray-50 dark:bg-gray-750">
-              <th className="text-left px-3 py-2 font-medium text-gray-600 dark:text-gray-400 sticky left-0 bg-gray-50 dark:bg-gray-750 z-10 min-w-[160px]">
+            <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-750">
+              <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400 sticky left-0 bg-gray-50 dark:bg-gray-750 z-10 min-w-[180px]">
                 Student
               </th>
               {stations.map(station => (
                 <th
                   key={station.id}
-                  className="text-center px-2 py-2 font-medium text-gray-600 dark:text-gray-400 min-w-[80px]"
-                  title={getStationTitle(station)}
+                  className="text-center px-3 py-3 font-medium text-gray-600 dark:text-gray-400 min-w-[140px]"
                 >
-                  <div className="text-xs leading-tight">
-                    <span className="font-semibold">S{station.station_number}</span>
-                    <br />
-                    <span className="font-normal text-gray-400 dark:text-gray-500 truncate block max-w-[80px]">
-                      {getStationTitle(station).substring(0, 12)}
-                    </span>
+                  <div className="space-y-0.5">
+                    <div className="text-xs font-semibold text-gray-800 dark:text-gray-200">
+                      Station {station.station_number}
+                    </div>
+                    <div className="text-xs font-normal text-gray-500 dark:text-gray-400 truncate max-w-[140px] mx-auto" title={getStationTitle(station)}>
+                      {getStationTitle(station)}
+                    </div>
+                    {station.instructorName && (
+                      <div className="text-[11px] font-normal text-blue-500 dark:text-blue-400">
+                        {formatInstructor(station.instructorName)}
+                      </div>
+                    )}
                   </div>
                 </th>
               ))}
-              <th className="text-center px-3 py-2 font-medium text-gray-600 dark:text-gray-400 min-w-[100px]">
+              <th className="text-center px-3 py-3 font-medium text-gray-600 dark:text-gray-400 min-w-[80px]">
                 Progress
               </th>
             </tr>
           </thead>
+
+          {/* Student rows */}
           <tbody>
             {students.map((student, idx) => {
               const summary = studentSummary.find(s => s.studentId === student.id);
-              const pct = summary && summary.total > 0 ? Math.round((summary.completed / summary.total) * 100) : 0;
+              const done = summary?.completed || 0;
+              const total = summary?.total || 0;
 
               return (
                 <tr
                   key={student.id}
-                  className={`${idx % 2 === 0 ? '' : 'bg-gray-50/50 dark:bg-gray-750/50'} hover:bg-blue-50/50 dark:hover:bg-blue-900/10`}
+                  className={`border-b border-gray-100 dark:border-gray-700/50 ${
+                    idx % 2 === 0 ? '' : 'bg-gray-50/50 dark:bg-gray-750/30'
+                  } hover:bg-blue-50/40 dark:hover:bg-blue-900/10 transition-colors`}
                 >
-                  <td className="px-3 py-2 font-medium text-gray-900 dark:text-gray-100 sticky left-0 bg-inherit z-10">
-                    {student.last_name}, {student.first_name}
+                  {/* Student name */}
+                  <td className="px-4 py-2.5 font-medium text-gray-900 dark:text-gray-100 text-sm sticky left-0 bg-inherit z-10 whitespace-nowrap">
+                    {student.last_name}, {student.first_name.charAt(0)}.
                   </td>
+
+                  {/* Station cells */}
                   {stations.map(station => (
-                    <td
-                      key={station.id}
-                      className="px-2 py-2 text-center relative"
-                      onClick={() => handleCellClick(student.id, station.id)}
-                    >
-                      <div className="w-8 h-8 mx-auto rounded-lg border border-gray-100 dark:border-gray-700 flex items-center justify-center hover:border-blue-300 dark:hover:border-blue-600 transition-colors">
-                        {renderCellContent(student.id, station.id)}
-                      </div>
+                    <td key={station.id} className="px-3 py-2 text-center relative">
+                      {renderBadge(student.id, station.id)}
                       {renderPopover(student.id, station.id)}
                     </td>
                   ))}
-                  <td className="px-3 py-2">
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                        <div
-                          className={`h-2 rounded-full transition-all ${pct === 100 ? 'bg-green-500' : 'bg-blue-500'}`}
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                      <span className="text-xs text-gray-500 min-w-[40px] text-right">
-                        {summary?.completed}/{summary?.total}
-                      </span>
-                    </div>
+
+                  {/* Progress indicator */}
+                  <td className="px-3 py-2 text-center">
+                    <span className={`inline-flex items-center justify-center text-sm font-mono font-semibold px-2 py-0.5 rounded ${
+                      done === total && total > 0
+                        ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                    }`}>
+                      [{done}/{total}]
+                    </span>
                   </td>
                 </tr>
               );
             })}
           </tbody>
 
-          {/* Summary row */}
+          {/* Summary footer */}
           <tfoot>
             <tr className="bg-gray-50 dark:bg-gray-750 border-t-2 border-gray-200 dark:border-gray-600">
-              <td className="px-3 py-2 font-semibold text-gray-700 dark:text-gray-300 sticky left-0 bg-gray-50 dark:bg-gray-750 z-10">
+              <td className="px-4 py-2.5 font-semibold text-gray-700 dark:text-gray-300 text-sm sticky left-0 bg-gray-50 dark:bg-gray-750 z-10">
                 Summary
               </td>
               {stationSummary.map(s => (
-                <td key={s.stationId} className="px-2 py-2 text-center">
-                  <div className="text-xs leading-tight">
-                    <span className="font-semibold text-gray-700 dark:text-gray-300">
-                      {s.completed}/{s.total}
-                    </span>
-                    <br />
-                    <span className="text-green-600">{s.passed}P</span>
-                    {s.failed > 0 && <span className="text-red-500 ml-1">{s.failed}F</span>}
+                <td key={s.stationId} className="px-3 py-2.5 text-center">
+                  <div className="space-y-0.5">
+                    <div className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                      {s.completed}/{s.total} done
+                    </div>
+                    <div className="text-[11px] text-gray-500 dark:text-gray-400">
+                      <span className="text-green-600 dark:text-green-400">{s.passed} pass</span>
+                      {s.failed > 0 && (
+                        <span className="text-red-500 dark:text-red-400 ml-1">{s.failed} fail</span>
+                      )}
+                    </div>
                   </div>
                 </td>
               ))}
-              <td className="px-3 py-2 text-center">
-                <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
-                  {studentsFullyDone}/{students.length} done
-                </span>
+              <td className="px-3 py-2.5 text-center">
+                <div className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+                  {studentsFullyDone}/{students.length}
+                </div>
+                <div className="text-[11px] text-gray-400 dark:text-gray-500">
+                  all done
+                </div>
               </td>
             </tr>
           </tfoot>
@@ -578,12 +605,26 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
       </div>
 
       {/* Legend */}
-      <div className="px-4 py-2 border-t border-gray-200 dark:border-gray-700 flex flex-wrap gap-4 text-xs text-gray-500">
-        <span className="flex items-center gap-1"><Circle className="w-3.5 h-3.5 text-gray-300" /> Not started</span>
-        <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5 text-amber-500" /> In progress</span>
-        <span className="flex items-center gap-1"><Check className="w-3.5 h-3.5 text-green-600 stroke-[3]" /> Pass</span>
-        <span className="flex items-center gap-1"><X className="w-3.5 h-3.5 text-red-500 stroke-[3]" /> Fail</span>
-        <span className="flex items-center gap-1"><Minus className="w-3.5 h-3.5 text-gray-400" /> Incomplete</span>
+      <div className="px-4 py-2.5 border-t border-gray-200 dark:border-gray-700 flex flex-wrap items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+        <span className="flex items-center gap-1.5">
+          <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-gray-100 dark:bg-gray-700 text-gray-400"><Circle className="w-3 h-3" /></span>
+          Not started
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-amber-50 dark:bg-amber-900/30 text-amber-600"><Clock className="w-3 h-3" /></span>
+          In progress
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-green-50 dark:bg-green-900/30 text-green-600"><Check className="w-3 h-3 stroke-[3]" /></span>
+          Pass
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-red-50 dark:bg-red-900/30 text-red-500"><X className="w-3 h-3 stroke-[3]" /></span>
+          Fail
+        </span>
+        <span className="ml-auto text-gray-400 dark:text-gray-500">
+          All stations complete: <strong>{studentsFullyDone}/{students.length}</strong> students
+        </span>
       </div>
     </div>
   );
