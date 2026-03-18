@@ -138,6 +138,9 @@ function WeekDetailPanel({
 }) {
   const [details, setDetails] = useState<BlockDetailItem[]>([]);
   const [totalHours, setTotalHours] = useState(0);
+  const [classHours, setClassHours] = useState(0);
+  const [labHours, setLabHours] = useState(0);
+  const [lvfrHours, setLvfrHours] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -153,6 +156,9 @@ function WeekDetailPanel({
         if (!cancelled) {
           setDetails(data.details || []);
           setTotalHours(data.totalHours || 0);
+          setClassHours(data.classHours || 0);
+          setLabHours(data.labHours || 0);
+          setLvfrHours(data.lvfrHours || 0);
         }
       } catch (err) {
         console.error('Detail load error:', err);
@@ -229,8 +235,25 @@ function WeekDetailPanel({
               </div>
             </div>
           ))}
-          <div className="border-t border-blue-200 dark:border-blue-800 pt-2 text-right">
-            <span className="text-xs font-semibold text-gray-900 dark:text-white">{totalHours}h total</span>
+          <div className="border-t border-blue-200 dark:border-blue-800 pt-2 flex items-center justify-between flex-wrap gap-2">
+            <div className="flex flex-wrap gap-3 text-xs text-gray-600 dark:text-gray-300">
+              {classHours > 0 && (
+                <span className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-blue-400" />Classes: {classHours}h
+                </span>
+              )}
+              {labHours > 0 && (
+                <span className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400" />Labs: {labHours}h
+                </span>
+              )}
+              {lvfrHours > 0 && (
+                <span className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-orange-400" />LVFR: {lvfrHours}h
+                </span>
+              )}
+            </div>
+            <span className="text-xs font-semibold text-gray-900 dark:text-white">Total: {totalHours}h</span>
           </div>
         </div>
       )}

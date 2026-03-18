@@ -227,6 +227,39 @@ async function getWeekDetail(semesterId: string, instructorId: string, weekNumbe
     }
   } catch { /* lab tables may not exist */ }
 
+  // LVFR assignment hours for this week
+  try {
+    const { data: lvfrAssignments } = await supabase
+      .from('lvfr_aemt_instructor_assignments')
+      .select('date, primary_instructor_id, secondary_instructor_id, additional_instructors')
+      .gte('date', weekStartStr)
+      .lte('date', weekEndStr);
+
+    const LVFR_HOURS_PER_DAY = 8;
+
+    for (const la of (lvfrAssignments || [])) {
+      const instructorIds: string[] = [];
+      if (la.primary_instructor_id) instructorIds.push(la.primary_instructor_id);
+      if (la.secondary_instructor_id) instructorIds.push(la.secondary_instructor_id);
+      if (la.additional_instructors && Array.isArray(la.additional_instructors)) {
+        instructorIds.push(...la.additional_instructors);
+      }
+
+      if (!instructorIds.includes(instructorId)) continue;
+
+      details.push({
+        title: 'LVFR Assignment',
+        start_time: '',
+        end_time: '',
+        hours: LVFR_HOURS_PER_DAY,
+        day_of_week: null,
+        date: la.date,
+        room: null,
+        source: 'lvfr',
+      });
+    }
+  } catch { /* LVFR table may not exist */ }
+
   // Sort by date then start_time
   details.sort((a, b) => {
     const dateA = a.date || '';
@@ -236,8 +269,11 @@ async function getWeekDetail(semesterId: string, instructorId: string, weekNumbe
   });
 
   const totalHours = Math.round(details.reduce((sum, d) => sum + d.hours, 0) * 100) / 100;
+  const classHours = Math.round(details.filter(d => d.source === 'planner').reduce((s, d) => s + d.hours, 0) * 100) / 100;
+  const labHours = Math.round(details.filter(d => d.source === 'lab').reduce((s, d) => s + d.hours, 0) * 100) / 100;
+  const lvfrHours = Math.round(details.filter(d => d.source === 'lvfr').reduce((s, d) => s + d.hours, 0) * 100) / 100;
 
-  return NextResponse.json({ details, totalHours, weekNumber });
+  return NextResponse.json({ details, totalHours, classHours, labHours, lvfrHours, weekNumber });
 }
 
 // ── POST: Recalculate workload ──
