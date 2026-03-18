@@ -2442,9 +2442,7 @@ function SemesterPlannerPage() {
         payload.update_mode = updateMode;
       }
 
-      const instructorIds = payload.instructor_ids as string[] | undefined;
-      delete payload.instructor_ids;
-
+      // instructor_ids are now handled server-side (including batch sync for recurring blocks)
       const res = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
@@ -2455,39 +2453,6 @@ function SemesterPlannerPage() {
       if (!res.ok) {
         alert(result.error || 'Failed to save block');
         return;
-      }
-
-      const savedBlock = result.block;
-      const blockId = savedBlock?.id || editingBlock?.id;
-
-      // Sync instructors: delete removed, add new ones
-      if (blockId) {
-        try {
-          const existingInstructors = safeArray(editingBlock?.instructors).map(i => i.instructor_id);
-          const newIds = instructorIds || [];
-
-          // Remove instructors no longer in the list
-          const toRemove = existingInstructors.filter(id => !newIds.includes(id));
-          for (const removeId of toRemove) {
-            await fetch(`/api/scheduling/planner/blocks/${blockId}/instructors`, {
-              method: 'DELETE',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ instructor_id: removeId }),
-            });
-          }
-
-          // Add new instructors
-          const toAdd = newIds.filter(id => !existingInstructors.includes(id));
-          for (const addId of toAdd) {
-            await fetch(`/api/scheduling/planner/blocks/${blockId}/instructors`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ instructor_id: addId, role: 'primary' }),
-            });
-          }
-        } catch {
-          // Instructor assignment is non-critical
-        }
       }
 
       setEditingBlock(null);

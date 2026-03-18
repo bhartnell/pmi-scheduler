@@ -84,7 +84,8 @@ export async function POST(request: NextRequest) {
     const {
       program_schedule_id, semester_id, room_id, day_of_week, start_time, end_time,
       block_type, title, course_name, content_notes, color,
-      is_recurring, specific_date, sort_order, date, week_number, recurring_group_id
+      is_recurring, specific_date, sort_order, date, week_number, recurring_group_id,
+      instructor_ids,
     } = body;
 
     if (!semester_id || !start_time || !end_time) {
@@ -126,6 +127,26 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) throw error;
+
+    // Assign instructors if provided
+    const newInstructorIds: string[] = Array.isArray(instructor_ids) ? instructor_ids : [];
+    if (newInstructorIds.length > 0 && data?.id) {
+      const assignments = newInstructorIds.map(instId => ({
+        schedule_block_id: data.id,
+        instructor_id: instId,
+        role: 'primary',
+      }));
+      await supabase.from('pmi_block_instructors').insert(assignments);
+
+      // Re-fetch to include instructors in the response
+      const { data: refreshed } = await supabase
+        .from('pmi_schedule_blocks')
+        .select(BLOCK_SELECT)
+        .eq('id', data.id)
+        .single();
+
+      return NextResponse.json({ block: refreshed || data });
+    }
 
     return NextResponse.json({ block: data });
   } catch (err: unknown) {

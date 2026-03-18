@@ -59,7 +59,44 @@ export async function PUT(
     if (body.week_number !== undefined) updates.week_number = body.week_number;
     if (body.sort_order !== undefined) updates.sort_order = body.sort_order;
 
+    // Extract instructor_ids from body (handled separately from block field updates)
+    const instructorIds: string[] | undefined = Array.isArray(body.instructor_ids) ? body.instructor_ids : undefined;
+
     const supabase = getSupabaseAdmin();
+
+    // Helper: replace all instructor assignments for a set of block IDs
+    async function syncInstructorsForBlocks(blockIds: string[], newInstructorIds: string[]) {
+      if (blockIds.length === 0) return;
+
+      // Delete all existing instructor assignments for these blocks
+      for (let i = 0; i < blockIds.length; i += 100) {
+        const batch = blockIds.slice(i, i + 100);
+        await supabase
+          .from('pmi_block_instructors')
+          .delete()
+          .in('schedule_block_id', batch);
+      }
+
+      // Insert new assignments for all blocks
+      if (newInstructorIds.length > 0) {
+        const assignments: { schedule_block_id: string; instructor_id: string; role: string }[] = [];
+        for (const blockId of blockIds) {
+          for (const instId of newInstructorIds) {
+            assignments.push({
+              schedule_block_id: blockId,
+              instructor_id: instId,
+              role: 'primary',
+            });
+          }
+        }
+        for (let i = 0; i < assignments.length; i += 100) {
+          const batch = assignments.slice(i, i + 100);
+          await supabase
+            .from('pmi_block_instructors')
+            .insert(batch);
+        }
+      }
+    }
 
     // Handle batch updates for recurring blocks
     if (update_mode === 'this_and_future' || update_mode === 'all') {
@@ -100,7 +137,13 @@ export async function PUT(
         if (batchError) throw batchError;
 
         const updatedCount = batchResult?.length || 0;
+        const updatedBlockIds = (batchResult || []).map((b: { id: string }) => b.id);
         console.log(`Batch update mode=${update_mode}: recurring_group_id=${targetBlock.recurring_group_id}, updated ${updatedCount} blocks`);
+
+        // Batch sync instructors for all affected blocks
+        if (instructorIds !== undefined && updatedBlockIds.length > 0) {
+          await syncInstructorsForBlocks(updatedBlockIds, instructorIds);
+        }
 
         // Return the updated target block
         const { data: updatedBlock, error: refetchError } = await supabase
@@ -124,6 +167,20 @@ export async function PUT(
       .single();
 
     if (error) throw error;
+
+    // Sync instructors for single block
+    if (instructorIds !== undefined) {
+      await syncInstructorsForBlocks([id], instructorIds);
+
+      // Re-fetch to include updated instructors
+      const { data: refreshed } = await supabase
+        .from('pmi_schedule_blocks')
+        .select(BLOCK_SELECT)
+        .eq('id', id)
+        .single();
+
+      return NextResponse.json({ block: refreshed || data });
+    }
 
     return NextResponse.json({ block: data });
   } catch (err: unknown) {
