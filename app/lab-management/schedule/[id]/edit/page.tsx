@@ -167,6 +167,16 @@ export default function EditLabDayPage() {
   // Custom duration input display state (for free typing)
   const [durationInputValue, setDurationInputValue] = useState('30');
 
+  // Skill coverage state
+  const [skillCoverage, setSkillCoverage] = useState<Record<string, {
+    skillSheetId: string;
+    skillName: string;
+    studentsCompleted: number;
+    totalStudents: number;
+    lastLabDate: string | null;
+    lastLabWeek: number | null;
+  }>>({});
+
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/signin');
@@ -249,6 +259,11 @@ export default function EditLabDayPage() {
           setStations(data.labDay.stations);
         }
 
+        // Fetch skill coverage for the cohort
+        if (data.labDay.cohort?.id) {
+          fetchSkillCoverage(data.labDay.cohort.id);
+        }
+
         // Check if room has a fixed timer
         if (data.labDay.room && timerTokens.length > 0) {
           const fixed = timerTokens.find(
@@ -261,6 +276,18 @@ export default function EditLabDayPage() {
       console.error('Error fetching lab day:', error);
     }
     setLoading(false);
+  };
+
+  const fetchSkillCoverage = async (cohortId: string) => {
+    try {
+      const res = await fetch(`/api/lab-management/skill-coverage?cohort_id=${cohortId}`);
+      const data = await res.json();
+      if (data.success) {
+        setSkillCoverage(data.coverage || {});
+      }
+    } catch (error) {
+      console.error('Error fetching skill coverage:', error);
+    }
   };
 
   // Check for fixed timer when tokens load
@@ -1228,6 +1255,31 @@ export default function EditLabDayPage() {
                             No instructor assigned
                           </p>
                         )}
+                        {/* Skill Coverage Badge */}
+                        {(() => {
+                          // Find coverage for this station's skill/scenario
+                          const stationName = station.custom_title || station.scenario?.title || '';
+                          const coverageEntry = Object.values(skillCoverage).find(
+                            c => c.skillName.toLowerCase() === stationName.toLowerCase()
+                          );
+                          if (coverageEntry) {
+                            const allDone = coverageEntry.studentsCompleted >= coverageEntry.totalStudents && coverageEntry.totalStudents > 0;
+                            return (
+                              <div className={`mt-1.5 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                                allDone
+                                  ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400'
+                                  : 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400'
+                              }`}>
+                                {allDone ? (
+                                  <><Check className="w-3 h-3" /> Done{coverageEntry.lastLabWeek ? ` in Week ${coverageEntry.lastLabWeek}` : ''}</>
+                                ) : (
+                                  <><AlertTriangle className="w-3 h-3" /> Repeated ({coverageEntry.studentsCompleted}/{coverageEntry.totalStudents} prev.)</>
+                                )}
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
                       </div>
                     </div>
                   </div>
