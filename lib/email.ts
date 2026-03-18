@@ -341,7 +341,8 @@ export async function sendEmail(emailData: EmailData): Promise<{ success: boolea
   const resend = getResend();
 
   if (!resend) {
-    return { success: true, id: 'mock-' + Date.now() };
+    console.error('RESEND_API_KEY not configured — email NOT sent to:', emailData.to);
+    return { success: false, error: 'Email service not configured (RESEND_API_KEY missing)' };
   }
 
   try {

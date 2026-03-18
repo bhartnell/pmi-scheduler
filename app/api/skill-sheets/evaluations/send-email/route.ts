@@ -63,7 +63,9 @@ export async function POST(request: NextRequest) {
     }
 
     const student = evaluation.student as any;
+    console.log('[send-email] Evaluation:', evaluation_id, '| Student:', student?.first_name, student?.last_name, '| Email:', student?.email, '| Status:', evaluation.email_status);
     if (!student?.email) {
+      console.error('[send-email] No email for student:', student?.first_name, student?.last_name);
       return NextResponse.json({ success: false, error: 'Student has no email address' }, { status: 400 });
     }
 
@@ -85,7 +87,8 @@ export async function POST(request: NextRequest) {
       ? new Date(labDay.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
       : new Date(evaluation.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
-    // Send email
+    // Send email via Resend
+    console.log('[send-email] Sending to:', student.email, '| Skill:', skillSheet?.skill_name, '| Type:', evaluation.evaluation_type);
     const emailResult = await sendSkillEvaluationEmail(student.email, {
       evaluationId: evaluation.id,
       studentFirstName: student.first_name,
@@ -100,10 +103,17 @@ export async function POST(request: NextRequest) {
     });
 
     if (!emailResult.success) {
+      console.error('[send-email] Resend failed:', emailResult.error);
+      // Update status to failed so it can be retried
+      await supabase
+        .from('student_skill_evaluations')
+        .update({ email_status: 'pending' })
+        .eq('id', evaluation_id);
       return NextResponse.json({ success: false, error: emailResult.error || 'Failed to send email' }, { status: 500 });
     }
 
-    // Update email_status to sent
+    console.log('[send-email] Success! Resend ID:', emailResult.id);
+    // Update email_status to sent only after confirmed delivery
     await supabase
       .from('student_skill_evaluations')
       .update({ email_status: 'sent' })

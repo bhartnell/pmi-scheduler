@@ -399,13 +399,21 @@ export default function SkillSheetPanel({
         if (saveStatus === 'complete' && emailPref === 'sent' && evalId) {
           setSendingEmail(true);
           try {
-            await fetch('/api/skill-sheets/evaluations/send-email', {
+            const emailRes = await fetch('/api/skill-sheets/evaluations/send-email', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ evaluation_id: evalId }),
             });
-          } catch {
-            console.warn('Failed to send immediate email');
+            const emailData = await emailRes.json();
+            if (!emailData.success) {
+              console.error('Email send failed:', emailData.error);
+              showToast(`Email failed: ${emailData.error || 'Unknown error'}`, 'error');
+            } else {
+              showToast(`Email sent to ${studentName || 'student'}`, 'success');
+            }
+          } catch (emailErr) {
+            console.error('Email send error:', emailErr);
+            showToast('Email failed: Network error', 'error');
           }
           setSendingEmail(false);
         }
