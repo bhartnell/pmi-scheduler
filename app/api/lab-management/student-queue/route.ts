@@ -378,3 +378,49 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ success: false, error: msg }, { status: 500 });
   }
 }
+
+// ---------------------------------------------------------------------------
+// DELETE /api/lab-management/student-queue
+//
+// Reset a cell back to "Not Started" by deleting the queue entry.
+// Body: { id } or { lab_day_id, student_id, station_id }
+// Keeps evaluation records — only removes the queue entry.
+// ---------------------------------------------------------------------------
+export async function DELETE(request: NextRequest) {
+  const auth = await requireAuth('instructor');
+  if (auth instanceof NextResponse) return auth;
+
+  try {
+    const body = await request.json();
+    const { id, lab_day_id, student_id, station_id } = body;
+
+    const supabase = getSupabaseAdmin();
+
+    if (id) {
+      const { error } = await supabase
+        .from('lab_day_student_queue')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+    } else if (lab_day_id && student_id && station_id) {
+      const { error } = await supabase
+        .from('lab_day_student_queue')
+        .delete()
+        .eq('lab_day_id', lab_day_id)
+        .eq('student_id', student_id)
+        .eq('station_id', station_id);
+      if (error) throw error;
+    } else {
+      return NextResponse.json(
+        { success: false, error: 'id or lab_day_id+student_id+station_id required' },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error('Error deleting queue entry:', err);
+    const msg = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ success: false, error: msg }, { status: 500 });
+  }
+}

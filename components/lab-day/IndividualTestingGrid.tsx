@@ -217,6 +217,42 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
     }
   };
 
+  const handleResetCell = async (studentId: string, stationId: string, hasEvaluation: boolean) => {
+    // If cell has an evaluation, confirm first
+    if (hasEvaluation) {
+      const ok = window.confirm('This will remove the queue entry. The evaluation record will be kept. Continue?');
+      if (!ok) return;
+    }
+
+    const key = `${studentId}_${stationId}`;
+    const cell = cells[key];
+    setActionLoading(key);
+    try {
+      const res = await fetch('/api/lab-management/student-queue', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(
+          cell?.queueId
+            ? { id: cell.queueId }
+            : { lab_day_id: labDayId, student_id: studentId, station_id: stationId }
+        ),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCells(prev => {
+          const next = { ...prev };
+          delete next[key];
+          return next;
+        });
+      }
+    } catch (err) {
+      console.error('Error resetting cell:', err);
+    } finally {
+      setActionLoading(null);
+      setPopoverCell(null);
+    }
+  };
+
   // ─── Helpers ────────────────────────────────────────────────────────────
 
   const getStationTitle = (station: GridStation) => {
@@ -424,14 +460,27 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
               >
                 <Edit2 className="w-4 h-4" /> Override to {cell.result === 'pass' ? 'Fail' : 'Pass'}
               </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); handleResetCell(studentId, stationId, !!cell.evaluationId); }}
+                className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
+              >
+                <Circle className="w-4 h-4" /> Reset to Not Started
+              </button>
             </div>
           </div>
         )}
 
-        {/* In-progress popover: mark pass/fail */}
+        {/* In-progress popover: reset, mark pass/fail */}
         {cell.status === 'in_progress' && (
           <div className="space-y-1">
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Manual override:</p>
+            <button
+              onClick={(e) => { e.stopPropagation(); handleResetCell(studentId, stationId, false); }}
+              className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
+            >
+              <Circle className="w-4 h-4" /> Reset to Not Started
+            </button>
+            <div className="border-t border-gray-100 dark:border-gray-700 my-1" />
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Manual override:</p>
             <button
               onClick={(e) => { e.stopPropagation(); handleOverrideResult(key, 'pass'); }}
               className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg"
