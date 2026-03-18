@@ -199,6 +199,22 @@ export default function SkillSheetPanel({
   const [expandedEvalId, setExpandedEvalId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
+  // Check if there are unsaved changes (any step completed, notes typed, etc.)
+  const hasUnsavedChanges = Object.keys(stepMarks).some(k => stepMarks[parseInt(k)] !== null) ||
+    Object.keys(stepSequence).length > 0 ||
+    notes.trim().length > 0;
+
+  // Safe close: confirm if unsaved changes exist
+  const handleSafeClose = () => {
+    if (hasUnsavedChanges) {
+      if (window.confirm('You have unsaved changes. Close anyway?')) {
+        onClose();
+      }
+    } else {
+      onClose();
+    }
+  };
+
   // ─── Data Fetching ──────────────────────────────────────────────────────
 
   const fetchSheet = useCallback(async () => {
@@ -254,7 +270,7 @@ export default function SkillSheetPanel({
   // Close on Escape key
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') handleSafeClose();
     };
     document.addEventListener('keydown', handleKey);
     return () => document.removeEventListener('keydown', handleKey);
@@ -1073,10 +1089,10 @@ export default function SkillSheetPanel({
 
   return (
     <>
-      {/* Backdrop */}
+      {/* Backdrop — confirm if unsaved changes */}
       <div
         className="fixed inset-0 bg-black/40 z-40 transition-opacity"
-        onClick={onClose}
+        onClick={handleSafeClose}
       />
 
       {/* Panel */}
@@ -1122,7 +1138,7 @@ export default function SkillSheetPanel({
           )}
 
           <button
-            onClick={onClose}
+            onClick={handleSafeClose}
             className="ml-1 p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
             title="Close (Esc)"
           >

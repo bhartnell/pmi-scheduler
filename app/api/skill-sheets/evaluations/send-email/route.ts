@@ -37,13 +37,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'evaluation_id is required' }, { status: 400 });
     }
 
-    // Fetch evaluation with related data
+    // Fetch evaluation with related data (include step instruction + phase for full score sheet)
     const { data: evaluation, error: evalError } = await supabase
       .from('student_skill_evaluations')
       .select(`
-        id, evaluation_type, result, notes, email_status, flagged_items, step_marks, created_at,
+        id, evaluation_type, result, notes, email_status, flagged_items, step_marks, step_details, created_at,
         student:students!student_skill_evaluations_student_id_fkey(id, first_name, last_name, email),
-        skill_sheet:skill_sheets!student_skill_evaluations_skill_sheet_id_fkey(id, skill_name, source, steps:skill_sheet_steps(step_number, is_critical)),
+        skill_sheet:skill_sheets!student_skill_evaluations_skill_sheet_id_fkey(id, skill_name, source, steps:skill_sheet_steps(step_number, phase, instruction, is_critical)),
         evaluator:lab_users!student_skill_evaluations_evaluator_id_fkey(id, name),
         lab_day:lab_days!student_skill_evaluations_lab_day_id_fkey(id, date, title)
       `)
@@ -72,34 +72,116 @@ export async function POST(request: NextRequest) {
     const skillSheet = evaluation.skill_sheet as any;
     const evaluator = evaluation.evaluator as any;
     const labDay = evaluation.lab_day as any;
+    const stepDetails = evaluation.step_details as any[] | null;
 
-    // Calculate steps completed
-    const totalSteps = skillSheet?.steps?.length || 0;
+    // Calculate steps completed — use step_details first (formative mode), fall back to step_marks
+    const steps = (skillSheet?.steps || []).sort((a: any, b: any) => a.step_number - b.step_number);
+    const totalSteps = steps.length;
     const stepMarks = evaluation.step_marks as Record<string, string> | null;
-    const passedSteps = stepMarks ? Object.values(stepMarks).filter(m => m === 'pass').length : 0;
-    const criticalSteps = skillSheet?.steps?.filter((s: any) => s.is_critical) || [];
-    const criticalPassed = stepMarks
-      ? criticalSteps.filter((s: any) => stepMarks[String(s.step_number)] === 'pass').length
-      : 0;
+
+    let passedSteps = 0;
+    let criticalPassed = 0;
+    const criticalSteps = steps.filter((s: any) => s.is_critical);
+
+    if (stepDetails && stepDetails.length > 0) {
+      // Formative mode: step_details has { completed, sequence_number, is_critical } per step
+      passedSteps = stepDetails.filter((sd: any) => sd.completed).length;
+      criticalPassed = stepDetails.filter((sd: any) => sd.completed && sd.is_critical).length;
+    } else if (stepMarks) {
+      passedSteps = Object.values(stepMarks).filter(m => m === 'pass').length;
+      criticalPassed = criticalSteps.filter((s: any) => stepMarks[String(s.step_number)] === 'pass').length;
+    }
+
+    // Determine actual result — formative always saves 'pass' but email should reflect completion
+    let displayResult = evaluation.result;
+    if (evaluation.evaluation_type === 'formative') {
+      // For formative: if not all steps done, show as "needs improvement"
+      const allCriticalDone = criticalSteps.length === 0 || criticalPassed === criticalSteps.length;
+      if (passedSteps < totalSteps || !allCriticalDone) {
+        displayResult = 'remediation'; // "Needs Improvement"
+      }
+    }
 
     // Format date
     const evalDate = labDay?.date
       ? new Date(labDay.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
       : new Date(evaluation.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
-    // Send email via Resend
-    console.log('[send-email] Sending to:', student.email, '| Skill:', skillSheet?.skill_name, '| Type:', evaluation.evaluation_type);
+    // Build step-by-step HTML table for email body
+    const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+    // Build completion lookup from step_details (sequence numbers) or step_marks
+    const completionMap: Record<number, { completed: boolean; sequence?: number }> = {};
+    if (stepDetails && stepDetails.length > 0) {
+      for (const sd of stepDetails) {
+        completionMap[sd.step_number] = { completed: sd.completed, sequence: sd.sequence_number };
+      }
+    } else if (stepMarks) {
+      for (const [sn, mark] of Object.entries(stepMarks)) {
+        completionMap[parseInt(sn)] = { completed: mark === 'pass' };
+      }
+    }
+
+    let stepTableRows = '';
+    for (const step of steps) {
+      const comp = completionMap[step.step_number];
+      const isDone = comp?.completed || false;
+      const seq = comp?.sequence;
+      const statusSymbol = isDone ? '&#10003;' : '&mdash;';
+      const statusColor = isDone ? '#10b981' : '#9ca3af';
+      const seqLabel = seq ? `<span style="color: #6b7280; font-size: 10px;">${seq}</span>` : '';
+
+      stepTableRows += `
+        <tr style="border-bottom: 1px solid #f3f4f6;">
+          <td style="padding: 5px 10px; font-size: 12px; color: #6b7280; text-align: center; width: 30px;">${step.step_number}</td>
+          <td style="padding: 5px 10px; font-size: 12px; color: #111827;">
+            ${escapeHtml(step.instruction || '')}
+            ${step.is_critical ? '<span style="color: #ef4444; font-weight: 700; font-size: 10px; margin-left: 4px;">[CRIT]</span>' : ''}
+          </td>
+          <td style="padding: 5px 10px; font-size: 12px; text-align: center; width: 30px;">${seqLabel}</td>
+          <td style="padding: 5px 10px; font-size: 16px; text-align: center; width: 30px; color: ${statusColor}; font-weight: 700;">${statusSymbol}</td>
+        </tr>`;
+    }
+
+    const resultColor = displayResult === 'pass' ? '#10b981' : displayResult === 'fail' ? '#ef4444' : '#f59e0b';
+    const resultLabel = displayResult === 'pass' ? 'PASS' : displayResult === 'fail' ? 'FAIL' : 'NEEDS IMPROVEMENT';
+
+    const scoreSheetHtml = `
+      <table style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb; margin: 16px 0;">
+        <thead>
+          <tr style="background-color: #1e40af; color: white;">
+            <th style="padding: 6px 10px; font-size: 11px; text-align: center; width: 30px;">#</th>
+            <th style="padding: 6px 10px; font-size: 11px; text-align: left;">Description</th>
+            <th style="padding: 6px 10px; font-size: 11px; text-align: center; width: 30px;">Order</th>
+            <th style="padding: 6px 10px; font-size: 11px; text-align: center; width: 30px;">&#10003;</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${stepTableRows}
+        </tbody>
+      </table>
+      <table style="width: 100%; margin: 12px 0; font-size: 13px;">
+        <tr>
+          <td><strong>Steps:</strong> ${passedSteps}/${totalSteps}</td>
+          <td><strong>Critical:</strong> ${criticalPassed}/${criticalSteps.length}</td>
+          <td><strong>Result:</strong> <span style="color: ${resultColor}; font-weight: 700;">${resultLabel}</span></td>
+        </tr>
+      </table>`;
+
+    // Send email via Resend with full score sheet embedded
+    console.log('[send-email] Sending to:', student.email, '| Skill:', skillSheet?.skill_name, '| Steps:', passedSteps + '/' + totalSteps, '| Result:', displayResult);
     const emailResult = await sendSkillEvaluationEmail(student.email, {
       evaluationId: evaluation.id,
       studentFirstName: student.first_name,
       skillName: skillSheet?.skill_name || 'Skill Evaluation',
       evaluationType: evaluation.evaluation_type,
-      result: evaluation.result,
+      result: displayResult,
       stepsCompleted: totalSteps > 0 ? `${passedSteps}/${totalSteps}` : undefined,
       criticalSteps: criticalSteps.length > 0 ? `${criticalPassed}/${criticalSteps.length}` : undefined,
       notes: evaluation.notes || undefined,
       evaluatorName: evaluator?.name ? formatInstructorName(evaluator.name) : 'Instructor',
       date: evalDate,
+      scoreSheetHtml,
     });
 
     if (!emailResult.success) {

@@ -44,7 +44,8 @@ import {
   XCircle,
   Shield,
   Layers,
-  Monitor
+  Monitor,
+  Mail
 } from 'lucide-react';
 import LabTimer from '@/components/LabTimer';
 import InlineTimerWidget from '@/components/InlineTimerWidget';
@@ -288,6 +289,29 @@ export default function LabDayPage() {
 
   // Quick Add Station state
   const [showQuickAddStation, setShowQuickAddStation] = useState(false);
+  const [sendingQueuedEmails, setSendingQueuedEmails] = useState(false);
+  const [queuedEmailResult, setQueuedEmailResult] = useState<{ sent: number; errors: number; doNotSendCount: number } | null>(null);
+
+  const handleSendQueuedEmails = async () => {
+    setSendingQueuedEmails(true);
+    setQueuedEmailResult(null);
+    try {
+      const res = await fetch('/api/skill-sheets/evaluations/send-batch-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lab_day_id: labDayId }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setQueuedEmailResult({ sent: data.sent, errors: data.errors || 0, doNotSendCount: data.doNotSendCount || 0 });
+      } else {
+        setQueuedEmailResult({ sent: 0, errors: 1, doNotSendCount: 0 });
+      }
+    } catch {
+      setQueuedEmailResult({ sent: 0, errors: 1, doNotSendCount: 0 });
+    }
+    setSendingQueuedEmails(false);
+  };
   const [quickAddType, setQuickAddType] = useState('scenario');
   const [quickAddTitle, setQuickAddTitle] = useState('');
   const [quickAddSaving, setQuickAddSaving] = useState(false);
@@ -3428,7 +3452,7 @@ export default function LabDayPage() {
         )}
 
         {/* Quick Actions Bar */}
-        <div className="flex items-center gap-2 mb-4 print:hidden">
+        <div className="flex items-center gap-2 mb-4 print:hidden flex-wrap">
           {!showQuickAddStation && (
             <button
               onClick={() => setShowQuickAddStation(true)}
@@ -3438,6 +3462,18 @@ export default function LabDayPage() {
               Quick Add Station
             </button>
           )}
+
+          {/* Send Queued Evaluation Emails */}
+          <button
+            onClick={handleSendQueuedEmails}
+            disabled={sendingQueuedEmails}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/30 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/50 border border-green-200 dark:border-green-800 disabled:opacity-50"
+          >
+            {sendingQueuedEmails ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+            {sendingQueuedEmails ? 'Sending...' : queuedEmailResult
+              ? `${queuedEmailResult.sent} sent${queuedEmailResult.errors > 0 ? `, ${queuedEmailResult.errors} failed` : ''}`
+              : 'Send Queued Emails'}
+          </button>
         </div>
 
         {/* Stations Grid */}

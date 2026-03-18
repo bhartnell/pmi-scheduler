@@ -252,7 +252,7 @@ const templates: Record<EmailTemplate, (data: Record<string, unknown>) => { subj
   }),
 
   skill_evaluation: (data) => ({
-    subject: `[PMI] Skill Evaluation Results — ${data.skillName}${data.date ? ` (${data.date})` : ''}`,
+    subject: `[PMI] Skill Evaluation — ${data.skillName}${data.date ? ` (${data.date})` : ''}`,
     html: `
       <h2 style="color: #111827; margin: 0 0 16px 0; font-size: 20px;">
         Skill Evaluation Results
@@ -260,31 +260,39 @@ const templates: Record<EmailTemplate, (data: Record<string, unknown>) => { subj
       <p style="color: #374151; margin: 0 0 16px 0; font-size: 16px; line-height: 1.5;">
         Hi ${data.studentFirstName},
       </p>
-      <p style="color: #374151; margin: 0 0 16px 0; font-size: 16px; line-height: 1.5;">
-        Your skill evaluation results from today's lab:
+      <p style="color: #374151; margin: 0 0 12px 0; font-size: 14px; line-height: 1.5;">
+        Here are your skill evaluation results${data.date ? ` from ${data.date}` : ''}:
       </p>
-      <div style="background-color: ${data.result === 'pass' ? '#ecfdf5' : data.result === 'fail' ? '#fef2f2' : '#fffbeb'}; border-radius: 8px; padding: 16px; margin: 16px 0; border-left: 4px solid ${data.result === 'pass' ? '#10b981' : data.result === 'fail' ? '#ef4444' : '#f59e0b'};">
-        <h3 style="color: #111827; margin: 0 0 8px 0; font-size: 18px;">
-          ${data.skillName}
-        </h3>
-        <p style="color: #374151; margin: 0; font-size: 14px;">
-          <strong>Mode:</strong> ${data.evaluationType === 'formative' ? 'Formative' : 'Final Competency'}<br>
-          <strong>Steps Completed:</strong> ${data.stepsCompleted || 'N/A'}<br>
-          ${data.criticalSteps ? `<strong>Critical Steps:</strong> ${data.criticalSteps}<br>` : ''}
-          <strong>Result:</strong> <span style="font-weight: 700; color: ${data.result === 'pass' ? '#10b981' : data.result === 'fail' ? '#ef4444' : '#f59e0b'};">${String(data.result).toUpperCase()}</span>
+
+      <div style="background-color: ${data.result === 'pass' ? '#ecfdf5' : data.result === 'fail' ? '#fef2f2' : '#fffbeb'}; border-radius: 8px; padding: 12px 16px; margin: 12px 0; border-left: 4px solid ${data.result === 'pass' ? '#10b981' : data.result === 'fail' ? '#ef4444' : '#f59e0b'};">
+        <h3 style="color: #111827; margin: 0 0 4px 0; font-size: 16px;">${data.skillName}</h3>
+        <p style="color: #374151; margin: 0; font-size: 13px;">
+          <strong>Mode:</strong> ${data.evaluationType === 'formative' ? 'Formative' : 'Final Competency'} &nbsp;|&nbsp;
+          <strong>Result:</strong> <span style="font-weight: 700; color: ${data.result === 'pass' ? '#10b981' : data.result === 'fail' ? '#ef4444' : '#f59e0b'};">${data.result === 'pass' ? 'PASS' : data.result === 'fail' ? 'FAIL' : 'NEEDS IMPROVEMENT'}</span>
         </p>
       </div>
+
+      ${data.scoreSheetHtml || `
+        <p style="color: #374151; margin: 8px 0; font-size: 13px;">
+          <strong>Steps Completed:</strong> ${data.stepsCompleted || 'N/A'}
+          ${data.criticalSteps ? ` &nbsp;|&nbsp; <strong>Critical Steps:</strong> ${data.criticalSteps}` : ''}
+        </p>
+      `}
+
       ${data.notes ? `
-        <div style="background-color: #f3f4f6; border-radius: 8px; padding: 16px; margin: 16px 0;">
-          <p style="color: #374151; margin: 0; font-size: 14px;">
+        <div style="background-color: #f3f4f6; border-radius: 8px; padding: 12px 16px; margin: 12px 0;">
+          <p style="color: #374151; margin: 0; font-size: 13px;">
             <strong>Evaluator Comments:</strong> ${data.notes}
           </p>
         </div>
       ` : ''}
-      <p style="color: #6b7280; margin: 16px 0 0 0; font-size: 14px;">
+
+      <p style="color: #6b7280; margin: 16px 0 0 0; font-size: 13px;">
         Evaluator: ${data.evaluatorName}
       </p>
-      ${data.evaluationId ? emailButton('View Full Results', `${APP_URL}/student/skill-evaluations/${data.evaluationId}`, data.result === 'pass' ? '#10b981' : '#2563eb') : ''}
+      <p style="color: #9ca3af; margin: 8px 0 0 0; font-size: 12px; font-style: italic;">
+        — PMI Paramedic Program
+      </p>
     `
   }),
 
@@ -513,11 +521,12 @@ export async function sendSkillEvaluationEmail(
     notes?: string;
     evaluatorName: string;
     date?: string;
+    scoreSheetHtml?: string;
   }
 ) {
   return sendEmail({
     to: toEmail,
-    subject: `[PMI] Skill Evaluation Results — ${data.skillName}${data.date ? ` (${data.date})` : ''}`,
+    subject: `[PMI] Skill Evaluation — ${data.skillName}${data.date ? ` (${data.date})` : ''}`,
     template: 'skill_evaluation',
     data
   });
