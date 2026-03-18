@@ -247,7 +247,8 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting station:', error);
-    return NextResponse.json({ success: false, error: 'Failed to delete station' }, { status: 500 });
+    const errMsg = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error deleting station:', id, errMsg, error);
+    return NextResponse.json({ success: false, error: `Failed to delete station: ${errMsg}` }, { status: 500 });
   }
 }
