@@ -420,8 +420,23 @@ export default function SkillSheetPanel({
         }
 
         // Update student queue (fire-and-forget, non-blocking)
+        // For formative mode, calculate pass/fail from actual step completion
         if (labDayId && studentId && stationPoolId) {
-          const queueResult = saveStatus === 'complete' ? (evaluationResult === 'pass' ? 'pass' : 'fail') : undefined;
+          let queueResult: string | undefined = undefined;
+          if (saveStatus === 'complete') {
+            if (mode === 'formative') {
+              // Calculate from step data: pass only if all critical steps done AND >=70% total
+              const totalSteps = sheet?.steps?.length || 0;
+              const completedCount = Object.keys(stepSequence).length;
+              const criticalSteps = (sheet?.steps || []).filter((s: { is_critical?: boolean }) => s.is_critical);
+              const criticalDone = criticalSteps.filter((s: { step_number: number }) => stepSequence[s.step_number] !== undefined).length;
+              const allCriticalDone = criticalSteps.length === 0 || criticalDone === criticalSteps.length;
+              const meetsThreshold = totalSteps === 0 || (completedCount / totalSteps) >= 0.7;
+              queueResult = (allCriticalDone && meetsThreshold) ? 'pass' : 'fail';
+            } else {
+              queueResult = evaluationResult === 'pass' ? 'pass' : 'fail';
+            }
+          }
           fetch('/api/lab-management/student-queue', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
