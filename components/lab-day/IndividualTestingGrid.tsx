@@ -284,11 +284,11 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
       return (
         <button
           onClick={() => handleCellClick(studentId, stationId)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-800/50 text-gray-400 dark:text-gray-500 border border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-bold bg-gray-100 dark:bg-gray-800/60 text-gray-400 dark:text-gray-500 border border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-pointer"
           title="Click to send to station"
         >
           <Circle className="w-4 h-4" />
-          <span className="hidden sm:inline">Not Started</span>
+          <span className="hidden sm:inline">—</span>
         </button>
       );
     }
@@ -297,11 +297,11 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
       return (
         <button
           onClick={() => handleCellClick(studentId, stationId)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-amber-500/10 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-500 cursor-pointer"
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-bold bg-amber-500/20 dark:bg-amber-500/30 text-amber-800 dark:text-amber-200 border border-amber-400 dark:border-amber-500 cursor-pointer"
           title="In Progress"
         >
           <Clock className="w-4 h-4 animate-pulse" />
-          <span className="hidden sm:inline">In Progress</span>
+          <span className="hidden sm:inline">Testing</span>
         </button>
       );
     }
@@ -311,7 +311,7 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
         return (
           <button
             onClick={() => handleCellClick(studentId, stationId)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500 cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-bold bg-emerald-600 dark:bg-emerald-600 text-white border border-emerald-700 cursor-pointer hover:bg-emerald-700 transition-colors"
             title="Pass"
           >
             <Check className="w-4 h-4 stroke-[3]" />
@@ -323,7 +323,7 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
         return (
           <button
             onClick={() => handleCellClick(studentId, stationId)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-300 dark:border-red-500 cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-bold bg-red-600 dark:bg-red-600 text-white border border-red-700 cursor-pointer hover:bg-red-700 transition-colors"
             title="Fail"
           >
             <X className="w-4 h-4 stroke-[3]" />
@@ -391,7 +391,7 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
             <div className="space-y-1 pt-1">
               {cell.evaluationId && (
                 <a
-                  href={`/api/skill-sheets/evaluations/print?id=${cell.evaluationId}`}
+                  href={`/api/skill-sheets/evaluations/print?evaluation_id=${cell.evaluationId}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg"
@@ -402,7 +402,7 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
               )}
               {cell.evaluationId && (
                 <a
-                  href={`/api/skill-sheets/evaluations/print?id=${cell.evaluationId}`}
+                  href={`/api/skill-sheets/evaluations/print?evaluation_id=${cell.evaluationId}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
@@ -500,31 +500,31 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
         <table className="w-full">
           {/* Column headers: station info */}
           <thead>
-            <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-750">
-              <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400 sticky left-0 bg-gray-50 dark:bg-gray-750 z-10 min-w-[180px]">
+            <tr className="border-b-2 border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/80">
+              <th className="text-left px-5 py-3 font-semibold text-gray-700 dark:text-gray-300 text-sm sticky left-0 bg-gray-50 dark:bg-gray-900/80 z-10 min-w-[220px]">
                 Student
               </th>
               {stations.map(station => (
                 <th
                   key={station.id}
-                  className="text-center px-3 py-3 font-medium text-gray-600 dark:text-gray-400 min-w-[140px]"
+                  className="text-center px-3 py-3 font-medium text-gray-600 dark:text-gray-400 min-w-[150px]"
                 >
                   <div className="space-y-0.5">
-                    <div className="text-xs font-semibold text-gray-800 dark:text-gray-200">
+                    <div className="text-xs font-bold text-gray-800 dark:text-gray-100">
                       Station {station.station_number}
                     </div>
-                    <div className="text-xs font-normal text-gray-500 dark:text-gray-400 truncate max-w-[140px] mx-auto" title={getStationTitle(station)}>
+                    <div className="text-xs font-normal text-gray-500 dark:text-gray-400 leading-tight max-w-[150px] mx-auto" title={getStationTitle(station)}>
                       {getStationTitle(station)}
                     </div>
                     {station.instructorName && (
-                      <div className="text-[11px] font-normal text-blue-500 dark:text-blue-400">
+                      <div className="text-[11px] font-medium text-blue-500 dark:text-blue-400">
                         {formatInstructor(station.instructorName)}
                       </div>
                     )}
                   </div>
                 </th>
               ))}
-              <th className="text-center px-3 py-3 font-medium text-gray-600 dark:text-gray-400 min-w-[80px]">
+              <th className="text-center px-3 py-3 font-semibold text-gray-700 dark:text-gray-300 text-sm min-w-[120px]">
                 Progress
               </th>
             </tr>
@@ -536,36 +536,51 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
               const summary = studentSummary.find(s => s.studentId === student.id);
               const done = summary?.completed || 0;
               const total = summary?.total || 0;
+              const pct = total > 0 ? Math.round((done / total) * 100) : 0;
 
               return (
                 <tr
                   key={student.id}
                   className={`border-b border-gray-100 dark:border-gray-700/50 ${
-                    idx % 2 === 0 ? '' : 'bg-gray-50/50 dark:bg-gray-750/30'
-                  } hover:bg-blue-50/40 dark:hover:bg-blue-900/10 transition-colors`}
+                    idx % 2 === 0 ? 'bg-white dark:bg-gray-800/40' : 'bg-gray-50/80 dark:bg-gray-900/50'
+                  } hover:bg-blue-50/50 dark:hover:bg-blue-900/20 transition-colors`}
                 >
-                  {/* Student name */}
-                  <td className="px-4 py-2.5 font-medium text-gray-900 dark:text-gray-100 text-sm sticky left-0 bg-inherit z-10 whitespace-nowrap">
-                    {student.last_name}, {student.first_name.charAt(0)}.
+                  {/* Student name — wider, clearer */}
+                  <td className={`px-5 py-3 font-semibold text-gray-900 dark:text-gray-100 text-sm sticky left-0 z-10 whitespace-nowrap ${
+                    idx % 2 === 0 ? 'bg-white dark:bg-gray-800/40' : 'bg-gray-50/80 dark:bg-gray-900/50'
+                  }`}>
+                    {student.last_name}, {student.first_name}
                   </td>
 
-                  {/* Station cells */}
+                  {/* Station cells — distinct cell backgrounds */}
                   {stations.map(station => (
-                    <td key={station.id} className="px-3 py-2 text-center relative">
-                      {renderBadge(student.id, station.id)}
+                    <td key={station.id} className="px-2 py-2 text-center relative">
+                      <div className="bg-gray-50 dark:bg-gray-800/80 border border-gray-100 dark:border-gray-700 rounded-lg p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700/80 transition-colors">
+                        {renderBadge(student.id, station.id)}
+                      </div>
                       {renderPopover(student.id, station.id)}
                     </td>
                   ))}
 
-                  {/* Progress indicator */}
-                  <td className="px-3 py-2 text-center">
-                    <span className={`inline-flex items-center justify-center text-sm font-mono font-semibold px-2 py-0.5 rounded ${
-                      done === total && total > 0
-                        ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-                    }`}>
-                      [{done}/{total}]
-                    </span>
+                  {/* Progress bar */}
+                  <td className="px-3 py-3 text-center">
+                    <div className="flex items-center gap-2 justify-center">
+                      <div className="w-16 h-2.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${
+                            done === total && total > 0 ? 'bg-emerald-500' : done > 0 ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'
+                          }`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      <span className={`text-xs font-bold tabular-nums ${
+                        done === total && total > 0
+                          ? 'text-emerald-600 dark:text-emerald-400'
+                          : 'text-gray-500 dark:text-gray-400'
+                      }`}>
+                        {done}/{total}
+                      </span>
+                    </div>
                   </td>
                 </tr>
               );
@@ -574,27 +589,27 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
 
           {/* Summary footer */}
           <tfoot>
-            <tr className="bg-gray-50 dark:bg-gray-750 border-t-2 border-gray-200 dark:border-gray-600">
-              <td className="px-4 py-2.5 font-semibold text-gray-700 dark:text-gray-300 text-sm sticky left-0 bg-gray-50 dark:bg-gray-750 z-10">
+            <tr className="bg-gray-100 dark:bg-gray-900/80 border-t-2 border-gray-300 dark:border-gray-600">
+              <td className="px-5 py-3 font-bold text-gray-800 dark:text-gray-200 text-sm sticky left-0 bg-gray-100 dark:bg-gray-900/80 z-10">
                 Summary
               </td>
               {stationSummary.map(s => (
-                <td key={s.stationId} className="px-3 py-2.5 text-center">
+                <td key={s.stationId} className="px-3 py-3 text-center">
                   <div className="space-y-0.5">
-                    <div className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-                      {s.completed}/{s.total} done
+                    <div className="text-sm font-bold text-gray-800 dark:text-gray-200">
+                      {s.completed}/{s.total}
                     </div>
-                    <div className="text-[11px] text-gray-500 dark:text-gray-400">
-                      <span className="text-green-600 dark:text-green-400">{s.passed} pass</span>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{s.passed}P</span>
                       {s.failed > 0 && (
-                        <span className="text-red-500 dark:text-red-400 ml-1">{s.failed} fail</span>
+                        <span className="text-red-500 dark:text-red-400 font-semibold ml-1">{s.failed}F</span>
                       )}
                     </div>
                   </div>
                 </td>
               ))}
-              <td className="px-3 py-2.5 text-center">
-                <div className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+              <td className="px-3 py-3 text-center">
+                <div className="text-sm font-bold text-gray-700 dark:text-gray-300">
                   {studentsFullyDone}/{students.length}
                 </div>
                 <div className="text-[11px] text-gray-400 dark:text-gray-500">
