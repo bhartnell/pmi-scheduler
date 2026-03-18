@@ -21,6 +21,7 @@ interface EvalData {
   notes: string | null;
   flagged_items: any;
   step_marks: Record<string, string> | null;
+  step_details: any[] | null;
   created_at: string;
   student: any;
   skill_sheet: any;
@@ -36,17 +37,41 @@ function renderEvaluationPage(evaluation: EvalData, includePageBreak: boolean = 
   const stepMarks = evaluation.step_marks || {};
   const flaggedItems = (evaluation.flagged_items || []) as { step_number: number; status: string }[];
 
+  const stepDetails = evaluation.step_details || [];
   const steps = (skillSheet?.steps || []).sort((a: any, b: any) => a.step_number - b.step_number);
   const totalSteps = steps.length;
-  const passedSteps = Object.values(stepMarks).filter(m => m === 'pass').length;
+
+  // Build completion map from step_details (formative) or step_marks (final)
+  const completionMap: Record<number, { completed: boolean; sequence?: number }> = {};
+  if (stepDetails.length > 0) {
+    for (const sd of stepDetails) {
+      completionMap[sd.step_number] = { completed: sd.completed, sequence: sd.sequence_number };
+    }
+  } else {
+    for (const [sn, mark] of Object.entries(stepMarks)) {
+      completionMap[parseInt(sn)] = { completed: mark === 'pass' };
+    }
+  }
+
+  const passedSteps = Object.values(completionMap).filter(c => c.completed).length;
   const criticalSteps = steps.filter((s: any) => s.is_critical);
-  const criticalPassed = criticalSteps.filter((s: any) => stepMarks[String(s.step_number)] === 'pass').length;
+  const criticalPassed = criticalSteps.filter((s: any) => completionMap[s.step_number]?.completed).length;
+  const hasSequenceData = stepDetails.length > 0 && stepDetails.some((sd: any) => sd.sequence_number);
 
   const evalDate = labDay?.date
     ? new Date(labDay.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
     : new Date(evaluation.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
-  const resultColor = evaluation.result === 'pass' ? '#10b981' : evaluation.result === 'fail' ? '#ef4444' : '#f59e0b';
+  // For formative: recalculate result based on actual completion
+  let displayResult = evaluation.result;
+  if (evaluation.evaluation_type === 'formative') {
+    const allCriticalDone = criticalSteps.length === 0 || criticalPassed === criticalSteps.length;
+    if (passedSteps < totalSteps || !allCriticalDone) {
+      displayResult = 'remediation';
+    }
+  }
+  const resultColor = displayResult === 'pass' ? '#10b981' : displayResult === 'fail' ? '#ef4444' : '#f59e0b';
+  const resultLabel = displayResult === 'pass' ? 'PASS' : displayResult === 'fail' ? 'FAIL' : 'NEEDS IMPROVEMENT';
 
   // Group steps by phase
   const phaseOrder = ['preparation', 'procedure', 'assessment', 'packaging'];
@@ -68,19 +93,27 @@ function renderEvaluationPage(evaluation: EvalData, includePageBreak: boolean = 
     const phaseSteps = stepsByPhase[phase];
     const phaseLabel = phaseLabels[phase] || phase.charAt(0).toUpperCase() + phase.slice(1);
 
+    const colSpan = hasSequenceData ? 4 : 3;
     stepRows += `
       <tr style="background-color: #f3f4f6;">
-        <td colspan="4" style="padding: 6px 12px; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #374151; border-bottom: 1px solid #e5e7eb;">
+        <td colspan="${colSpan}" style="padding: 6px 12px; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #374151; border-bottom: 1px solid #e5e7eb;">
           ${escapeHtml(phaseLabel)} (${phaseSteps.length} steps)
         </td>
       </tr>`;
 
     for (const step of phaseSteps) {
       stepNum++;
-      const mark = stepMarks[String(step.step_number)];
+      const comp = completionMap[step.step_number];
+      const isDone = comp?.completed || false;
+      const seq = comp?.sequence;
       const flagged = flaggedItems.find(f => f.step_number === step.step_number);
-      const statusSymbol = mark === 'pass' ? '&#10003;' : mark === 'fail' ? '&#10007;' : flagged?.status === 'fail' ? '&#10007;' : flagged?.status === 'caution' ? '&#9888;' : '&mdash;';
-      const statusColor = mark === 'pass' ? '#10b981' : mark === 'fail' ? '#ef4444' : flagged?.status === 'caution' ? '#f59e0b' : '#9ca3af';
+      const statusSymbol = isDone ? '&#10003;' : flagged?.status === 'fail' ? '&#10007;' : flagged?.status === 'caution' ? '&#9888;' : '&mdash;';
+      const statusColor = isDone ? '#10b981' : flagged?.status === 'fail' ? '#ef4444' : flagged?.status === 'caution' ? '#f59e0b' : '#9ca3af';
+
+      // Highlight out-of-order: if sequence number doesn't match step number
+      const isOutOfOrder = seq !== undefined && seq !== stepNum;
+      const seqColor = isOutOfOrder ? '#f59e0b' : '#6b7280';
+      const seqBg = isOutOfOrder ? 'background-color: #fef3c7;' : '';
 
       stepRows += `
         <tr style="border-bottom: 1px solid #f3f4f6;">
@@ -89,6 +122,7 @@ function renderEvaluationPage(evaluation: EvalData, includePageBreak: boolean = 
             ${escapeHtml(step.instruction)}
             ${step.is_critical ? '<span style="color: #ef4444; font-weight: 700; font-size: 10px; margin-left: 4px;">[CRIT]</span>' : ''}
           </td>
+          ${hasSequenceData ? `<td style="padding: 6px 12px; font-size: 12px; text-align: center; width: 50px; color: ${seqColor}; font-weight: 600; ${seqBg}">${seq || '&mdash;'}</td>` : ''}
           <td style="padding: 6px 12px; font-size: 16px; text-align: center; width: 50px; color: ${statusColor}; font-weight: 700;">${statusSymbol}</td>
         </tr>`;
     }
@@ -127,6 +161,7 @@ function renderEvaluationPage(evaluation: EvalData, includePageBreak: boolean = 
           <tr style="background-color: #1e40af; color: white;">
             <th style="padding: 8px 12px; font-size: 11px; text-align: center; width: 40px;">#</th>
             <th style="padding: 8px 12px; font-size: 11px; text-align: left;">Description</th>
+            ${hasSequenceData ? '<th style="padding: 8px 12px; font-size: 11px; text-align: center; width: 50px;">Order</th>' : ''}
             <th style="padding: 8px 12px; font-size: 11px; text-align: center; width: 50px;">Status</th>
           </tr>
         </thead>
@@ -140,7 +175,7 @@ function renderEvaluationPage(evaluation: EvalData, includePageBreak: boolean = 
         <tr>
           <td style="width: 33%;"><strong>Steps Completed:</strong> ${passedSteps}/${totalSteps}</td>
           <td style="width: 33%;"><strong>Critical Steps:</strong> ${criticalPassed}/${criticalSteps.length}</td>
-          <td style="width: 33%;"><strong>Result:</strong> <span style="color: ${resultColor}; font-weight: 700; font-size: 15px;">${evaluation.result.toUpperCase()}</span></td>
+          <td style="width: 33%;"><strong>Result:</strong> <span style="color: ${resultColor}; font-weight: 700; font-size: 15px;">${resultLabel}</span></td>
         </tr>
       </table>
 
@@ -195,7 +230,7 @@ export async function GET(request: NextRequest) {
     const { data: evaluation, error: evalError } = await supabase
       .from('student_skill_evaluations')
       .select(`
-        id, evaluation_type, result, notes, flagged_items, step_marks, created_at,
+        id, evaluation_type, result, notes, flagged_items, step_marks, step_details, created_at,
         student:students!student_skill_evaluations_student_id_fkey(id, first_name, last_name),
         skill_sheet:skill_sheets!student_skill_evaluations_skill_sheet_id_fkey(id, skill_name, source, steps:skill_sheet_steps(step_number, phase, instruction, is_critical)),
         evaluator:lab_users!student_skill_evaluations_evaluator_id_fkey(id, name),

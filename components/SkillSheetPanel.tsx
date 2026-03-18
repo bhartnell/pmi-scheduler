@@ -711,7 +711,7 @@ export default function SkillSheetPanel({
       const completedCount = studentQueue?.filter(s => s.evaluated).length || 0;
       const totalCount = studentQueue?.length || 0;
       return (
-        <div className="flex flex-col h-full bg-white dark:bg-gray-900 rounded-lg shadow-lg overflow-hidden">
+        <div className="flex flex-col bg-white dark:bg-gray-900 rounded-lg shadow-lg">
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
             <PartyPopper className="w-16 h-16 text-green-500 mb-4" />
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
@@ -752,7 +752,7 @@ export default function SkillSheetPanel({
     }
 
     return (
-      <div className="flex flex-col h-full bg-white dark:bg-gray-900 rounded-lg shadow-lg overflow-hidden">
+      <div className="flex flex-col bg-white dark:bg-gray-900 rounded-lg shadow-lg">
         {panelInner}
 
         {/* Student queue progress */}
@@ -822,8 +822,8 @@ export default function SkillSheetPanel({
           </div>
         )}
 
-        {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto overscroll-contain">
+        {/* Content — embedded mode: no scroll container, flows with page */}
+        <div className="flex-1">
           {loading ? (
             <div className="flex items-center justify-center py-16">
               <Loader2 className="w-8 h-8 animate-spin text-blue-600 dark:text-blue-400" />
