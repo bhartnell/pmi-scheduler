@@ -110,27 +110,19 @@ export default function AdminPage() {
       description: 'Manage kiosk display tokens for Raspberry Pi or wall monitors',
       color: 'bg-green-500'
     },
-    {
-      href: '/lab-management/seating/learning-styles',
-      icon: Brain,
-      title: 'Learning Styles',
-      description: 'Manage student learning style assessments for seating',
-      color: 'bg-cyan-500'
-    },
-    {
-      href: '/lab-management/seating/preferences',
-      icon: Layout,
-      title: 'Seating Preferences',
-      description: 'Manage student seating preferences and conflicts',
-      color: 'bg-orange-500'
-    },
-    {
-      href: '/lab-management/seating/charts',
-      icon: Layout,
-      title: 'Seating Charts',
-      description: 'Create and manage classroom seating arrangements',
-      color: 'bg-indigo-500'
-    }
+    // Seating Charts & Learning Styles - archived, hidden from nav
+    // {
+    //   href: '/lab-management/seating/learning-styles',
+    //   ...
+    // },
+    // {
+    //   href: '/lab-management/seating/preferences',
+    //   ...
+    // },
+    // {
+    //   href: '/lab-management/seating/charts',
+    //   ...
+    // }
   ];
 
   return (

@@ -89,12 +89,13 @@ export const QUICK_LINK_DEFINITIONS: Record<string, {
     label: 'My Certs',
     color: 'bg-yellow-500',
   },
-  learning_styles: {
-    href: '/lab-management/seating/learning-styles',
-    icon: Brain,
-    label: 'Learning',
-    color: 'bg-cyan-500',
-  },
+  // learning_styles - archived, hidden from nav
+  // learning_styles: {
+  //   href: '/lab-management/seating/learning-styles',
+  //   icon: Brain,
+  //   label: 'Learning',
+  //   color: 'bg-cyan-500',
+  // },
   cohorts: {
     href: '/lab-management/admin/cohorts',
     icon: Users,

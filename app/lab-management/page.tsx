@@ -259,18 +259,7 @@ export default function LabManagementDashboard() {
                 </div>
               </Link>
 
-              <Link
-                href="/lab-management/peer-evals"
-                className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 hover:shadow-lg transition-shadow flex items-center gap-3"
-              >
-                <div className="p-2 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg">
-                  <Users className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
-                </div>
-                <div className="flex-1">
-                  <div className="font-medium text-gray-900 dark:text-white">Peer Evaluations</div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">View aggregated peer eval results</div>
-                </div>
-              </Link>
+              {/* Peer Evaluations - archived, hidden from nav */}
             </div>
           </div>
         )}
