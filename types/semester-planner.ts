@@ -78,6 +78,7 @@ export interface PmiScheduleBlock {
   date: string | null;                 // actual calendar date (YYYY-MM-DD)
   week_number: number | null;          // week 1-15 within semester
   recurring_group_id: string | null;   // links all instances of same recurring class
+  linked_lab_day_id: string | null;    // links this block to a lab_days record
   sort_order: number;
   created_at: string;
   updated_at: string;
@@ -85,6 +86,7 @@ export interface PmiScheduleBlock {
   room?: PmiRoom;
   program_schedule?: PmiProgramSchedule;
   instructors?: PmiBlockInstructor[];
+  linked_lab_day?: { id: string; title: string; date: string; station_count?: number } | null;
 }
 
 export type InstructorRole = 'primary' | 'secondary' | 'observer';
@@ -138,6 +140,7 @@ export interface PmiCourseTemplate {
   notes: string | null;
   sort_order: number;
   active_weeks: string;
+  lab_day_index: string;             // which day_number(s) generate lab days: day1, day2, both, none
   default_instructor_id: string | null;
   default_instructor_name: string | null;
   default_instructor_ids: string[];

@@ -443,6 +443,22 @@ function TimeGridBlock({
       {block.week_number && height >= 60 && (
         <div className="text-[8px] text-white/50">W{block.week_number}</div>
       )}
+      {/* Lab day link indicator */}
+      {block.block_type === 'lab' && height >= 40 && (
+        <div className="text-[8px] truncate flex items-center gap-0.5">
+          {block.linked_lab_day ? (
+            <span className="text-green-200 flex items-center gap-0.5" title={`Linked: ${block.linked_lab_day.title}`}>
+              <Link className="w-2.5 h-2.5" />
+              Lab
+            </span>
+          ) : (
+            <span className="text-orange-200 flex items-center gap-0.5" title="No lab day linked">
+              <Unlink className="w-2.5 h-2.5" />
+              No lab
+            </span>
+          )}
+        </div>
+      )}
     </button>
   );
 }
@@ -585,8 +601,11 @@ function BlockEditModal({
     date: block.date || '',
   });
 
-  const [labDayLink, setLabDayLink] = useState<{ id: string; title: string | null; date: string } | null>(null);
+  const [labDayLink, setLabDayLink] = useState<{ id: string; title: string | null; date: string } | null>(
+    block.linked_lab_day ? { id: block.linked_lab_day.id, title: block.linked_lab_day.title, date: block.linked_lab_day.date } : null
+  );
   const [labDayLoading, setLabDayLoading] = useState(false);
+  const [creatingLabDay, setCreatingLabDay] = useState(false);
   const [instructorDropdownOpen, setInstructorDropdownOpen] = useState(false);
 
   // Look up lab day when block has a date and is type 'lab'
@@ -1089,17 +1108,54 @@ function BlockEditModal({
                 ) : (
                   <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800">
                     <div>
-                      <div className="text-sm text-yellow-800 dark:text-yellow-300">No lab day created</div>
+                      <div className="text-sm text-yellow-800 dark:text-yellow-300">No lab day linked</div>
                       <div className="text-xs text-yellow-600 dark:text-yellow-400">for {formData.date || block.date}</div>
                     </div>
-                    <a
-                      href={`/lab-management/schedule/new?date=${formData.date || block.date}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-2 py-1 text-xs font-medium bg-yellow-600 text-white rounded hover:bg-yellow-700 transition-colors"
-                    >
-                      Create Lab Day
-                    </a>
+                    <div className="flex gap-1.5">
+                      {block.id && (
+                        <button
+                          onClick={async () => {
+                            const blockDate = formData.date || block.date;
+                            if (!blockDate || !block.id) return;
+                            // Get cohort_id from the program schedule
+                            const cohortId = block.program_schedule?.cohort?.id;
+                            if (!cohortId) return;
+                            setCreatingLabDay(true);
+                            try {
+                              const res = await fetch('/api/scheduling/planner/blocks/link-lab-day', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                  block_id: block.id,
+                                  cohort_id: cohortId,
+                                  date: blockDate,
+                                  title: `${block.course_name || block.title || 'Lab'} — ${new Date(blockDate + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`,
+                                  week_number: block.week_number || null,
+                                }),
+                              });
+                              const data = await res.json();
+                              if (data.success && data.linked_lab_day) {
+                                setLabDayLink(data.linked_lab_day);
+                              }
+                            } catch { /* ignore */ }
+                            setCreatingLabDay(false);
+                          }}
+                          disabled={creatingLabDay || !block.program_schedule?.cohort?.id}
+                          className="px-2 py-1 text-xs font-medium bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-1"
+                        >
+                          {creatingLabDay ? <Loader2 className="w-3 h-3 animate-spin" /> : <Link className="w-3 h-3" />}
+                          Create &amp; Link
+                        </button>
+                      )}
+                      <a
+                        href={`/lab-management/schedule/new?date=${formData.date || block.date}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-2 py-1 text-xs font-medium bg-yellow-600 text-white rounded hover:bg-yellow-700 transition-colors"
+                      >
+                        Open Lab Mgmt
+                      </a>
+                    </div>
                   </div>
                 )}
               </div>
@@ -1266,6 +1322,7 @@ interface WizardState {
   startDate: string;
   loadLabTemplate: boolean;
   labTemplateId: string;
+  labDayIndex: string;  // day1, day2, both, none
 }
 
 function GenerateWizard({
@@ -1296,6 +1353,7 @@ function GenerateWizard({
     startDate: '',
     loadLabTemplate: false,
     labTemplateId: '',
+    labDayIndex: 'day2',
   });
   const [templates, setTemplates] = useState<PmiCourseTemplate[]>([]);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
@@ -1468,6 +1526,7 @@ function GenerateWizard({
           load_lab_template: wizard.loadLabTemplate,
           lab_template_id: wizard.labTemplateId || null,
           cohort_id: wizard.cohortId || null,
+          lab_day_index: wizard.labDayIndex || 'day2',
         }),
       });
       const result = await res.json();
@@ -1785,6 +1844,24 @@ function GenerateWizard({
                           <div className="mt-1 ml-6 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 rounded px-2 py-1">
                             {labTemplateInfo.most_recent.display}
                             {' · '}{labTemplateInfo.template_count} lab day{labTemplateInfo.template_count !== 1 ? 's' : ''}
+                          </div>
+                        )}
+                        {wizard.loadLabTemplate && (
+                          <div className="mt-2 ml-6">
+                            <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                              Lab Days On
+                            </label>
+                            <select
+                              value={wizard.labDayIndex}
+                              onChange={(e) => setWizard(prev => ({ ...prev, labDayIndex: e.target.value }))}
+                              className="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-xs text-gray-900 dark:text-gray-100"
+                            >
+                              <option value="day2">Day 2 only (default)</option>
+                              <option value="day1">Day 1 only</option>
+                              <option value="both">Both Day 1 &amp; Day 2</option>
+                              <option value="none">None (skip lab days)</option>
+                            </select>
+                            <p className="text-[10px] text-gray-400 mt-0.5">Controls which class days generate lab_days records</p>
                           </div>
                         )}
                         {wizard.loadLabTemplate && !wizard.cohortId && (

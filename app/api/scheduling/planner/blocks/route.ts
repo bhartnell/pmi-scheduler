@@ -16,6 +16,9 @@ const BLOCK_SELECT = `
   instructors:pmi_block_instructors(
     id, role,
     instructor:lab_users!pmi_block_instructors_instructor_id_fkey(id, name, email)
+  ),
+  linked_lab_day:lab_days!pmi_schedule_blocks_linked_lab_day_id_fkey(
+    id, title, date
   )
 `;
 

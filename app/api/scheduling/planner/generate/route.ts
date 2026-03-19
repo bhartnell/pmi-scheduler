@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
       load_lab_template, // if true, also apply lab template during generation
       lab_template_id,   // specific lab template to use (optional — uses most recent if not provided)
       cohort_id,         // needed for lab template application
+      lab_day_index,     // which day_number(s) get lab days: 'day1', 'day2', 'both', 'none' (default: 'day2')
     } = body;
 
     // Normalize instructor IDs: support both legacy single and new multi-instructor
@@ -318,9 +319,20 @@ export async function POST(request: NextRequest) {
           const labErrors: string[] = [];
           let labCreated = 0;
 
+          // Determine which day_numbers should get lab days based on lab_day_index setting
+          const effectiveLabDayIndex = lab_day_index || 'day2';
+          const allowedDayNumbers = new Set<number>();
+          if (effectiveLabDayIndex === 'day1') allowedDayNumbers.add(1);
+          else if (effectiveLabDayIndex === 'day2') allowedDayNumbers.add(2);
+          else if (effectiveLabDayIndex === 'both') { allowedDayNumbers.add(1); allowedDayNumbers.add(2); }
+          // 'none' leaves allowedDayNumbers empty — skip all lab day creation
+
           for (const tpl of sortedLab) {
             const weekNum = tpl.week_number || 1;
             const dayNum = tpl.day_number || 1;
+
+            // Skip lab days for day_numbers not matching the lab_day_index setting
+            if (!allowedDayNumbers.has(dayNum)) continue;
 
             // Calculate date: find the day_index from day_number
             // Day 1 → mapped to first class day, Day 2 → second class day
@@ -355,6 +367,22 @@ export async function POST(request: NextRequest) {
             }
 
             labCreated++;
+
+            // Link matching lab schedule blocks to this lab day
+            // Find blocks with block_type='lab' on the same date
+            if (labDay) {
+              const matchingBlocks = allCreated.filter(b => {
+                const blk = b as { date?: string; block_type?: string };
+                return blk.date === labDateStr && blk.block_type === 'lab';
+              });
+              for (const mb of matchingBlocks) {
+                const blockId = (mb as { id: string }).id;
+                await supabase
+                  .from('pmi_schedule_blocks')
+                  .update({ linked_lab_day_id: labDay.id })
+                  .eq('id', blockId);
+              }
+            }
 
             // Create stations
             // eslint-disable-next-line @typescript-eslint/no-explicit-any

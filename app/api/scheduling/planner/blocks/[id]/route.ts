@@ -16,6 +16,9 @@ const BLOCK_SELECT = `
   instructors:pmi_block_instructors(
     id, role,
     instructor:lab_users!pmi_block_instructors_instructor_id_fkey(id, name, email)
+  ),
+  linked_lab_day:lab_days!pmi_schedule_blocks_linked_lab_day_id_fkey(
+    id, title, date
   )
 `;
 
@@ -58,6 +61,7 @@ export async function PUT(
     if (body.date !== undefined) updates.date = body.date || null;
     if (body.week_number !== undefined) updates.week_number = body.week_number;
     if (body.sort_order !== undefined) updates.sort_order = body.sort_order;
+    if (body.linked_lab_day_id !== undefined) updates.linked_lab_day_id = body.linked_lab_day_id || null;
 
     // Extract instructor_ids from body (handled separately from block field updates)
     const instructorIds: string[] | undefined = Array.isArray(body.instructor_ids) ? body.instructor_ids : undefined;
