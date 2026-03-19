@@ -308,19 +308,20 @@ export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
     const { id, lab_day_id, student_id, station_id, status, result, evaluation_id } = body;
+    console.log('[student-queue PUT]', { id, lab_day_id, student_id, station_id, status, result, evaluation_id: evaluation_id?.substring?.(0, 8) });
 
     const supabase = getSupabaseAdmin();
 
     // If no id provided, look up by lab_day_id + student_id + station_id
     let entryId = id;
     if (!entryId && lab_day_id && student_id && station_id) {
+      // Find most recent entry for this student+station (any status, not just in_progress)
       const { data: found } = await supabase
         .from('lab_day_student_queue')
         .select('id')
         .eq('lab_day_id', lab_day_id)
         .eq('student_id', student_id)
         .eq('station_id', station_id)
-        .eq('status', 'in_progress')
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
