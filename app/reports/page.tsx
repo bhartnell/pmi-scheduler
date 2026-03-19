@@ -57,14 +57,7 @@ const REPORT_SECTIONS: { heading: string; reports: ReportLink[] }[] = [
         color: 'text-purple-600 dark:text-purple-400',
         bgColor: 'bg-purple-100 dark:bg-purple-900/30',
       },
-      {
-        title: 'Scenario Usage',
-        description: 'Scenario usage counts, difficulty distribution, and category coverage.',
-        href: '/reports/scenario-usage-overview',
-        icon: BookOpen,
-        color: 'text-orange-600 dark:text-orange-400',
-        bgColor: 'bg-orange-100 dark:bg-orange-900/30',
-      },
+      // Scenario Usage Overview - archived, hidden from nav (keep /reports/scenario-usage)
       {
         title: 'Clinical Placements',
         description: 'Clinical site utilization, student hours by site, and internship pipeline.',

@@ -45,6 +45,7 @@ import {
   Layers,
   BarChart3,
   RefreshCw,
+  Archive,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import {
@@ -238,20 +239,8 @@ function buildSections(pendingAccessRequests: number): AdminSection[] {
           description: 'Review and action student attendance absence appeal requests',
           color: 'bg-amber-600',
         },
-        {
-          href: '/admin/equipment/maintenance',
-          icon: Wrench,
-          title: 'Equipment Maintenance',
-          description: 'Schedule and track equipment maintenance, repairs, and calibration records',
-          color: 'bg-slate-600',
-        },
-        {
-          href: '/admin/incidents',
-          icon: AlertTriangle,
-          title: 'Incident Reports',
-          description: 'Log and track safety incidents in lab and clinical settings for OSHA compliance',
-          color: 'bg-red-600',
-        },
+        // Equipment Maintenance - archived, hidden from nav
+        // Incident Reports - archived, hidden from nav
         {
           href: '/admin/osce-events',
           icon: ClipboardCheck,
@@ -322,8 +311,8 @@ function buildSections(pendingAccessRequests: number): AdminSection[] {
           title: 'Scheduled Exports',
           description: 'Configure automatic weekly or monthly report exports by email',
           color: 'bg-emerald-500',
-},        {          href: '/admin/data-exports',          icon: Download,          title: 'Data Export Archives',          description: 'Storage-backed weekly exports, semester archives, and manual backups with download links',          color: 'bg-teal-500',
-        },
+},
+        // Data Export Archives - consolidated into /admin/data-export (redirects)
         {
           href: '/admin/certifications/verification',
           icon: ShieldCheck,
@@ -512,13 +501,7 @@ function buildSections(pendingAccessRequests: number): AdminSection[] {
           description: 'Configure outbound webhooks to notify external systems of events in real time',
           color: 'bg-indigo-700',
         },
-        {
-          href: '/admin/deep-links',
-          icon: Key,
-          title: 'Deep Links',
-          description: 'Generate and manage deep links for direct access to specific pages and resources',
-          color: 'bg-gray-600',
-        },
+        // Deep Links - archived, hidden from nav
       ],
     },
   ];
@@ -622,6 +605,7 @@ export default function AdminPage() {
   const effectiveRole = useEffectiveRole(currentUser?.role ?? null);
   const [filterQuery, setFilterQuery] = useState('');
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
+  const [archivedExpanded, setArchivedExpanded] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -790,6 +774,57 @@ export default function AdminPage() {
               filterQuery={filterQuery}
             />
           ))}
+        </div>
+
+        {/* Archived Features */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+          <button
+            onClick={() => setArchivedExpanded(!archivedExpanded)}
+            className="w-full flex items-center justify-between px-5 py-4 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors text-left"
+          >
+            <div className="flex items-center gap-3">
+              <Archive className="w-5 h-5 text-gray-400 dark:text-gray-500" />
+              <span className="font-semibold text-gray-600 dark:text-gray-400">Archived Features</span>
+              <span className="text-xs text-gray-400 dark:text-gray-500">(10)</span>
+            </div>
+            {archivedExpanded ? (
+              <ChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
+            ) : (
+              <ChevronRight className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
+            )}
+          </button>
+          {archivedExpanded && (
+            <div className="px-5 pb-4 border-t border-gray-100 dark:border-gray-700">
+              <p className="text-sm text-gray-500 dark:text-gray-400 py-3">
+                These features are built but hidden from normal navigation. Click to access if needed.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { label: 'Seating Charts', href: '/lab-management/seating/charts' },
+                  { label: 'Learning Styles', href: '/lab-management/seating/learning-styles' },
+                  { label: 'Seating Preferences', href: '/lab-management/seating/preferences' },
+                  { label: 'Peer Evaluations', href: '/lab-management/peer-evals' },
+                  { label: 'Mentorship', href: '/lab-management/mentorship' },
+                  { label: 'Equipment Maintenance', href: '/admin/equipment/maintenance' },
+                  { label: 'Protocol Tracking', href: '/lab-management/protocol-tracking' },
+                  { label: 'Deep Links', href: '/admin/deep-links' },
+                  { label: 'Resource Bookings', href: '/scheduling/resource-bookings' },
+                  { label: 'Medications Resource', href: '/resources/medications' },
+                  { label: 'Incident Reports', href: '/admin/incidents' },
+                  { label: 'Scenario Usage Overview', href: '/reports/scenario-usage-overview' },
+                  { label: 'Cases Leaderboard', href: '/cases/leaderboard' },
+                ].map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className="px-3 py-1.5 bg-gray-50 dark:bg-gray-700/50 text-sm text-gray-600 dark:text-gray-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Quick Links back to other areas */}
