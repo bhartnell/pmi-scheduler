@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole } from '@/lib/permissions';
 import { requireAuth } from '@/lib/api-auth';
+import { logAuditEvent } from '@/lib/audit';
 
 export async function GET(request: NextRequest) {
   try {
@@ -156,6 +157,16 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) throw error;
+
+    // FERPA audit: log internship creation
+    logAuditEvent({
+      user: { id: user.id, email: user.email, role: user.role },
+      action: 'internship_created',
+      resourceType: 'internship',
+      resourceId: data?.id,
+      resourceDescription: `Created internship for student ${body.student_id}`,
+      metadata: { studentId: body.student_id, cohortId: body.cohort_id, agencyName, status: body.status || 'not_started', phase: body.current_phase || 'pre_internship' },
+    }).catch(console.error);
 
     return NextResponse.json({ success: true, internship: data });
   } catch (error) {

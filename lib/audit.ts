@@ -19,7 +19,16 @@ export type AuditAction =
   | 'external_email_approved'
   | 'external_email_reactivated'
   | 'external_email_revoked'
-  | 'external_roster_imported';
+  | 'external_roster_imported'
+  | 'student_record_viewed'
+  | 'evaluation_viewed'
+  | 'assessment_created'
+  | 'attendance_marked'
+  | 'clinical_hours_logged'
+  | 'clinical_hours_updated'
+  | 'internship_created'
+  | 'student_group_created'
+  | 'student_group_changed';
 
 export type AuditResourceType =
   | 'student'
@@ -33,7 +42,14 @@ export type AuditResourceType =
   | 'user'
   | 'guest_access'
   | 'certification'
-  | 'audit_log';
+  | 'audit_log'
+  | 'skill_evaluation'
+  | 'scenario_assessment'
+  | 'skill_assessment'
+  | 'attendance'
+  | 'clinical_hours'
+  | 'internship'
+  | 'student_group';
 
 export interface AuditUser {
   id?: string;

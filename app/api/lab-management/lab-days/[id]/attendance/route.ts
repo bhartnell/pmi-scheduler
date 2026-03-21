@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole } from '@/lib/permissions';
 import { requireAuth } from '@/lib/api-auth';
+import { logAuditEvent } from '@/lib/audit';
 
 // GET /api/lab-management/lab-days/[id]/attendance
 // Returns all students in the cohort merged with their attendance status for this lab day
@@ -202,6 +203,16 @@ export async function PUT(
 
     if (error) throw error;
 
+    // FERPA audit: log attendance marking
+    logAuditEvent({
+      user: { id: user.id, email: user.email, role: user.role },
+      action: 'attendance_marked',
+      resourceType: 'attendance',
+      resourceId: labDayId,
+      resourceDescription: `Marked attendance for student ${student_id}: ${status}`,
+      metadata: { labDayId, studentId: student_id, status, notes: notes || null },
+    }).catch(console.error);
+
     return NextResponse.json({ success: true, record: data });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);
@@ -279,6 +290,16 @@ export async function POST(
     const absent = upsertRows.filter(r => r.status === 'absent').length;
     const excused = upsertRows.filter(r => r.status === 'excused').length;
     const late = upsertRows.filter(r => r.status === 'late').length;
+
+    // FERPA audit: log bulk attendance marking
+    logAuditEvent({
+      user: { id: user.id, email: user.email, role: user.role },
+      action: 'attendance_marked',
+      resourceType: 'attendance',
+      resourceId: labDayId,
+      resourceDescription: `Bulk marked attendance for ${upsertRows.length} students on lab day ${labDayId}`,
+      metadata: { labDayId, studentCount: upsertRows.length, present, absent, excused, late },
+    }).catch(console.error);
 
     return NextResponse.json({
       success: true,

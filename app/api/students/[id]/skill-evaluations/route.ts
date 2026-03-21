@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole } from '@/lib/permissions';
+import { logAuditEvent } from '@/lib/audit';
 
 async function getCurrentUser(email: string) {
   const supabase = getSupabaseAdmin();
@@ -236,6 +237,16 @@ export async function GET(
       const nameB = b.canonical_skill?.canonical_name || 'Uncategorized';
       return nameA.localeCompare(nameB);
     });
+
+    // FERPA audit: log student evaluation access
+    logAuditEvent({
+      user: { id: currentUser.id, email: currentUser.email, role: currentUser.role },
+      action: 'evaluation_viewed',
+      resourceType: 'skill_evaluation',
+      resourceId: studentId,
+      resourceDescription: `Viewed skill evaluations for student ${studentId} (${evaluations.length} evaluations)`,
+      metadata: { studentId, evaluationCount: evaluations.length },
+    }).catch(console.error);
 
     return NextResponse.json({ success: true, groups });
   } catch (error) {

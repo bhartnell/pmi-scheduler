@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole } from '@/lib/permissions';
 import { requireAuth } from '@/lib/api-auth';
+import { logAuditEvent } from '@/lib/audit';
 
 export async function GET(request: NextRequest) {
   try {
@@ -129,6 +130,16 @@ export async function POST(request: NextRequest) {
     }
 
     if (result.error) throw result.error;
+
+    // FERPA audit: log clinical hours create/update
+    logAuditEvent({
+      user: { id: user.id, email: user.email, role: user.role },
+      action: existing ? 'clinical_hours_updated' : 'clinical_hours_logged',
+      resourceType: 'clinical_hours',
+      resourceId: result.data?.id,
+      resourceDescription: `${existing ? 'Updated' : 'Logged'} clinical hours for student ${student_id}`,
+      metadata: { studentId: student_id, cohortId: cohort_id, isUpdate: !!existing },
+    }).catch(console.error);
 
     return NextResponse.json({ success: true, hours: result.data });
   } catch (error) {
