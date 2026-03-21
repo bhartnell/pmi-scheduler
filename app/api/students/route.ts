@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { logAuditEvent } from '@/lib/audit';
 
 // GET - List students, optionally filtered by cohort
 export async function GET(request: NextRequest) {
@@ -47,6 +48,15 @@ export async function GET(request: NextRequest) {
     const { data, error } = await query;
 
     if (error) throw error;
+
+    // FERPA audit: log student list access
+    logAuditEvent({
+      user: { email: session.user.email },
+      action: 'student_record_viewed',
+      resourceType: 'student_list',
+      resourceDescription: `Viewed student list${cohortId ? ` for cohort ${cohortId}` : ''} (${(data || []).length} students)`,
+      metadata: { cohortId, search: search || null, activeOnly, resultCount: (data || []).length },
+    }).catch(console.error);
 
     return NextResponse.json({ success: true, students: data || [] });
   } catch (error) {

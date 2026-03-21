@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth } from '@/lib/api-auth';
+import { logAuditEvent } from '@/lib/audit';
 
 export async function GET(request: NextRequest) {
   const auth = await requireAuth('instructor');
@@ -69,6 +70,16 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) throw error;
+
+    // FERPA audit: log skill assessment creation
+    logAuditEvent({
+      user: { id: user.id, email: user.email, role: user.role },
+      action: 'assessment_created',
+      resourceType: 'skill_assessment',
+      resourceId: data?.id,
+      resourceDescription: `Created skill assessment for student ${body.student_id}: ${body.skill_name}`,
+      metadata: { studentId: body.student_id, skillName: body.skill_name, passed: body.passed, overallCompetency: body.overall_competency },
+    }).catch(console.error);
 
     return NextResponse.json({ success: true, assessment: data });
   } catch (error) {

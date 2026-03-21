@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth } from '@/lib/api-auth';
+import { logAuditEvent } from '@/lib/audit';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -135,6 +136,16 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error;
 
+    // FERPA audit: log group creation
+    logAuditEvent({
+      user: { id: user.id, email: user.email, role: user.role },
+      action: 'student_group_created',
+      resourceType: 'student_group',
+      resourceId: data?.id,
+      resourceDescription: `Created group "${body.name || `Group ${nextOrder}`}" for cohort ${body.cohort_id}`,
+      metadata: { cohortId: body.cohort_id, groupName: body.name || `Group ${nextOrder}` },
+    }).catch(console.error);
+
     return NextResponse.json({ success: true, group: data });
   } catch (error) {
     console.error('Error creating group:', error);
@@ -218,6 +229,16 @@ export async function PUT(request: NextRequest) {
           changed_by: userEmail,
         });
 
+      // FERPA audit: log student group change
+      logAuditEvent({
+        user: { id: user.id, email: user.email, role: user.role },
+        action: 'student_group_changed',
+        resourceType: 'student_group',
+        resourceId: toGroupId || fromGroupId,
+        resourceDescription: `Student ${studentId} ${historyAction} ${fromGroupId ? `from group ${fromGroupId}` : ''}${toGroupId ? ` to group ${toGroupId}` : ''}`.trim(),
+        metadata: { studentId, fromGroupId, toGroupId, historyAction },
+      }).catch(console.error);
+
       return NextResponse.json({ success: true });
     }
 
@@ -269,6 +290,15 @@ export async function PUT(request: NextRequest) {
           .from('lab_group_members')
           .insert(newAssignments);
       }
+
+      // FERPA audit: log auto-balance group change
+      logAuditEvent({
+        user: { id: user.id, email: user.email, role: user.role },
+        action: 'student_group_changed',
+        resourceType: 'student_group',
+        resourceDescription: `Auto-balanced ${allStudentIds.length} students across ${numGroups} groups (${moved} moves)`,
+        metadata: { groupIds, totalStudents: allStudentIds.length, moved },
+      }).catch(console.error);
 
       return NextResponse.json({ success: true, moved });
     }

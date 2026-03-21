@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth } from '@/lib/api-auth';
+import { logAuditEvent } from '@/lib/audit';
 
 // GET - Fetch assessments
 export async function GET(request: NextRequest) {
@@ -131,6 +132,16 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) throw error;
+
+    // FERPA audit: log scenario assessment creation
+    logAuditEvent({
+      user: { id: user.id, email: user.email, role: user.role },
+      action: 'assessment_created',
+      resourceType: 'scenario_assessment',
+      resourceId: data?.id,
+      resourceDescription: `Created scenario assessment for lab day ${labDayId}, station ${labStationId}`,
+      metadata: { labDayId, labStationId, cohortId, rotationNumber, teamLeadId: body.team_lead_id, overallScore: body.overall_score },
+    }).catch(console.error);
 
     return NextResponse.json({ success: true, assessment: data });
   } catch (error: any) {
