@@ -1,5 +1,7 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import {
   Star,
   ChevronDown,
@@ -11,49 +13,64 @@ import {
 } from 'lucide-react';
 import type { Student, StudentRating } from './types';
 import HelpTooltip from '@/components/HelpTooltip';
+import { useToast } from '@/components/Toast';
 
 interface StudentRatingsSectionProps {
-  studentRatings: StudentRating[];
-  ratingsCollapsed: boolean;
-  ratingsLoading: boolean;
+  labDayId: string;
   cohortStudents: Student[];
-  savingRating: Record<string, boolean>;
-  ratingHover: Record<string, number>;
-  expandedNotes: Record<string, boolean>;
-  pendingNotes: Record<string, string>;
-  session: { user?: { email?: string | null } } | null;
-  onToggleCollapse: () => void;
-  onSaveRating: (studentId: string, rating: number) => void;
-  onSaveNote: (studentId: string) => void;
-  onRatingHoverChange: (studentId: string, value: number) => void;
-  onPendingNoteChange: (studentId: string, value: string) => void;
-  onExpandedNotesChange: (studentId: string, expanded: boolean) => void;
 }
 
-export default function StudentRatingsSection({
-  studentRatings,
-  ratingsCollapsed,
-  ratingsLoading,
-  cohortStudents,
-  savingRating,
-  ratingHover,
-  expandedNotes,
-  pendingNotes,
-  session,
-  onToggleCollapse,
-  onSaveRating,
-  onSaveNote,
-  onRatingHoverChange,
-  onPendingNoteChange,
-  onExpandedNotesChange,
-}: StudentRatingsSectionProps) {
+export default function StudentRatingsSection({ labDayId, cohortStudents }: StudentRatingsSectionProps) {
+  const { data: session } = useSession();
+  const toast = useToast();
+
+  const [studentRatings, setStudentRatings] = useState<StudentRating[]>([]);
+  const [ratingsCollapsed, setRatingsCollapsed] = useState(false);
+  const [ratingsLoading, setRatingsLoading] = useState(false);
+  const [savingRating, setSavingRating] = useState<Record<string, boolean>>({});
+  const [ratingHover, setRatingHover] = useState<Record<string, number>>({});
+  const [expandedNotes, setExpandedNotes] = useState<Record<string, boolean>>({});
+  const [pendingNotes, setPendingNotes] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    fetchStudentRatings();
+  }, [labDayId, session]);
+
+  const fetchStudentRatings = async () => {
+    if (!labDayId) return; setRatingsLoading(true);
+    try { const res = await fetch(`/api/lab-management/lab-days/${labDayId}/ratings`); const data = await res.json(); if (data.success) { setStudentRatings(data.ratings || []); const notes: Record<string, string> = {}; const currentEmail = session?.user?.email?.toLowerCase(); (data.ratings || []).forEach((r: StudentRating) => { if (r.instructor_email?.toLowerCase() === currentEmail && r.note) notes[r.student_id] = r.note; }); setPendingNotes(notes); } }
+    catch (error) { console.error('Error:', error); }
+    setRatingsLoading(false);
+  };
+
+  const handleSaveRating = async (studentId: string, rating: number) => {
+    setSavingRating(prev => ({ ...prev, [studentId]: true }));
+    const currentEmail = session?.user?.email || '';
+    const existingIdx = studentRatings.findIndex(r => r.student_id === studentId && r.instructor_email?.toLowerCase() === currentEmail.toLowerCase());
+    const optimisticRating: StudentRating = { id: existingIdx >= 0 ? studentRatings[existingIdx].id : `temp-${studentId}`, lab_day_id: labDayId, student_id: studentId, instructor_email: currentEmail, rating, note: pendingNotes[studentId] || null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
+    setStudentRatings(prev => existingIdx >= 0 ? prev.map((r, i) => i === existingIdx ? optimisticRating : r) : [...prev, optimisticRating]);
+    try { const res = await fetch(`/api/lab-management/lab-days/${labDayId}/ratings`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ student_id: studentId, rating, note: pendingNotes[studentId] || null }) }); const data = await res.json(); if (data.success) { setStudentRatings(prev => prev.map(r => r.student_id === studentId && r.instructor_email?.toLowerCase() === currentEmail.toLowerCase() ? data.rating : r)); toast.success('Rating saved'); } else { await fetchStudentRatings(); toast.error('Failed to save rating'); } }
+    catch { await fetchStudentRatings(); toast.error('Failed to save rating'); }
+    setSavingRating(prev => ({ ...prev, [studentId]: false }));
+  };
+
+  const handleSaveNote = async (studentId: string) => {
+    const currentEmail = session?.user?.email?.toLowerCase();
+    const existing = studentRatings.find(r => r.student_id === studentId && r.instructor_email?.toLowerCase() === currentEmail);
+    if (!existing) return;
+    setSavingRating(prev => ({ ...prev, [`note-${studentId}`]: true }));
+    try { const res = await fetch(`/api/lab-management/lab-days/${labDayId}/ratings`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ student_id: studentId, rating: existing.rating, note: pendingNotes[studentId] || null }) }); const data = await res.json(); if (data.success) { setStudentRatings(prev => prev.map(r => r.student_id === studentId && r.instructor_email?.toLowerCase() === currentEmail ? data.rating : r)); toast.success('Note saved'); setExpandedNotes(prev => ({ ...prev, [studentId]: false })); } else toast.error('Failed to save note'); }
+    catch { toast.error('Failed to save note'); }
+    setSavingRating(prev => ({ ...prev, [`note-${studentId}`]: false }));
+  };
+
   return (
     <div className="mt-6 print:hidden">
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700">
         {/* Section header */}
         <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
           <button
-            onClick={onToggleCollapse}
+            onClick={() => setRatingsCollapsed(prev => !prev)}
             className="flex items-center gap-2 text-left flex-1 min-w-0"
           >
             <Star className="w-5 h-5 text-amber-500 shrink-0" />
@@ -152,9 +169,9 @@ export default function StudentRatingsSection({
                               key={star}
                               type="button"
                               disabled={isSaving}
-                              onClick={() => onSaveRating(student.id, star)}
-                              onMouseEnter={() => onRatingHoverChange(student.id, star)}
-                              onMouseLeave={() => onRatingHoverChange(student.id, 0)}
+                              onClick={() => handleSaveRating(student.id, star)}
+                              onMouseEnter={() => setRatingHover(prev => ({ ...prev, [student.id]: star }))}
+                              onMouseLeave={() => setRatingHover(prev => ({ ...prev, [student.id]: 0 }))}
                               className="p-0.5 focus:outline-none disabled:opacity-50"
                               aria-label={`Rate ${star} star${star > 1 ? 's' : ''}`}
                             >
@@ -180,8 +197,8 @@ export default function StudentRatingsSection({
                       {myRating && !noteExpanded && (
                         <button
                           onClick={() => {
-                            onPendingNoteChange(student.id, myRating.note || '');
-                            onExpandedNotesChange(student.id, true);
+                            setPendingNotes(prev => ({ ...prev, [student.id]: myRating.note || '' }));
+                            setExpandedNotes(prev => ({ ...prev, [student.id]: true }));
                           }}
                           className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline"
                         >
@@ -196,7 +213,7 @@ export default function StudentRatingsSection({
                             rows={2}
                             value={pendingNote}
                             onChange={e =>
-                              onPendingNoteChange(student.id, e.target.value)
+                              setPendingNotes(prev => ({ ...prev, [student.id]: e.target.value }))
                             }
                             placeholder="Optional note about this student..."
                             className="w-full text-xs px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white resize-none focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -204,7 +221,7 @@ export default function StudentRatingsSection({
                           <div className="flex items-center gap-2">
                             <button
                               disabled={savingRating[`note-${student.id}`]}
-                              onClick={() => onSaveNote(student.id)}
+                              onClick={() => handleSaveNote(student.id)}
                               className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
                             >
                               {savingRating[`note-${student.id}`] ? (
@@ -216,7 +233,7 @@ export default function StudentRatingsSection({
                             </button>
                             <button
                               onClick={() =>
-                                onExpandedNotesChange(student.id, false)
+                                setExpandedNotes(prev => ({ ...prev, [student.id]: false }))
                               }
                               className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                             >

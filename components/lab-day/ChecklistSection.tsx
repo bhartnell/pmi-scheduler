@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import {
   ListChecks,
   ChevronDown,
@@ -12,40 +13,61 @@ import {
 import type { ChecklistItem } from './types';
 
 interface ChecklistSectionProps {
-  checklistItems: ChecklistItem[];
-  checklistCollapsed: boolean;
-  checklistLoading: boolean;
-  checklistGenerating: boolean;
-  newChecklistItem: string;
-  addingChecklistItem: boolean;
-  onToggleCollapse: () => void;
-  onToggleItem: (item: ChecklistItem) => void;
-  onAddItem: () => void;
-  onDeleteItem: (itemId: string) => void;
-  onAutoGenerate: () => void;
-  onNewItemChange: (value: string) => void;
+  labDayId: string;
 }
 
-export default function ChecklistSection({
-  checklistItems,
-  checklistCollapsed,
-  checklistLoading,
-  checklistGenerating,
-  newChecklistItem,
-  addingChecklistItem,
-  onToggleCollapse,
-  onToggleItem,
-  onAddItem,
-  onDeleteItem,
-  onAutoGenerate,
-  onNewItemChange,
-}: ChecklistSectionProps) {
+export default function ChecklistSection({ labDayId }: ChecklistSectionProps) {
+  const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([]);
+  const [checklistCollapsed, setChecklistCollapsed] = useState(false);
+  const [checklistLoading, setChecklistLoading] = useState(false);
+  const [checklistGenerating, setChecklistGenerating] = useState(false);
+  const [newChecklistItem, setNewChecklistItem] = useState('');
+  const [addingChecklistItem, setAddingChecklistItem] = useState(false);
+
+  useEffect(() => {
+    fetchChecklistItems();
+  }, [labDayId]);
+
+  const fetchChecklistItems = async () => {
+    setChecklistLoading(true);
+    try { const res = await fetch(`/api/lab-management/lab-days/${labDayId}/checklist`); const data = await res.json(); if (data.success) setChecklistItems(data.items || []); }
+    catch (error) { console.error('Error fetching checklist items:', error); }
+    setChecklistLoading(false);
+  };
+
+  const handleAutoGenerateChecklist = async () => {
+    setChecklistGenerating(true);
+    try { const res = await fetch(`/api/lab-management/lab-days/${labDayId}/checklist`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'auto-generate' }) }); const data = await res.json(); if (data.success) await fetchChecklistItems(); else alert('Failed: ' + (data.error || 'Unknown')); }
+    catch (error) { console.error('Error:', error); alert('Failed to auto-generate checklist'); }
+    setChecklistGenerating(false);
+  };
+
+  const handleAddChecklistItem = async () => {
+    if (!newChecklistItem.trim()) return; setAddingChecklistItem(true);
+    try { const res = await fetch(`/api/lab-management/lab-days/${labDayId}/checklist`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: newChecklistItem.trim() }) }); const data = await res.json(); if (data.success) { setChecklistItems(prev => [...prev, data.item]); setNewChecklistItem(''); } else alert('Failed: ' + (data.error || 'Unknown')); }
+    catch (error) { console.error('Error:', error); alert('Failed to add checklist item'); }
+    setAddingChecklistItem(false);
+  };
+
+  const handleToggleChecklistItem = async (item: ChecklistItem) => {
+    const newCompleted = !item.is_completed;
+    setChecklistItems(prev => prev.map(i => i.id === item.id ? { ...i, is_completed: newCompleted } : i));
+    try { const res = await fetch(`/api/lab-management/lab-days/${labDayId}/checklist`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ item_id: item.id, is_completed: newCompleted }) }); const data = await res.json(); if (data.success) setChecklistItems(prev => prev.map(i => i.id === item.id ? data.item : i)); else setChecklistItems(prev => prev.map(i => i.id === item.id ? { ...i, is_completed: item.is_completed } : i)); }
+    catch { setChecklistItems(prev => prev.map(i => i.id === item.id ? { ...i, is_completed: item.is_completed } : i)); }
+  };
+
+  const handleDeleteChecklistItem = async (itemId: string) => {
+    setChecklistItems(prev => prev.filter(i => i.id !== itemId));
+    try { const res = await fetch(`/api/lab-management/lab-days/${labDayId}/checklist?itemId=${itemId}`, { method: 'DELETE' }); const data = await res.json(); if (!data.success) await fetchChecklistItems(); }
+    catch { await fetchChecklistItems(); }
+  };
+
   return (
     <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow print:shadow-none print:border print:border-gray-300">
       {/* Checklist Header */}
       <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
         <button
-          onClick={onToggleCollapse}
+          onClick={() => setChecklistCollapsed(prev => !prev)}
           className="print-include flex items-center gap-2 text-left flex-1 min-w-0"
         >
           <ListChecks className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
@@ -67,7 +89,7 @@ export default function ChecklistSection({
         </button>
         <div className="flex items-center gap-2 ml-3 print:hidden">
           <button
-            onClick={onAutoGenerate}
+            onClick={handleAutoGenerateChecklist}
             disabled={checklistGenerating}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
             title="Generate checklist items from stations"
@@ -104,7 +126,7 @@ export default function ChecklistSection({
                       className="flex items-center gap-3 group py-1.5 px-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                     >
                       <button
-                        onClick={() => onToggleItem(item)}
+                        onClick={() => handleToggleChecklistItem(item)}
                         className="shrink-0 text-gray-400 dark:text-gray-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors print:hidden"
                         aria-label={item.is_completed ? 'Mark incomplete' : 'Mark complete'}
                       >
@@ -123,7 +145,7 @@ export default function ChecklistSection({
                         <span className="text-xs text-gray-400 dark:text-gray-500 print:hidden shrink-0">auto</span>
                       )}
                       <button
-                        onClick={() => onDeleteItem(item.id)}
+                        onClick={() => handleDeleteChecklistItem(item.id)}
                         className="shrink-0 p-1 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all rounded print:hidden"
                         aria-label="Delete item"
                       >
@@ -139,13 +161,13 @@ export default function ChecklistSection({
                 <input
                   type="text"
                   value={newChecklistItem}
-                  onChange={e => onNewItemChange(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') onAddItem(); }}
+                  onChange={e => setNewChecklistItem(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleAddChecklistItem(); }}
                   placeholder="Add a checklist item..."
                   className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400"
                 />
                 <button
-                  onClick={onAddItem}
+                  onClick={handleAddChecklistItem}
                   disabled={addingChecklistItem || !newChecklistItem.trim()}
                   className="inline-flex items-center gap-1.5 px-3 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
