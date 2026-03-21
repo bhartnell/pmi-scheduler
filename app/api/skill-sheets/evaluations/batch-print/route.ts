@@ -14,12 +14,24 @@ function escapeHtml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-function renderEvaluationPage(evaluation: any, includePageBreak: boolean = false): string {
+function renderEvaluationPage(evaluation: any, includePageBreak: boolean = false, evalIndex?: number, totalEvals?: number): string {
   const student = evaluation.student;
   const skillSheet = evaluation.skill_sheet;
   const evaluator = evaluation.evaluator;
   const labDay = evaluation.lab_day;
-  const stepMarks = evaluation.step_marks || {};
+  // step_marks can be { "1": "pass" } or step_details can be { "1": { status: "pass" } }
+  const rawStepMarks = evaluation.step_marks || {};
+  const stepDetails = evaluation.step_details || {};
+  // Merge: prefer step_marks, fall back to step_details
+  const stepMarks: Record<string, string> = {};
+  for (const [k, v] of Object.entries(rawStepMarks)) {
+    stepMarks[k] = typeof v === 'string' ? v : (v as any)?.status || '';
+  }
+  for (const [k, v] of Object.entries(stepDetails)) {
+    if (!stepMarks[k]) {
+      stepMarks[k] = typeof v === 'string' ? v : (v as any)?.status || '';
+    }
+  }
   const flaggedItems = (evaluation.flagged_items || []) as { step_number: number; status: string }[];
 
   const steps = (skillSheet?.steps || []).sort((a: any, b: any) => a.step_number - b.step_number);
@@ -65,8 +77,9 @@ function renderEvaluationPage(evaluation: any, includePageBreak: boolean = false
 
   return `
     <div ${includePageBreak ? 'style="page-break-before: always;"' : ''}>
-      <div style="border-bottom: 2px solid #2563eb; padding-bottom: 8px; margin-bottom: 12px;">
+      <div style="border-bottom: 2px solid #2563eb; padding-bottom: 8px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: baseline;">
         <h2 style="margin: 0; font-size: 15px; color: #111827;">${escapeHtml(skillSheet?.skill_name || 'Skill Evaluation')}</h2>
+        ${evalIndex != null && totalEvals != null ? `<span style="font-size: 11px; color: #6b7280;">Evaluation ${evalIndex} of ${totalEvals}</span>` : ''}
       </div>
       <table style="width: 100%; margin-bottom: 12px; font-size: 12px;">
         <tr>
@@ -128,17 +141,18 @@ export async function GET(request: NextRequest) {
     const { data: evaluations, error: evalsError } = await supabase
       .from('student_skill_evaluations')
       .select(`
-        id, evaluation_type, result, notes, flagged_items, step_marks, created_at,
+        id, evaluation_type, result, notes, flagged_items, step_marks, step_details, created_at,
         student:students!student_skill_evaluations_student_id_fkey(id, first_name, last_name),
         skill_sheet:skill_sheets!student_skill_evaluations_skill_sheet_id_fkey(id, skill_name, source, steps:skill_sheet_steps(step_number, phase, instruction, is_critical)),
         evaluator:lab_users!student_skill_evaluations_evaluator_id_fkey(id, name),
         lab_day:lab_days!student_skill_evaluations_lab_day_id_fkey(id, date, title)
       `)
       .eq('lab_day_id', labDayId)
+      .in('result', ['pass', 'fail'])
       .order('created_at', { ascending: true });
 
     if (evalsError || !evaluations?.length) {
-      return NextResponse.json({ success: false, error: 'No evaluations found for this lab day' }, { status: 404 });
+      return NextResponse.json({ success: false, error: 'No completed evaluations found for this lab day' }, { status: 404 });
     }
 
     const cohort = (labDay as any)?.cohort;
@@ -146,8 +160,11 @@ export async function GET(request: NextRequest) {
       ? new Date(labDay.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
       : 'Unknown Date';
 
-    // Unique evaluators
+    // Unique evaluators and stations
     const evaluatorNames = [...new Set(evaluations.map((e: any) => e.evaluator?.name).filter(Boolean))].map(n => formatInstructorName(n as string));
+    const stationNames = [...new Set(evaluations.map((e: any) => e.skill_sheet?.skill_name).filter(Boolean))];
+    const passCount = evaluations.filter((e: any) => e.result === 'pass').length;
+    const failCount = evaluations.filter((e: any) => e.result === 'fail').length;
 
     const coverPage = `
       <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 80vh; text-align: center;">
@@ -157,12 +174,13 @@ export async function GET(request: NextRequest) {
           <p><strong>Date:</strong> ${labDate}</p>
           ${labDay?.title ? `<p><strong>Lab Day:</strong> ${escapeHtml(labDay.title)}</p>` : ''}
           ${cohort ? `<p><strong>Cohort:</strong> ${escapeHtml(cohort.program?.abbreviation || '')}${escapeHtml(String(cohort.cohort_number || ''))}</p>` : ''}
-          <p><strong>Evaluations:</strong> ${evaluations.length}</p>
+          <p><strong>Stations:</strong> ${stationNames.map(n => escapeHtml(n as string)).join(', ')}</p>
           <p><strong>Evaluator${evaluatorNames.length > 1 ? 's' : ''}:</strong> ${evaluatorNames.join(', ')}</p>
+          <p><strong>Evaluations:</strong> ${evaluations.length} &nbsp;(<span style="color: #10b981;">${passCount} pass</span>${failCount > 0 ? ` / <span style="color: #ef4444;">${failCount} fail</span>` : ''})</p>
         </div>
       </div>`;
 
-    const evalPages = evaluations.map((e: any, i: number) => renderEvaluationPage(e, true)).join('\n');
+    const evalPages = evaluations.map((e: any, i: number) => renderEvaluationPage(e, true, i + 1, evaluations.length)).join('\n');
 
     const html = `<!DOCTYPE html>
 <html lang="en">

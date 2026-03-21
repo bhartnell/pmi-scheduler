@@ -3493,6 +3493,15 @@ export default function LabDayPage() {
             </button>
           )}
 
+          {/* Print All Evaluations */}
+          <button
+            onClick={() => window.open(`/api/skill-sheets/evaluations/batch-print?lab_day_id=${labDay.id}`, '_blank')}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/30 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/50 border border-purple-200 dark:border-purple-800"
+          >
+            <Printer className="w-4 h-4" />
+            Print All Evaluations
+          </button>
+
           {/* Send Queued Evaluation Emails */}
           <button
             onClick={handleSendQueuedEmails}

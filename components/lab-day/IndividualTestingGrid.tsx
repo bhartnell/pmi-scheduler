@@ -535,6 +535,14 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
             <strong className="text-gray-700 dark:text-gray-300">{totalCompleted}/{totalCells}</strong> complete
           </span>
           <button
+            onClick={() => window.open(`/api/skill-sheets/evaluations/batch-print?lab_day_id=${labDayId}`, '_blank')}
+            className="text-xs text-purple-600 dark:text-purple-400 flex items-center gap-1 hover:underline"
+            title="Print all completed evaluations"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            Print All
+          </button>
+          <button
             onClick={() => fetchGrid(true)}
             className="text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1 hover:underline"
           >
