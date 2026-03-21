@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import {
   DollarSign,
   ChevronDown,
@@ -14,56 +15,58 @@ import type { CostItem, Student } from './types';
 import { COST_CATEGORIES, COST_CATEGORY_COLORS } from './types';
 
 interface CostsSectionProps {
-  costItems: CostItem[];
-  costsCollapsed: boolean;
-  costsLoading: boolean;
-  addingCost: boolean;
-  editingCostId: string | null;
-  editCostForm: { category: string; description: string; amount: string };
-  newCostCategory: string;
-  newCostDescription: string;
-  newCostAmount: string;
+  labDayId: string;
   cohortStudents: Student[];
-  onToggleCollapse: () => void;
-  onAddCostItem: () => void;
-  onStartEditCost: (item: CostItem) => void;
-  onSaveEditCost: (itemId: string) => void;
-  onCancelEditCost: () => void;
-  onDeleteCostItem: (itemId: string) => void;
-  onEditCostFormChange: (form: { category: string; description: string; amount: string }) => void;
-  onNewCostCategoryChange: (value: string) => void;
-  onNewCostDescriptionChange: (value: string) => void;
-  onNewCostAmountChange: (value: string) => void;
 }
 
-export default function CostsSection({
-  costItems,
-  costsCollapsed,
-  costsLoading,
-  addingCost,
-  editingCostId,
-  editCostForm,
-  newCostCategory,
-  newCostDescription,
-  newCostAmount,
-  cohortStudents,
-  onToggleCollapse,
-  onAddCostItem,
-  onStartEditCost,
-  onSaveEditCost,
-  onCancelEditCost,
-  onDeleteCostItem,
-  onEditCostFormChange,
-  onNewCostCategoryChange,
-  onNewCostDescriptionChange,
-  onNewCostAmountChange,
-}: CostsSectionProps) {
+export default function CostsSection({ labDayId, cohortStudents }: CostsSectionProps) {
+  const [costItems, setCostItems] = useState<CostItem[]>([]);
+  const [costsCollapsed, setCostsCollapsed] = useState(true);
+  const [costsLoading, setCostsLoading] = useState(false);
+  const [addingCost, setAddingCost] = useState(false);
+  const [editingCostId, setEditingCostId] = useState<string | null>(null);
+  const [newCostCategory, setNewCostCategory] = useState<string>('Consumables');
+  const [newCostDescription, setNewCostDescription] = useState('');
+  const [newCostAmount, setNewCostAmount] = useState('');
+  const [editCostForm, setEditCostForm] = useState<{ category: string; description: string; amount: string }>({ category: '', description: '', amount: '' });
+
+  useEffect(() => {
+    fetchCostItems();
+  }, [labDayId]);
+
+  const fetchCostItems = async () => {
+    setCostsLoading(true);
+    try { const res = await fetch(`/api/lab-management/costs?lab_day_id=${labDayId}`); const data = await res.json(); if (data.success) setCostItems(data.items || []); }
+    catch (error) { console.error('Error:', error); }
+    setCostsLoading(false);
+  };
+
+  const handleAddCostItem = async () => {
+    if (!newCostDescription.trim() || !newCostAmount) return; setAddingCost(true);
+    try { const res = await fetch('/api/lab-management/costs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lab_day_id: labDayId, category: newCostCategory, description: newCostDescription.trim(), amount: parseFloat(newCostAmount) || 0 }) }); const data = await res.json(); if (data.success) { setCostItems(prev => [...prev, data.item]); setNewCostDescription(''); setNewCostAmount(''); setNewCostCategory('Consumables'); } }
+    catch (error) { console.error('Error:', error); }
+    setAddingCost(false);
+  };
+
+  const handleStartEditCost = (item: CostItem) => { setEditingCostId(item.id); setEditCostForm({ category: item.category, description: item.description, amount: item.amount.toString() }); };
+
+  const handleSaveEditCost = async (itemId: string) => {
+    try { const res = await fetch(`/api/lab-management/costs/${itemId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ category: editCostForm.category, description: editCostForm.description, amount: parseFloat(editCostForm.amount) || 0 }) }); const data = await res.json(); if (data.success) { setCostItems(prev => prev.map(i => i.id === itemId ? data.item : i)); setEditingCostId(null); } }
+    catch (error) { console.error('Error:', error); }
+  };
+
+  const handleDeleteCostItem = async (itemId: string) => {
+    setCostItems(prev => prev.filter(i => i.id !== itemId));
+    try { const res = await fetch(`/api/lab-management/costs/${itemId}`, { method: 'DELETE' }); const data = await res.json(); if (!data.success) await fetchCostItems(); }
+    catch { await fetchCostItems(); }
+  };
+
   return (
     <div className="mt-6 print:hidden bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700">
       {/* Costs Header */}
       <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
         <button
-          onClick={onToggleCollapse}
+          onClick={() => setCostsCollapsed(prev => !prev)}
           className="flex items-center gap-2 text-left flex-1 min-w-0"
         >
           <DollarSign className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
@@ -157,7 +160,7 @@ export default function CostsSection({
                               <td className="py-2 pr-3">
                                 <select
                                   value={editCostForm.category}
-                                  onChange={e => onEditCostFormChange({ ...editCostForm, category: e.target.value })}
+                                  onChange={e => setEditCostForm({ ...editCostForm, category: e.target.value })}
                                   className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                                 >
                                   {COST_CATEGORIES.map(c => (
@@ -169,7 +172,7 @@ export default function CostsSection({
                                 <input
                                   type="text"
                                   value={editCostForm.description}
-                                  onChange={e => onEditCostFormChange({ ...editCostForm, description: e.target.value })}
+                                  onChange={e => setEditCostForm({ ...editCostForm, description: e.target.value })}
                                   className="w-full px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                                   placeholder="Description"
                                 />
@@ -180,21 +183,21 @@ export default function CostsSection({
                                   min="0"
                                   step="0.01"
                                   value={editCostForm.amount}
-                                  onChange={e => onEditCostFormChange({ ...editCostForm, amount: e.target.value })}
+                                  onChange={e => setEditCostForm({ ...editCostForm, amount: e.target.value })}
                                   className="w-24 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-right"
                                 />
                               </td>
                               <td className="py-2">
                                 <div className="flex items-center gap-1">
                                   <button
-                                    onClick={() => onSaveEditCost(item.id)}
+                                    onClick={() => handleSaveEditCost(item.id)}
                                     className="p-1 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded"
                                     title="Save"
                                   >
                                     <Check className="w-3.5 h-3.5" />
                                   </button>
                                   <button
-                                    onClick={onCancelEditCost}
+                                    onClick={() => setEditingCostId(null)}
                                     className="p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
                                     title="Cancel"
                                   >
@@ -219,14 +222,14 @@ export default function CostsSection({
                               <td className="py-2">
                                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                   <button
-                                    onClick={() => onStartEditCost(item)}
+                                    onClick={() => handleStartEditCost(item)}
                                     className="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 rounded"
                                     title="Edit"
                                   >
                                     <Edit2 className="w-3.5 h-3.5" />
                                   </button>
                                   <button
-                                    onClick={() => onDeleteCostItem(item.id)}
+                                    onClick={() => handleDeleteCostItem(item.id)}
                                     className="p-1 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 rounded"
                                     title="Delete"
                                   >
@@ -247,7 +250,7 @@ export default function CostsSection({
               <div className="flex flex-wrap gap-2">
                 <select
                   value={newCostCategory}
-                  onChange={e => onNewCostCategoryChange(e.target.value)}
+                  onChange={e => setNewCostCategory(e.target.value)}
                   className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400"
                 >
                   {COST_CATEGORIES.map(c => (
@@ -257,8 +260,8 @@ export default function CostsSection({
                 <input
                   type="text"
                   value={newCostDescription}
-                  onChange={e => onNewCostDescriptionChange(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') onAddCostItem(); }}
+                  onChange={e => setNewCostDescription(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleAddCostItem(); }}
                   placeholder="Description (e.g. Nitrile gloves box)"
                   className="flex-1 min-w-[160px] px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400"
                 />
@@ -269,13 +272,13 @@ export default function CostsSection({
                     min="0"
                     step="0.01"
                     value={newCostAmount}
-                    onChange={e => onNewCostAmountChange(e.target.value)}
+                    onChange={e => setNewCostAmount(e.target.value)}
                     placeholder="Amount"
                     className="w-24 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:focus:ring-emerald-400"
                   />
                 </div>
                 <button
-                  onClick={onAddCostItem}
+                  onClick={handleAddCostItem}
                   disabled={addingCost || !newCostDescription.trim() || !newCostAmount}
                   className="inline-flex items-center gap-1.5 px-3 py-2 text-sm bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >

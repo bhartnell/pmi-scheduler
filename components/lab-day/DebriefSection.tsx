@@ -1,5 +1,7 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import {
   MessageSquare,
   ChevronDown,
@@ -12,61 +14,57 @@ import {
 } from 'lucide-react';
 
 interface DebriefSectionProps {
-  debriefs: any[];
-  debriefCollapsed: boolean;
-  debriefLoading: boolean;
-  currentUserDebrief: any;
-  editingDebriefId: string | null;
-  submittingDebrief: boolean;
-  debriefForm: {
-    rating: number;
-    went_well: string;
-    to_improve: string;
-    student_concerns: string;
-    equipment_issues: string;
-  };
-  debriefHoverRating: number;
-  evaluationConcerns: any[];
-  session: any;
-  onToggleCollapse: () => void;
-  onSubmitDebrief: () => void;
-  onStartEditingDebrief: (debrief: any) => void;
-  onCancelEditingDebrief: () => void;
-  onDebriefFormChange: (form: {
-    rating: number;
-    went_well: string;
-    to_improve: string;
-    student_concerns: string;
-    equipment_issues: string;
-  }) => void;
-  onDebriefHoverRatingChange: (rating: number) => void;
+  labDayId: string;
 }
 
-export default function DebriefSection({
-  debriefs,
-  debriefCollapsed,
-  debriefLoading,
-  currentUserDebrief,
-  editingDebriefId,
-  submittingDebrief,
-  debriefForm,
-  debriefHoverRating,
-  evaluationConcerns,
-  session,
-  onToggleCollapse,
-  onSubmitDebrief,
-  onStartEditingDebrief,
-  onCancelEditingDebrief,
-  onDebriefFormChange,
-  onDebriefHoverRatingChange,
-}: DebriefSectionProps) {
+export default function DebriefSection({ labDayId }: DebriefSectionProps) {
+  const { data: session } = useSession();
+
+  const [debriefs, setDebriefs] = useState<any[]>([]);
+  const [debriefLoading, setDebriefLoading] = useState(false);
+  const [debriefCollapsed, setDebriefCollapsed] = useState(false);
+  const [currentUserDebrief, setCurrentUserDebrief] = useState<any>(null);
+  const [editingDebriefId, setEditingDebriefId] = useState<string | null>(null);
+  const [submittingDebrief, setSubmittingDebrief] = useState(false);
+  const [debriefHoverRating, setDebriefHoverRating] = useState(0);
+  const [debriefForm, setDebriefForm] = useState({ rating: 0, went_well: '', to_improve: '', student_concerns: '', equipment_issues: '' });
+  const [evaluationConcerns, setEvaluationConcerns] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchDebriefs();
+    fetchEvaluationConcerns();
+  }, [labDayId, session]);
+
+  const fetchDebriefs = async () => {
+    if (!labDayId) return; setDebriefLoading(true);
+    try { const res = await fetch(`/api/lab-management/lab-days/${labDayId}/debrief`); const data = await res.json(); if (data.success) { setDebriefs(data.debriefs || []); const userEmail = session?.user?.email?.toLowerCase(); const own = (data.debriefs || []).find((d: any) => d.instructor_email?.toLowerCase() === userEmail); setCurrentUserDebrief(own || null); if (own) setDebriefForm({ rating: own.rating || 0, went_well: own.went_well || '', to_improve: own.to_improve || '', student_concerns: own.student_concerns || '', equipment_issues: own.equipment_issues || '' }); } }
+    catch (error) { console.error('Error:', error); }
+    setDebriefLoading(false);
+  };
+
+  const fetchEvaluationConcerns = async () => {
+    try { const res = await fetch(`/api/skill-sheets/evaluations-by-lab-day?lab_day_id=${labDayId}`); const data = await res.json(); if (data.success) setEvaluationConcerns((data.evaluations || []).filter((e: any) => e.flagged_items?.length > 0)); }
+    catch { /* ignore */ }
+  };
+
+  const handleSubmitDebrief = async () => {
+    if (debriefForm.rating < 1) return; setSubmittingDebrief(true);
+    try { const method = editingDebriefId ? 'PUT' : 'POST'; const url = editingDebriefId ? `/api/lab-management/lab-days/${labDayId}/debrief?id=${editingDebriefId}` : `/api/lab-management/lab-days/${labDayId}/debrief`; const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(debriefForm) }); const data = await res.json(); if (data.success) { setEditingDebriefId(null); await fetchDebriefs(); } }
+    catch (error) { console.error('Error:', error); }
+    setSubmittingDebrief(false);
+  };
+
+  const startEditingDebrief = (debrief: any) => { setEditingDebriefId(debrief.id); setDebriefForm({ rating: debrief.rating || 0, went_well: debrief.went_well || '', to_improve: debrief.to_improve || '', student_concerns: debrief.student_concerns || '', equipment_issues: debrief.equipment_issues || '' }); };
+
+  const cancelEditingDebrief = () => { setEditingDebriefId(null); if (currentUserDebrief) setDebriefForm({ rating: currentUserDebrief.rating || 0, went_well: currentUserDebrief.went_well || '', to_improve: currentUserDebrief.to_improve || '', student_concerns: currentUserDebrief.student_concerns || '', equipment_issues: currentUserDebrief.equipment_issues || '' }); };
+
   return (
     <div className="mt-6 print:hidden border-t-2 border-indigo-100 dark:border-indigo-900/50 pt-6">
       <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg shadow border border-indigo-100 dark:border-indigo-800/50">
         {/* Section header */}
         <div className="flex items-center justify-between p-4 border-b border-indigo-100 dark:border-indigo-800/50">
           <button
-            onClick={onToggleCollapse}
+            onClick={() => setDebriefCollapsed(prev => !prev)}
             className="flex items-center gap-2 text-left flex-1 min-w-0"
           >
             <MessageSquare className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0" />
@@ -154,9 +152,9 @@ export default function DebriefSection({
                             <button
                               key={star}
                               type="button"
-                              onClick={() => onDebriefFormChange({ ...debriefForm, rating: star })}
-                              onMouseEnter={() => onDebriefHoverRatingChange(star)}
-                              onMouseLeave={() => onDebriefHoverRatingChange(0)}
+                              onClick={() => setDebriefForm({ ...debriefForm, rating: star })}
+                              onMouseEnter={() => setDebriefHoverRating(star)}
+                              onMouseLeave={() => setDebriefHoverRating(0)}
                               className="p-0.5 focus:outline-none"
                               aria-label={`Rate ${star} star${star > 1 ? 's' : ''}`}
                             >
@@ -185,7 +183,7 @@ export default function DebriefSection({
                       </label>
                       <textarea
                         value={debriefForm.went_well}
-                        onChange={e => onDebriefFormChange({ ...debriefForm, went_well: e.target.value })}
+                        onChange={e => setDebriefForm({ ...debriefForm, went_well: e.target.value })}
                         rows={3}
                         placeholder="Describe what worked well during the lab..."
                         className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
@@ -199,7 +197,7 @@ export default function DebriefSection({
                       </label>
                       <textarea
                         value={debriefForm.to_improve}
-                        onChange={e => onDebriefFormChange({ ...debriefForm, to_improve: e.target.value })}
+                        onChange={e => setDebriefForm({ ...debriefForm, to_improve: e.target.value })}
                         rows={3}
                         placeholder="Describe areas for improvement..."
                         className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
@@ -214,7 +212,7 @@ export default function DebriefSection({
                       </label>
                       <textarea
                         value={debriefForm.student_concerns}
-                        onChange={e => onDebriefFormChange({ ...debriefForm, student_concerns: e.target.value })}
+                        onChange={e => setDebriefForm({ ...debriefForm, student_concerns: e.target.value })}
                         rows={2}
                         placeholder="Any student performance or behavioral concerns..."
                         className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
@@ -229,7 +227,7 @@ export default function DebriefSection({
                       </label>
                       <textarea
                         value={debriefForm.equipment_issues}
-                        onChange={e => onDebriefFormChange({ ...debriefForm, equipment_issues: e.target.value })}
+                        onChange={e => setDebriefForm({ ...debriefForm, equipment_issues: e.target.value })}
                         rows={2}
                         placeholder="Any equipment problems, damage, or missing items..."
                         className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
@@ -239,7 +237,7 @@ export default function DebriefSection({
                     {/* Actions */}
                     <div className="flex items-center gap-3 pt-1">
                       <button
-                        onClick={onSubmitDebrief}
+                        onClick={handleSubmitDebrief}
                         disabled={submittingDebrief || debriefForm.rating < 1}
                         className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
                       >
@@ -252,7 +250,7 @@ export default function DebriefSection({
                       </button>
                       {editingDebriefId && (
                         <button
-                          onClick={onCancelEditingDebrief}
+                          onClick={cancelEditingDebrief}
                           className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-sm"
                         >
                           Cancel
@@ -323,7 +321,7 @@ export default function DebriefSection({
                               </div>
                               {isOwn && (
                                 <button
-                                  onClick={() => onStartEditingDebrief(debrief)}
+                                  onClick={() => startEditingDebrief(debrief)}
                                   className="inline-flex items-center gap-1 px-2 py-1 text-xs text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded"
                                 >
                                   <Edit2 className="w-3 h-3" />

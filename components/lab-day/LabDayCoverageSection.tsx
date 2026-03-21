@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { formatInstructorName } from '@/lib/format-name';
 import {
   ChevronRight,
@@ -25,21 +26,38 @@ interface ShiftCoverage {
 }
 
 interface LabDayCoverageSectionProps {
-  coverageShifts: ShiftCoverage[];
-  coverageCollapsed: boolean;
+  labDayId: string;
   userRole: string | null;
-  onToggleCollapse: () => void;
-  onRefresh: () => void;
 }
 
 export default function LabDayCoverageSection({
-  coverageShifts,
-  coverageCollapsed,
+  labDayId,
   userRole,
-  onToggleCollapse,
-  onRefresh,
 }: LabDayCoverageSectionProps) {
   const toast = useToast();
+  const [coverageShifts, setCoverageShifts] = useState<ShiftCoverage[]>([]);
+  const [coverageCollapsed, setCoverageCollapsed] = useState(false);
+
+  useEffect(() => {
+    fetchCoverageShifts();
+  }, [labDayId]);
+
+  const fetchCoverageShifts = async () => {
+    try {
+      const labDayRes = await fetch(`/api/lab-management/lab-days/${labDayId}`);
+      const labDayData = await labDayRes.json();
+      const labDate = labDayData?.labDay?.date;
+      if (!labDate) return;
+      const res = await fetch(`/api/scheduling/shifts?start_date=${labDate}&end_date=${labDate}&include_filled=true`);
+      const data = await res.json();
+      if (data.success) {
+        setCoverageShifts((data.shifts || []).map((s: any) => ({
+          id: s.id, title: s.title, date: s.date, start_time: s.start_time, end_time: s.end_time,
+          signups: (s.signups || []).map((su: any) => ({ id: su.id, status: su.status, instructor: su.instructor || null })),
+        })));
+      }
+    } catch (error) { console.error('Error fetching coverage shifts:', error); }
+  };
 
   if (coverageShifts.length === 0) return null;
 
@@ -53,7 +71,7 @@ export default function LabDayCoverageSection({
       const data = await res.json();
       if (data.success) {
         toast?.addToast('success', 'Signup confirmed');
-        onRefresh();
+        fetchCoverageShifts();
       } else {
         toast?.addToast('error', data.error || 'Failed to confirm signup');
       }
@@ -73,7 +91,7 @@ export default function LabDayCoverageSection({
       const data = await res.json();
       if (data.success) {
         toast?.addToast('success', 'Signup declined');
-        onRefresh();
+        fetchCoverageShifts();
       } else {
         toast?.addToast('error', data.error || 'Failed to decline signup');
       }
@@ -86,7 +104,7 @@ export default function LabDayCoverageSection({
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6 print:shadow-none print:border print:border-gray-300">
       <button
-        onClick={onToggleCollapse}
+        onClick={() => setCoverageCollapsed(prev => !prev)}
         className="flex items-center justify-between w-full mb-3"
       >
         <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">

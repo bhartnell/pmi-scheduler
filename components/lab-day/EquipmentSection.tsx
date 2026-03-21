@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import {
   Package,
   ChevronDown,
@@ -12,46 +13,55 @@ import {
 import type { EquipmentItem, Station } from './types';
 
 interface EquipmentSectionProps {
-  equipmentItems: EquipmentItem[];
-  equipmentCollapsed: boolean;
-  equipmentLoading: boolean;
+  labDayId: string;
   stations: Station[];
-  newEquipmentName: string;
-  newEquipmentQty: number;
-  newEquipmentStation: string;
-  addingEquipment: boolean;
-  onToggleCollapse: () => void;
-  onUpdateStatus: (item: EquipmentItem, newStatus: EquipmentItem['status']) => void;
-  onAddEquipment: () => void;
-  onDeleteEquipment: (itemId: string) => void;
-  onNewNameChange: (value: string) => void;
-  onNewQtyChange: (value: number) => void;
-  onNewStationChange: (value: string) => void;
 }
 
-export default function EquipmentSection({
-  equipmentItems,
-  equipmentCollapsed,
-  equipmentLoading,
-  stations,
-  newEquipmentName,
-  newEquipmentQty,
-  newEquipmentStation,
-  addingEquipment,
-  onToggleCollapse,
-  onUpdateStatus,
-  onAddEquipment,
-  onDeleteEquipment,
-  onNewNameChange,
-  onNewQtyChange,
-  onNewStationChange,
-}: EquipmentSectionProps) {
+export default function EquipmentSection({ labDayId, stations }: EquipmentSectionProps) {
+  const [equipmentItems, setEquipmentItems] = useState<EquipmentItem[]>([]);
+  const [equipmentCollapsed, setEquipmentCollapsed] = useState(false);
+  const [equipmentLoading, setEquipmentLoading] = useState(false);
+  const [newEquipmentName, setNewEquipmentName] = useState('');
+  const [newEquipmentQty, setNewEquipmentQty] = useState(1);
+  const [newEquipmentStation, setNewEquipmentStation] = useState('');
+  const [addingEquipment, setAddingEquipment] = useState(false);
+
+  useEffect(() => {
+    fetchEquipmentItems();
+  }, [labDayId]);
+
+  const fetchEquipmentItems = async () => {
+    setEquipmentLoading(true);
+    try { const res = await fetch(`/api/lab-management/lab-days/${labDayId}/equipment`); const data = await res.json(); if (data.success) setEquipmentItems(data.items || []); }
+    catch (error) { console.error('Error:', error); }
+    setEquipmentLoading(false);
+  };
+
+  const handleAddEquipmentItem = async () => {
+    if (!newEquipmentName.trim()) return; setAddingEquipment(true);
+    try { const res = await fetch(`/api/lab-management/lab-days/${labDayId}/equipment`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newEquipmentName.trim(), quantity: newEquipmentQty, station_id: newEquipmentStation || null }) }); const data = await res.json(); if (data.success) { setEquipmentItems(prev => [...prev, data.item]); setNewEquipmentName(''); setNewEquipmentQty(1); setNewEquipmentStation(''); } else alert('Failed: ' + (data.error || 'Unknown')); }
+    catch (error) { console.error('Error:', error); alert('Failed to add equipment'); }
+    setAddingEquipment(false);
+  };
+
+  const handleUpdateEquipmentStatus = async (item: EquipmentItem, newStatus: EquipmentItem['status']) => {
+    setEquipmentItems(prev => prev.map(i => i.id === item.id ? { ...i, status: newStatus } : i));
+    try { const res = await fetch(`/api/lab-management/lab-days/${labDayId}/equipment`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ item_id: item.id, status: newStatus }) }); const data = await res.json(); if (data.success) setEquipmentItems(prev => prev.map(i => i.id === item.id ? data.item : i)); else setEquipmentItems(prev => prev.map(i => i.id === item.id ? { ...i, status: item.status } : i)); }
+    catch { setEquipmentItems(prev => prev.map(i => i.id === item.id ? { ...i, status: item.status } : i)); }
+  };
+
+  const handleDeleteEquipmentItem = async (itemId: string) => {
+    setEquipmentItems(prev => prev.filter(i => i.id !== itemId));
+    try { const res = await fetch(`/api/lab-management/lab-days/${labDayId}/equipment?itemId=${itemId}`, { method: 'DELETE' }); const data = await res.json(); if (!data.success) await fetchEquipmentItems(); }
+    catch { await fetchEquipmentItems(); }
+  };
+
   return (
     <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow print:shadow-none print:border print:border-gray-300">
       {/* Equipment Header */}
       <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
         <button
-          onClick={onToggleCollapse}
+          onClick={() => setEquipmentCollapsed(prev => !prev)}
           className="print-include flex items-center gap-2 text-left flex-1 min-w-0"
         >
           <Package className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
@@ -161,7 +171,7 @@ export default function EquipmentSection({
                             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                               {item.status !== 'returned' && (
                                 <button
-                                  onClick={() => onUpdateStatus(item, 'returned')}
+                                  onClick={() => handleUpdateEquipmentStatus(item, 'returned')}
                                   title="Mark Returned"
                                   className="p-1 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20 rounded"
                                 >
@@ -170,7 +180,7 @@ export default function EquipmentSection({
                               )}
                               {item.status !== 'damaged' && (
                                 <button
-                                  onClick={() => onUpdateStatus(item, 'damaged')}
+                                  onClick={() => handleUpdateEquipmentStatus(item, 'damaged')}
                                   title="Mark Damaged"
                                   className="p-1 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded"
                                 >
@@ -179,7 +189,7 @@ export default function EquipmentSection({
                               )}
                               {item.status !== 'missing' && (
                                 <button
-                                  onClick={() => onUpdateStatus(item, 'missing')}
+                                  onClick={() => handleUpdateEquipmentStatus(item, 'missing')}
                                   title="Mark Missing"
                                   className="p-1 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
                                 >
@@ -188,7 +198,7 @@ export default function EquipmentSection({
                               )}
                               {item.status !== 'checked_out' && (
                                 <button
-                                  onClick={() => onUpdateStatus(item, 'checked_out')}
+                                  onClick={() => handleUpdateEquipmentStatus(item, 'checked_out')}
                                   title="Mark Checked Out"
                                   className="p-1 text-yellow-600 dark:text-yellow-400 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 rounded"
                                 >
@@ -196,7 +206,7 @@ export default function EquipmentSection({
                                 </button>
                               )}
                               <button
-                                onClick={() => onDeleteEquipment(item.id)}
+                                onClick={() => handleDeleteEquipmentItem(item.id)}
                                 title="Remove item"
                                 className="p-1 text-gray-300 dark:text-gray-600 hover:text-red-500 dark:hover:text-red-400 rounded ml-1"
                               >
@@ -216,8 +226,8 @@ export default function EquipmentSection({
                 <input
                   type="text"
                   value={newEquipmentName}
-                  onChange={e => onNewNameChange(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') onAddEquipment(); }}
+                  onChange={e => setNewEquipmentName(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleAddEquipmentItem(); }}
                   placeholder="Item name (e.g. BVM, AED trainer)"
                   className="flex-1 min-w-[180px] px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400"
                 />
@@ -225,13 +235,13 @@ export default function EquipmentSection({
                   type="number"
                   min={1}
                   value={newEquipmentQty}
-                  onChange={e => onNewQtyChange(Math.max(1, parseInt(e.target.value) || 1))}
+                  onChange={e => setNewEquipmentQty(Math.max(1, parseInt(e.target.value) || 1))}
                   className="w-16 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400"
                   title="Quantity"
                 />
                 <select
                   value={newEquipmentStation}
-                  onChange={e => onNewStationChange(e.target.value)}
+                  onChange={e => setNewEquipmentStation(e.target.value)}
                   className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400"
                 >
                   <option value="">No station</option>
@@ -242,7 +252,7 @@ export default function EquipmentSection({
                   ))}
                 </select>
                 <button
-                  onClick={onAddEquipment}
+                  onClick={handleAddEquipmentItem}
                   disabled={addingEquipment || !newEquipmentName.trim()}
                   className="inline-flex items-center gap-1.5 px-3 py-2 text-sm bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >

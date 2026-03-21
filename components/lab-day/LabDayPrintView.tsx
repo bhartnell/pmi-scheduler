@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { formatCohortNumber } from '@/lib/format-cohort';
 import {
   Printer,
@@ -19,9 +20,8 @@ interface ShiftCoverage {
 
 interface LabDayPrintViewProps {
   labDay: LabDay;
+  labDayId: string;
   labDayRoles: LabDayRole[];
-  checklistItems: ChecklistItem[];
-  coverageShifts: ShiftCoverage[];
   cohortStudents: Student[];
   showRosterPrint: boolean;
   rosterIncludePhotos: boolean;
@@ -33,9 +33,8 @@ interface LabDayPrintViewProps {
 
 export default function LabDayPrintView({
   labDay,
+  labDayId,
   labDayRoles,
-  checklistItems,
-  coverageShifts,
   cohortStudents,
   showRosterPrint,
   rosterIncludePhotos,
@@ -44,6 +43,36 @@ export default function LabDayPrintView({
   formatDate,
   formatTime,
 }: LabDayPrintViewProps) {
+  const [checklistItems, setChecklistItems] = useState<ChecklistItem[]>([]);
+  const [coverageShifts, setCoverageShifts] = useState<ShiftCoverage[]>([]);
+
+  useEffect(() => {
+    // Fetch checklist items for print view
+    const fetchChecklist = async () => {
+      try { const res = await fetch(`/api/lab-management/lab-days/${labDayId}/checklist`); const data = await res.json(); if (data.success) setChecklistItems(data.items || []); }
+      catch { /* ignore */ }
+    };
+    // Fetch coverage shifts for print view
+    const fetchCoverage = async () => {
+      try {
+        const labDayRes = await fetch(`/api/lab-management/lab-days/${labDayId}`);
+        const labDayData = await labDayRes.json();
+        const labDate = labDayData?.labDay?.date;
+        if (!labDate) return;
+        const res = await fetch(`/api/scheduling/shifts?start_date=${labDate}&end_date=${labDate}&include_filled=true`);
+        const data = await res.json();
+        if (data.success) {
+          setCoverageShifts((data.shifts || []).map((s: any) => ({
+            id: s.id, title: s.title,
+            signups: (s.signups || []).map((su: any) => ({ id: su.id, status: su.status, instructor: su.instructor || null })),
+          })));
+        }
+      } catch { /* ignore */ }
+    };
+    fetchChecklist();
+    fetchCoverage();
+  }, [labDayId]);
+
   return (
     <>
       {/* Print Header - Only visible when printing non-roster view */}
