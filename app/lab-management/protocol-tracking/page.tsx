@@ -18,6 +18,7 @@ import {
   Brain,
   Sparkles
 } from 'lucide-react';
+import Breadcrumbs from '@/components/Breadcrumbs';
 
 interface Student {
   id: string;
@@ -253,6 +254,7 @@ export default function ProtocolTrackingPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+      <Breadcrumbs className="mb-2" />
       {/* Header */}
       <div className="bg-white shadow-sm dark:bg-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">

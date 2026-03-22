@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Plus, Settings, BarChart3, Users } from 'lucide-react';
 import LabHeader from '@/components/LabHeader';
+import Breadcrumbs from '@/components/Breadcrumbs';
 import { canManageContent, hasMinRole, canAccessScheduling } from '@/lib/permissions';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import CustomizeModal from '@/components/dashboard/CustomizeModal';
@@ -167,6 +168,7 @@ export default function LabManagementDashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+      <Breadcrumbs className="mb-2" />
       <LabHeader
         title="Lab Management Dashboard"
         actions={
