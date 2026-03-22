@@ -424,27 +424,38 @@ export default function EditLabDayPage() {
 
       // Save roles - first delete all existing roles for this lab day
       // Then add the new ones
-      const rolesRes = await fetch(`/api/lab-management/lab-day-roles?lab_day_id=${labDayId}`, {
-        method: 'DELETE'
-      });
-
-      // Add all roles
-      const allRoles = [
-        ...labLeads.map(id => ({ instructor_id: id, role: 'lab_lead' as const })),
-        ...roamers.map(id => ({ instructor_id: id, role: 'roamer' as const })),
-        ...observers.map(id => ({ instructor_id: id, role: 'observer' as const }))
-      ];
-
-      for (const role of allRoles) {
-        await fetch('/api/lab-management/lab-day-roles', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            lab_day_id: labDayId,
-            instructor_id: role.instructor_id,
-            role: role.role
-          })
+      try {
+        const rolesRes = await fetch(`/api/lab-management/lab-day-roles?lab_day_id=${labDayId}`, {
+          method: 'DELETE'
         });
+        if (!rolesRes.ok) {
+          console.error('Failed to clear existing roles:', rolesRes.status);
+        }
+
+        // Add all roles
+        const allRoles = [
+          ...labLeads.map(id => ({ instructor_id: id, role: 'lab_lead' as const })),
+          ...roamers.map(id => ({ instructor_id: id, role: 'roamer' as const })),
+          ...observers.map(id => ({ instructor_id: id, role: 'observer' as const }))
+        ];
+
+        for (const role of allRoles) {
+          const roleRes = await fetch('/api/lab-management/lab-day-roles', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              lab_day_id: labDayId,
+              instructor_id: role.instructor_id,
+              role: role.role
+            })
+          });
+          if (!roleRes.ok) {
+            console.error('Failed to save role:', role.role, roleRes.status);
+          }
+        }
+      } catch (roleError) {
+        console.error('Error saving roles (non-blocking):', roleError);
+        // Don't fail the entire save if roles fail
       }
 
       router.push(`/lab-management/schedule/${labDayId}`);

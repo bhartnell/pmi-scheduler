@@ -52,6 +52,9 @@ export default function EditStationModal({
   const [deletingStation, setDeletingStation] = useState(false);
   const [skillsModalOpen, setSkillsModalOpen] = useState(false);
   const [skillSearch, setSkillSearch] = useState('');
+  const [scenarioSearch, setScenarioSearch] = useState('');
+  const [scenarioFilterCategory, setScenarioFilterCategory] = useState('');
+  const [scenarioFilterDifficulty, setScenarioFilterDifficulty] = useState('');
   const [certLevelFilter, setCertLevelFilter] = useState<string>('');
   const [editCustomSkills, setEditCustomSkills] = useState<string[]>([]);
   const [selectedInstructor, setSelectedInstructor] = useState('');
@@ -530,16 +533,91 @@ export default function EditStationModal({
           {editForm.station_type === 'scenario' && (
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Scenario</label>
-              <select
-                value={editForm.scenario_id}
-                onChange={(e) => setEditForm(prev => ({ ...prev, scenario_id: e.target.value }))}
-                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
-              >
-                <option value="">Select a scenario...</option>
-                {scenarios.map(scenario => (
-                  <option key={scenario.id} value={scenario.id}>{scenario.title} ({scenario.category})</option>
-                ))}
-              </select>
+              {/* Search and filters */}
+              <div className="space-y-2 mb-2">
+                <input
+                  type="text"
+                  value={scenarioSearch}
+                  onChange={(e) => setScenarioSearch(e.target.value)}
+                  placeholder="Search scenarios by name..."
+                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 text-sm"
+                />
+                <div className="flex gap-2">
+                  <select
+                    value={scenarioFilterCategory}
+                    onChange={(e) => setScenarioFilterCategory(e.target.value)}
+                    className="flex-1 px-2 py-1.5 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 text-sm"
+                  >
+                    <option value="">All Categories</option>
+                    {[...new Set(scenarios.map(s => s.category).filter(Boolean))].sort().map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                  <select
+                    value={scenarioFilterDifficulty}
+                    onChange={(e) => setScenarioFilterDifficulty(e.target.value)}
+                    className="flex-1 px-2 py-1.5 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 text-sm"
+                  >
+                    <option value="">All Difficulties</option>
+                    {[...new Set(scenarios.map(s => s.difficulty).filter(Boolean))].sort().map(diff => (
+                      <option key={diff} value={diff}>{diff}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              {/* Scrollable scenario list */}
+              <div className="max-h-48 overflow-y-auto border dark:border-gray-700 rounded-lg">
+                {(() => {
+                  const filtered = scenarios.filter(s => {
+                    const matchesSearch = !scenarioSearch ||
+                      s.title.toLowerCase().includes(scenarioSearch.toLowerCase()) ||
+                      s.category.toLowerCase().includes(scenarioSearch.toLowerCase());
+                    const matchesCategory = !scenarioFilterCategory || s.category === scenarioFilterCategory;
+                    const matchesDifficulty = !scenarioFilterDifficulty || s.difficulty === scenarioFilterDifficulty;
+                    return matchesSearch && matchesCategory && matchesDifficulty;
+                  });
+                  if (filtered.length === 0) {
+                    return (
+                      <div className="p-3 text-sm text-gray-500 dark:text-gray-400 text-center">
+                        No scenarios match your filters
+                      </div>
+                    );
+                  }
+                  return filtered.map(scenario => (
+                    <label
+                      key={scenario.id}
+                      className={`flex items-center gap-3 p-2.5 cursor-pointer border-b last:border-0 dark:border-gray-700 transition-colors ${
+                        editForm.scenario_id === scenario.id
+                          ? 'bg-blue-50 dark:bg-blue-900/20'
+                          : 'hover:bg-gray-50 dark:hover:bg-gray-800'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="scenario_select"
+                        checked={editForm.scenario_id === scenario.id}
+                        onChange={() => setEditForm(prev => ({ ...prev, scenario_id: scenario.id }))}
+                        className="text-blue-600"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{scenario.title}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {scenario.category}{scenario.difficulty ? ` · ${scenario.difficulty}` : ''}
+                        </p>
+                      </div>
+                    </label>
+                  ));
+                })()}
+              </div>
+              {editForm.scenario_id && (
+                <button
+                  type="button"
+                  onClick={() => setEditForm(prev => ({ ...prev, scenario_id: '' }))}
+                  className="mt-1 text-xs text-gray-500 hover:text-red-500"
+                >
+                  Clear selection
+                </button>
+              )}
             </div>
           )}
 
