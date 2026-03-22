@@ -96,7 +96,7 @@ export async function GET(request: NextRequest) {
     if (studentsErr) throw studentsErr;
 
     const totalStudents = (allStudents || []).length;
-    const studentIds = (allStudents || []).map((s: any) => s.id);
+    const studentIds = (allStudents || []).map((s) => s.id);
 
     // Fetch learning styles for these students
     const { data: learningStyles, error: lsErr } = await supabase

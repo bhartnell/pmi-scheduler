@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
 
       if (allSkills && allSkills.length > 0) {
         skills = allSkills;
-        categories = [...new Set(allSkills.map((s: any) => s.category || 'other'))].sort();
+        categories = [...new Set(allSkills.map((s) => s.category || 'other'))].sort();
       }
     } catch {
       // Skills table may not exist yet
@@ -132,7 +132,7 @@ export async function GET(request: NextRequest) {
 
       if (sheets && sheets.length > 0) {
         // Map by skill name (lowercase) for loose matching
-        sheets.forEach((sheet: any) => {
+        sheets.forEach((sheet) => {
           const key = (sheet.skill_name || '').toLowerCase().trim();
           if (!skillSheetMap.has(key)) {
             skillSheetMap.set(key, sheet);
@@ -145,12 +145,12 @@ export async function GET(request: NextRequest) {
 
     // 6. Build signoff map keyed by skill_id
     const signoffMap = new Map<string, any>();
-    signoffs.forEach((s: any) => {
+    signoffs.forEach((s) => {
       signoffMap.set(s.skill_id, s);
     });
 
     // 7. Enrich skills with signoff status and skill sheet info
-    const enrichedSkills = skills.map((skill: any) => {
+    const enrichedSkills = skills.map((skill) => {
       const signoff = signoffMap.get(skill.id);
       const sheet = skillSheetMap.get((skill.name || '').toLowerCase().trim());
 

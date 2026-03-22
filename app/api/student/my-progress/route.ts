@@ -133,11 +133,11 @@ export async function GET(request: NextRequest) {
 
         // Build a map of signed-off skill IDs
         const signoffMap = new Map<string, any>();
-        (signoffs || []).forEach((s: any) => {
+        (signoffs || []).forEach((s) => {
           signoffMap.set(s.skill_id, s);
         });
 
-        skills = allSkills.map((skill: any) => {
+        skills = allSkills.map((skill) => {
           const signoff = signoffMap.get(skill.id);
           return {
             id: skill.id,
@@ -153,7 +153,7 @@ export async function GET(request: NextRequest) {
         skillsCompleted = skills.filter((s) => s.completed).length;
       } else if (signoffs && signoffs.length > 0) {
         // No skills table yet but signoffs exist - surface them as-is
-        skills = (signoffs || []).map((s: any) => ({
+        skills = (signoffs || []).map((s) => ({
           id: s.skill_id,
           name: (s.skill as any)?.name || 'Unknown Skill',
           category: (s.skill as any)?.category || 'other',
@@ -197,7 +197,7 @@ export async function GET(request: NextRequest) {
 
       if (assessments && assessments.length > 0) {
         scenariosAssessed = assessments.length;
-        scenarios = assessments.map((a: any) => {
+        scenarios = assessments.map((a) => {
           const score = a.overall_score ?? null;
           const passed =
             a.pass_fail != null
@@ -275,7 +275,7 @@ export async function GET(request: NextRequest) {
           (r: any) => r.status === 'present' || r.status === 'late'
         ).length;
 
-        attendance = attendanceRecords.map((r: any) => ({
+        attendance = attendanceRecords.map((r) => ({
           id: r.id,
           labDate: (r.lab_day as any)?.date || null,
           labTitle: (r.lab_day as any)?.title || null,
@@ -314,11 +314,11 @@ export async function GET(request: NextRequest) {
 
       if (docTypes && docTypes.length > 0) {
         const recordMap = new Map<string, any>();
-        (complianceRecords || []).forEach((r: any) => {
+        (complianceRecords || []).forEach((r) => {
           recordMap.set(r.doc_type_id, r);
         });
 
-        compliance = docTypes.map((dt: any) => {
+        compliance = docTypes.map((dt) => {
           const record = recordMap.get(dt.id);
           const now = new Date();
           let status = record?.status || 'missing';
@@ -369,7 +369,7 @@ export async function GET(request: NextRequest) {
           .limit(10);
 
         if (labDays && labDays.length > 0) {
-          upcomingLabs = labDays.map((d: any) => ({
+          upcomingLabs = labDays.map((d) => ({
             id: d.id,
             date: d.date,
             title: d.title || null,

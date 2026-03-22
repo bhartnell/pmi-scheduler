@@ -149,10 +149,10 @@ export async function GET(request: NextRequest) {
       offset,
       hasMore: offset + limit < (count || 0),
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching recent activity:', error);
     return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to fetch recent activity' },
+      { success: false, error: (error as Error)?.message || 'Failed to fetch recent activity' },
       { status: 500 }
     );
   }

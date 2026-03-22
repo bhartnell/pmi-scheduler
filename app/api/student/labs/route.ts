@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
       if (attendanceRecords && attendanceRecords.length > 0) {
         // 4. Collect lab_day_ids to fetch station completions in bulk
         const labDayIds = attendanceRecords
-          .map((r: any) => r.lab_day_id)
+          .map((r) => r.lab_day_id)
           .filter(Boolean);
 
         // 5. Fetch station completions for these lab days
@@ -101,7 +101,7 @@ export async function GET(request: NextRequest) {
               .order('completed_at', { ascending: true });
 
             if (completions) {
-              completions.forEach((c: any) => {
+              completions.forEach((c) => {
                 if (!c.lab_day_id) return;
                 if (!completionsByLabDay.has(c.lab_day_id)) {
                   completionsByLabDay.set(c.lab_day_id, []);
@@ -140,7 +140,7 @@ export async function GET(request: NextRequest) {
               .order('signed_off_at', { ascending: true });
 
             if (signoffs) {
-              signoffs.forEach((s: any) => {
+              signoffs.forEach((s) => {
                 if (!s.lab_day_id) return;
                 if (!signoffsByLabDay.has(s.lab_day_id)) {
                   signoffsByLabDay.set(s.lab_day_id, []);
@@ -160,7 +160,7 @@ export async function GET(request: NextRequest) {
         }
 
         // 7. Build enriched lab records
-        labs = attendanceRecords.map((record: any) => {
+        labs = attendanceRecords.map((record) => {
           const labDay = record.lab_day as any;
           const labDayId = record.lab_day_id;
 

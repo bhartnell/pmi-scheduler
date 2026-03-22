@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
       studentTlMap[id] = { count: 0, lastDate: null, rotations: [] };
     });
 
-    tlLogs?.forEach((log: any) => {
+    tlLogs?.forEach((log) => {
       if (studentTlMap[log.student_id]) {
         studentTlMap[log.student_id].count++;
         studentTlMap[log.student_id].rotations.push(log);

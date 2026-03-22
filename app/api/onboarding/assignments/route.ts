@@ -99,10 +99,10 @@ export async function GET(request: NextRequest) {
       assignments: enrichedAssignments,
     });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching onboarding assignments:', error);
     return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to fetch onboarding assignments' },
+      { success: false, error: (error as Error)?.message || 'Failed to fetch onboarding assignments' },
       { status: 500 }
     );
   }
@@ -353,10 +353,10 @@ export async function POST(request: NextRequest) {
       assignment: newAssignment,
     });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error creating onboarding assignment:', error);
     return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to create onboarding assignment' },
+      { success: false, error: (error as Error)?.message || 'Failed to create onboarding assignment' },
       { status: 500 }
     );
   }
@@ -431,10 +431,10 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error deleting onboarding assignment:', error);
     return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to delete onboarding assignment' },
+      { success: false, error: (error as Error)?.message || 'Failed to delete onboarding assignment' },
       { status: 500 }
     );
   }

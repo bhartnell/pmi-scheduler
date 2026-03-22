@@ -109,11 +109,11 @@ export async function PATCH(request: NextRequest) {
       adjustment_applied: adjustmentApplied,
       serverTime: new Date().toISOString()
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error adjusting timer:', error);
     return NextResponse.json({
       success: false,
-      error: error?.message || 'Failed to adjust timer'
+      error: (error as Error)?.message || 'Failed to adjust timer'
     }, { status: 500 });
   }
 }

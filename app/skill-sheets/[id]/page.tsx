@@ -198,8 +198,8 @@ function SkillSheetDetailContent() {
       } else {
         setError(data.error || 'Skill sheet not found');
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to load skill sheet');
+    } catch (err) {
+      setError((err as Error).message || 'Failed to load skill sheet');
     }
     setLoading(false);
   }, [sheetId]);

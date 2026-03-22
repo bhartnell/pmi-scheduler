@@ -298,10 +298,10 @@ export async function GET(request: NextRequest) {
       laneProgress: laneProgress || []
     });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching onboarding dashboard:', error);
     return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to fetch onboarding dashboard' },
+      { success: false, error: (error as Error)?.message || 'Failed to fetch onboarding dashboard' },
       { status: 500 }
     );
   }

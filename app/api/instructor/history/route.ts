@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
     // Also fetch station assignments (lab_stations) to get station info
     // We need the lab_day_ids we found to look up station assignments for this instructor
     const labDayIds = Array.from(
-      new Set((roleRows || []).map((r: any) => {
+      new Set((roleRows || []).map((r) => {
         const ld = Array.isArray(r.lab_day) ? r.lab_day[0] : r.lab_day;
         return ld?.id;
       }).filter(Boolean))
@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
         .select('station_id')
         .eq('user_id', currentUser.id);
 
-      const junctionStationIds = (siRows || []).map((r: any) => r.station_id).filter(Boolean);
+      const junctionStationIds = (siRows || []).map((r) => r.station_id).filter(Boolean);
 
       // Step 2: Look up those stations to get lab_day_id and details
       if (junctionStationIds.length > 0) {
@@ -147,7 +147,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Normalize and filter entries
-    let entries = (roleRows || []).map((r: any) => {
+    let entries = (roleRows || []).map((r) => {
       const labDay = Array.isArray(r.lab_day) ? r.lab_day[0] : r.lab_day;
       const cohort = labDay ? (Array.isArray(labDay.cohort) ? labDay.cohort[0] : labDay.cohort) : null;
       const program = cohort ? (Array.isArray(cohort.program) ? cohort.program[0] : cohort.program) : null;

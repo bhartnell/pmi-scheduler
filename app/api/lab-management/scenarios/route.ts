@@ -156,18 +156,18 @@ export async function POST(request: NextRequest) {
       console.error('Supabase error creating scenario:', error);
       return NextResponse.json({
         success: false,
-        error: `Database error: ${error.message}`,
+        error: `Database error: ${(error as Error).message}`,
         details: error.details || null,
         hint: error.hint || null
       }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, scenario: data });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error creating scenario:', error);
     return NextResponse.json({
       success: false,
-      error: error.message || 'Failed to create scenario'
+      error: (error as Error).message || 'Failed to create scenario'
     }, { status: 500 });
   }
 }

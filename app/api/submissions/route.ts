@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
         console.error('Supabase update error:', error);
         return NextResponse.json({
           success: false,
-          error: error.message || 'Failed to update submission'
+          error: (error as Error).message || 'Failed to update submission'
         }, { status: 500 });
       }
       return NextResponse.json({ success: true, submission: data, isUpdate: true });
@@ -69,16 +69,16 @@ export async function POST(request: NextRequest) {
         console.error('Supabase insert error:', error);
         return NextResponse.json({
           success: false,
-          error: error.message || 'Failed to create submission'
+          error: (error as Error).message || 'Failed to create submission'
         }, { status: 500 });
       }
       return NextResponse.json({ success: true, submission: data, isUpdate: false });
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error saving submission:', error);
     return NextResponse.json({
       success: false,
-      error: error?.message || 'Failed to save submission'
+      error: (error as Error)?.message || 'Failed to save submission'
     }, { status: 500 });
   }
 }

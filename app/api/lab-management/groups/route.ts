@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
     // Optionally include members for all groups in a single bulk query
     let groupsResult = data || [];
     if (includeMembers && groupsResult.length > 0) {
-      const groupIds = groupsResult.map((g: any) => g.id);
+      const groupIds = groupsResult.map((g) => g.id);
       const { data: allAssignments, error: membersError } = await supabase
         .from('student_group_assignments')
         .select(`
@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
       }
 
       // Attach members to each group
-      groupsResult = groupsResult.map((g: any) => ({
+      groupsResult = groupsResult.map((g) => ({
         ...g,
         members: membersByGroup.get(g.id) || [],
       }));
@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
 
     let history: any[] = [];
     if (includeHistory && cohortId) {
-      const groupIds = (data || []).map((g: any) => g.id);
+      const groupIds = (data || []).map((g) => g.id);
       if (groupIds.length > 0) {
         const { data: histData } = await supabase
           .from('lab_group_assignment_history')
@@ -256,7 +256,7 @@ export async function PUT(request: NextRequest) {
 
       if (membersError) throw membersError;
 
-      const allStudentIds = (members || []).map((m: any) => m.student_id);
+      const allStudentIds = (members || []).map((m) => m.student_id);
       const numGroups = groupIds.length;
       const targetSize = Math.floor(allStudentIds.length / numGroups);
       const remainder = allStudentIds.length % numGroups;
@@ -275,7 +275,7 @@ export async function PUT(request: NextRequest) {
       }
 
       // Count moves
-      const oldGroupMap = new Map((members || []).map((m: any) => [m.student_id, m.lab_group_id]));
+      const oldGroupMap = new Map((members || []).map((m) => [m.student_id, m.lab_group_id]));
       const moved = newAssignments.filter(a => oldGroupMap.get(a.student_id) !== a.lab_group_id).length;
 
       // Delete all current assignments for these groups

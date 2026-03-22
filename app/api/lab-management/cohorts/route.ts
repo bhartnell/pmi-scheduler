@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
 
     if (error) throw error;
 
-    const cohorts = data.map((cohort: any) => ({
+    const cohorts = data.map((cohort) => ({
       ...cohort,
       student_count: cohort.student_count?.[0]?.count || 0
     }));
@@ -46,12 +46,12 @@ export async function GET(request: NextRequest) {
     const response = NextResponse.json({ success: true, cohorts });
     response.headers.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
     return response;
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching cohorts:', error);
     return NextResponse.json({
       success: false,
-      error: error?.message || 'Failed to fetch cohorts',
-      code: error?.code || undefined,
+      error: (error as Error)?.message || 'Failed to fetch cohorts',
+      code: (error as any)?.code || undefined,
     }, { status: 500 });
   }
 }

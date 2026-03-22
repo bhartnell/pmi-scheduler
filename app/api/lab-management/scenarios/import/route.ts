@@ -236,13 +236,13 @@ export async function POST(request: NextRequest) {
 
         if (error) {
           console.error('Error inserting scenario:', error);
-          results.push({ title: imported.title, error: error.message });
+          results.push({ title: imported.title, error: (error as Error).message });
         } else {
           results.push({ title: data.title, id: data.id });
         }
-      } catch (err: any) {
+      } catch (err) {
         console.error('Error processing scenario:', err);
-        results.push({ title: imported.title || 'Unknown', error: err.message });
+        results.push({ title: imported.title || 'Unknown', error: (err as Error).message });
       }
     }
 
@@ -255,11 +255,11 @@ export async function POST(request: NextRequest) {
       imported: successful,
       failed: failed.length > 0 ? failed : undefined
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error importing scenarios:', error);
     return NextResponse.json({
       success: false,
-      error: error.message || 'Failed to import scenarios'
+      error: (error as Error).message || 'Failed to import scenarios'
     }, { status: 500 });
   }
 }

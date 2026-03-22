@@ -80,17 +80,17 @@ export async function GET(request: NextRequest) {
 
     // Create lookup maps
     const internshipMap = new Map();
-    (internships || []).forEach((i: any) => {
+    (internships || []).forEach((i) => {
       internshipMap.set(i.student_id, i);
     });
 
     const emtTrackingMap = new Map();
-    (emtTracking || []).forEach((t: any) => {
+    (emtTracking || []).forEach((t) => {
       emtTrackingMap.set(t.student_id, t);
     });
 
     const aemtTrackingMap = new Map();
-    (aemtTracking || []).forEach((t: any) => {
+    (aemtTracking || []).forEach((t) => {
       aemtTrackingMap.set(t.student_id, t);
     });
 

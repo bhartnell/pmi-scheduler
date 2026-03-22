@@ -644,7 +644,7 @@ export default function StudentProgressPage() {
       const json = await res.json();
       setData(json);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to load progress');
+      setError(err instanceof Error ? (err as Error).message : 'Failed to load progress');
     } finally {
       setLoading(false);
     }
@@ -1100,7 +1100,7 @@ export default function StudentProgressPage() {
               </div>
             ) : (
               <div className="space-y-2">
-                {skillEvaluations.map((group: any, idx: number) => {
+                {skillEvaluations.map((group, idx: number) => {
                   const groupKey = group.canonical_skill?.id || `fallback-${idx}`;
                   const skillName = group.canonical_skill?.canonical_name || group.skill_sheet_fallback?.skill_name || 'Unknown Skill';
                   const category = group.canonical_skill?.skill_category || null;

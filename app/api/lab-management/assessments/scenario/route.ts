@@ -144,19 +144,19 @@ export async function POST(request: NextRequest) {
     }).catch(console.error);
 
     return NextResponse.json({ success: true, assessment: data });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error creating assessment:', error);
     console.error('Error details:', {
-      code: error?.code,
-      message: error?.message,
-      details: error?.details,
-      hint: error?.hint
+      code: (error as any)?.code,
+      message: (error as Error)?.message,
+      details: (error as any)?.details,
+      hint: (error as any)?.hint
     });
     return NextResponse.json({
       success: false,
-      error: error?.message || 'Failed to create assessment',
-      code: error?.code,
-      details: error?.details
+      error: (error as Error)?.message || 'Failed to create assessment',
+      code: (error as any)?.code,
+      details: (error as any)?.details
     }, { status: 500 });
   }
 }

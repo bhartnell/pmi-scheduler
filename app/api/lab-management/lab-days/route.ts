@@ -62,16 +62,16 @@ export async function GET(request: NextRequest) {
 
     // Sort stations by station_number when returning detail view
     if (detail && data) {
-      data.forEach((ld: any) => {
+      data.forEach((ld) => {
         if (ld.stations) {
-          ld.stations.sort((a: any, b: any) => (a.station_number || 0) - (b.station_number || 0));
+          ld.stations.sort((a, b) => (a.station_number || 0) - (b.station_number || 0));
         }
       });
     }
 
     // Fetch lab_day_roles (Lab Lead, Roamer, Observer) with instructor info
     if (data && data.length > 0) {
-      const labDayIds = data.map((ld: any) => ld.id);
+      const labDayIds = data.map((ld) => ld.id);
       const { data: roles } = await supabase
         .from('lab_day_roles')
         .select(`
@@ -102,7 +102,7 @@ export async function GET(request: NextRequest) {
       }
 
       // Fetch shift signups for lab day dates (open_shifts matched by date)
-      const uniqueDates = [...new Set(data.map((ld: any) => ld.date))];
+      const uniqueDates = [...new Set(data.map((ld) => ld.date))];
       if (uniqueDates.length > 0) {
         const { data: shifts } = await supabase
           .from('open_shifts')
@@ -241,7 +241,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, labDay });
   } catch (error) {
     console.error('Error creating lab day:', error);
-    const message = error instanceof Error ? error.message : 'Failed to create lab day';
+    const message = error instanceof Error ? (error as Error).message : 'Failed to create lab day';
     return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }

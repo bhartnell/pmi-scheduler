@@ -48,9 +48,9 @@ export async function GET(request: NextRequest) {
     };
 
     return NextResponse.json({ success: true, reports, stats });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching user feedback submissions:', error);
-    if (error?.code === '42P01' || error?.message?.includes('does not exist')) {
+    if ((error as any)?.code === '42P01' || (error as Error)?.message?.includes('does not exist')) {
       return NextResponse.json({ success: true, reports: [], stats: { total: 0, open: 0, in_progress: 0, resolved: 0 } });
     }
     return NextResponse.json({ success: false, error: 'Failed to fetch submissions' }, { status: 500 });

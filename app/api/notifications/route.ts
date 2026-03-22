@@ -118,10 +118,10 @@ export async function GET(request: NextRequest) {
       enabledCategories: applyPrefs ? enabledCategories : undefined,
       pagination: { limit, offset, total: totalCount || 0 },
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching notifications:', error);
     return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to fetch notifications' },
+      { success: false, error: (error as Error)?.message || 'Failed to fetch notifications' },
       { status: 500 }
     );
   }
@@ -195,10 +195,10 @@ export async function POST(request: NextRequest) {
     if (error) throw error;
 
     return NextResponse.json({ success: true, notification: data });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error creating notification:', error);
     return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to create notification' },
+      { success: false, error: (error as Error)?.message || 'Failed to create notification' },
       { status: 500 }
     );
   }
@@ -247,10 +247,10 @@ export async function DELETE(request: NextRequest) {
     }
 
     return NextResponse.json({ error: 'Provide "all: true" or "id"' }, { status: 400 });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error deleting notifications:', error);
     return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to delete notifications' },
+      { success: false, error: (error as Error)?.message || 'Failed to delete notifications' },
       { status: 500 }
     );
   }

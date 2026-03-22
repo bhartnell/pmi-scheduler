@@ -118,8 +118,8 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({ success: true, scenarios: enriched });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching scenario library:', error);
-    return NextResponse.json({ success: false, error: error.message || 'Failed to fetch scenarios' }, { status: 500 });
+    return NextResponse.json({ success: false, error: (error as Error).message || 'Failed to fetch scenarios' }, { status: 500 });
   }
 }

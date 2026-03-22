@@ -47,11 +47,11 @@ export async function GET(request: NextRequest) {
     const { data: notes, error } = await query;
 
     if (error) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+      return NextResponse.json({ success: false, error: (error as Error).message }, { status: 500 });
     }
 
     // Normalize: attach instructor display info at the top level
-    const normalized = (notes || []).map((n: any) => ({
+    const normalized = (notes || []).map((n) => ({
       id: n.id,
       instructor_id: n.instructor_id,
       instructor_email: n.instructor_email || n.lab_users?.email || null,
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
         .eq('note_date', date);
 
       if (error) {
-        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+        return NextResponse.json({ success: false, error: (error as Error).message }, { status: 500 });
       }
 
       return NextResponse.json({ success: true, note: null, deleted: true });
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+      return NextResponse.json({ success: false, error: (error as Error).message }, { status: 500 });
     }
 
     // Attach instructor display info for the client

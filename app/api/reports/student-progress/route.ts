@@ -109,8 +109,8 @@ export async function GET(request: NextRequest) {
       const olderHalf = scenarioAssessments.slice(half);
       const newerHalf = scenarioAssessments.slice(0, half);
 
-      const olderAvg = olderHalf.reduce((sum: number, a: any) => sum + (a.overall_score || 0), 0) / olderHalf.length;
-      const newerAvg = newerHalf.reduce((sum: number, a: any) => sum + (a.overall_score || 0), 0) / newerHalf.length;
+      const olderAvg = olderHalf.reduce((sum: number, a) => sum + (a.overall_score || 0), 0) / olderHalf.length;
+      const newerAvg = newerHalf.reduce((sum: number, a) => sum + (a.overall_score || 0), 0) / newerHalf.length;
 
       if (newerAvg > olderAvg + 5) {
         recentTrend = 'up';
@@ -129,7 +129,7 @@ export async function GET(request: NextRequest) {
     // Aggregate skills
     const skillsMap: Record<string, { name: string; attempts: number; passed: boolean; lastAttemptDate: string }> = {};
 
-    skillAssessments?.forEach((assessment: any) => {
+    skillAssessments?.forEach((assessment) => {
       const skillName = assessment.skill_name;
       if (!skillsMap[skillName]) {
         skillsMap[skillName] = {

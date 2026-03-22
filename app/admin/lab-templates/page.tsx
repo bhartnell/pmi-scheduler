@@ -352,7 +352,7 @@ function TemplateFormModal({ template, scenarios, onClose, onSaved }: TemplateFo
       toast.success(isEdit ? 'Template updated' : 'Template created');
       onSaved(data.template);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to save template');
+      toast.error(err instanceof Error ? (err as Error).message : 'Failed to save template');
     } finally {
       setSaving(false);
     }
@@ -586,7 +586,7 @@ function ApplySection({ cohorts }: ApplySectionProps) {
       setShowConfirm(false);
       toast.success(`Created ${data.created_count} lab day${data.created_count !== 1 ? 's' : ''}`);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to apply templates');
+      toast.error(err instanceof Error ? (err as Error).message : 'Failed to apply templates');
     } finally {
       setApplying(false);
     }
@@ -739,7 +739,7 @@ function ApplySection({ cohorts }: ApplySectionProps) {
               </span>
             </div>
             <div className="space-y-1">
-              {result.lab_days.map((ld: any) => (
+              {result.lab_days.map((ld) => (
                 <div key={ld.id} className="flex items-center gap-2 text-xs text-green-700 dark:text-green-300">
                   <span className="w-1.5 h-1.5 rounded-full bg-green-500 flex-shrink-0" />
                   {ld.date} &mdash; Week {ld.week_number}: {ld.title}
@@ -1100,7 +1100,7 @@ export default function LabTemplatesPage() {
       setDeletingTemplate(null);
       fetchTemplates();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete template');
+      toast.error(err instanceof Error ? (err as Error).message : 'Failed to delete template');
     } finally {
       setDeleting(false);
     }

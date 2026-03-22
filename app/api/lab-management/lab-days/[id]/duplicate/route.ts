@@ -89,7 +89,7 @@ export async function POST(
     }
 
     // 4. Insert all stations linked to the new lab day
-    const stationsToInsert = originalStations.map((s: any) => ({
+    const stationsToInsert = originalStations.map((s) => ({
       lab_day_id: newLabDay.id,
       station_number: s.station_number,
       station_type: s.station_type,
@@ -132,7 +132,7 @@ export async function POST(
     }
 
     // 5. Copy station_skills for each original station
-    const allOriginalIds = originalStations.map((s: any) => s.id);
+    const allOriginalIds = originalStations.map((s) => s.id);
     const { data: allStationSkills, error: skillsError } = await supabase
       .from('station_skills')
       .select('station_id, skill_id, display_order')
@@ -140,7 +140,7 @@ export async function POST(
 
     if (!skillsError && allStationSkills && allStationSkills.length > 0) {
       const skillsToInsert = allStationSkills
-        .map((ss: any) => {
+        .map((ss) => {
           const stationNumber = originalIdToNumber[ss.station_id];
           const newStationId = stationNumberToNewId[stationNumber];
           if (!newStationId) return null;
@@ -172,7 +172,7 @@ export async function POST(
 
     if (!customSkillsError && allCustomSkills && allCustomSkills.length > 0) {
       const customSkillsToInsert = allCustomSkills
-        .map((cs: any) => {
+        .map((cs) => {
           const stationNumber = originalIdToNumber[cs.station_id];
           const newStationId = stationNumberToNewId[stationNumber];
           if (!newStationId) return null;

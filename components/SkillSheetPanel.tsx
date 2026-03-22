@@ -213,8 +213,8 @@ export default function SkillSheetPanel({
       } else {
         setError(data.error || 'Skill sheet not found');
       }
-    } catch (err: any) {
-      setError(err.message || 'Failed to load skill sheet');
+    } catch (err) {
+      setError((err as Error).message || 'Failed to load skill sheet');
     }
     setLoading(false);
   }, [sheetId]);
@@ -1893,8 +1893,8 @@ function ExistingEvalSummary({
               <div className="px-3 py-2 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
                 <div className="space-y-1">
                   {[...ev.step_details]
-                    .sort((a: any, b: any) => (a.sequence_number || 999) - (b.sequence_number || 999))
-                    .map((detail: any) => (
+                    .sort((a, b) => (a.sequence_number || 999) - (b.sequence_number || 999))
+                    .map((detail) => (
                       <div key={detail.step_number} className="flex items-center gap-2 text-[10px]">
                         {detail.completed ? (
                           <span className="w-4 h-4 rounded-full bg-green-600 text-white text-[8px] font-bold flex items-center justify-center flex-shrink-0">

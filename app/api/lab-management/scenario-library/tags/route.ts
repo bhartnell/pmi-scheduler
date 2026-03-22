@@ -35,9 +35,9 @@ export async function GET(request: NextRequest) {
 
     const uniqueTags = [...new Set((data || []).map((r) => r.tag))];
     return NextResponse.json({ success: true, tags: uniqueTags });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching scenario tags:', error);
-    return NextResponse.json({ success: false, error: error.message || 'Failed to fetch tags' }, { status: 500 });
+    return NextResponse.json({ success: false, error: (error as Error).message || 'Failed to fetch tags' }, { status: 500 });
   }
 }
 
@@ -68,8 +68,8 @@ export async function POST(request: NextRequest) {
       .single();
 
     // Handle duplicate gracefully
-    if (error && error.code !== '23505') throw error;
-    if (error?.code === '23505') {
+    if (error && (error as any).code !== '23505') throw error;
+    if ((error as any)?.code === '23505') {
       // Already exists - fetch it
       const { data: existing } = await supabase
         .from('scenario_tags')
@@ -81,9 +81,9 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ success: true, tag: data }, { status: 201 });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error adding scenario tag:', error);
-    return NextResponse.json({ success: false, error: error.message || 'Failed to add tag' }, { status: 500 });
+    return NextResponse.json({ success: false, error: (error as Error).message || 'Failed to add tag' }, { status: 500 });
   }
 }
 
@@ -114,8 +114,8 @@ export async function DELETE(request: NextRequest) {
     if (error) throw error;
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error removing scenario tag:', error);
-    return NextResponse.json({ success: false, error: error.message || 'Failed to remove tag' }, { status: 500 });
+    return NextResponse.json({ success: false, error: (error as Error).message || 'Failed to remove tag' }, { status: 500 });
   }
 }

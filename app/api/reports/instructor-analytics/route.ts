@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
 
     const evalsByInstructor: Record<string, number> = {};
     let totalEvals = 0;
-    (evaluations || []).forEach((e: any) => {
+    (evaluations || []).forEach((e) => {
       if (!e.evaluator_id) return;
       // Filter by date if needed
       if (startDate && e.created_at && e.created_at < startDate) return;

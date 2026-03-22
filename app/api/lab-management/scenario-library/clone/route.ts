@@ -73,8 +73,8 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ success: true, scenario: cloned }, { status: 201 });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error cloning scenario:', error);
-    return NextResponse.json({ success: false, error: error.message || 'Failed to clone scenario' }, { status: 500 });
+    return NextResponse.json({ success: false, error: (error as Error).message || 'Failed to clone scenario' }, { status: 500 });
   }
 }

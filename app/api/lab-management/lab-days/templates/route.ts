@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, templates: [] });
     }
 
-    const labDayIds = labDays.map((ld: any) => ld.id);
+    const labDayIds = labDays.map((ld) => ld.id);
 
     // -----------------------------------------------------------------------
     // 2. Fetch stations for all matched lab days in one query.
@@ -124,7 +124,7 @@ export async function GET(request: NextRequest) {
     const scenarioIds = [
       ...new Set(
         (allStations || [])
-          .map((s: any) => s.scenario_id)
+          .map((s) => s.scenario_id)
           .filter(Boolean)
       ),
     ];
@@ -136,7 +136,7 @@ export async function GET(request: NextRequest) {
         .select('id, title, category')
         .in('id', scenarioIds);
       if (scenarios) {
-        scenariosMap = Object.fromEntries(scenarios.map((s: any) => [s.id, s]));
+        scenariosMap = Object.fromEntries(scenarios.map((s) => [s.id, s]));
       }
     }
 
@@ -209,7 +209,7 @@ export async function GET(request: NextRequest) {
     // -----------------------------------------------------------------------
     // 6. Assemble the final template list.
     // -----------------------------------------------------------------------
-    const templates = labDays.map((ld: any) => {
+    const templates = labDays.map((ld) => {
       const cohort = ld.cohort as any;
       const program = cohort?.program as any;
 

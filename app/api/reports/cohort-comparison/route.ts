@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
           .eq('status', 'active');
 
         const studentList = students || [];
-        const studentIds = studentList.map((s: any) => s.id);
+        const studentIds = studentList.map((s) => s.id);
         const studentCount = studentIds.length;
 
         if (studentCount === 0) {
@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
           const studentCompletions = completionsByStudent[sid] || {};
 
           // Skills: passed stations / total stations
-          const passedStations = stations.filter((s: any) => studentCompletions[s.id] === 'pass').length;
+          const passedStations = stations.filter((s) => studentCompletions[s.id] === 'pass').length;
           const skillsPercent = totalStations > 0 ? Math.round((passedStations / totalStations) * 100) : 0;
 
           // Scenarios: avg score / 5 as %
@@ -225,7 +225,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, comparisons: orderedResults });
   } catch (error) {
     console.error('Error generating cohort comparison:', error);
-    const message = error instanceof Error ? error.message : 'Failed to generate comparison';
+    const message = error instanceof Error ? (error as Error).message : 'Failed to generate comparison';
     return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }

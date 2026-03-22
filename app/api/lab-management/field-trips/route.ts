@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     error = result.error;
 
     // If is_active column doesn't exist, retry without filter
-    if (error && (error.message?.includes('is_active') || error.code === '42703')) {
+    if (error && ((error as Error).message?.includes('is_active') || (error as any).code === '42703')) {
       console.warn('field_trips: is_active column not found, querying without filter');
       const fallback = await supabase
         .from('field_trips')
@@ -46,17 +46,17 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       // Table might not exist yet
-      if (error.code === '42P01') {
+      if ((error as any).code === '42P01') {
         return NextResponse.json({ success: true, fieldTrips: [] });
       }
       throw error;
     }
 
     return NextResponse.json({ success: true, fieldTrips: fieldTrips || [] });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching field trips:', error);
     return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to fetch field trips' },
+      { success: false, error: (error as Error)?.message || 'Failed to fetch field trips' },
       { status: 500 }
     );
   }
@@ -96,10 +96,10 @@ export async function POST(request: NextRequest) {
     if (error) throw error;
 
     return NextResponse.json({ success: true, fieldTrip });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error creating field trip:', error);
     return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to create field trip' },
+      { success: false, error: (error as Error)?.message || 'Failed to create field trip' },
       { status: 500 }
     );
   }
@@ -130,10 +130,10 @@ export async function DELETE(request: NextRequest) {
     if (error) throw error;
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error deleting field trip:', error);
     return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to delete field trip' },
+      { success: false, error: (error as Error)?.message || 'Failed to delete field trip' },
       { status: 500 }
     );
   }

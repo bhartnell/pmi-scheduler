@@ -222,11 +222,11 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ success: true, visit: completeVisit });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error creating site visit:', error);
     // Return more specific error message for debugging
-    const errorMessage = error?.message || 'Failed to create site visit';
-    const errorCode = error?.code;
+    const errorMessage = (error as Error)?.message || 'Failed to create site visit';
+    const errorCode = (error as any)?.code;
 
     // Handle specific Postgres errors
     if (errorCode === '23503') {

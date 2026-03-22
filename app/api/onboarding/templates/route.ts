@@ -26,10 +26,10 @@ export async function GET(request: NextRequest) {
       templates: templates || [],
     });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching onboarding templates:', error);
     return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to fetch templates' },
+      { success: false, error: (error as Error)?.message || 'Failed to fetch templates' },
       { status: 500 }
     );
   }

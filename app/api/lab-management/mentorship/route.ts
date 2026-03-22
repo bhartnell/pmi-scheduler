@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
     if (error) throw error;
 
     // Get log counts per pair
-    const pairIds = (data || []).map((p: any) => p.id);
+    const pairIds = (data || []).map((p) => p.id);
     let logCounts: Record<string, number> = {};
 
     if (pairIds.length > 0) {
@@ -65,19 +65,19 @@ export async function GET(request: NextRequest) {
         .select('pair_id')
         .in('pair_id', pairIds);
 
-      (logs || []).forEach((log: any) => {
+      (logs || []).forEach((log) => {
         logCounts[log.pair_id] = (logCounts[log.pair_id] || 0) + 1;
       });
     }
 
-    const pairs = (data || []).map((pair: any) => ({
+    const pairs = (data || []).map((pair) => ({
       ...pair,
       log_count: logCounts[pair.id] || 0,
     }));
 
     // Summary stats
-    const active = pairs.filter((p: any) => p.status === 'active').length;
-    const completed = pairs.filter((p: any) => p.status === 'completed').length;
+    const active = pairs.filter((p) => p.status === 'active').length;
+    const completed = pairs.filter((p) => p.status === 'completed').length;
     const totalMeetings = Object.values(logCounts).reduce((sum: number, n: number) => sum + n, 0);
 
     return NextResponse.json({

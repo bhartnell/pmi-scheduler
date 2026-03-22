@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error('Supabase error:', error);
       // If the columns don't exist yet, return empty data
-      if (error.code === '42703') {
+      if ((error as any).code === '42703') {
         return NextResponse.json({
           success: true,
           flaggedItems: [],
@@ -62,16 +62,16 @@ export async function GET(request: NextRequest) {
     }
 
     // Separate into needs attention and positive recognition
-    const needsAttention = (data || []).filter((item: any) =>
+    const needsAttention = (data || []).filter((item) =>
       item.issue_level === 'needs_followup' &&
       !item.flag_categories?.includes('positive')
     );
 
-    const positiveRecognition = (data || []).filter((item: any) =>
+    const positiveRecognition = (data || []).filter((item) =>
       item.flag_categories?.includes('positive')
     );
 
-    const minorIssues = (data || []).filter((item: any) =>
+    const minorIssues = (data || []).filter((item) =>
       item.issue_level === 'minor' &&
       !item.flag_categories?.includes('positive')
     );

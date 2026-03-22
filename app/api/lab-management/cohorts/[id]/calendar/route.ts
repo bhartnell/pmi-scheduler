@@ -83,9 +83,9 @@ export async function GET(
 
     // Sort stations by station_number within each lab day
     if (labDays) {
-      labDays.forEach((ld: any) => {
+      labDays.forEach((ld) => {
         if (ld.stations) {
-          ld.stations.sort((a: any, b: any) => (a.station_number || 0) - (b.station_number || 0));
+          ld.stations.sort((a, b) => (a.station_number || 0) - (b.station_number || 0));
         }
       });
     }
@@ -97,7 +97,7 @@ export async function GET(
     });
   } catch (error) {
     console.error('Error fetching cohort calendar:', error);
-    const message = error instanceof Error ? error.message : 'Failed to fetch cohort calendar';
+    const message = error instanceof Error ? (error as Error).message : 'Failed to fetch cohort calendar';
     return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }

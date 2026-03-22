@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
       ['Visit Date', 'Visit Time', 'Site', 'Site Abbr', 'System', 'Departments', 'Visitor', 'Cohort', 'Students Visited', 'Entire Class', 'Comments']
     ];
 
-    visits?.forEach((visit: any) => {
+    visits?.forEach((visit) => {
       const studentNames = visit.entire_class
         ? 'Entire Class'
         : visit.students?.map((s: any) =>

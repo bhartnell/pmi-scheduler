@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
       .eq('lab_day_id', labDayId)
       .single();
 
-    if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+    if (error && (error as any).code !== 'PGRST116') { // PGRST116 = no rows returned
       throw error;
     }
 
@@ -64,10 +64,10 @@ export async function GET(request: NextRequest) {
       isStale,
       serverTime: new Date().toISOString() // Include server time for sync
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching timer state:', error);
     // Check if table doesn't exist
-    if (error?.code === '42P01' || error?.message?.includes('does not exist')) {
+    if ((error as any)?.code === '42P01' || (error as Error)?.message?.includes('does not exist')) {
       return NextResponse.json({
         success: true,
         timer: null,
@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
     }
     return NextResponse.json({
       success: false,
-      error: error?.message || 'Failed to fetch timer state'
+      error: (error as Error)?.message || 'Failed to fetch timer state'
     }, { status: 500 });
   }
 }
@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
       stoppedTimerTitle = firstOther?.lab_day?.title || null;
 
       // Stop all other running/paused timers and increment their version
-      const otherLabDayIds = otherTimers.map((t: any) => t.lab_day_id);
+      const otherLabDayIds = otherTimers.map((t) => t.lab_day_id);
       try {
         await supabase.rpc('increment_version_batch', { lab_day_ids: otherLabDayIds });
       } catch {
@@ -174,11 +174,11 @@ export async function POST(request: NextRequest) {
       version: data?.version ?? 0,
       stoppedTimerTitle
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error creating timer state:', error);
     return NextResponse.json({
       success: false,
-      error: error?.message || 'Failed to create timer state'
+      error: (error as Error)?.message || 'Failed to create timer state'
     }, { status: 500 });
   }
 }
@@ -221,11 +221,11 @@ export async function DELETE(request: NextRequest) {
     }
 
     return NextResponse.json({ success: true, message: 'Timer state cleared' });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error deleting timer state:', error);
     return NextResponse.json({
       success: false,
-      error: error?.message || 'Failed to delete timer state'
+      error: (error as Error)?.message || 'Failed to delete timer state'
     }, { status: 500 });
   }
 }

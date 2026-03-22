@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
 
     const scenarioList = scenarios || [];
     const totalScenarios = scenarioList.length;
-    const activeScenarios = scenarioList.filter((s: any) => s.is_active).length;
+    const activeScenarios = scenarioList.filter((s) => s.is_active).length;
 
     // 2. Fetch lab_stations with scenario references
     const { data: stations } = await supabase
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
 
     // Usage count per scenario
     const usageCounts: Record<string, { count: number; lastDate: string | null }> = {};
-    (stations || []).forEach((s: any) => {
+    (stations || []).forEach((s) => {
       if (!s.scenario_id) return;
       if (!usageCounts[s.scenario_id]) {
         usageCounts[s.scenario_id] = { count: 0, lastDate: null };
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
     });
 
     // 3. Build usage data with scenario info
-    const usageData = scenarioList.map((scenario: any) => ({
+    const usageData = scenarioList.map((scenario) => ({
       id: scenario.id,
       name: scenario.title,
       category: scenario.category || 'Uncategorized',
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
 
     // 4. Difficulty distribution
     const difficultyDist: Record<string, number> = {};
-    scenarioList.forEach((s: any) => {
+    scenarioList.forEach((s) => {
       const diff = s.difficulty || 'Unrated';
       difficultyDist[diff] = (difficultyDist[diff] || 0) + 1;
     });
@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
 
     // 5. Category distribution
     const categoryDist: Record<string, number> = {};
-    scenarioList.forEach((s: any) => {
+    scenarioList.forEach((s) => {
       const cat = s.category || 'Uncategorized';
       categoryDist[cat] = (categoryDist[cat] || 0) + 1;
     });
@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
       .sort((a, b) => b.count - a.count);
 
     // 6. Categories used
-    const categoriesUsed = new Set(scenarioList.map((s: any) => s.category).filter(Boolean)).size;
+    const categoriesUsed = new Set(scenarioList.map((s) => s.category).filter(Boolean)).size;
 
     const response = NextResponse.json({
       success: true,

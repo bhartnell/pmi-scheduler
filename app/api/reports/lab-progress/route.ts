@@ -77,10 +77,10 @@ export async function GET(request: NextRequest) {
     let scenarioStations = 0;
     let skillStations = 0;
 
-    labDays?.forEach((day: any) => {
+    labDays?.forEach((day) => {
       const stationCount = day.stations?.length || 0;
       totalStations += stationCount;
-      day.stations?.forEach((station: any) => {
+      day.stations?.forEach((station) => {
         if (station.station_type === 'scenario') {
           scenarioStations++;
         } else if (station.station_type === 'skill') {
@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
     // Batch fetch all scenario assessments for all students (includes criteria_ratings for cohort averages)
     let allScenarioAssessments: any[] = [];
     if (includeScenarios && labDays && labDays.length > 0 && studentIds.length > 0) {
-      const labDayIds = labDays.map((d: any) => d.id);
+      const labDayIds = labDays.map((d) => d.id);
       const { data } = await supabase
         .from('scenario_assessments')
         .select('team_lead_id, overall_score, criteria_ratings, cohort_id, lab_day_id')
@@ -177,7 +177,7 @@ export async function GET(request: NextRequest) {
       let assessmentTotal = 0, treatmentTotal = 0, communicationTotal = 0, overallTotal = 0;
       const count = allScenarioAssessments.length;
 
-      allScenarioAssessments.forEach((assessment: any) => {
+      allScenarioAssessments.forEach((assessment) => {
         const ratings = assessment.criteria_ratings || [];
         ratings.forEach((rating: any) => {
           const category = rating.category?.toLowerCase() || '';
@@ -211,7 +211,7 @@ export async function GET(request: NextRequest) {
     };
 
     if (allSkillAssessments.length > 0) {
-      const passedCount = allSkillAssessments.filter((a: any) => a.passed).length;
+      const passedCount = allSkillAssessments.filter((a) => a.passed).length;
       skillsProgress = {
         completed: passedCount,
         total: allSkillAssessments.length,
@@ -224,7 +224,7 @@ export async function GET(request: NextRequest) {
     studentIds.forEach(id => {
       tlCountMap[id] = 0;
     });
-    allTeamLeadLogs.forEach((log: any) => {
+    allTeamLeadLogs.forEach((log) => {
       tlCountMap[log.student_id] = (tlCountMap[log.student_id] || 0) + 1;
     });
     const tlCounts = Object.values(tlCountMap);
@@ -247,13 +247,13 @@ export async function GET(request: NextRequest) {
       const studentScenarios = scenariosByStudent.get(student.id) || [];
       if (studentScenarios.length > 0) {
         scenarioCount = studentScenarios.length;
-        const totalScore = studentScenarios.reduce((sum: number, s: any) => sum + (s.overall_score || 0), 0);
+        const totalScore = studentScenarios.reduce((sum: number, s) => sum + (s.overall_score || 0), 0);
         averageScore = totalScore / scenarioCount;
       }
 
       // Get skill assessments from batched data
       const studentSkills = skillsByStudent.get(student.id) || [];
-      skillsCompleted = studentSkills.filter((s: any) => s.passed).length;
+      skillsCompleted = studentSkills.filter((s) => s.passed).length;
 
       // Get team lead count from batched data
       const studentTL = teamLeadByStudent.get(student.id) || [];

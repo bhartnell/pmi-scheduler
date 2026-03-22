@@ -141,7 +141,7 @@ export async function GET(request: NextRequest) {
       });
 
       // Process station assignments
-      stationAssignments.forEach((station: any) => {
+      stationAssignments.forEach((station) => {
         const labDayId = station.lab_day_id;
         const stationType = station.station_type || 'unknown';
         const date = labDayDateMap[labDayId];
@@ -175,7 +175,7 @@ export async function GET(request: NextRequest) {
 
       // Process special day roles (lab_lead, roamer, observer)
       if (dayRoles) {
-        dayRoles.forEach((dr: any) => {
+        dayRoles.forEach((dr) => {
           const instructor = Array.isArray(dr.instructor) ? dr.instructor[0] : dr.instructor;
           if (!instructor?.email) return;
           const email = instructor.email;
@@ -206,7 +206,7 @@ export async function GET(request: NextRequest) {
 
         if (polls && polls.length > 0) {
           pollTotals = polls.length;
-          const pollIds = polls.map((p: any) => p.id);
+          const pollIds = polls.map((p) => p.id);
 
           const { data: submissions } = await supabase
             .from('poll_submissions')
@@ -215,7 +215,7 @@ export async function GET(request: NextRequest) {
             .in('respondent_email', instructorEmails);
 
           if (submissions) {
-            submissions.forEach((sub: any) => {
+            submissions.forEach((sub) => {
               if (sub.respondent_email) {
                 pollResponsesByEmail[sub.respondent_email] = (pollResponsesByEmail[sub.respondent_email] || 0) + 1;
               }

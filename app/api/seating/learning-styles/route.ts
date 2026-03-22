@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
     // Filter by cohort if specified
     let filteredData = data;
     if (cohortId) {
-      filteredData = data?.filter((ls: any) => ls.student?.cohort_id === cohortId) || [];
+      filteredData = data?.filter((ls) => ls.student?.cohort_id === cohortId) || [];
     }
 
     return NextResponse.json({ success: true, learningStyles: filteredData });

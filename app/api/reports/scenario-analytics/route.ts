@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
 
     // Build: lab_station_id -> { scenario_id, lab_date }
     const stationMap: Record<string, { scenarioId: string; labDate: string | null }> = {};
-    (stationsWithScenario || []).forEach((station: any) => {
+    (stationsWithScenario || []).forEach((station) => {
       if (!station.scenario_id) return;
       const labDay = Array.isArray(station.lab_day) ? station.lab_day[0] : station.lab_day;
       stationMap[station.id] = {
@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
       { count: number; totalScore: number; scoreCount: number; passCount: number }
     > = {};
 
-    (assessments || []).forEach((a: any) => {
+    (assessments || []).forEach((a) => {
       const stationInfo = stationMap[a.lab_station_id];
       if (!stationInfo) return;
 
@@ -104,7 +104,7 @@ export async function GET(request: NextRequest) {
       if ((startDate || endDate) && !labDate) return;
 
       // Apply category filter - scenario must be in filtered set
-      const scenarioInFilter = scenarios.find((s: any) => s.id === scenarioId);
+      const scenarioInFilter = scenarios.find((s) => s.id === scenarioId);
       if (!scenarioInFilter) return;
 
       if (!aggMap[scenarioId]) {
@@ -131,8 +131,8 @@ export async function GET(request: NextRequest) {
 
     // Build final rows only for scenarios that have been assessed
     const scenarioRows = scenarios
-      .filter((s: any) => aggMap[s.id]?.count > 0)
-      .map((scenario: any) => {
+      .filter((s) => aggMap[s.id]?.count > 0)
+      .map((scenario) => {
         const agg = aggMap[scenario.id];
         const avgScore =
           agg.scoreCount > 0
@@ -169,7 +169,7 @@ export async function GET(request: NextRequest) {
     const allCategories: string[] = Array.from(
       new Set(
         scenarios
-          .map((s: any) => s.category)
+          .map((s) => s.category)
           .filter((c: string | null): c is string => !!c)
       )
     ).sort() as string[];

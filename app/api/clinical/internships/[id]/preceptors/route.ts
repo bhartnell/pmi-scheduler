@@ -52,10 +52,10 @@ export async function GET(
     }
 
     return NextResponse.json({ success: true, assignments: data || [] });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error in GET /api/clinical/internships/[id]/preceptors:', error);
     return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to fetch preceptor assignments' },
+      { success: false, error: (error as Error)?.message || 'Failed to fetch preceptor assignments' },
       { status: 500 }
     );
   }
@@ -141,10 +141,10 @@ export async function POST(
     }
 
     return NextResponse.json({ success: true, assignment: data });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error in POST /api/clinical/internships/[id]/preceptors:', error);
     return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to create preceptor assignment' },
+      { success: false, error: (error as Error)?.message || 'Failed to create preceptor assignment' },
       { status: 500 }
     );
   }
@@ -212,10 +212,10 @@ export async function PATCH(
     }
 
     return NextResponse.json({ success: true, assignment: data });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error in PATCH /api/clinical/internships/[id]/preceptors:', error);
     return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to update preceptor assignment' },
+      { success: false, error: (error as Error)?.message || 'Failed to update preceptor assignment' },
       { status: 500 }
     );
   }

@@ -59,9 +59,9 @@ export async function GET(request: NextRequest) {
         .select('*')
         .eq('student_id', studentId);
 
-      const recordMap = new Map((records || []).map((r: any) => [r.doc_type_id, r]));
+      const recordMap = new Map((records || []).map((r) => [r.doc_type_id, r]));
 
-      const result = (docTypes || []).map((dt: any) => {
+      const result = (docTypes || []).map((dt) => {
         const record = recordMap.get(dt.id) || null;
         return {
           doc_type: dt,
@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
         .eq('status', 'active')
         .order('last_name', { ascending: true });
 
-      const studentIds = (students || []).map((s: any) => s.id);
+      const studentIds = (students || []).map((s) => s.id);
 
       let records: any[] = [];
       if (studentIds.length > 0) {
@@ -102,7 +102,7 @@ export async function GET(request: NextRequest) {
       }
 
       // Per-student rows
-      const studentRows = (students || []).map((student: any) => {
+      const studentRows = (students || []).map((student) => {
         const studentRecords = lookup[student.id] || {};
         const docStatuses: Record<string, string> = {};
         let completeCount = 0;
@@ -127,7 +127,7 @@ export async function GET(request: NextRequest) {
       });
 
       // Per-doc-type summary
-      const docSummary = (docTypes || []).map((dt: any) => {
+      const docSummary = (docTypes || []).map((dt) => {
         let completeCount = 0;
         for (const student of (students || [])) {
           const rec = lookup[student.id]?.[dt.id];
@@ -203,7 +203,7 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('POST /api/compliance error:', error);
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+      return NextResponse.json({ success: false, error: (error as Error).message }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, record: result });
@@ -253,7 +253,7 @@ export async function PUT(request: NextRequest) {
 
     if (error) {
       console.error('PUT /api/compliance error:', error);
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+      return NextResponse.json({ success: false, error: (error as Error).message }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, record: result });

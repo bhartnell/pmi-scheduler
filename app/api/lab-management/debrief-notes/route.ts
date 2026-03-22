@@ -47,33 +47,33 @@ export async function GET(request: NextRequest) {
     const { data: labDays, error } = await query;
 
     if (error) {
-      if (error.message?.includes('does not exist')) {
+      if ((error as Error).message?.includes('does not exist')) {
         return NextResponse.json({ success: true, labDays: [] });
       }
       throw error;
     }
 
     // Filter lab days that have notes, and optionally filter by category
-    let filtered = (labDays || []).filter((ld: any) => {
+    let filtered = (labDays || []).filter((ld) => {
       const notes = ld.debrief_notes || [];
       if (notes.length === 0) return false;
       if (category) {
-        return notes.some((n: any) => n.category === category);
+        return notes.some((n) => n.category === category);
       }
       return true;
     });
 
     // If category filter, also filter the notes within each lab day
     if (category) {
-      filtered = filtered.map((ld: any) => ({
+      filtered = filtered.map((ld) => ({
         ...ld,
-        debrief_notes: (ld.debrief_notes || []).filter((n: any) => n.category === category),
+        debrief_notes: (ld.debrief_notes || []).filter((n) => n.category === category),
       }));
     }
 
     return NextResponse.json({ success: true, labDays: filtered });
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : String(error);
+    const msg = error instanceof Error ? (error as Error).message : String(error);
     if (msg.includes('does not exist')) {
       return NextResponse.json({ success: true, labDays: [] });
     }

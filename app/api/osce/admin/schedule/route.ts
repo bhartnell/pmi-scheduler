@@ -69,7 +69,7 @@ export async function GET() {
     const schedule = (blocks || []).map(block => {
       const blockObservers = (observers || []).filter(o =>
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        o.blocks?.some((b: any) => b.time_block_id === block.id)
+        o.blocks?.some((b) => b.time_block_id === block.id)
       ).map(o => ({ id: o.id, name: o.name, agency: o.agency, email: o.email }));
 
       const blockStudents = (students || []).filter(s =>

@@ -77,13 +77,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ conflicts: [] });
     }
 
-    const labDayIds = labDaysOnDate.map((ld: any) => ld.id);
+    const labDayIds = labDaysOnDate.map((ld) => ld.id);
 
     // ----------------------------------------------------------------
     // 2. Cohort conflict: same cohort already has a lab day on this date
     // ----------------------------------------------------------------
     if (cohort_id) {
-      const cohortConflict = labDaysOnDate.find((ld: any) => ld.cohort_id === cohort_id);
+      const cohortConflict = labDaysOnDate.find((ld) => ld.cohort_id === cohort_id);
       if (cohortConflict) {
         const cohortData = cohortConflict.cohort as any;
         const cohortLabel = cohortData

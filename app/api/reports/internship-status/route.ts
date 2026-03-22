@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
 
     // Build internship map by student
     const internshipMap: Record<string, any> = {};
-    internships?.forEach((intern: any) => {
+    internships?.forEach((intern) => {
       internshipMap[intern.student_id] = intern;
     });
 

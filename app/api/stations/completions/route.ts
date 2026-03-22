@@ -77,13 +77,13 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('Error fetching completions:', error);
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+      return NextResponse.json({ success: false, error: (error as Error).message }, { status: 500 });
     }
 
     // If cohortId filter requested, filter results (post-query since it's a nested field)
     let filteredData = data || [];
     if (cohortId && filteredData.length > 0) {
-      filteredData = filteredData.filter((c: any) => c.student?.cohort_id === cohortId);
+      filteredData = filteredData.filter((c) => c.student?.cohort_id === cohortId);
     }
 
     return NextResponse.json({
@@ -176,7 +176,7 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('Error logging completion:', error);
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+      return NextResponse.json({ success: false, error: (error as Error).message }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, completion });

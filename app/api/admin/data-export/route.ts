@@ -433,7 +433,7 @@ export async function GET(request: NextRequest) {
         fileContent = JSON.stringify({ export_type: 'cohort', exported_at: new Date().toISOString(), data: cohorts }, null, 2);
       } else {
         // Flatten cohorts for CSV (one row per cohort, without nested students)
-        const rows = cohorts.map((c: any) => ({
+        const rows = cohorts.map((c) => ({
           id: c.id,
           cohort_number: c.cohort_number,
           program_name: c.program?.name,
@@ -479,7 +479,7 @@ export async function GET(request: NextRequest) {
         // Internships CSV - one section
         const internshipsFlat = flattenClinical(clinicalData);
         // Hours CSV - separate table appended after
-        const hourRows = clinicalData.hours.map((h: any) => ({
+        const hourRows = clinicalData.hours.map((h) => ({
           id: h.id,
           student_id: h.student_id,
           cohort_id: h.cohort_id,
@@ -551,7 +551,7 @@ export async function GET(request: NextRequest) {
         // For CSV full backup: separate sections with labels
         const sections: string[] = [];
 
-        const cohortRows = cohorts.map((c: any) => ({
+        const cohortRows = cohorts.map((c) => ({
           section: 'cohort',
           id: c.id,
           cohort_number: c.cohort_number,
