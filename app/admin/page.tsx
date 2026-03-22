@@ -742,6 +742,24 @@ export default function AdminPage() {
           </div>
         </div>
 
+        {/* Google OAuth Note */}
+        {isSuperAdmin && (
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <Key className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5" />
+              <div>
+                <h2 className="font-semibold text-amber-900 dark:text-amber-100">Google Sign-In: Internal Mode</h2>
+                <p className="text-sm text-amber-800 dark:text-amber-200">
+                  Google sign-in is currently limited to @pmi.edu accounts. To allow volunteer instructors
+                  with personal Gmail accounts, change the OAuth consent screen from &quot;Internal&quot; to
+                  &quot;External&quot; in the{' '}
+                  <span className="font-medium">Google Cloud Console &gt; APIs &amp; Services &gt; OAuth consent screen</span>.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Search Filter */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500 pointer-events-none" />

@@ -376,11 +376,19 @@ export default function SiteVisitSettingsPage() {
                             Warning after
                           </label>
                           <input
-                            type="number"
-                            min={1}
-                            max={urgentDays - 1}
+                            type="text"
+                            inputMode="numeric"
                             value={alertDays}
-                            onChange={(e) => setEditedField(site.id, 'visit_alert_days', parseInt(e.target.value) || 14)}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val === '' || /^\d+$/.test(val)) {
+                                setEditedField(site.id, 'visit_alert_days', val === '' ? '' : parseInt(val));
+                              }
+                            }}
+                            onBlur={(e) => {
+                              const val = parseInt(e.target.value);
+                              if (!val || val < 1) setEditedField(site.id, 'visit_alert_days', 14);
+                            }}
                             className="w-16 px-2 py-1 text-sm text-center border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                           />
                           <span className="text-sm text-gray-600 dark:text-gray-400">days</span>
@@ -393,11 +401,19 @@ export default function SiteVisitSettingsPage() {
                             Urgent after
                           </label>
                           <input
-                            type="number"
-                            min={alertDays + 1}
-                            max={365}
+                            type="text"
+                            inputMode="numeric"
                             value={urgentDays}
-                            onChange={(e) => setEditedField(site.id, 'visit_urgent_days', parseInt(e.target.value) || 28)}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val === '' || /^\d+$/.test(val)) {
+                                setEditedField(site.id, 'visit_urgent_days', val === '' ? '' : parseInt(val));
+                              }
+                            }}
+                            onBlur={(e) => {
+                              const val = parseInt(e.target.value);
+                              if (!val || val < 1) setEditedField(site.id, 'visit_urgent_days', 28);
+                            }}
                             className="w-16 px-2 py-1 text-sm text-center border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                           />
                           <span className="text-sm text-gray-600 dark:text-gray-400">days</span>

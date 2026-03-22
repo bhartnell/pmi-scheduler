@@ -447,10 +447,24 @@ export default function TimerBanner({
               {formatTime(displaySeconds)}
             </span>
             {showRotateAlert && (
-              <span className="flex items-center gap-1 text-sm font-bold animate-bounce mt-1">
-                <AlertTriangle className="w-4 h-4" />
-                TIME TO ROTATE!
-              </span>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="flex items-center gap-1 text-sm font-bold animate-bounce">
+                  <AlertTriangle className="w-4 h-4" />
+                  TIME TO ROTATE!
+                </span>
+                <button
+                  onClick={() => {
+                    setShowRotateAlert(false);
+                    // Also toggle ready if station context available
+                    if (stationId && userEmail && !isReady) {
+                      toggleReady();
+                    }
+                  }}
+                  className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-bold transition-colors"
+                >
+                  ACKNOWLEDGE
+                </button>
+              </div>
             )}
             {showDebriefAlert && !showRotateAlert && (
               <span className="flex items-center gap-1 text-sm font-bold mt-1">
