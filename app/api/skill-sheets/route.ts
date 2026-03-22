@@ -64,6 +64,9 @@ export async function GET(request: NextRequest) {
         )
       `);
 
+    // Only show active skill sheets by default
+    query = query.eq('is_active', true);
+
     // Apply filters
     if (program) {
       query = query.eq('program', program.toLowerCase());
@@ -137,7 +140,8 @@ export async function GET(request: NextRequest) {
 
     const { data: allSheets, error: countError } = await supabase
       .from('skill_sheets')
-      .select('program');
+      .select('program')
+      .eq('is_active', true);
 
     if (countError && !countError.message?.includes('does not exist')) {
       console.error('Error fetching program counts:', countError);
