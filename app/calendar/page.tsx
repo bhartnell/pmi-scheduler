@@ -1,791 +1,1025 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState, useCallback, useMemo, Suspense } from 'react';
 import Link from 'next/link';
 import {
   ChevronRight,
   ChevronLeft,
   Calendar as CalendarIcon,
-  Plus,
+  List,
+  Grid3X3,
+  LayoutGrid,
+  Filter,
+  Printer,
   Clock,
   Users,
   MapPin,
-  AlertCircle,
-  CheckCircle,
-  X as XIcon,
-  Download
+  Eye,
+  ArrowRight,
 } from 'lucide-react';
-import { downloadICS, parseLocalDate } from '@/lib/ics-export';
-import { useToast } from '@/components/Toast';
-import HelpTooltip from '@/components/HelpTooltip';
-import { canAccessScheduling } from '@/lib/permissions';
-import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import Breadcrumbs from '@/components/Breadcrumbs';
 
-interface Cohort {
-  id: string;
-  cohort_number: number;
-  program: {
-    name: string;
-    abbreviation: string;
-  };
-}
+// ── Types ──────────────────────────────────────────────────────────────
 
-interface LabDay {
+interface CalendarEvent {
   id: string;
-  date: string;
-  title: string | null;
-  start_time: string | null;
-  end_time: string | null;
-  cohort_id: string;
-  cohort: {
-    cohort_number: number;
-    program: {
-      abbreviation: string;
-    };
-  };
-  num_rotations: number;
-  rotation_duration: number;
-  notes: string | null;
-  needs_coverage: boolean;
-  coverage_needed: number;
-  coverage_note: string | null;
-  stations: any[];
-}
-
-interface Shift {
-  id: string;
+  source: 'planner' | 'lab_day' | 'lvfr' | 'clinical' | 'shift' | 'meeting';
   title: string;
   date: string;
   start_time: string;
   end_time: string;
-  location: string | null;
-  department: string | null;
-  min_instructors: number;
-  max_instructors: number | null;
-  is_filled: boolean;
-  is_cancelled: boolean;
-  lab_day_id: string | null;
-  signups: {
-    status: string;
-    instructor_id: string;
-  }[];
-  signup_count: number;
-  confirmed_count: number;
+  program?: 'paramedic' | 'emt' | 'aemt' | 'lvfr' | 'other';
+  color: string;
+  cohort_number?: number;
+  instructor_names?: string[];
+  room?: string;
+  linked_id?: string;
+  linked_url?: string;
+  event_type: 'class' | 'lab' | 'exam' | 'clinical' | 'shift' | 'meeting' | 'other';
+  metadata?: Record<string, unknown>;
 }
 
-interface CurrentUser {
-  id: string;
-  email: string;
-  name: string;
-  role: string;
+type ViewMode = 'week' | 'month' | 'list';
+type PresetView = 'all' | 'instructor' | 'labs';
+
+const PROGRAMS = ['paramedic', 'emt', 'aemt', 'lvfr'] as const;
+const EVENT_TYPES = ['class', 'lab', 'clinical', 'exam', 'shift'] as const;
+
+const PROGRAM_LABELS: Record<string, string> = {
+  paramedic: 'Paramedic',
+  emt: 'EMT',
+  aemt: 'AEMT',
+  lvfr: 'LVFR',
+};
+
+const EVENT_TYPE_LABELS: Record<string, string> = {
+  class: 'Classes',
+  lab: 'Labs',
+  clinical: 'Clinical',
+  exam: 'Exams',
+  shift: 'Shifts',
+};
+
+const PROGRAM_COLORS: Record<string, string> = {
+  paramedic: '#3B82F6',
+  emt: '#22C55E',
+  aemt: '#F59E0B',
+  lvfr: '#F97316',
+  other: '#6B7280',
+};
+
+// ── Utility functions ──────────────────────────────────────────────────
+
+function formatDate(dateStr: string): string {
+  const d = new Date(dateStr + 'T12:00:00');
+  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
-export default function CalendarPage() {
+function formatTime(timeStr: string): string {
+  if (!timeStr) return '';
+  const [h, m] = timeStr.split(':').map(Number);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${hour12}:${String(m).padStart(2, '0')} ${ampm}`;
+}
+
+function getMonday(date: Date): Date {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function addDays(date: Date, days: number): Date {
+  const d = new Date(date);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+function toDateStr(date: Date): string {
+  return date.toISOString().split('T')[0];
+}
+
+function getMonthDays(year: number, month: number): Date[] {
+  const first = new Date(year, month, 1);
+  const startDay = first.getDay();
+  const start = addDays(first, -startDay);
+  const days: Date[] = [];
+  for (let i = 0; i < 42; i++) {
+    days.push(addDays(start, i));
+  }
+  return days;
+}
+
+function timeToMinutes(timeStr: string): number {
+  if (!timeStr) return 0;
+  const parts = timeStr.split(':').map(Number);
+  return (parts[0] || 0) * 60 + (parts[1] || 0);
+}
+
+// ── Main component (wrapped in Suspense for useSearchParams) ───────────
+
+function CalendarContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const toast = useToast();
+  const searchParams = useSearchParams();
 
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
-  const effectiveRole = useEffectiveRole(currentUser?.role ?? null);
-  const [labDays, setLabDays] = useState<LabDay[]>([]);
-  const [shifts, setShifts] = useState<Shift[]>([]);
+  // State
+  const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [viewMode, setViewMode] = useState<ViewMode>('week');
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [presetView, setPresetView] = useState<PresetView>('all');
+  const [selectedInstructor, setSelectedInstructor] = useState<string>('');
+  const [instructorList, setInstructorList] = useState<{ id: string; name: string }[]>([]);
 
-  // Filters
-  const [showLabDays, setShowLabDays] = useState(true);
-  const [showOpenShifts, setShowOpenShifts] = useState(true);
-  const [showMyShifts, setShowMyShifts] = useState(true);
-  const [showGoogleEvents, setShowGoogleEvents] = useState(false);
-  const [googleEvents, setGoogleEvents] = useState<Array<{
-    id: string;
-    summary: string;
-    start: string;
-    end: string;
-    allDay: boolean;
-    calendarName: string;
-  }>>([]);
-  const [loadingGoogleEvents, setLoadingGoogleEvents] = useState(false);
+  // Filters from URL params or defaults
+  const [activePrograms, setActivePrograms] = useState<Set<string>>(
+    new Set(PROGRAMS)
+  );
+  const [activeEventTypes, setActiveEventTypes] = useState<Set<string>>(
+    new Set(EVENT_TYPES)
+  );
 
-  const isDirector = currentUser?.role === 'admin' || currentUser?.role === 'superadmin';
+  // Initialize from URL params
+  useEffect(() => {
+    const view = searchParams.get('view') as ViewMode | null;
+    if (view && ['week', 'month', 'list'].includes(view)) {
+      setViewMode(view);
+    }
+    const programs = searchParams.get('programs');
+    if (programs) {
+      setActivePrograms(new Set(programs.split(',')));
+    }
+    const types = searchParams.get('types');
+    if (types) {
+      setActiveEventTypes(new Set(types.split(',')));
+    }
+    const preset = searchParams.get('preset') as PresetView | null;
+    if (preset) setPresetView(preset);
+    const dateParam = searchParams.get('date');
+    if (dateParam) {
+      setCurrentDate(new Date(dateParam + 'T12:00:00'));
+    }
+  }, []);
 
+  // Detect mobile
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
+  // Default to list on mobile
+  useEffect(() => {
+    if (isMobile && viewMode === 'week') {
+      setViewMode('list');
+    }
+  }, [isMobile]);
+
+  // Auth redirect
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/signin');
     }
   }, [status, router]);
 
-  // Role guard: scheduling-enabled roles only
-  useEffect(() => {
-    if (effectiveRole && !canAccessScheduling(effectiveRole)) {
-      router.push('/');
+  // Computed date ranges
+  const dateRange = useMemo(() => {
+    if (viewMode === 'week') {
+      const monday = getMonday(currentDate);
+      return {
+        start: toDateStr(monday),
+        end: toDateStr(addDays(monday, 6)),
+      };
+    } else if (viewMode === 'month') {
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+      const firstDay = new Date(year, month, 1);
+      const lastDay = new Date(year, month + 1, 0);
+      // Extend to cover full weeks
+      const startDay = firstDay.getDay();
+      const start = addDays(firstDay, -startDay);
+      const endDay = lastDay.getDay();
+      const end = addDays(lastDay, 6 - endDay);
+      return { start: toDateStr(start), end: toDateStr(end) };
+    } else {
+      // List: show 2 weeks
+      const monday = getMonday(currentDate);
+      return {
+        start: toDateStr(monday),
+        end: toDateStr(addDays(monday, 13)),
+      };
     }
-  }, [effectiveRole, router]);
+  }, [currentDate, viewMode]);
 
-  useEffect(() => {
-    if (session?.user?.email) {
-      fetchCurrentUser();
-    }
-  }, [session]);
-
-  useEffect(() => {
-    if (currentUser) {
-      fetchData();
-    }
-  }, [currentUser, currentMonth]);
-
-  useEffect(() => {
-    if (!showGoogleEvents) return;
-    fetchGoogleEvents();
-  }, [showGoogleEvents, currentMonth]);
-
-  const fetchGoogleEvents = async () => {
-    setLoadingGoogleEvents(true);
-    try {
-      const year = currentMonth.getFullYear();
-      const month = currentMonth.getMonth();
-      // Get first day of previous month and last day of next month for buffer
-      const startDate = new Date(year, month - 1, 1).toISOString().split('T')[0];
-      const endDate = new Date(year, month + 2, 0).toISOString().split('T')[0];
-      const res = await fetch(`/api/calendar/google-events?startDate=${startDate}&endDate=${endDate}`);
-      const data = await res.json();
-      if (data.success) {
-        setGoogleEvents(data.events || []);
-      }
-    } catch (err) {
-      console.error('Failed to fetch Google events:', err);
-    } finally {
-      setLoadingGoogleEvents(false);
-    }
-  };
-
-  const fetchCurrentUser = async () => {
-    try {
-      const res = await fetch('/api/instructor/me');
-      const data = await res.json();
-      if (data.success && data.user) {
-        setCurrentUser(data.user);
-      }
-    } catch (error) {
-      console.error('Error fetching user:', error);
-    }
-  };
-
-  const fetchData = async () => {
+  // Fetch events
+  const fetchEvents = useCallback(async () => {
     setLoading(true);
     try {
-      // Get first and last day of current month view (including overflow days)
-      const startDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
-      startDate.setDate(startDate.getDate() - startDate.getDay()); // Go back to Sunday
+      const includeTypes: string[] = [];
+      if (activeEventTypes.has('class') || activeEventTypes.has('exam')) includeTypes.push('classes');
+      if (activeEventTypes.has('lab')) includeTypes.push('labs');
+      if (activeEventTypes.has('clinical')) includeTypes.push('clinical');
+      if (activeEventTypes.has('shift')) includeTypes.push('shifts');
+      if (activePrograms.has('lvfr')) includeTypes.push('lvfr');
 
-      const endDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
-      endDate.setDate(endDate.getDate() + (6 - endDate.getDay())); // Go forward to Saturday
+      const params = new URLSearchParams({
+        start_date: dateRange.start,
+        end_date: dateRange.end,
+        include: includeTypes.join(','),
+        programs: Array.from(activePrograms).join(','),
+      });
 
-      const startDateStr = startDate.toISOString().split('T')[0];
-      const endDateStr = endDate.toISOString().split('T')[0];
-
-      // Fetch lab days and shifts in parallel
-      const [labDaysRes, shiftsRes] = await Promise.all([
-        fetch(`/api/lab-management/lab-days?startDate=${startDateStr}&endDate=${endDateStr}`),
-        fetch(`/api/scheduling/shifts?start_date=${startDateStr}&end_date=${endDateStr}&include_filled=true`)
-      ]);
-
-      const labDaysData = await labDaysRes.json();
-      const shiftsData = await shiftsRes.json();
-
-      if (labDaysData.success) {
-        setLabDays(labDaysData.labDays || []);
+      if (presetView === 'instructor' && selectedInstructor) {
+        params.set('instructor_id', selectedInstructor);
       }
-      if (shiftsData.success) {
-        setShifts(shiftsData.shifts || []);
+
+      const res = await fetch(`/api/calendar/unified?${params}`);
+      const data = await res.json();
+      if (data.events) {
+        setEvents(data.events);
       }
-    } catch (error) {
-      console.error('Error fetching calendar data:', error);
+    } catch (err) {
+      console.error('Failed to fetch calendar events:', err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-  };
+  }, [dateRange, activePrograms, activeEventTypes, presetView, selectedInstructor]);
 
-  const goToPreviousMonth = () => {
-    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
-  };
-
-  const goToNextMonth = () => {
-    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
-  };
-
-  const goToToday = () => {
-    setCurrentMonth(new Date());
-  };
-
-  // Generate calendar days
-  const generateCalendarDays = () => {
-    const days = [];
-    const firstDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
-    const lastDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
-
-    // Start from Sunday of the first week
-    const startDate = new Date(firstDay);
-    startDate.setDate(startDate.getDate() - startDate.getDay());
-
-    // End on Saturday of the last week
-    const endDate = new Date(lastDay);
-    endDate.setDate(endDate.getDate() + (6 - endDate.getDay()));
-
-    const current = new Date(startDate);
-    while (current <= endDate) {
-      days.push(new Date(current));
-      current.setDate(current.getDate() + 1);
+  useEffect(() => {
+    if (status === 'authenticated') {
+      fetchEvents();
     }
+  }, [fetchEvents, status]);
 
-    return days;
-  };
+  // Fetch instructor list
+  useEffect(() => {
+    if (status === 'authenticated') {
+      fetch('/api/instructor/me')
+        .then(r => r.json())
+        .catch(() => null);
 
-  const getLabDaysForDate = (date: Date) => {
-    const dateStr = date.toISOString().split('T')[0];
-    return labDays.filter(ld => ld.date === dateStr);
-  };
-
-  const getShiftsForDate = (date: Date) => {
-    const dateStr = date.toISOString().split('T')[0];
-    return shifts.filter(s => s.date === dateStr);
-  };
-
-  const getGoogleEventsForDate = (date: Date) => {
-    const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    return googleEvents.filter((event) => {
-      const eventDate = event.start?.split('T')[0] || event.start;
-      return eventDate === dateStr;
-    });
-  };
-
-  const formatGoogleEventTime = (dateStr: string) => {
-    if (!dateStr || !dateStr.includes('T')) return '';
-    try {
-      const date = new Date(dateStr);
-      return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'America/Phoenix' });
-    } catch {
-      return '';
-    }
-  };
-
-  const isToday = (date: Date) => {
-    const today = new Date();
-    return date.toDateString() === today.toDateString();
-  };
-
-  const isCurrentMonth = (date: Date) => {
-    return date.getMonth() === currentMonth.getMonth();
-  };
-
-  // Filter shifts based on user role
-  const getVisibleShifts = (shiftsForDate: Shift[]) => {
-    if (isDirector) {
-      // Directors see all shifts
-      return shiftsForDate;
-    }
-
-    // Instructors see: open shifts + their own confirmed shifts
-    return shiftsForDate.filter(shift => {
-      if (shift.is_cancelled) return false;
-
-      const userSignup = shift.signups?.find(s => s.instructor_id === currentUser?.id);
-      const hasOpenSpots = !shift.is_filled;
-      const isUserConfirmed = userSignup?.status === 'confirmed';
-
-      return hasOpenSpots || isUserConfirmed;
-    });
-  };
-
-  const handleExportCalendar = () => {
-    const events: Parameters<typeof downloadICS>[0] = [];
-
-    if (showLabDays) {
-      for (const ld of labDays) {
-        const cohortName = ld.cohort
-          ? `${ld.cohort.program.abbreviation} Group ${ld.cohort.cohort_number}`
-          : '';
-        const titlePart = ld.title || cohortName || `Lab Day ${ld.date}`;
-        const descParts: string[] = [];
-        if (cohortName) descParts.push(`Cohort: ${cohortName}`);
-
-        events.push({
-          uid: `labday-${ld.id}@pmi-scheduler`,
-          title: `Lab Day - ${titlePart}`,
-          description: descParts.join('\n'),
-          location: 'PMI Campus',
-          startDate: parseLocalDate(ld.date, ld.start_time, 8),
-          endDate: parseLocalDate(ld.date, ld.end_time, 17),
+      fetch('/api/admin/users?role=instructor&limit=200')
+        .then(r => r.json())
+        .then(data => {
+          if (data.users) {
+            setInstructorList(data.users.map((u: { id: string; name: string }) => ({
+              id: u.id,
+              name: u.name,
+            })));
+          }
+        })
+        .catch(() => {
+          // Fallback - try different endpoint
+          fetch('/api/lab-management/instructors')
+            .then(r => r.json())
+            .then(data => {
+              if (data.instructors) {
+                setInstructorList(data.instructors.map((u: { id: string; name: string }) => ({
+                  id: u.id,
+                  name: u.name,
+                })));
+              }
+            })
+            .catch(() => { /* instructor list unavailable */ });
         });
-      }
     }
+  }, [status]);
 
-    if (showOpenShifts || showMyShifts) {
-      for (const shift of shifts) {
-        if (shift.is_cancelled) continue;
-
-        const userSignup = shift.signups?.find(s => s.instructor_id === currentUser?.id);
-        const isMyShift = userSignup?.status === 'confirmed';
-        const isOpen = !shift.is_filled;
-
-        if ((showOpenShifts && isOpen) || (showMyShifts && isMyShift)) {
-          const descParts: string[] = [];
-          if (shift.department) descParts.push(`Department: ${shift.department}`);
-
-          events.push({
-            uid: `shift-${shift.id}@pmi-scheduler`,
-            title: `${shift.title}${shift.location ? ` - ${shift.location}` : ''}`,
-            description: descParts.join('\n'),
-            location: shift.location ?? undefined,
-            startDate: parseLocalDate(shift.date, shift.start_time, 8),
-            endDate: parseLocalDate(shift.date, shift.end_time, 17),
-          });
-        }
-      }
+  // Update URL params
+  useEffect(() => {
+    const params = new URLSearchParams();
+    params.set('view', viewMode);
+    params.set('date', toDateStr(currentDate));
+    if (presetView !== 'all') params.set('preset', presetView);
+    if (activePrograms.size < PROGRAMS.length) {
+      params.set('programs', Array.from(activePrograms).join(','));
     }
-
-    if (events.length === 0) {
-      toast.info('No visible events to export');
-      return;
+    if (activeEventTypes.size < EVENT_TYPES.length) {
+      params.set('types', Array.from(activeEventTypes).join(','));
     }
+    const newUrl = `/calendar?${params.toString()}`;
+    window.history.replaceState(null, '', newUrl);
+  }, [viewMode, currentDate, presetView, activePrograms, activeEventTypes]);
 
-    const year = currentMonth.getFullYear();
-    const month = String(currentMonth.getMonth() + 1).padStart(2, '0');
-    downloadICS(events, `pmi-calendar-${year}-${month}.ics`);
-    toast.success(`Exported ${events.length} event${events.length === 1 ? '' : 's'} to calendar`);
+  // Filter events client-side for event type filtering
+  const filteredEvents = useMemo(() => {
+    return events.filter(e => activeEventTypes.has(e.event_type));
+  }, [events, activeEventTypes]);
+
+  // Group events by date for list view
+  const eventsByDate = useMemo(() => {
+    const map = new Map<string, CalendarEvent[]>();
+    for (const e of filteredEvents) {
+      const existing = map.get(e.date) || [];
+      existing.push(e);
+      map.set(e.date, existing);
+    }
+    return map;
+  }, [filteredEvents]);
+
+  // Navigation
+  const goToday = () => setCurrentDate(new Date());
+  const goPrev = () => {
+    if (viewMode === 'week' || viewMode === 'list') {
+      setCurrentDate(prev => addDays(prev, -7));
+    } else {
+      setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+    }
+  };
+  const goNext = () => {
+    if (viewMode === 'week' || viewMode === 'list') {
+      setCurrentDate(prev => addDays(prev, 7));
+    } else {
+      setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+    }
   };
 
-  const calendarDays = generateCalendarDays();
-  const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  // Toggle helpers
+  const toggleProgram = (prog: string) => {
+    setActivePrograms(prev => {
+      const next = new Set(prev);
+      if (next.has(prog)) next.delete(prog);
+      else next.add(prog);
+      return next;
+    });
+  };
 
-  if (status === 'loading' || loading) {
+  const toggleAllPrograms = () => {
+    if (activePrograms.size === PROGRAMS.length) {
+      setActivePrograms(new Set());
+    } else {
+      setActivePrograms(new Set(PROGRAMS));
+    }
+  };
+
+  const toggleEventType = (type: string) => {
+    setActiveEventTypes(prev => {
+      const next = new Set(prev);
+      if (next.has(type)) next.delete(type);
+      else next.add(type);
+      return next;
+    });
+  };
+
+  // Print
+  const handlePrint = () => window.print();
+
+  // Click event handler
+  const handleEventClick = (event: CalendarEvent) => {
+    if (event.linked_url) {
+      router.push(event.linked_url);
+    }
+  };
+
+  // ── Week view days ─────────────────────────────────────────────────
+
+  const weekDays = useMemo(() => {
+    const monday = getMonday(currentDate);
+    return Array.from({ length: 5 }, (_, i) => addDays(monday, i));
+  }, [currentDate]);
+
+  // Header title
+  const headerTitle = useMemo(() => {
+    if (viewMode === 'month') {
+      return currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    }
+    const monday = getMonday(currentDate);
+    const friday = addDays(monday, 4);
+    const fmt = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return `${fmt(monday)} - ${fmt(friday)}, ${friday.getFullYear()}`;
+  }, [currentDate, viewMode]);
+
+  // Instructor hour total for week
+  const weeklyHours = useMemo(() => {
+    if (presetView !== 'instructor') return null;
+    let total = 0;
+    for (const e of filteredEvents) {
+      const start = timeToMinutes(e.start_time);
+      const end = timeToMinutes(e.end_time);
+      if (end > start) total += end - start;
+    }
+    return (total / 60).toFixed(1);
+  }, [filteredEvents, presetView]);
+
+  if (status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-700 dark:text-gray-300">Loading calendar...</p>
-        </div>
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
       </div>
     );
   }
 
-  if (!session || !currentUser) return null;
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-      {/* Header */}
-      <div className="bg-white shadow-sm dark:bg-gray-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <Breadcrumbs className="mb-1" />
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                Calendar
-                <HelpTooltip text="Coordinate clinical site scheduling across programs and cohorts. View lab days, open shifts, and coverage needs in one place." />
-              </h1>
-            </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <button
-                onClick={handleExportCalendar}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
-                title="Export visible events to calendar (.ics)"
-              >
-                <Download className="w-4 h-4" />
-                Export to Calendar
-              </button>
-              {isDirector && (
-                <>
-                  <Link
-                    href="/lab-management/schedule/new"
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
-                  >
-                    <Plus className="w-5 h-5" />
-                    Lab Day
-                  </Link>
-                  <Link
-                    href="/scheduling/shifts/new"
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 font-medium"
-                  >
-                    <Plus className="w-5 h-5" />
-                    Shift
-                  </Link>
-                </>
-              )}
-            </div>
-          </div>
+    <div className="max-w-[1600px] mx-auto px-4 py-6 print:px-0 print:py-0">
+      <Breadcrumbs className="mb-2" />
+
+      {/* ── Header ────────────────────────────────────────────────────── */}
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4 print:hidden">
+        <div className="flex items-center gap-3">
+          <CalendarIcon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Master Calendar</h1>
+        </div>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/scheduling/planner"
+            className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 flex items-center gap-1"
+          >
+            Edit in Planner <ArrowRight className="h-3 w-3" />
+          </Link>
+          <button
+            onClick={handlePrint}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600"
+          >
+            <Printer className="h-4 w-4" /> Print
+          </button>
         </div>
       </div>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Calendar Controls */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
-          <div className="p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-            {/* Month Navigation */}
-            <div className="flex items-center gap-4">
-              <button
-                onClick={goToPreviousMonth}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-              >
-                <ChevronLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-              </button>
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white min-w-[200px] text-center">
-                {currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-              </h2>
-              <button
-                onClick={goToNextMonth}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
-              >
-                <ChevronRight className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-              </button>
-              <button
-                onClick={goToToday}
-                className="px-3 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
-              >
-                Today
-              </button>
-            </div>
-
-            {/* Filter Chips */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <button
-                onClick={() => setShowLabDays(!showLabDays)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  showLabDays
-                    ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-700'
-                    : 'border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
-                }`}
-              >
-                <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                Lab Days
-              </button>
-              <button
-                onClick={() => setShowOpenShifts(!showOpenShifts)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  showOpenShifts
-                    ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border border-orange-300 dark:border-orange-700'
-                    : 'border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
-                }`}
-              >
-                <span className="w-2 h-2 rounded-full bg-orange-500"></span>
-                Open Shifts
-              </button>
-              <button
-                onClick={() => setShowMyShifts(!showMyShifts)}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  showMyShifts
-                    ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-300 dark:border-green-700'
-                    : 'border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
-                }`}
-              >
-                <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                My Shifts
-              </button>
-              <button
-                onClick={() => setShowGoogleEvents(!showGoogleEvents)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
-                  showGoogleEvents
-                    ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300'
-                    : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
-                }`}
-              >
-                <span className={`w-2 h-2 rounded-full ${showGoogleEvents ? 'bg-purple-500' : 'bg-gray-400'}`}></span>
-                My Google Calendar
-                {loadingGoogleEvents && <span className="ml-1 animate-spin">&#x27F3;</span>}
-              </button>
-            </div>
-          </div>
+      {/* ── View toggle & navigation ──────────────────────────────────── */}
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4 print:hidden">
+        {/* View mode buttons */}
+        <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-1">
+          <button
+            onClick={() => setViewMode('week')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors ${
+              viewMode === 'week'
+                ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm font-medium'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+            }`}
+          >
+            <Grid3X3 className="h-4 w-4" /> Week
+          </button>
+          <button
+            onClick={() => setViewMode('month')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors ${
+              viewMode === 'month'
+                ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm font-medium'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+            }`}
+          >
+            <LayoutGrid className="h-4 w-4" /> Month
+          </button>
+          <button
+            onClick={() => setViewMode('list')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-colors ${
+              viewMode === 'list'
+                ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm font-medium'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+            }`}
+          >
+            <List className="h-4 w-4" /> List
+          </button>
         </div>
 
-        {/* Calendar Grid */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden hidden md:block">
-          {/* Week day headers */}
-          <div className="grid grid-cols-7 bg-gray-50 dark:bg-gray-700 border-b dark:border-gray-600">
-            {weekDays.map(day => (
-              <div key={day} className="py-2 lg:py-3 text-center text-xs lg:text-sm font-medium text-gray-600 dark:text-gray-300">
-                <span className="lg:hidden">{day.charAt(0)}</span>
-                <span className="hidden lg:inline">{day}</span>
-              </div>
+        {/* Navigation */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={goPrev}
+            className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <button
+            onClick={goToday}
+            className="px-3 py-1.5 text-sm font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-md hover:bg-blue-100 dark:hover:bg-blue-900/50"
+          >
+            Today
+          </button>
+          <button
+            onClick={goNext}
+            className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+          <span className="text-lg font-semibold text-gray-900 dark:text-white ml-2">{headerTitle}</span>
+        </div>
+      </div>
+
+      {/* ── Filter bar ────────────────────────────────────────────────── */}
+      <div className="flex flex-wrap items-center gap-2 mb-4 print:hidden">
+        <Filter className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+
+        {/* All programs toggle */}
+        <button
+          onClick={toggleAllPrograms}
+          className={`px-2.5 py-1 text-xs font-medium rounded-full border transition-colors ${
+            activePrograms.size === PROGRAMS.length
+              ? 'bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-900 border-gray-800 dark:border-gray-200'
+              : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-600 hover:border-gray-400'
+          }`}
+        >
+          All PMI
+        </button>
+
+        {/* Program chips */}
+        {PROGRAMS.map(prog => (
+          <button
+            key={prog}
+            onClick={() => toggleProgram(prog)}
+            className={`px-2.5 py-1 text-xs font-medium rounded-full border transition-colors ${
+              activePrograms.has(prog)
+                ? 'text-white border-transparent'
+                : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-300 dark:border-gray-600 hover:border-gray-400'
+            }`}
+            style={activePrograms.has(prog) ? { backgroundColor: PROGRAM_COLORS[prog] } : undefined}
+          >
+            {PROGRAM_LABELS[prog]}
+          </button>
+        ))}
+
+        <span className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1" />
+
+        {/* Event type chips */}
+        {EVENT_TYPES.map(type => (
+          <button
+            key={type}
+            onClick={() => toggleEventType(type)}
+            className={`px-2.5 py-1 text-xs font-medium rounded-full border transition-colors ${
+              activeEventTypes.has(type)
+                ? 'bg-gray-700 dark:bg-gray-300 text-white dark:text-gray-900 border-gray-700 dark:border-gray-300'
+                : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-300 dark:border-gray-600 hover:border-gray-400'
+            }`}
+          >
+            {EVENT_TYPE_LABELS[type]}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Preset views ──────────────────────────────────────────────── */}
+      <div className="flex flex-wrap items-center gap-2 mb-4 print:hidden">
+        <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">View:</span>
+        <button
+          onClick={() => { setPresetView('all'); setSelectedInstructor(''); }}
+          className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+            presetView === 'all'
+              ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
+              : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+          }`}
+        >
+          All Programs
+        </button>
+        <button
+          onClick={() => setPresetView('instructor')}
+          className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+            presetView === 'instructor'
+              ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
+              : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+          }`}
+        >
+          By Instructor
+        </button>
+        <button
+          onClick={() => {
+            setPresetView('labs');
+            setActiveEventTypes(new Set(['lab']));
+          }}
+          className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+            presetView === 'labs'
+              ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
+              : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+          }`}
+        >
+          Labs Only
+        </button>
+
+        {/* Instructor selector */}
+        {presetView === 'instructor' && (
+          <select
+            value={selectedInstructor}
+            onChange={e => setSelectedInstructor(e.target.value)}
+            className="ml-2 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+          >
+            <option value="">Select instructor...</option>
+            {instructorList.map(inst => (
+              <option key={inst.id} value={inst.id}>{inst.name}</option>
             ))}
-          </div>
+          </select>
+        )}
 
-          {/* Calendar days */}
-          <div className="grid grid-cols-7">
-            {calendarDays.map((date, idx) => {
-              const dayLabDays = showLabDays ? getLabDaysForDate(date) : [];
-              const dayShifts = getVisibleShifts(getShiftsForDate(date));
-              const today = isToday(date);
-              const currentMo = isCurrentMonth(date);
+        {presetView === 'instructor' && weeklyHours !== null && (
+          <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">
+            <Clock className="h-3.5 w-3.5 inline mr-1" />
+            {weeklyHours} hrs this week
+          </span>
+        )}
+      </div>
 
-              // Filter shifts by active filters
-              const openShifts = dayShifts.filter(s => !s.is_filled && !s.is_cancelled);
-              const filledShifts = dayShifts.filter(s => s.is_filled && !s.is_cancelled);
-              const myShifts = dayShifts.filter(s => {
-                const userSignup = s.signups?.find(signup => signup.instructor_id === currentUser?.id);
-                return userSignup?.status === 'confirmed';
-              });
-
-              return (
-                <div
-                  key={idx}
-                  className={`min-h-[80px] lg:min-h-[120px] border-b border-r dark:border-gray-600 p-1 md:p-2 relative ${
-                    !currentMo ? 'bg-gray-50 dark:bg-gray-700' : ''
-                  } ${today ? 'bg-blue-50 dark:bg-blue-900/30' : ''}`}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className={`text-sm font-medium ${
-                      today
-                        ? 'text-blue-600 dark:text-blue-400'
-                        : currentMo
-                          ? 'text-gray-900 dark:text-white'
-                          : 'text-gray-400 dark:text-gray-500'
-                    }`}>
-                      {date.getDate()}
-                    </span>
-                  </div>
-
-                  {/* Events */}
-                  <div className="space-y-1">
-                    {/* Lab days */}
-                    {dayLabDays.map(labDay => (
-                      <Link
-                        key={labDay.id}
-                        href={`/lab-management/schedule/${labDay.id}`}
-                        className={`block px-1.5 py-1 text-xs rounded relative ${
-                          labDay.needs_coverage
-                            ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-800 dark:text-orange-300 hover:bg-orange-200 dark:hover:bg-orange-900/60 ring-1 ring-orange-300 dark:ring-orange-700'
-                            : 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/70'
-                        }`}
-                        title={labDay.needs_coverage
-                          ? `${labDay.cohort.program.abbreviation} G${labDay.cohort.cohort_number} — Needs ${labDay.coverage_needed} instructor${labDay.coverage_needed > 1 ? 's' : ''}`
-                          : (labDay.title || `${labDay.cohort.program.abbreviation} G${labDay.cohort.cohort_number}`)
-                        }
-                      >
-                        <div className="font-medium truncate flex items-center gap-1">
-                          {labDay.needs_coverage && (
-                            <span title="Needs coverage"><AlertCircle className="w-3 h-3 text-orange-500 flex-shrink-0" /></span>
-                          )}
-                          {labDay.cohort.program.abbreviation} G{labDay.cohort.cohort_number}
-                        </div>
-                        {labDay.title && (
-                          <div className={`text-[10px] truncate ${labDay.needs_coverage ? 'text-orange-600 dark:text-orange-400' : 'text-blue-600 dark:text-blue-400'}`}>
-                            {labDay.title}
-                          </div>
-                        )}
-                        {labDay.needs_coverage && (
-                          <div className="text-[10px] text-orange-600 dark:text-orange-400 font-medium">
-                            Needs {labDay.coverage_needed} instructor{labDay.coverage_needed > 1 ? 's' : ''}
-                          </div>
-                        )}
-                      </Link>
-                    ))}
-
-                    {/* Open shifts */}
-                    {showOpenShifts && openShifts.map(shift => (
-                      <Link
-                        key={shift.id}
-                        href={`/scheduling/shifts?shiftId=${shift.id}`}
-                        className="block px-1.5 py-1 text-xs rounded bg-orange-100 dark:bg-orange-900/50 text-orange-800 dark:text-orange-300 hover:bg-orange-200 dark:hover:bg-orange-900/70"
-                        title={shift.title}
-                      >
-                        <div className="font-medium truncate flex items-center gap-1">
-                          {shift.title}
-                        </div>
-                        <div className="text-[10px] text-orange-600 dark:text-orange-400 truncate">
-                          {shift.confirmed_count}/{shift.max_instructors || '∞'} filled
-                        </div>
-                      </Link>
-                    ))}
-
-                    {/* Filled/My shifts */}
-                    {showMyShifts && myShifts.length > 0 && myShifts.map(shift => (
-                      <Link
-                        key={shift.id}
-                        href={`/scheduling/shifts?shiftId=${shift.id}`}
-                        className="block px-1.5 py-1 text-xs rounded bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/70"
-                        title={shift.title}
-                      >
-                        <div className="font-medium truncate flex items-center gap-1">
-                          <CheckCircle className="w-3 h-3 flex-shrink-0" />
-                          {shift.title}
-                        </div>
-                      </Link>
-                    ))}
-
-                    {/* Other filled shifts (for directors) */}
-                    {isDirector && filledShifts.filter(s => !myShifts.find(ms => ms.id === s.id)).map(shift => (
-                      <Link
-                        key={shift.id}
-                        href={`/scheduling/shifts?shiftId=${shift.id}`}
-                        className="block px-1.5 py-1 text-xs rounded bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/70"
-                        title={shift.title}
-                      >
-                        <div className="font-medium truncate">
-                          {shift.title}
-                        </div>
-                        <div className="text-[10px] text-green-600 dark:text-green-400 truncate">
-                          Filled
-                        </div>
-                      </Link>
-                    ))}
-
-                    {/* Cancelled shifts (directors only) */}
-                    {isDirector && dayShifts.filter(s => s.is_cancelled).map(shift => (
-                      <div
-                        key={shift.id}
-                        className="px-1.5 py-1 text-xs rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 line-through"
-                        title={`${shift.title} (Cancelled)`}
-                      >
-                        <div className="font-medium truncate">
-                          {shift.title}
-                        </div>
-                      </div>
-                    ))}
-
-                    {/* Google Calendar events overlay */}
-                    {showGoogleEvents && getGoogleEventsForDate(date).map((event) => (
-                      <div
-                        key={`gcal-${event.id}`}
-                        className="block px-1.5 py-0.5 text-xs rounded bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 border border-dashed border-purple-300 dark:border-purple-700 opacity-80 mt-0.5"
-                        title={`${event.summary} (${event.calendarName})\nOnly you can see this`}
-                      >
-                        <div className="font-medium truncate">{event.summary}</div>
-                        {!event.allDay && event.start && (
-                          <div className="text-[10px] text-purple-500 dark:text-purple-400">
-                            {formatGoogleEventTime(event.start)}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+      {/* ── Calendar content ──────────────────────────────────────────── */}
+      {loading ? (
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
         </div>
+      ) : viewMode === 'week' ? (
+        <WeekView
+          days={weekDays}
+          events={filteredEvents}
+          onEventClick={handleEventClick}
+          onDayClick={(date) => {
+            setCurrentDate(date);
+            setViewMode('week');
+          }}
+        />
+      ) : viewMode === 'month' ? (
+        <MonthView
+          currentDate={currentDate}
+          events={filteredEvents}
+          onDayClick={(date) => {
+            setCurrentDate(date);
+            setViewMode('week');
+          }}
+          onEventClick={handleEventClick}
+        />
+      ) : (
+        <ListView
+          eventsByDate={eventsByDate}
+          onEventClick={handleEventClick}
+          presetView={presetView}
+        />
+      )}
 
-        {/* Mobile List View */}
-        <div className="md:hidden bg-white dark:bg-gray-800 rounded-lg shadow">
-          <div className="p-4 border-b dark:border-gray-600">
-            <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-              <CalendarIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-              Upcoming Events
-            </h3>
-          </div>
-          <div className="divide-y dark:divide-gray-600">
-            {(() => {
-              const now = new Date(new Date().toDateString());
-              const upcomingLabs = (showLabDays ? labDays : [])
-                .filter(ld => new Date(ld.date + 'T12:00:00') >= now)
-                .map(ld => ({ ...ld, _type: 'lab' as const }));
-              const upcomingShifts = shifts
-                .filter(s => !s.is_cancelled && new Date(s.date + 'T12:00:00') >= now)
-                .map(s => ({ ...s, _type: 'shift' as const }));
-              const combined = [...upcomingLabs, ...upcomingShifts]
-                .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-                .slice(0, 15);
-
-              if (combined.length === 0) {
-                return (
-                  <div className="p-8 text-center text-gray-500 dark:text-gray-400">
-                    <CalendarIcon className="w-12 h-12 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
-                    <p>No upcoming events</p>
-                  </div>
-                );
-              }
-
-              return combined.map(item => {
-                const itemDate = new Date(item.date + 'T12:00:00');
-                const isLab = item._type === 'lab';
-                const isItemToday = itemDate.toDateString() === new Date().toDateString();
-
-                return (
-                  <Link
-                    key={`${item._type}-${item.id}`}
-                    href={isLab ? `/lab-management/schedule/${item.id}` : `/scheduling/shifts?shiftId=${item.id}`}
-                    className="p-4 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700"
-                  >
-                    <div className={`text-center p-2 rounded-lg min-w-[50px] ${
-                      isItemToday ? 'bg-blue-100 dark:bg-blue-900/50' : 'bg-gray-100 dark:bg-gray-700'
-                    }`}>
-                      <div className={`text-xs font-medium ${
-                        isItemToday ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'
-                      }`}>
-                        {itemDate.toLocaleDateString('en-US', { weekday: 'short' })}
-                      </div>
-                      <div className={`text-lg font-bold ${
-                        isItemToday ? 'text-blue-700 dark:text-blue-300' : 'text-gray-900 dark:text-white'
-                      }`}>
-                        {itemDate.getDate()}
-                      </div>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-gray-900 dark:text-white truncate flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full flex-shrink-0 ${isLab ? 'bg-blue-500' : 'bg-orange-500'}`} />
-                        {isLab
-                          ? `${(item as LabDay).cohort.program.abbreviation} G${(item as LabDay).cohort.cohort_number}`
-                          : (item as Shift).title
-                        }
-                      </div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">
-                        {isLab ? 'Lab Day' : `${(item as Shift).start_time || ''} - ${(item as Shift).end_time || ''}`}
-                        {isLab && (item as LabDay).needs_coverage && (
-                          <span className="ml-2 text-orange-600 dark:text-orange-400">Needs coverage</span>
-                        )}
-                      </div>
-                    </div>
-                    {isItemToday && (
-                      <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-xs font-medium rounded flex-shrink-0">
-                        Today
-                      </span>
-                    )}
-                  </Link>
-                );
-              });
-            })()}
-          </div>
+      {filteredEvents.length === 0 && !loading && (
+        <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+          <CalendarIcon className="h-12 w-12 mx-auto mb-3 opacity-30" />
+          <p className="text-lg font-medium">No events found</p>
+          <p className="text-sm mt-1">Try adjusting your filters or date range</p>
         </div>
-
-        {/* Legend */}
-        <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Legend</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-4 h-4 rounded bg-blue-500"></div>
-              <div className="text-sm text-gray-700 dark:text-gray-300">
-                <div className="font-medium">Lab Days</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">Scheduled lab sessions with cohorts</div>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="w-4 h-4 rounded bg-orange-500"></div>
-              <div className="text-sm text-gray-700 dark:text-gray-300">
-                <div className="font-medium">Open Shifts</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">Shifts needing instructors</div>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="w-4 h-4 rounded bg-green-500"></div>
-              <div className="text-sm text-gray-700 dark:text-gray-300">
-                <div className="font-medium">Confirmed Shifts</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">Your confirmed assignments</div>
-              </div>
-            </div>
-          </div>
-          {showGoogleEvents && (
-            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mt-3">
-              <div className="w-4 h-3 rounded bg-purple-100 dark:bg-purple-900/30 border border-dashed border-purple-400" />
-              <span>Google Calendar <span className="text-xs text-gray-400">(only visible to you)</span></span>
-            </div>
-          )}
-          {!isDirector && (
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-3 italic">
-              Directors see all shifts. Instructors see open shifts and their own confirmed shifts.
-            </p>
-          )}
-        </div>
-      </main>
+      )}
     </div>
+  );
+}
+
+// ── Week View ────────────────────────────────────────────────────────
+
+function WeekView({
+  days,
+  events,
+  onEventClick,
+}: {
+  days: Date[];
+  events: CalendarEvent[];
+  onEventClick: (e: CalendarEvent) => void;
+  onDayClick: (date: Date) => void;
+}) {
+  const HOUR_START = 6;
+  const HOUR_END = 21;
+  const HOUR_HEIGHT = 60; // px per hour
+  const hours = Array.from({ length: HOUR_END - HOUR_START }, (_, i) => HOUR_START + i);
+
+  // Group events by day
+  const eventsByDay = useMemo(() => {
+    const map = new Map<string, CalendarEvent[]>();
+    for (const d of days) {
+      map.set(toDateStr(d), []);
+    }
+    for (const e of events) {
+      const dayEvents = map.get(e.date);
+      if (dayEvents) dayEvents.push(e);
+    }
+    return map;
+  }, [days, events]);
+
+  const today = toDateStr(new Date());
+
+  return (
+    <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-900 print:border-gray-400">
+      {/* Day headers */}
+      <div className="grid grid-cols-[60px_repeat(5,1fr)] border-b border-gray-200 dark:border-gray-700">
+        <div className="p-2 text-xs text-gray-500 dark:text-gray-400 border-r border-gray-200 dark:border-gray-700" />
+        {days.map(d => {
+          const dateStr = toDateStr(d);
+          const isToday = dateStr === today;
+          return (
+            <div
+              key={dateStr}
+              className={`p-2 text-center border-r last:border-r-0 border-gray-200 dark:border-gray-700 ${
+                isToday ? 'bg-blue-50 dark:bg-blue-900/20' : ''
+              }`}
+            >
+              <div className="text-xs text-gray-500 dark:text-gray-400">
+                {d.toLocaleDateString('en-US', { weekday: 'short' })}
+              </div>
+              <div className={`text-lg font-semibold ${
+                isToday ? 'text-blue-600 dark:text-blue-400' : 'text-gray-900 dark:text-white'
+              }`}>
+                {d.getDate()}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Time grid */}
+      <div className="relative grid grid-cols-[60px_repeat(5,1fr)]" style={{ height: `${(HOUR_END - HOUR_START) * HOUR_HEIGHT}px` }}>
+        {/* Hour labels */}
+        <div className="border-r border-gray-200 dark:border-gray-700">
+          {hours.map(h => (
+            <div
+              key={h}
+              className="absolute left-0 w-[60px] text-right pr-2 text-xs text-gray-400 dark:text-gray-500 -translate-y-1/2"
+              style={{ top: `${(h - HOUR_START) * HOUR_HEIGHT}px` }}
+            >
+              {h === 0 ? '12 AM' : h < 12 ? `${h} AM` : h === 12 ? '12 PM' : `${h - 12} PM`}
+            </div>
+          ))}
+        </div>
+
+        {/* Day columns */}
+        {days.map((d, dayIdx) => {
+          const dateStr = toDateStr(d);
+          const dayEvents = eventsByDay.get(dateStr) || [];
+          const isToday = dateStr === today;
+
+          return (
+            <div
+              key={dateStr}
+              className={`relative border-r last:border-r-0 border-gray-200 dark:border-gray-700 ${
+                isToday ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''
+              }`}
+            >
+              {/* Hour lines */}
+              {hours.map(h => (
+                <div
+                  key={h}
+                  className="absolute left-0 right-0 border-t border-gray-100 dark:border-gray-800"
+                  style={{ top: `${(h - HOUR_START) * HOUR_HEIGHT}px` }}
+                />
+              ))}
+
+              {/* Events */}
+              {dayEvents.map(event => {
+                const startMin = timeToMinutes(event.start_time);
+                const endMin = timeToMinutes(event.end_time);
+                const top = ((startMin / 60) - HOUR_START) * HOUR_HEIGHT;
+                const height = Math.max(((endMin - startMin) / 60) * HOUR_HEIGHT, 20);
+
+                return (
+                  <button
+                    key={event.id}
+                    onClick={() => onEventClick(event)}
+                    className="absolute left-0.5 right-0.5 rounded-md px-1.5 py-0.5 text-left overflow-hidden cursor-pointer hover:opacity-90 transition-opacity shadow-sm z-10"
+                    style={{
+                      top: `${top}px`,
+                      height: `${height}px`,
+                      backgroundColor: event.color + '20',
+                      borderLeft: `3px solid ${event.color}`,
+                    }}
+                    title={`${event.title}\n${formatTime(event.start_time)} - ${formatTime(event.end_time)}${event.room ? `\n${event.room}` : ''}${event.instructor_names?.length ? `\n${event.instructor_names.join(', ')}` : ''}`}
+                  >
+                    <div className="text-[10px] font-semibold truncate" style={{ color: event.color }}>
+                      {event.title}
+                    </div>
+                    {height > 30 && (
+                      <div className="text-[9px] text-gray-600 dark:text-gray-400 truncate">
+                        {formatTime(event.start_time)} - {formatTime(event.end_time)}
+                      </div>
+                    )}
+                    {height > 45 && event.room && (
+                      <div className="text-[9px] text-gray-500 dark:text-gray-500 truncate">
+                        {event.room}
+                      </div>
+                    )}
+                    {height > 55 && event.cohort_number && (
+                      <div className="text-[9px] text-gray-500 dark:text-gray-500 truncate">
+                        C{event.cohort_number}
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Month View ───────────────────────────────────────────────────────
+
+function MonthView({
+  currentDate,
+  events,
+  onDayClick,
+  onEventClick,
+}: {
+  currentDate: Date;
+  events: CalendarEvent[];
+  onDayClick: (date: Date) => void;
+  onEventClick: (e: CalendarEvent) => void;
+}) {
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+  const days = getMonthDays(year, month);
+  const today = toDateStr(new Date());
+
+  const eventsByDate = useMemo(() => {
+    const map = new Map<string, CalendarEvent[]>();
+    for (const e of events) {
+      const existing = map.get(e.date) || [];
+      existing.push(e);
+      map.set(e.date, existing);
+    }
+    return map;
+  }, [events]);
+
+  const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  return (
+    <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-900">
+      {/* Weekday headers */}
+      <div className="grid grid-cols-7 border-b border-gray-200 dark:border-gray-700">
+        {weekdays.map(wd => (
+          <div key={wd} className="p-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 border-r last:border-r-0 border-gray-200 dark:border-gray-700">
+            {wd}
+          </div>
+        ))}
+      </div>
+
+      {/* Day cells */}
+      <div className="grid grid-cols-7">
+        {days.map((d, i) => {
+          const dateStr = toDateStr(d);
+          const isCurrentMonth = d.getMonth() === month;
+          const isToday = dateStr === today;
+          const dayEvents = eventsByDate.get(dateStr) || [];
+
+          return (
+            <button
+              key={i}
+              onClick={() => onDayClick(d)}
+              className={`min-h-[80px] md:min-h-[100px] p-1 border-b border-r border-gray-200 dark:border-gray-700 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-800 ${
+                !isCurrentMonth ? 'bg-gray-50 dark:bg-gray-900/50' : ''
+              } ${isToday ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
+            >
+              <div className={`text-xs font-medium mb-0.5 ${
+                isToday ? 'text-blue-600 dark:text-blue-400 font-bold' :
+                isCurrentMonth ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-600'
+              }`}>
+                {d.getDate()}
+              </div>
+              {/* Event dots / chips */}
+              <div className="space-y-0.5">
+                {dayEvents.slice(0, 3).map(e => (
+                  <div
+                    key={e.id}
+                    className="text-[9px] md:text-[10px] truncate rounded px-1 py-px leading-tight"
+                    style={{ backgroundColor: e.color + '25', color: e.color }}
+                    onClick={(ev) => { ev.stopPropagation(); onEventClick(e); }}
+                  >
+                    {e.title}
+                  </div>
+                ))}
+                {dayEvents.length > 3 && (
+                  <div className="text-[9px] text-gray-500 dark:text-gray-400 px-1">
+                    +{dayEvents.length - 3} more
+                  </div>
+                )}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── List View ────────────────────────────────────────────────────────
+
+function ListView({
+  eventsByDate,
+  onEventClick,
+  presetView,
+}: {
+  eventsByDate: Map<string, CalendarEvent[]>;
+  onEventClick: (e: CalendarEvent) => void;
+  presetView: PresetView;
+}) {
+  const sortedDates = Array.from(eventsByDate.keys()).sort();
+  const today = toDateStr(new Date());
+
+  return (
+    <div className="space-y-4">
+      {sortedDates.map(dateStr => {
+        const dayEvents = eventsByDate.get(dateStr) || [];
+        if (dayEvents.length === 0) return null;
+        const isToday = dateStr === today;
+
+        return (
+          <div key={dateStr}>
+            <div className={`sticky top-0 z-10 px-3 py-1.5 text-sm font-semibold rounded-md mb-2 ${
+              isToday
+                ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200'
+                : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
+            }`}>
+              {formatDate(dateStr)}
+              {isToday && <span className="ml-2 text-xs font-normal">(Today)</span>}
+            </div>
+
+            <div className="space-y-1.5">
+              {dayEvents.map(event => (
+                <button
+                  key={event.id}
+                  onClick={() => onEventClick(event)}
+                  className="w-full flex items-start gap-3 px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left"
+                >
+                  {/* Color indicator */}
+                  <div
+                    className="w-1 self-stretch rounded-full flex-shrink-0 mt-0.5"
+                    style={{ backgroundColor: event.color }}
+                  />
+
+                  {/* Time */}
+                  <div className="w-[100px] flex-shrink-0">
+                    <div className="text-sm font-medium text-gray-900 dark:text-white">
+                      {formatTime(event.start_time)}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      {formatTime(event.end_time)}
+                    </div>
+                  </div>
+
+                  {/* Details */}
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                      {event.title}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                      {event.program && event.program !== 'other' && (
+                        <span
+                          className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                          style={{ backgroundColor: PROGRAM_COLORS[event.program] + '20', color: PROGRAM_COLORS[event.program] }}
+                        >
+                          {PROGRAM_LABELS[event.program] || event.program}
+                        </span>
+                      )}
+                      {event.cohort_number && (
+                        <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                          C{event.cohort_number}
+                        </span>
+                      )}
+                      {event.room && (
+                        <span className="text-[10px] text-gray-500 dark:text-gray-400 flex items-center gap-0.5">
+                          <MapPin className="h-2.5 w-2.5" /> {event.room}
+                        </span>
+                      )}
+                      {event.instructor_names && event.instructor_names.length > 0 && (
+                        <span className="text-[10px] text-gray-500 dark:text-gray-400 flex items-center gap-0.5">
+                          <Users className="h-2.5 w-2.5" /> {event.instructor_names.join(', ')}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Labs Only: extra info */}
+                  {presetView === 'labs' && event.source === 'lab_day' && (
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {event.metadata?.station_count !== undefined && (
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          {String(event.metadata.station_count)} stations
+                        </span>
+                      )}
+                      <Link
+                        href={event.linked_url || '#'}
+                        onClick={e => e.stopPropagation()}
+                        className="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-0.5"
+                      >
+                        <Eye className="h-3 w-3" /> View
+                      </Link>
+                    </div>
+                  )}
+
+                  {/* Link arrow */}
+                  {event.linked_url && presetView !== 'labs' && (
+                    <ChevronRight className="h-4 w-4 text-gray-400 dark:text-gray-500 flex-shrink-0 mt-1" />
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Page export with Suspense ────────────────────────────────────────
+
+export default function CalendarPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+      </div>
+    }>
+      <CalendarContent />
+    </Suspense>
   );
 }
