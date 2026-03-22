@@ -24,6 +24,7 @@ import {
   ClipboardList,
 } from 'lucide-react';
 import LabHeader from '@/components/LabHeader';
+import Breadcrumbs from '@/components/Breadcrumbs';
 import { hasMinRole } from '@/lib/permissions';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -370,6 +371,7 @@ export default function MentorshipPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+      <Breadcrumbs className="mb-2" />
       <LabHeader
         title="Student Mentorship"
         breadcrumbs={[{ label: 'Mentorship' }]}
