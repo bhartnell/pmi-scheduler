@@ -18,8 +18,12 @@ import {
   MapPin,
   Eye,
   ArrowRight,
+  AlertTriangle,
+  CalendarSearch,
 } from 'lucide-react';
 import Breadcrumbs from '@/components/Breadcrumbs';
+import ConflictPanel from '@/components/calendar/ConflictPanel';
+import SlotFinderPanel from '@/components/calendar/SlotFinderPanel';
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -210,6 +214,10 @@ function CalendarContent() {
   const [activeEventTypes, setActiveEventTypes] = useState<Set<string>>(
     new Set(EVENT_TYPES)
   );
+  const [conflictPanelOpen, setConflictPanelOpen] = useState(false);
+  const [slotFinderOpen, setSlotFinderOpen] = useState(false);
+  const [inlineConflictCount, setInlineConflictCount] = useState(0);
+  const [conflictEventIds, setConflictEventIds] = useState<Set<string>>(new Set());
 
   // Initialize from URL params
   useEffect(() => {
@@ -375,6 +383,56 @@ function CalendarContent() {
     window.history.replaceState(null, '', newUrl);
   }, [viewMode, currentDate, presetView, activePrograms, activeEventTypes]);
 
+  // Inline conflict detection: check instructor + room conflicts on current events
+  useEffect(() => {
+    if (events.length === 0) {
+      setInlineConflictCount(0);
+      setConflictEventIds(new Set());
+      return;
+    }
+
+    // Group by date and check for overlaps
+    const byDate = new Map<string, CalendarEvent[]>();
+    for (const e of events) {
+      if (!byDate.has(e.date)) byDate.set(e.date, []);
+      byDate.get(e.date)!.push(e);
+    }
+
+    const ids = new Set<string>();
+    let count = 0;
+
+    for (const [, dayEvents] of byDate) {
+      for (let i = 0; i < dayEvents.length; i++) {
+        for (let j = i + 1; j < dayEvents.length; j++) {
+          const a = dayEvents[i];
+          const b = dayEvents[j];
+          // Check time overlap
+          if (!(a.start_time < b.end_time && b.start_time < a.end_time)) continue;
+
+          // Instructor conflict
+          const sharedInstructors = (a.instructor_names || []).filter(n =>
+            (b.instructor_names || []).includes(n)
+          );
+          if (sharedInstructors.length > 0) {
+            ids.add(a.id);
+            ids.add(b.id);
+            count++;
+          }
+
+          // Room conflict
+          if (a.room && b.room && a.room === b.room) {
+            ids.add(a.id);
+            ids.add(b.id);
+            count++;
+          }
+        }
+      }
+    }
+
+    setInlineConflictCount(count);
+    setConflictEventIds(ids);
+  }, [events]);
+
   // Filter events client-side for event type filtering
   const filteredEvents = useMemo(() => {
     return events.filter(e => activeEventTypes.has(e.event_type));
@@ -494,6 +552,28 @@ function CalendarContent() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Master Calendar</h1>
         </div>
         <div className="flex items-center gap-2">
+          {/* Conflict badge */}
+          {inlineConflictCount > 0 && (
+            <button
+              onClick={() => setConflictPanelOpen(true)}
+              className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 rounded-md hover:bg-red-200 dark:hover:bg-red-900/50"
+            >
+              <AlertTriangle className="h-3.5 w-3.5" />
+              {inlineConflictCount} conflict{inlineConflictCount !== 1 ? 's' : ''}
+            </button>
+          )}
+          <button
+            onClick={() => setConflictPanelOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-md hover:bg-amber-100 dark:hover:bg-amber-900/50"
+          >
+            <AlertTriangle className="h-4 w-4" /> Find Conflicts
+          </button>
+          <button
+            onClick={() => setSlotFinderOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-md hover:bg-blue-100 dark:hover:bg-blue-900/50"
+          >
+            <CalendarSearch className="h-4 w-4" /> Find Slot
+          </button>
           <Link
             href="/scheduling/planner"
             className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 flex items-center gap-1"
@@ -692,6 +772,7 @@ function CalendarContent() {
             setCurrentDate(date);
             setViewMode('week');
           }}
+          conflictEventIds={conflictEventIds}
         />
       ) : viewMode === 'month' ? (
         <MonthView
@@ -718,6 +799,24 @@ function CalendarContent() {
           <p className="text-sm mt-1">Try adjusting your filters or date range</p>
         </div>
       )}
+
+      {/* Slide-out panels */}
+      <ConflictPanel
+        open={conflictPanelOpen}
+        onClose={() => setConflictPanelOpen(false)}
+        dateRange={dateRange}
+        onViewOnCalendar={(date) => {
+          setConflictPanelOpen(false);
+          setCurrentDate(new Date(date + 'T12:00:00'));
+          setViewMode('week');
+        }}
+      />
+      <SlotFinderPanel
+        open={slotFinderOpen}
+        onClose={() => setSlotFinderOpen(false)}
+        dateRange={dateRange}
+        instructorList={instructorList}
+      />
     </div>
   );
 }
@@ -728,11 +827,13 @@ function WeekView({
   days,
   events,
   onEventClick,
+  conflictEventIds,
 }: {
   days: Date[];
   events: CalendarEvent[];
   onEventClick: (e: CalendarEvent) => void;
   onDayClick: (date: Date) => void;
+  conflictEventIds?: Set<string>;
 }) {
   const HOUR_START = 6;
   const HOUR_END = 21;
@@ -835,6 +936,7 @@ function WeekView({
                 const col = event._column;
                 const totalCols = event._totalColumns;
                 const isNarrow = totalCols > 1;
+                const hasConflict = conflictEventIds?.has(event.id) ?? false;
 
                 // Column-based positioning
                 const leftPct = (col / totalCols) * 100;
@@ -854,14 +956,21 @@ function WeekView({
                   >
                     <button
                       onClick={() => onEventClick(event)}
-                      className="w-full h-full rounded-md px-1.5 py-0.5 text-left overflow-hidden cursor-pointer hover:opacity-90 transition-opacity shadow-sm"
+                      className={`w-full h-full rounded-md px-1.5 py-0.5 text-left overflow-hidden cursor-pointer hover:opacity-90 transition-opacity shadow-sm ${
+                        hasConflict ? 'ring-2 ring-red-500 ring-offset-1' : ''
+                      }`}
                       style={{
                         backgroundColor: event.color + '20',
-                        borderLeft: `3px solid ${event.color}`,
+                        borderLeft: `3px solid ${hasConflict ? '#EF4444' : event.color}`,
                       }}
                     >
-                      <div className="text-[10px] font-semibold truncate" style={{ color: event.color }}>
-                        {event.title}
+                      <div className="flex items-center gap-0.5">
+                        {hasConflict && (
+                          <AlertTriangle className="h-3 w-3 text-red-500 flex-shrink-0" />
+                        )}
+                        <span className="text-[10px] font-semibold truncate" style={{ color: event.color }}>
+                          {event.title}
+                        </span>
                       </div>
                       {height > 30 && (
                         <div className="text-[9px] text-gray-600 dark:text-gray-400 truncate">
