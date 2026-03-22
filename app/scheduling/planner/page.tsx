@@ -2734,6 +2734,10 @@ function SemesterPlannerPage() {
               </h1>
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 Date-based calendar &middot; PMI Program Scheduling
+                <span className="mx-1">&middot;</span>
+                <a href="/calendar" className="text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">
+                  View in Calendar &rarr;
+                </a>
               </p>
             </div>
           </div>
