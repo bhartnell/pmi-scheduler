@@ -13,7 +13,7 @@ async function getDefaultOpenEventId(supabase: ReturnType<typeof getSupabaseAdmi
   return data?.id || null;
 }
 
-// POST - Public: register as an OSCE observer (backward compat — defaults to most recent open event)
+// PUBLIC: No auth required — public OSCE observer registration (backward compat — defaults to most recent open event)
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();

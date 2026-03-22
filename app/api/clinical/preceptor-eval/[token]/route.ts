@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
+// PUBLIC: No auth required — token-based preceptor evaluation form for external preceptors
+
 // Auto-flag threshold: any individual rating at or below this triggers a flag
 const AUTO_FLAG_THRESHOLD = 2;
 

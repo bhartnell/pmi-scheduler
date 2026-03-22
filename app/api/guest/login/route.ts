@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { rateLimit } from '@/lib/rate-limit';
 
+// PUBLIC: No auth required — guest login endpoint for external observers/visitors
 export async function POST(request: NextRequest) {
   // Rate limit: 10 guest login attempts per minute per IP
   const ip = request.headers.get('x-forwarded-for') || 'unknown';

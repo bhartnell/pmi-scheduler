@@ -13,7 +13,7 @@ async function getDefaultEventId(supabase: ReturnType<typeof getSupabaseAdmin>):
   return data?.id || null;
 }
 
-// GET - Public: list all time blocks with observer counts (backward compat — defaults to most recent event)
+// PUBLIC: No auth required — list all time blocks with observer counts (backward compat — defaults to most recent event)
 export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseAdmin();
