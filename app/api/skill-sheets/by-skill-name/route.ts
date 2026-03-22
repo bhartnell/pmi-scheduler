@@ -83,7 +83,8 @@ export async function GET(request: NextRequest) {
     let exactQuery = supabase
       .from('skill_sheets')
       .select('id')
-      .eq('skill_name', name);
+      .eq('skill_name', name)
+      .eq('is_active', true);
 
     if (program) {
       exactQuery = exactQuery.or(`program.eq.${program},program.eq.all`);
@@ -132,7 +133,8 @@ export async function GET(request: NextRequest) {
     let fuzzyQuery = supabase
       .from('skill_sheets')
       .select('id')
-      .ilike('skill_name', `%${name}%`);
+      .ilike('skill_name', `%${name}%`)
+      .eq('is_active', true);
 
     if (program) {
       fuzzyQuery = fuzzyQuery.or(`program.eq.${program},program.eq.all`);
@@ -180,7 +182,8 @@ export async function GET(request: NextRequest) {
       let canonicalSheetQuery = supabase
         .from('skill_sheets')
         .select('id')
-        .in('canonical_skill_id', canonicalIds);
+        .in('canonical_skill_id', canonicalIds)
+        .eq('is_active', true);
 
       if (program) {
         canonicalSheetQuery = canonicalSheetQuery.or(`program.eq.${program},program.eq.all`);

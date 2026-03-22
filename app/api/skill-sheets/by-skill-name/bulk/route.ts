@@ -26,7 +26,8 @@ export async function POST(request: NextRequest) {
     let exactQuery = supabase
       .from('skill_sheets')
       .select('id, skill_name')
-      .in('skill_name', names);
+      .in('skill_name', names)
+      .eq('is_active', true);
 
     if (program) {
       exactQuery = exactQuery.or(`program.eq.${program},program.eq.all`);
@@ -85,7 +86,8 @@ export async function POST(request: NextRequest) {
       let fuzzyQuery = supabase
         .from('skill_sheets')
         .select('id, skill_name')
-        .or(fuzzyFilters);
+        .or(fuzzyFilters)
+        .eq('is_active', true);
 
       if (program) {
         fuzzyQuery = fuzzyQuery.or(`program.eq.${program},program.eq.all`);
