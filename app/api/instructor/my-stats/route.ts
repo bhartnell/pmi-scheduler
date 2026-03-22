@@ -240,7 +240,7 @@ export async function GET(request: NextRequest) {
         .eq('instructor_email', currentUser.email);
 
       for (const ldId of recentLabDayIds) {
-        const forDay = (labRatings || []).filter((r: any) => r.lab_day_id === ldId);
+        const forDay = (labRatings || []).filter((r) => r.lab_day_id === ldId);
         if (forDay.length > 0) {
           const avg = forDay.reduce((s: number, r: any) => s + r.rating, 0) / forDay.length;
           ratingByDay[ldId as string] = Math.round(avg * 10) / 10;

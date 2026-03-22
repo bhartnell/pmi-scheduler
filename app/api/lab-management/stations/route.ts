@@ -42,11 +42,11 @@ export async function GET(request: NextRequest) {
     const { data: stations, error } = await query;
 
     if (error) {
-      console.error('Supabase GET error:', error.code, error.message, error.details, error.hint);
+      console.error('Supabase GET error:', (error as any).code, (error as Error).message, error.details, error.hint);
       return NextResponse.json({
         success: false,
-        error: `Database error: ${error.message}`,
-        code: error.code,
+        error: `Database error: ${(error as Error).message}`,
+        code: (error as any).code,
         hint: error.hint
       }, { status: 500 });
     }
@@ -56,8 +56,8 @@ export async function GET(request: NextRequest) {
 
     if (data.length > 0) {
       // Get unique scenario IDs and lab_day IDs
-      const scenarioIds = [...new Set(data.map((s: any) => s.scenario_id).filter(Boolean))];
-      const labDayIds = [...new Set(data.map((s: any) => s.lab_day_id).filter(Boolean))];
+      const scenarioIds = [...new Set(data.map((s) => s.scenario_id).filter(Boolean))];
+      const labDayIds = [...new Set(data.map((s) => s.lab_day_id).filter(Boolean))];
 
       // Fetch scenarios
       let scenariosMap: Record<string, any> = {};
@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
           .select('id, title, category, difficulty')
           .in('id', scenarioIds);
         if (scenarios) {
-          scenariosMap = Object.fromEntries(scenarios.map((s: any) => [s.id, s]));
+          scenariosMap = Object.fromEntries(scenarios.map((s) => [s.id, s]));
         }
       }
 
@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
 
         if (labDays) {
           // Get cohort IDs
-          const cohortIds = [...new Set(labDays.map((ld: any) => ld.cohort_id).filter(Boolean))];
+          const cohortIds = [...new Set(labDays.map((ld) => ld.cohort_id).filter(Boolean))];
 
           // Fetch cohorts with programs
           let cohortsMap: Record<string, any> = {};
@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
 
             if (cohorts) {
               // Get program IDs
-              const programIds = [...new Set(cohorts.map((c: any) => c.program_id).filter(Boolean))];
+              const programIds = [...new Set(cohorts.map((c) => c.program_id).filter(Boolean))];
 
               // Fetch programs
               let programsMap: Record<string, any> = {};
@@ -103,12 +103,12 @@ export async function GET(request: NextRequest) {
                   .select('id, abbreviation')
                   .in('id', programIds);
                 if (programs) {
-                  programsMap = Object.fromEntries(programs.map((p: any) => [p.id, p]));
+                  programsMap = Object.fromEntries(programs.map((p) => [p.id, p]));
                 }
               }
 
               // Build cohorts with programs
-              cohortsMap = Object.fromEntries(cohorts.map((c: any) => [
+              cohortsMap = Object.fromEntries(cohorts.map((c) => [
                 c.id,
                 {
                   id: c.id,
@@ -120,7 +120,7 @@ export async function GET(request: NextRequest) {
           }
 
           // Build lab_days with cohorts
-          labDaysMap = Object.fromEntries(labDays.map((ld: any) => [
+          labDaysMap = Object.fromEntries(labDays.map((ld) => [
             ld.id,
             {
               id: ld.id,
@@ -132,7 +132,7 @@ export async function GET(request: NextRequest) {
       }
 
       // Attach related data to stations
-      data = data.map((station: any) => ({
+      data = data.map((station) => ({
         ...station,
         scenario: station.scenario_id ? scenariosMap[station.scenario_id] || null : null,
         lab_day: station.lab_day_id ? labDaysMap[station.lab_day_id] || null : null
@@ -144,7 +144,7 @@ export async function GET(request: NextRequest) {
     if (upcoming && filteredData.length > 0) {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      filteredData = filteredData.filter((station: any) => {
+      filteredData = filteredData.filter((station) => {
         if (station.lab_day?.date) {
           // Parse date with T12:00:00 to avoid timezone issues
           const labDate = new Date(station.lab_day.date + 'T12:00:00');
@@ -154,7 +154,7 @@ export async function GET(request: NextRequest) {
         return false;
       });
 
-      filteredData.sort((a: any, b: any) => {
+      filteredData.sort((a, b) => {
         const dateA = new Date((a.lab_day?.date || '1970-01-01') + 'T12:00:00');
         const dateB = new Date((b.lab_day?.date || '1970-01-01') + 'T12:00:00');
         return dateA.getTime() - dateB.getTime();
@@ -162,7 +162,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (open) {
-      filteredData = filteredData.filter((station: any) =>
+      filteredData = filteredData.filter((station) =>
         !station.instructor_email || station.instructor_email.trim() === ''
       );
     }
@@ -219,11 +219,11 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error('Supabase POST error:', error.code, error.message, error.details, error.hint);
+      console.error('Supabase POST error:', (error as any).code, (error as Error).message, error.details, error.hint);
       return NextResponse.json({
         success: false,
-        error: `Database error: ${error.message}`,
-        code: error.code,
+        error: `Database error: ${(error as Error).message}`,
+        code: (error as any).code,
         hint: error.hint
       }, { status: 500 });
     }
@@ -242,7 +242,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, station });
   } catch (error) {
     console.error('Error creating station:', error);
-    const message = error instanceof Error ? error.message : 'Failed to create station';
+    const message = error instanceof Error ? (error as Error).message : 'Failed to create station';
     return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }

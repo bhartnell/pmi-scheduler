@@ -57,15 +57,15 @@ export async function GET(request: NextRequest) {
 
     // Apply cohort filter
     if (cohortId) {
-      items = items.filter((item: any) => item.lab_day?.cohort_id === cohortId);
+      items = items.filter((item) => item.lab_day?.cohort_id === cohortId);
     }
 
     // Apply date range filters
     if (startDate) {
-      items = items.filter((item: any) => item.lab_day?.date >= startDate);
+      items = items.filter((item) => item.lab_day?.date >= startDate);
     }
     if (endDate) {
-      items = items.filter((item: any) => item.lab_day?.date <= endDate);
+      items = items.filter((item) => item.lab_day?.date <= endDate);
     }
 
     return NextResponse.json({ success: true, items });

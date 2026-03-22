@@ -251,7 +251,7 @@ const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number
     labDays
       .filter(ld => ld.date === todayStr)
       .forEach(ld => {
-        ld.stations.forEach((s: any) => {
+        ld.stations.forEach((s) => {
           if (s.instructor_email) emails.add(s.instructor_email.toLowerCase());
         });
         ld.roles?.forEach((r: LabDayRole) => {
@@ -1163,7 +1163,7 @@ const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number
                       )}
                       {labDay.stations.length > 0 && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 mt-3">
-                          {labDay.stations.map((station: any) => (
+                          {labDay.stations.map((station) => (
                             <Link
                               key={station.id}
                               href={`/lab-management/grade/station/${station.id}`}
@@ -1331,15 +1331,15 @@ const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number
                     {dayLabDays.map(labDay => {
                       const stationCount = labDay.stations.length;
                       // Coverage: a station is "covered" if it has an instructor assigned
-                      const coveredCount = labDay.stations.filter((s: any) => s.instructor_name || s.instructor_email).length;
+                      const coveredCount = labDay.stations.filter((s) => s.instructor_name || s.instructor_email).length;
                       const needsCoverage = stationCount > 0 && coveredCount < stationCount;
                       const fullyStaffed = stationCount > 0 && coveredCount === stationCount;
 
                       // Collect unique station instructor names
                       const stationInstructors = Array.from(new Set(
                         labDay.stations
-                          .filter((s: any) => s.instructor_name)
-                          .map((s: any) => s.instructor_name as string)
+                          .filter((s) => s.instructor_name)
+                          .map((s) => s.instructor_name as string)
                       ));
 
                       // Lab day roles (Lab Lead, Roamer, Observer)
@@ -1691,8 +1691,8 @@ const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number
                           const roams = roles.filter(r => r.role === 'roamer');
                           const stnInstructors = Array.from(new Set(
                             labDay.stations
-                              .filter((s: any) => s.instructor_name)
-                              .map((s: any) => s.instructor_name as string)
+                              .filter((s) => s.instructor_name)
+                              .map((s) => s.instructor_name as string)
                           ));
                           // Include shift signups in the instructor summary
                           const shiftSignups = labDay.shift_signups;

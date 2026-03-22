@@ -210,8 +210,8 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
   // ============================================================
 
   // 5a. VITAL SIGNS
-  const hasVitals = linkedScenario?.initial_vitals && Object.values(linkedScenario.initial_vitals).some((v: any) => v);
-  const hasEkg = linkedScenario?.ekg_findings && Object.values(linkedScenario.ekg_findings).some((v: any) => v);
+  const hasVitals = linkedScenario?.initial_vitals && Object.values(linkedScenario.initial_vitals).some((v) => v);
+  const hasEkg = linkedScenario?.ekg_findings && Object.values(linkedScenario.ekg_findings).some((v) => v);
 
   if (hasVitals || hasEkg) {
     content += `
@@ -265,7 +265,7 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
   const sampleE = linkedScenario?.sample_history?.events_leading || '—';
 
   // 5d. OPQRST
-  const hasOpqrst = linkedScenario?.opqrst && Object.values(linkedScenario.opqrst).some((v: any) => v);
+  const hasOpqrst = linkedScenario?.opqrst && Object.values(linkedScenario.opqrst).some((v) => v);
 
   // Always show SAMPLE, optionally show OPQRST
   content += `
@@ -312,7 +312,7 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
 
   // 5e. SECONDARY SURVEY (Physical exam body regions)
   const hasSecondarySurvey = linkedScenario?.secondary_survey &&
-    Object.values(linkedScenario.secondary_survey).some((v: any) => v);
+    Object.values(linkedScenario.secondary_survey).some((v) => v);
 
   if (hasSecondarySurvey) {
     const survey = linkedScenario.secondary_survey;

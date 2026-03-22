@@ -140,15 +140,15 @@ export async function PATCH(
       console.error('Supabase error updating scenario:', error);
       return NextResponse.json({
         success: false,
-        error: `Database error: ${error.message}`,
+        error: `Database error: ${(error as Error).message}`,
         details: error.details || null
       }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, scenario: data });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error updating scenario:', error);
-    return NextResponse.json({ success: false, error: error.message || 'Failed to update scenario' }, { status: 500 });
+    return NextResponse.json({ success: false, error: (error as Error).message || 'Failed to update scenario' }, { status: 500 });
   }
 }
 

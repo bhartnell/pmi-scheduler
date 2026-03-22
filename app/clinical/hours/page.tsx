@@ -256,12 +256,12 @@ export default function ClinicalHoursTrackerPage() {
           setSelectedCohort(filtered[0].id);
         }
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching data:', error);
       if (isAuthError(error)) {
         setFetchError('You are not authorized to view this page. Please sign in.');
       } else {
-        setFetchError(error?.message || 'Failed to load data. Please refresh the page.');
+        setFetchError((error as Error)?.message || 'Failed to load data. Please refresh the page.');
       }
     }
     setLoading(false);
@@ -277,10 +277,10 @@ export default function ClinicalHoursTrackerPage() {
 
       if (studentsData.success) setStudents(studentsData.students || []);
       if (hoursDataRes.success) setHoursData(hoursDataRes.hours || []);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching cohort data:', error);
       if (!isAuthError(error)) {
-        toast.error(error?.message || 'Failed to load cohort data');
+        toast.error((error as Error)?.message || 'Failed to load cohort data');
       }
     }
   };

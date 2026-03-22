@@ -63,7 +63,7 @@ export async function POST(
     }
 
     // 3. Fetch station skills and custom skills for all original stations
-    const originalStationIds = (originalStations || []).map((s: any) => s.id);
+    const originalStationIds = (originalStations || []).map((s) => s.id);
 
     let allStationSkills: any[] = [];
     let allCustomSkills: any[] = [];
@@ -123,7 +123,7 @@ export async function POST(
 
         // Copy stations if any
         if (originalStations && originalStations.length > 0) {
-          const stationsToInsert = originalStations.map((s: any) => ({
+          const stationsToInsert = originalStations.map((s) => ({
             lab_day_id: newLabDay.id,
             station_number: s.station_number,
             station_type: s.station_type,
@@ -158,7 +158,7 @@ export async function POST(
             // Copy station_skills
             if (allStationSkills.length > 0) {
               const skillsToInsert = allStationSkills
-                .map((ss: any) => {
+                .map((ss) => {
                   const stationNumber = originalIdToNumber[ss.station_id];
                   const newStationId = stationNumberToNewId[stationNumber];
                   if (!newStationId) return null;
@@ -178,7 +178,7 @@ export async function POST(
             // Copy custom_skills
             if (allCustomSkills.length > 0) {
               const customSkillsToInsert = allCustomSkills
-                .map((cs: any) => {
+                .map((cs) => {
                   const stationNumber = originalIdToNumber[cs.station_id];
                   const newStationId = stationNumberToNewId[stationNumber];
                   if (!newStationId) return null;
@@ -198,9 +198,9 @@ export async function POST(
         }
 
         created.push(newLabDay.id);
-      } catch (err: any) {
+      } catch (err) {
         console.error(`Error duplicating to date ${new_date}:`, err);
-        failed.push({ date: new_date, error: err.message || 'Unknown error' });
+        failed.push({ date: new_date, error: (err as Error).message || 'Unknown error' });
       }
     }
 

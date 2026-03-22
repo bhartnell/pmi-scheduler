@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       // Table might not exist yet - return empty array
-      if (error.code === '42P01') {
+      if ((error as any).code === '42P01') {
         return NextResponse.json({ success: true, locations: [] });
       }
       throw error;
@@ -32,10 +32,10 @@ export async function GET(request: NextRequest) {
     const response = NextResponse.json({ success: true, locations: locations || [] });
     response.headers.set('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=1200');
     return response;
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching locations:', error);
     return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to fetch locations' },
+      { success: false, error: (error as Error)?.message || 'Failed to fetch locations' },
       { status: 500 }
     );
   }

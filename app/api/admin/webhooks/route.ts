@@ -36,7 +36,7 @@ export async function GET(_request: NextRequest) {
 
         const recent = logs ?? [];
         const totalDeliveries = recent.length;
-        const successCount = recent.filter((l: any) => l.success).length;
+        const successCount = recent.filter((l) => l.success).length;
         const lastDelivery = recent[0] ?? null;
 
         return {

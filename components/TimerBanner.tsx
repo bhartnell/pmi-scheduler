@@ -116,10 +116,10 @@ export default function TimerBanner({
         setConnectionError(data.error || 'API returned error');
         console.error('Timer API error:', data.error);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error fetching timer:', error);
       setIsConnected(false);
-      setConnectionError(error?.message || 'Network error');
+      setConnectionError((error as Error)?.message || 'Network error');
     }
   }, [labDayId]);
 

@@ -74,10 +74,10 @@ export async function GET() {
     });
     response.headers.set('Cache-Control', 'private, max-age=300, stale-while-revalidate=60');
     return response;
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching notification preferences:', error);
     return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to fetch preferences' },
+      { success: false, error: (error as Error)?.message || 'Failed to fetch preferences' },
       { status: 500 }
     );
   }
@@ -160,10 +160,10 @@ export async function PUT(request: NextRequest) {
         show_desktop_notifications: updatedSettings.show_desktop_notifications,
       },
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error updating notification preferences:', error);
     return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to update preferences' },
+      { success: false, error: (error as Error)?.message || 'Failed to update preferences' },
       { status: 500 }
     );
   }
@@ -204,10 +204,10 @@ export async function DELETE() {
       success: true,
       message: 'Notification preferences reset to defaults',
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error resetting notification preferences:', error);
     return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to reset preferences' },
+      { success: false, error: (error as Error)?.message || 'Failed to reset preferences' },
       { status: 500 }
     );
   }

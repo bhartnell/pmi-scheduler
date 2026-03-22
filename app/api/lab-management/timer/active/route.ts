@@ -159,11 +159,11 @@ export async function GET(request: NextRequest) {
       staleTimersStopped: staleTimerIds.length,
       extraTimersStopped: nonStaleTimers.length > 1 ? nonStaleTimers.length - 1 : 0
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching active timer:', error);
     return NextResponse.json({
       success: false,
-      error: error?.message || 'Failed to fetch active timer'
+      error: (error as Error)?.message || 'Failed to fetch active timer'
     }, { status: 500 });
   }
 }

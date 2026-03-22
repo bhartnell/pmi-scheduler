@@ -353,11 +353,11 @@ export async function POST(request: NextRequest) {
       success: true,
       ...results,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error importing feedback:', error);
     return NextResponse.json({
       success: false,
-      error: error?.message || 'Failed to import feedback',
+      error: (error as Error)?.message || 'Failed to import feedback',
     }, { status: 500 });
   }
 }

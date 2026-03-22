@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
     if (error) throw error;
 
     // Get team lead counts for all students
-    const studentIds = data.map((s: any) => s.id);
+    const studentIds = data.map((s) => s.id);
 
     if (studentIds.length > 0) {
       const { data: tlCounts } = await supabase
@@ -71,11 +71,11 @@ export async function GET(request: NextRequest) {
         .in('student_id', studentIds);
 
       const countMap: Record<string, number> = {};
-      tlCounts?.forEach((tl: any) => {
+      tlCounts?.forEach((tl) => {
         countMap[tl.student_id] = (countMap[tl.student_id] || 0) + 1;
       });
 
-      const studentsWithCounts = data.map((student: any) => ({
+      const studentsWithCounts = data.map((student) => ({
         ...student,
         team_lead_count: countMap[student.id] || 0
       }));

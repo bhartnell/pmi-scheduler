@@ -68,7 +68,7 @@ function renderEvaluationPage(evaluation: any, includePageBreak: boolean = false
     for (const step of phaseSteps) {
       stepNum++;
       const mark = stepMarks[String(step.step_number)];
-      const flagged = flaggedItems.find((f: any) => f.step_number === step.step_number);
+      const flagged = flaggedItems.find((f) => f.step_number === step.step_number);
       const statusSymbol = mark === 'pass' ? '&#10003;' : mark === 'fail' ? '&#10007;' : flagged?.status === 'fail' ? '&#10007;' : flagged?.status === 'caution' ? '&#9888;' : '&mdash;';
       const statusColor = mark === 'pass' ? '#10b981' : mark === 'fail' ? '#ef4444' : flagged?.status === 'caution' ? '#f59e0b' : '#9ca3af';
       stepRows += `<tr style="border-bottom: 1px solid #f3f4f6;"><td style="padding: 5px 10px; font-size: 11px; color: #6b7280; text-align: center; width: 30px;">${stepNum}</td><td style="padding: 5px 10px; font-size: 11px; color: #111827;">${escapeHtml(step.instruction)}${step.is_critical ? ' <span style="color: #ef4444; font-weight: 700; font-size: 9px;">[CRIT]</span>' : ''}</td><td style="padding: 5px 10px; font-size: 14px; text-align: center; width: 40px; color: ${statusColor}; font-weight: 700;">${statusSymbol}</td></tr>`;

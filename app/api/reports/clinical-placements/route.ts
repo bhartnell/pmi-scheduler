@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
 
     // Count rotations per site and unique students per site
     const siteStats: Record<string, { rotations: number; students: Set<string>; dates: string[] }> = {};
-    (rotations || []).forEach((r: any) => {
+    (rotations || []).forEach((r) => {
       if (!siteStats[r.site_id]) {
         siteStats[r.site_id] = { rotations: 0, students: new Set(), dates: [] };
       }
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
     let totalClinicalHours = 0;
     const uniqueStudentsWithHours = new Set<string>();
 
-    (clinicalHours || []).forEach((h: any) => {
+    (clinicalHours || []).forEach((h) => {
       const siteName = h.site_name || h.category || 'Unknown';
       hoursBySiteName[siteName] = (hoursBySiteName[siteName] || 0) + (h.hours || 0);
       totalClinicalHours += h.hours || 0;
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
     });
 
     // 4. Build site usage data
-    const siteUsage = siteList.map((site: any) => {
+    const siteUsage = siteList.map((site) => {
       const stats = siteStats[site.id] || { rotations: 0, students: new Set(), dates: [] };
       return {
         id: site.id,
@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
       .select('id, current_phase, status');
 
     const phaseCounts: Record<string, number> = {};
-    (internships || []).forEach((i: any) => {
+    (internships || []).forEach((i) => {
       const phase = i.current_phase || i.status || 'unknown';
       phaseCounts[phase] = (phaseCounts[phase] || 0) + 1;
     });

@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (tlLogs) {
-      tlLogs.forEach((log: any) => {
+      tlLogs.forEach((log) => {
         countMap[log.student_id].count++;
         const currentLastDate = countMap[log.student_id].lastDate;
         if (!currentLastDate || log.date > currentLastDate) {

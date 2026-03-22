@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
     // Filter by date range if needed
     let filteredStations = allStations || [];
     if (startDate || endDate) {
-      filteredStations = filteredStations.filter((s: any) => {
+      filteredStations = filteredStations.filter((s) => {
         const labDay = Array.isArray(s.lab_day) ? s.lab_day[0] : s.lab_day;
         const date = labDay?.date;
         if (!date) return false;
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
     }
 
     const stationsByLabDay: Record<string, number> = {};
-    filteredStations.forEach((s: any) => {
+    filteredStations.forEach((s) => {
       stationsByLabDay[s.lab_day_id] = (stationsByLabDay[s.lab_day_id] || 0) + 1;
     });
     const labDayIds = Object.keys(stationsByLabDay);
@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
       .not('scenario_id', 'is', null);
 
     const scenarioUsage: Record<string, { title: string; count: number }> = {};
-    (stationsWithScenarios || []).forEach((s: any) => {
+    (stationsWithScenarios || []).forEach((s) => {
       const scenario = Array.isArray(s.scenario) ? s.scenario[0] : s.scenario;
       if (!scenario) return;
       if (!scenarioUsage[scenario.id]) {
@@ -100,7 +100,7 @@ export async function GET(request: NextRequest) {
       .is('revoked_at', null);
 
     const totalSignoffs = signoffs?.length || 0;
-    const uniqueStudentsWithSignoffs = new Set((signoffs || []).map((s: any) => s.student_id)).size;
+    const uniqueStudentsWithSignoffs = new Set((signoffs || []).map((s) => s.student_id)).size;
 
     // Overall pass rate = unique signoffs / (total students * total skills) if we have data
     const skillPassRate =
@@ -131,7 +131,7 @@ export async function GET(request: NextRequest) {
       total_skills: totalSkills,
       total_signoffs: totalSignoffs,
       students_with_signoffs: uniqueStudentsWithSignoffs,
-      recent_labs: (recentLabs || []).map((lab: any) => ({
+      recent_labs: (recentLabs || []).map((lab) => ({
         id: lab.id,
         date: lab.date,
         title: lab.title,

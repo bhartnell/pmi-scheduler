@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
       }
 
       // Transform agencies to match clinical_sites structure
-      const agenciesAsSites = (agencies || []).map((agency: any) => ({
+      const agenciesAsSites = (agencies || []).map((agency) => ({
         id: `agency-${agency.id}`, // Prefix to distinguish from clinical sites
         name: agency.name,
         abbreviation: agency.abbreviation || agency.name.slice(0, 10),

@@ -26,7 +26,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
       .order('created_at', { ascending: true });
 
     if (error) {
-      if (error.message?.includes('does not exist')) {
+      if ((error as Error).message?.includes('does not exist')) {
         return NextResponse.json({ success: true, debriefs: [] });
       }
       throw error;
@@ -34,12 +34,12 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
 
     return NextResponse.json({ success: true, debriefs: data || [] });
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : String(error);
+    const msg = error instanceof Error ? (error as Error).message : String(error);
     if (msg.includes('does not exist')) {
       return NextResponse.json({ success: true, debriefs: [] });
     }
     console.error('Error fetching debriefs:', error);
-    return NextResponse.json({ success: false, error: (error instanceof Error ? error.message : (error as any)?.message) || 'Failed to fetch debriefs' }, { status: 500 });
+    return NextResponse.json({ success: false, error: (error instanceof Error ? (error as Error).message : (error instanceof Error ? (error as Error).message : String(error))) || 'Failed to fetch debriefs' }, { status: 500 });
   }
 }
 
@@ -113,12 +113,12 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
     return NextResponse.json({ success: true, debrief: data, updated: false });
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : String(error);
+    const msg = error instanceof Error ? (error as Error).message : String(error);
     if (msg.includes('does not exist')) {
       return NextResponse.json({ success: false, error: 'Debrief feature is not yet configured. Please run database migrations.' }, { status: 503 });
     }
     console.error('Error submitting debrief:', error);
-    return NextResponse.json({ success: false, error: (error instanceof Error ? error.message : (error as any)?.message) || 'Failed to submit debrief' }, { status: 500 });
+    return NextResponse.json({ success: false, error: (error instanceof Error ? (error as Error).message : (error instanceof Error ? (error as Error).message : String(error))) || 'Failed to submit debrief' }, { status: 500 });
   }
 }
 
@@ -182,11 +182,11 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
 
     return NextResponse.json({ success: true, debrief: data });
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : String(error);
+    const msg = error instanceof Error ? (error as Error).message : String(error);
     if (msg.includes('does not exist')) {
       return NextResponse.json({ success: false, error: 'Debrief feature is not yet configured. Please run database migrations.' }, { status: 503 });
     }
     console.error('Error updating debrief:', error);
-    return NextResponse.json({ success: false, error: (error instanceof Error ? error.message : (error as any)?.message) || 'Failed to update debrief' }, { status: 500 });
+    return NextResponse.json({ success: false, error: (error instanceof Error ? (error as Error).message : (error instanceof Error ? (error as Error).message : String(error))) || 'Failed to update debrief' }, { status: 500 });
   }
 }

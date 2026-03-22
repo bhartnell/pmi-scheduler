@@ -26,7 +26,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
       .order('created_at', { ascending: true });
 
     if (error) {
-      if (error.message?.includes('does not exist')) {
+      if ((error as Error).message?.includes('does not exist')) {
         return NextResponse.json({ success: true, items: [] });
       }
       throw error;
@@ -34,12 +34,12 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
 
     return NextResponse.json({ success: true, items: data || [] });
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : String(error);
+    const msg = error instanceof Error ? (error as Error).message : String(error);
     if (msg.includes('does not exist')) {
       return NextResponse.json({ success: true, items: [] });
     }
     console.error('Error fetching equipment items:', error);
-    return NextResponse.json({ success: false, error: (error instanceof Error ? error.message : (error as any)?.message) || 'Failed to fetch equipment items' }, { status: 500 });
+    return NextResponse.json({ success: false, error: (error instanceof Error ? (error as Error).message : (error instanceof Error ? (error as Error).message : String(error))) || 'Failed to fetch equipment items' }, { status: 500 });
   }
 }
 
@@ -83,12 +83,12 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
     return NextResponse.json({ success: true, item: data });
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : String(error);
+    const msg = error instanceof Error ? (error as Error).message : String(error);
     if (msg.includes('does not exist')) {
       return NextResponse.json({ success: false, error: 'Equipment tracking is not yet configured. Please run database migrations.' }, { status: 503 });
     }
     console.error('Error creating equipment item:', error);
-    return NextResponse.json({ success: false, error: (error instanceof Error ? error.message : (error as any)?.message) || 'Failed to create equipment item' }, { status: 500 });
+    return NextResponse.json({ success: false, error: (error instanceof Error ? (error as Error).message : (error instanceof Error ? (error as Error).message : String(error))) || 'Failed to create equipment item' }, { status: 500 });
   }
 }
 
@@ -147,12 +147,12 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
 
     return NextResponse.json({ success: true, item: data });
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : String(error);
+    const msg = error instanceof Error ? (error as Error).message : String(error);
     if (msg.includes('does not exist')) {
       return NextResponse.json({ success: false, error: 'Equipment tracking is not yet configured. Please run database migrations.' }, { status: 503 });
     }
     console.error('Error updating equipment item:', error);
-    return NextResponse.json({ success: false, error: (error instanceof Error ? error.message : (error as any)?.message) || 'Failed to update equipment item' }, { status: 500 });
+    return NextResponse.json({ success: false, error: (error instanceof Error ? (error as Error).message : (error instanceof Error ? (error as Error).message : String(error))) || 'Failed to update equipment item' }, { status: 500 });
   }
 }
 
@@ -188,11 +188,11 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
 
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : String(error);
+    const msg = error instanceof Error ? (error as Error).message : String(error);
     if (msg.includes('does not exist')) {
       return NextResponse.json({ success: false, error: 'Equipment tracking is not yet configured. Please run database migrations.' }, { status: 503 });
     }
     console.error('Error deleting equipment item:', error);
-    return NextResponse.json({ success: false, error: (error instanceof Error ? error.message : (error as any)?.message) || 'Failed to delete equipment item' }, { status: 500 });
+    return NextResponse.json({ success: false, error: (error instanceof Error ? (error as Error).message : (error instanceof Error ? (error as Error).message : String(error))) || 'Failed to delete equipment item' }, { status: 500 });
   }
 }

@@ -277,7 +277,7 @@ export async function POST(
     }>;
 
     const phaseScores = phases.map((phase) => {
-      const phaseResponses = responses.filter((r: any) => r.phase_id === phase.id);
+      const phaseResponses = responses.filter((r) => r.phase_id === phase.id);
       const phasePoints = phaseResponses.reduce(
         (sum: number, r: any) => sum + (r.points_earned || 0),
         0
@@ -298,7 +298,7 @@ export async function POST(
         max_points: phaseMaxPoints,
         time_seconds: phaseTime,
         questions: (phase.questions || []).map((q) => {
-          const resp = phaseResponses.find((r: any) => r.question_id === q.id);
+          const resp = phaseResponses.find((r) => r.question_id === q.id);
           return {
             question_id: q.id,
             question_text: q.text,

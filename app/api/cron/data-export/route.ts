@@ -248,7 +248,7 @@ export async function GET(request: NextRequest) {
       .lt('expires_at', new Date().toISOString());
 
     for (const archive of expired || []) {
-      const filePaths = (archive.files as any[]).map((f: any) => f.path);
+      const filePaths = (archive.files as any[]).map((f) => f.path);
       if (filePaths.length > 0) {
         await supabase.storage.from('data-exports').remove(filePaths);
       }
@@ -275,11 +275,11 @@ export async function GET(request: NextRequest) {
       dateLabel,
       cleaned: cleanedCount,
     });
-  } catch (err: any) {
+  } catch (err) {
     const elapsed = Date.now() - startTime;
-    console.error(`[DATA-EXPORT] Cron failed after ${elapsed}ms:`, err?.message || err);
+    console.error(`[DATA-EXPORT] Cron failed after ${elapsed}ms:`, (err as Error)?.message || err);
     return NextResponse.json(
-      { error: 'Internal server error', message: err?.message },
+      { error: 'Internal server error', message: (err as Error)?.message },
       { status: 500 }
     );
   }

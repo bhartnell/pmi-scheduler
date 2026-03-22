@@ -52,9 +52,9 @@ export async function POST(request: NextRequest) {
         : 0;
 
     return NextResponse.json({ success: true, rating: data, avg_rating: avg, rating_count: count });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error saving scenario rating:', error);
-    return NextResponse.json({ success: false, error: error.message || 'Failed to save rating' }, { status: 500 });
+    return NextResponse.json({ success: false, error: (error as Error).message || 'Failed to save rating' }, { status: 500 });
   }
 }
 
@@ -85,8 +85,8 @@ export async function DELETE(request: NextRequest) {
     if (error) throw error;
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error removing scenario rating:', error);
-    return NextResponse.json({ success: false, error: error.message || 'Failed to remove rating' }, { status: 500 });
+    return NextResponse.json({ success: false, error: (error as Error).message || 'Failed to remove rating' }, { status: 500 });
   }
 }

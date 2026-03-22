@@ -149,10 +149,10 @@ export async function POST(request: NextRequest) {
     if (error) throw error;
 
     return NextResponse.json({ success: true, rotation });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error creating rotation:', error);
     // Unique constraint = same student, same date (different site attempted)
-    if (error?.code === '23505') {
+    if ((error as any)?.code === '23505') {
       return NextResponse.json(
         {
           success: false,

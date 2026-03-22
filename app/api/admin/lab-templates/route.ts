@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
     if (error) throw error;
 
     // Sort stations by sort_order within each template
-    const enriched = (templates ?? []).map((t: any) => ({
+    const enriched = (templates ?? []).map((t) => ({
       ...t,
       stations: (t.stations ?? []).sort(
         (a: any, b: any) => (a.sort_order || 0) - (b.sort_order || 0)
@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ success: true, templates: enriched });
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : String(error);
+    const msg = error instanceof Error ? (error as Error).message : String(error);
     console.error('Error fetching lab templates:', msg, error);
     return NextResponse.json({ error: 'Failed to fetch lab templates', details: msg }, { status: 500 });
   }

@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
     // Build a map: scenario_id -> { count, lastUsedDate }
     const usageMap: Record<string, { count: number; lastUsedDate: string | null }> = {};
 
-    (stations || []).forEach((station: any) => {
+    (stations || []).forEach((station) => {
       const sid = station.scenario_id;
       if (!sid) return;
 
@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Build the final scenario usage rows
-    const scenarioRows = scenarios.map((scenario: any) => {
+    const scenarioRows = scenarios.map((scenario) => {
       const usage = usageMap[scenario.id] || { count: 0, lastUsedDate: null };
       return {
         id: scenario.id,
@@ -112,7 +112,7 @@ export async function GET(request: NextRequest) {
     const allCategories: string[] = Array.from(
       new Set(
         scenarios
-          .map((s: any) => s.category)
+          .map((s) => s.category)
           .filter((c: string | null): c is string => !!c)
       )
     ).sort() as string[];

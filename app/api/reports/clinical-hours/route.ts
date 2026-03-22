@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    clinicalHours?.forEach((record: any) => {
+    clinicalHours?.forEach((record) => {
       const studentId = record.student_id;
       if (!hoursMap[studentId]) return;
 

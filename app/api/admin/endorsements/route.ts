@@ -53,10 +53,10 @@ export async function GET(request: NextRequest) {
     if (error) throw error;
 
     return NextResponse.json({ success: true, endorsements: endorsements || [] });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching endorsements:', error);
     return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to fetch endorsements' },
+      { success: false, error: (error as Error)?.message || 'Failed to fetch endorsements' },
       { status: 500 }
     );
   }
@@ -127,10 +127,10 @@ export async function POST(request: NextRequest) {
     if (error) throw error;
 
     return NextResponse.json({ success: true, endorsement });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error granting endorsement:', error);
     return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to grant endorsement' },
+      { success: false, error: (error as Error)?.message || 'Failed to grant endorsement' },
       { status: 500 }
     );
   }
@@ -176,10 +176,10 @@ export async function DELETE(request: NextRequest) {
     if (error) throw error;
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error revoking endorsement:', error);
     return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to revoke endorsement' },
+      { success: false, error: (error as Error)?.message || 'Failed to revoke endorsement' },
       { status: 500 }
     );
   }

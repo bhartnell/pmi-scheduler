@@ -117,10 +117,10 @@ export async function GET(
       }
     });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching task progress:', error);
     return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to fetch task progress' },
+      { success: false, error: (error as Error)?.message || 'Failed to fetch task progress' },
       { status: 500 }
     );
   }
@@ -373,10 +373,10 @@ export async function PATCH(
       warnings: warnings.length > 0 ? warnings : undefined
     });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error updating task progress:', error);
     return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to update task progress' },
+      { success: false, error: (error as Error)?.message || 'Failed to update task progress' },
       { status: 500 }
     );
   }

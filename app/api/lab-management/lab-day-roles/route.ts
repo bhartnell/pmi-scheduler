@@ -53,10 +53,10 @@ export async function GET(request: NextRequest) {
     }));
 
     return NextResponse.json({ success: true, roles: processedRoles });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching lab day roles:', error);
     // Handle table not existing gracefully
-    if (error?.code === '42P01' || error?.message?.includes('does not exist')) {
+    if ((error as any)?.code === '42P01' || (error as Error)?.message?.includes('does not exist')) {
       return NextResponse.json({ success: true, roles: [], tableExists: false });
     }
     return NextResponse.json({ success: true, roles: [] }); // Return empty array to prevent retry loops

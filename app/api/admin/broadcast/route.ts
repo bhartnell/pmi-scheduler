@@ -182,10 +182,10 @@ export async function POST(request: NextRequest) {
       recipient_count: recipientCount,
       broadcast_id: historyRecord?.id || null,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error sending broadcast:', error);
     return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to send broadcast' },
+      { success: false, error: (error as Error)?.message || 'Failed to send broadcast' },
       { status: 500 }
     );
   }
@@ -222,10 +222,10 @@ export async function GET(request: NextRequest) {
       cohorts: cohortsResult.data || [],
       users: usersResult.data || [],
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching broadcast options:', error);
     return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to fetch options' },
+      { success: false, error: (error as Error)?.message || 'Failed to fetch options' },
       { status: 500 }
     );
   }

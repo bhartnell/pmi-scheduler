@@ -28,10 +28,10 @@ export async function GET(request: NextRequest) {
       broadcasts: data || [],
       pagination: { limit, offset, total: count || 0 },
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching broadcast history:', error);
     return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to fetch broadcast history' },
+      { success: false, error: (error as Error)?.message || 'Failed to fetch broadcast history' },
       { status: 500 }
     );
   }

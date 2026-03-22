@@ -25,17 +25,17 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       // Table might not exist yet
-      if (error.code === '42P01') {
+      if ((error as any).code === '42P01') {
         return NextResponse.json({ success: true, attendance: [] });
       }
       throw error;
     }
 
     return NextResponse.json({ success: true, attendance: attendance || [] });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching attendance:', error);
     return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to fetch attendance' },
+      { success: false, error: (error as Error)?.message || 'Failed to fetch attendance' },
       { status: 500 }
     );
   }
@@ -79,10 +79,10 @@ export async function POST(request: NextRequest) {
     if (error) throw error;
 
     return NextResponse.json({ success: true, record });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error updating attendance:', error);
     return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to update attendance' },
+      { success: false, error: (error as Error)?.message || 'Failed to update attendance' },
       { status: 500 }
     );
   }
@@ -124,10 +124,10 @@ export async function PATCH(request: NextRequest) {
     if (error) throw error;
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error bulk updating attendance:', error);
     return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to update attendance' },
+      { success: false, error: (error as Error)?.message || 'Failed to update attendance' },
       { status: 500 }
     );
   }

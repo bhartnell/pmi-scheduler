@@ -107,7 +107,7 @@ export default function SchedulerAdmin({ pollData, onComplete }: SchedulerAdminP
           slots.push({
             key: `${di}-${ti}`,
             count: available.length,
-            names: available.map((s: any) => s.name),
+            names: available.map((s) => s.name),
           });
         }
       });
@@ -137,7 +137,7 @@ export default function SchedulerAdmin({ pollData, onComplete }: SchedulerAdminP
       const matching = filteredSubmissions.filter(sub => (sub.respondent_role || sub.meeting_type) === role);
       rolesCovered[role] = {
         filled: matching.length > 0,
-        names: matching.map((s: any) => s.name),
+        names: matching.map((s) => s.name),
       };
     });
     return rolesCovered;
@@ -192,7 +192,7 @@ export default function SchedulerAdmin({ pollData, onComplete }: SchedulerAdminP
       const endDate = new Date(startDate);
       endDate.setMinutes(endDate.getMinutes() + meetingForm.duration);
 
-      const attendees = activeRespondents.map((sub: any) => ({
+      const attendees = activeRespondents.map((sub) => ({
         email: sub.email,
         name: sub.name,
       }));
@@ -226,11 +226,11 @@ export default function SchedulerAdmin({ pollData, onComplete }: SchedulerAdminP
           message: result.error || 'Failed to create meeting',
         });
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error creating meeting:', error);
       setMeetingResult({
         success: false,
-        message: error?.message || 'Failed to create meeting',
+        message: (error as Error)?.message || 'Failed to create meeting',
       });
     }
 
@@ -255,7 +255,7 @@ export default function SchedulerAdmin({ pollData, onComplete }: SchedulerAdminP
     setEmailResult(null);
 
     try {
-      const recipients = activeRespondents.map((sub: any) => ({
+      const recipients = activeRespondents.map((sub) => ({
         email: sub.email,
         name: sub.name,
       }));
@@ -291,11 +291,11 @@ export default function SchedulerAdmin({ pollData, onComplete }: SchedulerAdminP
           message: result.error || 'Failed to send email',
         });
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error sending email:', error);
       setEmailResult({
         success: false,
-        message: error?.message || 'Failed to send email',
+        message: (error as Error)?.message || 'Failed to send email',
       });
     }
 
@@ -648,7 +648,7 @@ export default function SchedulerAdmin({ pollData, onComplete }: SchedulerAdminP
                         </div>
                         {count > 0 && (
                           <div className="text-xs text-gray-600">
-                            {available.map((s: any) => s.name).join(', ')}
+                            {available.map((s) => s.name).join(', ')}
                           </div>
                         )}
                         <div className="text-xs text-green-600 mt-2">Tap to create meeting</div>
@@ -697,7 +697,7 @@ export default function SchedulerAdmin({ pollData, onComplete }: SchedulerAdminP
                                   <div className="bg-gray-900 text-white text-xs rounded-lg py-2 px-3 shadow-lg whitespace-nowrap">
                                     <div className="font-semibold mb-1">{dates[di]?.display} @ {timeSlots[ti]}</div>
                                     <div className="text-green-300 mb-1">{count} available:</div>
-                                    {available.map((sub: any, idx: number) => (
+                                    {available.map((sub, idx: number) => (
                                       <div key={idx} className="text-gray-300">{'\u2022'} {sub.name}</div>
                                     ))}
                                     {total - count > 0 && (
@@ -820,7 +820,7 @@ export default function SchedulerAdmin({ pollData, onComplete }: SchedulerAdminP
                     <p className="text-sm text-gray-500 dark:text-gray-400">No respondents selected</p>
                   ) : (
                     <div className="space-y-1">
-                      {activeRespondents.map((sub: any, idx: number) => (
+                      {activeRespondents.map((sub, idx: number) => (
                         <div key={idx} className="text-sm text-gray-700 dark:text-gray-300 flex items-center gap-2">
                           <CheckCircle className="w-3 h-3 text-green-500" />
                           <span>{sub.name}</span>
@@ -921,7 +921,7 @@ export default function SchedulerAdmin({ pollData, onComplete }: SchedulerAdminP
                     <p className="text-sm text-gray-500 dark:text-gray-400">No respondents selected</p>
                   ) : (
                     <div className="flex flex-wrap gap-1">
-                      {activeRespondents.map((sub: any, idx: number) => (
+                      {activeRespondents.map((sub, idx: number) => (
                         <span key={idx} className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
                           {sub.name}
                         </span>

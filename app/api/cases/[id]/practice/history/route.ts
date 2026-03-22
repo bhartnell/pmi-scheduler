@@ -53,7 +53,7 @@ export async function GET(
       );
     }
 
-    const history = (attempts || []).map((a: any) => ({
+    const history = (attempts || []).map((a) => ({
       attempt_number: a.attempt_number,
       total_points: a.total_points,
       max_points: a.max_points,

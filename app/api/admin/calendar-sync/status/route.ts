@@ -16,7 +16,7 @@ export async function GET() {
       .not('role', 'in', '("guest","user","student")')
       .order('name');
 
-    const instructors = (users || []).map((u: any) => ({
+    const instructors = (users || []).map((u) => ({
       id: u.id,
       name: u.name,
       email: u.email,
@@ -38,7 +38,7 @@ export async function GET() {
       .select('source_type');
 
     const eventsByType: Record<string, number> = {};
-    (byTypeRaw || []).forEach((r: any) => {
+    (byTypeRaw || []).forEach((r) => {
       eventsByType[r.source_type] = (eventsByType[r.source_type] || 0) + 1;
     });
 
@@ -48,12 +48,12 @@ export async function GET() {
       .select('user_email');
 
     const eventsByUser: Record<string, number> = {};
-    (eventCounts || []).forEach((r: any) => {
+    (eventCounts || []).forEach((r) => {
       eventsByUser[r.user_email.toLowerCase()] = (eventsByUser[r.user_email.toLowerCase()] || 0) + 1;
     });
 
     // Attach event counts to instructors
-    const instructorsWithCounts = instructors.map((inst: any) => ({
+    const instructorsWithCounts = instructors.map((inst) => ({
       ...inst,
       eventsSynced: eventsByUser[inst.email.toLowerCase()] || 0,
     }));
@@ -71,8 +71,8 @@ export async function GET() {
       // Table may not exist yet
     }
 
-    const connectedCount = instructors.filter((i: any) => i.connected).length;
-    const needsReauthCount = instructors.filter((i: any) => i.needsReauth).length;
+    const connectedCount = instructors.filter((i) => i.connected).length;
+    const needsReauthCount = instructors.filter((i) => i.needsReauth).length;
 
     return NextResponse.json({
       success: true,

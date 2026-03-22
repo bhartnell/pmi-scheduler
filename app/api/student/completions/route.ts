@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
 
     // Build station status map (latest result per station)
     const stationStatusMap: Record<string, { result: string; completed_at: string; notes?: string }> = {};
-    (completions || []).forEach((c: any) => {
+    (completions || []).forEach((c) => {
       if (!stationStatusMap[c.station_id]) {
         stationStatusMap[c.station_id] = {
           result: c.result,
@@ -106,7 +106,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Enrich stations with status
-    const enrichedStations = (stations || []).map((station: any) => ({
+    const enrichedStations = (stations || []).map((station) => ({
       ...station,
       status: stationStatusMap[station.id]?.result || 'not_started',
       completed_at: stationStatusMap[station.id]?.completed_at || null
@@ -114,8 +114,8 @@ export async function GET(request: NextRequest) {
 
     // Calculate summary stats
     const totalStations = stations?.length || 0;
-    const passedCount = Object.values(stationStatusMap).filter((s: any) => s.result === 'pass').length;
-    const needsReviewCount = Object.values(stationStatusMap).filter((s: any) => s.result === 'needs_review').length;
+    const passedCount = Object.values(stationStatusMap).filter((s) => s.result === 'pass').length;
+    const needsReviewCount = Object.values(stationStatusMap).filter((s) => s.result === 'needs_review').length;
     const notStartedCount = totalStations - passedCount - needsReviewCount;
 
     return NextResponse.json({

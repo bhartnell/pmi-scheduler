@@ -129,7 +129,7 @@ export async function GET(
       }
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const leaderboard = (stats || []).map((s: any, index: number) => {
+      const leaderboard = (stats || []).map((s, index: number) => {
         // Supabase join returns students as object (inner join on FK) or array
         const studentData = Array.isArray(s.students) ? s.students[0] : s.students;
         const firstName = studentData?.first_name || 'Unknown';

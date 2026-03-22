@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
     // Filter by cohort if specified
     let filteredData = data;
     if (cohortId) {
-      filteredData = data?.filter((p: any) =>
+      filteredData = data?.filter((p) =>
         p.student?.cohort_id === cohortId || p.other_student?.cohort_id === cohortId
       ) || [];
     }

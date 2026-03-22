@@ -1665,7 +1665,7 @@ function GoogleCalendarPanel() {
             <p className="text-sm text-gray-400 dark:text-gray-500">No calendars found</p>
           ) : (
             <div className="space-y-1">
-              {calendarList.map((cal: any) => (
+              {calendarList.map((cal) => (
                 <div key={cal.id} className="flex items-center justify-between py-1.5">
                   <div className="flex items-center gap-2">
                     <div

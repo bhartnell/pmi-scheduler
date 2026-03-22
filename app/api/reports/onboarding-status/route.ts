@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
       progressMap[id] = {};
     });
 
-    progress?.forEach((p: any) => {
+    progress?.forEach((p) => {
       if (progressMap[p.instructor_id]) {
         progressMap[p.instructor_id][p.task_id] = p;
       }
@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
 
     (instructors || []).forEach(instructor => {
       const instructorProgress = progressMap[instructor.id] || {};
-      const completedTasks = Object.values(instructorProgress).filter((p: any) => p.status === 'completed');
+      const completedTasks = Object.values(instructorProgress).filter((p) => p.status === 'completed');
       const tasksCompleted = completedTasks.length;
       const completionRate = totalTasks > 0 ? (tasksCompleted / totalTasks) * 100 : 0;
 
@@ -77,11 +77,11 @@ export async function GET(request: NextRequest) {
 
       // Get pending tasks
       const pendingTasks = (tasks || [])
-        .filter((task: any) => {
+        .filter((task) => {
           const taskProgress = instructorProgress[task.id];
           return !taskProgress || taskProgress.status !== 'completed';
         })
-        .map((task: any) => task.title);
+        .map((task) => task.title);
 
       instructorBreakdown.push({
         id: instructor.id,
@@ -112,7 +112,7 @@ export async function GET(request: NextRequest) {
     instructorBreakdown.sort((a, b) => a.completionRate - b.completionRate);
 
     // Calculate task completion rates
-    const taskCompletion = (tasks || []).map((task: any) => {
+    const taskCompletion = (tasks || []).map((task) => {
       const completedCount = (instructors || []).filter(instructor => {
         const taskProgress = progressMap[instructor.id]?.[task.id];
         return taskProgress?.status === 'completed';

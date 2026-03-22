@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
 
     // Build certification lookup map: user_id -> certification[]
     const certsByUser = new Map<string, any[]>();
-    (certifications || []).forEach((c: any) => {
+    (certifications || []).forEach((c) => {
       if (!certsByUser.has(c.user_id)) {
         certsByUser.set(c.user_id, []);
       }

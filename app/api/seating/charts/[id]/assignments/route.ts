@@ -70,7 +70,7 @@ export async function PUT(
 
     // Insert new assignments if any
     if (assignments.length > 0) {
-      const assignmentsToInsert = assignments.map((a: any) => ({
+      const assignmentsToInsert = assignments.map((a) => ({
         seating_chart_id: chartId,
         student_id: a.student_id,
         table_number: a.table_number,

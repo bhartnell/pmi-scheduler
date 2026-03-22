@@ -56,10 +56,10 @@ export async function GET() {
       preferences,
       userEmail: session.user.email,
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching email preferences:', error);
     return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to fetch email preferences' },
+      { success: false, error: (error as Error)?.message || 'Failed to fetch email preferences' },
       { status: 500 }
     );
   }
@@ -107,10 +107,10 @@ export async function PUT(request: NextRequest) {
     if (error) throw error;
 
     return NextResponse.json({ success: true, preferences });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error updating email preferences:', error);
     return NextResponse.json(
-      { success: false, error: error?.message || 'Failed to update email preferences' },
+      { success: false, error: (error as Error)?.message || 'Failed to update email preferences' },
       { status: 500 }
     );
   }

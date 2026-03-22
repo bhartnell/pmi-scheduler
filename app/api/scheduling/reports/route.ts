@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
         const shifts = allShifts || [];
         const activeShifts = shifts.filter(s => !s.is_cancelled);
         const filledCount = activeShifts.filter(s => {
-          const confirmed = s.signups?.filter((su: any) => su.status === 'confirmed').length || 0;
+          const confirmed = s.signups?.filter((su) => su.status === 'confirmed').length || 0;
           return confirmed >= s.min_instructors;
         }).length;
         const openCount = activeShifts.length - filledCount;
@@ -70,8 +70,8 @@ export async function GET(request: NextRequest) {
 
         // ── Coverage breakdown per shift ──
         const coverageReport = shifts.map(shift => {
-          const confirmedCount = shift.signups?.filter((s: any) => s.status === 'confirmed').length || 0;
-          const pendingCount = shift.signups?.filter((s: any) => s.status === 'pending').length || 0;
+          const confirmedCount = shift.signups?.filter((s) => s.status === 'confirmed').length || 0;
+          const pendingCount = shift.signups?.filter((s) => s.status === 'pending').length || 0;
 
           let status = 'unfilled';
           if (shift.is_cancelled) {
@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
             pending_count: pendingCount,
             status,
             instructors: shift.signups
-              ?.filter((s: any) => s.status === 'confirmed')
+              ?.filter((s) => s.status === 'confirmed')
               .map((s: any) => s.instructor?.name || s.instructor?.email) || [],
           };
         });
@@ -304,8 +304,8 @@ export async function GET(request: NextRequest) {
         if (error) throw error;
 
         const report = (shifts || []).map(shift => {
-          const confirmedCount = shift.signups?.filter((s: any) => s.status === 'confirmed').length || 0;
-          const pendingCount = shift.signups?.filter((s: any) => s.status === 'pending').length || 0;
+          const confirmedCount = shift.signups?.filter((s) => s.status === 'confirmed').length || 0;
+          const pendingCount = shift.signups?.filter((s) => s.status === 'pending').length || 0;
 
           let status = 'unfilled';
           if (shift.is_cancelled) {
@@ -330,7 +330,7 @@ export async function GET(request: NextRequest) {
             pending_count: pendingCount,
             status,
             instructors: shift.signups
-              ?.filter((s: any) => s.status === 'confirmed')
+              ?.filter((s) => s.status === 'confirmed')
               .map((s: any) => s.instructor?.name || s.instructor?.email) || [],
           };
         });
@@ -548,8 +548,8 @@ export async function GET(request: NextRequest) {
           if (shift.is_cancelled) {
             byMonth[monthKey].cancelled++;
           } else {
-            const confirmed = (shift.signups as any[])?.filter((s: any) => s.status === 'confirmed').length || 0;
-            const pending = (shift.signups as any[])?.filter((s: any) => s.status === 'pending').length || 0;
+            const confirmed = (shift.signups as any[])?.filter((s) => s.status === 'confirmed').length || 0;
+            const pending = (shift.signups as any[])?.filter((s) => s.status === 'pending').length || 0;
             if (confirmed >= shift.min_instructors) {
               byMonth[monthKey].filled++;
             } else if (confirmed > 0 || pending > 0) {
@@ -575,7 +575,7 @@ export async function GET(request: NextRequest) {
         // Overall totals
         const totalAll = (shifts || []).filter(s => !s.is_cancelled);
         const overallFilled = totalAll.filter(s => {
-          const confirmed = (s.signups as any[])?.filter((su: any) => su.status === 'confirmed').length || 0;
+          const confirmed = (s.signups as any[])?.filter((su) => su.status === 'confirmed').length || 0;
           return confirmed >= s.min_instructors;
         }).length;
 

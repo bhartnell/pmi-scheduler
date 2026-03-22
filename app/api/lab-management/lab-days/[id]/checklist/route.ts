@@ -27,7 +27,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
       .order('created_at', { ascending: true });
 
     if (error) {
-      if (error.message?.includes('does not exist')) {
+      if ((error as Error).message?.includes('does not exist')) {
         return NextResponse.json({ success: true, items: [] });
       }
       throw error;
@@ -35,12 +35,12 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
 
     return NextResponse.json({ success: true, items: data || [] });
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : String(error);
+    const msg = error instanceof Error ? (error as Error).message : String(error);
     if (msg.includes('does not exist')) {
       return NextResponse.json({ success: true, items: [] });
     }
     console.error('Error fetching checklist items:', error);
-    return NextResponse.json({ success: false, error: (error instanceof Error ? error.message : (error as any)?.message) || 'Failed to fetch checklist items' }, { status: 500 });
+    return NextResponse.json({ success: false, error: (error instanceof Error ? (error as Error).message : (error instanceof Error ? (error as Error).message : String(error))) || 'Failed to fetch checklist items' }, { status: 500 });
   }
 }
 
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
       // Fetch default templates for all station types + common
       const stations = (labDay.stations as any[]) || [];
-      const stationTypes = [...new Set(stations.map((s: any) => s.station_type as string))];
+      const stationTypes = [...new Set(stations.map((s) => s.station_type as string))];
       const templateTypes = [...stationTypes, '_common'];
 
       let templates: any[] = [];
@@ -232,12 +232,12 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
 
     return NextResponse.json({ success: true, item: data });
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : String(error);
+    const msg = error instanceof Error ? (error as Error).message : String(error);
     if (msg.includes('does not exist')) {
       return NextResponse.json({ success: false, error: 'Checklist feature is not yet configured. Please run database migrations.' }, { status: 503 });
     }
     console.error('Error creating checklist item:', error);
-    return NextResponse.json({ success: false, error: (error instanceof Error ? error.message : (error as any)?.message) || 'Failed to create checklist item' }, { status: 500 });
+    return NextResponse.json({ success: false, error: (error instanceof Error ? (error as Error).message : (error instanceof Error ? (error as Error).message : String(error))) || 'Failed to create checklist item' }, { status: 500 });
   }
 }
 
@@ -296,12 +296,12 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
 
     return NextResponse.json({ success: true, item: data });
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : String(error);
+    const msg = error instanceof Error ? (error as Error).message : String(error);
     if (msg.includes('does not exist')) {
       return NextResponse.json({ success: false, error: 'Checklist feature is not yet configured. Please run database migrations.' }, { status: 503 });
     }
     console.error('Error updating checklist item:', error);
-    return NextResponse.json({ success: false, error: (error instanceof Error ? error.message : (error as any)?.message) || 'Failed to update checklist item' }, { status: 500 });
+    return NextResponse.json({ success: false, error: (error instanceof Error ? (error as Error).message : (error instanceof Error ? (error as Error).message : String(error))) || 'Failed to update checklist item' }, { status: 500 });
   }
 }
 
@@ -337,11 +337,11 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
 
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : String(error);
+    const msg = error instanceof Error ? (error as Error).message : String(error);
     if (msg.includes('does not exist')) {
       return NextResponse.json({ success: false, error: 'Checklist feature is not yet configured. Please run database migrations.' }, { status: 503 });
     }
     console.error('Error deleting checklist item:', error);
-    return NextResponse.json({ success: false, error: (error instanceof Error ? error.message : (error as any)?.message) || 'Failed to delete checklist item' }, { status: 500 });
+    return NextResponse.json({ success: false, error: (error instanceof Error ? (error as Error).message : (error instanceof Error ? (error as Error).message : String(error))) || 'Failed to delete checklist item' }, { status: 500 });
   }
 }

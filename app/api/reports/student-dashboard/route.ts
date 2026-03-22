@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
     if (endDate) labDaysQuery = labDaysQuery.lte('date', endDate);
 
     const { data: labDays } = await labDaysQuery;
-    const labDayIds = (labDays || []).map((d: any) => d.id);
+    const labDayIds = (labDays || []).map((d) => d.id);
     const totalLabDays = labDayIds.length;
 
     // 3. Fetch attendance records
@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
 
     // Build attendance map: student_id -> { present, late, absent, excused }
     const attendanceMap: Record<string, { present: number; late: number; absent: number; excused: number }> = {};
-    attendanceRecords.forEach((r: any) => {
+    attendanceRecords.forEach((r) => {
       if (!attendanceMap[r.student_id]) {
         attendanceMap[r.student_id] = { present: 0, late: 0, absent: 0, excused: 0 };
       }
@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
       .is('revoked_at', null);
 
     const signoffMap: Record<string, number> = {};
-    (signoffs || []).forEach((s: any) => {
+    (signoffs || []).forEach((s) => {
       signoffMap[s.student_id] = (signoffMap[s.student_id] || 0) + 1;
     });
 
@@ -101,7 +101,7 @@ export async function GET(request: NextRequest) {
       .select('student_id, hours')
       .in('student_id', studentIds);
 
-    (clinicalHours || []).forEach((c: any) => {
+    (clinicalHours || []).forEach((c) => {
       clinicalHoursMap[c.student_id] = (clinicalHoursMap[c.student_id] || 0) + (c.hours || 0);
     });
 
@@ -110,7 +110,7 @@ export async function GET(request: NextRequest) {
     let totalSkillPct = 0;
     let atRiskCount = 0;
 
-    const studentRows = studentList.map((student: any) => {
+    const studentRows = studentList.map((student) => {
       const att = attendanceMap[student.id] || { present: 0, late: 0, absent: 0, excused: 0 };
       const totalRecords = att.present + att.late + att.absent + att.excused;
       const attendancePct =

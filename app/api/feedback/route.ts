@@ -116,9 +116,9 @@ export async function GET(request: NextRequest) {
       limit,
       offset
     });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error fetching feedback:', error);
-    if (error?.code === '42P01' || error?.message?.includes('does not exist')) {
+    if ((error as any)?.code === '42P01' || (error as Error)?.message?.includes('does not exist')) {
       return NextResponse.json({ success: true, reports: [], total: 0, tableExists: false });
     }
     return NextResponse.json({ success: false, error: 'Failed to fetch feedback' }, { status: 500 });
@@ -252,17 +252,17 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ success: true, report: data });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error submitting feedback:', error);
     console.error('Error details:', {
-      code: error?.code,
-      message: error?.message,
-      details: error?.details,
-      hint: error?.hint
+      code: (error as any)?.code,
+      message: (error as Error)?.message,
+      details: (error as any)?.details,
+      hint: (error as any)?.hint
     });
 
     // Check if table doesn't exist
-    if (error?.code === '42P01' || error?.message?.includes('does not exist')) {
+    if ((error as any)?.code === '42P01' || (error as Error)?.message?.includes('does not exist')) {
       return NextResponse.json({
         success: false,
         error: 'Feedback table not configured. Please run the migration.',
@@ -271,18 +271,18 @@ export async function POST(request: NextRequest) {
     }
 
     // Check for RLS policy violation
-    if (error?.code === '42501' || error?.message?.includes('policy')) {
+    if ((error as any)?.code === '42501' || (error as Error)?.message?.includes('policy')) {
       return NextResponse.json({
         success: false,
         error: 'Permission denied. Check RLS policies or service role key.',
-        details: error?.message
+        details: (error as Error)?.message
       }, { status: 500 });
     }
 
     return NextResponse.json({
       success: false,
       error: 'Failed to submit feedback',
-      details: error?.message || 'Unknown error'
+      details: (error as Error)?.message || 'Unknown error'
     }, { status: 500 });
   }
 }
@@ -372,14 +372,14 @@ export async function PATCH(request: NextRequest) {
     }
 
     return NextResponse.json({ success: true, report: data });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error updating feedback:', error);
     console.error('PATCH error details:', {
-      code: error?.code,
-      message: error?.message,
-      details: error?.details,
-      hint: error?.hint
+      code: (error as any)?.code,
+      message: (error as Error)?.message,
+      details: (error as any)?.details,
+      hint: (error as any)?.hint
     });
-    return NextResponse.json({ success: false, error: error?.message || 'Failed to update feedback' }, { status: 500 });
+    return NextResponse.json({ success: false, error: (error as Error)?.message || 'Failed to update feedback' }, { status: 500 });
   }
 }

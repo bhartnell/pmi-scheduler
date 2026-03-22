@@ -44,7 +44,7 @@ export async function GET(_request: NextRequest) {
     if (error) throw error;
 
     // Sort criteria by sort_order within each rubric
-    const enriched = (rubrics ?? []).map((r: any) => ({
+    const enriched = (rubrics ?? []).map((r) => ({
       ...r,
       criteria: (r.criteria ?? []).sort(
         (a: any, b: any) => (a.sort_order || 0) - (b.sort_order || 0)

@@ -200,9 +200,9 @@ export async function createNotification({
 
     if (error) throw error;
     return { success: true };
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error creating notification:', error);
-    return { success: false, error: error?.message };
+    return { success: false, error: (error as Error)?.message };
   }
 }
 
@@ -233,9 +233,9 @@ export async function createBulkNotifications(
 
     if (error) throw error;
     return { success: true };
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error creating bulk notifications:', error);
-    return { success: false, error: error?.message };
+    return { success: false, error: (error as Error)?.message };
   }
 }
 
@@ -713,7 +713,7 @@ export async function insertDefaultNotificationPreferences(
 
     if (error) {
       // Unique constraint violation means preferences already exist (race condition)
-      if (error.code === '23505') {
+      if ((error as any).code === '23505') {
         return;
       }
       console.error('[DEFAULT PREFS] Error inserting default preferences:', error);

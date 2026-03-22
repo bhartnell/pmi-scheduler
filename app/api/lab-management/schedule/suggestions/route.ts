@@ -123,7 +123,7 @@ export async function GET(request: NextRequest) {
 
     // Build a map from cohort id to cohort data for later enrichment
     const cohortMap = Object.fromEntries(
-      (allCohorts as any[]).map((c: any) => [c.id, c])
+      (allCohorts as any[]).map((c) => [c.id, c])
     );
 
     // ----------------------------------------------------------------
@@ -194,8 +194,8 @@ export async function GET(request: NextRequest) {
     const scenarioIds = [
       ...new Set(
         (stations || [])
-          .filter((s: any) => s.scenario_id)
-          .map((s: any) => s.scenario_id)
+          .filter((s) => s.scenario_id)
+          .map((s) => s.scenario_id)
       ),
     ];
 
@@ -206,14 +206,14 @@ export async function GET(request: NextRequest) {
         .select('id, title, category, difficulty')
         .in('id', scenarioIds);
       if (scenariosData) {
-        scenariosMap = Object.fromEntries(scenariosData.map((s: any) => [s.id, s]));
+        scenariosMap = Object.fromEntries(scenariosData.map((s) => [s.id, s]));
       }
     }
 
     // ----------------------------------------------------------------
     // 7. Fetch station_skills (library skills linked to stations)
     // ----------------------------------------------------------------
-    const stationIds = (stations || []).map((s: any) => s.id);
+    const stationIds = (stations || []).map((s) => s.id);
     let stationSkillsMap: Record<string, { id: string; name: string; category: string }[]> = {};
 
     if (stationIds.length > 0) {
@@ -263,7 +263,7 @@ export async function GET(request: NextRequest) {
     const allDrillIds = [
       ...new Set(
         (stations || [])
-          .flatMap((s: any) => s.drill_ids || [])
+          .flatMap((s) => s.drill_ids || [])
           .filter(Boolean)
       ),
     ];
@@ -275,7 +275,7 @@ export async function GET(request: NextRequest) {
         .select('id, name, category')
         .in('id', allDrillIds);
       if (drillsData) {
-        drillsMap = Object.fromEntries(drillsData.map((d: any) => [d.id, d]));
+        drillsMap = Object.fromEntries(drillsData.map((d) => [d.id, d]));
       }
     }
 
@@ -294,8 +294,8 @@ export async function GET(request: NextRequest) {
           .map((id: string) => drillsMap[id])
           .filter(Boolean),
         // Include skill_ids array for copy-paste into the form
-        selected_skills: (stationSkillsMap[s.id] || []).map((sk: any) => sk.id),
-        custom_skill_names: (customSkillsMap[s.id] || []).map((cs: any) => cs.name),
+        selected_skills: (stationSkillsMap[s.id] || []).map((sk) => sk.id),
+        custom_skill_names: (customSkillsMap[s.id] || []).map((cs) => cs.name),
       };
 
       acc[s.lab_day_id].push(enrichedStation);
@@ -332,7 +332,7 @@ export async function GET(request: NextRequest) {
     // Limit to 5 suggestions to keep the UI manageable
     return NextResponse.json({ success: true, suggestions: suggestions.slice(0, 5) });
   } catch (error: unknown) {
-    const msg = error instanceof Error ? error.message : String(error);
+    const msg = error instanceof Error ? (error as Error).message : String(error);
     if (msg.includes('does not exist')) {
       return NextResponse.json({ success: true, suggestions: [] });
     }

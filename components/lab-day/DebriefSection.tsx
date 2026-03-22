@@ -98,7 +98,7 @@ export default function DebriefSection({ labDayId }: DebriefSectionProps) {
                       Student Concerns from Evaluations
                     </h4>
                     <div className="space-y-2">
-                      {evaluationConcerns.map((evalItem: any, i: number) => (
+                      {evaluationConcerns.map((evalItem, i: number) => (
                         <div key={evalItem.id || i} className="bg-white dark:bg-gray-800 rounded border border-amber-100 dark:border-amber-900/50 p-3">
                           <div className="flex items-center justify-between mb-1">
                             <span className="text-sm font-medium text-gray-900 dark:text-white">

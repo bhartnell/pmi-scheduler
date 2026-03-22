@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
 
     // Apply search filter in-memory (name or email partial match)
     const filtered = search
-      ? (alumni ?? []).filter((a: any) => {
+      ? (alumni ?? []).filter((a) => {
           const fullName = `${a.first_name} ${a.last_name}`.toLowerCase();
           const emailLower = (a.email ?? '').toLowerCase();
           const q = search.toLowerCase();
