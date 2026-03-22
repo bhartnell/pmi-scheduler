@@ -121,6 +121,72 @@ function timeToMinutes(timeStr: string): number {
   return (parts[0] || 0) * 60 + (parts[1] || 0);
 }
 
+// ── Overlap layout algorithm (Google Calendar-style side-by-side) ──────
+
+interface LayoutInfo {
+  _column: number;
+  _totalColumns: number;
+}
+
+function layoutEvents(events: CalendarEvent[]): (CalendarEvent & LayoutInfo)[] {
+  if (events.length === 0) return [];
+
+  // Sort by start time, then longer events first
+  const sorted = [...events].sort((a, b) =>
+    a.start_time.localeCompare(b.start_time) ||
+    (timeToMinutes(b.end_time) - timeToMinutes(b.start_time)) -
+    (timeToMinutes(a.end_time) - timeToMinutes(a.start_time))
+  );
+
+  // Build overlap groups: sets of events that all transitively overlap
+  const groups: CalendarEvent[][] = [];
+  let currentGroup: CalendarEvent[] = [];
+  let groupEnd = '';
+
+  for (const event of sorted) {
+    if (currentGroup.length === 0 || event.start_time < groupEnd) {
+      currentGroup.push(event);
+      if (event.end_time > groupEnd) groupEnd = event.end_time;
+    } else {
+      groups.push(currentGroup);
+      currentGroup = [event];
+      groupEnd = event.end_time;
+    }
+  }
+  if (currentGroup.length > 0) groups.push(currentGroup);
+
+  // For each group, assign columns greedily
+  const result: (CalendarEvent & LayoutInfo)[] = [];
+
+  for (const group of groups) {
+    const columns: { endTime: string }[] = [];
+
+    for (const event of group) {
+      let placed = false;
+      for (let col = 0; col < columns.length; col++) {
+        if (columns[col].endTime <= event.start_time) {
+          columns[col].endTime = event.end_time;
+          result.push({ ...event, _column: col, _totalColumns: 0 });
+          placed = true;
+          break;
+        }
+      }
+      if (!placed) {
+        result.push({ ...event, _column: columns.length, _totalColumns: 0 });
+        columns.push({ endTime: event.end_time });
+      }
+    }
+
+    // Set totalColumns for all events in this group
+    const totalCols = columns.length;
+    for (let i = result.length - group.length; i < result.length; i++) {
+      result[i]._totalColumns = totalCols;
+    }
+  }
+
+  return result;
+}
+
 // ── Main component (wrapped in Suspense for useSearchParams) ───────────
 
 function CalendarContent() {
@@ -673,15 +739,21 @@ function WeekView({
   const HOUR_HEIGHT = 60; // px per hour
   const hours = Array.from({ length: HOUR_END - HOUR_START }, (_, i) => HOUR_START + i);
 
-  // Group events by day
-  const eventsByDay = useMemo(() => {
-    const map = new Map<string, CalendarEvent[]>();
+  // Group events by day and apply overlap layout
+  const layoutByDay = useMemo(() => {
+    const map = new Map<string, (CalendarEvent & LayoutInfo)[]>();
+    // Collect events per day
+    const rawMap = new Map<string, CalendarEvent[]>();
     for (const d of days) {
-      map.set(toDateStr(d), []);
+      rawMap.set(toDateStr(d), []);
     }
     for (const e of events) {
-      const dayEvents = map.get(e.date);
+      const dayEvents = rawMap.get(e.date);
       if (dayEvents) dayEvents.push(e);
+    }
+    // Layout each day independently
+    for (const [dateStr, dayEvents] of rawMap) {
+      map.set(dateStr, layoutEvents(dayEvents));
     }
     return map;
   }, [days, events]);
@@ -732,9 +804,9 @@ function WeekView({
         </div>
 
         {/* Day columns */}
-        {days.map((d, dayIdx) => {
+        {days.map((d) => {
           const dateStr = toDateStr(d);
-          const dayEvents = eventsByDay.get(dateStr) || [];
+          const dayEvents = layoutByDay.get(dateStr) || [];
           const isToday = dateStr === today;
 
           return (
@@ -753,45 +825,96 @@ function WeekView({
                 />
               ))}
 
-              {/* Events */}
+              {/* Events - side-by-side columns for overlaps */}
               {dayEvents.map(event => {
                 const startMin = timeToMinutes(event.start_time);
                 const endMin = timeToMinutes(event.end_time);
                 const top = ((startMin / 60) - HOUR_START) * HOUR_HEIGHT;
                 const height = Math.max(((endMin - startMin) / 60) * HOUR_HEIGHT, 20);
 
+                const col = event._column;
+                const totalCols = event._totalColumns;
+                const isNarrow = totalCols > 1;
+
+                // Column-based positioning
+                const leftPct = (col / totalCols) * 100;
+                const widthPct = 100 / totalCols;
+
                 return (
-                  <button
+                  <div
                     key={event.id}
-                    onClick={() => onEventClick(event)}
-                    className="absolute left-0.5 right-0.5 rounded-md px-1.5 py-0.5 text-left overflow-hidden cursor-pointer hover:opacity-90 transition-opacity shadow-sm z-10"
+                    className="absolute z-10 group"
                     style={{
                       top: `${top}px`,
                       height: `${height}px`,
-                      backgroundColor: event.color + '20',
-                      borderLeft: `3px solid ${event.color}`,
+                      left: `calc(${leftPct}% + 1px)`,
+                      width: `calc(${widthPct}% - 2px)`,
+                      minWidth: isNarrow ? '40px' : undefined,
                     }}
-                    title={`${event.title}\n${formatTime(event.start_time)} - ${formatTime(event.end_time)}${event.room ? `\n${event.room}` : ''}${event.instructor_names?.length ? `\n${event.instructor_names.join(', ')}` : ''}`}
                   >
-                    <div className="text-[10px] font-semibold truncate" style={{ color: event.color }}>
-                      {event.title}
-                    </div>
-                    {height > 30 && (
-                      <div className="text-[9px] text-gray-600 dark:text-gray-400 truncate">
-                        {formatTime(event.start_time)} - {formatTime(event.end_time)}
+                    <button
+                      onClick={() => onEventClick(event)}
+                      className="w-full h-full rounded-md px-1.5 py-0.5 text-left overflow-hidden cursor-pointer hover:opacity-90 transition-opacity shadow-sm"
+                      style={{
+                        backgroundColor: event.color + '20',
+                        borderLeft: `3px solid ${event.color}`,
+                      }}
+                    >
+                      <div className="text-[10px] font-semibold truncate" style={{ color: event.color }}>
+                        {event.title}
+                      </div>
+                      {height > 30 && (
+                        <div className="text-[9px] text-gray-600 dark:text-gray-400 truncate">
+                          {formatTime(event.start_time)} - {formatTime(event.end_time)}
+                        </div>
+                      )}
+                      {height > 45 && event.room && (
+                        <div className="text-[9px] text-gray-500 dark:text-gray-500 truncate">
+                          {event.room}
+                        </div>
+                      )}
+                      {height > 55 && event.cohort_number && (
+                        <div className="text-[9px] text-gray-500 dark:text-gray-500 truncate">
+                          C{event.cohort_number}
+                        </div>
+                      )}
+                    </button>
+
+                    {/* Hover tooltip for narrow/overlapping events */}
+                    {isNarrow && (
+                      <div className="hidden group-hover:block absolute left-full top-0 ml-1 z-50 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-2.5 pointer-events-none">
+                        <div className="text-xs font-semibold text-gray-900 dark:text-white mb-1" style={{ color: event.color }}>
+                          {event.title}
+                        </div>
+                        <div className="text-[11px] text-gray-600 dark:text-gray-400 flex items-center gap-1 mb-0.5">
+                          <Clock className="h-3 w-3 flex-shrink-0" />
+                          {formatTime(event.start_time)} - {formatTime(event.end_time)}
+                        </div>
+                        {event.instructor_names && event.instructor_names.length > 0 && (
+                          <div className="text-[11px] text-gray-600 dark:text-gray-400 flex items-center gap-1 mb-0.5">
+                            <Users className="h-3 w-3 flex-shrink-0" />
+                            {event.instructor_names.join(', ')}
+                          </div>
+                        )}
+                        {event.room && (
+                          <div className="text-[11px] text-gray-600 dark:text-gray-400 flex items-center gap-1 mb-0.5">
+                            <MapPin className="h-3 w-3 flex-shrink-0" />
+                            {event.room}
+                          </div>
+                        )}
+                        {event.cohort_number && (
+                          <div className="text-[11px] text-gray-500 dark:text-gray-400">
+                            Cohort {event.cohort_number}
+                          </div>
+                        )}
+                        {event.program && event.program !== 'other' && (
+                          <div className="text-[10px] font-medium mt-1 px-1.5 py-0.5 rounded-full inline-block" style={{ backgroundColor: event.color + '20', color: event.color }}>
+                            {PROGRAM_LABELS[event.program] || event.program}
+                          </div>
+                        )}
                       </div>
                     )}
-                    {height > 45 && event.room && (
-                      <div className="text-[9px] text-gray-500 dark:text-gray-500 truncate">
-                        {event.room}
-                      </div>
-                    )}
-                    {height > 55 && event.cohort_number && (
-                      <div className="text-[9px] text-gray-500 dark:text-gray-500 truncate">
-                        C{event.cohort_number}
-                      </div>
-                    )}
-                  </button>
+                  </div>
                 );
               })}
             </div>
