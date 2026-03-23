@@ -22,6 +22,9 @@ export interface CalendarEvent {
   linked_id?: string;
   linked_url?: string;
   event_type: 'class' | 'lab' | 'exam' | 'clinical' | 'shift' | 'meeting' | 'other';
+  status?: 'draft' | 'published' | 'cancelled';
+  content_notes?: string;
+  linked_lab_day_id?: string;
   metadata?: Record<string, unknown>;
 }
 
@@ -67,6 +70,14 @@ function eventsOverlap(a: CalendarEvent, b: CalendarEvent): boolean {
   return a.start_time < b.end_time && b.start_time < a.end_time;
 }
 
+/** Returns true if two events are linked (same schedule block + lab day) and should not conflict */
+function areLinkedEvents(a: CalendarEvent, b: CalendarEvent): boolean {
+  // If a planner block links to a lab day, they represent the same real event
+  if (a.linked_lab_day_id && b.source === 'lab_day' && b.linked_id === a.linked_lab_day_id) return true;
+  if (b.linked_lab_day_id && a.source === 'lab_day' && a.linked_id === b.linked_lab_day_id) return true;
+  return false;
+}
+
 /** ISO week-start (Monday) for a given date string */
 function getWeekKey(dateStr: string): string {
   const d = new Date(dateStr + 'T12:00:00');
@@ -99,6 +110,7 @@ function checkInstructorConflicts(events: CalendarEvent[]): ConflictResult[] {
         const a = withInstructors[i];
         const b = withInstructors[j];
         if (!eventsOverlap(a, b)) continue;
+        if (areLinkedEvents(a, b)) continue;
 
         const sharedNames = (a.instructor_names || []).filter((n) =>
           (b.instructor_names || []).includes(n)
@@ -134,6 +146,7 @@ function checkRoomConflicts(events: CalendarEvent[]): ConflictResult[] {
         const b = withRooms[j];
         if (a.room !== b.room) continue;
         if (!eventsOverlap(a, b)) continue;
+        if (areLinkedEvents(a, b)) continue;
 
         results.push({
           type: 'room_conflict',
@@ -163,6 +176,7 @@ function checkCohortConflicts(events: CalendarEvent[]): ConflictResult[] {
         const b = withCohort[j];
         if (a.cohort_number !== b.cohort_number) continue;
         if (!eventsOverlap(a, b)) continue;
+        if (areLinkedEvents(a, b)) continue;
 
         results.push({
           type: 'cohort_conflict',

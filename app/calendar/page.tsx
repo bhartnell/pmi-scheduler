@@ -24,6 +24,7 @@ import {
 import Breadcrumbs from '@/components/Breadcrumbs';
 import ConflictPanel from '@/components/calendar/ConflictPanel';
 import SlotFinderPanel from '@/components/calendar/SlotFinderPanel';
+import EventDetailPanel from '@/components/calendar/EventDetailPanel';
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -42,6 +43,9 @@ interface CalendarEvent {
   linked_id?: string;
   linked_url?: string;
   event_type: 'class' | 'lab' | 'exam' | 'clinical' | 'shift' | 'meeting' | 'other';
+  status?: 'draft' | 'published' | 'cancelled';
+  content_notes?: string;
+  linked_lab_day_id?: string;
   metadata?: Record<string, unknown>;
 }
 
@@ -218,6 +222,12 @@ function CalendarContent() {
   const [slotFinderOpen, setSlotFinderOpen] = useState(false);
   const [inlineConflictCount, setInlineConflictCount] = useState(0);
   const [conflictEventIds, setConflictEventIds] = useState<Set<string>>(new Set());
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
+  const [detailPanelOpen, setDetailPanelOpen] = useState(false);
+  // Status filters: published and draft shown by default, cancelled hidden
+  const [showPublished, setShowPublished] = useState(true);
+  const [showDrafts, setShowDrafts] = useState(true);
+  const [showCancelled, setShowCancelled] = useState(false);
 
   // Initialize from URL params
   useEffect(() => {
@@ -409,6 +419,10 @@ function CalendarContent() {
           // Check time overlap
           if (!(a.start_time < b.end_time && b.start_time < a.end_time)) continue;
 
+          // Skip linked events (planner block linked to a lab day = same event)
+          if (a.linked_lab_day_id && b.source === 'lab_day' && b.linked_id === a.linked_lab_day_id) continue;
+          if (b.linked_lab_day_id && a.source === 'lab_day' && a.linked_id === b.linked_lab_day_id) continue;
+
           // Instructor conflict
           const sharedInstructors = (a.instructor_names || []).filter(n =>
             (b.instructor_names || []).includes(n)
@@ -433,10 +447,19 @@ function CalendarContent() {
     setConflictEventIds(ids);
   }, [events]);
 
-  // Filter events client-side for event type filtering
+  // Filter events client-side for event type and status filtering
   const filteredEvents = useMemo(() => {
-    return events.filter(e => activeEventTypes.has(e.event_type));
-  }, [events, activeEventTypes]);
+    return events.filter(e => {
+      if (!activeEventTypes.has(e.event_type)) return false;
+      // Status filtering (only applies to planner events that have status)
+      if (e.status) {
+        if (e.status === 'published' && !showPublished) return false;
+        if (e.status === 'draft' && !showDrafts) return false;
+        if (e.status === 'cancelled' && !showCancelled) return false;
+      }
+      return true;
+    });
+  }, [events, activeEventTypes, showPublished, showDrafts, showCancelled]);
 
   // Group events by date for list view
   const eventsByDate = useMemo(() => {
@@ -496,11 +519,10 @@ function CalendarContent() {
   // Print
   const handlePrint = () => window.print();
 
-  // Click event handler
+  // Click event handler — open detail panel instead of navigating
   const handleEventClick = (event: CalendarEvent) => {
-    if (event.linked_url) {
-      router.push(event.linked_url);
-    }
+    setSelectedEvent(event);
+    setDetailPanelOpen(true);
   };
 
   // ── Week view days ─────────────────────────────────────────────────
@@ -697,6 +719,41 @@ function CalendarContent() {
             {EVENT_TYPE_LABELS[type]}
           </button>
         ))}
+
+        <span className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1" />
+
+        {/* Status filters */}
+        <span className="text-xs text-gray-400 dark:text-gray-500 mr-1">Show:</span>
+        <button
+          onClick={() => setShowPublished(!showPublished)}
+          className={`px-2.5 py-1 text-xs font-medium rounded-full border transition-colors ${
+            showPublished
+              ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-300 dark:border-green-700'
+              : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-300 dark:border-gray-600 hover:border-gray-400'
+          }`}
+        >
+          Published
+        </button>
+        <button
+          onClick={() => setShowDrafts(!showDrafts)}
+          className={`px-2.5 py-1 text-xs font-medium rounded-full border transition-colors ${
+            showDrafts
+              ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 border-yellow-300 dark:border-yellow-700'
+              : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-300 dark:border-gray-600 hover:border-gray-400'
+          }`}
+        >
+          Drafts
+        </button>
+        <button
+          onClick={() => setShowCancelled(!showCancelled)}
+          className={`px-2.5 py-1 text-xs font-medium rounded-full border transition-colors ${
+            showCancelled
+              ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-300 dark:border-red-700'
+              : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-300 dark:border-gray-600 hover:border-gray-400'
+          }`}
+        >
+          Cancelled
+        </button>
       </div>
 
       {/* ── Preset views ──────────────────────────────────────────────── */}
@@ -816,6 +873,11 @@ function CalendarContent() {
         onClose={() => setSlotFinderOpen(false)}
         dateRange={dateRange}
         instructorList={instructorList}
+      />
+      <EventDetailPanel
+        event={selectedEvent}
+        open={detailPanelOpen}
+        onClose={() => { setDetailPanelOpen(false); setSelectedEvent(null); }}
       />
     </div>
   );
@@ -937,6 +999,8 @@ function WeekView({
                 const totalCols = event._totalColumns;
                 const isNarrow = totalCols > 1;
                 const hasConflict = conflictEventIds?.has(event.id) ?? false;
+                const isDraft = event.status === 'draft';
+                const isCancelled = event.status === 'cancelled';
 
                 // Column-based positioning
                 const leftPct = (col / totalCols) * 100;
@@ -958,10 +1022,16 @@ function WeekView({
                       onClick={() => onEventClick(event)}
                       className={`w-full h-full rounded-md px-1.5 py-0.5 text-left overflow-hidden cursor-pointer hover:opacity-90 transition-opacity shadow-sm ${
                         hasConflict ? 'ring-2 ring-red-500 ring-offset-1' : ''
-                      }`}
+                      } ${isDraft ? 'opacity-60' : ''} ${isCancelled ? 'opacity-40 line-through' : ''}`}
                       style={{
-                        backgroundColor: event.color + '20',
+                        backgroundColor: event.color + (isDraft ? '10' : '20'),
                         borderLeft: `3px solid ${hasConflict ? '#EF4444' : event.color}`,
+                        borderStyle: isDraft ? 'dashed' : 'solid',
+                        borderWidth: isDraft ? '1px' : undefined,
+                        borderColor: isDraft ? event.color + '60' : undefined,
+                        borderLeftWidth: '3px',
+                        borderLeftStyle: 'solid',
+                        borderLeftColor: hasConflict ? '#EF4444' : event.color,
                       }}
                     >
                       <div className="flex items-center gap-0.5">
@@ -1099,16 +1169,28 @@ function MonthView({
               </div>
               {/* Event dots / chips */}
               <div className="space-y-0.5">
-                {dayEvents.slice(0, 3).map(e => (
-                  <div
-                    key={e.id}
-                    className="text-[9px] md:text-[10px] truncate rounded px-1 py-px leading-tight"
-                    style={{ backgroundColor: e.color + '25', color: e.color }}
-                    onClick={(ev) => { ev.stopPropagation(); onEventClick(e); }}
-                  >
-                    {e.title}
-                  </div>
-                ))}
+                {dayEvents.slice(0, 3).map(e => {
+                  const isDraft = e.status === 'draft';
+                  const isCancelled = e.status === 'cancelled';
+                  return (
+                    <div
+                      key={e.id}
+                      className={`text-[9px] md:text-[10px] truncate rounded px-1 py-px leading-tight ${
+                        isDraft ? 'opacity-60' : ''
+                      } ${isCancelled ? 'opacity-40 line-through' : ''}`}
+                      style={{
+                        backgroundColor: e.color + (isDraft ? '15' : '25'),
+                        color: e.color,
+                        borderStyle: isDraft ? 'dashed' : undefined,
+                        borderWidth: isDraft ? '1px' : undefined,
+                        borderColor: isDraft ? e.color + '40' : undefined,
+                      }}
+                      onClick={(ev) => { ev.stopPropagation(); onEventClick(e); }}
+                    >
+                      {isDraft ? '[D] ' : ''}{e.title}
+                    </div>
+                  );
+                })}
                 {dayEvents.length > 3 && (
                   <div className="text-[9px] text-gray-500 dark:text-gray-400 px-1">
                     +{dayEvents.length - 3} more
@@ -1156,15 +1238,22 @@ function ListView({
             </div>
 
             <div className="space-y-1.5">
-              {dayEvents.map(event => (
+              {dayEvents.map(event => {
+                const isDraft = event.status === 'draft';
+                const isCancelled = event.status === 'cancelled';
+                return (
                 <button
                   key={event.id}
                   onClick={() => onEventClick(event)}
-                  className="w-full flex items-start gap-3 px-3 py-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left"
+                  className={`w-full flex items-start gap-3 px-3 py-2.5 rounded-lg border bg-white dark:bg-gray-900 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left ${
+                    isDraft ? 'border-dashed border-gray-300 dark:border-gray-600 opacity-70' :
+                    isCancelled ? 'border-red-200 dark:border-red-800 opacity-50' :
+                    'border-gray-200 dark:border-gray-700'
+                  }`}
                 >
                   {/* Color indicator */}
                   <div
-                    className="w-1 self-stretch rounded-full flex-shrink-0 mt-0.5"
+                    className={`w-1 self-stretch rounded-full flex-shrink-0 mt-0.5 ${isDraft ? 'opacity-50' : ''}`}
                     style={{ backgroundColor: event.color }}
                   />
 
@@ -1228,12 +1317,25 @@ function ListView({
                     </div>
                   )}
 
+                  {/* Status badge */}
+                  {isDraft && (
+                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 flex-shrink-0">
+                      Draft
+                    </span>
+                  )}
+                  {isCancelled && (
+                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 flex-shrink-0">
+                      Cancelled
+                    </span>
+                  )}
+
                   {/* Link arrow */}
                   {event.linked_url && presetView !== 'labs' && (
                     <ChevronRight className="h-4 w-4 text-gray-400 dark:text-gray-500 flex-shrink-0 mt-1" />
                   )}
                 </button>
-              ))}
+                );
+              })}
             </div>
           </div>
         );
