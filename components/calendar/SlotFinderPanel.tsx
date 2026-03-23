@@ -64,7 +64,7 @@ export default function SlotFinderPanel({
 
   // Fetch rooms
   useEffect(() => {
-    fetch('/api/scheduling/planner/rooms')
+    fetch('/api/academics/planner/rooms')
       .then((r) => r.json())
       .then((data) => {
         if (data.rooms) {

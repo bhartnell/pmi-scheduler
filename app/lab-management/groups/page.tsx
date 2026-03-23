@@ -784,7 +784,7 @@ function GroupManagementPageInner() {
               Home
             </Link>
             <ChevronRight className="w-4 h-4 flex-shrink-0" />
-            <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
+            <Link href="/labs" className="hover:text-blue-600 dark:hover:text-blue-400">Labs</Link>
             <ChevronRight className="w-4 h-4 flex-shrink-0" />
             <span>Group Management</span>
           </div>

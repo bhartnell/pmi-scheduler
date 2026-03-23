@@ -1,0 +1,12 @@
+var R=require("../../../../../../../chunks/[turbopack]_runtime.js")("server/app/api/clinical/internships/[id]/closeout/packet/route.js")
+R.c("server/chunks/[root-of-the-server]__1e6e8371._.js")
+R.c("server/chunks/e71d5_next_dist_esm_build_templates_app-route_afd41410.js")
+R.c("server/chunks/[root-of-the-server]__2d48b7f9._.js")
+R.c("server/chunks/e71d5_next_7d129b84._.js")
+R.c("server/chunks/[root-of-the-server]__a801940c._.js")
+R.c("server/chunks/[root-of-the-server]__6536df96._.js")
+R.c("server/chunks/_claude_worktrees_focused-goodall_lib_supabase_ts_b99b8956._.js")
+R.c("server/chunks/[root-of-the-server]__d6dcdb21._.js")
+R.c("server/chunks/040eb_server_app_api_clinical_internships_[id]_closeout_packet_route_actions_2ace0cec.js")
+R.m(625012)
+module.exports=R.m(625012).exports

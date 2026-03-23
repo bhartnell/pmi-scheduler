@@ -1,0 +1,17 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/lab-management/layout,_N_T_/lab-management/templates/layout,_N_T_/lab-management/templates/review/layout,_N_T_/lab-management/templates/review/page,_N_T_/lab-management/templates/review"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/lab-management/templates/review/__PAGE__",
+    "/lab-management/templates/review",
+    "/lab-management/templates",
+    "/lab-management",
+    "/_index",
+    "/_head"
+  ]
+}

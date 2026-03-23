@@ -200,7 +200,7 @@ export default function InstructorDashboard() {
             </div>
             <div className="flex items-center gap-3">
               <Link
-                href="/lab-management"
+                href="/labs"
                 className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
               >
                 Lab Management
@@ -353,7 +353,7 @@ export default function InstructorDashboard() {
                 Upcoming Labs
               </h2>
               <Link
-                href="/lab-management/schedule"
+                href="/labs/schedule"
                 className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 flex items-center gap-1"
               >
                 View Schedule <ChevronRight className="w-4 h-4" />
@@ -370,7 +370,7 @@ export default function InstructorDashboard() {
                   {upcomingLabs.slice(0, 5).map((lab) => (
                     <Link
                       key={`${lab.lab_day_id}-${lab.station_id}`}
-                      href={`/lab-management/schedule/${lab.lab_day_id}`}
+                      href={`/labs/schedule/${lab.lab_day_id}`}
                       className="block p-3 rounded-lg bg-gray-50 dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 transition"
                     >
                       <div className="flex items-center justify-between">
@@ -436,7 +436,7 @@ export default function InstructorDashboard() {
               <span className="text-sm font-medium text-gray-900 dark:text-white">Teaching History</span>
             </Link>
             <Link
-              href="/lab-management/scenarios"
+              href="/labs/scenarios"
               className="flex flex-col items-center gap-2 p-4 rounded-lg bg-green-50 dark:bg-green-900/30 hover:bg-green-100 dark:hover:bg-green-900/50 transition"
             >
               <Users className="w-8 h-8 text-green-600 dark:text-green-400" />

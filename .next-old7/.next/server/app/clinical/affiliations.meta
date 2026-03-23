@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/clinical/layout,_N_T_/clinical/affiliations/layout,_N_T_/clinical/affiliations/page,_N_T_/clinical/affiliations"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/clinical/affiliations/__PAGE__",
+    "/clinical/affiliations",
+    "/clinical",
+    "/_index",
+    "/_head"
+  ]
+}

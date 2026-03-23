@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/reports/layout,_N_T_/reports/closeout-surveys/layout,_N_T_/reports/closeout-surveys/page,_N_T_/reports/closeout-surveys"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/reports/closeout-surveys/__PAGE__",
+    "/reports/closeout-surveys",
+    "/reports",
+    "/_index",
+    "/_head"
+  ]
+}

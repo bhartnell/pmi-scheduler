@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/lab-management/layout,_N_T_/lab-management/skill-drills/layout,_N_T_/lab-management/skill-drills/page,_N_T_/lab-management/skill-drills"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/lab-management/skill-drills/__PAGE__",
+    "/lab-management/skill-drills",
+    "/lab-management",
+    "/_index",
+    "/_head"
+  ]
+}

@@ -1,0 +1,3 @@
+{
+  "/api/clinical/internships/[id]/closeout/employment/route": "app/api/clinical/internships/[id]/closeout/employment/route.js"
+}

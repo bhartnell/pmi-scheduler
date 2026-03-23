@@ -1105,7 +1105,7 @@ function BlockEditModal({
                   </div>
                 ) : labDayLink ? (
                   <a
-                    href={`/lab-management/schedule/${labDayLink.id}`}
+                    href={`/labs/schedule/${labDayLink.id}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
@@ -1164,12 +1164,12 @@ function BlockEditModal({
                         </button>
                       )}
                       <a
-                        href={`/lab-management/schedule/new?date=${formData.date || block.date}`}
+                        href={`/labs/schedule/new?date=${formData.date || block.date}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="px-2 py-1 text-xs font-medium bg-yellow-600 text-white rounded hover:bg-yellow-700 transition-colors"
                       >
-                        Open Lab Mgmt
+                        Open Labs
                       </a>
                     </div>
                   </div>
@@ -1405,14 +1405,14 @@ function GenerateWizard({
     setLoadingTemplates(true);
     setError(null);
     try {
-      let url = `/api/scheduling/planner/templates?program_type=${progType}`;
+      let url = `/api/academics/planner/templates?program_type=${progType}`;
       if (semNum !== null) url += `&semester_number=${semNum}`;
 
       // Load course templates, lab templates, and cohorts in parallel
-      let labUrl = `/api/scheduling/planner/lab-templates?program=${progType}`;
+      let labUrl = `/api/academics/planner/lab-templates?program=${progType}`;
       if (semNum !== null) labUrl += `&semester=${semNum}`;
 
-      const cohortUrl = `/api/scheduling/planner/cohorts?program_type=${progType}&semester_id=${semesterId}`;
+      const cohortUrl = `/api/academics/planner/cohorts?program_type=${progType}&semester_id=${semesterId}`;
 
       const [res, labRes, cohortRes] = await Promise.all([
         fetch(url),
@@ -1458,7 +1458,7 @@ function GenerateWizard({
     } else if (wizard.step === 3) {
       // Check for existing blocks before proceeding to review
       try {
-        let checkUrl = `/api/scheduling/planner/blocks/check-existing?semester_id=${semesterId}`;
+        let checkUrl = `/api/academics/planner/blocks/check-existing?semester_id=${semesterId}`;
         if (wizard.programScheduleId) {
           checkUrl += `&program_schedule_id=${wizard.programScheduleId}`;
         }
@@ -1510,7 +1510,7 @@ function GenerateWizard({
       // If a cohort is selected but has no program_schedule yet, auto-create one
       if (wizard.cohortId && !programScheduleId) {
         const classDays = Object.values(wizard.dayMapping);
-        const createRes = await fetch('/api/scheduling/planner/programs', {
+        const createRes = await fetch('/api/academics/planner/programs', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -1527,7 +1527,7 @@ function GenerateWizard({
         // Non-fatal if this fails — generation can proceed without a program_schedule link
       }
 
-      const res = await fetch('/api/scheduling/planner/generate', {
+      const res = await fetch('/api/academics/planner/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -2273,7 +2273,7 @@ function MonthView({
                       return (
                         <a
                           key={ld.id}
-                          href={`/lab-management/schedule/${ld.id}`}
+                          href={`/labs/schedule/${ld.id}`}
                           onClick={(e) => e.stopPropagation()}
                           className="w-full block text-left rounded px-1 py-0 text-[9px] truncate hover:opacity-80 font-medium bg-orange-50 dark:bg-orange-900/20 text-orange-800 dark:text-orange-300"
                           style={{ borderLeft: '2px solid #F97316' }}
@@ -2385,9 +2385,9 @@ function SemesterPlannerPage() {
       try {
         setLoading(true);
         const [semRes, roomRes, instRes] = await Promise.all([
-          fetch('/api/scheduling/planner/semesters?active_only=false'),
-          fetch('/api/scheduling/planner/rooms'),
-          fetch('/api/scheduling/planner/instructors'),
+          fetch('/api/academics/planner/semesters?active_only=false'),
+          fetch('/api/academics/planner/rooms'),
+          fetch('/api/academics/planner/instructors'),
         ]);
 
         const semData = await semRes.json();
@@ -2440,9 +2440,9 @@ function SemesterPlannerPage() {
       }
 
       const [progRes, blockRes, conflictRes, labDayRes] = await Promise.all([
-        fetch(`/api/scheduling/planner/programs?semester_id=${selectedSemesterId}`),
-        fetch(`/api/scheduling/planner/blocks?semester_id=${selectedSemesterId}&date_from=${dateFrom}&date_to=${dateTo}`),
-        fetch(`/api/scheduling/planner/conflicts?semester_id=${selectedSemesterId}`),
+        fetch(`/api/academics/planner/programs?semester_id=${selectedSemesterId}`),
+        fetch(`/api/academics/planner/blocks?semester_id=${selectedSemesterId}&date_from=${dateFrom}&date_to=${dateTo}`),
+        fetch(`/api/academics/planner/conflicts?semester_id=${selectedSemesterId}`),
         fetch(`/api/lab-management/lab-days?startDate=${dateFrom}&endDate=${dateTo}&limit=100`),
       ]);
 
@@ -2523,8 +2523,8 @@ function SemesterPlannerPage() {
     try {
       const isNew = !editingBlock?.id;
       const url = isNew
-        ? '/api/scheduling/planner/blocks'
-        : `/api/scheduling/planner/blocks/${editingBlock!.id}`;
+        ? '/api/academics/planner/blocks'
+        : `/api/academics/planner/blocks/${editingBlock!.id}`;
       const method = isNew ? 'POST' : 'PUT';
 
       const payload = { ...formData };
@@ -2562,7 +2562,7 @@ function SemesterPlannerPage() {
   const handleSaveRecurring = useCallback(async (data: Record<string, unknown>) => {
     setSaving(true);
     try {
-      const res = await fetch('/api/scheduling/planner/blocks/recurring', {
+      const res = await fetch('/api/academics/planner/blocks/recurring', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -2587,7 +2587,7 @@ function SemesterPlannerPage() {
 
     try {
       const modeParam = mode ? `?mode=${mode}` : '';
-      const res = await fetch(`/api/scheduling/planner/blocks/${editingBlock.id}${modeParam}`, {
+      const res = await fetch(`/api/academics/planner/blocks/${editingBlock.id}${modeParam}`, {
         method: 'DELETE',
       });
       if (!res.ok) {
@@ -2675,7 +2675,7 @@ function SemesterPlannerPage() {
       if (updateMode) {
         payload.update_mode = updateMode;
       }
-      const res = await fetch(`/api/scheduling/planner/blocks/${blockId}`, {
+      const res = await fetch(`/api/academics/planner/blocks/${blockId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -2826,7 +2826,7 @@ function SemesterPlannerPage() {
 
             {/* Edit Templates */}
             <a
-              href="/scheduling/planner/templates"
+              href="/academics/planner/templates"
               className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg flex items-center gap-1.5"
             >
               <Wand2 className="w-4 h-4 text-purple-500" /> Templates
@@ -2838,7 +2838,7 @@ function SemesterPlannerPage() {
                 if (!selectedSemesterId) return;
                 if (!confirm('Publish all draft blocks for this semester? This will set all draft blocks to Published.')) return;
                 try {
-                  const res = await fetch('/api/scheduling/planner/blocks/publish-all', {
+                  const res = await fetch('/api/academics/planner/blocks/publish-all', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ semester_id: selectedSemesterId }),
@@ -2887,7 +2887,7 @@ function SemesterPlannerPage() {
             {/* ICS Export */}
             {selectedSemesterId && (
               <a
-                href={`/api/scheduling/planner/ical/${selectedSemesterId}`}
+                href={`/api/academics/planner/ical/${selectedSemesterId}`}
                 className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg flex items-center gap-1.5"
               >
                 <Download className="w-4 h-4" /> ICS
@@ -2896,7 +2896,7 @@ function SemesterPlannerPage() {
 
             {/* Workload Tracker */}
             <a
-              href="/scheduling/planner/workload"
+              href="/academics/planner/workload"
               className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg flex items-center gap-1.5"
             >
               <BarChart3 className="w-4 h-4 text-indigo-500" /> Workload
@@ -3031,7 +3031,7 @@ function SemesterPlannerPage() {
                       {(labDaysByDate.get(dateStr) || []).map(ld => (
                         <a
                           key={ld.id}
-                          href={`/lab-management/schedule/${ld.id}`}
+                          href={`/labs/schedule/${ld.id}`}
                           className="block mt-1 px-1 py-0.5 text-[9px] leading-tight rounded border border-orange-400 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 hover:bg-orange-100 dark:hover:bg-orange-900/40 truncate"
                           title={ld.title || 'Lab Day'}
                         >

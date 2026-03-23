@@ -1,0 +1,3 @@
+{
+  "/api/lab-management/lab-days/[id]/attendance/absences/route": "app/api/lab-management/lab-days/[id]/attendance/absences/route.js"
+}

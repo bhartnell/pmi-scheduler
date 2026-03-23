@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/admin/layout,_N_T_/admin/system-health/layout,_N_T_/admin/system-health/page,_N_T_/admin/system-health"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/admin/system-health/__PAGE__",
+    "/admin/system-health",
+    "/admin",
+    "/_index",
+    "/_head"
+  ]
+}

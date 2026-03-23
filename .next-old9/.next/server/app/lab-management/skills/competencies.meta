@@ -1,0 +1,17 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/lab-management/layout,_N_T_/lab-management/skills/layout,_N_T_/lab-management/skills/competencies/layout,_N_T_/lab-management/skills/competencies/page,_N_T_/lab-management/skills/competencies"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/lab-management/skills/competencies/__PAGE__",
+    "/lab-management/skills/competencies",
+    "/lab-management/skills",
+    "/lab-management",
+    "/_index",
+    "/_head"
+  ]
+}

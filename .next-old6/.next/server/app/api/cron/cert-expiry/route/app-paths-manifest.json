@@ -1,0 +1,3 @@
+{
+  "/api/cron/cert-expiry/route": "app/api/cron/cert-expiry/route.js"
+}

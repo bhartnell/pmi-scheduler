@@ -1,0 +1,3 @@
+{
+  "/api/cron/scheduled-exports/route": "app/api/cron/scheduled-exports/route.js"
+}

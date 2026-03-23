@@ -98,7 +98,7 @@ export default function MyCertificationsPage() {
             Your account hasn&apos;t been set up yet. Please contact an administrator.
           </p>
           <Link
-            href="/lab-management"
+            href="/labs"
             className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
             Back to Lab Management
@@ -120,7 +120,7 @@ export default function MyCertificationsPage() {
               Home
             </Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
+            <Link href="/labs" className="hover:text-blue-600 dark:hover:text-blue-400">Labs</Link>
             <ChevronRight className="w-4 h-4" />
             <span>My Certifications</span>
           </div>

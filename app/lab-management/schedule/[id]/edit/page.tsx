@@ -458,7 +458,7 @@ export default function EditLabDayPage() {
         // Don't fail the entire save if roles fail
       }
 
-      router.push(`/lab-management/schedule/${labDayId}`);
+      router.push(`/labs/schedule/${labDayId}`);
     } catch (error) {
       console.error('Error saving:', error);
       alert('Failed to save lab day');
@@ -479,7 +479,7 @@ export default function EditLabDayPage() {
 
       const data = await res.json();
       if (data.success) {
-        router.push('/lab-management/schedule');
+        router.push('/labs/schedule');
       } else {
         alert('Failed to delete: ' + (data.error || 'Unknown error'));
       }
@@ -588,7 +588,7 @@ export default function EditLabDayPage() {
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Lab Day Not Found</h2>
           <p className="text-gray-600 dark:text-gray-400 mb-4">The requested lab day could not be found.</p>
           <Link
-            href="/lab-management/schedule"
+            href="/labs/schedule"
             className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
             Back to Schedule
@@ -604,11 +604,11 @@ export default function EditLabDayPage() {
       <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-6">
           <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
-            <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
+            <Link href="/labs" className="hover:text-blue-600 dark:hover:text-blue-400">Labs</Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management/schedule" className="hover:text-blue-600 dark:hover:text-blue-400">Schedule</Link>
+            <Link href="/labs/schedule" className="hover:text-blue-600 dark:hover:text-blue-400">Schedule</Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href={`/lab-management/schedule/${labDayId}`} className="hover:text-blue-600 dark:hover:text-blue-400">
+            <Link href={`/labs/schedule/${labDayId}`} className="hover:text-blue-600 dark:hover:text-blue-400">
               {labDay.cohort.program.abbreviation} Group {formatCohortNumber(labDay.cohort.cohort_number)}
             </Link>
             <ChevronRight className="w-4 h-4" />
@@ -815,7 +815,7 @@ export default function EditLabDayPage() {
                     <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
                       <Smartphone className="w-3 h-3" />
                       No mobile timers available.{' '}
-                      <Link href="/lab-management/admin/timer-displays" className="text-blue-600 hover:underline">
+                      <Link href="/admin/timer-displays" className="text-blue-600 hover:underline">
                         Create one
                       </Link>
                     </p>
@@ -1084,7 +1084,7 @@ export default function EditLabDayPage() {
 
             <div className="flex gap-3">
               <Link
-                href={`/lab-management/schedule/${labDayId}`}
+                href={`/labs/schedule/${labDayId}`}
                 className="px-6 py-2 border dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
               >
                 Cancel

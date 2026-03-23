@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/reports/layout,_N_T_/reports/cohort-comparison/layout,_N_T_/reports/cohort-comparison/page,_N_T_/reports/cohort-comparison"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/reports/cohort-comparison/__PAGE__",
+    "/reports/cohort-comparison",
+    "/reports",
+    "/_index",
+    "/_head"
+  ]
+}

@@ -45,7 +45,7 @@ export default function AdminPage() {
       const data = await res.json();
       if (data.success && data.user) {
         if (!canManageContent(data.user.role)) {
-          router.push('/lab-management');
+          router.push('/labs');
           return;
         }
         setCurrentUser(data.user);
@@ -69,42 +69,42 @@ export default function AdminPage() {
   // Lab content administration links
   const adminLinks = [
     {
-      href: '/lab-management/admin/cohorts',
+      href: '/academics/cohorts',
       icon: GraduationCap,
       title: 'Manage Cohorts',
       description: 'Create and manage program cohorts (EMT Group 4, PM Group 14, etc.)',
       color: 'bg-blue-500'
     },
     {
-      href: '/lab-management/students',
+      href: '/academics/students',
       icon: UserCog,
       title: 'Student Roster',
       description: 'View all students, add new students, import from CSV',
       color: 'bg-purple-500'
     },
     {
-      href: '/lab-management/scenarios',
+      href: '/labs/scenarios',
       icon: FolderKanban,
       title: 'Scenario Library',
       description: 'Create and manage training scenarios',
       color: 'bg-orange-500'
     },
     {
-      href: '/lab-management/admin/certifications',
+      href: '/admin/certifications',
       icon: Award,
       title: 'Certification Records',
       description: 'View and manage individual instructor certification records',
       color: 'bg-purple-500'
     },
     {
-      href: '/lab-management/admin/feedback',
+      href: '/admin/feedback',
       icon: MessageSquare,
       title: 'Feedback Reports',
       description: 'Review bug reports and feature requests from users',
       color: 'bg-teal-500'
     },
     {
-      href: '/lab-management/admin/timer-displays',
+      href: '/admin/timer-displays',
       icon: Monitor,
       title: 'Timer Displays',
       description: 'Manage kiosk display tokens for Raspberry Pi or wall monitors',
@@ -112,15 +112,15 @@ export default function AdminPage() {
     },
     // Seating Charts & Learning Styles - archived, hidden from nav
     // {
-    //   href: '/lab-management/seating/learning-styles',
+    //   href: '/labs/seating/learning-styles',
     //   ...
     // },
     // {
-    //   href: '/lab-management/seating/preferences',
+    //   href: '/labs/seating/preferences',
     //   ...
     // },
     // {
-    //   href: '/lab-management/seating/charts',
+    //   href: '/labs/seating/charts',
     //   ...
     // }
   ];

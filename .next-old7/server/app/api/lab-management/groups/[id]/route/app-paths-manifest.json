@@ -1,0 +1,3 @@
+{
+  "/api/lab-management/groups/[id]/route": "app/api/lab-management/groups/[id]/route.js"
+}

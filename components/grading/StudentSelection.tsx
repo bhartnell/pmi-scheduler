@@ -206,7 +206,7 @@ export default function StudentSelection({
           <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
             <p className="text-sm text-yellow-800 dark:text-yellow-300">
               No lab groups found for this cohort.
-              <Link href={`/lab-management/cohorts/${station.lab_day.cohort.id}/groups`} className="underline ml-1">
+              <Link href={`/academics/cohorts/${station.lab_day.cohort.id}/groups`} className="underline ml-1">
                 Create groups first
               </Link>
             </p>

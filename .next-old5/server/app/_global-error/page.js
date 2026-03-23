@@ -1,0 +1,11 @@
+var R=require("../../chunks/ssr/[turbopack]_runtime.js")("server/app/_global-error/page.js")
+R.c("server/chunks/ssr/[root-of-the-server]__6666cf6b._.js")
+R.c("server/chunks/ssr/_claude_worktrees_focused-goodall_5f397658._.js")
+R.c("server/chunks/ssr/e71d5_next_dist_062df98e._.js")
+R.c("server/chunks/ssr/[root-of-the-server]__ce408d73._.js")
+R.c("server/chunks/ssr/e71d5_066c3a0a._.js")
+R.c("server/chunks/ssr/e71d5_next_dist_0cdbe273._.js")
+R.c("server/chunks/ssr/_claude_worktrees_focused-goodall_app_295bd7e1._.js")
+R.c("server/chunks/ssr/2e377_focused-goodall__next-internal_server_app__global-error_page_actions_9e253278.js")
+R.m(396476)
+module.exports=R.m(396476).exports

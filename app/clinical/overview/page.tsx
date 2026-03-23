@@ -57,7 +57,7 @@ const PM_SEMESTER_CONFIG: Record<number, { label: string; description: string; c
   4: { label: 'S4 - Internship', description: 'Field internship phase', color: 'text-purple-700 dark:text-purple-400', bgColor: 'bg-purple-100 dark:bg-purple-900/30', trackerLink: '/clinical/internships' },
   3: { label: 'S3 - Clinicals', description: 'Hospital clinical rotations', color: 'text-blue-700 dark:text-blue-400', bgColor: 'bg-blue-100 dark:bg-blue-900/30', trackerLink: '/clinical/hours' },
   2: { label: 'S2 - Compliance', description: 'Pre-clinical compliance docs', color: 'text-green-700 dark:text-green-400', bgColor: 'bg-green-100 dark:bg-green-900/30', trackerLink: '/clinical/compliance' },
-  1: { label: 'S1 - Didactic', description: 'Classroom phase', color: 'text-gray-700 dark:text-gray-400', bgColor: 'bg-gray-100 dark:bg-gray-700', trackerLink: '/lab-management' },
+  1: { label: 'S1 - Didactic', description: 'Classroom phase', color: 'text-gray-700 dark:text-gray-400', bgColor: 'bg-gray-100 dark:bg-gray-700', trackerLink: '/labs' },
 };
 
 export default function ClinicalOverviewPage() {

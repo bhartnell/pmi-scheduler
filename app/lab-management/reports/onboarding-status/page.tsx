@@ -159,9 +159,9 @@ export default function OnboardingStatusReportPage() {
               Home
             </Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
+            <Link href="/labs" className="hover:text-blue-600 dark:hover:text-blue-400">Labs</Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management/reports" className="hover:text-blue-600 dark:hover:text-blue-400">Reports</Link>
+            <Link href="/reports" className="hover:text-blue-600 dark:hover:text-blue-400">Reports</Link>
             <ChevronRight className="w-4 h-4" />
             <span>Onboarding Status</span>
           </div>

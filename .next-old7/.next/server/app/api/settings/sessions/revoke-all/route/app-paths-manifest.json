@@ -1,0 +1,3 @@
+{
+  "/api/settings/sessions/revoke-all/route": "app/api/settings/sessions/revoke-all/route.js"
+}

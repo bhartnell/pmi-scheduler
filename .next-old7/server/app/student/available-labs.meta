@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/student/layout,_N_T_/student/available-labs/layout,_N_T_/student/available-labs/page,_N_T_/student/available-labs"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/student/available-labs/__PAGE__",
+    "/student/available-labs",
+    "/student",
+    "/_index",
+    "/_head"
+  ]
+}

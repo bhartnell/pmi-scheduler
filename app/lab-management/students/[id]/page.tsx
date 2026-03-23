@@ -833,7 +833,7 @@ export default function StudentDetailPage() {
       
       const data = await res.json();
       if (data.success) {
-        router.push('/lab-management/students');
+        router.push('/academics/students');
       } else {
         alert('Failed to delete: ' + data.error);
       }
@@ -857,7 +857,7 @@ export default function StudentDetailPage() {
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
           <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Student Not Found</h2>
-          <Link href="/lab-management/students" className="text-blue-600 dark:text-blue-400 hover:underline">Back to Students</Link>
+          <Link href="/academics/students" className="text-blue-600 dark:text-blue-400 hover:underline">Back to Students</Link>
         </div>
       </div>
     );
@@ -873,7 +873,7 @@ export default function StudentDetailPage() {
             className="mb-1"
           />
           <Link
-            href="/lab-management/students"
+            href="/academics/students"
             className="inline-flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 mt-1"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -1139,7 +1139,7 @@ export default function StudentDetailPage() {
                         View Progress
                       </Link>
                       <Link
-                        href={`/lab-management/students/${studentId}/portfolio`}
+                        href={`/academics/students/${studentId}/portfolio`}
                         className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/40 rounded-lg font-medium"
                       >
                         <FileText className="w-4 h-4" />

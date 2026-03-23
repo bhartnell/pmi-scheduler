@@ -1043,7 +1043,7 @@ function NewLabDayPageContent() {
 
       // Clear local draft after successful save
       autoSave.clearDraft();
-      router.push(`/lab-management/schedule/${labDayId}`);
+      router.push(`/labs/schedule/${labDayId}`);
     } catch (error) {
       console.error('Error saving lab day:', error);
       alert('Failed to save lab day');
@@ -1123,7 +1123,7 @@ function NewLabDayPageContent() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Link
-                href="/lab-management/schedule"
+                href="/labs/schedule"
                 className="flex items-center gap-1 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
               >
                 <ArrowLeft className="w-5 h-5" />
@@ -2543,7 +2543,7 @@ function NewLabDayPageContent() {
         {/* Save Button */}
         <div className="flex justify-end gap-3 pt-4">
           <Link
-            href="/lab-management/schedule"
+            href="/labs/schedule"
             className="px-6 py-2 border dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
           >
             Cancel

@@ -1,0 +1,17 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/admin/layout,_N_T_/admin/scenarios/layout,_N_T_/admin/scenarios/audit/layout,_N_T_/admin/scenarios/audit/page,_N_T_/admin/scenarios/audit"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/admin/scenarios/audit/__PAGE__",
+    "/admin/scenarios/audit",
+    "/admin/scenarios",
+    "/admin",
+    "/_index",
+    "/_head"
+  ]
+}

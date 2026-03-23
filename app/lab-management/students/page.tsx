@@ -161,14 +161,14 @@ export default function StudentsPage() {
             <div className="flex gap-2">
               <ExportDropdown config={exportConfig} disabled={filteredStudents.length === 0} />
               <Link
-                href="/lab-management/students/import"
+                href="/academics/students/import"
                 className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
               >
                 <Upload className="w-4 h-4" />
                 Import
               </Link>
               <Link
-                href="/lab-management/students/new"
+                href="/academics/students/new"
                 className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               >
                 <Plus className="w-4 h-4" />
@@ -238,7 +238,7 @@ export default function StudentsPage() {
               {searchTerm ? 'Try adjusting your search or filters.' : 'Add your first student to get started.'}
             </p>
             <Link
-              href="/lab-management/students/new"
+              href="/academics/students/new"
               className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
               <Plus className="w-4 h-4" />
@@ -254,7 +254,7 @@ export default function StudentsPage() {
               {filteredStudents.map(student => (
                 <Link
                   key={student.id}
-                  href={`/lab-management/students/${student.id}`}
+                  href={`/academics/students/${student.id}`}
                   className="bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-lg transition-shadow p-4"
                 >
                   <div className="flex items-start gap-3">

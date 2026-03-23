@@ -1,0 +1,3 @@
+{
+  "/api/seating/charts/[id]/assignments/route": "app/api/seating/charts/[id]/assignments/route.js"
+}

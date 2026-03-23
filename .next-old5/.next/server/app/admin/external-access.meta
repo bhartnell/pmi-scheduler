@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/admin/layout,_N_T_/admin/external-access/layout,_N_T_/admin/external-access/page,_N_T_/admin/external-access"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/admin/external-access/__PAGE__",
+    "/admin/external-access",
+    "/admin",
+    "/_index",
+    "/_head"
+  ]
+}

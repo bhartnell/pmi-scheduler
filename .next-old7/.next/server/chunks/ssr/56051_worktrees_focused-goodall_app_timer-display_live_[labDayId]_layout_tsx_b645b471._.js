@@ -1,0 +1,3 @@
+module.exports=[756583,a=>{"use strict";var b=a.i(357542);function c({children:a}){return(0,b.jsx)("div",{className:"min-h-screen bg-black",children:a})}a.s(["default",()=>c,"metadata",0,{title:"Live Timer Display - PMI EMS Scheduler",description:"Full-screen lab timer display for tablets and projectors",other:{"mobile-web-app-capable":"yes","apple-mobile-web-app-capable":"yes","apple-mobile-web-app-status-bar-style":"black","apple-mobile-web-app-title":"PMI Timer","theme-color":"#000000"}}])}];
+
+//# sourceMappingURL=56051_worktrees_focused-goodall_app_timer-display_live_%5BlabDayId%5D_layout_tsx_b645b471._.js.map

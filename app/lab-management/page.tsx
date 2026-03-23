@@ -50,7 +50,7 @@ export default function LabManagementDashboard() {
   useEffect(() => {
     if (!effectiveRole) return;
     if (effectiveRole === 'volunteer_instructor') {
-      router.push('/lab-management/schedule');
+      router.push('/labs/schedule');
     } else if (!hasMinRole(effectiveRole, 'instructor') && !canAccessScheduling(effectiveRole)) {
       router.push('/');
     }
@@ -174,7 +174,7 @@ export default function LabManagementDashboard() {
         actions={
           canManage ? (
             <Link
-              href="/lab-management/schedule/new"
+              href="/labs/schedule/new"
               className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
             >
               <Plus className="w-4 h-4" />
@@ -210,7 +210,7 @@ export default function LabManagementDashboard() {
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Quick Actions</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <Link
-                href="/lab-management/students/new"
+                href="/academics/students/new"
                 className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 hover:shadow-lg transition-shadow flex items-center gap-3"
               >
                 <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
@@ -223,7 +223,7 @@ export default function LabManagementDashboard() {
               </Link>
 
               <Link
-                href="/lab-management/scenarios/new"
+                href="/labs/scenarios/new"
                 className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 hover:shadow-lg transition-shadow flex items-center gap-3"
               >
                 <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
@@ -236,7 +236,7 @@ export default function LabManagementDashboard() {
               </Link>
 
               <Link
-                href="/lab-management/admin/cohorts"
+                href="/academics/cohorts"
                 className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 hover:shadow-lg transition-shadow flex items-center gap-3"
               >
                 <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
@@ -249,7 +249,7 @@ export default function LabManagementDashboard() {
               </Link>
 
               <Link
-                href="/lab-management/reports"
+                href="/reports"
                 className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 hover:shadow-lg transition-shadow flex items-center gap-3"
               >
                 <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">

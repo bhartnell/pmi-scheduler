@@ -1,0 +1,17 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/lab-management/layout,_N_T_/lab-management/reports/layout,_N_T_/lab-management/reports/onboarding-status/layout,_N_T_/lab-management/reports/onboarding-status/page,_N_T_/lab-management/reports/onboarding-status"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/lab-management/reports/onboarding-status/__PAGE__",
+    "/lab-management/reports/onboarding-status",
+    "/lab-management/reports",
+    "/lab-management",
+    "/_index",
+    "/_head"
+  ]
+}

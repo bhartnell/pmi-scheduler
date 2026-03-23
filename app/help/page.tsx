@@ -144,18 +144,18 @@ const ADMIN_FEATURES: RoleFeature[] = [
 ];
 
 const INSTRUCTOR_FEATURES: RoleFeature[] = [
-  { feature: 'Lab Schedule', description: 'Create and manage lab day schedules at /lab-management/schedule. Add stations, assign scenarios, and configure timers.' },
-  { feature: 'Students', description: 'Manage the student roster at /lab-management/students. Add students, view progress, flag concerns, and track attendance.' },
-  { feature: 'Scenarios', description: 'Build and maintain the scenario library at /lab-management/scenarios. Tag scenarios by category, difficulty, and skill requirements.' },
-  { feature: 'Seating & Groups', description: 'Manage group assignments and seating charts at /lab-management/seating. The system can auto-assign groups based on learning style preferences.' },
-  { feature: 'Cohort Management', description: 'Create and manage student cohorts at /lab-management/cohorts. Archive cohorts when they graduate.' },
-  { feature: 'Grading', description: 'Grade station performance for students at /lab-management/grade/station/[id]. Results feed into student progress reports.' },
+  { feature: 'Lab Schedule', description: 'Create and manage lab day schedules at /labs/schedule. Add stations, assign scenarios, and configure timers.' },
+  { feature: 'Students', description: 'Manage the student roster at /academics/students. Add students, view progress, flag concerns, and track attendance.' },
+  { feature: 'Scenarios', description: 'Build and maintain the scenario library at /labs/scenarios. Tag scenarios by category, difficulty, and skill requirements.' },
+  { feature: 'Seating & Groups', description: 'Manage group assignments and seating charts at /labs/seating. The system can auto-assign groups based on learning style preferences.' },
+  { feature: 'Cohort Management', description: 'Create and manage student cohorts at /academics/cohorts. Archive cohorts when they graduate.' },
+  { feature: 'Grading', description: 'Grade station performance for students at /labs/grade/station/[id]. Results feed into student progress reports.' },
   { feature: 'Certifications', description: 'Track your personal certifications and CE hours at /instructor/certifications and /instructor/ce.' },
   { feature: 'Scheduling Polls', description: 'Create Doodle-style scheduling polls at /scheduler to find the best meeting time with students or preceptors.' },
   { feature: 'Part-Timer Scheduling', description: 'Set your availability and sign up for open shifts at /scheduling. Admins can view all availability at /scheduling/availability/all.' },
   { feature: 'Onboarding', description: 'Assign onboarding tracks to new instructors and monitor their progress at /onboarding.' },
   { feature: 'Tasks', description: 'Create, assign, and track tasks between instructors at /tasks. Tasks support comments, file attachments, and due dates.' },
-  { feature: 'EKG Warm-Up', description: 'Run an EKG rhythm identification exercise at /lab-management/ekg-warmup for student warm-up activities.' },
+  { feature: 'EKG Warm-Up', description: 'Run an EKG rhythm identification exercise at /labs/ekg-warmup for student warm-up activities.' },
 ];
 
 const STUDENT_FEATURES: RoleFeature[] = [
@@ -165,7 +165,7 @@ const STUDENT_FEATURES: RoleFeature[] = [
   { feature: 'Completions', description: 'Review completed lab sessions, scenario grades, and attendance history at /student/completions.' },
   { feature: 'Scheduling Polls', description: 'Submit your availability for scheduling polls when an instructor sends you a poll link at /poll/[id].' },
   { feature: 'Onboarding', description: 'Complete assigned onboarding tasks and track your progress at /onboarding.' },
-  { feature: 'Certifications', description: 'View your current certifications at /lab-management/my-certifications.' },
+  { feature: 'Certifications', description: 'View your current certifications at /labs/my-certifications.' },
 ];
 
 const FAQ_ITEMS: FaqItem[] = [
@@ -239,7 +239,7 @@ const FAQ_ITEMS: FaqItem[] = [
     category: 'Data & Export',
     question: 'Can I export data to Excel or PDF?',
     answer:
-      'Yes. Most report pages have an Export button that lets you download data as an Excel spreadsheet or print as a PDF. Look for the export icon or the export dropdown on report pages like /lab-management/reports and /reports/instructor-workload.',
+      'Yes. Most report pages have an Export button that lets you download data as an Excel spreadsheet or print as a PDF. Look for the export icon or the export dropdown on report pages like /reports and /reports/instructor-workload.',
   },
   {
     category: 'Technical',
@@ -440,7 +440,7 @@ const CHANGELOG_VERSIONS: ChangelogVersion[] = [
     date: '2026-01-31',
     added: [
       'Core scheduling system — polls, availability submission, result aggregation',
-      'Lab management (/lab-management) — lab days, sections, scenarios, student assignments',
+      'Labs (/labs) — lab days, sections, scenarios, student assignments',
       'Clinical tracking (/clinical) — hospital shifts, agency internship hours, field contacts',
       'Admin panel (/admin) — user management, role assignment, cohort creation, reports',
       'Scenario library — create, version, and assign EMS scenarios to lab days',

@@ -1,0 +1,3 @@
+{
+  "/api/dashboard/cert-expiry/route": "app/api/dashboard/cert-expiry/route.js"
+}

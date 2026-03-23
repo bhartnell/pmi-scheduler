@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/lvfr-aemt/layout,_N_T_/lvfr-aemt/skills/layout,_N_T_/lvfr-aemt/skills/page,_N_T_/lvfr-aemt/skills"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/lvfr-aemt/skills/__PAGE__",
+    "/lvfr-aemt/skills",
+    "/lvfr-aemt",
+    "/_index",
+    "/_head"
+  ]
+}

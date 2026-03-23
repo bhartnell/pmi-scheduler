@@ -99,7 +99,7 @@ export default function OpenStationsWidget() {
     <WidgetCard
       title="Open Stations"
       icon={<AlertCircle className="w-5 h-5 text-orange-600 dark:text-orange-400" />}
-      viewAllLink="/lab-management/schedule"
+      viewAllLink="/labs/schedule"
       viewAllText="View All"
       loading={loading}
     >

@@ -251,7 +251,7 @@ export default function LabDayTemplatesPage() {
               </p>
             </div>
             <Link
-              href="/lab-management/schedule/new"
+              href="/labs/schedule/new"
               className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm"
             >
               <Plus className="w-4 h-4" />
@@ -373,7 +373,7 @@ export default function LabDayTemplatesPage() {
                   Create your first template by setting up a lab day and clicking &ldquo;Save as Template&rdquo;.
                 </p>
                 <Link
-                  href="/lab-management/schedule/new"
+                  href="/labs/schedule/new"
                   className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm"
                 >
                   <Plus className="w-4 h-4" />
@@ -468,7 +468,7 @@ export default function LabDayTemplatesPage() {
                   {/* Actions */}
                   <div className="px-4 py-3 border-t dark:border-gray-700 flex items-center gap-2 bg-gray-50 dark:bg-gray-700/30 rounded-b-lg">
                     <Link
-                      href={`/lab-management/schedule/new?templateId=${template.id}`}
+                      href={`/labs/schedule/new?templateId=${template.id}`}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm transition-colors"
                     >
                       <ExternalLink className="w-3.5 h-3.5" />

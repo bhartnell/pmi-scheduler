@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/admin/layout,_N_T_/admin/lab-templates/layout,_N_T_/admin/lab-templates/page,_N_T_/admin/lab-templates"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/admin/lab-templates/__PAGE__",
+    "/admin/lab-templates",
+    "/admin",
+    "/_index",
+    "/_head"
+  ]
+}

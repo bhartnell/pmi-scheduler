@@ -134,7 +134,7 @@ function NewStudentContent() {
       const data = await res.json();
       if (data.success) {
         // Redirect to returnTo if provided, otherwise to student detail page
-        router.push(returnTo || `/lab-management/students/${data.student.id}`);
+        router.push(returnTo || `/academics/students/${data.student.id}`);
       } else {
         alert('Failed to create student: ' + data.error);
       }
@@ -157,9 +157,9 @@ function NewStudentContent() {
       <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-2xl mx-auto px-4 py-6">
           <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1">
-            <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
+            <Link href="/labs" className="hover:text-blue-600 dark:hover:text-blue-400">Labs</Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management/students" className="hover:text-blue-600 dark:hover:text-blue-400">Students</Link>
+            <Link href="/academics/students" className="hover:text-blue-600 dark:hover:text-blue-400">Students</Link>
             <ChevronRight className="w-4 h-4" />
             <span className="dark:text-gray-300">New</span>
           </div>
@@ -318,7 +318,7 @@ function NewStudentContent() {
 
           <div className="flex gap-3 pt-4 border-t dark:border-gray-700">
             <Link
-              href={returnTo || '/lab-management/students'}
+              href={returnTo || '/academics/students'}
               className="px-6 py-2 border dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
             >
               Cancel
@@ -347,7 +347,7 @@ function NewStudentContent() {
         <div className="mt-6 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
           <p className="text-sm text-blue-800 dark:text-blue-300">
             <strong>Tip:</strong> Need to add multiple students at once?{' '}
-            <Link href="/lab-management/students/import" className="font-medium underline">
+            <Link href="/academics/students/import" className="font-medium underline">
               Use the import feature
             </Link>{' '}
             to paste from Excel or upload a CSV file.

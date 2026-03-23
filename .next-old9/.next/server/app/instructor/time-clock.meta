@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/instructor/layout,_N_T_/instructor/time-clock/layout,_N_T_/instructor/time-clock/page,_N_T_/instructor/time-clock"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/instructor/time-clock/__PAGE__",
+    "/instructor/time-clock",
+    "/instructor",
+    "/_index",
+    "/_head"
+  ]
+}

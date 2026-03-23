@@ -304,7 +304,7 @@ export default function LabCostsReportPage() {
               Home
             </Link>
             <ChevronRight className="w-4 h-4 flex-shrink-0" />
-            <Link href="/lab-management/reports" className="hover:text-blue-600 dark:hover:text-blue-400">
+            <Link href="/reports" className="hover:text-blue-600 dark:hover:text-blue-400">
               Reports
             </Link>
             <ChevronRight className="w-4 h-4 flex-shrink-0" />
@@ -575,7 +575,7 @@ export default function LabCostsReportPage() {
                           </td>
                           <td className="px-4 py-3 text-gray-900 dark:text-white">
                             <Link
-                              href={`/lab-management/schedule/${d.lab_day_id}`}
+                              href={`/labs/schedule/${d.lab_day_id}`}
                               className="hover:text-blue-600 dark:hover:text-blue-400 hover:underline"
                             >
                               {d.title || `Lab Day ${formatDate(d.date)}`}

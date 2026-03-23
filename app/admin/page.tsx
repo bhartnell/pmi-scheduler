@@ -140,7 +140,7 @@ function buildSections(pendingAccessRequests: number): AdminSection[] {
           color: 'bg-blue-600',
         },
         {
-          href: '/lab-management/scenarios',
+          href: '/labs/scenarios',
           icon: Layers,
           title: 'Manage Scenarios',
           description: 'View, create, edit, and delete simulation scenarios',
@@ -380,7 +380,7 @@ function buildSections(pendingAccessRequests: number): AdminSection[] {
       defaultExpanded: false,
       links: [
         {
-          href: '/lab-management/reports',
+          href: '/reports',
           icon: BarChart3,
           title: 'Reports Hub',
           description: 'All lab, clinical, instructor, and student reports in one place',
@@ -818,13 +818,13 @@ export default function AdminPage() {
               </p>
               <div className="flex flex-wrap gap-2">
                 {[
-                  { label: 'Seating Charts', href: '/lab-management/seating/charts' },
-                  { label: 'Learning Styles', href: '/lab-management/seating/learning-styles' },
-                  { label: 'Seating Preferences', href: '/lab-management/seating/preferences' },
-                  { label: 'Peer Evaluations', href: '/lab-management/peer-evals' },
-                  { label: 'Mentorship', href: '/lab-management/mentorship' },
+                  { label: 'Seating Charts', href: '/labs/seating/charts' },
+                  { label: 'Learning Styles', href: '/labs/seating/learning-styles' },
+                  { label: 'Seating Preferences', href: '/labs/seating/preferences' },
+                  { label: 'Peer Evaluations', href: '/labs/peer-evals' },
+                  { label: 'Mentorship', href: '/labs/mentorship' },
                   { label: 'Equipment Maintenance', href: '/admin/equipment/maintenance' },
-                  { label: 'Protocol Tracking', href: '/lab-management/protocol-tracking' },
+                  { label: 'Protocol Tracking', href: '/labs/protocol-tracking' },
                   { label: 'Deep Links', href: '/admin/deep-links' },
                   { label: 'Resource Bookings', href: '/scheduling/resource-bookings' },
                   { label: 'Medications Resource', href: '/resources/medications' },
@@ -850,19 +850,19 @@ export default function AdminPage() {
           <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3">Related Areas</h2>
           <div className="flex flex-wrap gap-2">
             <Link
-              href="/lab-management/admin/cohorts"
+              href="/academics/cohorts"
               className="px-3 py-1.5 bg-white dark:bg-gray-800 rounded-lg shadow text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
             >
               Manage Cohorts
             </Link>
             <Link
-              href="/lab-management/students"
+              href="/academics/students"
               className="px-3 py-1.5 bg-white dark:bg-gray-800 rounded-lg shadow text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
             >
               Student Roster
             </Link>
             <Link
-              href="/lab-management/scenarios"
+              href="/labs/scenarios"
               className="px-3 py-1.5 bg-white dark:bg-gray-800 rounded-lg shadow text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
             >
               Scenarios

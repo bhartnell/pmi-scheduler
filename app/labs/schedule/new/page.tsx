@@ -1,0 +1,2999 @@
+'use client';
+
+import { formatCohortNumber } from '@/lib/format-cohort';
+import { useSession } from 'next-auth/react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState, Suspense, useMemo, useCallback, useRef } from 'react';
+import Link from 'next/link';
+import { useAutoSave } from '@/hooks/useAutoSave';
+import AutoSaveIndicator from '@/components/AutoSaveIndicator';
+import HelpTooltip from '@/components/HelpTooltip';
+import {
+  ChevronRight,
+  Plus,
+  Trash2,
+  Save,
+  Calendar,
+  Clock,
+  BookOpen,
+  AlertCircle,
+  User,
+  Home,
+  Stethoscope,
+  FileText,
+  ClipboardCheck,
+  Search,
+  X,
+  Users,
+  HelpCircle,
+  LayoutTemplate,
+  CheckCircle,
+  RefreshCw,
+  ExternalLink,
+  History,
+  ChevronDown,
+  ChevronUp,
+  Copy,
+  AlertTriangle,
+  ArrowLeft,
+} from 'lucide-react';
+import Breadcrumbs from '@/components/Breadcrumbs';
+
+interface LabDayTemplate {
+  id: string;
+  name: string;
+  description: string | null;
+  template_data: {
+    stations: Array<{
+      station_type: string;
+      scenario_id?: string;
+      selected_skills?: string[];
+      custom_skills?: string[];
+      notes?: string;
+      room?: string;
+      rotation_minutes?: number;
+      num_rotations?: number;
+      skill_sheet_url?: string;
+      instructions_url?: string;
+      station_notes?: string;
+    }>;
+    rotation_duration?: number;
+    num_rotations?: number;
+  };
+  is_shared: boolean;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface Cohort {
+  id: string;
+  cohort_number: number | string;
+  program: { abbreviation: string };
+}
+
+interface Scenario {
+  id: string;
+  title: string;
+  category: string;
+  subcategory: string | null;
+  difficulty: string;
+  applicable_programs: string[];
+  chief_complaint: string | null;
+  patient_name: string | null;
+  patient_age: string | null;
+  estimated_duration: number | null;
+}
+
+interface Skill {
+  id: string;
+  name: string;
+  category: string;
+  certification_levels: string[];
+}
+
+interface Instructor {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
+interface LabUser {
+  id: string;
+  name: string;
+  email: string;
+}
+
+interface Station {
+  id: string;
+  station_number: number;
+  station_type: 'scenario' | 'skills' | 'skill_drill' | 'documentation';
+  scenario_id: string;
+  custom_title: string;  // Auto-generated station name
+  selected_skills: string[];  // For skills stations
+  custom_skills: string[];  // For freetext custom skills
+  drill_ids: string[];  // For skill_drill stations
+  instructor_name: string;
+  instructor_email: string;
+  room: string;
+  notes: string;
+  rotation_minutes: number;
+  num_rotations: number;
+  // Skills station document fields
+  skill_sheet_url: string;
+  instructions_url: string;
+  station_notes: string;
+}
+
+interface SkillDrill {
+  id: string;
+  name: string;
+  description: string | null;
+  category: string;
+  estimated_duration_minutes: number;
+  equipment_needed: string[] | null;
+}
+
+interface DrillDocument {
+  id: string;
+  document_name: string;
+  document_url: string;
+  document_type: string;
+}
+
+interface SuggestionStation {
+  id: string;
+  station_number: number;
+  station_type: 'scenario' | 'skills' | 'skill_drill' | 'documentation';
+  scenario_id: string | null;
+  drill_ids: string[];
+  selected_skills: string[];
+  custom_skill_names: string[];
+  room: string | null;
+  notes: string | null;
+  rotation_minutes: number;
+  num_rotations: number;
+  skill_sheet_url: string | null;
+  instructions_url: string | null;
+  station_notes: string | null;
+  scenario: { id: string; title: string; category: string; difficulty: string } | null;
+  library_skills: { id: string; name: string; category: string }[];
+  custom_skills: { id: string; name: string }[];
+  drills: { id: string; name: string; category: string }[];
+}
+
+interface Suggestion {
+  lab_day_id: string;
+  date: string;
+  title: string | null;
+  week_number: number | null;
+  day_number: number | null;
+  num_rotations: number;
+  rotation_duration: number;
+  week_offset: number | null;
+  cohort: {
+    id: string;
+    cohort_number: number | string;
+    program: { id: string; name: string; abbreviation: string };
+  } | null;
+  stations: SuggestionStation[];
+}
+
+const STATION_TYPES = [
+  { value: 'scenario', label: 'Scenario', icon: Stethoscope, color: 'bg-purple-500', description: 'Full scenario with grading' },
+  { value: 'skills', label: 'Skills', icon: ClipboardCheck, color: 'bg-green-500', description: 'Skills practice station' },
+  { value: 'skill_drill', label: 'Skill Drill', icon: RefreshCw, color: 'bg-orange-500', description: 'Practice specific skills repeatedly' },
+  { value: 'documentation', label: 'Documentation', icon: FileText, color: 'bg-blue-500', description: 'Documentation/PCR station' }
+];
+
+function NewLabDayPageContent() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const [cohorts, setCohorts] = useState<Cohort[]>([]);
+  const [scenarios, setScenarios] = useState<Scenario[]>([]);
+  const [skills, setSkills] = useState<Skill[]>([]);
+  const [skillDrills, setSkillDrills] = useState<SkillDrill[]>([]);
+  const [instructors, setInstructors] = useState<Instructor[]>([]);
+  const [users, setUsers] = useState<LabUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+
+  // Conflict detection state
+  interface SchedulingConflict {
+    type: 'instructor' | 'room' | 'cohort';
+    message: string;
+    severity: 'warning';
+  }
+  const [conflicts, setConflicts] = useState<SchedulingConflict[]>([]);
+  const [conflictsLoading, setConflictsLoading] = useState(false);
+  const [showConflictModal, setShowConflictModal] = useState(false);
+  const conflictDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Lab Day Roles state
+  const [labLeads, setLabLeads] = useState<string[]>([]);
+  const [roamers, setRoamers] = useState<string[]>([]);
+  const [observers, setObservers] = useState<string[]>([]);
+
+  // Coverage Request state
+  const [needsCoverage, setNeedsCoverage] = useState(false);
+  const [coverageNeeded, setCoverageNeeded] = useState(1);
+  const [coverageNote, setCoverageNote] = useState('');
+
+  // Form state
+  const [selectedCohort, setSelectedCohort] = useState('');
+  const [labDate, setLabDate] = useState(searchParams.get('date') || '');
+  const [startTime, setStartTime] = useState('08:00');
+  const [endTime, setEndTime] = useState('12:00');
+  const [labTitle, setLabTitle] = useState('');
+  const [labNotes, setLabNotes] = useState('');
+  const [semester, setSemester] = useState('');
+  const [weekNumber, setWeekNumber] = useState('');
+  const [dayNumber, setDayNumber] = useState('');
+  const [stations, setStations] = useState<Station[]>([
+    createEmptyStation(1)
+  ]);
+
+  // Lab-day level rotation settings (defaults for stations)
+  const [numRotationsLabDay, setNumRotationsLabDay] = useState(4);
+  const [rotationDurationLabDay, setRotationDurationLabDay] = useState(30);
+  const [durationInputValueLabDay, setDurationInputValueLabDay] = useState('30');
+
+  // Custom duration input display state (for station rotation minutes)
+  const [durationInputValues, setDurationInputValues] = useState<Record<string, string>>({});
+
+  // Skills search
+  const [skillSearch, setSkillSearch] = useState('');
+  const [skillsModalStation, setSkillsModalStation] = useState<number | null>(null);
+
+  // Scenario modal
+  const [scenarioModalStation, setScenarioModalStation] = useState<number | null>(null);
+  const [scenarioSearch, setScenarioSearch] = useState('');
+  const [scenarioFilterCategory, setScenarioFilterCategory] = useState('');
+  const [scenarioFilterDifficulty, setScenarioFilterDifficulty] = useState('');
+  const [scenarioFilterProgram, setScenarioFilterProgram] = useState('');
+
+  // Drill picker per-station
+  const [drillSearchValues, setDrillSearchValues] = useState<Record<string, string>>({});
+  const [drillCategoryFilters, setDrillCategoryFilters] = useState<Record<string, string>>({});
+
+  // Drill documents per-station (keyed by station.id)
+  const [drillDocsByStation, setDrillDocsByStation] = useState<Record<string, DrillDocument[]>>({});
+
+  // Templates
+  const [templates, setTemplates] = useState<LabDayTemplate[]>([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState('');
+  const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false);
+  const [templateName, setTemplateName] = useState('');
+  const [templateDescription, setTemplateDescription] = useState('');
+  const [templateShared, setTemplateShared] = useState(false);
+  const [templateSaving, setTemplateSaving] = useState(false);
+  const [templateToast, setTemplateToast] = useState('');
+  const [showLoadConfirm, setShowLoadConfirm] = useState(false);
+  const [pendingTemplateId, setPendingTemplateId] = useState('');
+
+  // Previous labs suggestions
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+  const [suggestionsOpen, setSuggestionsOpen] = useState(true);
+  const [applyConfirmId, setApplyConfirmId] = useState<string | null>(null);
+
+  // --- Auto-save draft ---
+  // Compose a snapshot of the user-editable form fields to track changes.
+  // We exclude fetched reference data (cohorts, scenarios, skills, etc.) and
+  // UI-only state (modal open flags, search text) so only meaningful form
+  // data triggers the auto-save debounce.
+  interface LabDayDraft {
+    selectedCohort: string;
+    labDate: string;
+    startTime: string;
+    endTime: string;
+    labTitle: string;
+    labNotes: string;
+    semester: string;
+    weekNumber: string;
+    dayNumber: string;
+    numRotationsLabDay: number;
+    rotationDurationLabDay: number;
+    stations: Station[];
+    labLeads: string[];
+    roamers: string[];
+    observers: string[];
+    needsCoverage: boolean;
+    coverageNeeded: number;
+    coverageNote: string;
+  }
+
+  const labDayDraft = useMemo<LabDayDraft>(() => ({
+    selectedCohort,
+    labDate,
+    startTime,
+    endTime,
+    labTitle,
+    labNotes,
+    semester,
+    weekNumber,
+    dayNumber,
+    numRotationsLabDay,
+    rotationDurationLabDay,
+    stations,
+    labLeads,
+    roamers,
+    observers,
+    needsCoverage,
+    coverageNeeded,
+    coverageNote,
+  }), [
+    selectedCohort, labDate, startTime, endTime, labTitle, labNotes,
+    semester, weekNumber, dayNumber, numRotationsLabDay, rotationDurationLabDay,
+    stations, labLeads, roamers, observers, needsCoverage, coverageNeeded, coverageNote,
+  ]);
+
+  const autoSave = useAutoSave<LabDayDraft>({
+    key: 'lab-day-draft-new',
+    data: labDayDraft,
+    onRestore: (saved) => {
+      setSelectedCohort(saved.selectedCohort);
+      setLabDate(saved.labDate);
+      setStartTime(saved.startTime);
+      setEndTime(saved.endTime);
+      setLabTitle(saved.labTitle);
+      setLabNotes(saved.labNotes);
+      setSemester(saved.semester);
+      setWeekNumber(saved.weekNumber);
+      setDayNumber(saved.dayNumber);
+      setNumRotationsLabDay(saved.numRotationsLabDay);
+      setRotationDurationLabDay(saved.rotationDurationLabDay);
+      setDurationInputValueLabDay(saved.rotationDurationLabDay.toString());
+      setStations(saved.stations);
+      setLabLeads(saved.labLeads);
+      setRoamers(saved.roamers);
+      setObservers(saved.observers);
+      setNeedsCoverage(saved.needsCoverage);
+      setCoverageNeeded(saved.coverageNeeded);
+      setCoverageNote(saved.coverageNote);
+    },
+    debounceMs: 5000,
+    enabled: !loading,
+  });
+  // --- End auto-save draft ---
+
+  function createEmptyStation(stationNumber: number): Station {
+    return {
+      id: `temp-${Date.now()}-${stationNumber}`,
+      station_number: stationNumber,
+      station_type: 'scenario',
+      scenario_id: '',
+      custom_title: '',
+      selected_skills: [],
+      custom_skills: [],
+      drill_ids: [],
+      instructor_name: '',
+      instructor_email: '',
+      room: '',
+      notes: '',
+      rotation_minutes: 30,
+      num_rotations: 4,
+      skill_sheet_url: '',
+      instructions_url: '',
+      station_notes: ''
+    };
+  }
+
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.push('/auth/signin');
+    }
+  }, [status, router]);
+
+  useEffect(() => {
+    if (session) {
+      fetchData();
+    }
+  }, [session]);
+
+  // Auto-apply template from URL param after templates are loaded
+  const templateIdParam = searchParams.get('templateId');
+  useEffect(() => {
+    if (templateIdParam && templates.length > 0 && !loading) {
+      applyTemplate(templateIdParam);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [templateIdParam, templates.length, loading]);
+
+  // Fetch documents for all skill_drill stations whenever stations change
+  useEffect(() => {
+    const drillStations = stations.filter(s => s.station_type === 'skill_drill' && (s.drill_ids || []).length > 0);
+    if (drillStations.length === 0) return;
+
+    const fetchAllDrillDocs = async () => {
+      const updates: Record<string, DrillDocument[]> = {};
+      await Promise.all(
+        drillStations.map(async (station) => {
+          const allDocs: DrillDocument[] = [];
+          await Promise.all(
+            (station.drill_ids || []).map(async (drillId) => {
+              try {
+                const res = await fetch(`/api/lab-management/skill-drills/${drillId}/documents`);
+                const data = await res.json();
+                if (data.success && data.documents?.length) {
+                  allDocs.push(...data.documents);
+                }
+              } catch {
+                // Non-critical; skip on error
+              }
+            })
+          );
+          updates[station.id] = allDocs;
+        })
+      );
+      setDrillDocsByStation(prev => ({ ...prev, ...updates }));
+    };
+
+    fetchAllDrillDocs();
+    // We intentionally only trigger on station type / drill_ids changes; full deps would cause excessive re-fetches
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stations.map(s => `${s.id}:${s.station_type}:${(s.drill_ids || []).join(',')}`).join('|')]);
+
+  // Fetch previous-lab suggestions whenever date or cohort changes
+  useEffect(() => {
+    if (!labDate) {
+      setSuggestions([]);
+      return;
+    }
+
+    let cancelled = false;
+    const fetchSuggestions = async () => {
+      setSuggestionsLoading(true);
+      try {
+        const params = new URLSearchParams({ date: labDate });
+        if (selectedCohort) params.set('cohort_id', selectedCohort);
+        const res = await fetch(`/api/lab-management/schedule/suggestions?${params.toString()}`);
+        const data = await res.json();
+        if (!cancelled && data.success) {
+          setSuggestions(data.suggestions || []);
+          if ((data.suggestions || []).length > 0) {
+            setSuggestionsOpen(true);
+          }
+        }
+      } catch {
+        // Non-critical; silently ignore
+      } finally {
+        if (!cancelled) setSuggestionsLoading(false);
+      }
+    };
+
+    fetchSuggestions();
+    return () => { cancelled = true; };
+  // Only re-run when date or cohort changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [labDate, selectedCohort]);
+
+  const fetchData = async () => {
+    try {
+      // Fetch cohorts
+      const cohortsRes = await fetch('/api/lab-management/cohorts');
+      const cohortsData = await cohortsRes.json();
+      if (cohortsData.success) {
+        setCohorts(cohortsData.cohorts || []);
+      }
+
+      // Fetch scenarios
+      const scenariosRes = await fetch('/api/lab-management/scenarios');
+      const scenariosData = await scenariosRes.json();
+      if (scenariosData.success) {
+        setScenarios(scenariosData.scenarios || []);
+      }
+
+      // Fetch skills
+      const skillsRes = await fetch('/api/lab-management/skills');
+      const skillsData = await skillsRes.json();
+      if (skillsData.success) {
+        setSkills(skillsData.skills || []);
+      }
+
+      // Fetch skill drills
+      const drillsRes = await fetch('/api/lab-management/skill-drills');
+      const drillsData = await drillsRes.json();
+      if (drillsData.success) {
+        setSkillDrills(drillsData.drills || []);
+      }
+
+      // Fetch instructors
+      const instructorsRes = await fetch('/api/lab-management/instructors');
+      const instructorsData = await instructorsRes.json();
+      if (instructorsData.success) {
+        setInstructors(instructorsData.instructors || []);
+      }
+
+      // Fetch users for roles dropdown
+      const usersRes = await fetch('/api/users/list');
+      const usersData = await usersRes.json();
+      if (usersData.success) {
+        setUsers(usersData.users || []);
+      }
+
+      // Fetch templates
+      setTemplatesLoading(true);
+      try {
+        const templatesRes = await fetch('/api/lab-management/templates');
+        const templatesData = await templatesRes.json();
+        if (templatesData.success) {
+          setTemplates(templatesData.templates || []);
+        }
+      } catch {
+        // Templates are non-critical; silently ignore
+      } finally {
+        setTemplatesLoading(false);
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    }
+    setLoading(false);
+  };
+
+  // Conflict checking: called with debounce when date, cohort, or instructors change
+  const checkConflicts = useCallback(async (
+    date: string,
+    cohortId: string,
+    instructorIds: string[]
+  ) => {
+    if (!date) {
+      setConflicts([]);
+      return;
+    }
+    setConflictsLoading(true);
+    try {
+      const body: Record<string, unknown> = { date };
+      if (cohortId) body.cohort_id = cohortId;
+      if (instructorIds.length > 0) body.instructor_ids = instructorIds;
+
+      const res = await fetch('/api/lab-management/schedule/conflicts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setConflicts(data.conflicts || []);
+      }
+    } catch {
+      // Non-critical; silently ignore conflict check errors
+    } finally {
+      setConflictsLoading(false);
+    }
+  }, []);
+
+  // Debounced conflict check triggered by date, cohort, or instructor changes
+  useEffect(() => {
+    if (conflictDebounceRef.current) {
+      clearTimeout(conflictDebounceRef.current);
+    }
+    if (!labDate) {
+      setConflicts([]);
+      return;
+    }
+    const allInstructorIds = [...labLeads, ...roamers, ...observers];
+    conflictDebounceRef.current = setTimeout(() => {
+      checkConflicts(labDate, selectedCohort, allInstructorIds);
+    }, 600);
+    return () => {
+      if (conflictDebounceRef.current) {
+        clearTimeout(conflictDebounceRef.current);
+      }
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [labDate, selectedCohort, labLeads.join(','), roamers.join(','), observers.join(',')]);
+
+  const handleInstructorChange = (index: number, value: string) => {
+    if (value === 'custom') {
+      // Clear the fields for custom entry
+      updateStation(index, { instructor_name: '', instructor_email: '' });
+    } else if (value === '') {
+      // Clear instructor
+      updateStation(index, { instructor_name: '', instructor_email: '' });
+    } else {
+      // Parse the "name|email" format
+      const [name, email] = value.split('|');
+      updateStation(index, { instructor_name: name, instructor_email: email });
+    }
+  };
+
+  const getSelectedInstructorValue = (station: Station) => {
+    if (!station.instructor_email) return '';
+    // Check if it matches an instructor in the list
+    const match = instructors.find(i => i.email === station.instructor_email);
+    if (match) {
+      return `${match.name}|${match.email}`;
+    }
+    // Custom entry
+    return 'custom';
+  };
+
+  const addStation = () => {
+    const nextNumber = stations.length + 1;
+    setStations([...stations, createEmptyStation(nextNumber)]);
+  };
+
+  const removeStation = (index: number) => {
+    if (stations.length <= 1) return;
+    const updated = stations.filter((_, i) => i !== index);
+    updated.forEach((s, i) => s.station_number = i + 1);
+    setStations(updated);
+  };
+
+  const updateStation = (index: number, updates: Partial<Station>) => {
+    const updated = [...stations];
+    updated[index] = { ...updated[index], ...updates };
+    setStations(updated);
+  };
+
+  const assignSelfToStation = (index: number) => {
+    updateStation(index, {
+      instructor_name: session?.user?.name || '',
+      instructor_email: session?.user?.email || ''
+    });
+  };
+
+  const toggleSkill = (stationIndex: number, skillId: string) => {
+    const station = stations[stationIndex];
+    const currentSkills = station.selected_skills;
+    if (currentSkills.includes(skillId)) {
+      updateStation(stationIndex, {
+        selected_skills: currentSkills.filter(id => id !== skillId)
+      });
+    } else {
+      updateStation(stationIndex, {
+        selected_skills: [...currentSkills, skillId]
+      });
+    }
+  };
+
+  // Generate descriptive station name with cohort, date, and content
+  const generateStationName = (station: Station) => {
+    // Build cohort abbreviation (e.g., "PM14", "AEMT3", "EMT5")
+    const cohortData = cohorts.find(c => c.id === selectedCohort);
+    if (!cohortData) return 'Station';
+
+    const cohortAbbrev = `${cohortData.program.abbreviation}${formatCohortNumber(cohortData.cohort_number)}`;
+
+    // Format date (e.g., "01/26/26")
+    const dateStr = labDate ? new Date(labDate + 'T12:00:00').toLocaleDateString('en-US', {
+      month: '2-digit',
+      day: '2-digit',
+      year: '2-digit'
+    }) : '';
+
+    // Get content name based on station type
+    let contentName = '';
+    if (station.station_type === 'scenario') {
+      const scenario = scenarios.find(s => s.id === station.scenario_id);
+      if (scenario) {
+        contentName = scenario.title;
+      } else {
+        contentName = 'Scenario';
+      }
+    } else if (station.station_type === 'skill_drill') {
+      if (station.drill_ids && station.drill_ids.length > 0) {
+        const drillNames = station.drill_ids
+          .map(id => skillDrills.find(d => d.id === id)?.name)
+          .filter(Boolean) as string[];
+        contentName = drillNames.slice(0, 2).join(', ');
+        if (drillNames.length > 2) contentName += '...';
+      } else {
+        contentName = 'Skill Drill';
+      }
+    } else if (station.station_type === 'skills') {
+      const skillNames = station.selected_skills
+        .map(skillId => skills.find(s => s.id === skillId)?.name)
+        .filter(Boolean) as string[];
+      const allSkillNames = [...skillNames, ...station.custom_skills.filter(s => s.trim())];
+      if (allSkillNames.length > 0) {
+        contentName = allSkillNames.slice(0, 2).join(', ');
+        if (allSkillNames.length > 2) {
+          contentName += '...';
+        }
+      } else {
+        contentName = 'Skills';
+      }
+    } else if (station.station_type === 'documentation') {
+      contentName = 'Documentation';
+    }
+
+    return dateStr ? `${cohortAbbrev} ${dateStr} - ${contentName}` : `${cohortAbbrev} - ${contentName}`;
+  };
+
+  const showToast = (message: string) => {
+    setTemplateToast(message);
+    setTimeout(() => setTemplateToast(''), 3000);
+  };
+
+  const hasFormData = () => {
+    return (
+      selectedCohort !== '' ||
+      labDate !== '' ||
+      labTitle !== '' ||
+      stations.some(s => s.scenario_id || s.selected_skills.length > 0 || s.custom_skills.some(c => c.trim()) || (s.drill_ids || []).length > 0)
+    );
+  };
+
+  const applyTemplate = (templateId: string) => {
+    const template = templates.find(t => t.id === templateId);
+    if (!template) return;
+
+    const td = template.template_data;
+
+    // Apply rotation settings if present
+    if (td.num_rotations) {
+      setNumRotationsLabDay(td.num_rotations);
+    }
+    if (td.rotation_duration) {
+      setRotationDurationLabDay(td.rotation_duration);
+      setDurationInputValueLabDay(td.rotation_duration.toString());
+    }
+
+    // Apply stations
+    if (td.stations && td.stations.length > 0) {
+      const newStations: Station[] = td.stations.map((s, i) => ({
+        ...createEmptyStation(i + 1),
+        station_type: (s.station_type as Station['station_type']) || 'scenario',
+        scenario_id: s.scenario_id || '',
+        selected_skills: s.selected_skills || [],
+        custom_skills: s.custom_skills || [],
+        drill_ids: (s as any).drill_ids || [],
+        notes: s.notes || '',
+        room: s.room || '',
+        rotation_minutes: s.rotation_minutes ?? 30,
+        num_rotations: s.num_rotations ?? 4,
+        skill_sheet_url: s.skill_sheet_url || '',
+        instructions_url: s.instructions_url || '',
+        station_notes: s.station_notes || '',
+      }));
+      setStations(newStations);
+    }
+
+    setSelectedTemplateId('');
+    setPendingTemplateId('');
+    setShowLoadConfirm(false);
+    showToast(`Template "${template.name}" loaded`);
+  };
+
+  const handleTemplateSelect = (templateId: string) => {
+    if (!templateId) {
+      setSelectedTemplateId('');
+      return;
+    }
+
+    if (hasFormData()) {
+      setPendingTemplateId(templateId);
+      setShowLoadConfirm(true);
+    } else {
+      setSelectedTemplateId(templateId);
+      applyTemplate(templateId);
+    }
+  };
+
+  const applySuggestion = (suggestion: Suggestion) => {
+    // Apply lab-day level rotation settings
+    if (suggestion.num_rotations) {
+      setNumRotationsLabDay(suggestion.num_rotations);
+    }
+    if (suggestion.rotation_duration) {
+      setRotationDurationLabDay(suggestion.rotation_duration);
+      setDurationInputValueLabDay(suggestion.rotation_duration.toString());
+    }
+
+    // Map suggestion stations into the Station format the form uses
+    const newStations: Station[] = suggestion.stations.map((s, i) => ({
+      ...createEmptyStation(i + 1),
+      station_type: s.station_type,
+      scenario_id: s.scenario_id || '',
+      selected_skills: s.selected_skills || [],
+      custom_skills: s.custom_skill_names || [],
+      drill_ids: s.drill_ids || [],
+      room: s.room || '',
+      notes: s.notes || '',
+      rotation_minutes: s.rotation_minutes ?? 30,
+      num_rotations: s.num_rotations ?? 4,
+      skill_sheet_url: s.skill_sheet_url || '',
+      instructions_url: s.instructions_url || '',
+      station_notes: s.station_notes || '',
+    }));
+
+    setStations(newStations);
+    setApplyConfirmId(null);
+    showToast('Configuration copied from previous lab');
+  };
+
+  const handleSaveTemplate = async () => {
+    if (!templateName.trim()) return;
+
+    setTemplateSaving(true);
+    try {
+      // Check for name conflict
+      const existing = templates.find(
+        t => t.name.toLowerCase() === templateName.trim().toLowerCase() && t.created_by === (session?.user?.email || '')
+      );
+
+      const templateData = {
+        stations: stations.map(s => ({
+          station_type: s.station_type,
+          scenario_id: s.scenario_id || undefined,
+          selected_skills: s.selected_skills,
+          custom_skills: s.custom_skills,
+          notes: s.notes || undefined,
+          room: s.room || undefined,
+          rotation_minutes: s.rotation_minutes,
+          num_rotations: s.num_rotations,
+          skill_sheet_url: s.skill_sheet_url || undefined,
+          instructions_url: s.instructions_url || undefined,
+          station_notes: s.station_notes || undefined,
+        })),
+        rotation_duration: rotationDurationLabDay,
+        num_rotations: numRotationsLabDay,
+      };
+
+      if (existing) {
+        // Update existing template
+        const res = await fetch(`/api/lab-management/templates/${existing.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: templateName.trim(),
+            description: templateDescription.trim() || null,
+            template_data: templateData,
+            is_shared: templateShared,
+          }),
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Failed to update template');
+        setTemplates(prev => prev.map(t => (t.id === existing.id ? data.template : t)));
+        showToast('Template updated!');
+      } else {
+        // Create new template
+        const res = await fetch('/api/lab-management/templates', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: templateName.trim(),
+            description: templateDescription.trim() || null,
+            template_data: templateData,
+            is_shared: templateShared,
+          }),
+        });
+        const data = await res.json();
+        if (!data.success) throw new Error(data.error || 'Failed to create template');
+        setTemplates(prev => [data.template, ...prev]);
+        showToast('Template saved!');
+      }
+
+      setShowSaveTemplateModal(false);
+      setTemplateName('');
+      setTemplateDescription('');
+      setTemplateShared(false);
+    } catch (error) {
+      console.error('Error saving template:', error);
+      alert('Failed to save template. Please try again.');
+    } finally {
+      setTemplateSaving(false);
+    }
+  };
+
+  const handleSaveWithConflictCheck = async () => {
+    // Inline validation
+    const newErrors: Record<string, string> = {};
+    if (!selectedCohort) {
+      newErrors.cohort = 'Please select a cohort';
+    }
+    if (!labDate) {
+      newErrors.date = 'Please select a date';
+    }
+    if (Object.keys(newErrors).length > 0) {
+      setFormErrors(newErrors);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    setFormErrors({});
+
+    // If there are conflicts, show the confirmation modal
+    if (conflicts.length > 0) {
+      setShowConflictModal(true);
+      return;
+    }
+
+    await handleSave();
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      // Parse rotation duration from input value as safety net
+      const parsedDuration = parseInt(durationInputValueLabDay);
+      const safeDuration = isNaN(parsedDuration) || parsedDuration < 1 ? 30 : Math.min(parsedDuration, 120);
+
+      // Create lab day
+      const labDayRes = await fetch('/api/lab-management/lab-days', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cohort_id: selectedCohort,
+          date: labDate,
+          start_time: startTime || null,
+          end_time: endTime || null,
+          title: labTitle || null,
+          notes: labNotes || null,
+          semester: semester ? parseInt(semester) : null,
+          week_number: weekNumber ? parseInt(weekNumber) : null,
+          day_number: dayNumber ? parseInt(dayNumber) : null,
+          num_rotations: numRotationsLabDay,
+          rotation_duration: safeDuration,
+          needs_coverage: needsCoverage,
+          coverage_needed: needsCoverage ? coverageNeeded : 0,
+          coverage_note: needsCoverage ? (coverageNote || null) : null
+        })
+      });
+
+      const labDayData = await labDayRes.json();
+      if (!labDayData.success) {
+        throw new Error(labDayData.error || 'Failed to create lab day');
+      }
+
+      const labDayId = labDayData.labDay.id;
+
+      // Send coverage request notification to directors if requested
+      if (needsCoverage) {
+        try {
+          await fetch('/api/lab-management/request-coverage', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              lab_day_id: labDayId,
+              coverage_needed: coverageNeeded,
+              coverage_note: coverageNote || ''
+            })
+          });
+        } catch (error) {
+          console.error('Error sending coverage notification:', error);
+          // Don't fail the save if notification fails
+        }
+      }
+
+      // Save lab day roles
+      const allRoles = [
+        ...labLeads.map(id => ({ instructor_id: id, role: 'lab_lead' as const })),
+        ...roamers.map(id => ({ instructor_id: id, role: 'roamer' as const })),
+        ...observers.map(id => ({ instructor_id: id, role: 'observer' as const }))
+      ];
+
+      for (const role of allRoles) {
+        await fetch('/api/lab-management/lab-day-roles', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            lab_day_id: labDayId,
+            instructor_id: role.instructor_id,
+            role: role.role
+          })
+        });
+      }
+
+      // Create stations
+      for (const station of stations) {
+        // Generate custom_title for the station
+        const customTitle = generateStationName(station);
+
+        const stationRes = await fetch('/api/lab-management/stations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            lab_day_id: labDayId,
+            station_number: station.station_number,
+            station_type: station.station_type,
+            scenario_id: station.station_type === 'scenario' ? station.scenario_id || null : null,
+            drill_ids: station.station_type === 'skill_drill' ? (station.drill_ids || []) : [],
+            custom_title: customTitle,
+            instructor_name: station.instructor_name || null,
+            instructor_email: station.instructor_email || null,
+            room: station.room || null,
+            notes: station.notes || null,
+            rotation_minutes: station.rotation_minutes,
+            num_rotations: station.num_rotations,
+            // Skills station document fields
+            skill_sheet_url: (station.station_type === 'skills' || station.station_type === 'skill_drill') ? station.skill_sheet_url || null : null,
+            instructions_url: (station.station_type === 'skills' || station.station_type === 'skill_drill') ? station.instructions_url || null : null,
+            station_notes: (station.station_type === 'skills' || station.station_type === 'skill_drill') ? station.station_notes || null : null
+          })
+        });
+
+        const stationData = await stationRes.json();
+
+        // If skills station, add the skill links
+        if (station.station_type === 'skills' && stationData.success) {
+          // Add library skills
+          for (const skillId of station.selected_skills) {
+            await fetch('/api/lab-management/station-skills', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                station_id: stationData.station.id,
+                skill_id: skillId
+              })
+            });
+          }
+          
+          // Add custom skills
+          for (const customSkill of station.custom_skills) {
+            if (customSkill.trim()) {
+              await fetch('/api/lab-management/custom-skills', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  station_id: stationData.station.id,
+                  name: customSkill.trim()
+                })
+              });
+            }
+          }
+        }
+      }
+
+      // Clear local draft after successful save
+      autoSave.clearDraft();
+      router.push(`/labs/schedule/${labDayId}`);
+    } catch (error) {
+      console.error('Error saving lab day:', error);
+      alert('Failed to save lab day');
+    }
+    setSaving(false);
+  };
+
+  // Get cohort's program level for filtering skills
+  const selectedCohortData = cohorts.find(c => c.id === selectedCohort);
+  const programLevel = selectedCohortData?.program?.abbreviation || '';
+
+  // Filter skills by search and program level
+  const filteredSkills = skills.filter(skill => {
+    const matchesSearch = !skillSearch || 
+      skill.name.toLowerCase().includes(skillSearch.toLowerCase()) ||
+      skill.category.toLowerCase().includes(skillSearch.toLowerCase());
+    const matchesLevel = !programLevel || 
+      skill.certification_levels.includes(programLevel) ||
+      skill.certification_levels.includes('EMT'); // EMT skills available to all
+    return matchesSearch && matchesLevel;
+  });
+
+  // Group skills by category
+  const skillsByCategory = filteredSkills.reduce((acc, skill) => {
+    if (!acc[skill.category]) acc[skill.category] = [];
+    acc[skill.category].push(skill);
+    return acc;
+  }, {} as Record<string, Skill[]>);
+
+  // Scenario filtering
+  const scenarioCategories = [...new Set(scenarios.map(s => s.category).filter(Boolean))].sort();
+  const scenarioDifficulties = ['basic', 'intermediate', 'advanced'];
+  const scenarioPrograms = ['EMT', 'AEMT', 'Paramedic'];
+
+  const filteredScenarios = scenarios.filter(scenario => {
+    const searchLower = scenarioSearch.toLowerCase();
+    const matchesSearch = !scenarioSearch ||
+      scenario.title.toLowerCase().includes(searchLower) ||
+      (scenario.chief_complaint && scenario.chief_complaint.toLowerCase().includes(searchLower)) ||
+      (scenario.category && scenario.category.toLowerCase().includes(searchLower)) ||
+      (scenario.patient_name && scenario.patient_name.toLowerCase().includes(searchLower));
+    const matchesCategory = !scenarioFilterCategory || scenario.category === scenarioFilterCategory;
+    const matchesDifficulty = !scenarioFilterDifficulty || scenario.difficulty === scenarioFilterDifficulty;
+    const matchesProgram = !scenarioFilterProgram ||
+      (scenario.applicable_programs && scenario.applicable_programs.includes(scenarioFilterProgram));
+    return matchesSearch && matchesCategory && matchesDifficulty && matchesProgram;
+  });
+
+  const scenariosByCategory = filteredScenarios.reduce((acc, scenario) => {
+    const cat = scenario.category || 'Uncategorized';
+    if (!acc[cat]) acc[cat] = [];
+    acc[cat].push(scenario);
+    return acc;
+  }, {} as Record<string, Scenario[]>);
+
+  if (status === 'loading' || loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (!session) return null;
+
+  const openStationsCount = stations.filter(s => !s.instructor_email).length;
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+      {/* Header */}
+      <div className="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <Breadcrumbs
+            customSegments={{ 'new': 'New Lab Day' }}
+            className="mb-2"
+          />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Link
+                href="/labs/schedule"
+                className="flex items-center gap-1 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </Link>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Schedule New Lab Day</h1>
+            </div>
+            <button
+              onClick={handleSaveWithConflictCheck}
+              disabled={saving}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {saving ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="w-5 h-5" />
+                  Save Lab Day
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+        {/* Auto-save indicator and restore prompt */}
+        <AutoSaveIndicator
+          saveStatus={autoSave.saveStatus}
+          showRestorePrompt={autoSave.showRestorePrompt}
+          draftTimestamp={autoSave.draftTimestamp}
+          onRestore={autoSave.restoreDraft}
+          onDiscard={autoSave.discardDraft}
+          onDismiss={autoSave.dismissRestorePrompt}
+        />
+
+        {/* Template Toolbar */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <LayoutTemplate className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Templates</span>
+            </div>
+            <div className="flex flex-1 items-center gap-3 w-full sm:w-auto">
+              <select
+                value={selectedTemplateId}
+                onChange={(e) => handleTemplateSelect(e.target.value)}
+                disabled={templatesLoading}
+                className="flex-1 px-3 py-2 border dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700 disabled:opacity-50"
+              >
+                <option value="">
+                  {templatesLoading ? 'Loading templates...' : templates.length === 0 ? 'No templates yet' : 'Load from template...'}
+                </option>
+                {templates.length > 0 && (
+                  <>
+                    {templates.filter(t => t.created_by === session?.user?.email).length > 0 && (
+                      <optgroup label="My Templates">
+                        {templates
+                          .filter(t => t.created_by === session?.user?.email)
+                          .map(t => (
+                            <option key={t.id} value={t.id}>
+                              {t.name} ({t.template_data.stations?.length ?? 0} stations)
+                            </option>
+                          ))}
+                      </optgroup>
+                    )}
+                    {templates.filter(t => t.is_shared && t.created_by !== session?.user?.email).length > 0 && (
+                      <optgroup label="Shared Templates">
+                        {templates
+                          .filter(t => t.is_shared && t.created_by !== session?.user?.email)
+                          .map(t => (
+                            <option key={t.id} value={t.id}>
+                              {t.name} ({t.template_data.stations?.length ?? 0} stations)
+                            </option>
+                          ))}
+                      </optgroup>
+                    )}
+                  </>
+                )}
+              </select>
+              <button
+                type="button"
+                onClick={() => {
+                  setTemplateName('');
+                  setTemplateDescription('');
+                  setTemplateShared(false);
+                  setShowSaveTemplateModal(true);
+                }}
+                className="flex items-center gap-2 px-3 py-2 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex-shrink-0"
+              >
+                <Save className="w-4 h-4" />
+                Save as Template
+              </button>
+            </div>
+          </div>
+          {templates.length === 0 && !templatesLoading && (
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+              Save your current station setup as a template to reuse it on future lab days.
+            </p>
+          )}
+        </div>
+
+        {/* Toast notification */}
+        {templateToast && (
+          <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg shadow-lg animate-in fade-in slide-in-from-bottom-2">
+            <CheckCircle className="w-4 h-4 flex-shrink-0" />
+            <span className="text-sm font-medium">{templateToast}</span>
+          </div>
+        )}
+
+        {/* Basic Info */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+          <h2 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            Lab Day Details
+          </h2>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Cohort <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={selectedCohort}
+                onChange={(e) => {
+                  setSelectedCohort(e.target.value);
+                  if (formErrors.cohort) setFormErrors(prev => ({ ...prev, cohort: '' }));
+                }}
+                className={`w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 ${
+                  formErrors.cohort ? 'border-red-500' : 'dark:border-gray-600'
+                }`}
+              >
+                <option value="">Select cohort...</option>
+                {cohorts.map(cohort => (
+                  <option key={cohort.id} value={cohort.id}>
+                    {cohort.program.abbreviation} Group {formatCohortNumber(cohort.cohort_number)}
+                  </option>
+                ))}
+              </select>
+              {formErrors.cohort && (
+                <p className="text-sm text-red-500 mt-1">{formErrors.cohort}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Date <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="date"
+                value={labDate}
+                onChange={(e) => {
+                  setLabDate(e.target.value);
+                  if (formErrors.date) setFormErrors(prev => ({ ...prev, date: '' }));
+                }}
+                className={`w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 ${
+                  formErrors.date ? 'border-red-500' : 'dark:border-gray-600'
+                }`}
+              />
+              {formErrors.date && (
+                <p className="text-sm text-red-500 mt-1">{formErrors.date}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <Clock className="w-4 h-4 inline mr-1" />
+                Start Time
+              </label>
+              <input
+                type="time"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <Clock className="w-4 h-4 inline mr-1" />
+                End Time
+              </label>
+              <input
+                type="time"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Title (optional)
+              </label>
+              <input
+                type="text"
+                value={labTitle}
+                onChange={(e) => setLabTitle(e.target.value)}
+                placeholder="e.g., Cardiac Day, Trauma Scenarios"
+                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Notes (optional)
+              </label>
+              <input
+                type="text"
+                value={labNotes}
+                onChange={(e) => setLabNotes(e.target.value)}
+                placeholder="Any special instructions..."
+                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Semester
+              </label>
+              <select
+                value={semester}
+                onChange={(e) => setSemester(e.target.value)}
+                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+              >
+                <option value="">Select semester...</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Week #
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="52"
+                value={weekNumber}
+                onChange={(e) => setWeekNumber(e.target.value)}
+                placeholder="e.g., 12"
+                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Day #
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="7"
+                value={dayNumber}
+                onChange={(e) => setDayNumber(e.target.value)}
+                placeholder="e.g., 1"
+                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+              />
+            </div>
+
+            {/* Lab Day Rotation Settings */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-1">
+                Rotations
+                <HelpTooltip text="Number of times student groups rotate through each station during this lab day." />
+              </label>
+              <select
+                value={numRotationsLabDay}
+                onChange={(e) => setNumRotationsLabDay(parseInt(e.target.value))}
+                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+              >
+                {[2, 3, 4, 5, 6].map(n => (
+                  <option key={n} value={n}>{n} rotations</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Rotation Duration
+              </label>
+              <div className="space-y-2">
+                <input
+                  type="number"
+                  min="1"
+                  max="120"
+                  value={durationInputValueLabDay}
+                  onChange={(e) => {
+                    // Allow free typing - update display value
+                    setDurationInputValueLabDay(e.target.value);
+                    // Also update numeric state immediately for valid integers
+                    const val = parseInt(e.target.value);
+                    if (!isNaN(val) && val >= 1 && val <= 120) {
+                      setRotationDurationLabDay(val);
+                    }
+                  }}
+                  onBlur={(e) => {
+                    // Validate and clamp only when user leaves the field
+                    let val = parseInt(e.target.value) || 15;
+                    val = Math.max(1, Math.min(120, val));
+                    setDurationInputValueLabDay(val.toString());
+                    setRotationDurationLabDay(val);
+                  }}
+                  onFocus={(e) => {
+                    // Select all text for easy replacement
+                    e.target.select();
+                  }}
+                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                />
+                <div className="flex flex-wrap gap-1">
+                  {[15, 20, 30, 45, 60].map(n => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => {
+                        // Update both the display value and actual state
+                        setDurationInputValueLabDay(n.toString());
+                        setRotationDurationLabDay(n);
+                      }}
+                      className={`px-2 py-1 text-xs rounded transition-colors ${
+                        rotationDurationLabDay === n
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                      }`}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Scheduling Conflict Warnings */}
+        {(conflicts.length > 0 || conflictsLoading) && labDate && (
+          <div className="space-y-2">
+            {conflictsLoading && conflicts.length === 0 && (
+              <div className="flex items-center gap-2 px-4 py-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg text-sm text-yellow-700 dark:text-yellow-400">
+                <svg className="animate-spin h-4 w-4 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Checking for conflicts...
+              </div>
+            )}
+            {conflicts.map((conflict, index) => (
+              <div
+                key={index}
+                className="flex items-start gap-3 px-4 py-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg"
+              >
+                <AlertTriangle className="w-5 h-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-yellow-800 dark:text-yellow-300">
+                    Scheduling Conflict
+                  </p>
+                  <p className="text-sm text-yellow-700 dark:text-yellow-400 mt-0.5">
+                    {conflict.message}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Conflict Confirmation Modal */}
+        {showConflictModal && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
+              <div className="flex items-start gap-3 mb-4">
+                <div className="p-2 bg-yellow-100 dark:bg-yellow-900/30 rounded-lg flex-shrink-0">
+                  <AlertTriangle className="w-6 h-6 text-yellow-600 dark:text-yellow-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Scheduling Conflicts Detected
+                  </h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    There {conflicts.length === 1 ? 'is' : 'are'} {conflicts.length} scheduling conflict{conflicts.length === 1 ? '' : 's'}. Do you want to proceed anyway?
+                  </p>
+                </div>
+              </div>
+              <ul className="mb-6 space-y-2">
+                {conflicts.map((conflict, index) => (
+                  <li key={index} className="flex items-start gap-2 text-sm text-yellow-800 dark:text-yellow-300">
+                    <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5 text-yellow-600 dark:text-yellow-400" />
+                    {conflict.message}
+                  </li>
+                ))}
+              </ul>
+              <div className="flex gap-3 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowConflictModal(false)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                >
+                  Go Back
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setShowConflictModal(false);
+                    await handleSave();
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-white bg-yellow-600 rounded-lg hover:bg-yellow-700 transition-colors"
+                >
+                  Save Anyway
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Previous Labs Suggestions Panel */}
+        {labDate && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+            {/* Collapsible header */}
+            <button
+              type="button"
+              onClick={() => setSuggestionsOpen(o => !o)}
+              className="w-full flex items-center justify-between px-4 py-3 text-left"
+            >
+              <div className="flex items-center gap-2">
+                <History className="w-5 h-5 text-violet-600 dark:text-violet-400" />
+                <span className="font-semibold text-gray-900 dark:text-white">
+                  Previous Labs
+                </span>
+                {suggestionsLoading ? (
+                  <span className="text-xs text-gray-400 dark:text-gray-500">Loading...</span>
+                ) : suggestions.length > 0 ? (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-300">
+                    {suggestions.length} found
+                  </span>
+                ) : (
+                  <span className="text-xs text-gray-400 dark:text-gray-500">No matches found</span>
+                )}
+              </div>
+              {suggestionsOpen ? (
+                <ChevronUp className="w-4 h-4 text-gray-400" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-gray-400" />
+              )}
+            </button>
+
+            {suggestionsOpen && (
+              <div className="border-t dark:border-gray-700 px-4 pb-4 pt-3">
+                {suggestionsLoading ? (
+                  <div className="flex items-center justify-center py-6">
+                    <svg className="animate-spin h-5 w-5 text-violet-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  </div>
+                ) : suggestions.length === 0 ? (
+                  <p className="text-sm text-gray-500 dark:text-gray-400 py-3">
+                    {selectedCohort
+                      ? 'No previous labs found at the same relative week in other cohorts.'
+                      : 'Select a cohort above to see labs from previous cohorts at the same program week.'}
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Labs from previous cohorts at the same point in the program. Click "Use This Configuration" to pre-fill your stations.
+                    </p>
+                    {suggestions.map((suggestion) => {
+                      const cohortLabel = suggestion.cohort
+                        ? `${suggestion.cohort.program.abbreviation} Group ${formatCohortNumber(suggestion.cohort.cohort_number)}`
+                        : 'Unknown Cohort';
+                      const dateFormatted = new Date(suggestion.date + 'T12:00:00').toLocaleDateString('en-US', {
+                        weekday: 'short', month: 'short', day: 'numeric', year: 'numeric'
+                      });
+                      const stationTypeSummary = suggestion.stations.length > 0
+                        ? suggestion.stations.map(s => {
+                            if (s.station_type === 'scenario') return 'Scenario';
+                            if (s.station_type === 'skills') return 'Skills';
+                            if (s.station_type === 'skill_drill') return 'Skill Drill';
+                            return 'Documentation';
+                          }).join(', ')
+                        : 'No stations';
+
+                      return (
+                        <div
+                          key={suggestion.lab_day_id}
+                          className="border dark:border-gray-700 rounded-lg p-3 space-y-2"
+                        >
+                          {/* Cohort + date header */}
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-medium text-gray-900 dark:text-white text-sm">
+                                  {cohortLabel}
+                                </span>
+                                {suggestion.week_offset !== null && (
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-violet-50 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
+                                    Week +{suggestion.week_offset}
+                                  </span>
+                                )}
+                                {suggestion.week_number && (
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400">
+                                    Wk {suggestion.week_number}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                {dateFormatted}
+                                {suggestion.title && ` — ${suggestion.title}`}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Station list */}
+                          {suggestion.stations.length > 0 && (
+                            <div className="space-y-1">
+                              <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                                {suggestion.stations.length} station{suggestion.stations.length !== 1 ? 's' : ''}: {stationTypeSummary}
+                              </div>
+                              {suggestion.stations.map((st, stIdx) => {
+                                let contentLabel = '';
+                                if (st.station_type === 'scenario' && st.scenario) {
+                                  contentLabel = st.scenario.title;
+                                } else if (st.station_type === 'skills') {
+                                  const names = [
+                                    ...st.library_skills.map(sk => sk.name),
+                                    ...st.custom_skills.map(cs => cs.name),
+                                  ];
+                                  contentLabel = names.length > 0
+                                    ? names.slice(0, 3).join(', ') + (names.length > 3 ? '...' : '')
+                                    : 'Skills station';
+                                } else if (st.station_type === 'skill_drill') {
+                                  contentLabel = st.drills.length > 0
+                                    ? st.drills.slice(0, 2).map(d => d.name).join(', ') + (st.drills.length > 2 ? '...' : '')
+                                    : 'Skill Drill';
+                                } else {
+                                  contentLabel = 'Documentation';
+                                }
+
+                                const typeColors: Record<string, string> = {
+                                  scenario: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
+                                  skills: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300',
+                                  skill_drill: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
+                                  documentation: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+                                };
+
+                                return (
+                                  <div key={stIdx} className="flex items-center gap-1.5 text-xs">
+                                    <span className={`px-1.5 py-0.5 rounded text-xs font-medium flex-shrink-0 ${typeColors[st.station_type] || ''}`}>
+                                      {st.station_type === 'skill_drill' ? 'Drill' : st.station_type.charAt(0).toUpperCase() + st.station_type.slice(1)}
+                                    </span>
+                                    <span className="text-gray-700 dark:text-gray-300 truncate">{contentLabel}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+
+                          {/* Action button */}
+                          {applyConfirmId === suggestion.lab_day_id ? (
+                            <div className="flex items-center gap-2 pt-1">
+                              <span className="text-xs text-gray-600 dark:text-gray-400">Replace current stations?</span>
+                              <button
+                                type="button"
+                                onClick={() => applySuggestion(suggestion)}
+                                className="px-2 py-1 text-xs bg-violet-600 text-white rounded hover:bg-violet-700 transition-colors"
+                              >
+                                Yes, replace
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setApplyConfirmId(null)}
+                                className="px-2 py-1 text-xs bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (hasFormData()) {
+                                  setApplyConfirmId(suggestion.lab_day_id);
+                                } else {
+                                  applySuggestion(suggestion);
+                                }
+                              }}
+                              className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-violet-50 text-violet-700 dark:bg-violet-900/20 dark:text-violet-300 border border-violet-200 dark:border-violet-800 rounded-lg hover:bg-violet-100 dark:hover:bg-violet-900/40 transition-colors"
+                            >
+                              <Copy className="w-3 h-3" />
+                              Use This Configuration
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Request Coverage */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+          <h2 className="font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+            <HelpCircle className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+            Request Additional Instructors
+          </h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            Need more instructors for this lab day? Directors will be notified of your request.
+          </p>
+
+          <div className="space-y-4">
+            {/* Toggle */}
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={needsCoverage}
+                onChange={(e) => setNeedsCoverage(e.target.checked)}
+                className="w-4 h-4 text-orange-600 rounded"
+              />
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                This lab day needs additional instructor coverage
+              </span>
+            </label>
+
+            {needsCoverage && (
+              <div className="pl-7 space-y-3">
+                {/* Number needed */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    How many instructors needed?
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="10"
+                    value={coverageNeeded}
+                    onChange={(e) => setCoverageNeeded(parseInt(e.target.value) || 1)}
+                    className="w-32 px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  />
+                </div>
+
+                {/* Note */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Note for directors (optional)
+                  </label>
+                  <textarea
+                    value={coverageNote}
+                    onChange={(e) => {
+                      if (e.target.value.length <= 500) setCoverageNote(e.target.value);
+                    }}
+                    rows={2}
+                    placeholder="e.g., Need help with high-acuity scenarios..."
+                    className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                    maxLength={500}
+                  />
+                  <div className="flex justify-end text-xs text-gray-400 mt-1">
+                    <span className={coverageNote.length >= 450 ? 'text-amber-500' : ''}>
+                      {coverageNote.length}/500
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Lab Day Roles */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+          <h2 className="font-semibold text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+            <Users className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+            Lab Day Roles
+          </h2>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            Assign instructors to roles for this lab day. These are day-wide assignments (not station rotations).
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Lab Lead */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Lab Lead(s)
+                <span className="ml-2 text-xs text-gray-500 font-normal block">Oversees the lab day</span>
+              </label>
+              <div className="flex flex-wrap gap-2 mb-2 min-h-[28px]">
+                {labLeads.map(id => {
+                  const user = users.find(u => u.id === id);
+                  return user ? (
+                    <span
+                      key={id}
+                      className="inline-flex items-center gap-1 px-3 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 rounded-full text-sm"
+                    >
+                      {user.name}
+                      <button
+                        type="button"
+                        onClick={() => setLabLeads(labLeads.filter(l => l !== id))}
+                        className="ml-1 hover:text-amber-600 dark:hover:text-amber-200"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ) : null;
+                })}
+              </div>
+              <select
+                value=""
+                onChange={(e) => {
+                  if (e.target.value && !labLeads.includes(e.target.value)) {
+                    setLabLeads([...labLeads, e.target.value]);
+                  }
+                }}
+                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 text-sm"
+              >
+                <option value="">Add a lab lead...</option>
+                {users
+                  .filter(u => !labLeads.includes(u.id))
+                  .map(u => (
+                    <option key={u.id} value={u.id}>{u.name}</option>
+                  ))}
+              </select>
+            </div>
+
+            {/* Roamer */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Roamer(s)
+                <span className="ml-2 text-xs text-gray-500 font-normal block">Floats between stations</span>
+              </label>
+              <div className="flex flex-wrap gap-2 mb-2 min-h-[28px]">
+                {roamers.map(id => {
+                  const user = users.find(u => u.id === id);
+                  return user ? (
+                    <span
+                      key={id}
+                      className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-full text-sm"
+                    >
+                      {user.name}
+                      <button
+                        type="button"
+                        onClick={() => setRoamers(roamers.filter(r => r !== id))}
+                        className="ml-1 hover:text-blue-600 dark:hover:text-blue-200"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ) : null;
+                })}
+              </div>
+              <select
+                value=""
+                onChange={(e) => {
+                  if (e.target.value && !roamers.includes(e.target.value)) {
+                    setRoamers([...roamers, e.target.value]);
+                  }
+                }}
+                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 text-sm"
+              >
+                <option value="">Add a roamer...</option>
+                {users
+                  .filter(u => !roamers.includes(u.id))
+                  .map(u => (
+                    <option key={u.id} value={u.id}>{u.name}</option>
+                  ))}
+              </select>
+            </div>
+
+            {/* Observer */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Observer(s)
+                <span className="ml-2 text-xs text-gray-500 font-normal block">For training/shadowing</span>
+              </label>
+              <div className="flex flex-wrap gap-2 mb-2 min-h-[28px]">
+                {observers.map(id => {
+                  const user = users.find(u => u.id === id);
+                  return user ? (
+                    <span
+                      key={id}
+                      className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 rounded-full text-sm"
+                    >
+                      {user.name}
+                      <button
+                        type="button"
+                        onClick={() => setObservers(observers.filter(o => o !== id))}
+                        className="ml-1 hover:text-purple-600 dark:hover:text-purple-200"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ) : null;
+                })}
+              </div>
+              <select
+                value=""
+                onChange={(e) => {
+                  if (e.target.value && !observers.includes(e.target.value)) {
+                    setObservers([...observers, e.target.value]);
+                  }
+                }}
+                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 text-sm"
+              >
+                <option value="">Add an observer...</option>
+                {users
+                  .filter(u => !observers.includes(u.id))
+                  .map(u => (
+                    <option key={u.id} value={u.id}>{u.name}</option>
+                  ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Stations */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+          <div className="p-4 border-b dark:border-gray-700 flex items-center justify-between">
+            <div>
+              <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <BookOpen className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                Stations ({stations.length})
+              </h2>
+              {openStationsCount > 0 && (
+                <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-1">
+                  <AlertCircle className="w-4 h-4 inline mr-1" />
+                  {openStationsCount} station{openStationsCount > 1 ? 's' : ''} need{openStationsCount === 1 ? 's' : ''} instructor
+                </p>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={addStation}
+              className="flex items-center gap-1 px-3 py-2 text-sm bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-lg hover:bg-purple-200 dark:hover:bg-purple-900/50"
+            >
+              <Plus className="w-4 h-4" /> Add Station
+            </button>
+          </div>
+
+          <div className="p-4 space-y-6">
+            {stations.map((station, index) => {
+              const stationType = STATION_TYPES.find(t => t.value === station.station_type);
+              const TypeIcon = stationType?.icon || Stethoscope;
+              
+              return (
+                <div key={station.id} className="border dark:border-gray-700 rounded-lg">
+                  {/* Station Header with Type Selection */}
+                  <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700 flex items-center justify-between rounded-t-lg">
+                    <div className="flex items-center gap-3">
+                      <div className={`p-2 rounded-lg ${stationType?.color || 'bg-gray-500'}`}>
+                        <TypeIcon className="w-4 h-4 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="font-medium text-gray-900 dark:text-white">Station {station.station_number}</h3>
+                        <div className="flex gap-1 mt-1">
+                          {STATION_TYPES.map(type => (
+                            <button
+                              key={type.value}
+                              type="button"
+                              onClick={() => updateStation(index, {
+                                station_type: type.value as any,
+                                scenario_id: '',
+                                selected_skills: [],
+                                custom_skills: []
+                              })}
+                              className={`px-2 py-0.5 text-xs rounded ${
+                                station.station_type === type.value
+                                  ? `${type.color} text-white`
+                                  : 'bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-500'
+                              }`}
+                            >
+                              {type.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    {stations.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeStation(index)}
+                        className="p-1 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="p-4 space-y-4">
+                    {/* Auto-generated Station Name Display */}
+                    <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                      <div className="text-xs text-blue-600 dark:text-blue-400 font-medium mb-1">Station Name (auto-generated)</div>
+                      <div className="text-sm text-blue-900 dark:text-blue-100 font-medium">
+                        {generateStationName(station)}
+                      </div>
+                    </div>
+
+                    {/* Scenario Selection (only for scenario type) */}
+                    {station.station_type === 'scenario' && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Scenario
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setScenarioModalStation(index)}
+                          className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-left hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                        >
+                          {station.scenario_id ? (
+                            (() => {
+                              const selectedScenario = scenarios.find(s => s.id === station.scenario_id);
+                              return selectedScenario ? (
+                                <div>
+                                  <div className="font-medium text-gray-900 dark:text-white">{selectedScenario.title}</div>
+                                  <div className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-2 mt-1">
+                                    <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-xs">
+                                      {selectedScenario.category}
+                                    </span>
+                                    <span className={`px-2 py-0.5 rounded text-xs ${
+                                      selectedScenario.difficulty === 'basic' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
+                                      selectedScenario.difficulty === 'intermediate' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300' :
+                                      'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+                                    }`}>
+                                      {selectedScenario.difficulty}
+                                    </span>
+                                    {selectedScenario.chief_complaint && (
+                                      <span className="text-gray-400 dark:text-gray-500">• {selectedScenario.chief_complaint}</span>
+                                    )}
+                                  </div>
+                                </div>
+                              ) : (
+                                <span className="text-gray-500 dark:text-gray-400">Scenario not found</span>
+                              );
+                            })()
+                          ) : (
+                            <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                              <Search className="w-4 h-4" />
+                              <span>Search and select a scenario... ({scenarios.length} available)</span>
+                            </div>
+                          )}
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Skill Drill Picker (for skill_drill type only) */}
+                    {station.station_type === 'skill_drill' && (
+                      <div className="space-y-3">
+                        <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
+                          <p className="text-orange-800 dark:text-orange-300 text-sm">
+                            <strong>Skill Drill:</strong> Student-led practice station. Select drills from the library below.
+                          </p>
+                        </div>
+
+                        {/* Selected drill badges */}
+                        {(station.drill_ids || []).length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {(station.drill_ids || []).map(drillId => {
+                              const drill = skillDrills.find(d => d.id === drillId);
+                              return drill ? (
+                                <span
+                                  key={drillId}
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 text-xs rounded-full"
+                                >
+                                  {drill.name}
+                                  <button
+                                    type="button"
+                                    onClick={() => updateStation(index, {
+                                      drill_ids: (station.drill_ids || []).filter(x => x !== drillId)
+                                    })}
+                                    className="hover:text-orange-600 dark:hover:text-orange-200"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </span>
+                              ) : null;
+                            })}
+                          </div>
+                        )}
+
+                        {/* Search + category filter */}
+                        <div className="flex gap-2">
+                          <div className="relative flex-1">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <input
+                              type="text"
+                              value={drillSearchValues[station.id] || ''}
+                              onChange={(e) => setDrillSearchValues(prev => ({ ...prev, [station.id]: e.target.value }))}
+                              placeholder="Search drills..."
+                              className="w-full pl-10 pr-4 py-2 border dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                            />
+                          </div>
+                          <select
+                            value={drillCategoryFilters[station.id] || ''}
+                            onChange={(e) => setDrillCategoryFilters(prev => ({ ...prev, [station.id]: e.target.value }))}
+                            className="px-3 py-2 border dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                          >
+                            <option value="">All Categories</option>
+                            {[...new Set(skillDrills.map(d => d.category))].sort().map(cat => (
+                              <option key={cat} value={cat}>{cat.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Drill list */}
+                        <div className="border dark:border-gray-600 rounded-lg overflow-hidden max-h-56 overflow-y-auto">
+                          {skillDrills
+                            .filter(d =>
+                              (!(drillSearchValues[station.id]) || d.name.toLowerCase().includes((drillSearchValues[station.id] || '').toLowerCase()) || (d.description || '').toLowerCase().includes((drillSearchValues[station.id] || '').toLowerCase())) &&
+                              (!(drillCategoryFilters[station.id]) || d.category === drillCategoryFilters[station.id])
+                            )
+                            .map(drill => {
+                              const isSelected = (station.drill_ids || []).includes(drill.id);
+                              return (
+                                <label
+                                  key={drill.id}
+                                  className={`flex items-start gap-3 p-2.5 cursor-pointer border-b last:border-0 dark:border-gray-700 transition-colors ${
+                                    isSelected
+                                      ? 'bg-orange-50 dark:bg-orange-900/20'
+                                      : 'hover:bg-gray-50 dark:hover:bg-gray-700'
+                                  }`}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    onChange={() => {
+                                      const current = station.drill_ids || [];
+                                      updateStation(index, {
+                                        drill_ids: isSelected
+                                          ? current.filter(x => x !== drill.id)
+                                          : [...current, drill.id]
+                                      });
+                                    }}
+                                    className="mt-0.5 w-4 h-4 text-orange-500"
+                                  />
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <span className="font-medium text-sm text-gray-900 dark:text-white">{drill.name}</span>
+                                      <span className="text-xs text-gray-500 dark:text-gray-400">{drill.estimated_duration_minutes} min</span>
+                                      <span className="text-xs px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded">
+                                        {drill.category.replace(/_/g, ' ')}
+                                      </span>
+                                    </div>
+                                    {drill.description && (
+                                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-1">
+                                        {drill.description}
+                                      </p>
+                                    )}
+                                  </div>
+                                </label>
+                              );
+                            })
+                          }
+                          {skillDrills.length === 0 && (
+                            <p className="p-3 text-sm text-gray-500 dark:text-gray-400 text-center">No skill drills available</p>
+                          )}
+                        </div>
+
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {(station.drill_ids || []).length === 0
+                            ? 'No drills selected — station will be open drill time.'
+                            : `${(station.drill_ids || []).length} drill${(station.drill_ids || []).length !== 1 ? 's' : ''} selected.`}
+                        </p>
+
+                        {/* Auto-loaded documents from selected drills */}
+                        {(drillDocsByStation[station.id] || []).length > 0 && (
+                          <div className="p-3 bg-orange-50 dark:bg-orange-900/10 rounded-lg border border-orange-200 dark:border-orange-800">
+                            <h4 className="text-sm font-medium text-orange-800 dark:text-orange-300 mb-2 flex items-center gap-2">
+                              <FileText className="w-4 h-4" />
+                              Linked Drill Documents
+                            </h4>
+                            <div className="space-y-1">
+                              {(drillDocsByStation[station.id] || []).map(doc => (
+                                <a
+                                  key={doc.id}
+                                  href={doc.document_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center gap-2 text-sm text-orange-700 dark:text-orange-300 hover:underline"
+                                >
+                                  <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                                  {doc.document_name}
+                                  <span className="text-xs text-orange-500 px-1 py-0.5 bg-orange-100 dark:bg-orange-900/30 rounded">
+                                    {doc.document_type.replace(/_/g, ' ')}
+                                  </span>
+                                </a>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Skills Selection (for skills type only) */}
+                    {station.station_type === 'skills' && (
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Skills from Library ({station.selected_skills.length} selected)
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => setSkillsModalStation(index)}
+                            className="w-full px-3 py-2 border border-dashed dark:border-gray-600 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 text-left"
+                          >
+                            {station.selected_skills.length === 0 ? (
+                              <span className="flex items-center gap-2">
+                                <Plus className="w-4 h-4" /> Select skills from library...
+                              </span>
+                            ) : (
+                              <div className="flex flex-wrap gap-1">
+                                {station.selected_skills.map(skillId => {
+                                  const skill = skills.find(s => s.id === skillId);
+                                  return skill ? (
+                                    <span key={skillId} className="px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs rounded">
+                                      {skill.name}
+                                    </span>
+                                  ) : null;
+                                })}
+                              </div>
+                            )}
+                          </button>
+                        </div>
+
+                        {/* Custom/Other Skills */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Custom Skills (freetext)
+                          </label>
+                          <div className="space-y-2">
+                            {station.custom_skills.map((customSkill, skillIndex) => (
+                              <div key={skillIndex} className="flex items-center gap-2">
+                                <input
+                                  type="text"
+                                  value={customSkill}
+                                  onChange={(e) => {
+                                    const newCustomSkills = [...station.custom_skills];
+                                    newCustomSkills[skillIndex] = e.target.value;
+                                    updateStation(index, { custom_skills: newCustomSkills });
+                                  }}
+                                  className="flex-1 px-3 py-2 border dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                                  placeholder="Enter custom skill..."
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const newCustomSkills = station.custom_skills.filter((_, i) => i !== skillIndex);
+                                    updateStation(index, { custom_skills: newCustomSkills });
+                                  }}
+                                  className="p-2 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            ))}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                updateStation(index, { custom_skills: [...station.custom_skills, ''] });
+                              }}
+                              className="flex items-center gap-1 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+                            >
+                              <Plus className="w-4 h-4" /> Add custom skill
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Skills Station Documentation */}
+                        <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                          <h4 className="text-sm font-medium text-green-800 dark:text-green-300 mb-3 flex items-center gap-2">
+                            <FileText className="w-4 h-4" />
+                            Station Documentation
+                          </h4>
+                          <div className="space-y-3">
+                            <div>
+                              <label className="block text-xs text-green-700 dark:text-green-400 mb-1">Skill Sheet URL</label>
+                              <input
+                                type="url"
+                                value={station.skill_sheet_url}
+                                onChange={(e) => updateStation(index, { skill_sheet_url: e.target.value })}
+                                placeholder="https://drive.google.com/... or paste URL"
+                                className="w-full px-3 py-2 border border-green-300 dark:border-green-700 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-green-700 dark:text-green-400 mb-1">Instructions URL</label>
+                              <input
+                                type="url"
+                                value={station.instructions_url}
+                                onChange={(e) => updateStation(index, { instructions_url: e.target.value })}
+                                placeholder="https://drive.google.com/... or paste URL"
+                                className="w-full px-3 py-2 border border-green-300 dark:border-green-700 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs text-green-700 dark:text-green-400 mb-1">Station Notes</label>
+                              <textarea
+                                value={station.station_notes}
+                                onChange={(e) => updateStation(index, { station_notes: e.target.value })}
+                                placeholder="Equipment needed, setup instructions, special notes..."
+                                rows={3}
+                                className="w-full px-3 py-2 border border-green-300 dark:border-green-700 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-800"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Documentation Station Notes */}
+                    {station.station_type === 'documentation' && (
+                      <div className="p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+                        <p className="text-sm text-blue-800 dark:text-blue-300">
+                          Documentation station for PCR practice and review. Instructor assignment is optional.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Instructor Section */}
+                    <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                          <User className="w-4 h-4" />
+                          Instructor
+                        </label>
+                        {!station.instructor_email && (
+                          <span className="text-xs px-2 py-1 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 rounded-full">
+                            Open - Needs Instructor
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Instructor Dropdown */}
+                      <div className="mb-3">
+                        <select
+                          value={getSelectedInstructorValue(station)}
+                          onChange={(e) => handleInstructorChange(index, e.target.value)}
+                          className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 text-sm"
+                        >
+                          <option value="">Select instructor (optional)...</option>
+                          {instructors.map((instructor) => (
+                            <option key={instructor.id} value={`${instructor.name}|${instructor.email}`}>
+                              {instructor.name} ({instructor.role})
+                            </option>
+                          ))}
+                          <option value="custom">+ Enter custom name...</option>
+                        </select>
+                      </div>
+
+                      {/* Custom fields shown when "custom" is selected or when there's a non-matching entry */}
+                      {(getSelectedInstructorValue(station) === 'custom' ||
+                        (station.instructor_email && !instructors.find(i => i.email === station.instructor_email))) && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Name</label>
+                            <input
+                              type="text"
+                              value={station.instructor_name}
+                              onChange={(e) => updateStation(index, { instructor_name: e.target.value })}
+                              placeholder="Enter name"
+                              className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Email</label>
+                            <input
+                              type="email"
+                              value={station.instructor_email}
+                              onChange={(e) => updateStation(index, { instructor_email: e.target.value })}
+                              placeholder="Enter email"
+                              className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 text-sm"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {!station.instructor_email && (
+                        <button
+                          type="button"
+                          onClick={() => assignSelfToStation(index)}
+                          className="mt-2 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 flex items-center gap-1"
+                        >
+                          <User className="w-4 h-4" />
+                          Assign myself
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Room and Rotation Settings */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Room</label>
+                        <input
+                          type="text"
+                          value={station.room}
+                          onChange={(e) => updateStation(index, { room: e.target.value })}
+                          placeholder="e.g., Sim Lab A"
+                          className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Rotations</label>
+                        <select
+                          value={station.num_rotations}
+                          onChange={(e) => updateStation(index, { num_rotations: parseInt(e.target.value) })}
+                          className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                        >
+                          {[2, 3, 4, 5, 6].map(n => (
+                            <option key={n} value={n}>{n} rotations</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Minutes</label>
+                        <div className="space-y-2">
+                          <input
+                            type="number"
+                            min="1"
+                            max="120"
+                            value={durationInputValues[station.id] ?? station.rotation_minutes}
+                            onChange={(e) => {
+                              // Allow free typing - update display value
+                              setDurationInputValues(prev => ({
+                                ...prev,
+                                [station.id]: e.target.value
+                              }));
+                              // Also update station immediately for valid integers
+                              const val = parseInt(e.target.value);
+                              if (!isNaN(val) && val >= 1 && val <= 120) {
+                                updateStation(index, { rotation_minutes: val });
+                              }
+                            }}
+                            onBlur={(e) => {
+                              // Validate and clamp only when user leaves the field
+                              let val = parseInt(e.target.value) || 15;
+                              val = Math.max(1, Math.min(120, val));
+                              setDurationInputValues(prev => ({
+                                ...prev,
+                                [station.id]: val.toString()
+                              }));
+                              updateStation(index, { rotation_minutes: val });
+                            }}
+                            onFocus={(e) => {
+                              // Select all text for easy replacement
+                              e.target.select();
+                            }}
+                            className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                          />
+                          <div className="flex flex-wrap gap-1">
+                            {[15, 20, 30, 45, 60].map(n => (
+                              <button
+                                key={n}
+                                type="button"
+                                onClick={() => {
+                                  // Update both the display value and actual state
+                                  setDurationInputValues(prev => ({
+                                    ...prev,
+                                    [station.id]: n.toString()
+                                  }));
+                                  updateStation(index, { rotation_minutes: n });
+                                }}
+                                className={`px-2 py-1 text-xs rounded transition-colors ${
+                                  station.rotation_minutes === n
+                                    ? 'bg-blue-600 text-white'
+                                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                                }`}
+                              >
+                                {n}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Notes */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>
+                      <textarea
+                        value={station.notes}
+                        onChange={(e) => updateStation(index, { notes: e.target.value })}
+                        placeholder="Special setup, equipment needed, etc."
+                        rows={2}
+                        className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Quick Add Buttons */}
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              const newStations: Station[] = [];
+              for (let i = stations.length + 1; i <= stations.length + 4; i++) {
+                newStations.push(createEmptyStation(i));
+              }
+              setStations([...stations, ...newStations]);
+            }}
+            className="px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+          >
+            + Add 4 Stations
+          </button>
+        </div>
+
+        {/* Save Button */}
+        <div className="flex justify-end gap-3 pt-4">
+          <Link
+            href="/labs/schedule"
+            className="px-6 py-2 border dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+          >
+            Cancel
+          </Link>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {saving ? (
+              <>
+                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="w-5 h-5" />
+                Save Lab Day
+              </>
+            )}
+          </button>
+        </div>
+      </main>
+
+      {/* Load Template Confirmation Modal */}
+      {showLoadConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-sm w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+                <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+              </div>
+              <h3 className="font-semibold text-gray-900 dark:text-white">Replace form data?</h3>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+              Loading this template will replace your current station setup and rotation settings.
+              Lab details (cohort, date, times) will be kept.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => {
+                  setShowLoadConfirm(false);
+                  setPendingTemplateId('');
+                }}
+                className="px-4 py-2 border dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => applyTemplate(pendingTemplateId)}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm"
+              >
+                Load Template
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Save as Template Modal */}
+      {showSaveTemplateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-4 border-b dark:border-gray-700 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <LayoutTemplate className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                <h3 className="font-semibold text-gray-900 dark:text-white">Save as Template</h3>
+              </div>
+              <button
+                onClick={() => setShowSaveTemplateModal(false)}
+                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+              >
+                <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+              </button>
+            </div>
+            <div className="p-4 space-y-4">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Saves the current station setup ({stations.length} station{stations.length !== 1 ? 's' : ''}) and rotation settings as a reusable template.
+              </p>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Template Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={templateName}
+                  onChange={(e) => setTemplateName(e.target.value)}
+                  placeholder="e.g., Cardiac Day - 4 Stations"
+                  maxLength={100}
+                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  autoFocus
+                />
+                {templates.some(
+                  t => t.name.toLowerCase() === templateName.trim().toLowerCase() && t.created_by === session?.user?.email
+                ) && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                    A template with this name already exists. Saving will overwrite it.
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Description (optional)
+                </label>
+                <textarea
+                  value={templateDescription}
+                  onChange={(e) => setTemplateDescription(e.target.value)}
+                  placeholder="What scenarios or skills does this template cover?"
+                  rows={3}
+                  maxLength={500}
+                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                />
+              </div>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={templateShared}
+                  onChange={(e) => setTemplateShared(e.target.checked)}
+                  className="w-4 h-4 text-indigo-600 rounded"
+                />
+                <div>
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Share with team</span>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">All instructors can load this template</p>
+                </div>
+              </label>
+            </div>
+            <div className="p-4 border-t dark:border-gray-700 flex gap-3 justify-end">
+              <button
+                onClick={() => setShowSaveTemplateModal(false)}
+                className="px-4 py-2 border dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveTemplate}
+                disabled={!templateName.trim() || templateSaving}
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {templateSaving ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    Save Template
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Skills Selection Modal */}
+      {skillsModalStation !== null && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden">
+            <div className="p-4 border-b dark:border-gray-700 flex items-center justify-between">
+              <h3 className="font-semibold text-gray-900 dark:text-white">Select Skills for Station {skillsModalStation + 1}</h3>
+              <button
+                onClick={() => setSkillsModalStation(null)}
+                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+              >
+                <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+              </button>
+            </div>
+
+            {/* Search */}
+            <div className="p-4 border-b dark:border-gray-700">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  value={skillSearch}
+                  onChange={(e) => setSkillSearch(e.target.value)}
+                  placeholder="Search skills..."
+                  className="w-full pl-10 pr-4 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                />
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                Showing skills for {programLevel || 'all levels'} • {stations[skillsModalStation]?.selected_skills.length || 0} selected
+              </p>
+            </div>
+
+            {/* Skills List */}
+            <div className="p-4 overflow-y-auto max-h-[50vh]">
+              {Object.entries(skillsByCategory).map(([category, categorySkills]) => (
+                <div key={category} className="mb-4">
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{category}</h4>
+                  <div className="space-y-1">
+                    {categorySkills.map(skill => {
+                      const isSelected = stations[skillsModalStation]?.selected_skills.includes(skill.id);
+                      return (
+                        <label
+                          key={skill.id}
+                          className={`flex items-center gap-3 p-2 rounded cursor-pointer ${
+                            isSelected ? 'bg-green-50 dark:bg-green-900/30' : 'hover:bg-gray-50 dark:hover:bg-gray-700'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleSkill(skillsModalStation, skill.id)}
+                            className="w-4 h-4 text-green-600"
+                          />
+                          <span className="text-sm text-gray-900 dark:text-white">{skill.name}</span>
+                          <div className="flex gap-1 ml-auto">
+                            {skill.certification_levels.map(level => (
+                              <span key={level} className="text-xs px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded">
+                                {level}
+                              </span>
+                            ))}
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Done Button */}
+            <div className="p-4 border-t dark:border-gray-700">
+              <button
+                onClick={() => setSkillsModalStation(null)}
+                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Done ({stations[skillsModalStation]?.selected_skills.length || 0} skills selected)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Scenario Selection Modal */}
+      {scenarioModalStation !== null && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[85vh] overflow-hidden flex flex-col">
+            {/* Header */}
+            <div className="p-4 border-b dark:border-gray-700 flex items-center justify-between flex-shrink-0">
+              <div>
+                <h3 className="font-semibold text-gray-900 dark:text-white">Select Scenario for Station {scenarioModalStation + 1}</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{filteredScenarios.length} of {scenarios.length} scenarios</p>
+              </div>
+              <button
+                onClick={() => setScenarioModalStation(null)}
+                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+              >
+                <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+              </button>
+            </div>
+
+            {/* Search and Filters */}
+            <div className="p-4 border-b dark:border-gray-700 space-y-3 flex-shrink-0">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  value={scenarioSearch}
+                  onChange={(e) => setScenarioSearch(e.target.value)}
+                  placeholder="Search by title, chief complaint, patient name..."
+                  className="w-full pl-10 pr-4 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  autoFocus
+                />
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <select
+                  value={scenarioFilterProgram}
+                  onChange={(e) => setScenarioFilterProgram(e.target.value)}
+                  className="px-3 py-1.5 border dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700"
+                >
+                  <option value="">All Programs</option>
+                  {scenarioPrograms.map(prog => (
+                    <option key={prog} value={prog}>{prog}</option>
+                  ))}
+                </select>
+
+                <select
+                  value={scenarioFilterCategory}
+                  onChange={(e) => setScenarioFilterCategory(e.target.value)}
+                  className="px-3 py-1.5 border dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700"
+                >
+                  <option value="">All Categories</option>
+                  {scenarioCategories.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+
+                <select
+                  value={scenarioFilterDifficulty}
+                  onChange={(e) => setScenarioFilterDifficulty(e.target.value)}
+                  className="px-3 py-1.5 border dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700"
+                >
+                  <option value="">All Difficulties</option>
+                  {scenarioDifficulties.map(diff => (
+                    <option key={diff} value={diff}>{diff.charAt(0).toUpperCase() + diff.slice(1)}</option>
+                  ))}
+                </select>
+
+                {(scenarioSearch || scenarioFilterProgram || scenarioFilterCategory || scenarioFilterDifficulty) && (
+                  <button
+                    onClick={() => {
+                      setScenarioSearch('');
+                      setScenarioFilterProgram('');
+                      setScenarioFilterCategory('');
+                      setScenarioFilterDifficulty('');
+                    }}
+                    className="px-3 py-1.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg"
+                  >
+                    Clear Filters
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Scenarios List */}
+            <div className="flex-1 overflow-y-auto p-4">
+              {filteredScenarios.length === 0 ? (
+                <div className="text-center py-8">
+                  <Stethoscope className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                  <p className="text-gray-500 dark:text-gray-400">No scenarios match your filters</p>
+                  <button
+                    onClick={() => {
+                      setScenarioSearch('');
+                      setScenarioFilterProgram('');
+                      setScenarioFilterCategory('');
+                      setScenarioFilterDifficulty('');
+                    }}
+                    className="mt-2 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+                  >
+                    Clear all filters
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {Object.entries(scenariosByCategory).sort(([a], [b]) => a.localeCompare(b)).map(([category, categoryScenarios]) => (
+                    <div key={category}>
+                      <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 sticky top-0 bg-white dark:bg-gray-800 py-1">
+                        {category} ({categoryScenarios.length})
+                      </h4>
+                      <div className="space-y-1">
+                        {categoryScenarios.map(scenario => {
+                          const isSelected = stations[scenarioModalStation]?.scenario_id === scenario.id;
+                          return (
+                            <button
+                              key={scenario.id}
+                              type="button"
+                              onClick={() => {
+                                updateStation(scenarioModalStation, { scenario_id: scenario.id });
+                                setScenarioModalStation(null);
+                              }}
+                              className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                                isSelected ? 'bg-purple-50 dark:bg-purple-900/30 border-purple-300 dark:border-purple-700' : 'hover:bg-gray-50 dark:hover:bg-gray-700 border-gray-200 dark:border-gray-700'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-medium text-gray-900 dark:text-white">{scenario.title}</div>
+                                  {scenario.chief_complaint && (
+                                    <div className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">CC: {scenario.chief_complaint}</div>
+                                  )}
+                                  {scenario.patient_name && scenario.patient_age && (
+                                    <div className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">
+                                      Patient: {scenario.patient_name}, {scenario.patient_age}
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                    scenario.difficulty === 'basic' ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' :
+                                    scenario.difficulty === 'intermediate' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300' :
+                                    'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+                                  }`}>
+                                    {scenario.difficulty}
+                                  </span>
+                                  {scenario.estimated_duration && (
+                                    <span className="text-xs text-gray-400 dark:text-gray-500">~{scenario.estimated_duration} min</span>
+                                  )}
+                                  <div className="flex gap-0.5">
+                                    {scenario.applicable_programs?.map(prog => (
+                                      <span key={prog} className="text-xs px-1 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded">
+                                        {prog}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t dark:border-gray-700 flex justify-between items-center flex-shrink-0">
+              <div className="text-sm text-gray-500 dark:text-gray-400">
+                {stations[scenarioModalStation]?.scenario_id ? (
+                  <span>Selected: <strong className="text-gray-900 dark:text-white">{scenarios.find(s => s.id === stations[scenarioModalStation]?.scenario_id)?.title}</strong></span>
+                ) : (
+                  <span>No scenario selected</span>
+                )}
+              </div>
+              <div className="flex gap-2">
+                {stations[scenarioModalStation]?.scenario_id && (
+                  <button
+                    onClick={() => updateStation(scenarioModalStation, { scenario_id: '' })}
+                    className="px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+                  >
+                    Clear Selection
+                  </button>
+                )}
+                <button
+                  onClick={() => setScenarioModalStation(null)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  {stations[scenarioModalStation]?.scenario_id ? 'Confirm Selection' : 'Close'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function NewLabDayPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-700 dark:text-gray-300">Loading...</p>
+        </div>
+      </div>
+    }>
+      <NewLabDayPageContent />
+    </Suspense>
+  );
+}

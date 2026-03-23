@@ -40,7 +40,7 @@ export default function CreatePollPage() {
 
       if (result.success && result.poll) {
         // Redirect to the scheduler home to see the new poll
-        router.push('/scheduler');
+        router.push('/scheduling/polls');
       } else {
         alert('Failed to create poll: ' + (result.error || 'Unknown error'));
       }
@@ -87,7 +87,7 @@ export default function CreatePollPage() {
               Home
             </Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/scheduler" className="hover:text-blue-600 dark:hover:text-blue-400">
+            <Link href="/scheduling/polls" className="hover:text-blue-600 dark:hover:text-blue-400">
               Scheduler
             </Link>
             <ChevronRight className="w-4 h-4" />
@@ -106,7 +106,7 @@ export default function CreatePollPage() {
               </div>
             </div>
             <Link
-              href="/scheduler"
+              href="/scheduling/polls"
               className="inline-flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 text-sm"
             >
               <ArrowLeft className="w-4 h-4" />

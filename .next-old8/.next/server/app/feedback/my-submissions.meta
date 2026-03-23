@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/feedback/layout,_N_T_/feedback/my-submissions/layout,_N_T_/feedback/my-submissions/page,_N_T_/feedback/my-submissions"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/feedback/my-submissions/__PAGE__",
+    "/feedback/my-submissions",
+    "/feedback",
+    "/_index",
+    "/_head"
+  ]
+}

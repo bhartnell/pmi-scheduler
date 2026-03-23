@@ -1,0 +1,15 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/lvfr-aemt/layout,_N_T_/lvfr-aemt/page,_N_T_/lvfr-aemt"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/lvfr-aemt/__PAGE__",
+    "/lvfr-aemt",
+    "/_index",
+    "/_head"
+  ]
+}

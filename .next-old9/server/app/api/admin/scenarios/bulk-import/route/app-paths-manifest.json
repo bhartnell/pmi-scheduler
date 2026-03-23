@@ -1,0 +1,3 @@
+{
+  "/api/admin/scenarios/bulk-import/route": "app/api/admin/scenarios/bulk-import/route.js"
+}

@@ -1,0 +1,4836 @@
+{
+  "version": 3,
+  "pages404": true,
+  "appType": "app",
+  "caseSensitive": false,
+  "basePath": "",
+  "redirects": [
+    {
+      "source": "/:path+/",
+      "destination": "/:path+",
+      "internal": true,
+      "priority": true,
+      "statusCode": 308,
+      "regex": "^(?:/((?:[^/]+?)(?:/(?:[^/]+?))*))/$"
+    },
+    {
+      "source": "/lab-management/admin/users",
+      "destination": "/admin/users",
+      "statusCode": 308,
+      "regex": "^(?!/_next)/lab-management/admin/users(?:/)?$"
+    },
+    {
+      "source": "/lab-management/admin/deletion-requests",
+      "destination": "/admin/deletion-requests",
+      "statusCode": 308,
+      "regex": "^(?!/_next)/lab-management/admin/deletion-requests(?:/)?$"
+    },
+    {
+      "source": "/admin/create",
+      "destination": "/scheduler/create",
+      "statusCode": 308,
+      "regex": "^(?!/_next)/admin/create(?:/)?$"
+    },
+    {
+      "source": "/skill-sheets",
+      "destination": "/lab-management/skill-sheets",
+      "statusCode": 307,
+      "regex": "^(?!/_next)/skill-sheets(?:/)?$"
+    },
+    {
+      "source": "/osce-evaluator-signup",
+      "destination": "/osce/spring-2026",
+      "statusCode": 307,
+      "regex": "^(?!/_next)/osce-evaluator-signup(?:/)?$"
+    }
+  ],
+  "headers": [],
+  "rewrites": {
+    "beforeFiles": [],
+    "afterFiles": [],
+    "fallback": []
+  },
+  "dynamicRoutes": [
+    {
+      "page": "/admin/osce-events/[id]",
+      "regex": "^/admin/osce\\-events/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/admin/osce\\-events/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/admin/poll/[id]",
+      "regex": "^/admin/poll/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/admin/poll/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/access-requests/[id]",
+      "regex": "^/api/access\\-requests/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/access\\-requests/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/admin/alumni/[id]",
+      "regex": "^/api/admin/alumni/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/admin/alumni/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/admin/attendance-appeals/[id]",
+      "regex": "^/api/admin/attendance\\-appeals/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/admin/attendance\\-appeals/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/admin/bulk-operations/[id]/rollback",
+      "regex": "^/api/admin/bulk\\-operations/([^/]+?)/rollback(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/admin/bulk\\-operations/(?<nxtPid>[^/]+?)/rollback(?:/)?$"
+    },
+    {
+      "page": "/api/admin/document-requests/[id]",
+      "regex": "^/api/admin/document\\-requests/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/admin/document\\-requests/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/admin/equipment/maintenance/[id]",
+      "regex": "^/api/admin/equipment/maintenance/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/admin/equipment/maintenance/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/admin/incidents/[id]",
+      "regex": "^/api/admin/incidents/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/admin/incidents/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/admin/lab-templates/[id]",
+      "regex": "^/api/admin/lab\\-templates/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/admin/lab\\-templates/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/admin/lab-templates/[id]/versions",
+      "regex": "^/api/admin/lab\\-templates/([^/]+?)/versions(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/admin/lab\\-templates/(?<nxtPid>[^/]+?)/versions(?:/)?$"
+    },
+    {
+      "page": "/api/admin/rubrics/[id]",
+      "regex": "^/api/admin/rubrics/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/admin/rubrics/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/admin/scheduled-exports/[id]",
+      "regex": "^/api/admin/scheduled\\-exports/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/admin/scheduled\\-exports/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/admin/webhooks/[id]",
+      "regex": "^/api/admin/webhooks/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/admin/webhooks/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/admin/webhooks/[id]/logs",
+      "regex": "^/api/admin/webhooks/([^/]+?)/logs(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/admin/webhooks/(?<nxtPid>[^/]+?)/logs(?:/)?$"
+    },
+    {
+      "page": "/api/admin/webhooks/[id]/test",
+      "regex": "^/api/admin/webhooks/([^/]+?)/test(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/admin/webhooks/(?<nxtPid>[^/]+?)/test(?:/)?$"
+    },
+    {
+      "page": "/api/announcements/[id]/read",
+      "regex": "^/api/announcements/([^/]+?)/read(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/announcements/(?<nxtPid>[^/]+?)/read(?:/)?$"
+    },
+    {
+      "page": "/api/auth/[...nextauth]",
+      "regex": "^/api/auth/(.+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPnextauth": "nxtPnextauth"
+      },
+      "namedRegex": "^/api/auth/(?<nxtPnextauth>.+?)(?:/)?$"
+    },
+    {
+      "page": "/api/case-sessions/[code]",
+      "regex": "^/api/case\\-sessions/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPcode": "nxtPcode"
+      },
+      "namedRegex": "^/api/case\\-sessions/(?<nxtPcode>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/case-sessions/[code]/instructor",
+      "regex": "^/api/case\\-sessions/([^/]+?)/instructor(?:/)?$",
+      "routeKeys": {
+        "nxtPcode": "nxtPcode"
+      },
+      "namedRegex": "^/api/case\\-sessions/(?<nxtPcode>[^/]+?)/instructor(?:/)?$"
+    },
+    {
+      "page": "/api/case-sessions/[code]/join",
+      "regex": "^/api/case\\-sessions/([^/]+?)/join(?:/)?$",
+      "routeKeys": {
+        "nxtPcode": "nxtPcode"
+      },
+      "namedRegex": "^/api/case\\-sessions/(?<nxtPcode>[^/]+?)/join(?:/)?$"
+    },
+    {
+      "page": "/api/case-sessions/[code]/leaderboard",
+      "regex": "^/api/case\\-sessions/([^/]+?)/leaderboard(?:/)?$",
+      "routeKeys": {
+        "nxtPcode": "nxtPcode"
+      },
+      "namedRegex": "^/api/case\\-sessions/(?<nxtPcode>[^/]+?)/leaderboard(?:/)?$"
+    },
+    {
+      "page": "/api/case-sessions/[code]/respond",
+      "regex": "^/api/case\\-sessions/([^/]+?)/respond(?:/)?$",
+      "routeKeys": {
+        "nxtPcode": "nxtPcode"
+      },
+      "namedRegex": "^/api/case\\-sessions/(?<nxtPcode>[^/]+?)/respond(?:/)?$"
+    },
+    {
+      "page": "/api/case-sessions/[code]/results",
+      "regex": "^/api/case\\-sessions/([^/]+?)/results(?:/)?$",
+      "routeKeys": {
+        "nxtPcode": "nxtPcode"
+      },
+      "namedRegex": "^/api/case\\-sessions/(?<nxtPcode>[^/]+?)/results(?:/)?$"
+    },
+    {
+      "page": "/api/cases/achievements/[studentId]",
+      "regex": "^/api/cases/achievements/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPstudentId": "nxtPstudentId"
+      },
+      "namedRegex": "^/api/cases/achievements/(?<nxtPstudentId>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/cases/leaderboard/[cohortId]",
+      "regex": "^/api/cases/leaderboard/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPcohortId": "nxtPcohortId"
+      },
+      "namedRegex": "^/api/cases/leaderboard/(?<nxtPcohortId>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/cases/[id]",
+      "regex": "^/api/cases/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/cases/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/cases/[id]/duplicate",
+      "regex": "^/api/cases/([^/]+?)/duplicate(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/cases/(?<nxtPid>[^/]+?)/duplicate(?:/)?$"
+    },
+    {
+      "page": "/api/cases/[id]/practice/complete",
+      "regex": "^/api/cases/([^/]+?)/practice/complete(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/cases/(?<nxtPid>[^/]+?)/practice/complete(?:/)?$"
+    },
+    {
+      "page": "/api/cases/[id]/practice/history",
+      "regex": "^/api/cases/([^/]+?)/practice/history(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/cases/(?<nxtPid>[^/]+?)/practice/history(?:/)?$"
+    },
+    {
+      "page": "/api/cases/[id]/practice/progress",
+      "regex": "^/api/cases/([^/]+?)/practice/progress(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/cases/(?<nxtPid>[^/]+?)/practice/progress(?:/)?$"
+    },
+    {
+      "page": "/api/cases/[id]/practice/respond",
+      "regex": "^/api/cases/([^/]+?)/practice/respond(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/cases/(?<nxtPid>[^/]+?)/practice/respond(?:/)?$"
+    },
+    {
+      "page": "/api/cases/[id]/practice/start",
+      "regex": "^/api/cases/([^/]+?)/practice/start(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/cases/(?<nxtPid>[^/]+?)/practice/start(?:/)?$"
+    },
+    {
+      "page": "/api/checkin/[token]",
+      "regex": "^/api/checkin/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPtoken": "nxtPtoken"
+      },
+      "namedRegex": "^/api/checkin/(?<nxtPtoken>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/clinical/agencies/[id]",
+      "regex": "^/api/clinical/agencies/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/clinical/agencies/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/clinical/internships/[id]",
+      "regex": "^/api/clinical/internships/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/clinical/internships/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/clinical/internships/[id]/closeout",
+      "regex": "^/api/clinical/internships/([^/]+?)/closeout(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/clinical/internships/(?<nxtPid>[^/]+?)/closeout(?:/)?$"
+    },
+    {
+      "page": "/api/clinical/internships/[id]/closeout/documents",
+      "regex": "^/api/clinical/internships/([^/]+?)/closeout/documents(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/clinical/internships/(?<nxtPid>[^/]+?)/closeout/documents(?:/)?$"
+    },
+    {
+      "page": "/api/clinical/internships/[id]/closeout/employment",
+      "regex": "^/api/clinical/internships/([^/]+?)/closeout/employment(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/clinical/internships/(?<nxtPid>[^/]+?)/closeout/employment(?:/)?$"
+    },
+    {
+      "page": "/api/clinical/internships/[id]/closeout/packet",
+      "regex": "^/api/clinical/internships/([^/]+?)/closeout/packet(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/clinical/internships/(?<nxtPid>[^/]+?)/closeout/packet(?:/)?$"
+    },
+    {
+      "page": "/api/clinical/internships/[id]/closeout/summary",
+      "regex": "^/api/clinical/internships/([^/]+?)/closeout/summary(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/clinical/internships/(?<nxtPid>[^/]+?)/closeout/summary(?:/)?$"
+    },
+    {
+      "page": "/api/clinical/internships/[id]/closeout/surveys",
+      "regex": "^/api/clinical/internships/([^/]+?)/closeout/surveys(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/clinical/internships/(?<nxtPid>[^/]+?)/closeout/surveys(?:/)?$"
+    },
+    {
+      "page": "/api/clinical/internships/[id]/notify-nremt",
+      "regex": "^/api/clinical/internships/([^/]+?)/notify\\-nremt(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/clinical/internships/(?<nxtPid>[^/]+?)/notify\\-nremt(?:/)?$"
+    },
+    {
+      "page": "/api/clinical/internships/[id]/preceptors",
+      "regex": "^/api/clinical/internships/([^/]+?)/preceptors(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/clinical/internships/(?<nxtPid>[^/]+?)/preceptors(?:/)?$"
+    },
+    {
+      "page": "/api/clinical/internships/[id]/preceptors/[assignmentId]",
+      "regex": "^/api/clinical/internships/([^/]+?)/preceptors/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid",
+        "nxtPassignmentId": "nxtPassignmentId"
+      },
+      "namedRegex": "^/api/clinical/internships/(?<nxtPid>[^/]+?)/preceptors/(?<nxtPassignmentId>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/clinical/preceptor-eval/[token]",
+      "regex": "^/api/clinical/preceptor\\-eval/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPtoken": "nxtPtoken"
+      },
+      "namedRegex": "^/api/clinical/preceptor\\-eval/(?<nxtPtoken>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/clinical/preceptors/[id]",
+      "regex": "^/api/clinical/preceptors/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/clinical/preceptors/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/clinical/rotations/[id]",
+      "regex": "^/api/clinical/rotations/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/clinical/rotations/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/clinical/site-visits/[id]",
+      "regex": "^/api/clinical/site\\-visits/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/clinical/site\\-visits/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/clinical/sites/[id]",
+      "regex": "^/api/clinical/sites/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/clinical/sites/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/clinical/sites/[id]/departments",
+      "regex": "^/api/clinical/sites/([^/]+?)/departments(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/clinical/sites/(?<nxtPid>[^/]+?)/departments(?:/)?$"
+    },
+    {
+      "page": "/api/clinical/summative-evaluations/[id]",
+      "regex": "^/api/clinical/summative\\-evaluations/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/clinical/summative\\-evaluations/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/clinical/summative-evaluations/[id]/export",
+      "regex": "^/api/clinical/summative\\-evaluations/([^/]+?)/export(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/clinical/summative\\-evaluations/(?<nxtPid>[^/]+?)/export(?:/)?$"
+    },
+    {
+      "page": "/api/clinical/summative-evaluations/[id]/scenario-print",
+      "regex": "^/api/clinical/summative\\-evaluations/([^/]+?)/scenario\\-print(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/clinical/summative\\-evaluations/(?<nxtPid>[^/]+?)/scenario\\-print(?:/)?$"
+    },
+    {
+      "page": "/api/clinical/summative-evaluations/[id]/scores",
+      "regex": "^/api/clinical/summative\\-evaluations/([^/]+?)/scores(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/clinical/summative\\-evaluations/(?<nxtPid>[^/]+?)/scores(?:/)?$"
+    },
+    {
+      "page": "/api/instructor/ce-records/[id]",
+      "regex": "^/api/instructor/ce\\-records/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/instructor/ce\\-records/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/instructor/teaching-log/[id]",
+      "regex": "^/api/instructor/teaching\\-log/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/instructor/teaching\\-log/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/instructor/time-clock/[id]",
+      "regex": "^/api/instructor/time\\-clock/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/instructor/time\\-clock/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/ce-records/[id]",
+      "regex": "^/api/lab\\-management/ce\\-records/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/ce\\-records/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/certifications/[id]",
+      "regex": "^/api/lab\\-management/certifications/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/certifications/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/cohorts/[id]",
+      "regex": "^/api/lab\\-management/cohorts/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/cohorts/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/cohorts/[id]/archive",
+      "regex": "^/api/lab\\-management/cohorts/([^/]+?)/archive(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/cohorts/(?<nxtPid>[^/]+?)/archive(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/cohorts/[id]/calendar",
+      "regex": "^/api/lab\\-management/cohorts/([^/]+?)/calendar(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/cohorts/(?<nxtPid>[^/]+?)/calendar(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/cohorts/[id]/completion",
+      "regex": "^/api/lab\\-management/cohorts/([^/]+?)/completion(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/cohorts/(?<nxtPid>[^/]+?)/completion(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/cohorts/[id]/email",
+      "regex": "^/api/lab\\-management/cohorts/([^/]+?)/email(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/cohorts/(?<nxtPid>[^/]+?)/email(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/cohorts/[id]/stats",
+      "regex": "^/api/lab\\-management/cohorts/([^/]+?)/stats(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/cohorts/(?<nxtPid>[^/]+?)/stats(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/costs/[id]",
+      "regex": "^/api/lab\\-management/costs/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/costs/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/groups/[id]",
+      "regex": "^/api/lab\\-management/groups/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/groups/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/groups/[id]/members",
+      "regex": "^/api/lab\\-management/groups/([^/]+?)/members(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/groups/(?<nxtPid>[^/]+?)/members(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/lab-days/[id]",
+      "regex": "^/api/lab\\-management/lab\\-days/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/lab\\-days/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/lab-days/[id]/attendance",
+      "regex": "^/api/lab\\-management/lab\\-days/([^/]+?)/attendance(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/lab\\-days/(?<nxtPid>[^/]+?)/attendance(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/lab-days/[id]/attendance/absences",
+      "regex": "^/api/lab\\-management/lab\\-days/([^/]+?)/attendance/absences(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/lab\\-days/(?<nxtPid>[^/]+?)/attendance/absences(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/lab-days/[id]/checkin-token",
+      "regex": "^/api/lab\\-management/lab\\-days/([^/]+?)/checkin\\-token(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/lab\\-days/(?<nxtPid>[^/]+?)/checkin\\-token(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/lab-days/[id]/checklist",
+      "regex": "^/api/lab\\-management/lab\\-days/([^/]+?)/checklist(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/lab\\-days/(?<nxtPid>[^/]+?)/checklist(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/lab-days/[id]/debrief",
+      "regex": "^/api/lab\\-management/lab\\-days/([^/]+?)/debrief(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/lab\\-days/(?<nxtPid>[^/]+?)/debrief(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/lab-days/[id]/debrief-notes",
+      "regex": "^/api/lab\\-management/lab\\-days/([^/]+?)/debrief\\-notes(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/lab\\-days/(?<nxtPid>[^/]+?)/debrief\\-notes(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/lab-days/[id]/debrief-notes/[noteId]",
+      "regex": "^/api/lab\\-management/lab\\-days/([^/]+?)/debrief\\-notes/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid",
+        "nxtPnoteId": "nxtPnoteId"
+      },
+      "namedRegex": "^/api/lab\\-management/lab\\-days/(?<nxtPid>[^/]+?)/debrief\\-notes/(?<nxtPnoteId>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/lab-days/[id]/duplicate",
+      "regex": "^/api/lab\\-management/lab\\-days/([^/]+?)/duplicate(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/lab\\-days/(?<nxtPid>[^/]+?)/duplicate(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/lab-days/[id]/duplicate-bulk",
+      "regex": "^/api/lab\\-management/lab\\-days/([^/]+?)/duplicate\\-bulk(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/lab\\-days/(?<nxtPid>[^/]+?)/duplicate\\-bulk(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/lab-days/[id]/equipment",
+      "regex": "^/api/lab\\-management/lab\\-days/([^/]+?)/equipment(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/lab\\-days/(?<nxtPid>[^/]+?)/equipment(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/lab-days/[id]/ratings",
+      "regex": "^/api/lab\\-management/lab\\-days/([^/]+?)/ratings(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/lab\\-days/(?<nxtPid>[^/]+?)/ratings(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/lab-days/[id]/roster",
+      "regex": "^/api/lab\\-management/lab\\-days/([^/]+?)/roster(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/lab\\-days/(?<nxtPid>[^/]+?)/roster(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/mentorship/[id]",
+      "regex": "^/api/lab\\-management/mentorship/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/mentorship/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/mentorship/[id]/logs",
+      "regex": "^/api/lab\\-management/mentorship/([^/]+?)/logs(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/mentorship/(?<nxtPid>[^/]+?)/logs(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/scenarios/[id]",
+      "regex": "^/api/lab\\-management/scenarios/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/scenarios/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/scenarios/[id]/difficulty-recommendation",
+      "regex": "^/api/lab\\-management/scenarios/([^/]+?)/difficulty\\-recommendation(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/scenarios/(?<nxtPid>[^/]+?)/difficulty\\-recommendation(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/scenarios/[id]/duplicate",
+      "regex": "^/api/lab\\-management/scenarios/([^/]+?)/duplicate(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/scenarios/(?<nxtPid>[^/]+?)/duplicate(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/scenarios/[id]/versions",
+      "regex": "^/api/lab\\-management/scenarios/([^/]+?)/versions(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/scenarios/(?<nxtPid>[^/]+?)/versions(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/skill-drills/[id]",
+      "regex": "^/api/lab\\-management/skill\\-drills/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/skill\\-drills/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/skill-drills/[id]/documents",
+      "regex": "^/api/lab\\-management/skill\\-drills/([^/]+?)/documents(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/skill\\-drills/(?<nxtPid>[^/]+?)/documents(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/skills/[id]/documents",
+      "regex": "^/api/lab\\-management/skills/([^/]+?)/documents(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/skills/(?<nxtPid>[^/]+?)/documents(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/stations/[id]",
+      "regex": "^/api/lab\\-management/stations/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/stations/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/stations/[id]/documents",
+      "regex": "^/api/lab\\-management/stations/([^/]+?)/documents(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/stations/(?<nxtPid>[^/]+?)/documents(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/students/[id]",
+      "regex": "^/api/lab\\-management/students/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/students/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/students/[id]/clinical-tasks",
+      "regex": "^/api/lab\\-management/students/([^/]+?)/clinical\\-tasks(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/students/(?<nxtPid>[^/]+?)/clinical\\-tasks(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/students/[id]/communications",
+      "regex": "^/api/lab\\-management/students/([^/]+?)/communications(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/students/(?<nxtPid>[^/]+?)/communications(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/students/[id]/learning-plan",
+      "regex": "^/api/lab\\-management/students/([^/]+?)/learning\\-plan(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/students/(?<nxtPid>[^/]+?)/learning\\-plan(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/students/[id]/learning-plan/notes",
+      "regex": "^/api/lab\\-management/students/([^/]+?)/learning\\-plan/notes(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/students/(?<nxtPid>[^/]+?)/learning\\-plan/notes(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/students/[id]/notes",
+      "regex": "^/api/lab\\-management/students/([^/]+?)/notes(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/students/(?<nxtPid>[^/]+?)/notes(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/students/[id]/photo",
+      "regex": "^/api/lab\\-management/students/([^/]+?)/photo(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/students/(?<nxtPid>[^/]+?)/photo(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/students/[id]/portfolio",
+      "regex": "^/api/lab\\-management/students/([^/]+?)/portfolio(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/students/(?<nxtPid>[^/]+?)/portfolio(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/students/[id]/ratings",
+      "regex": "^/api/lab\\-management/students/([^/]+?)/ratings(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/students/(?<nxtPid>[^/]+?)/ratings(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/template-reviews/[id]",
+      "regex": "^/api/lab\\-management/template\\-reviews/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/template\\-reviews/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/template-reviews/[id]/finalize",
+      "regex": "^/api/lab\\-management/template\\-reviews/([^/]+?)/finalize(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/template\\-reviews/(?<nxtPid>[^/]+?)/finalize(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/template-reviews/[id]/items",
+      "regex": "^/api/lab\\-management/template\\-reviews/([^/]+?)/items(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/template\\-reviews/(?<nxtPid>[^/]+?)/items(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/template-reviews/[id]/items/[itemId]",
+      "regex": "^/api/lab\\-management/template\\-reviews/([^/]+?)/items/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid",
+        "nxtPitemId": "nxtPitemId"
+      },
+      "namedRegex": "^/api/lab\\-management/template\\-reviews/(?<nxtPid>[^/]+?)/items/(?<nxtPitemId>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/template-reviews/[id]/items/[itemId]/comments",
+      "regex": "^/api/lab\\-management/template\\-reviews/([^/]+?)/items/([^/]+?)/comments(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid",
+        "nxtPitemId": "nxtPitemId"
+      },
+      "namedRegex": "^/api/lab\\-management/template\\-reviews/(?<nxtPid>[^/]+?)/items/(?<nxtPitemId>[^/]+?)/comments(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/templates/[id]",
+      "regex": "^/api/lab\\-management/templates/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/templates/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/timer-displays/[id]",
+      "regex": "^/api/lab\\-management/timer\\-displays/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lab\\-management/timer\\-displays/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/lvfr-aemt/files/[id]",
+      "regex": "^/api/lvfr\\-aemt/files/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lvfr\\-aemt/files/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/lvfr-aemt/planner/instances/[id]/publish",
+      "regex": "^/api/lvfr\\-aemt/planner/instances/([^/]+?)/publish(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lvfr\\-aemt/planner/instances/(?<nxtPid>[^/]+?)/publish(?:/)?$"
+    },
+    {
+      "page": "/api/lvfr-aemt/planner/placements/[id]",
+      "regex": "^/api/lvfr\\-aemt/planner/placements/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lvfr\\-aemt/planner/placements/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/lvfr-aemt/planner/placements/[id]/confirm",
+      "regex": "^/api/lvfr\\-aemt/planner/placements/([^/]+?)/confirm(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lvfr\\-aemt/planner/placements/(?<nxtPid>[^/]+?)/confirm(?:/)?$"
+    },
+    {
+      "page": "/api/lvfr-aemt/planner/templates/[id]",
+      "regex": "^/api/lvfr\\-aemt/planner/templates/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/lvfr\\-aemt/planner/templates/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/lvfr-aemt/skills/[studentId]",
+      "regex": "^/api/lvfr\\-aemt/skills/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPstudentId": "nxtPstudentId"
+      },
+      "namedRegex": "^/api/lvfr\\-aemt/skills/(?<nxtPstudentId>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/onboarding/tasks/[id]/progress",
+      "regex": "^/api/onboarding/tasks/([^/]+?)/progress(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/onboarding/tasks/(?<nxtPid>[^/]+?)/progress(?:/)?$"
+    },
+    {
+      "page": "/api/osce/events/[id]",
+      "regex": "^/api/osce/events/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/osce/events/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/osce/events/[id]/calendar-invites",
+      "regex": "^/api/osce/events/([^/]+?)/calendar\\-invites(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/osce/events/(?<nxtPid>[^/]+?)/calendar\\-invites(?:/)?$"
+    },
+    {
+      "page": "/api/osce/events/[id]/observers",
+      "regex": "^/api/osce/events/([^/]+?)/observers(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/osce/events/(?<nxtPid>[^/]+?)/observers(?:/)?$"
+    },
+    {
+      "page": "/api/osce/events/[id]/observers/export",
+      "regex": "^/api/osce/events/([^/]+?)/observers/export(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/osce/events/(?<nxtPid>[^/]+?)/observers/export(?:/)?$"
+    },
+    {
+      "page": "/api/osce/events/[id]/observers/[observerId]",
+      "regex": "^/api/osce/events/([^/]+?)/observers/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid",
+        "nxtPobserverId": "nxtPobserverId"
+      },
+      "namedRegex": "^/api/osce/events/(?<nxtPid>[^/]+?)/observers/(?<nxtPobserverId>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/osce/events/[id]/schedule",
+      "regex": "^/api/osce/events/([^/]+?)/schedule(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/osce/events/(?<nxtPid>[^/]+?)/schedule(?:/)?$"
+    },
+    {
+      "page": "/api/osce/events/[id]/student-agencies",
+      "regex": "^/api/osce/events/([^/]+?)/student\\-agencies(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/osce/events/(?<nxtPid>[^/]+?)/student\\-agencies(?:/)?$"
+    },
+    {
+      "page": "/api/osce/events/[id]/students/reorder",
+      "regex": "^/api/osce/events/([^/]+?)/students/reorder(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/osce/events/(?<nxtPid>[^/]+?)/students/reorder(?:/)?$"
+    },
+    {
+      "page": "/api/osce/events/[id]/time-blocks",
+      "regex": "^/api/osce/events/([^/]+?)/time\\-blocks(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/osce/events/(?<nxtPid>[^/]+?)/time\\-blocks(?:/)?$"
+    },
+    {
+      "page": "/api/osce/observers/[id]",
+      "regex": "^/api/osce/observers/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/osce/observers/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/osce/public/[slug]",
+      "regex": "^/api/osce/public/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPslug": "nxtPslug"
+      },
+      "namedRegex": "^/api/osce/public/(?<nxtPslug>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/osce/public/[slug]/register",
+      "regex": "^/api/osce/public/([^/]+?)/register(?:/)?$",
+      "routeKeys": {
+        "nxtPslug": "nxtPslug"
+      },
+      "namedRegex": "^/api/osce/public/(?<nxtPslug>[^/]+?)/register(?:/)?$"
+    },
+    {
+      "page": "/api/reports/builder/[id]",
+      "regex": "^/api/reports/builder/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/reports/builder/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/resources/medications/[id]",
+      "regex": "^/api/resources/medications/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/resources/medications/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/scheduling/availability/[id]",
+      "regex": "^/api/scheduling/availability/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/scheduling/availability/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/scheduling/planner/blocks/[id]",
+      "regex": "^/api/scheduling/planner/blocks/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/scheduling/planner/blocks/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/scheduling/planner/blocks/[id]/instructors",
+      "regex": "^/api/scheduling/planner/blocks/([^/]+?)/instructors(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/scheduling/planner/blocks/(?<nxtPid>[^/]+?)/instructors(?:/)?$"
+    },
+    {
+      "page": "/api/scheduling/planner/programs/[id]",
+      "regex": "^/api/scheduling/planner/programs/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/scheduling/planner/programs/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/scheduling/planner/rooms/[id]",
+      "regex": "^/api/scheduling/planner/rooms/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/scheduling/planner/rooms/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/scheduling/planner/rooms/[id]/availability",
+      "regex": "^/api/scheduling/planner/rooms/([^/]+?)/availability(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/scheduling/planner/rooms/(?<nxtPid>[^/]+?)/availability(?:/)?$"
+    },
+    {
+      "page": "/api/scheduling/planner/semesters/[id]",
+      "regex": "^/api/scheduling/planner/semesters/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/scheduling/planner/semesters/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/scheduling/resource-bookings/[id]",
+      "regex": "^/api/scheduling/resource\\-bookings/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/scheduling/resource\\-bookings/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/scheduling/shifts/[id]",
+      "regex": "^/api/scheduling/shifts/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/scheduling/shifts/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/scheduling/shifts/[id]/signup",
+      "regex": "^/api/scheduling/shifts/([^/]+?)/signup(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/scheduling/shifts/(?<nxtPid>[^/]+?)/signup(?:/)?$"
+    },
+    {
+      "page": "/api/scheduling/shifts/[id]/signup/[signupId]",
+      "regex": "^/api/scheduling/shifts/([^/]+?)/signup/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid",
+        "nxtPsignupId": "nxtPsignupId"
+      },
+      "namedRegex": "^/api/scheduling/shifts/(?<nxtPid>[^/]+?)/signup/(?<nxtPsignupId>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/scheduling/substitute-requests/[id]",
+      "regex": "^/api/scheduling/substitute\\-requests/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/scheduling/substitute\\-requests/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/scheduling/swaps/[id]/assign",
+      "regex": "^/api/scheduling/swaps/([^/]+?)/assign(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/scheduling/swaps/(?<nxtPid>[^/]+?)/assign(?:/)?$"
+    },
+    {
+      "page": "/api/scheduling/swaps/[id]/interest",
+      "regex": "^/api/scheduling/swaps/([^/]+?)/interest(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/scheduling/swaps/(?<nxtPid>[^/]+?)/interest(?:/)?$"
+    },
+    {
+      "page": "/api/seating/charts/[id]",
+      "regex": "^/api/seating/charts/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/seating/charts/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/seating/charts/[id]/assignments",
+      "regex": "^/api/seating/charts/([^/]+?)/assignments(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/seating/charts/(?<nxtPid>[^/]+?)/assignments(?:/)?$"
+    },
+    {
+      "page": "/api/seating/charts/[id]/generate",
+      "regex": "^/api/seating/charts/([^/]+?)/generate(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/seating/charts/(?<nxtPid>[^/]+?)/generate(?:/)?$"
+    },
+    {
+      "page": "/api/settings/sessions/[id]",
+      "regex": "^/api/settings/sessions/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/settings/sessions/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/skill-sheets/[id]",
+      "regex": "^/api/skill\\-sheets/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/skill\\-sheets/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/skill-sheets/[id]/evaluate",
+      "regex": "^/api/skill\\-sheets/([^/]+?)/evaluate(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/skill\\-sheets/(?<nxtPid>[^/]+?)/evaluate(?:/)?$"
+    },
+    {
+      "page": "/api/stations/pool/[id]",
+      "regex": "^/api/stations/pool/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/stations/pool/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/student/documents/[id]",
+      "regex": "^/api/student/documents/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/student/documents/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/students/[id]/progress",
+      "regex": "^/api/students/([^/]+?)/progress(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/students/(?<nxtPid>[^/]+?)/progress(?:/)?$"
+    },
+    {
+      "page": "/api/students/[id]/skill-evaluations",
+      "regex": "^/api/students/([^/]+?)/skill\\-evaluations(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/students/(?<nxtPid>[^/]+?)/skill\\-evaluations(?:/)?$"
+    },
+    {
+      "page": "/api/tasks/[id]",
+      "regex": "^/api/tasks/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/tasks/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/api/tasks/[id]/comments",
+      "regex": "^/api/tasks/([^/]+?)/comments(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/api/tasks/(?<nxtPid>[^/]+?)/comments(?:/)?$"
+    },
+    {
+      "page": "/api/timer-display/[token]",
+      "regex": "^/api/timer\\-display/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPtoken": "nxtPtoken"
+      },
+      "namedRegex": "^/api/timer\\-display/(?<nxtPtoken>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/cases/session/[code]/instructor",
+      "regex": "^/cases/session/([^/]+?)/instructor(?:/)?$",
+      "routeKeys": {
+        "nxtPcode": "nxtPcode"
+      },
+      "namedRegex": "^/cases/session/(?<nxtPcode>[^/]+?)/instructor(?:/)?$"
+    },
+    {
+      "page": "/cases/session/[code]/join",
+      "regex": "^/cases/session/([^/]+?)/join(?:/)?$",
+      "routeKeys": {
+        "nxtPcode": "nxtPcode"
+      },
+      "namedRegex": "^/cases/session/(?<nxtPcode>[^/]+?)/join(?:/)?$"
+    },
+    {
+      "page": "/cases/session/[code]/student",
+      "regex": "^/cases/session/([^/]+?)/student(?:/)?$",
+      "routeKeys": {
+        "nxtPcode": "nxtPcode"
+      },
+      "namedRegex": "^/cases/session/(?<nxtPcode>[^/]+?)/student(?:/)?$"
+    },
+    {
+      "page": "/cases/session/[code]/tv",
+      "regex": "^/cases/session/([^/]+?)/tv(?:/)?$",
+      "routeKeys": {
+        "nxtPcode": "nxtPcode"
+      },
+      "namedRegex": "^/cases/session/(?<nxtPcode>[^/]+?)/tv(?:/)?$"
+    },
+    {
+      "page": "/cases/[id]",
+      "regex": "^/cases/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/cases/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/cases/[id]/edit",
+      "regex": "^/cases/([^/]+?)/edit(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/cases/(?<nxtPid>[^/]+?)/edit(?:/)?$"
+    },
+    {
+      "page": "/cases/[id]/practice",
+      "regex": "^/cases/([^/]+?)/practice(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/cases/(?<nxtPid>[^/]+?)/practice(?:/)?$"
+    },
+    {
+      "page": "/checkin/[token]",
+      "regex": "^/checkin/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPtoken": "nxtPtoken"
+      },
+      "namedRegex": "^/checkin/(?<nxtPtoken>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/clinical/internships/[id]",
+      "regex": "^/clinical/internships/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/clinical/internships/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/clinical/summative-evaluations/[id]/grade",
+      "regex": "^/clinical/summative\\-evaluations/([^/]+?)/grade(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/clinical/summative\\-evaluations/(?<nxtPid>[^/]+?)/grade(?:/)?$"
+    },
+    {
+      "page": "/lab-management/cohorts/[id]",
+      "regex": "^/lab\\-management/cohorts/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/lab\\-management/cohorts/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/lab-management/cohorts/[id]/calendar",
+      "regex": "^/lab\\-management/cohorts/([^/]+?)/calendar(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/lab\\-management/cohorts/(?<nxtPid>[^/]+?)/calendar(?:/)?$"
+    },
+    {
+      "page": "/lab-management/cohorts/[id]/completion",
+      "regex": "^/lab\\-management/cohorts/([^/]+?)/completion(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/lab\\-management/cohorts/(?<nxtPid>[^/]+?)/completion(?:/)?$"
+    },
+    {
+      "page": "/lab-management/cohorts/[id]/groups",
+      "regex": "^/lab\\-management/cohorts/([^/]+?)/groups(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/lab\\-management/cohorts/(?<nxtPid>[^/]+?)/groups(?:/)?$"
+    },
+    {
+      "page": "/lab-management/grade/station/[id]",
+      "regex": "^/lab\\-management/grade/station/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/lab\\-management/grade/station/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/lab-management/scenarios/[id]",
+      "regex": "^/lab\\-management/scenarios/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/lab\\-management/scenarios/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/lab-management/schedule/[id]",
+      "regex": "^/lab\\-management/schedule/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/lab\\-management/schedule/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/lab-management/schedule/[id]/edit",
+      "regex": "^/lab\\-management/schedule/([^/]+?)/edit(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/lab\\-management/schedule/(?<nxtPid>[^/]+?)/edit(?:/)?$"
+    },
+    {
+      "page": "/lab-management/schedule/[id]/stations/new",
+      "regex": "^/lab\\-management/schedule/([^/]+?)/stations/new(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/lab\\-management/schedule/(?<nxtPid>[^/]+?)/stations/new(?:/)?$"
+    },
+    {
+      "page": "/lab-management/seating/charts/[id]",
+      "regex": "^/lab\\-management/seating/charts/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/lab\\-management/seating/charts/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/lab-management/students/[id]",
+      "regex": "^/lab\\-management/students/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/lab\\-management/students/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/lab-management/students/[id]/learning-plan",
+      "regex": "^/lab\\-management/students/([^/]+?)/learning\\-plan(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/lab\\-management/students/(?<nxtPid>[^/]+?)/learning\\-plan(?:/)?$"
+    },
+    {
+      "page": "/lab-management/students/[id]/portfolio",
+      "regex": "^/lab\\-management/students/([^/]+?)/portfolio(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/lab\\-management/students/(?<nxtPid>[^/]+?)/portfolio(?:/)?$"
+    },
+    {
+      "page": "/lab-management/templates/review/[id]",
+      "regex": "^/lab\\-management/templates/review/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/lab\\-management/templates/review/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/lab-management/templates/review/[id]/item/[itemId]",
+      "regex": "^/lab\\-management/templates/review/([^/]+?)/item/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid",
+        "nxtPitemId": "nxtPitemId"
+      },
+      "namedRegex": "^/lab\\-management/templates/review/(?<nxtPid>[^/]+?)/item/(?<nxtPitemId>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/osce/[slug]",
+      "regex": "^/osce/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPslug": "nxtPslug"
+      },
+      "namedRegex": "^/osce/(?<nxtPslug>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/poll/[id]",
+      "regex": "^/poll/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/poll/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/preceptor/evaluate/[token]",
+      "regex": "^/preceptor/evaluate/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPtoken": "nxtPtoken"
+      },
+      "namedRegex": "^/preceptor/evaluate/(?<nxtPtoken>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/skill-sheets/[id]",
+      "regex": "^/skill\\-sheets/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/skill\\-sheets/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/students/[id]/progress",
+      "regex": "^/students/([^/]+?)/progress(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/students/(?<nxtPid>[^/]+?)/progress(?:/)?$"
+    },
+    {
+      "page": "/tasks/[id]",
+      "regex": "^/tasks/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPid": "nxtPid"
+      },
+      "namedRegex": "^/tasks/(?<nxtPid>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/timer-display/live/[labDayId]",
+      "regex": "^/timer\\-display/live/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPlabDayId": "nxtPlabDayId"
+      },
+      "namedRegex": "^/timer\\-display/live/(?<nxtPlabDayId>[^/]+?)(?:/)?$"
+    },
+    {
+      "page": "/timer-display/[token]",
+      "regex": "^/timer\\-display/([^/]+?)(?:/)?$",
+      "routeKeys": {
+        "nxtPtoken": "nxtPtoken"
+      },
+      "namedRegex": "^/timer\\-display/(?<nxtPtoken>[^/]+?)(?:/)?$"
+    }
+  ],
+  "staticRoutes": [
+    {
+      "page": "/",
+      "regex": "^/(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/(?:/)?$"
+    },
+    {
+      "page": "/_global-error",
+      "regex": "^/_global\\-error(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_global\\-error(?:/)?$"
+    },
+    {
+      "page": "/_not-found",
+      "regex": "^/_not\\-found(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/_not\\-found(?:/)?$"
+    },
+    {
+      "page": "/admin",
+      "regex": "^/admin(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin(?:/)?$"
+    },
+    {
+      "page": "/admin/access-requests",
+      "regex": "^/admin/access\\-requests(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/access\\-requests(?:/)?$"
+    },
+    {
+      "page": "/admin/alumni",
+      "regex": "^/admin/alumni(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/alumni(?:/)?$"
+    },
+    {
+      "page": "/admin/announcements",
+      "regex": "^/admin/announcements(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/announcements(?:/)?$"
+    },
+    {
+      "page": "/admin/attendance-appeals",
+      "regex": "^/admin/attendance\\-appeals(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/attendance\\-appeals(?:/)?$"
+    },
+    {
+      "page": "/admin/audit-log",
+      "regex": "^/admin/audit\\-log(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/audit\\-log(?:/)?$"
+    },
+    {
+      "page": "/admin/broadcast",
+      "regex": "^/admin/broadcast(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/broadcast(?:/)?$"
+    },
+    {
+      "page": "/admin/bulk-operations",
+      "regex": "^/admin/bulk\\-operations(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/bulk\\-operations(?:/)?$"
+    },
+    {
+      "page": "/admin/calendar-sync",
+      "regex": "^/admin/calendar\\-sync(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/calendar\\-sync(?:/)?$"
+    },
+    {
+      "page": "/admin/cases/generate",
+      "regex": "^/admin/cases/generate(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/cases/generate(?:/)?$"
+    },
+    {
+      "page": "/admin/certifications",
+      "regex": "^/admin/certifications(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/certifications(?:/)?$"
+    },
+    {
+      "page": "/admin/certifications/compliance",
+      "regex": "^/admin/certifications/compliance(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/certifications/compliance(?:/)?$"
+    },
+    {
+      "page": "/admin/certifications/verification",
+      "regex": "^/admin/certifications/verification(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/certifications/verification(?:/)?$"
+    },
+    {
+      "page": "/admin/compliance",
+      "regex": "^/admin/compliance(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/compliance(?:/)?$"
+    },
+    {
+      "page": "/admin/config",
+      "regex": "^/admin/config(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/config(?:/)?$"
+    },
+    {
+      "page": "/admin/dashboard-defaults",
+      "regex": "^/admin/dashboard\\-defaults(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/dashboard\\-defaults(?:/)?$"
+    },
+    {
+      "page": "/admin/data-export",
+      "regex": "^/admin/data\\-export(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/data\\-export(?:/)?$"
+    },
+    {
+      "page": "/admin/data-import",
+      "regex": "^/admin/data\\-import(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/data\\-import(?:/)?$"
+    },
+    {
+      "page": "/admin/database-tools",
+      "regex": "^/admin/database\\-tools(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/database\\-tools(?:/)?$"
+    },
+    {
+      "page": "/admin/deep-links",
+      "regex": "^/admin/deep\\-links(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/deep\\-links(?:/)?$"
+    },
+    {
+      "page": "/admin/deletion-requests",
+      "regex": "^/admin/deletion\\-requests(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/deletion\\-requests(?:/)?$"
+    },
+    {
+      "page": "/admin/email-templates",
+      "regex": "^/admin/email\\-templates(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/email\\-templates(?:/)?$"
+    },
+    {
+      "page": "/admin/equipment",
+      "regex": "^/admin/equipment(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/equipment(?:/)?$"
+    },
+    {
+      "page": "/admin/equipment/maintenance",
+      "regex": "^/admin/equipment/maintenance(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/equipment/maintenance(?:/)?$"
+    },
+    {
+      "page": "/admin/external-access",
+      "regex": "^/admin/external\\-access(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/external\\-access(?:/)?$"
+    },
+    {
+      "page": "/admin/ferpa-compliance",
+      "regex": "^/admin/ferpa\\-compliance(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/ferpa\\-compliance(?:/)?$"
+    },
+    {
+      "page": "/admin/guests",
+      "regex": "^/admin/guests(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/guests(?:/)?$"
+    },
+    {
+      "page": "/admin/incidents",
+      "regex": "^/admin/incidents(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/incidents(?:/)?$"
+    },
+    {
+      "page": "/admin/lab-templates",
+      "regex": "^/admin/lab\\-templates(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/lab\\-templates(?:/)?$"
+    },
+    {
+      "page": "/admin/lab-templates/import",
+      "regex": "^/admin/lab\\-templates/import(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/lab\\-templates/import(?:/)?$"
+    },
+    {
+      "page": "/admin/osce-events",
+      "regex": "^/admin/osce\\-events(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/osce\\-events(?:/)?$"
+    },
+    {
+      "page": "/admin/osce-observers",
+      "regex": "^/admin/osce\\-observers(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/osce\\-observers(?:/)?$"
+    },
+    {
+      "page": "/admin/program-requirements",
+      "regex": "^/admin/program\\-requirements(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/program\\-requirements(?:/)?$"
+    },
+    {
+      "page": "/admin/qa-checklist",
+      "regex": "^/admin/qa\\-checklist(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/qa\\-checklist(?:/)?$"
+    },
+    {
+      "page": "/admin/roles",
+      "regex": "^/admin/roles(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/roles(?:/)?$"
+    },
+    {
+      "page": "/admin/rubrics",
+      "regex": "^/admin/rubrics(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/rubrics(?:/)?$"
+    },
+    {
+      "page": "/admin/scenarios",
+      "regex": "^/admin/scenarios(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/scenarios(?:/)?$"
+    },
+    {
+      "page": "/admin/scenarios/audit",
+      "regex": "^/admin/scenarios/audit(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/scenarios/audit(?:/)?$"
+    },
+    {
+      "page": "/admin/scenarios/bulk-import",
+      "regex": "^/admin/scenarios/bulk\\-import(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/scenarios/bulk\\-import(?:/)?$"
+    },
+    {
+      "page": "/admin/scenarios/transform",
+      "regex": "^/admin/scenarios/transform(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/scenarios/transform(?:/)?$"
+    },
+    {
+      "page": "/admin/scheduled-exports",
+      "regex": "^/admin/scheduled\\-exports(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/scheduled\\-exports(?:/)?$"
+    },
+    {
+      "page": "/admin/settings",
+      "regex": "^/admin/settings(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/settings(?:/)?$"
+    },
+    {
+      "page": "/admin/skill-sheets/import",
+      "regex": "^/admin/skill\\-sheets/import(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/skill\\-sheets/import(?:/)?$"
+    },
+    {
+      "page": "/admin/system-alerts",
+      "regex": "^/admin/system\\-alerts(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/system\\-alerts(?:/)?$"
+    },
+    {
+      "page": "/admin/system-health",
+      "regex": "^/admin/system\\-health(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/system\\-health(?:/)?$"
+    },
+    {
+      "page": "/admin/time-clock",
+      "regex": "^/admin/time\\-clock(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/time\\-clock(?:/)?$"
+    },
+    {
+      "page": "/admin/user-activity",
+      "regex": "^/admin/user\\-activity(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/user\\-activity(?:/)?$"
+    },
+    {
+      "page": "/admin/users",
+      "regex": "^/admin/users(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/users(?:/)?$"
+    },
+    {
+      "page": "/admin/webhooks",
+      "regex": "^/admin/webhooks(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/admin/webhooks(?:/)?$"
+    },
+    {
+      "page": "/api/access-requests",
+      "regex": "^/api/access\\-requests(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/access\\-requests(?:/)?$"
+    },
+    {
+      "page": "/api/access-requests/status",
+      "regex": "^/api/access\\-requests/status(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/access\\-requests/status(?:/)?$"
+    },
+    {
+      "page": "/api/admin/alumni",
+      "regex": "^/api/admin/alumni(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/alumni(?:/)?$"
+    },
+    {
+      "page": "/api/admin/attendance-appeals",
+      "regex": "^/api/admin/attendance\\-appeals(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/attendance\\-appeals(?:/)?$"
+    },
+    {
+      "page": "/api/admin/audit-log",
+      "regex": "^/api/admin/audit\\-log(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/audit\\-log(?:/)?$"
+    },
+    {
+      "page": "/api/admin/broadcast",
+      "regex": "^/api/admin/broadcast(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/broadcast(?:/)?$"
+    },
+    {
+      "page": "/api/admin/broadcast/history",
+      "regex": "^/api/admin/broadcast/history(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/broadcast/history(?:/)?$"
+    },
+    {
+      "page": "/api/admin/bulk-operations",
+      "regex": "^/api/admin/bulk\\-operations(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/bulk\\-operations(?:/)?$"
+    },
+    {
+      "page": "/api/admin/calendar-sync",
+      "regex": "^/api/admin/calendar\\-sync(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/calendar\\-sync(?:/)?$"
+    },
+    {
+      "page": "/api/admin/calendar-sync/remind",
+      "regex": "^/api/admin/calendar\\-sync/remind(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/calendar\\-sync/remind(?:/)?$"
+    },
+    {
+      "page": "/api/admin/calendar-sync/status",
+      "regex": "^/api/admin/calendar\\-sync/status(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/calendar\\-sync/status(?:/)?$"
+    },
+    {
+      "page": "/api/admin/cases/briefs",
+      "regex": "^/api/admin/cases/briefs(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/cases/briefs(?:/)?$"
+    },
+    {
+      "page": "/api/admin/cases/coverage",
+      "regex": "^/api/admin/cases/coverage(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/cases/coverage(?:/)?$"
+    },
+    {
+      "page": "/api/admin/cases/prompt-template",
+      "regex": "^/api/admin/cases/prompt\\-template(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/cases/prompt\\-template(?:/)?$"
+    },
+    {
+      "page": "/api/admin/cases/seed-briefs",
+      "regex": "^/api/admin/cases/seed\\-briefs(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/cases/seed\\-briefs(?:/)?$"
+    },
+    {
+      "page": "/api/admin/cases/seed-prompt",
+      "regex": "^/api/admin/cases/seed\\-prompt(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/cases/seed\\-prompt(?:/)?$"
+    },
+    {
+      "page": "/api/admin/cases/seed-samples",
+      "regex": "^/api/admin/cases/seed\\-samples(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/cases/seed\\-samples(?:/)?$"
+    },
+    {
+      "page": "/api/admin/certification-compliance",
+      "regex": "^/api/admin/certification\\-compliance(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/certification\\-compliance(?:/)?$"
+    },
+    {
+      "page": "/api/admin/certifications",
+      "regex": "^/api/admin/certifications(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/certifications(?:/)?$"
+    },
+    {
+      "page": "/api/admin/certifications/import",
+      "regex": "^/api/admin/certifications/import(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/certifications/import(?:/)?$"
+    },
+    {
+      "page": "/api/admin/certifications/verify",
+      "regex": "^/api/admin/certifications/verify(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/certifications/verify(?:/)?$"
+    },
+    {
+      "page": "/api/admin/compliance",
+      "regex": "^/api/admin/compliance(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/compliance(?:/)?$"
+    },
+    {
+      "page": "/api/admin/config",
+      "regex": "^/api/admin/config(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/config(?:/)?$"
+    },
+    {
+      "page": "/api/admin/dashboard-defaults",
+      "regex": "^/api/admin/dashboard\\-defaults(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/dashboard\\-defaults(?:/)?$"
+    },
+    {
+      "page": "/api/admin/data-export",
+      "regex": "^/api/admin/data\\-export(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/data\\-export(?:/)?$"
+    },
+    {
+      "page": "/api/admin/data-import/execute",
+      "regex": "^/api/admin/data\\-import/execute(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/data\\-import/execute(?:/)?$"
+    },
+    {
+      "page": "/api/admin/data-import/history",
+      "regex": "^/api/admin/data\\-import/history(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/data\\-import/history(?:/)?$"
+    },
+    {
+      "page": "/api/admin/data-import/preview",
+      "regex": "^/api/admin/data\\-import/preview(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/data\\-import/preview(?:/)?$"
+    },
+    {
+      "page": "/api/admin/database-tools/audit-logs",
+      "regex": "^/api/admin/database\\-tools/audit\\-logs(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/database\\-tools/audit\\-logs(?:/)?$"
+    },
+    {
+      "page": "/api/admin/database-tools/cohorts",
+      "regex": "^/api/admin/database\\-tools/cohorts(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/database\\-tools/cohorts(?:/)?$"
+    },
+    {
+      "page": "/api/admin/database-tools/notifications",
+      "regex": "^/api/admin/database\\-tools/notifications(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/database\\-tools/notifications(?:/)?$"
+    },
+    {
+      "page": "/api/admin/database-tools/orphans",
+      "regex": "^/api/admin/database\\-tools/orphans(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/database\\-tools/orphans(?:/)?$"
+    },
+    {
+      "page": "/api/admin/database-tools/stats",
+      "regex": "^/api/admin/database\\-tools/stats(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/database\\-tools/stats(?:/)?$"
+    },
+    {
+      "page": "/api/admin/deletion-requests",
+      "regex": "^/api/admin/deletion\\-requests(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/deletion\\-requests(?:/)?$"
+    },
+    {
+      "page": "/api/admin/document-requests",
+      "regex": "^/api/admin/document\\-requests(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/document\\-requests(?:/)?$"
+    },
+    {
+      "page": "/api/admin/email-stats",
+      "regex": "^/api/admin/email\\-stats(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/email\\-stats(?:/)?$"
+    },
+    {
+      "page": "/api/admin/email-templates",
+      "regex": "^/api/admin/email\\-templates(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/email\\-templates(?:/)?$"
+    },
+    {
+      "page": "/api/admin/email-templates/test",
+      "regex": "^/api/admin/email\\-templates/test(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/email\\-templates/test(?:/)?$"
+    },
+    {
+      "page": "/api/admin/endorsements",
+      "regex": "^/api/admin/endorsements(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/endorsements(?:/)?$"
+    },
+    {
+      "page": "/api/admin/equipment",
+      "regex": "^/api/admin/equipment(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/equipment(?:/)?$"
+    },
+    {
+      "page": "/api/admin/equipment/checkout",
+      "regex": "^/api/admin/equipment/checkout(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/equipment/checkout(?:/)?$"
+    },
+    {
+      "page": "/api/admin/equipment/maintenance",
+      "regex": "^/api/admin/equipment/maintenance(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/equipment/maintenance(?:/)?$"
+    },
+    {
+      "page": "/api/admin/external-access",
+      "regex": "^/api/admin/external\\-access(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/external\\-access(?:/)?$"
+    },
+    {
+      "page": "/api/admin/external-access/import",
+      "regex": "^/api/admin/external\\-access/import(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/external\\-access/import(?:/)?$"
+    },
+    {
+      "page": "/api/admin/feedback/import",
+      "regex": "^/api/admin/feedback/import(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/feedback/import(?:/)?$"
+    },
+    {
+      "page": "/api/admin/ferpa",
+      "regex": "^/api/admin/ferpa(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/ferpa(?:/)?$"
+    },
+    {
+      "page": "/api/admin/guests",
+      "regex": "^/api/admin/guests(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/guests(?:/)?$"
+    },
+    {
+      "page": "/api/admin/incidents",
+      "regex": "^/api/admin/incidents(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/incidents(?:/)?$"
+    },
+    {
+      "page": "/api/admin/lab-templates",
+      "regex": "^/api/admin/lab\\-templates(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/lab\\-templates(?:/)?$"
+    },
+    {
+      "page": "/api/admin/lab-templates/apply",
+      "regex": "^/api/admin/lab\\-templates/apply(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/lab\\-templates/apply(?:/)?$"
+    },
+    {
+      "page": "/api/admin/lab-templates/compare",
+      "regex": "^/api/admin/lab\\-templates/compare(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/lab\\-templates/compare(?:/)?$"
+    },
+    {
+      "page": "/api/admin/lab-templates/import",
+      "regex": "^/api/admin/lab\\-templates/import(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/lab\\-templates/import(?:/)?$"
+    },
+    {
+      "page": "/api/admin/lab-templates/seed",
+      "regex": "^/api/admin/lab\\-templates/seed(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/lab\\-templates/seed(?:/)?$"
+    },
+    {
+      "page": "/api/admin/lab-templates/update-from-lab",
+      "regex": "^/api/admin/lab\\-templates/update\\-from\\-lab(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/lab\\-templates/update\\-from\\-lab(?:/)?$"
+    },
+    {
+      "page": "/api/admin/program-requirements",
+      "regex": "^/api/admin/program\\-requirements(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/program\\-requirements(?:/)?$"
+    },
+    {
+      "page": "/api/admin/rubrics",
+      "regex": "^/api/admin/rubrics(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/rubrics(?:/)?$"
+    },
+    {
+      "page": "/api/admin/scenarios/audit",
+      "regex": "^/api/admin/scenarios/audit(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/scenarios/audit(?:/)?$"
+    },
+    {
+      "page": "/api/admin/scenarios/auto-fill",
+      "regex": "^/api/admin/scenarios/auto\\-fill(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/scenarios/auto\\-fill(?:/)?$"
+    },
+    {
+      "page": "/api/admin/scenarios/bulk-import",
+      "regex": "^/api/admin/scenarios/bulk\\-import(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/scenarios/bulk\\-import(?:/)?$"
+    },
+    {
+      "page": "/api/admin/scenarios/bulk-import/commit",
+      "regex": "^/api/admin/scenarios/bulk\\-import/commit(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/scenarios/bulk\\-import/commit(?:/)?$"
+    },
+    {
+      "page": "/api/admin/scenarios/generate-content",
+      "regex": "^/api/admin/scenarios/generate\\-content(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/scenarios/generate\\-content(?:/)?$"
+    },
+    {
+      "page": "/api/admin/scenarios/transform",
+      "regex": "^/api/admin/scenarios/transform(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/scenarios/transform(?:/)?$"
+    },
+    {
+      "page": "/api/admin/scheduled-exports",
+      "regex": "^/api/admin/scheduled\\-exports(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/scheduled\\-exports(?:/)?$"
+    },
+    {
+      "page": "/api/admin/skill-drills/seed",
+      "regex": "^/api/admin/skill\\-drills/seed(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/skill\\-drills/seed(?:/)?$"
+    },
+    {
+      "page": "/api/admin/skill-sheets/counts",
+      "regex": "^/api/admin/skill\\-sheets/counts(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/skill\\-sheets/counts(?:/)?$"
+    },
+    {
+      "page": "/api/admin/skill-sheets/import",
+      "regex": "^/api/admin/skill\\-sheets/import(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/skill\\-sheets/import(?:/)?$"
+    },
+    {
+      "page": "/api/admin/skill-sheets/seed-aliases",
+      "regex": "^/api/admin/skill\\-sheets/seed\\-aliases(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/skill\\-sheets/seed\\-aliases(?:/)?$"
+    },
+    {
+      "page": "/api/admin/skill-sheets/seed-canonical",
+      "regex": "^/api/admin/skill\\-sheets/seed\\-canonical(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/skill\\-sheets/seed\\-canonical(?:/)?$"
+    },
+    {
+      "page": "/api/admin/skill-sheets/verify",
+      "regex": "^/api/admin/skill\\-sheets/verify(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/skill\\-sheets/verify(?:/)?$"
+    },
+    {
+      "page": "/api/admin/stats",
+      "regex": "^/api/admin/stats(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/stats(?:/)?$"
+    },
+    {
+      "page": "/api/admin/system-alerts",
+      "regex": "^/api/admin/system\\-alerts(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/system\\-alerts(?:/)?$"
+    },
+    {
+      "page": "/api/admin/system-health",
+      "regex": "^/api/admin/system\\-health(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/system\\-health(?:/)?$"
+    },
+    {
+      "page": "/api/admin/user-activity",
+      "regex": "^/api/admin/user\\-activity(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/user\\-activity(?:/)?$"
+    },
+    {
+      "page": "/api/admin/user-activity/log",
+      "regex": "^/api/admin/user\\-activity/log(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/user\\-activity/log(?:/)?$"
+    },
+    {
+      "page": "/api/admin/users",
+      "regex": "^/api/admin/users(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/users(?:/)?$"
+    },
+    {
+      "page": "/api/admin/webhooks",
+      "regex": "^/api/admin/webhooks(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/admin/webhooks(?:/)?$"
+    },
+    {
+      "page": "/api/announcements",
+      "regex": "^/api/announcements(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/announcements(?:/)?$"
+    },
+    {
+      "page": "/api/calendar/availability",
+      "regex": "^/api/calendar/availability(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/calendar/availability(?:/)?$"
+    },
+    {
+      "page": "/api/calendar/calendars",
+      "regex": "^/api/calendar/calendars(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/calendar/calendars(?:/)?$"
+    },
+    {
+      "page": "/api/calendar/callback",
+      "regex": "^/api/calendar/callback(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/calendar/callback(?:/)?$"
+    },
+    {
+      "page": "/api/calendar/connect",
+      "regex": "^/api/calendar/connect(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/calendar/connect(?:/)?$"
+    },
+    {
+      "page": "/api/calendar/google-events",
+      "regex": "^/api/calendar/google\\-events(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/calendar/google\\-events(?:/)?$"
+    },
+    {
+      "page": "/api/calendar/status",
+      "regex": "^/api/calendar/status(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/calendar/status(?:/)?$"
+    },
+    {
+      "page": "/api/case-sessions",
+      "regex": "^/api/case\\-sessions(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/case\\-sessions(?:/)?$"
+    },
+    {
+      "page": "/api/cases",
+      "regex": "^/api/cases(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/cases(?:/)?$"
+    },
+    {
+      "page": "/api/cases/achievements/check",
+      "regex": "^/api/cases/achievements/check(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/cases/achievements/check(?:/)?$"
+    },
+    {
+      "page": "/api/cases/generate",
+      "regex": "^/api/cases/generate(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/cases/generate(?:/)?$"
+    },
+    {
+      "page": "/api/cases/generate/bulk",
+      "regex": "^/api/cases/generate/bulk(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/cases/generate/bulk(?:/)?$"
+    },
+    {
+      "page": "/api/cases/import",
+      "regex": "^/api/cases/import(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/cases/import(?:/)?$"
+    },
+    {
+      "page": "/api/clinical/aemt-tracking",
+      "regex": "^/api/clinical/aemt\\-tracking(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/clinical/aemt\\-tracking(?:/)?$"
+    },
+    {
+      "page": "/api/clinical/affiliations",
+      "regex": "^/api/clinical/affiliations(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/clinical/affiliations(?:/)?$"
+    },
+    {
+      "page": "/api/clinical/agencies",
+      "regex": "^/api/clinical/agencies(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/clinical/agencies(?:/)?$"
+    },
+    {
+      "page": "/api/clinical/capacity",
+      "regex": "^/api/clinical/capacity(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/clinical/capacity(?:/)?$"
+    },
+    {
+      "page": "/api/clinical/capacity/check",
+      "regex": "^/api/clinical/capacity/check(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/clinical/capacity/check(?:/)?$"
+    },
+    {
+      "page": "/api/clinical/compliance",
+      "regex": "^/api/clinical/compliance(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/clinical/compliance(?:/)?$"
+    },
+    {
+      "page": "/api/clinical/emt-tracking",
+      "regex": "^/api/clinical/emt\\-tracking(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/clinical/emt\\-tracking(?:/)?$"
+    },
+    {
+      "page": "/api/clinical/hours",
+      "regex": "^/api/clinical/hours(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/clinical/hours(?:/)?$"
+    },
+    {
+      "page": "/api/clinical/internships",
+      "regex": "^/api/clinical/internships(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/clinical/internships(?:/)?$"
+    },
+    {
+      "page": "/api/clinical/mce",
+      "regex": "^/api/clinical/mce(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/clinical/mce(?:/)?$"
+    },
+    {
+      "page": "/api/clinical/overview-all",
+      "regex": "^/api/clinical/overview\\-all(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/clinical/overview\\-all(?:/)?$"
+    },
+    {
+      "page": "/api/clinical/planning-calendar",
+      "regex": "^/api/clinical/planning\\-calendar(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/clinical/planning\\-calendar(?:/)?$"
+    },
+    {
+      "page": "/api/clinical/preceptor-eval/send",
+      "regex": "^/api/clinical/preceptor\\-eval/send(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/clinical/preceptor\\-eval/send(?:/)?$"
+    },
+    {
+      "page": "/api/clinical/preceptor-eval/tokens",
+      "regex": "^/api/clinical/preceptor\\-eval/tokens(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/clinical/preceptor\\-eval/tokens(?:/)?$"
+    },
+    {
+      "page": "/api/clinical/preceptor-feedback",
+      "regex": "^/api/clinical/preceptor\\-feedback(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/clinical/preceptor\\-feedback(?:/)?$"
+    },
+    {
+      "page": "/api/clinical/preceptors",
+      "regex": "^/api/clinical/preceptors(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/clinical/preceptors(?:/)?$"
+    },
+    {
+      "page": "/api/clinical/rotations",
+      "regex": "^/api/clinical/rotations(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/clinical/rotations(?:/)?$"
+    },
+    {
+      "page": "/api/clinical/site-visits",
+      "regex": "^/api/clinical/site\\-visits(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/clinical/site\\-visits(?:/)?$"
+    },
+    {
+      "page": "/api/clinical/site-visits/coverage",
+      "regex": "^/api/clinical/site\\-visits/coverage(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/clinical/site\\-visits/coverage(?:/)?$"
+    },
+    {
+      "page": "/api/clinical/site-visits/export",
+      "regex": "^/api/clinical/site\\-visits/export(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/clinical/site\\-visits/export(?:/)?$"
+    },
+    {
+      "page": "/api/clinical/sites",
+      "regex": "^/api/clinical/sites(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/clinical/sites(?:/)?$"
+    },
+    {
+      "page": "/api/clinical/summative-evaluations",
+      "regex": "^/api/clinical/summative\\-evaluations(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/clinical/summative\\-evaluations(?:/)?$"
+    },
+    {
+      "page": "/api/clinical/summative-scenarios",
+      "regex": "^/api/clinical/summative\\-scenarios(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/clinical/summative\\-scenarios(?:/)?$"
+    },
+    {
+      "page": "/api/compliance",
+      "regex": "^/api/compliance(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/compliance(?:/)?$"
+    },
+    {
+      "page": "/api/config/public",
+      "regex": "^/api/config/public(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/config/public(?:/)?$"
+    },
+    {
+      "page": "/api/cron/affiliation-expiry",
+      "regex": "^/api/cron/affiliation\\-expiry(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/cron/affiliation\\-expiry(?:/)?$"
+    },
+    {
+      "page": "/api/cron/attendance-alerts",
+      "regex": "^/api/cron/attendance\\-alerts(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/cron/attendance\\-alerts(?:/)?$"
+    },
+    {
+      "page": "/api/cron/availability-reminders",
+      "regex": "^/api/cron/availability\\-reminders(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/cron/availability\\-reminders(?:/)?$"
+    },
+    {
+      "page": "/api/cron/calendar-sync",
+      "regex": "^/api/cron/calendar\\-sync(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/cron/calendar\\-sync(?:/)?$"
+    },
+    {
+      "page": "/api/cron/cert-expiry",
+      "regex": "^/api/cron/cert\\-expiry(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/cron/cert\\-expiry(?:/)?$"
+    },
+    {
+      "page": "/api/cron/clinical-hours-reminder",
+      "regex": "^/api/cron/clinical\\-hours\\-reminder(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/cron/clinical\\-hours\\-reminder(?:/)?$"
+    },
+    {
+      "page": "/api/cron/compliance-expiry",
+      "regex": "^/api/cron/compliance\\-expiry(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/cron/compliance\\-expiry(?:/)?$"
+    },
+    {
+      "page": "/api/cron/compliance-reminders",
+      "regex": "^/api/cron/compliance\\-reminders(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/cron/compliance\\-reminders(?:/)?$"
+    },
+    {
+      "page": "/api/cron/daily-digest",
+      "regex": "^/api/cron/daily\\-digest(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/cron/daily\\-digest(?:/)?$"
+    },
+    {
+      "page": "/api/cron/debrief-reminder",
+      "regex": "^/api/cron/debrief\\-reminder(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/cron/debrief\\-reminder(?:/)?$"
+    },
+    {
+      "page": "/api/cron/internship-milestones",
+      "regex": "^/api/cron/internship\\-milestones(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/cron/internship\\-milestones(?:/)?$"
+    },
+    {
+      "page": "/api/cron/lab-reminder",
+      "regex": "^/api/cron/lab\\-reminder(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/cron/lab\\-reminder(?:/)?$"
+    },
+    {
+      "page": "/api/cron/lvfr-weekly-report",
+      "regex": "^/api/cron/lvfr\\-weekly\\-report(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/cron/lvfr\\-weekly\\-report(?:/)?$"
+    },
+    {
+      "page": "/api/cron/scheduled-exports",
+      "regex": "^/api/cron/scheduled\\-exports(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/cron/scheduled\\-exports(?:/)?$"
+    },
+    {
+      "page": "/api/cron/site-visit-reminders",
+      "regex": "^/api/cron/site\\-visit\\-reminders(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/cron/site\\-visit\\-reminders(?:/)?$"
+    },
+    {
+      "page": "/api/cron/system-health",
+      "regex": "^/api/cron/system\\-health(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/cron/system\\-health(?:/)?$"
+    },
+    {
+      "page": "/api/cron/weekly-digest",
+      "regex": "^/api/cron/weekly\\-digest(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/cron/weekly\\-digest(?:/)?$"
+    },
+    {
+      "page": "/api/dashboard/cert-expiry",
+      "regex": "^/api/dashboard/cert\\-expiry(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/dashboard/cert\\-expiry(?:/)?$"
+    },
+    {
+      "page": "/api/dashboard/layout",
+      "regex": "^/api/dashboard/layout(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/dashboard/layout(?:/)?$"
+    },
+    {
+      "page": "/api/dashboard/quick-stats",
+      "regex": "^/api/dashboard/quick\\-stats(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/dashboard/quick\\-stats(?:/)?$"
+    },
+    {
+      "page": "/api/dashboard/recent-activity",
+      "regex": "^/api/dashboard/recent\\-activity(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/dashboard/recent\\-activity(?:/)?$"
+    },
+    {
+      "page": "/api/deep-links",
+      "regex": "^/api/deep\\-links(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/deep\\-links(?:/)?$"
+    },
+    {
+      "page": "/api/deep-links/qr",
+      "regex": "^/api/deep\\-links/qr(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/deep\\-links/qr(?:/)?$"
+    },
+    {
+      "page": "/api/errors/log",
+      "regex": "^/api/errors/log(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/errors/log(?:/)?$"
+    },
+    {
+      "page": "/api/feedback",
+      "regex": "^/api/feedback(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/feedback(?:/)?$"
+    },
+    {
+      "page": "/api/feedback/my-submissions",
+      "regex": "^/api/feedback/my\\-submissions(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/feedback/my\\-submissions(?:/)?$"
+    },
+    {
+      "page": "/api/ferpa/agreement",
+      "regex": "^/api/ferpa/agreement(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/ferpa/agreement(?:/)?$"
+    },
+    {
+      "page": "/api/ferpa/release",
+      "regex": "^/api/ferpa/release(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/ferpa/release(?:/)?$"
+    },
+    {
+      "page": "/api/guest/login",
+      "regex": "^/api/guest/login(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/guest/login(?:/)?$"
+    },
+    {
+      "page": "/api/instructor/ce-records",
+      "regex": "^/api/instructor/ce\\-records(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/instructor/ce\\-records(?:/)?$"
+    },
+    {
+      "page": "/api/instructor/history",
+      "regex": "^/api/instructor/history(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/instructor/history(?:/)?$"
+    },
+    {
+      "page": "/api/instructor/me",
+      "regex": "^/api/instructor/me(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/instructor/me(?:/)?$"
+    },
+    {
+      "page": "/api/instructor/my-stats",
+      "regex": "^/api/instructor/my\\-stats(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/instructor/my\\-stats(?:/)?$"
+    },
+    {
+      "page": "/api/instructor/teaching-log",
+      "regex": "^/api/instructor/teaching\\-log(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/instructor/teaching\\-log(?:/)?$"
+    },
+    {
+      "page": "/api/instructor/time-clock",
+      "regex": "^/api/instructor/time\\-clock(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/instructor/time\\-clock(?:/)?$"
+    },
+    {
+      "page": "/api/instructor/upcoming-labs",
+      "regex": "^/api/instructor/upcoming\\-labs(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/instructor/upcoming\\-labs(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/assessments/scenario",
+      "regex": "^/api/lab\\-management/assessments/scenario(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/assessments/scenario(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/assessments/skill",
+      "regex": "^/api/lab\\-management/assessments/skill(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/assessments/skill(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/attendance/at-risk",
+      "regex": "^/api/lab\\-management/attendance/at\\-risk(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/attendance/at\\-risk(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/ce-records",
+      "regex": "^/api/lab\\-management/ce\\-records(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/ce\\-records(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/ce-requirements",
+      "regex": "^/api/lab\\-management/ce\\-requirements(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/ce\\-requirements(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/certifications",
+      "regex": "^/api/lab\\-management/certifications(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/certifications(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/checklist-templates",
+      "regex": "^/api/lab\\-management/checklist\\-templates(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/checklist\\-templates(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/cohorts",
+      "regex": "^/api/lab\\-management/cohorts(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/cohorts(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/competencies",
+      "regex": "^/api/lab\\-management/competencies(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/competencies(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/competencies/report",
+      "regex": "^/api/lab\\-management/competencies/report(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/competencies/report(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/costs",
+      "regex": "^/api/lab\\-management/costs(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/costs(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/custom-skills",
+      "regex": "^/api/lab\\-management/custom\\-skills(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/custom\\-skills(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/daily-notes",
+      "regex": "^/api/lab\\-management/daily\\-notes(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/daily\\-notes(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/debrief-notes",
+      "regex": "^/api/lab\\-management/debrief\\-notes(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/debrief\\-notes(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/debrief-notes/counts",
+      "regex": "^/api/lab\\-management/debrief\\-notes/counts(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/debrief\\-notes/counts(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/field-trips",
+      "regex": "^/api/lab\\-management/field\\-trips(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/field\\-trips(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/field-trips/attendance",
+      "regex": "^/api/lab\\-management/field\\-trips/attendance(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/field\\-trips/attendance(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/flagged-items",
+      "regex": "^/api/lab\\-management/flagged\\-items(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/flagged\\-items(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/groups",
+      "regex": "^/api/lab\\-management/groups(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/groups(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/groups/generate",
+      "regex": "^/api/lab\\-management/groups/generate(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/groups/generate(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/instructors",
+      "regex": "^/api/lab\\-management/instructors(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/instructors(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/lab-day-roles",
+      "regex": "^/api/lab\\-management/lab\\-day\\-roles(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/lab\\-day\\-roles(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/lab-day-skills",
+      "regex": "^/api/lab\\-management/lab\\-day\\-skills(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/lab\\-day\\-skills(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/lab-days",
+      "regex": "^/api/lab\\-management/lab\\-days(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/lab\\-days(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/lab-days/templates",
+      "regex": "^/api/lab\\-management/lab\\-days/templates(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/lab\\-days/templates(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/learning-style-report",
+      "regex": "^/api/lab\\-management/learning\\-style\\-report(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/learning\\-style\\-report(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/locations",
+      "regex": "^/api/lab\\-management/locations(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/locations(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/mentorship",
+      "regex": "^/api/lab\\-management/mentorship(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/mentorship(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/programs",
+      "regex": "^/api/lab\\-management/programs(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/programs(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/request-coverage",
+      "regex": "^/api/lab\\-management/request\\-coverage(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/request\\-coverage(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/scenario-library",
+      "regex": "^/api/lab\\-management/scenario\\-library(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/scenario\\-library(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/scenario-library/clone",
+      "regex": "^/api/lab\\-management/scenario\\-library/clone(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/scenario\\-library/clone(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/scenario-library/favorites",
+      "regex": "^/api/lab\\-management/scenario\\-library/favorites(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/scenario\\-library/favorites(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/scenario-library/ratings",
+      "regex": "^/api/lab\\-management/scenario\\-library/ratings(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/scenario\\-library/ratings(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/scenario-library/tags",
+      "regex": "^/api/lab\\-management/scenario\\-library/tags(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/scenario\\-library/tags(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/scenarios",
+      "regex": "^/api/lab\\-management/scenarios(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/scenarios(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/scenarios/favorites",
+      "regex": "^/api/lab\\-management/scenarios/favorites(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/scenarios/favorites(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/scenarios/import",
+      "regex": "^/api/lab\\-management/scenarios/import(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/scenarios/import(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/schedule/conflicts",
+      "regex": "^/api/lab\\-management/schedule/conflicts(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/schedule/conflicts(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/schedule/suggestions",
+      "regex": "^/api/lab\\-management/schedule/suggestions(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/schedule/suggestions(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/skill-drills",
+      "regex": "^/api/lab\\-management/skill\\-drills(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/skill\\-drills(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/skill-signoffs",
+      "regex": "^/api/lab\\-management/skill\\-signoffs(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/skill\\-signoffs(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/skills",
+      "regex": "^/api/lab\\-management/skills(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/skills(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/station-instructors",
+      "regex": "^/api/lab\\-management/station\\-instructors(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/station\\-instructors(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/station-skills",
+      "regex": "^/api/lab\\-management/station\\-skills(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/station\\-skills(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/stations",
+      "regex": "^/api/lab\\-management/stations(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/stations(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/students",
+      "regex": "^/api/lab\\-management/students(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/students(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/students/check-duplicates",
+      "regex": "^/api/lab\\-management/students/check\\-duplicates(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/students/check\\-duplicates(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/students/import",
+      "regex": "^/api/lab\\-management/students/import(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/students/import(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/students/notes-summary",
+      "regex": "^/api/lab\\-management/students/notes\\-summary(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/students/notes\\-summary(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/team-leads",
+      "regex": "^/api/lab\\-management/team\\-leads(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/team\\-leads(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/template-reviews",
+      "regex": "^/api/lab\\-management/template\\-reviews(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/template\\-reviews(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/templates",
+      "regex": "^/api/lab\\-management/templates(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/templates(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/timer",
+      "regex": "^/api/lab\\-management/timer(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/timer(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/timer/active",
+      "regex": "^/api/lab\\-management/timer/active(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/timer/active(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/timer/adjust",
+      "regex": "^/api/lab\\-management/timer/adjust(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/timer/adjust(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/timer/ready",
+      "regex": "^/api/lab\\-management/timer/ready(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/timer/ready(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/timer-displays",
+      "regex": "^/api/lab\\-management/timer\\-displays(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/timer\\-displays(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/users",
+      "regex": "^/api/lab\\-management/users(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/users(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/weekly-templates",
+      "regex": "^/api/lab\\-management/weekly\\-templates(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/weekly\\-templates(?:/)?$"
+    },
+    {
+      "page": "/api/lab-management/weekly-templates/generate",
+      "regex": "^/api/lab\\-management/weekly\\-templates/generate(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lab\\-management/weekly\\-templates/generate(?:/)?$"
+    },
+    {
+      "page": "/api/lvfr-aemt/admin/seed",
+      "regex": "^/api/lvfr\\-aemt/admin/seed(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lvfr\\-aemt/admin/seed(?:/)?$"
+    },
+    {
+      "page": "/api/lvfr-aemt/calendar",
+      "regex": "^/api/lvfr\\-aemt/calendar(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lvfr\\-aemt/calendar(?:/)?$"
+    },
+    {
+      "page": "/api/lvfr-aemt/calendar/swap",
+      "regex": "^/api/lvfr\\-aemt/calendar/swap(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lvfr\\-aemt/calendar/swap(?:/)?$"
+    },
+    {
+      "page": "/api/lvfr-aemt/chapters",
+      "regex": "^/api/lvfr\\-aemt/chapters(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lvfr\\-aemt/chapters(?:/)?$"
+    },
+    {
+      "page": "/api/lvfr-aemt/dashboard",
+      "regex": "^/api/lvfr\\-aemt/dashboard(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lvfr\\-aemt/dashboard(?:/)?$"
+    },
+    {
+      "page": "/api/lvfr-aemt/files",
+      "regex": "^/api/lvfr\\-aemt/files(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lvfr\\-aemt/files(?:/)?$"
+    },
+    {
+      "page": "/api/lvfr-aemt/grades",
+      "regex": "^/api/lvfr\\-aemt/grades(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lvfr\\-aemt/grades(?:/)?$"
+    },
+    {
+      "page": "/api/lvfr-aemt/grades/import",
+      "regex": "^/api/lvfr\\-aemt/grades/import(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lvfr\\-aemt/grades/import(?:/)?$"
+    },
+    {
+      "page": "/api/lvfr-aemt/grades/import/confirm",
+      "regex": "^/api/lvfr\\-aemt/grades/import/confirm(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lvfr\\-aemt/grades/import/confirm(?:/)?$"
+    },
+    {
+      "page": "/api/lvfr-aemt/grades/summary",
+      "regex": "^/api/lvfr\\-aemt/grades/summary(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lvfr\\-aemt/grades/summary(?:/)?$"
+    },
+    {
+      "page": "/api/lvfr-aemt/medications",
+      "regex": "^/api/lvfr\\-aemt/medications(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lvfr\\-aemt/medications(?:/)?$"
+    },
+    {
+      "page": "/api/lvfr-aemt/pharm/checkpoints",
+      "regex": "^/api/lvfr\\-aemt/pharm/checkpoints(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lvfr\\-aemt/pharm/checkpoints(?:/)?$"
+    },
+    {
+      "page": "/api/lvfr-aemt/planner",
+      "regex": "^/api/lvfr\\-aemt/planner(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lvfr\\-aemt/planner(?:/)?$"
+    },
+    {
+      "page": "/api/lvfr-aemt/planner/availability",
+      "regex": "^/api/lvfr\\-aemt/planner/availability(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lvfr\\-aemt/planner/availability(?:/)?$"
+    },
+    {
+      "page": "/api/lvfr-aemt/planner/blocks",
+      "regex": "^/api/lvfr\\-aemt/planner/blocks(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lvfr\\-aemt/planner/blocks(?:/)?$"
+    },
+    {
+      "page": "/api/lvfr-aemt/planner/instances",
+      "regex": "^/api/lvfr\\-aemt/planner/instances(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lvfr\\-aemt/planner/instances(?:/)?$"
+    },
+    {
+      "page": "/api/lvfr-aemt/planner/placements",
+      "regex": "^/api/lvfr\\-aemt/planner/placements(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lvfr\\-aemt/planner/placements(?:/)?$"
+    },
+    {
+      "page": "/api/lvfr-aemt/planner/placements/move",
+      "regex": "^/api/lvfr\\-aemt/planner/placements/move(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lvfr\\-aemt/planner/placements/move(?:/)?$"
+    },
+    {
+      "page": "/api/lvfr-aemt/planner/templates",
+      "regex": "^/api/lvfr\\-aemt/planner/templates(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lvfr\\-aemt/planner/templates(?:/)?$"
+    },
+    {
+      "page": "/api/lvfr-aemt/planner/validate",
+      "regex": "^/api/lvfr\\-aemt/planner/validate(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lvfr\\-aemt/planner/validate(?:/)?$"
+    },
+    {
+      "page": "/api/lvfr-aemt/scheduling",
+      "regex": "^/api/lvfr\\-aemt/scheduling(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lvfr\\-aemt/scheduling(?:/)?$"
+    },
+    {
+      "page": "/api/lvfr-aemt/skills",
+      "regex": "^/api/lvfr\\-aemt/skills(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lvfr\\-aemt/skills(?:/)?$"
+    },
+    {
+      "page": "/api/lvfr-aemt/skills/attempts",
+      "regex": "^/api/lvfr\\-aemt/skills/attempts(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lvfr\\-aemt/skills/attempts(?:/)?$"
+    },
+    {
+      "page": "/api/lvfr-aemt/skills/matrix",
+      "regex": "^/api/lvfr\\-aemt/skills/matrix(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lvfr\\-aemt/skills/matrix(?:/)?$"
+    },
+    {
+      "page": "/api/lvfr-aemt/skills/summary",
+      "regex": "^/api/lvfr\\-aemt/skills/summary(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/lvfr\\-aemt/skills/summary(?:/)?$"
+    },
+    {
+      "page": "/api/notifications",
+      "regex": "^/api/notifications(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/notifications(?:/)?$"
+    },
+    {
+      "page": "/api/notifications/archive",
+      "regex": "^/api/notifications/archive(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/notifications/archive(?:/)?$"
+    },
+    {
+      "page": "/api/notifications/digest-preview",
+      "regex": "^/api/notifications/digest\\-preview(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/notifications/digest\\-preview(?:/)?$"
+    },
+    {
+      "page": "/api/notifications/email-preferences",
+      "regex": "^/api/notifications/email\\-preferences(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/notifications/email\\-preferences(?:/)?$"
+    },
+    {
+      "page": "/api/notifications/preferences",
+      "regex": "^/api/notifications/preferences(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/notifications/preferences(?:/)?$"
+    },
+    {
+      "page": "/api/notifications/read",
+      "regex": "^/api/notifications/read(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/notifications/read(?:/)?$"
+    },
+    {
+      "page": "/api/onboarding/assignments",
+      "regex": "^/api/onboarding/assignments(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/onboarding/assignments(?:/)?$"
+    },
+    {
+      "page": "/api/onboarding/dashboard",
+      "regex": "^/api/onboarding/dashboard(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/onboarding/dashboard(?:/)?$"
+    },
+    {
+      "page": "/api/onboarding/templates",
+      "regex": "^/api/onboarding/templates(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/onboarding/templates(?:/)?$"
+    },
+    {
+      "page": "/api/osce/admin/schedule",
+      "regex": "^/api/osce/admin/schedule(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/osce/admin/schedule(?:/)?$"
+    },
+    {
+      "page": "/api/osce/admin/students/reorder",
+      "regex": "^/api/osce/admin/students/reorder(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/osce/admin/students/reorder(?:/)?$"
+    },
+    {
+      "page": "/api/osce/events",
+      "regex": "^/api/osce/events(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/osce/events(?:/)?$"
+    },
+    {
+      "page": "/api/osce/observers",
+      "regex": "^/api/osce/observers(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/osce/observers(?:/)?$"
+    },
+    {
+      "page": "/api/osce/observers/export",
+      "regex": "^/api/osce/observers/export(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/osce/observers/export(?:/)?$"
+    },
+    {
+      "page": "/api/osce/register",
+      "regex": "^/api/osce/register(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/osce/register(?:/)?$"
+    },
+    {
+      "page": "/api/osce/student-agencies",
+      "regex": "^/api/osce/student\\-agencies(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/osce/student\\-agencies(?:/)?$"
+    },
+    {
+      "page": "/api/osce/time-blocks",
+      "regex": "^/api/osce/time\\-blocks(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/osce/time\\-blocks(?:/)?$"
+    },
+    {
+      "page": "/api/peer-evaluations",
+      "regex": "^/api/peer\\-evaluations(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/peer\\-evaluations(?:/)?$"
+    },
+    {
+      "page": "/api/peer-evaluations/aggregate",
+      "regex": "^/api/peer\\-evaluations/aggregate(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/peer\\-evaluations/aggregate(?:/)?$"
+    },
+    {
+      "page": "/api/polls",
+      "regex": "^/api/polls(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/polls(?:/)?$"
+    },
+    {
+      "page": "/api/reports/attendance",
+      "regex": "^/api/reports/attendance(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/reports/attendance(?:/)?$"
+    },
+    {
+      "page": "/api/reports/availability-patterns",
+      "regex": "^/api/reports/availability\\-patterns(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/reports/availability\\-patterns(?:/)?$"
+    },
+    {
+      "page": "/api/reports/builder",
+      "regex": "^/api/reports/builder(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/reports/builder(?:/)?$"
+    },
+    {
+      "page": "/api/reports/clinical-hours",
+      "regex": "^/api/reports/clinical\\-hours(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/reports/clinical\\-hours(?:/)?$"
+    },
+    {
+      "page": "/api/reports/clinical-placements",
+      "regex": "^/api/reports/clinical\\-placements(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/reports/clinical\\-placements(?:/)?$"
+    },
+    {
+      "page": "/api/reports/closeout-surveys",
+      "regex": "^/api/reports/closeout\\-surveys(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/reports/closeout\\-surveys(?:/)?$"
+    },
+    {
+      "page": "/api/reports/cohort-comparison",
+      "regex": "^/api/reports/cohort\\-comparison(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/reports/cohort\\-comparison(?:/)?$"
+    },
+    {
+      "page": "/api/reports/gradebook",
+      "regex": "^/api/reports/gradebook(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/reports/gradebook(?:/)?$"
+    },
+    {
+      "page": "/api/reports/instructor-analytics",
+      "regex": "^/api/reports/instructor\\-analytics(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/reports/instructor\\-analytics(?:/)?$"
+    },
+    {
+      "page": "/api/reports/instructor-workload",
+      "regex": "^/api/reports/instructor\\-workload(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/reports/instructor\\-workload(?:/)?$"
+    },
+    {
+      "page": "/api/reports/internship-status",
+      "regex": "^/api/reports/internship\\-status(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/reports/internship\\-status(?:/)?$"
+    },
+    {
+      "page": "/api/reports/lab-progress",
+      "regex": "^/api/reports/lab\\-progress(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/reports/lab\\-progress(?:/)?$"
+    },
+    {
+      "page": "/api/reports/onboarding-status",
+      "regex": "^/api/reports/onboarding\\-status(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/reports/onboarding\\-status(?:/)?$"
+    },
+    {
+      "page": "/api/reports/program-outcomes",
+      "regex": "^/api/reports/program\\-outcomes(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/reports/program\\-outcomes(?:/)?$"
+    },
+    {
+      "page": "/api/reports/program-overview",
+      "regex": "^/api/reports/program\\-overview(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/reports/program\\-overview(?:/)?$"
+    },
+    {
+      "page": "/api/reports/scenario-analytics",
+      "regex": "^/api/reports/scenario\\-analytics(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/reports/scenario\\-analytics(?:/)?$"
+    },
+    {
+      "page": "/api/reports/scenario-usage",
+      "regex": "^/api/reports/scenario\\-usage(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/reports/scenario\\-usage(?:/)?$"
+    },
+    {
+      "page": "/api/reports/scenario-usage-overview",
+      "regex": "^/api/reports/scenario\\-usage\\-overview(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/reports/scenario\\-usage\\-overview(?:/)?$"
+    },
+    {
+      "page": "/api/reports/student-dashboard",
+      "regex": "^/api/reports/student\\-dashboard(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/reports/student\\-dashboard(?:/)?$"
+    },
+    {
+      "page": "/api/reports/student-progress",
+      "regex": "^/api/reports/student\\-progress(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/reports/student\\-progress(?:/)?$"
+    },
+    {
+      "page": "/api/reports/team-leads",
+      "regex": "^/api/reports/team\\-leads(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/reports/team\\-leads(?:/)?$"
+    },
+    {
+      "page": "/api/resources",
+      "regex": "^/api/resources(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/resources(?:/)?$"
+    },
+    {
+      "page": "/api/resources/medications",
+      "regex": "^/api/resources/medications(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/resources/medications(?:/)?$"
+    },
+    {
+      "page": "/api/resources/versions",
+      "regex": "^/api/resources/versions(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/resources/versions(?:/)?$"
+    },
+    {
+      "page": "/api/scheduling/availability",
+      "regex": "^/api/scheduling/availability(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/scheduling/availability(?:/)?$"
+    },
+    {
+      "page": "/api/scheduling/availability/all",
+      "regex": "^/api/scheduling/availability/all(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/scheduling/availability/all(?:/)?$"
+    },
+    {
+      "page": "/api/scheduling/availability/bulk",
+      "regex": "^/api/scheduling/availability/bulk(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/scheduling/availability/bulk(?:/)?$"
+    },
+    {
+      "page": "/api/scheduling/availability/suggestions",
+      "regex": "^/api/scheduling/availability/suggestions(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/scheduling/availability/suggestions(?:/)?$"
+    },
+    {
+      "page": "/api/scheduling/availability-status",
+      "regex": "^/api/scheduling/availability\\-status(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/scheduling/availability\\-status(?:/)?$"
+    },
+    {
+      "page": "/api/scheduling/part-timer-status",
+      "regex": "^/api/scheduling/part\\-timer\\-status(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/scheduling/part\\-timer\\-status(?:/)?$"
+    },
+    {
+      "page": "/api/scheduling/planner/blocks",
+      "regex": "^/api/scheduling/planner/blocks(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/scheduling/planner/blocks(?:/)?$"
+    },
+    {
+      "page": "/api/scheduling/planner/conflicts",
+      "regex": "^/api/scheduling/planner/conflicts(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/scheduling/planner/conflicts(?:/)?$"
+    },
+    {
+      "page": "/api/scheduling/planner/programs",
+      "regex": "^/api/scheduling/planner/programs(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/scheduling/planner/programs(?:/)?$"
+    },
+    {
+      "page": "/api/scheduling/planner/rooms",
+      "regex": "^/api/scheduling/planner/rooms(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/scheduling/planner/rooms(?:/)?$"
+    },
+    {
+      "page": "/api/scheduling/planner/semesters",
+      "regex": "^/api/scheduling/planner/semesters(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/scheduling/planner/semesters(?:/)?$"
+    },
+    {
+      "page": "/api/scheduling/planner/workload",
+      "regex": "^/api/scheduling/planner/workload(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/scheduling/planner/workload(?:/)?$"
+    },
+    {
+      "page": "/api/scheduling/reports",
+      "regex": "^/api/scheduling/reports(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/scheduling/reports(?:/)?$"
+    },
+    {
+      "page": "/api/scheduling/resource-bookings",
+      "regex": "^/api/scheduling/resource\\-bookings(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/scheduling/resource\\-bookings(?:/)?$"
+    },
+    {
+      "page": "/api/scheduling/resource-bookings/resources",
+      "regex": "^/api/scheduling/resource\\-bookings/resources(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/scheduling/resource\\-bookings/resources(?:/)?$"
+    },
+    {
+      "page": "/api/scheduling/send-availability-reminders",
+      "regex": "^/api/scheduling/send\\-availability\\-reminders(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/scheduling/send\\-availability\\-reminders(?:/)?$"
+    },
+    {
+      "page": "/api/scheduling/shifts",
+      "regex": "^/api/scheduling/shifts(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/scheduling/shifts(?:/)?$"
+    },
+    {
+      "page": "/api/scheduling/signups/pending",
+      "regex": "^/api/scheduling/signups/pending(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/scheduling/signups/pending(?:/)?$"
+    },
+    {
+      "page": "/api/scheduling/substitute-requests",
+      "regex": "^/api/scheduling/substitute\\-requests(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/scheduling/substitute\\-requests(?:/)?$"
+    },
+    {
+      "page": "/api/scheduling/team-availability",
+      "regex": "^/api/scheduling/team\\-availability(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/scheduling/team\\-availability(?:/)?$"
+    },
+    {
+      "page": "/api/scheduling/team-availability/saved",
+      "regex": "^/api/scheduling/team\\-availability/saved(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/scheduling/team\\-availability/saved(?:/)?$"
+    },
+    {
+      "page": "/api/scheduling/trades",
+      "regex": "^/api/scheduling/trades(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/scheduling/trades(?:/)?$"
+    },
+    {
+      "page": "/api/search",
+      "regex": "^/api/search(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/search(?:/)?$"
+    },
+    {
+      "page": "/api/seating/charts",
+      "regex": "^/api/seating/charts(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/seating/charts(?:/)?$"
+    },
+    {
+      "page": "/api/seating/classrooms",
+      "regex": "^/api/seating/classrooms(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/seating/classrooms(?:/)?$"
+    },
+    {
+      "page": "/api/seating/learning-styles",
+      "regex": "^/api/seating/learning\\-styles(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/seating/learning\\-styles(?:/)?$"
+    },
+    {
+      "page": "/api/seating/preferences",
+      "regex": "^/api/seating/preferences(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/seating/preferences(?:/)?$"
+    },
+    {
+      "page": "/api/settings/2fa/disable",
+      "regex": "^/api/settings/2fa/disable(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/settings/2fa/disable(?:/)?$"
+    },
+    {
+      "page": "/api/settings/2fa/setup",
+      "regex": "^/api/settings/2fa/setup(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/settings/2fa/setup(?:/)?$"
+    },
+    {
+      "page": "/api/settings/2fa/status",
+      "regex": "^/api/settings/2fa/status(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/settings/2fa/status(?:/)?$"
+    },
+    {
+      "page": "/api/settings/2fa/verify",
+      "regex": "^/api/settings/2fa/verify(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/settings/2fa/verify(?:/)?$"
+    },
+    {
+      "page": "/api/settings/calendar-sync",
+      "regex": "^/api/settings/calendar\\-sync(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/settings/calendar\\-sync(?:/)?$"
+    },
+    {
+      "page": "/api/settings/notifications",
+      "regex": "^/api/settings/notifications(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/settings/notifications(?:/)?$"
+    },
+    {
+      "page": "/api/settings/sessions",
+      "regex": "^/api/settings/sessions(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/settings/sessions(?:/)?$"
+    },
+    {
+      "page": "/api/settings/sessions/revoke-all",
+      "regex": "^/api/settings/sessions/revoke\\-all(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/settings/sessions/revoke\\-all(?:/)?$"
+    },
+    {
+      "page": "/api/skill-sheets",
+      "regex": "^/api/skill\\-sheets(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/skill\\-sheets(?:/)?$"
+    },
+    {
+      "page": "/api/skill-sheets/by-skill-name",
+      "regex": "^/api/skill\\-sheets/by\\-skill\\-name(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/skill\\-sheets/by\\-skill\\-name(?:/)?$"
+    },
+    {
+      "page": "/api/skill-sheets/by-skill-name/bulk",
+      "regex": "^/api/skill\\-sheets/by\\-skill\\-name/bulk(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/skill\\-sheets/by\\-skill\\-name/bulk(?:/)?$"
+    },
+    {
+      "page": "/api/skill-sheets/evaluations-by-lab-day",
+      "regex": "^/api/skill\\-sheets/evaluations\\-by\\-lab\\-day(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/skill\\-sheets/evaluations\\-by\\-lab\\-day(?:/)?$"
+    },
+    {
+      "page": "/api/stations/completions",
+      "regex": "^/api/stations/completions(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/stations/completions(?:/)?$"
+    },
+    {
+      "page": "/api/stations/completions/bulk",
+      "regex": "^/api/stations/completions/bulk(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/stations/completions/bulk(?:/)?$"
+    },
+    {
+      "page": "/api/stations/pool",
+      "regex": "^/api/stations/pool(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/stations/pool(?:/)?$"
+    },
+    {
+      "page": "/api/stations/pool/favorites",
+      "regex": "^/api/stations/pool/favorites(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/stations/pool/favorites(?:/)?$"
+    },
+    {
+      "page": "/api/student/attendance-appeals",
+      "regex": "^/api/student/attendance\\-appeals(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/student/attendance\\-appeals(?:/)?$"
+    },
+    {
+      "page": "/api/student/available-labs",
+      "regex": "^/api/student/available\\-labs(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/student/available\\-labs(?:/)?$"
+    },
+    {
+      "page": "/api/student/available-labs/cancel",
+      "regex": "^/api/student/available\\-labs/cancel(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/student/available\\-labs/cancel(?:/)?$"
+    },
+    {
+      "page": "/api/student/available-labs/my-signups",
+      "regex": "^/api/student/available\\-labs/my\\-signups(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/student/available\\-labs/my\\-signups(?:/)?$"
+    },
+    {
+      "page": "/api/student/available-labs/signup",
+      "regex": "^/api/student/available\\-labs/signup(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/student/available\\-labs/signup(?:/)?$"
+    },
+    {
+      "page": "/api/student/communication-preferences",
+      "regex": "^/api/student/communication\\-preferences(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/student/communication\\-preferences(?:/)?$"
+    },
+    {
+      "page": "/api/student/completions",
+      "regex": "^/api/student/completions(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/student/completions(?:/)?$"
+    },
+    {
+      "page": "/api/student/documents",
+      "regex": "^/api/student/documents(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/student/documents(?:/)?$"
+    },
+    {
+      "page": "/api/student/documents/requests",
+      "regex": "^/api/student/documents/requests(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/student/documents/requests(?:/)?$"
+    },
+    {
+      "page": "/api/student/ekg-scenarios",
+      "regex": "^/api/student/ekg\\-scenarios(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/student/ekg\\-scenarios(?:/)?$"
+    },
+    {
+      "page": "/api/student/labs",
+      "regex": "^/api/student/labs(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/student/labs(?:/)?$"
+    },
+    {
+      "page": "/api/student/my-progress",
+      "regex": "^/api/student/my\\-progress(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/student/my\\-progress(?:/)?$"
+    },
+    {
+      "page": "/api/student/profile",
+      "regex": "^/api/student/profile(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/student/profile(?:/)?$"
+    },
+    {
+      "page": "/api/student/skill-sheets",
+      "regex": "^/api/student/skill\\-sheets(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/student/skill\\-sheets(?:/)?$"
+    },
+    {
+      "page": "/api/students",
+      "regex": "^/api/students(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/students(?:/)?$"
+    },
+    {
+      "page": "/api/submissions",
+      "regex": "^/api/submissions(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/submissions(?:/)?$"
+    },
+    {
+      "page": "/api/tasks",
+      "regex": "^/api/tasks(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/tasks(?:/)?$"
+    },
+    {
+      "page": "/api/tasks/bulk",
+      "regex": "^/api/tasks/bulk(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/tasks/bulk(?:/)?$"
+    },
+    {
+      "page": "/api/timer-display",
+      "regex": "^/api/timer\\-display(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/timer\\-display(?:/)?$"
+    },
+    {
+      "page": "/api/tracking/ekg-scores",
+      "regex": "^/api/tracking/ekg\\-scores(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/tracking/ekg\\-scores(?:/)?$"
+    },
+    {
+      "page": "/api/tracking/protocol-completions",
+      "regex": "^/api/tracking/protocol\\-completions(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/tracking/protocol\\-completions(?:/)?$"
+    },
+    {
+      "page": "/api/tracking/scenarios",
+      "regex": "^/api/tracking/scenarios(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/tracking/scenarios(?:/)?$"
+    },
+    {
+      "page": "/api/user/preferences",
+      "regex": "^/api/user/preferences(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/user/preferences(?:/)?$"
+    },
+    {
+      "page": "/api/user-preferences/tour",
+      "regex": "^/api/user\\-preferences/tour(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/user\\-preferences/tour(?:/)?$"
+    },
+    {
+      "page": "/api/users/list",
+      "regex": "^/api/users/list(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/users/list(?:/)?$"
+    },
+    {
+      "page": "/auth/error",
+      "regex": "^/auth/error(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/auth/error(?:/)?$"
+    },
+    {
+      "page": "/auth/signin",
+      "regex": "^/auth/signin(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/auth/signin(?:/)?$"
+    },
+    {
+      "page": "/calendar",
+      "regex": "^/calendar(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/calendar(?:/)?$"
+    },
+    {
+      "page": "/cases",
+      "regex": "^/cases(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/cases(?:/)?$"
+    },
+    {
+      "page": "/cases/leaderboard",
+      "regex": "^/cases/leaderboard(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/cases/leaderboard(?:/)?$"
+    },
+    {
+      "page": "/cases/new",
+      "regex": "^/cases/new(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/cases/new(?:/)?$"
+    },
+    {
+      "page": "/clinical",
+      "regex": "^/clinical(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/clinical(?:/)?$"
+    },
+    {
+      "page": "/clinical/aemt-tracking",
+      "regex": "^/clinical/aemt\\-tracking(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/clinical/aemt\\-tracking(?:/)?$"
+    },
+    {
+      "page": "/clinical/affiliations",
+      "regex": "^/clinical/affiliations(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/clinical/affiliations(?:/)?$"
+    },
+    {
+      "page": "/clinical/agencies",
+      "regex": "^/clinical/agencies(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/clinical/agencies(?:/)?$"
+    },
+    {
+      "page": "/clinical/capacity",
+      "regex": "^/clinical/capacity(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/clinical/capacity(?:/)?$"
+    },
+    {
+      "page": "/clinical/compliance",
+      "regex": "^/clinical/compliance(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/clinical/compliance(?:/)?$"
+    },
+    {
+      "page": "/clinical/compliance-tracker",
+      "regex": "^/clinical/compliance\\-tracker(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/clinical/compliance\\-tracker(?:/)?$"
+    },
+    {
+      "page": "/clinical/emt-tracking",
+      "regex": "^/clinical/emt\\-tracking(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/clinical/emt\\-tracking(?:/)?$"
+    },
+    {
+      "page": "/clinical/hours",
+      "regex": "^/clinical/hours(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/clinical/hours(?:/)?$"
+    },
+    {
+      "page": "/clinical/internships",
+      "regex": "^/clinical/internships(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/clinical/internships(?:/)?$"
+    },
+    {
+      "page": "/clinical/mce",
+      "regex": "^/clinical/mce(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/clinical/mce(?:/)?$"
+    },
+    {
+      "page": "/clinical/overview",
+      "regex": "^/clinical/overview(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/clinical/overview(?:/)?$"
+    },
+    {
+      "page": "/clinical/planning-calendar",
+      "regex": "^/clinical/planning\\-calendar(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/clinical/planning\\-calendar(?:/)?$"
+    },
+    {
+      "page": "/clinical/preceptors",
+      "regex": "^/clinical/preceptors(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/clinical/preceptors(?:/)?$"
+    },
+    {
+      "page": "/clinical/rotation-scheduler",
+      "regex": "^/clinical/rotation\\-scheduler(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/clinical/rotation\\-scheduler(?:/)?$"
+    },
+    {
+      "page": "/clinical/site-visit-settings",
+      "regex": "^/clinical/site\\-visit\\-settings(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/clinical/site\\-visit\\-settings(?:/)?$"
+    },
+    {
+      "page": "/clinical/site-visits",
+      "regex": "^/clinical/site\\-visits(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/clinical/site\\-visits(?:/)?$"
+    },
+    {
+      "page": "/clinical/summative-evaluations",
+      "regex": "^/clinical/summative\\-evaluations(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/clinical/summative\\-evaluations(?:/)?$"
+    },
+    {
+      "page": "/favicon.ico",
+      "regex": "^/favicon\\.ico(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/favicon\\.ico(?:/)?$"
+    },
+    {
+      "page": "/feedback/my-submissions",
+      "regex": "^/feedback/my\\-submissions(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/feedback/my\\-submissions(?:/)?$"
+    },
+    {
+      "page": "/guest",
+      "regex": "^/guest(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/guest(?:/)?$"
+    },
+    {
+      "page": "/help",
+      "regex": "^/help(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/help(?:/)?$"
+    },
+    {
+      "page": "/instructor",
+      "regex": "^/instructor(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/instructor(?:/)?$"
+    },
+    {
+      "page": "/instructor/ce",
+      "regex": "^/instructor/ce(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/instructor/ce(?:/)?$"
+    },
+    {
+      "page": "/instructor/certifications",
+      "regex": "^/instructor/certifications(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/instructor/certifications(?:/)?$"
+    },
+    {
+      "page": "/instructor/history",
+      "regex": "^/instructor/history(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/instructor/history(?:/)?$"
+    },
+    {
+      "page": "/instructor/my-stats",
+      "regex": "^/instructor/my\\-stats(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/instructor/my\\-stats(?:/)?$"
+    },
+    {
+      "page": "/instructor/teaching",
+      "regex": "^/instructor/teaching(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/instructor/teaching(?:/)?$"
+    },
+    {
+      "page": "/instructor/time-clock",
+      "regex": "^/instructor/time\\-clock(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/instructor/time\\-clock(?:/)?$"
+    },
+    {
+      "page": "/lab-management",
+      "regex": "^/lab\\-management(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lab\\-management(?:/)?$"
+    },
+    {
+      "page": "/lab-management/admin",
+      "regex": "^/lab\\-management/admin(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lab\\-management/admin(?:/)?$"
+    },
+    {
+      "page": "/lab-management/admin/certifications",
+      "regex": "^/lab\\-management/admin/certifications(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lab\\-management/admin/certifications(?:/)?$"
+    },
+    {
+      "page": "/lab-management/admin/cohorts",
+      "regex": "^/lab\\-management/admin/cohorts(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lab\\-management/admin/cohorts(?:/)?$"
+    },
+    {
+      "page": "/lab-management/admin/feedback",
+      "regex": "^/lab\\-management/admin/feedback(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lab\\-management/admin/feedback(?:/)?$"
+    },
+    {
+      "page": "/lab-management/admin/timer-displays",
+      "regex": "^/lab\\-management/admin/timer\\-displays(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lab\\-management/admin/timer\\-displays(?:/)?$"
+    },
+    {
+      "page": "/lab-management/aemt-tracker",
+      "regex": "^/lab\\-management/aemt\\-tracker(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lab\\-management/aemt\\-tracker(?:/)?$"
+    },
+    {
+      "page": "/lab-management/debrief-review",
+      "regex": "^/lab\\-management/debrief\\-review(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lab\\-management/debrief\\-review(?:/)?$"
+    },
+    {
+      "page": "/lab-management/ekg-warmup",
+      "regex": "^/lab\\-management/ekg\\-warmup(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lab\\-management/ekg\\-warmup(?:/)?$"
+    },
+    {
+      "page": "/lab-management/emt-tracker",
+      "regex": "^/lab\\-management/emt\\-tracker(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lab\\-management/emt\\-tracker(?:/)?$"
+    },
+    {
+      "page": "/lab-management/flags",
+      "regex": "^/lab\\-management/flags(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lab\\-management/flags(?:/)?$"
+    },
+    {
+      "page": "/lab-management/groups",
+      "regex": "^/lab\\-management/groups(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lab\\-management/groups(?:/)?$"
+    },
+    {
+      "page": "/lab-management/mentorship",
+      "regex": "^/lab\\-management/mentorship(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lab\\-management/mentorship(?:/)?$"
+    },
+    {
+      "page": "/lab-management/my-certifications",
+      "regex": "^/lab\\-management/my\\-certifications(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lab\\-management/my\\-certifications(?:/)?$"
+    },
+    {
+      "page": "/lab-management/peer-evals",
+      "regex": "^/lab\\-management/peer\\-evals(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lab\\-management/peer\\-evals(?:/)?$"
+    },
+    {
+      "page": "/lab-management/protocol-tracking",
+      "regex": "^/lab\\-management/protocol\\-tracking(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lab\\-management/protocol\\-tracking(?:/)?$"
+    },
+    {
+      "page": "/lab-management/reports",
+      "regex": "^/lab\\-management/reports(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lab\\-management/reports(?:/)?$"
+    },
+    {
+      "page": "/lab-management/reports/clinical-hours",
+      "regex": "^/lab\\-management/reports/clinical\\-hours(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lab\\-management/reports/clinical\\-hours(?:/)?$"
+    },
+    {
+      "page": "/lab-management/reports/internship-status",
+      "regex": "^/lab\\-management/reports/internship\\-status(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lab\\-management/reports/internship\\-status(?:/)?$"
+    },
+    {
+      "page": "/lab-management/reports/lab-progress",
+      "regex": "^/lab\\-management/reports/lab\\-progress(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lab\\-management/reports/lab\\-progress(?:/)?$"
+    },
+    {
+      "page": "/lab-management/reports/onboarding-status",
+      "regex": "^/lab\\-management/reports/onboarding\\-status(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lab\\-management/reports/onboarding\\-status(?:/)?$"
+    },
+    {
+      "page": "/lab-management/reports/student-progress",
+      "regex": "^/lab\\-management/reports/student\\-progress(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lab\\-management/reports/student\\-progress(?:/)?$"
+    },
+    {
+      "page": "/lab-management/reports/team-leads",
+      "regex": "^/lab\\-management/reports/team\\-leads(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lab\\-management/reports/team\\-leads(?:/)?$"
+    },
+    {
+      "page": "/lab-management/scenario-library",
+      "regex": "^/lab\\-management/scenario\\-library(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lab\\-management/scenario\\-library(?:/)?$"
+    },
+    {
+      "page": "/lab-management/scenarios",
+      "regex": "^/lab\\-management/scenarios(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lab\\-management/scenarios(?:/)?$"
+    },
+    {
+      "page": "/lab-management/scenarios/new",
+      "regex": "^/lab\\-management/scenarios/new(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lab\\-management/scenarios/new(?:/)?$"
+    },
+    {
+      "page": "/lab-management/schedule",
+      "regex": "^/lab\\-management/schedule(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lab\\-management/schedule(?:/)?$"
+    },
+    {
+      "page": "/lab-management/schedule/new",
+      "regex": "^/lab\\-management/schedule/new(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lab\\-management/schedule/new(?:/)?$"
+    },
+    {
+      "page": "/lab-management/seating/charts",
+      "regex": "^/lab\\-management/seating/charts(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lab\\-management/seating/charts(?:/)?$"
+    },
+    {
+      "page": "/lab-management/seating/learning-styles",
+      "regex": "^/lab\\-management/seating/learning\\-styles(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lab\\-management/seating/learning\\-styles(?:/)?$"
+    },
+    {
+      "page": "/lab-management/seating/preferences",
+      "regex": "^/lab\\-management/seating/preferences(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lab\\-management/seating/preferences(?:/)?$"
+    },
+    {
+      "page": "/lab-management/skill-drills",
+      "regex": "^/lab\\-management/skill\\-drills(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lab\\-management/skill\\-drills(?:/)?$"
+    },
+    {
+      "page": "/lab-management/skill-sheets",
+      "regex": "^/lab\\-management/skill\\-sheets(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lab\\-management/skill\\-sheets(?:/)?$"
+    },
+    {
+      "page": "/lab-management/skills/competencies",
+      "regex": "^/lab\\-management/skills/competencies(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lab\\-management/skills/competencies(?:/)?$"
+    },
+    {
+      "page": "/lab-management/skills/competencies/report",
+      "regex": "^/lab\\-management/skills/competencies/report(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lab\\-management/skills/competencies/report(?:/)?$"
+    },
+    {
+      "page": "/lab-management/stations/log",
+      "regex": "^/lab\\-management/stations/log(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lab\\-management/stations/log(?:/)?$"
+    },
+    {
+      "page": "/lab-management/stations/pool",
+      "regex": "^/lab\\-management/stations/pool(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lab\\-management/stations/pool(?:/)?$"
+    },
+    {
+      "page": "/lab-management/students",
+      "regex": "^/lab\\-management/students(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lab\\-management/students(?:/)?$"
+    },
+    {
+      "page": "/lab-management/students/import",
+      "regex": "^/lab\\-management/students/import(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lab\\-management/students/import(?:/)?$"
+    },
+    {
+      "page": "/lab-management/students/new",
+      "regex": "^/lab\\-management/students/new(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lab\\-management/students/new(?:/)?$"
+    },
+    {
+      "page": "/lab-management/templates",
+      "regex": "^/lab\\-management/templates(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lab\\-management/templates(?:/)?$"
+    },
+    {
+      "page": "/lab-management/templates/review",
+      "regex": "^/lab\\-management/templates/review(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lab\\-management/templates/review(?:/)?$"
+    },
+    {
+      "page": "/lab-management/templates/weekly",
+      "regex": "^/lab\\-management/templates/weekly(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lab\\-management/templates/weekly(?:/)?$"
+    },
+    {
+      "page": "/lvfr-aemt",
+      "regex": "^/lvfr\\-aemt(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lvfr\\-aemt(?:/)?$"
+    },
+    {
+      "page": "/lvfr-aemt/calendar",
+      "regex": "^/lvfr\\-aemt/calendar(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lvfr\\-aemt/calendar(?:/)?$"
+    },
+    {
+      "page": "/lvfr-aemt/files",
+      "regex": "^/lvfr\\-aemt/files(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lvfr\\-aemt/files(?:/)?$"
+    },
+    {
+      "page": "/lvfr-aemt/grades",
+      "regex": "^/lvfr\\-aemt/grades(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lvfr\\-aemt/grades(?:/)?$"
+    },
+    {
+      "page": "/lvfr-aemt/grades/import",
+      "regex": "^/lvfr\\-aemt/grades/import(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lvfr\\-aemt/grades/import(?:/)?$"
+    },
+    {
+      "page": "/lvfr-aemt/pharm",
+      "regex": "^/lvfr\\-aemt/pharm(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lvfr\\-aemt/pharm(?:/)?$"
+    },
+    {
+      "page": "/lvfr-aemt/planner",
+      "regex": "^/lvfr\\-aemt/planner(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lvfr\\-aemt/planner(?:/)?$"
+    },
+    {
+      "page": "/lvfr-aemt/scheduling",
+      "regex": "^/lvfr\\-aemt/scheduling(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lvfr\\-aemt/scheduling(?:/)?$"
+    },
+    {
+      "page": "/lvfr-aemt/skills",
+      "regex": "^/lvfr\\-aemt/skills(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/lvfr\\-aemt/skills(?:/)?$"
+    },
+    {
+      "page": "/notifications",
+      "regex": "^/notifications(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/notifications(?:/)?$"
+    },
+    {
+      "page": "/onboarding",
+      "regex": "^/onboarding(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/onboarding(?:/)?$"
+    },
+    {
+      "page": "/osce-evaluator-signup",
+      "regex": "^/osce\\-evaluator\\-signup(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/osce\\-evaluator\\-signup(?:/)?$"
+    },
+    {
+      "page": "/poll/create",
+      "regex": "^/poll/create(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/poll/create(?:/)?$"
+    },
+    {
+      "page": "/reports",
+      "regex": "^/reports(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/reports(?:/)?$"
+    },
+    {
+      "page": "/reports/attendance",
+      "regex": "^/reports/attendance(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/reports/attendance(?:/)?$"
+    },
+    {
+      "page": "/reports/availability-patterns",
+      "regex": "^/reports/availability\\-patterns(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/reports/availability\\-patterns(?:/)?$"
+    },
+    {
+      "page": "/reports/builder",
+      "regex": "^/reports/builder(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/reports/builder(?:/)?$"
+    },
+    {
+      "page": "/reports/clinical-placements",
+      "regex": "^/reports/clinical\\-placements(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/reports/clinical\\-placements(?:/)?$"
+    },
+    {
+      "page": "/reports/closeout-surveys",
+      "regex": "^/reports/closeout\\-surveys(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/reports/closeout\\-surveys(?:/)?$"
+    },
+    {
+      "page": "/reports/cohort-comparison",
+      "regex": "^/reports/cohort\\-comparison(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/reports/cohort\\-comparison(?:/)?$"
+    },
+    {
+      "page": "/reports/gradebook",
+      "regex": "^/reports/gradebook(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/reports/gradebook(?:/)?$"
+    },
+    {
+      "page": "/reports/instructor-analytics",
+      "regex": "^/reports/instructor\\-analytics(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/reports/instructor\\-analytics(?:/)?$"
+    },
+    {
+      "page": "/reports/instructor-workload",
+      "regex": "^/reports/instructor\\-workload(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/reports/instructor\\-workload(?:/)?$"
+    },
+    {
+      "page": "/reports/lab-costs",
+      "regex": "^/reports/lab\\-costs(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/reports/lab\\-costs(?:/)?$"
+    },
+    {
+      "page": "/reports/program-outcomes",
+      "regex": "^/reports/program\\-outcomes(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/reports/program\\-outcomes(?:/)?$"
+    },
+    {
+      "page": "/reports/program-overview",
+      "regex": "^/reports/program\\-overview(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/reports/program\\-overview(?:/)?$"
+    },
+    {
+      "page": "/reports/scenario-analytics",
+      "regex": "^/reports/scenario\\-analytics(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/reports/scenario\\-analytics(?:/)?$"
+    },
+    {
+      "page": "/reports/scenario-usage",
+      "regex": "^/reports/scenario\\-usage(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/reports/scenario\\-usage(?:/)?$"
+    },
+    {
+      "page": "/reports/scenario-usage-overview",
+      "regex": "^/reports/scenario\\-usage\\-overview(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/reports/scenario\\-usage\\-overview(?:/)?$"
+    },
+    {
+      "page": "/reports/student-dashboard",
+      "regex": "^/reports/student\\-dashboard(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/reports/student\\-dashboard(?:/)?$"
+    },
+    {
+      "page": "/request-access",
+      "regex": "^/request\\-access(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/request\\-access(?:/)?$"
+    },
+    {
+      "page": "/resources",
+      "regex": "^/resources(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/resources(?:/)?$"
+    },
+    {
+      "page": "/resources/medications",
+      "regex": "^/resources/medications(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/resources/medications(?:/)?$"
+    },
+    {
+      "page": "/scheduler",
+      "regex": "^/scheduler(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/scheduler(?:/)?$"
+    },
+    {
+      "page": "/scheduler/create",
+      "regex": "^/scheduler/create(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/scheduler/create(?:/)?$"
+    },
+    {
+      "page": "/scheduling",
+      "regex": "^/scheduling(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/scheduling(?:/)?$"
+    },
+    {
+      "page": "/scheduling/availability",
+      "regex": "^/scheduling/availability(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/scheduling/availability(?:/)?$"
+    },
+    {
+      "page": "/scheduling/availability/all",
+      "regex": "^/scheduling/availability/all(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/scheduling/availability/all(?:/)?$"
+    },
+    {
+      "page": "/scheduling/planner",
+      "regex": "^/scheduling/planner(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/scheduling/planner(?:/)?$"
+    },
+    {
+      "page": "/scheduling/planner/workload",
+      "regex": "^/scheduling/planner/workload(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/scheduling/planner/workload(?:/)?$"
+    },
+    {
+      "page": "/scheduling/reports",
+      "regex": "^/scheduling/reports(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/scheduling/reports(?:/)?$"
+    },
+    {
+      "page": "/scheduling/resource-bookings",
+      "regex": "^/scheduling/resource\\-bookings(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/scheduling/resource\\-bookings(?:/)?$"
+    },
+    {
+      "page": "/scheduling/shifts",
+      "regex": "^/scheduling/shifts(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/scheduling/shifts(?:/)?$"
+    },
+    {
+      "page": "/scheduling/shifts/new",
+      "regex": "^/scheduling/shifts/new(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/scheduling/shifts/new(?:/)?$"
+    },
+    {
+      "page": "/scheduling/signups/pending",
+      "regex": "^/scheduling/signups/pending(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/scheduling/signups/pending(?:/)?$"
+    },
+    {
+      "page": "/scheduling/substitute-requests",
+      "regex": "^/scheduling/substitute\\-requests(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/scheduling/substitute\\-requests(?:/)?$"
+    },
+    {
+      "page": "/scheduling/team-availability",
+      "regex": "^/scheduling/team\\-availability(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/scheduling/team\\-availability(?:/)?$"
+    },
+    {
+      "page": "/settings",
+      "regex": "^/settings(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/settings(?:/)?$"
+    },
+    {
+      "page": "/settings/sessions",
+      "regex": "^/settings/sessions(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/settings/sessions(?:/)?$"
+    },
+    {
+      "page": "/skill-sheets",
+      "regex": "^/skill\\-sheets(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/skill\\-sheets(?:/)?$"
+    },
+    {
+      "page": "/student",
+      "regex": "^/student(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/student(?:/)?$"
+    },
+    {
+      "page": "/student/attendance-appeals",
+      "regex": "^/student/attendance\\-appeals(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/student/attendance\\-appeals(?:/)?$"
+    },
+    {
+      "page": "/student/available-labs",
+      "regex": "^/student/available\\-labs(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/student/available\\-labs(?:/)?$"
+    },
+    {
+      "page": "/student/completions",
+      "regex": "^/student/completions(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/student/completions(?:/)?$"
+    },
+    {
+      "page": "/student/documents",
+      "regex": "^/student/documents(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/student/documents(?:/)?$"
+    },
+    {
+      "page": "/student/labs",
+      "regex": "^/student/labs(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/student/labs(?:/)?$"
+    },
+    {
+      "page": "/student/my-progress",
+      "regex": "^/student/my\\-progress(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/student/my\\-progress(?:/)?$"
+    },
+    {
+      "page": "/student/peer-eval",
+      "regex": "^/student/peer\\-eval(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/student/peer\\-eval(?:/)?$"
+    },
+    {
+      "page": "/student/profile",
+      "regex": "^/student/profile(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/student/profile(?:/)?$"
+    },
+    {
+      "page": "/student/skill-sheets",
+      "regex": "^/student/skill\\-sheets(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/student/skill\\-sheets(?:/)?$"
+    },
+    {
+      "page": "/tasks",
+      "regex": "^/tasks(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/tasks(?:/)?$"
+    }
+  ],
+  "dataRoutes": [],
+  "rsc": {
+    "header": "rsc",
+    "varyHeader": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch",
+    "prefetchHeader": "next-router-prefetch",
+    "didPostponeHeader": "x-nextjs-postponed",
+    "contentTypeHeader": "text/x-component",
+    "suffix": ".rsc",
+    "prefetchSegmentHeader": "next-router-segment-prefetch",
+    "prefetchSegmentSuffix": ".segment.rsc",
+    "prefetchSegmentDirSuffix": ".segments",
+    "clientParamParsing": false,
+    "dynamicRSCPrerender": false
+  },
+  "rewriteHeaders": {
+    "pathHeader": "x-nextjs-rewritten-path",
+    "queryHeader": "x-nextjs-rewritten-query"
+  }
+}

@@ -120,7 +120,7 @@ export default function AdminInstructorWorkloadPage() {
     try {
       setLoading(true);
       setError(null);
-      const semRes = await fetch('/api/scheduling/planner/semesters');
+      const semRes = await fetch('/api/academics/planner/semesters');
       if (!semRes.ok) throw new Error('Failed to load semesters');
       const semData = await semRes.json();
       const sems: PmiSemester[] = semData.semesters || [];
@@ -129,7 +129,7 @@ export default function AdminInstructorWorkloadPage() {
       if (sems.length > 0) {
         const activeSem = sems.find(s => s.is_active) || sems[0];
         setSelectedSemesterId(activeSem.id);
-        const wRes = await fetch(`/api/scheduling/planner/workload?semester_id=${activeSem.id}`);
+        const wRes = await fetch(`/api/academics/planner/workload?semester_id=${activeSem.id}`);
         if (wRes.ok) {
           const wData = await wRes.json();
           setWorkload(wData.workload || []);
@@ -147,7 +147,7 @@ export default function AdminInstructorWorkloadPage() {
   const switchSemester = useCallback(async (semId: string) => {
     setSelectedSemesterId(semId);
     try {
-      const res = await fetch(`/api/scheduling/planner/workload?semester_id=${semId}`);
+      const res = await fetch(`/api/academics/planner/workload?semester_id=${semId}`);
       if (res.ok) {
         const data = await res.json();
         setWorkload(data.workload || []);
@@ -223,7 +223,7 @@ export default function AdminInstructorWorkloadPage() {
           </div>
           <div className="flex items-center gap-2">
             <Link
-              href="/scheduling/planner/workload"
+              href="/academics/planner/workload"
               className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
             >
               <Calendar className="w-3.5 h-3.5" />
@@ -363,7 +363,7 @@ export default function AdminInstructorWorkloadPage() {
           <p className="text-xs text-gray-400 dark:text-gray-500 text-center">
             {semesters.find(s => s.id === selectedSemesterId)?.name} ·
             {' '}Showing {workload.length > 0 ? `${summaries.length} instructors across ${new Set(workload.map(w => w.week_number)).size} weeks` : 'no data'}
-            {' '}· <Link href="/scheduling/planner/workload" className="text-blue-500 hover:underline">View weekly heat map →</Link>
+            {' '}· <Link href="/academics/planner/workload" className="text-blue-500 hover:underline">View weekly heat map →</Link>
           </p>
         )}
       </div>

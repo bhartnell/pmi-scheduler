@@ -712,7 +712,7 @@ export default function StudentProgressPage() {
               <RefreshCw className="w-4 h-4" /> Retry
             </button>
             <Link
-              href="/lab-management/students"
+              href="/academics/students"
               className="px-4 py-2 border dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
             >
               Back to Students
@@ -754,7 +754,7 @@ export default function StudentProgressPage() {
           <div className="flex items-center justify-between mb-4 print:hidden">
             <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
               <Link
-                href="/lab-management/students"
+                href="/academics/students"
                 className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1"
               >
                 <ArrowLeft className="w-4 h-4" />
@@ -762,7 +762,7 @@ export default function StudentProgressPage() {
               </Link>
               <ChevronRight className="w-4 h-4" />
               <Link
-                href={`/lab-management/students/${student.id}`}
+                href={`/academics/students/${student.id}`}
                 className="hover:text-blue-600 dark:hover:text-blue-400"
               >
                 {student.name}
@@ -1237,7 +1237,7 @@ export default function StudentProgressPage() {
         {/* ---- BACK LINK (print-hidden) ---- */}
         <div className="print:hidden">
           <Link
-            href={`/lab-management/students/${student.id}`}
+            href={`/academics/students/${student.id}`}
             className="inline-flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 hover:underline"
           >
             <ArrowLeft className="w-4 h-4" />

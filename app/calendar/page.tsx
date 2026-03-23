@@ -597,7 +597,7 @@ function CalendarContent() {
             <CalendarSearch className="h-4 w-4" /> Find Slot
           </button>
           <Link
-            href="/scheduling/planner"
+            href="/academics/planner"
             className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 flex items-center gap-1"
           >
             Edit in Planner <ArrowRight className="h-3 w-3" />

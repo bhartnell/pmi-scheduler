@@ -310,7 +310,7 @@ export default function ScenarioAnalyticsPage() {
             </Link>
             <ChevronRight className="w-4 h-4 flex-shrink-0" />
             <Link
-              href="/lab-management/reports"
+              href="/reports"
               className="hover:text-blue-600 dark:hover:text-blue-400"
             >
               Reports

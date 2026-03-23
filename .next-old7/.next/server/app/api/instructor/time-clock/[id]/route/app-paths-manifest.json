@@ -1,0 +1,3 @@
+{
+  "/api/instructor/time-clock/[id]/route": "app/api/instructor/time-clock/[id]/route.js"
+}

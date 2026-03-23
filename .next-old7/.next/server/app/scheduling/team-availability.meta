@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/scheduling/layout,_N_T_/scheduling/team-availability/layout,_N_T_/scheduling/team-availability/page,_N_T_/scheduling/team-availability"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/scheduling/team-availability/__PAGE__",
+    "/scheduling/team-availability",
+    "/scheduling",
+    "/_index",
+    "/_head"
+  ]
+}

@@ -317,7 +317,7 @@ export default function CommandPalette() {
         label: 'Go to Lab Management',
         icon: FlaskConical,
         category: 'Navigation',
-        action: () => router.push('/lab-management'),
+        action: () => router.push('/labs'),
         keywords: ['lab'],
       },
       {
@@ -333,7 +333,7 @@ export default function CommandPalette() {
         label: 'Go to Lab Schedule',
         icon: CalendarDays,
         category: 'Navigation',
-        action: () => router.push('/lab-management/schedule'),
+        action: () => router.push('/labs/schedule'),
         keywords: ['schedule'],
       },
       {
@@ -341,7 +341,7 @@ export default function CommandPalette() {
         label: 'Go to Students',
         icon: Users,
         category: 'Navigation',
-        action: () => router.push('/lab-management/students'),
+        action: () => router.push('/academics/students'),
         keywords: ['student'],
       },
       {
@@ -349,7 +349,7 @@ export default function CommandPalette() {
         label: 'Go to Scenarios',
         icon: FileText,
         category: 'Navigation',
-        action: () => router.push('/lab-management/scenarios'),
+        action: () => router.push('/labs/scenarios'),
         keywords: ['scenario'],
       },
       {
@@ -381,7 +381,7 @@ export default function CommandPalette() {
         label: 'Go to Reports',
         icon: BarChart3,
         category: 'Navigation',
-        action: () => router.push('/lab-management/reports'),
+        action: () => router.push('/reports'),
         keywords: ['analytics'],
       },
       {
@@ -389,7 +389,7 @@ export default function CommandPalette() {
         label: 'Go to Cohorts',
         icon: GraduationCap,
         category: 'Navigation',
-        action: () => router.push('/lab-management/cohorts'),
+        action: () => router.push('/academics/cohorts'),
         keywords: ['cohort', 'group'],
       },
       {
@@ -520,7 +520,7 @@ export default function CommandPalette() {
             icon: Users,
             category: 'Students',
             keywords: [],
-            action: () => router.push(`/lab-management/students/${s.id}`),
+            action: () => router.push(`/academics/students/${s.id}`),
           });
         });
 
@@ -537,7 +537,7 @@ export default function CommandPalette() {
             keywords: [],
             badge: s.difficulty ?? undefined,
             badgeColor: getDifficultyColor(s.difficulty),
-            action: () => router.push(`/lab-management/scenarios/${s.id}`),
+            action: () => router.push(`/labs/scenarios/${s.id}`),
           });
         });
 
@@ -569,7 +569,7 @@ export default function CommandPalette() {
             keywords: [],
             badge: l.status ?? undefined,
             badgeColor: getLabStatusColor(l.status),
-            action: () => router.push(`/lab-management/schedule/${l.id}`),
+            action: () => router.push(`/labs/schedule/${l.id}`),
           });
         });
 

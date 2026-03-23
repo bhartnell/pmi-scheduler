@@ -1,0 +1,3 @@
+{
+  "/api/clinical/preceptor-eval/[token]/route": "app/api/clinical/preceptor-eval/[token]/route.js"
+}

@@ -1,0 +1,3 @@
+{
+  "/api/clinical/internships/[id]/notify-nremt/route": "app/api/clinical/internships/[id]/notify-nremt/route.js"
+}

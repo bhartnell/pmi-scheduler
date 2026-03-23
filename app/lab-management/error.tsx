@@ -13,7 +13,7 @@ export default function LabManagementError({ error, reset }: ErrorProps) {
       error={error}
       reset={reset}
       sectionName="Lab Management"
-      dashboardHref="/lab-management"
+      dashboardHref="/labs"
     />
   );
 }

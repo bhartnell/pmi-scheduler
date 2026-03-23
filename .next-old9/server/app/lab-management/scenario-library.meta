@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/lab-management/layout,_N_T_/lab-management/scenario-library/layout,_N_T_/lab-management/scenario-library/page,_N_T_/lab-management/scenario-library"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/lab-management/scenario-library/__PAGE__",
+    "/lab-management/scenario-library",
+    "/lab-management",
+    "/_index",
+    "/_head"
+  ]
+}

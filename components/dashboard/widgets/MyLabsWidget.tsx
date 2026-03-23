@@ -96,7 +96,7 @@ export default function MyLabsWidget() {
     <WidgetCard
       title="My Upcoming Labs"
       icon={<Calendar className="w-5 h-5 text-green-600 dark:text-green-400" />}
-      viewAllLink="/lab-management/schedule"
+      viewAllLink="/labs/schedule"
       viewAllText="View Schedule"
       loading={loading}
     >
@@ -115,7 +115,7 @@ export default function MyLabsWidget() {
                 className="flex items-center justify-between p-2 rounded-lg border border-gray-200 dark:border-gray-700"
               >
                 <Link
-                  href={`/lab-management/grade/station/${assignment.id}`}
+                  href={`/labs/grade/station/${assignment.id}`}
                   className="flex-1 min-w-0 hover:opacity-80"
                 >
                   <div className="flex items-center gap-2">
@@ -142,7 +142,7 @@ export default function MyLabsWidget() {
                 <div className="flex items-center gap-1 flex-shrink-0">
                   {labIsToday && (
                     <Link
-                      href={`/lab-management/schedule/${assignment.lab_day.id}`}
+                      href={`/labs/schedule/${assignment.lab_day.id}`}
                       className="p-1.5 rounded-lg bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50"
                       title="Open lab with timer"
                     >
@@ -150,7 +150,7 @@ export default function MyLabsWidget() {
                     </Link>
                   )}
                   <Link
-                    href={`/lab-management/grade/station/${assignment.id}`}
+                    href={`/labs/grade/station/${assignment.id}`}
                     className="p-1 text-gray-400"
                   >
                     <ChevronRight className="w-4 h-4" />

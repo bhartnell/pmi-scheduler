@@ -539,7 +539,7 @@ export default function ComplianceTrackerPage() {
                         <tr key={row.student.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
                           <td className="px-4 py-3 whitespace-nowrap sticky left-0 bg-white dark:bg-gray-800 z-10">
                             <Link
-                              href={`/lab-management/students/${row.student.id}`}
+                              href={`/academics/students/${row.student.id}`}
                               className="font-medium text-blue-600 dark:text-blue-400 hover:underline text-sm"
                             >
                               {row.student.last_name}, {row.student.first_name}

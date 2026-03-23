@@ -573,7 +573,7 @@ export default function PeerEvalsInstructorPage() {
         {/* Navigation back */}
         <div className="mt-6">
           <Link
-            href="/lab-management"
+            href="/labs"
             className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
           >
             &larr; Back to Lab Management

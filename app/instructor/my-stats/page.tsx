@@ -570,7 +570,7 @@ export default function MyStatsPage() {
                               <td className="px-5 py-3 text-gray-900 dark:text-white">
                                 {lab.lab_day_id ? (
                                   <Link
-                                    href={`/lab-management/schedule/${lab.lab_day_id}`}
+                                    href={`/labs/schedule/${lab.lab_day_id}`}
                                     className="text-blue-600 dark:text-blue-400 hover:underline"
                                   >
                                     {lab.title}
@@ -621,7 +621,7 @@ export default function MyStatsPage() {
                           <div className="font-medium text-gray-900 dark:text-white text-sm">
                             {lab.lab_day_id ? (
                               <Link
-                                href={`/lab-management/schedule/${lab.lab_day_id}`}
+                                href={`/labs/schedule/${lab.lab_day_id}`}
                                 className="text-blue-600 dark:text-blue-400"
                               >
                                 {lab.title}

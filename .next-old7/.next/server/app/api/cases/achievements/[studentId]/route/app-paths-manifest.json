@@ -1,0 +1,3 @@
+{
+  "/api/cases/achievements/[studentId]/route": "app/api/cases/achievements/[studentId]/route.js"
+}

@@ -216,7 +216,7 @@ export default function TemplateReviewListPage() {
         return;
       }
       showToast('Review created successfully');
-      router.push(`/lab-management/templates/review/${data.review.id}`);
+      router.push(`/labs/templates/review/${data.review.id}`);
     } catch {
       showToast('Failed to create review', 'error');
     } finally {
@@ -262,9 +262,9 @@ export default function TemplateReviewListPage() {
               <Home className="w-3 h-3" /> Home
             </Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
+            <Link href="/labs" className="hover:text-blue-600 dark:hover:text-blue-400">Labs</Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management/templates" className="hover:text-blue-600 dark:hover:text-blue-400">Templates</Link>
+            <Link href="/labs/templates" className="hover:text-blue-600 dark:hover:text-blue-400">Templates</Link>
             <ChevronRight className="w-4 h-4" />
             <span className="dark:text-gray-300">Semester Review</span>
           </div>
@@ -462,7 +462,7 @@ export default function TemplateReviewListPage() {
                     return (
                       <tr
                         key={review.id}
-                        onClick={() => router.push(`/lab-management/templates/review/${review.id}`)}
+                        onClick={() => router.push(`/labs/templates/review/${review.id}`)}
                         className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/30 cursor-pointer transition-colors"
                       >
                         <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{review.title}</td>

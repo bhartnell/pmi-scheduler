@@ -431,7 +431,7 @@ export default function GradeStationPage() {
           alert('Progress saved — you can continue later');
         } else {
           alert('Assessment saved successfully!');
-          router.push(`/lab-management/schedule/${station?.lab_day?.id}`);
+          router.push(`/labs/schedule/${station?.lab_day?.id}`);
         }
       } else {
         alert('Failed to save: ' + (data.error || 'Unknown error'));
@@ -559,7 +559,7 @@ export default function GradeStationPage() {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
           <p className="text-gray-600 dark:text-gray-400">Station not found</p>
-          <Link href="/lab-management/schedule" className="text-blue-600 dark:text-blue-400 hover:underline mt-4 block">
+          <Link href="/labs/schedule" className="text-blue-600 dark:text-blue-400 hover:underline mt-4 block">
             Back to Schedule
           </Link>
         </div>

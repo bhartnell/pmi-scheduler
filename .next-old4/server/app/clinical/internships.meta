@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/clinical/layout,_N_T_/clinical/internships/layout,_N_T_/clinical/internships/page,_N_T_/clinical/internships"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/clinical/internships/__PAGE__",
+    "/clinical/internships",
+    "/clinical",
+    "/_index",
+    "/_head"
+  ]
+}

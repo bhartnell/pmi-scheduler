@@ -1,0 +1,3 @@
+{
+  "/api/lab-management/lab-days/[id]/duplicate/route": "app/api/lab-management/lab-days/[id]/duplicate/route.js"
+}

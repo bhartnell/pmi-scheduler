@@ -1,0 +1,3 @@
+{
+  "/api/scheduling/swaps/[id]/assign/route": "app/api/scheduling/swaps/[id]/assign/route.js"
+}

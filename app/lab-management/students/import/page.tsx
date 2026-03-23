@@ -690,9 +690,9 @@ function ImportStudentsContent() {
       <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-6">
           <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1">
-            <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
+            <Link href="/labs" className="hover:text-blue-600 dark:hover:text-blue-400">Labs</Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management/students" className="hover:text-blue-600 dark:hover:text-blue-400">Students</Link>
+            <Link href="/academics/students" className="hover:text-blue-600 dark:hover:text-blue-400">Students</Link>
             <ChevronRight className="w-4 h-4" />
             <span className="dark:text-gray-300">Import</span>
           </div>
@@ -767,7 +767,7 @@ function ImportStudentsContent() {
 
                 <div className="mt-3 flex gap-3">
                   <Link
-                    href={returnTo || '/lab-management/students'}
+                    href={returnTo || '/academics/students'}
                     className="text-green-800 dark:text-green-300 font-medium hover:underline text-sm"
                   >
                     {returnTo ? 'Return to Cohort' : 'View Students'} &rarr;
@@ -1073,7 +1073,7 @@ function ImportStudentsContent() {
             {/* Import Button */}
             <div className="flex flex-wrap gap-3 items-center">
               <Link
-                href={returnTo || '/lab-management/students'}
+                href={returnTo || '/academics/students'}
                 className="px-6 py-3 border dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
                 Cancel

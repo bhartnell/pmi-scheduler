@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/admin/layout,_N_T_/admin/program-requirements/layout,_N_T_/admin/program-requirements/page,_N_T_/admin/program-requirements"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/admin/program-requirements/__PAGE__",
+    "/admin/program-requirements",
+    "/admin",
+    "/_index",
+    "/_head"
+  ]
+}

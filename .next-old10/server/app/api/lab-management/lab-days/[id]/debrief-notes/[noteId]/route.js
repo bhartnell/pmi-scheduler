@@ -1,0 +1,12 @@
+var R=require("../../../../../../../chunks/[turbopack]_runtime.js")("server/app/api/lab-management/lab-days/[id]/debrief-notes/[noteId]/route.js")
+R.c("server/chunks/[root-of-the-server]__600b84a6._.js")
+R.c("server/chunks/[root-of-the-server]__5c9d265a._.js")
+R.c("server/chunks/e71d5_next_dist_0bb58a65._.js")
+R.c("server/chunks/e71d5_next_7d129b84._.js")
+R.c("server/chunks/[root-of-the-server]__a801940c._.js")
+R.c("server/chunks/_claude_worktrees_focused-goodall_lib_supabase_ts_b99b8956._.js")
+R.c("server/chunks/[root-of-the-server]__48e44030._.js")
+R.c("server/chunks/[root-of-the-server]__6536df96._.js")
+R.c("server/chunks/fa498_api_lab-management_lab-days_[id]_debrief-notes_[noteId]_route_actions_4d427eb7.js")
+R.m(460848)
+module.exports=R.m(460848).exports
