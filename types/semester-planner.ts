@@ -74,14 +74,13 @@ export interface PmiScheduleBlock {
   content_notes: string | null;
   chapter_references: string[] | null;
   status: 'draft' | 'published' | 'cancelled';
-  linked_lab_day_id: string | null;
+  linked_lab_day_id: string | null;    // links this block to a lab_days record
   color: string | null;                // block-level color override
   is_recurring: boolean;
   specific_date: string | null;
   date: string | null;                 // actual calendar date (YYYY-MM-DD)
   week_number: number | null;          // week 1-15 within semester
   recurring_group_id: string | null;   // links all instances of same recurring class
-  linked_lab_day_id: string | null;    // links this block to a lab_days record
   sort_order: number;
   created_at: string;
   updated_at: string;
