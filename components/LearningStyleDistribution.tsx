@@ -165,7 +165,7 @@ export default function LearningStyleDistribution({
         </button>
         {cohortLinkId && (
           <Link
-            href={`/lab-management/seating/learning-styles?cohortId=${cohortLinkId}`}
+            href={`/labs/seating/learning-styles?cohortId=${cohortLinkId}`}
             className="ml-2 text-xs text-blue-600 dark:text-blue-400 hover:underline shrink-0"
           >
             Manage
@@ -179,7 +179,7 @@ export default function LearningStyleDistribution({
             <div className="text-center py-4 text-gray-500 dark:text-gray-400 text-sm">
               No learning styles assessed for this cohort yet.{' '}
               {cohortLinkId && (
-                <Link href={`/lab-management/seating/learning-styles?cohortId=${cohortLinkId}`} className="text-blue-600 dark:text-blue-400 hover:underline">
+                <Link href={`/labs/seating/learning-styles?cohortId=${cohortLinkId}`} className="text-blue-600 dark:text-blue-400 hover:underline">
                   Add assessments
                 </Link>
               )}

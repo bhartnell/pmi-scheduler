@@ -307,7 +307,7 @@ export default function EventDetailPanel({ event, open, onClose }: EventDetailPa
           {/* Open Lab Day */}
           {(event.source === 'lab_day' || event.linked_lab_day_id || labDayDetail) && (
             <Link
-              href={labDayDetail ? `/lab-management/schedule/${labDayDetail.id}` : (event.linked_url || '#')}
+              href={labDayDetail ? `/labs/schedule/${labDayDetail.id}` : (event.linked_url || '#')}
               className="flex items-center justify-center gap-2 w-full px-4 py-2 text-sm font-medium text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/20 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
             >
               <ExternalLink className="h-4 w-4" />
@@ -318,7 +318,7 @@ export default function EventDetailPanel({ event, open, onClose }: EventDetailPa
           {/* Edit in Planner */}
           {event.source === 'planner' && (
             <Link
-              href="/scheduling/planner"
+              href="/academics/planner"
               className="flex items-center justify-center gap-2 w-full px-4 py-2 text-sm font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
             >
               <ExternalLink className="h-4 w-4" />

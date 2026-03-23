@@ -1154,7 +1154,7 @@ export default function ScenarioEditorPage() {
         return;
       }
       const data = await res.json();
-      router.push(`/lab-management/scenarios/${data.id}`);
+      router.push(`/labs/scenarios/${data.id}`);
     } catch (err) {
       console.error('Error duplicating scenario:', err);
       alert('Failed to duplicate scenario');
@@ -1284,7 +1284,7 @@ export default function ScenarioEditorPage() {
         // Bump version history so it reloads on next expand
         setVersionHistoryKey(k => k + 1);
         // Redirect to scenarios list after successful save
-        router.push('/lab-management/scenarios');
+        router.push('/labs/scenarios');
       } else {
         alert('Failed to save scenario: ' + (data.error || 'Unknown error'));
       }
@@ -1356,7 +1356,7 @@ export default function ScenarioEditorPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Link
-                href="/lab-management/scenarios"
+                href="/labs/scenarios"
                 className="flex items-center gap-1 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white print:hidden"
               >
                 <ArrowLeft className="w-5 h-5" />
@@ -3066,7 +3066,7 @@ export default function ScenarioEditorPage() {
           )}
           <div className="flex justify-end gap-3">
             <Link
-              href="/lab-management/scenarios"
+              href="/labs/scenarios"
               className="px-6 py-2 border dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
             >
               Cancel

@@ -34,7 +34,7 @@ export default function NeedsAttentionWidget() {
               type: 'unassigned_stations',
               title: `${count} station${count > 1 ? 's' : ''} need${count === 1 ? 's' : ''} instructors`,
               count,
-              link: '/lab-management/schedule',
+              link: '/labs/schedule',
               severity: count >= 3 ? 'high' : 'medium',
             });
           }
@@ -51,7 +51,7 @@ export default function NeedsAttentionWidget() {
               type: 'open_feedback',
               title: `${count} new feedback report${count > 1 ? 's' : ''}`,
               count,
-              link: '/lab-management/admin/feedback',
+              link: '/admin/feedback',
               severity: count >= 5 ? 'high' : 'low',
             });
           }

@@ -1396,7 +1396,7 @@ export default function ScenarioAuditPage() {
                                 </span>
                               </div>
                               <Link
-                                href={`/lab-management/scenarios/${entry.id}`}
+                                href={`/labs/scenarios/${entry.id}`}
                                 onClick={(e) => e.stopPropagation()}
                                 className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 flex-shrink-0"
                                 title="Open in editor"
@@ -1738,7 +1738,7 @@ export default function ScenarioAuditPage() {
                             </div>
                           </div>
                           <Link
-                            href={`/lab-management/scenarios/${s.id}`}
+                            href={`/labs/scenarios/${s.id}`}
                             onClick={(e) => e.stopPropagation()}
                             className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 flex-shrink-0"
                             title="Open in editor"

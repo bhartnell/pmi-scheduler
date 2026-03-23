@@ -1,0 +1,11 @@
+var R=require("../../../../../chunks/[turbopack]_runtime.js")("server/app/api/lvfr-aemt/files/[id]/route.js")
+R.c("server/chunks/[root-of-the-server]__ddd7ab74._.js")
+R.c("server/chunks/[root-of-the-server]__a801940c._.js")
+R.c("server/chunks/[root-of-the-server]__2d48b7f9._.js")
+R.c("server/chunks/_claude_worktrees_focused-goodall_lib_supabase_ts_b99b8956._.js")
+R.c("server/chunks/[root-of-the-server]__6536df96._.js")
+R.c("server/chunks/[root-of-the-server]__d6dcdb21._.js")
+R.c("server/chunks/e71d5_next_7d129b84._.js")
+R.c("server/chunks/d9de2__next-internal_server_app_api_lvfr-aemt_files_[id]_route_actions_e0a262ba.js")
+R.m(971603)
+module.exports=R.m(971603).exports

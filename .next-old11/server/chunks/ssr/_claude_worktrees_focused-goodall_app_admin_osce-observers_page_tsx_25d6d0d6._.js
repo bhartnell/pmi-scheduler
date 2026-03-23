@@ -1,0 +1,3 @@
+module.exports=[684887,a=>{"use strict";var b=a.i(326363),c=a.i(648181),d=a.i(731590);function e(){let a=(0,d.useRouter)(),[e,f]=(0,c.useState)(!0);return((0,c.useEffect)(()=>{!async function(){try{let b=await fetch("/api/osce/events"),c=await b.json();c.success&&c.events?.length>0?a.replace(`/admin/osce-events/${c.events[0].id}`):a.replace("/admin/osce-events")}catch{a.replace("/admin/osce-events")}finally{f(!1)}}()},[a]),e)?(0,b.jsx)("div",{className:"min-h-screen flex items-center justify-center",children:(0,b.jsx)("div",{className:"text-gray-500 dark:text-gray-400",children:"Redirecting to OSCE Events..."})}):null}a.s(["default",()=>e])}];
+
+//# sourceMappingURL=_claude_worktrees_focused-goodall_app_admin_osce-observers_page_tsx_25d6d0d6._.js.map

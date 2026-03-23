@@ -1,0 +1,17 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/lvfr-aemt/layout,_N_T_/lvfr-aemt/grades/layout,_N_T_/lvfr-aemt/grades/import/layout,_N_T_/lvfr-aemt/grades/import/page,_N_T_/lvfr-aemt/grades/import"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/lvfr-aemt/grades/import/__PAGE__",
+    "/lvfr-aemt/grades/import",
+    "/lvfr-aemt/grades",
+    "/lvfr-aemt",
+    "/_index",
+    "/_head"
+  ]
+}

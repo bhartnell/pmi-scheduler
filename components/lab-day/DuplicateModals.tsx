@@ -262,7 +262,7 @@ export default function DuplicateModals({
                   {bulkDuplicateProgress.createdIds.length > 0 && (
                     <div className="space-y-1">
                       {bulkDuplicateProgress.createdIds.map((newId, idx) => (
-                        <Link key={newId} href={`/lab-management/schedule/${newId}`} className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 hover:underline" onClick={onCloseBulkDuplicate}>
+                        <Link key={newId} href={`/labs/schedule/${newId}`} className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 hover:underline" onClick={onCloseBulkDuplicate}>
                           <ExternalLink className="w-3.5 h-3.5 flex-shrink-0" />
                           View new lab day {idx + 1}
                         </Link>

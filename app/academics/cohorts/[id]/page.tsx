@@ -629,7 +629,7 @@ export default function CohortHubPage() {
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
           <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Cohort Not Found</h2>
-          <Link href="/lab-management/admin/cohorts" className="text-blue-600 dark:text-blue-400 hover:underline">
+          <Link href="/academics/cohorts" className="text-blue-600 dark:text-blue-400 hover:underline">
             Back to Cohorts
           </Link>
         </div>
@@ -668,9 +668,9 @@ export default function CohortHubPage() {
               Home
             </Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
+            <Link href="/labs" className="hover:text-blue-600 dark:hover:text-blue-400">Labs</Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management/admin/cohorts" className="hover:text-blue-600 dark:hover:text-blue-400">Cohorts</Link>
+            <Link href="/academics/cohorts" className="hover:text-blue-600 dark:hover:text-blue-400">Cohorts</Link>
             <ChevronRight className="w-4 h-4" />
             <span>{cohort.program.abbreviation} Group {cohort.cohort_number}</span>
           </div>
@@ -700,21 +700,21 @@ export default function CohortHubPage() {
               {!cohort.is_archived && (
                 <>
                   <Link
-                    href={`/lab-management/students/new?cohortId=${cohortId}&returnTo=${encodeURIComponent(`/lab-management/cohorts/${cohortId}`)}`}
+                    href={`/academics/students/new?cohortId=${cohortId}&returnTo=${encodeURIComponent(`/academics/cohorts/${cohortId}`)}`}
                     className="inline-flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-700 border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 text-sm text-gray-700 dark:text-gray-200"
                   >
                     <UserPlus className="w-4 h-4" />
                     Add Student
                   </Link>
                   <Link
-                    href={`/lab-management/students/import?cohortId=${cohortId}&returnTo=${encodeURIComponent(`/lab-management/cohorts/${cohortId}`)}`}
+                    href={`/academics/students/import?cohortId=${cohortId}&returnTo=${encodeURIComponent(`/academics/cohorts/${cohortId}`)}`}
                     className="inline-flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-700 border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 text-sm text-gray-700 dark:text-gray-200"
                   >
                     <Upload className="w-4 h-4" />
                     Import
                   </Link>
                   <Link
-                    href={`/lab-management/admin/cohorts`}
+                    href={`/academics/cohorts`}
                     className="inline-flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-700 border dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 text-sm text-gray-700 dark:text-gray-200"
                   >
                     <Edit2 className="w-4 h-4" />
@@ -868,7 +868,7 @@ export default function CohortHubPage() {
               label="Learning Styles"
               current={stats?.withLearningStyles || 0}
               total={stats?.totalStudents || 0}
-              href={`/lab-management/seating/learning-styles?cohortId=${cohortId}`}
+              href={`/labs/seating/learning-styles?cohortId=${cohortId}`}
             />
             <ProgressBar
               label="Student Photos"
@@ -896,7 +896,7 @@ export default function CohortHubPage() {
               status={stats?.activeSeatingChart ? `Created ${new Date(stats.activeSeatingChart.created_at).toLocaleDateString()}` : 'Not created'}
               warning={missingLearningStyles > 0 ? `Need ${missingLearningStyles} more learning styles` : null}
               actionLabel={stats?.activeSeatingChart ? 'View Chart' : 'Create Chart'}
-              href={`/lab-management/seating/charts?cohortId=${cohortId}`}
+              href={`/labs/seating/charts?cohortId=${cohortId}`}
             />
             <ToolCard
               icon={Users}
@@ -904,21 +904,21 @@ export default function CohortHubPage() {
               status={stats?.groupsCount ? `${stats.groupsCount} groups` : 'Not created'}
               warning={missingLearningStyles > 0 ? `Need ${missingLearningStyles} more learning styles` : null}
               actionLabel={stats?.groupsCount ? 'View Groups' : 'Create Groups'}
-              href={`/lab-management/cohorts/${cohortId}/groups`}
+              href={`/academics/cohorts/${cohortId}/groups`}
             />
             <ToolCard
               icon={Calendar}
               title="Lab Schedule"
               status={stats?.upcomingLabs?.length ? `${stats.upcomingLabs.length} upcoming` : 'No labs scheduled'}
               actionLabel="View Schedule"
-              href={`/lab-management/schedule?cohortId=${cohortId}`}
+              href={`/labs/schedule?cohortId=${cohortId}`}
             />
             <ToolCard
               icon={BarChart3}
               title="Completion Report"
               status={stats?.totalStudents ? `${stats.totalStudents} students tracked` : 'View program completion'}
               actionLabel="View Report"
-              href={`/lab-management/cohorts/${cohortId}/completion`}
+              href={`/academics/cohorts/${cohortId}/completion`}
             />
             {hasTemplates && !cohort?.is_archived && (
               <ToolCard
@@ -940,7 +940,7 @@ export default function CohortHubPage() {
                 title="Generate Class Schedule"
                 status="Open planner wizard"
                 actionLabel="Generate"
-                href={`/scheduling/planner?generate=true&cohortId=${cohortId}&program=${encodeURIComponent(cohort?.program?.abbreviation?.toLowerCase() || '')}`}
+                href={`/academics/planner?generate=true&cohortId=${cohortId}&program=${encodeURIComponent(cohort?.program?.abbreviation?.toLowerCase() || '')}`}
               />
             )}
           </div>
@@ -1029,7 +1029,7 @@ export default function CohortHubPage() {
                 </button>
               )}
               <Link
-                href={`/lab-management/students?cohortId=${cohortId}`}
+                href={`/academics/students?cohortId=${cohortId}`}
                 className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
               >
                 View All &rarr;
@@ -1043,7 +1043,7 @@ export default function CohortHubPage() {
               title="No students in this cohort"
               message="Add students manually or import them from a CSV file."
               actionLabel="Import Students"
-              actionHref="/lab-management/students/import"
+              actionHref="/academics/students/import"
             />
           ) : (
             <div className="divide-y dark:divide-gray-700 max-h-96 overflow-y-auto">
@@ -1055,7 +1055,7 @@ export default function CohortHubPage() {
                     className="flex items-center gap-4 p-4 hover:bg-gray-50 dark:hover:bg-gray-700 group"
                   >
                     <Link
-                      href={`/lab-management/students/${student.id}`}
+                      href={`/academics/students/${student.id}`}
                       className="flex items-center gap-4 flex-1 min-w-0"
                     >
                       {/* Photo */}
@@ -1149,7 +1149,7 @@ export default function CohortHubPage() {
                       className="flex items-center gap-4 p-4 opacity-60 hover:opacity-100 transition-opacity bg-gray-50/50 dark:bg-gray-900/30"
                     >
                       <Link
-                        href={`/lab-management/students/${student.id}`}
+                        href={`/academics/students/${student.id}`}
                         className="flex items-center gap-4 flex-1 min-w-0"
                       >
                         {/* Photo */}

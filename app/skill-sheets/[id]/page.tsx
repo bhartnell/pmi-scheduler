@@ -691,7 +691,7 @@ function SkillSheetDetailContent() {
               Home
             </Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/skill-sheets" className="hover:text-blue-600 dark:hover:text-blue-400">
+            <Link href="/academics/skill-sheets" className="hover:text-blue-600 dark:hover:text-blue-400">
               Skill Sheets
             </Link>
             <ChevronRight className="w-4 h-4" />

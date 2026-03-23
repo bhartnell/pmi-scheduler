@@ -27,14 +27,14 @@ const QUICK_ACTIONS: QuickAction[] = [
     id: 'new-lab-day',
     label: 'New Lab Day',
     icon: CalendarDays,
-    href: '/lab-management/schedule/new',
+    href: '/labs/schedule/new',
     color: 'bg-green-600 hover:bg-green-700',
   },
   {
     id: 'new-scenario',
     label: 'New Scenario',
     icon: FileText,
-    href: '/lab-management/scenarios/new',
+    href: '/labs/scenarios/new',
     color: 'bg-orange-600 hover:bg-orange-700',
   },
   {

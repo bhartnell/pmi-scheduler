@@ -461,7 +461,7 @@ export default function NewStationPage() {
       }
 
       // Redirect back to lab day page
-      router.push(`/lab-management/schedule/${labDayId}`);
+      router.push(`/labs/schedule/${labDayId}`);
     } catch (error) {
       console.error('Error saving station:', error);
       alert('Failed to save station');
@@ -552,7 +552,7 @@ export default function NewStationPage() {
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Lab Day Not Found</h2>
           <p className="text-gray-600 dark:text-gray-400 mb-4">The requested lab day could not be found.</p>
           <Link
-            href="/lab-management/schedule"
+            href="/labs/schedule"
             className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           >
             Back to Schedule
@@ -574,11 +574,11 @@ export default function NewStationPage() {
               Home
             </Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
+            <Link href="/labs" className="hover:text-blue-600 dark:hover:text-blue-400">Labs</Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management/schedule" className="hover:text-blue-600 dark:hover:text-blue-400">Schedule</Link>
+            <Link href="/labs/schedule" className="hover:text-blue-600 dark:hover:text-blue-400">Schedule</Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href={`/lab-management/schedule/${labDayId}`} className="hover:text-blue-600 dark:hover:text-blue-400">
+            <Link href={`/labs/schedule/${labDayId}`} className="hover:text-blue-600 dark:hover:text-blue-400">
               {labDay.cohort.program.abbreviation} Group {formatCohortNumber(labDay.cohort.cohort_number)}
             </Link>
             <ChevronRight className="w-4 h-4" />
@@ -840,7 +840,7 @@ export default function NewStationPage() {
 
                 <p className="text-xs text-gray-500 dark:text-gray-400">
                   {selectedDrillIds.length === 0 ? 'No drills selected — station will show as open drill time.' : `${selectedDrillIds.length} drill${selectedDrillIds.length !== 1 ? 's' : ''} selected.`}
-                  {' '}<Link href="/lab-management/skill-drills" target="_blank" className="text-blue-600 dark:text-blue-400 hover:underline">Manage drill library</Link>
+                  {' '}<Link href="/labs/skill-drills" target="_blank" className="text-blue-600 dark:text-blue-400 hover:underline">Manage drill library</Link>
                 </p>
 
                 {selectedDrillIds.some(id => {
@@ -1226,7 +1226,7 @@ export default function NewStationPage() {
           {/* Actions */}
           <div className="px-4 py-4 border-t dark:border-gray-700 flex justify-end gap-3">
             <Link
-              href={`/lab-management/schedule/${labDayId}`}
+              href={`/labs/schedule/${labDayId}`}
               className="px-6 py-2 border dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
             >
               Cancel

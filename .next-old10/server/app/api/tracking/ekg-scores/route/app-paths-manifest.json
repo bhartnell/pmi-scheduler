@@ -1,0 +1,3 @@
+{
+  "/api/tracking/ekg-scores/route": "app/api/tracking/ekg-scores/route.js"
+}

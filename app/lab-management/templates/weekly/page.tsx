@@ -425,9 +425,9 @@ export default function WeeklyTemplatesPage() {
               <Home className="w-3 h-3" /> Home
             </Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
+            <Link href="/labs" className="hover:text-blue-600 dark:hover:text-blue-400">Labs</Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management/templates" className="hover:text-blue-600 dark:hover:text-blue-400">Templates</Link>
+            <Link href="/labs/templates" className="hover:text-blue-600 dark:hover:text-blue-400">Templates</Link>
             <ChevronRight className="w-4 h-4" />
             <span className="dark:text-gray-300">Weekly Templates</span>
           </div>

@@ -1,0 +1,17 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/scheduling/layout,_N_T_/scheduling/signups/layout,_N_T_/scheduling/signups/pending/layout,_N_T_/scheduling/signups/pending/page,_N_T_/scheduling/signups/pending"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/scheduling/signups/pending/__PAGE__",
+    "/scheduling/signups/pending",
+    "/scheduling/signups",
+    "/scheduling",
+    "/_index",
+    "/_head"
+  ]
+}

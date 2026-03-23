@@ -430,7 +430,7 @@ export default function SeatingChartBuilderPage() {
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
           <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Chart Not Found</h2>
-          <Link href="/lab-management/seating/charts" className="text-blue-600 dark:text-blue-400 hover:underline">
+          <Link href="/labs/seating/charts" className="text-blue-600 dark:text-blue-400 hover:underline">
             Back to Charts
           </Link>
         </div>
@@ -463,9 +463,9 @@ export default function SeatingChartBuilderPage() {
               Home
             </Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
+            <Link href="/labs" className="hover:text-blue-600 dark:hover:text-blue-400">Labs</Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management/seating/charts" className="hover:text-blue-600 dark:hover:text-blue-400">Seating Charts</Link>
+            <Link href="/labs/seating/charts" className="hover:text-blue-600 dark:hover:text-blue-400">Seating Charts</Link>
             <ChevronRight className="w-4 h-4" />
             <span className="dark:text-gray-300">{chart.name}</span>
           </div>

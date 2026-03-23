@@ -229,8 +229,8 @@ function ReportContent() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       <LabHeader
         breadcrumbs={[
-          { label: 'Skills', href: '/lab-management/skill-sheets' },
-          { label: 'Competency Tracker', href: '/lab-management/skills/competencies' },
+          { label: 'Skills', href: '/academics/skill-sheets' },
+          { label: 'Competency Tracker', href: '/labs/skills/competencies' },
           { label: 'Cohort Report' },
         ]}
         title="Cohort Competency Report"
@@ -285,7 +285,7 @@ function ReportContent() {
             </div>
 
             <Link
-              href={`/lab-management/skills/competencies${selectedCohort ? `?cohort_id=${selectedCohort}` : ''}`}
+              href={`/labs/skills/competencies${selectedCohort ? `?cohort_id=${selectedCohort}` : ''}`}
               className="ml-auto flex items-center gap-1.5 text-sm text-blue-600 dark:text-blue-400 hover:underline"
             >
               <ArrowLeft className="w-4 h-4" />

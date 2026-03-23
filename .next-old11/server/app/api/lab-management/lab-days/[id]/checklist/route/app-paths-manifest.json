@@ -1,0 +1,3 @@
+{
+  "/api/lab-management/lab-days/[id]/checklist/route": "app/api/lab-management/lab-days/[id]/checklist/route.js"
+}

@@ -149,7 +149,7 @@ function WeekDetailPanel({
       try {
         setLoading(true);
         const res = await fetch(
-          `/api/scheduling/planner/workload?semester_id=${semesterId}&instructor_id=${instructorId}&week_number=${weekNumber}`
+          `/api/academics/planner/workload?semester_id=${semesterId}&instructor_id=${instructorId}&week_number=${weekNumber}`
         );
         if (!res.ok) throw new Error('Failed to load detail');
         const data = await res.json();
@@ -775,7 +775,7 @@ export default function WorkloadTrackerPage() {
   // ── Data fetching ──
   const fetchWorkload = useCallback(async (semesterId: string) => {
     try {
-      const res = await fetch(`/api/scheduling/planner/workload?semester_id=${semesterId}`);
+      const res = await fetch(`/api/academics/planner/workload?semester_id=${semesterId}`);
       if (!res.ok) throw new Error('Failed to load workload data');
       const data = await res.json();
       setWorkload(data.workload || []);
@@ -790,7 +790,7 @@ export default function WorkloadTrackerPage() {
       setLoading(true);
       setError(null);
 
-      const semRes = await fetch('/api/scheduling/planner/semesters');
+      const semRes = await fetch('/api/academics/planner/semesters');
       if (!semRes.ok) throw new Error('Failed to load semesters');
       const semData = await semRes.json();
       const sems: PmiSemester[] = semData.semesters || [];
@@ -826,7 +826,7 @@ export default function WorkloadTrackerPage() {
     try {
       setRecalculating(true);
       setSelectedCell(null);
-      const res = await fetch('/api/scheduling/planner/workload', {
+      const res = await fetch('/api/academics/planner/workload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ semester_id: selectedSemesterId }),
@@ -915,7 +915,7 @@ export default function WorkloadTrackerPage() {
           <AlertTriangle className="w-8 h-8 text-red-500 mx-auto mb-3" />
           <p className="text-sm text-red-600 dark:text-red-400 mb-4">{error}</p>
           <Link
-            href="/scheduling/planner"
+            href="/academics/planner"
             className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
           >
             Back to Planner
@@ -936,7 +936,7 @@ export default function WorkloadTrackerPage() {
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
             <Link
-              href="/scheduling/planner"
+              href="/academics/planner"
               className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
             >
               <ArrowLeft className="w-4 h-4 text-gray-500" />

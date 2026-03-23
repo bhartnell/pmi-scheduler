@@ -1,0 +1,17 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/lab-management/layout,_N_T_/lab-management/students/layout,_N_T_/lab-management/students/new/layout,_N_T_/lab-management/students/new/page,_N_T_/lab-management/students/new"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/lab-management/students/new/__PAGE__",
+    "/lab-management/students/new",
+    "/lab-management/students",
+    "/lab-management",
+    "/_index",
+    "/_head"
+  ]
+}

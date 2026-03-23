@@ -134,7 +134,7 @@ export default function AttendanceAlertBanner({ studentId }: Props) {
           <div className="mt-2 flex items-center gap-1 text-sm">
             <MessageSquare className="w-3.5 h-3.5 flex-shrink-0 opacity-70" />
             <Link
-              href={`/lab-management/students/${studentId}?tab=communications`}
+              href={`/academics/students/${studentId}?tab=communications`}
               className={linkClass}
             >
               Document follow-up in communication log

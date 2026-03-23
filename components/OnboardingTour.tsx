@@ -55,7 +55,7 @@ const ADMIN_STEPS: TourStep[] = [
     placement: 'bottom',
   },
   {
-    target: '[href="/lab-management"]',
+    target: '[href="/labs"]',
     title: 'Lab Management',
     description: 'Create and manage lab schedules, scenarios, students, and assessments. This is the core of daily operations.',
     placement: 'bottom',
@@ -88,13 +88,13 @@ const INSTRUCTOR_STEPS: TourStep[] = [
     placement: 'bottom',
   },
   {
-    target: '[href="/lab-management"]',
+    target: '[href="/labs"]',
     title: 'Lab Management',
     description: 'View and manage lab schedules, run scenarios, track student performance, and record assessments.',
     placement: 'bottom',
   },
   {
-    target: '[href="/lab-management/scenarios"]',
+    target: '[href="/labs/scenarios"]',
     title: 'Scenarios',
     description: 'Browse and build clinical simulation scenarios. You can create custom scenarios, set assessment criteria, and track completion.',
     placement: 'bottom',

@@ -1,0 +1,15 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/lab-management/layout,_N_T_/lab-management/page,_N_T_/lab-management"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/lab-management/__PAGE__",
+    "/lab-management",
+    "/_index",
+    "/_head"
+  ]
+}

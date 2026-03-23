@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/clinical/layout,_N_T_/clinical/mce/layout,_N_T_/clinical/mce/page,_N_T_/clinical/mce"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/clinical/mce/__PAGE__",
+    "/clinical/mce",
+    "/clinical",
+    "/_index",
+    "/_head"
+  ]
+}

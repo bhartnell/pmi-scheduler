@@ -1,0 +1,3 @@
+{
+  "/api/osce/events/[id]/student-agencies/route": "app/api/osce/events/[id]/student-agencies/route.js"
+}

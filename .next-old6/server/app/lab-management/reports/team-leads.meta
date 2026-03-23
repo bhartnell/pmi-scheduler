@@ -1,0 +1,17 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/lab-management/layout,_N_T_/lab-management/reports/layout,_N_T_/lab-management/reports/team-leads/layout,_N_T_/lab-management/reports/team-leads/page,_N_T_/lab-management/reports/team-leads"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/lab-management/reports/team-leads/__PAGE__",
+    "/lab-management/reports/team-leads",
+    "/lab-management/reports",
+    "/lab-management",
+    "/_index",
+    "/_head"
+  ]
+}

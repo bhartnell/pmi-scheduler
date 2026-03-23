@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/lab-management/layout,_N_T_/lab-management/my-certifications/layout,_N_T_/lab-management/my-certifications/page,_N_T_/lab-management/my-certifications"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/lab-management/my-certifications/__PAGE__",
+    "/lab-management/my-certifications",
+    "/lab-management",
+    "/_index",
+    "/_head"
+  ]
+}

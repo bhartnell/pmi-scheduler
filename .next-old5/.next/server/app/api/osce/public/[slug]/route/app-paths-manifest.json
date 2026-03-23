@@ -1,0 +1,3 @@
+{
+  "/api/osce/public/[slug]/route": "app/api/osce/public/[slug]/route.js"
+}

@@ -1,0 +1,3 @@
+{
+  "/api/clinical/summative-evaluations/[id]/scenario-print/route": "app/api/clinical/summative-evaluations/[id]/scenario-print/route.js"
+}

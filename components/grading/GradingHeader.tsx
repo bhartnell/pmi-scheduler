@@ -42,9 +42,9 @@ export default function GradingHeader({
         <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1">
           <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400">Home</Link>
           <ChevronRight className="w-4 h-4" />
-          <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
+          <Link href="/labs" className="hover:text-blue-600 dark:hover:text-blue-400">Labs</Link>
           <ChevronRight className="w-4 h-4" />
-          <Link href={`/lab-management/schedule/${labDay.id}`} className="hover:text-blue-600 dark:hover:text-blue-400">
+          <Link href={`/labs/schedule/${labDay.id}`} className="hover:text-blue-600 dark:hover:text-blue-400">
             {new Date(labDay.date + 'T12:00:00').toLocaleDateString()}
           </Link>
           <ChevronRight className="w-4 h-4" />

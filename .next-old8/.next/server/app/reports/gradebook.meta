@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/reports/layout,_N_T_/reports/gradebook/layout,_N_T_/reports/gradebook/page,_N_T_/reports/gradebook"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/reports/gradebook/__PAGE__",
+    "/reports/gradebook",
+    "/reports",
+    "/_index",
+    "/_head"
+  ]
+}

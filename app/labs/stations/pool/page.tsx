@@ -361,7 +361,7 @@ export default function StationPoolPage() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1">
-                <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
+                <Link href="/labs" className="hover:text-blue-600 dark:hover:text-blue-400">Labs</Link>
                 <ChevronRight className="w-4 h-4" />
                 <span>Station Pool</span>
               </div>

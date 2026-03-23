@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/lab-management/layout,_N_T_/lab-management/peer-evals/layout,_N_T_/lab-management/peer-evals/page,_N_T_/lab-management/peer-evals"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/lab-management/peer-evals/__PAGE__",
+    "/lab-management/peer-evals",
+    "/lab-management",
+    "/_index",
+    "/_head"
+  ]
+}

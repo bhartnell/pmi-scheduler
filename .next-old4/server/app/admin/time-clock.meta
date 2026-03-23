@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/admin/layout,_N_T_/admin/time-clock/layout,_N_T_/admin/time-clock/page,_N_T_/admin/time-clock"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/admin/time-clock/__PAGE__",
+    "/admin/time-clock",
+    "/admin",
+    "/_index",
+    "/_head"
+  ]
+}

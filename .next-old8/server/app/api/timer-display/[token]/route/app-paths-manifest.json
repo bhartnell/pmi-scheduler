@@ -1,0 +1,3 @@
+{
+  "/api/timer-display/[token]/route": "app/api/timer-display/[token]/route.js"
+}

@@ -42,7 +42,7 @@ export default function LearningPlanBanner({ studentId }: Props) {
             This student has an active learning plan.{' '}
           </span>
           <Link
-            href={`/lab-management/students/${studentId}/learning-plan`}
+            href={`/academics/students/${studentId}/learning-plan`}
             className="text-sm font-semibold text-indigo-700 dark:text-indigo-300 underline hover:no-underline"
           >
             View learning plan

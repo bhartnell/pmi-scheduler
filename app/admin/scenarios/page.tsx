@@ -54,7 +54,7 @@ export default function ScenariosHubPage() {
 
   const tools = [
     {
-      href: '/lab-management/scenarios',
+      href: '/labs/scenarios',
       icon: FileText,
       title: 'Manage Scenarios',
       description: 'View, create, edit, and delete simulation scenarios. This is the main scenario library used by instructors for lab days.',

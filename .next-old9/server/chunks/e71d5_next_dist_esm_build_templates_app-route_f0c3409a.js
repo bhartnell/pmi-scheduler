@@ -1,0 +1,75 @@
+module.exports=[166127,e=>{"use strict";var t=e.i(356292),n=e.i(511587),s=e.i(658158),r=e.i(385772),i=e.i(755949),a=e.i(68611),o=e.i(156149),l=e.i(570712),c=e.i(268070),d=e.i(375339),u=e.i(663426),p=e.i(962412),h=e.i(413713),g=e.i(569873),f=e.i(413654),m=e.i(193695);e.i(689710);var y=e.i(770056),v=e.i(876908),_=e.i(84039),R=e.i(859727);e.i(995941);var w=e.i(879735);let A=["phases","sample_history","opqrst","secondary_survey","debrief_points","learning_objectives"],b=new Map;async function x(e){try{let t=await (0,_.requireAuth)("admin");if(t instanceof v.NextResponse)return t;let{searchParams:n}=new URL(e.url),s=n.get("pending_review");if("true"===s){let e=(0,R.getSupabaseAdmin)(),{data:t,error:n}=await e.from("scenarios").select("id").eq("content_review_status","pending_review");if(n)return v.NextResponse.json({ids:[]});return v.NextResponse.json({ids:(t||[]).map(e=>e.id)})}return v.NextResponse.json({error:"Invalid query"},{status:400})}catch{return v.NextResponse.json({ids:[]})}}async function N(e){try{let n,s=await (0,_.requireAuth)("admin");if(s instanceof v.NextResponse)return s;let{scenario_id:r,fields_to_generate:i,preview:a=!0}=await e.json();if(!r)return v.NextResponse.json({success:!1,error:"scenario_id is required"},{status:400});if(!i||!Array.isArray(i)||0===i.length)return v.NextResponse.json({success:!1,error:"fields_to_generate must be a non-empty array"},{status:400});let o=i.filter(e=>!A.includes(e));if(o.length>0)return v.NextResponse.json({success:!1,error:`Invalid fields: ${o.join(", ")}. Allowed: ${A.join(", ")}`},{status:400});let l=function(e){let t=Date.now(),n=b.get(e);if(n&&t-n<6e3){let e=Math.ceil((6e3-(t-n))/1e3);return`Rate limited. Please wait ${e} more second(s) before generating again.`}return null}(s.user.email);if(l)return v.NextResponse.json({success:!1,error:l},{status:429});if(!process.env.ANTHROPIC_API_KEY)return v.NextResponse.json({success:!1,error:"ANTHROPIC_API_KEY is not configured"},{status:500});let c=(0,R.getSupabaseAdmin)(),{data:d,error:u}=await c.from("scenarios").select("*").eq("id",r).single();if(u||!d)return v.NextResponse.json({success:!1,error:"Scenario not found"},{status:404});let p=i.filter(e=>{let t=d[e];return!(!(null==t||"string"==typeof t&&""===t.trim()||Array.isArray(t)&&0===t.length)&&("object"!=typeof t||Array.isArray(t)||0!==Object.keys(t).length))});if(0===p.length)return v.NextResponse.json({success:!0,preview:a,skipped_fields:i,message:"All requested fields already have content. No generation needed.",generated:{}});let h=function(e,t){let n=e.title||"Untitled",s=e.category||"Medical",r=e.chief_complaint||"Not specified",i=e.patient_name||"John Doe",a=e.patient_age??"Unknown",o=e.patient_sex||"Unknown",l=e.medical_history||"None noted",c=e.medications||"None noted",d=e.allergies||"NKDA",u="Not available",p=e.initial_vitals;if(p&&"object"==typeof p){let e=[];p.bp&&e.push(`BP ${p.bp}`),(p.hr||p.pulse)&&e.push(`HR ${p.hr||p.pulse}`),(p.rr||p.respiratory_rate)&&e.push(`RR ${p.rr||p.respiratory_rate}`),p.spo2&&e.push(`SpO2 ${p.spo2}%`),p.etco2&&e.push(`EtCO2 ${p.etco2}`),p.gcs&&e.push(`GCS ${p.gcs}`),p.ekg_rhythm&&e.push(`EKG: ${p.ekg_rhythm}`),e.length>0&&(u=e.join(", "))}let h="Not specified",g=e.critical_actions;Array.isArray(g)&&g.length>0&&("string"==typeof g[0]?h=g.join("; "):"object"==typeof g[0]&&null!==g[0]&&(h=g.map(e=>e.description||e.action||JSON.stringify(e)).join("; ")));let f=t.map(e=>(function(e){switch(e){case"phases":return`"phases": An array of 3-4 phase objects representing clinical progression (initial presentation -> intervention response -> transport/resolution). Each phase:
+{
+  "id": "phase-1", // unique ID like "phase-1", "phase-2", etc.
+  "name": "Initial Presentation", // descriptive name
+  "trigger": "Description of what triggers transition to this phase",
+  "presentation_notes": "Detailed description of patient presentation in this phase, including instructor cues",
+  "expected_actions": ["Action 1 the student should take", "Action 2", ...],
+  "vitals": {
+    "bp_systolic": 120,
+    "bp_diastolic": 80,
+    "pulse": 88,
+    "respiratory_rate": 18,
+    "spo2": 97,
+    "etco2": 38,
+    "temperature": "98.6",
+    "skin": "Warm, dry, pink",
+    "pupils": "PERRL 4mm",
+    "gcs": 15,
+    "ekg_rhythm": "Normal Sinus Rhythm"
+  },
+  "display_order": 0 // 0-indexed
+}`;case"sample_history":return`"sample_history": A SAMPLE history object:
+{
+  "signs_symptoms": "Detailed signs and symptoms the patient is presenting with",
+  "allergies": "Patient allergies or NKDA",
+  "medications": "Current medications the patient takes",
+  "past_medical_history": "Relevant past medical history",
+  "last_oral_intake": "When and what the patient last ate/drank",
+  "events_leading": "Events leading up to the emergency"
+}`;case"opqrst":return`"opqrst": An OPQRST pain assessment object:
+{
+  "onset": "When and how the symptoms began",
+  "provocation": "What makes it better or worse",
+  "quality": "Description of the pain/symptom quality",
+  "radiation": "Where the pain radiates to, if applicable",
+  "severity": "Pain severity on 1-10 scale with description",
+  "time_onset": "Specific time of onset"
+}`;case"secondary_survey":return`"secondary_survey": A head-to-toe secondary survey object:
+{
+  "head": "Head/face findings",
+  "neck": "Neck findings including JVD, tracheal deviation",
+  "chest": "Chest findings including breath sounds, chest wall",
+  "abdomen": "Abdominal findings including quadrant tenderness",
+  "pelvis": "Pelvic findings",
+  "extremities": "Extremity findings including pulses, motor/sensory",
+  "posterior": "Posterior/back findings"
+}`;case"debrief_points":return'"debrief_points": An array of 4-6 strings, each being a discussion point for post-scenario debriefing. Focus on key learning moments, decision points, and areas for improvement.';case"learning_objectives":return'"learning_objectives": An array of 3-5 strings, each being a specific, measurable learning objective for this scenario. Use action verbs (demonstrate, identify, perform, etc.)';default:return""}})(e)).join("\n\n");return`You are an experienced paramedic educator creating scenario content for EMS students.
+
+Given this clinical scenario:
+- Title: ${n}
+- Category: ${s}
+- Chief Complaint: ${r}
+- Patient: ${i}, ${a}yo ${o}
+- Medical History: ${l}
+- Medications: ${c}
+- Allergies: ${d}
+- Initial Vitals: ${u}
+- Critical Actions: ${h}
+
+Generate the following fields in valid JSON format:
+
+${f}
+
+Requirements:
+- Phases should show clinical progression (initial presentation -> intervention response -> transport/resolution)
+- Vitals in each phase should change realistically based on the condition and interventions
+- SAMPLE history should be consistent with the chief complaint and demographics
+- Include realistic instructor cues and decision points
+- All medications should have correct dosages for paramedic scope
+- EKG findings should be appropriate for the cardiac rhythm
+- Content should be clinically accurate and educational
+
+Return ONLY valid JSON with the requested fields as top-level keys. No explanation text, no markdown code blocks.`}(d,p);var t=s.user.email;if(b.set(t,Date.now()),b.size>50){let e=Date.now()-12e3;for(let[t,n]of b)n<e&&b.delete(t)}let g=new w.default({apiKey:process.env.ANTHROPIC_API_KEY}),f=(await g.messages.create({model:"claude-sonnet-4-20250514",max_tokens:4096,messages:[{role:"user",content:h}]})).content.find(e=>"text"===e.type);if(!f||"text"!==f.type)return v.NextResponse.json({success:!1,error:"No text content in AI response"},{status:500});let m=f.text.trim();m.startsWith("```json")?m=m.slice(7):m.startsWith("```")&&(m=m.slice(3)),m.endsWith("```")&&(m=m.slice(0,-3)),m=m.trim();try{n=JSON.parse(m)}catch{return v.NextResponse.json({success:!1,error:"Failed to parse AI response as JSON",raw_response:m.substring(0,500)},{status:500})}let y={};for(let e of p)void 0!==n[e]&&(y[e]=n[e]);let x=i.filter(e=>!p.includes(e));if(a)return v.NextResponse.json({success:!0,preview:!0,scenario_id:r,scenario_title:d.title,generated:y,fields_generated:Object.keys(y),skipped_fields:x,skipped_reason:x.length>0?"Fields already have content":void 0});let N={...y,ai_generated_fields:[...d.ai_generated_fields||[],...Object.keys(y).filter(e=>!(d.ai_generated_fields||[]).includes(e))],content_review_status:"pending_review",updated_at:new Date().toISOString()},{error:E}=await c.from("scenarios").update(N).eq("id",r);if(E)return v.NextResponse.json({success:!1,error:`Failed to save: ${E.message}`},{status:500});return v.NextResponse.json({success:!0,preview:!1,scenario_id:r,scenario_title:d.title,generated:y,fields_generated:Object.keys(y),skipped_fields:x,skipped_reason:x.length>0?"Fields already have content":void 0,content_review_status:"pending_review"})}catch(t){console.error("Error in generate-content:",t);let e=t instanceof Error?t.message:"Unknown error";return v.NextResponse.json({success:!1,error:`Failed to generate content: ${e}`},{status:500})}}e.s(["GET",()=>x,"POST",()=>N],367593);var E=e.i(367593);let j=new t.AppRouteRouteModule({definition:{kind:n.RouteKind.APP_ROUTE,page:"/api/admin/scenarios/generate-content/route",pathname:"/api/admin/scenarios/generate-content",filename:"route",bundlePath:""},distDir:".next",relativeProjectDir:"",resolvedPagePath:"[project]/.claude/worktrees/focused-goodall/app/api/admin/scenarios/generate-content/route.ts",nextConfigOutput:"standalone",userland:E}),{workAsyncStorage:C,workUnitAsyncStorage:k,serverHooks:P}=j;function O(){return(0,s.patchFetch)({workAsyncStorage:C,workUnitAsyncStorage:k})}async function S(e,t,s){j.isDev&&(0,r.addRequestMeta)(e,"devRequestTimingInternalsEnd",process.hrtime.bigint());let v="/api/admin/scenarios/generate-content/route";v=v.replace(/\/index$/,"")||"/";let _=await j.prepare(e,t,{srcPage:v,multiZoneDraftMode:!1});if(!_)return t.statusCode=400,t.end("Bad Request"),null==s.waitUntil||s.waitUntil.call(s,Promise.resolve()),null;let{buildId:R,params:w,nextConfig:A,parsedUrl:b,isDraftMode:x,prerenderManifest:N,routerServerContext:E,isOnDemandRevalidate:C,revalidateOnlyGenerated:k,resolvedPathname:P,clientReferenceManifest:O,serverActionsManifest:S}=_,$=(0,o.normalizeAppPath)(v),q=!!(N.dynamicRoutes[$]||N.routes[P]),T=async()=>((null==E?void 0:E.render404)?await E.render404(e,t,b,!1):t.end("This page could not be found"),null);if(q&&!x){let e=!!N.routes[P],t=N.dynamicRoutes[$];if(t&&!1===t.fallback&&!e){if(A.experimental.adapterPath)return await T();throw new m.NoFallbackError}}let I=null;!q||j.isDev||x||(I="/index"===(I=P)?"/":I);let D=!0===j.isDev||!q,H=q&&!D;S&&O&&(0,a.setManifestsSingleton)({page:v,clientReferenceManifest:O,serverActionsManifest:S});let U=e.method||"GET",M=(0,i.getTracer)(),K=M.getActiveScopeSpan(),F={params:w,prerenderManifest:N,renderOpts:{experimental:{authInterrupts:!!A.experimental.authInterrupts},cacheComponents:!!A.cacheComponents,supportsDynamicResponse:D,incrementalCache:(0,r.getRequestMeta)(e,"incrementalCache"),cacheLifeProfiles:A.cacheLife,waitUntil:s.waitUntil,onClose:e=>{t.on("close",e)},onAfterTaskError:void 0,onInstrumentationRequestError:(t,n,s,r)=>j.onRequestError(e,t,s,r,E)},sharedContext:{buildId:R}},L=new l.NodeNextRequest(e),W=new l.NodeNextResponse(t),G=c.NextRequestAdapter.fromNodeNextRequest(L,(0,c.signalFromNodeResponse)(t));try{let a=async e=>j.handle(G,F).finally(()=>{if(!e)return;e.setAttributes({"http.status_code":t.statusCode,"next.rsc":!1});let n=M.getRootSpanAttributes();if(!n)return;if(n.get("next.span_type")!==d.BaseServerSpan.handleRequest)return void console.warn(`Unexpected root span type '${n.get("next.span_type")}'. Please report this Next.js issue https://github.com/vercel/next.js`);let s=n.get("next.route");if(s){let t=`${U} ${s}`;e.setAttributes({"next.route":s,"http.route":s,"next.span_name":t}),e.updateName(t)}else e.updateName(`${U} ${v}`)}),o=!!(0,r.getRequestMeta)(e,"minimalMode"),l=async r=>{var i,l;let c=async({previousCacheEntry:n})=>{try{if(!o&&C&&k&&!n)return t.statusCode=404,t.setHeader("x-nextjs-cache","REVALIDATED"),t.end("This page could not be found"),null;let i=await a(r);e.fetchMetrics=F.renderOpts.fetchMetrics;let l=F.renderOpts.pendingWaitUntil;l&&s.waitUntil&&(s.waitUntil(l),l=void 0);let c=F.renderOpts.collectedTags;if(!q)return await (0,p.sendResponse)(L,W,i,F.renderOpts.pendingWaitUntil),null;{let e=await i.blob(),t=(0,h.toNodeOutgoingHttpHeaders)(i.headers);c&&(t[f.NEXT_CACHE_TAGS_HEADER]=c),!t["content-type"]&&e.type&&(t["content-type"]=e.type);let n=void 0!==F.renderOpts.collectedRevalidate&&!(F.renderOpts.collectedRevalidate>=f.INFINITE_CACHE)&&F.renderOpts.collectedRevalidate,s=void 0===F.renderOpts.collectedExpire||F.renderOpts.collectedExpire>=f.INFINITE_CACHE?void 0:F.renderOpts.collectedExpire;return{value:{kind:y.CachedRouteKind.APP_ROUTE,status:i.status,body:Buffer.from(await e.arrayBuffer()),headers:t},cacheControl:{revalidate:n,expire:s}}}}catch(t){throw(null==n?void 0:n.isStale)&&await j.onRequestError(e,t,{routerKind:"App Router",routePath:v,routeType:"route",revalidateReason:(0,u.getRevalidateReason)({isStaticGeneration:H,isOnDemandRevalidate:C})},!1,E),t}},d=await j.handleResponse({req:e,nextConfig:A,cacheKey:I,routeKind:n.RouteKind.APP_ROUTE,isFallback:!1,prerenderManifest:N,isRoutePPREnabled:!1,isOnDemandRevalidate:C,revalidateOnlyGenerated:k,responseGenerator:c,waitUntil:s.waitUntil,isMinimalMode:o});if(!q)return null;if((null==d||null==(i=d.value)?void 0:i.kind)!==y.CachedRouteKind.APP_ROUTE)throw Object.defineProperty(Error(`Invariant: app-route received invalid cache entry ${null==d||null==(l=d.value)?void 0:l.kind}`),"__NEXT_ERROR_CODE",{value:"E701",enumerable:!1,configurable:!0});o||t.setHeader("x-nextjs-cache",C?"REVALIDATED":d.isMiss?"MISS":d.isStale?"STALE":"HIT"),x&&t.setHeader("Cache-Control","private, no-cache, no-store, max-age=0, must-revalidate");let m=(0,h.fromNodeOutgoingHttpHeaders)(d.value.headers);return o&&q||m.delete(f.NEXT_CACHE_TAGS_HEADER),!d.cacheControl||t.getHeader("Cache-Control")||m.get("Cache-Control")||m.set("Cache-Control",(0,g.getCacheControlHeader)(d.cacheControl)),await (0,p.sendResponse)(L,W,new Response(d.value.body,{headers:m,status:d.value.status||200})),null};K?await l(K):await M.withPropagatedContext(e.headers,()=>M.trace(d.BaseServerSpan.handleRequest,{spanName:`${U} ${v}`,kind:i.SpanKind.SERVER,attributes:{"http.method":U,"http.target":e.url}},l))}catch(t){if(t instanceof m.NoFallbackError||await j.onRequestError(e,t,{routerKind:"App Router",routePath:$,routeType:"route",revalidateReason:(0,u.getRevalidateReason)({isStaticGeneration:H,isOnDemandRevalidate:C})},!1,E),q)throw t;return await (0,p.sendResponse)(L,W,new Response(null,{status:500})),null}}e.s(["handler",()=>S,"patchFetch",()=>O,"routeModule",()=>j,"serverHooks",()=>P,"workAsyncStorage",()=>C,"workUnitAsyncStorage",()=>k],166127)}];
+
+//# sourceMappingURL=e71d5_next_dist_esm_build_templates_app-route_f0c3409a.js.map

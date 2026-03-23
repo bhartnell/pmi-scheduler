@@ -347,9 +347,9 @@ export default function ReviewItemPage() {
               <Home className="w-3 h-3" /> Home
             </Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management/templates/review" className="hover:text-blue-600 dark:hover:text-blue-400">Semester Review</Link>
+            <Link href="/labs/templates/review" className="hover:text-blue-600 dark:hover:text-blue-400">Semester Review</Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href={`/lab-management/templates/review/${reviewId}`} className="hover:text-blue-600 dark:hover:text-blue-400 truncate max-w-[150px]">
+            <Link href={`/labs/templates/review/${reviewId}`} className="hover:text-blue-600 dark:hover:text-blue-400 truncate max-w-[150px]">
               {reviewTitle}
             </Link>
             <ChevronRight className="w-4 h-4" />

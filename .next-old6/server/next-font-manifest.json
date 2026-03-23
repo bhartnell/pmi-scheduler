@@ -1,0 +1,679 @@
+{
+  "app": {
+    "[project]/.claude/worktrees/focused-goodall/app/_not-found/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/access-requests/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/alumni/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/announcements/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/attendance-appeals/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/audit-log/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/broadcast/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/bulk-operations/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/calendar-sync/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/cases/generate/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/certifications/compliance/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/certifications/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/certifications/verification/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/compliance/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/config/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/dashboard-defaults/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/data-export/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/data-import/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/database-tools/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/deep-links/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/deletion-requests/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/email-templates/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/equipment/maintenance/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/equipment/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/external-access/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/ferpa-compliance/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/guests/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/incidents/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/lab-templates/import/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/lab-templates/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/osce-events/[id]/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/osce-events/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/osce-observers/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/poll/[id]/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/program-requirements/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/qa-checklist/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/roles/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/rubrics/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/scenarios/audit/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/scenarios/bulk-import/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/scenarios/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/scenarios/transform/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/scheduled-exports/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/settings/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/skill-sheets/import/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/system-alerts/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/system-health/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/time-clock/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/user-activity/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/users/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/admin/webhooks/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/auth/error/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/auth/signin/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/calendar/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/cases/[id]/edit/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/cases/[id]/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/cases/[id]/practice/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/cases/leaderboard/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/cases/new/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/cases/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/cases/session/[code]/instructor/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/cases/session/[code]/join/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/cases/session/[code]/student/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/cases/session/[code]/tv/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/checkin/[token]/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/clinical/aemt-tracking/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/clinical/affiliations/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/clinical/agencies/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/clinical/capacity/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/clinical/compliance-tracker/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/clinical/compliance/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/clinical/emt-tracking/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/clinical/hours/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/clinical/internships/[id]/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/clinical/internships/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/clinical/mce/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/clinical/overview/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/clinical/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/clinical/planning-calendar/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/clinical/preceptors/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/clinical/rotation-scheduler/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/clinical/site-visit-settings/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/clinical/site-visits/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/clinical/summative-evaluations/[id]/grade/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/clinical/summative-evaluations/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/feedback/my-submissions/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/guest/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/help/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/instructor/ce/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/instructor/certifications/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/instructor/history/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/instructor/my-stats/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/instructor/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/instructor/teaching/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/instructor/time-clock/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/admin/certifications/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/admin/cohorts/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/admin/feedback/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/admin/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/admin/timer-displays/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/aemt-tracker/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/cohorts/[id]/calendar/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/cohorts/[id]/completion/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/cohorts/[id]/groups/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/cohorts/[id]/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/debrief-review/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/ekg-warmup/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/emt-tracker/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/flags/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/grade/station/[id]/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/groups/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/mentorship/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/my-certifications/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/peer-evals/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/protocol-tracking/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/reports/clinical-hours/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/reports/internship-status/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/reports/lab-progress/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/reports/onboarding-status/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/reports/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/reports/student-progress/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/reports/team-leads/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/scenario-library/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/scenarios/[id]/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/scenarios/new/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/scenarios/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/schedule/[id]/edit/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/schedule/[id]/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/schedule/[id]/stations/new/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/schedule/new/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/schedule/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/seating/charts/[id]/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/seating/charts/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/seating/learning-styles/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/seating/preferences/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/skill-drills/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/skill-sheets/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/skills/competencies/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/skills/competencies/report/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/stations/log/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/stations/pool/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/students/[id]/learning-plan/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/students/[id]/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/students/[id]/portfolio/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/students/import/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/students/new/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/students/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/templates/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/templates/review/[id]/item/[itemId]/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/templates/review/[id]/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/templates/review/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lab-management/templates/weekly/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lvfr-aemt/calendar/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lvfr-aemt/files/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lvfr-aemt/grades/import/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lvfr-aemt/grades/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lvfr-aemt/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lvfr-aemt/pharm/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lvfr-aemt/planner/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lvfr-aemt/scheduling/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/lvfr-aemt/skills/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/notifications/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/onboarding/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/osce-evaluator-signup/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/osce/[slug]/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/poll/[id]/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/poll/create/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/preceptor/evaluate/[token]/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/reports/attendance/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/reports/availability-patterns/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/reports/builder/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/reports/clinical-placements/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/reports/closeout-surveys/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/reports/cohort-comparison/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/reports/gradebook/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/reports/instructor-analytics/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/reports/instructor-workload/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/reports/lab-costs/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/reports/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/reports/program-outcomes/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/reports/program-overview/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/reports/scenario-analytics/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/reports/scenario-usage-overview/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/reports/scenario-usage/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/reports/student-dashboard/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/request-access/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/resources/medications/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/resources/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/scheduler/create/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/scheduler/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/scheduling/availability/all/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/scheduling/availability/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/scheduling/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/scheduling/planner/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/scheduling/planner/workload/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/scheduling/reports/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/scheduling/resource-bookings/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/scheduling/shifts/new/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/scheduling/shifts/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/scheduling/signups/pending/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/scheduling/substitute-requests/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/scheduling/team-availability/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/settings/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/settings/sessions/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/skill-sheets/[id]/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/skill-sheets/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/student/attendance-appeals/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/student/available-labs/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/student/completions/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/student/documents/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/student/labs/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/student/my-progress/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/student/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/student/peer-eval/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/student/profile/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/student/skill-sheets/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/students/[id]/progress/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/tasks/[id]/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/tasks/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/timer-display/[token]/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ],
+    "[project]/.claude/worktrees/focused-goodall/app/timer-display/live/[labDayId]/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ]
+  },
+  "appUsingSizeAdjust": true,
+  "pages": {},
+  "pagesUsingSizeAdjust": false
+}

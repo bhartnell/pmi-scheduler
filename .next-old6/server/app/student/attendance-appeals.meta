@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/student/layout,_N_T_/student/attendance-appeals/layout,_N_T_/student/attendance-appeals/page,_N_T_/student/attendance-appeals"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/student/attendance-appeals/__PAGE__",
+    "/student/attendance-appeals",
+    "/student",
+    "/_index",
+    "/_head"
+  ]
+}

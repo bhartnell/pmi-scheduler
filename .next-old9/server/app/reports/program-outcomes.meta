@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/reports/layout,_N_T_/reports/program-outcomes/layout,_N_T_/reports/program-outcomes/page,_N_T_/reports/program-outcomes"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/reports/program-outcomes/__PAGE__",
+    "/reports/program-outcomes",
+    "/reports",
+    "/_index",
+    "/_head"
+  ]
+}

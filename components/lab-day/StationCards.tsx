@@ -43,7 +43,7 @@ export default function StationCards({
         <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Stations Yet</h3>
         <p className="text-gray-600 dark:text-gray-400 mb-4">Add stations to this lab day to get started.</p>
         <Link
-          href={`/lab-management/schedule/${labDayId}/stations/new`}
+          href={`/labs/schedule/${labDayId}/stations/new`}
           className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
         >
           <Plus className="w-5 h-5" />
@@ -162,7 +162,7 @@ export default function StationCards({
             {stationSkillSheetIds[station.id] ? (
               <div className="mb-3 print:hidden">
                 <Link
-                  href={`/skill-sheets/${stationSkillSheetIds[station.id]}`}
+                  href={`/academics/skill-sheets/${stationSkillSheetIds[station.id]}`}
                   className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 rounded hover:bg-emerald-100 dark:hover:bg-emerald-900/50"
                 >
                   <ClipboardCheck className="w-3 h-3" />
@@ -194,7 +194,7 @@ export default function StationCards({
               {station.scenario && (
                 <>
                   <Link
-                    href={`/lab-management/scenarios/${station.scenario.id}`}
+                    href={`/labs/scenarios/${station.scenario.id}`}
                     className="inline-flex items-center justify-center gap-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
                   >
                     <FileText className="w-4 h-4" />
@@ -210,7 +210,7 @@ export default function StationCards({
                 </>
               )}
               <Link
-                href={`/lab-management/grade/station/${station.id}`}
+                href={`/labs/grade/station/${station.id}`}
                 className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               >
                 <ClipboardCheck className="w-4 h-4" />

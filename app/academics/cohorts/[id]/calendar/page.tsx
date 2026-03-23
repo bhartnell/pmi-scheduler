@@ -235,7 +235,7 @@ function DayDetailPanel({
             Close
           </button>
           <Link
-            href={`/lab-management/schedule/${labDay.id}`}
+            href={`/labs/schedule/${labDay.id}`}
             className="px-4 py-2 text-sm bg-blue-600 text-white hover:bg-blue-700 rounded-lg"
             onClick={onClose}
           >
@@ -443,7 +443,7 @@ export default function CohortCalendarPage() {
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Error</h2>
           <p className="text-gray-600 dark:text-gray-400 mb-4">{error}</p>
           <Link
-            href="/lab-management/admin/cohorts"
+            href="/academics/cohorts"
             className="text-blue-600 dark:text-blue-400 hover:underline"
           >
             Back to Cohorts
@@ -474,17 +474,17 @@ export default function CohortCalendarPage() {
                   Home
                 </Link>
                 <ChevronRight className="w-4 h-4 flex-shrink-0" />
-                <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">
+                <Link href="/labs" className="hover:text-blue-600 dark:hover:text-blue-400">
                   Lab Management
                 </Link>
                 <ChevronRight className="w-4 h-4 flex-shrink-0" />
-                <Link href="/lab-management/admin/cohorts" className="hover:text-blue-600 dark:hover:text-blue-400">
+                <Link href="/academics/cohorts" className="hover:text-blue-600 dark:hover:text-blue-400">
                   Cohorts
                 </Link>
                 <ChevronRight className="w-4 h-4 flex-shrink-0" />
                 {cohort ? (
                   <Link
-                    href={`/lab-management/cohorts/${cohortId}`}
+                    href={`/academics/cohorts/${cohortId}`}
                     className="hover:text-blue-600 dark:hover:text-blue-400"
                   >
                     {cohortLabel}
@@ -525,7 +525,7 @@ export default function CohortCalendarPage() {
                 Export as ICS
               </button>
               <Link
-                href={`/lab-management/schedule?cohortId=${cohortId}`}
+                href={`/labs/schedule?cohortId=${cohortId}`}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
               >
                 <CalendarIcon className="w-4 h-4" />

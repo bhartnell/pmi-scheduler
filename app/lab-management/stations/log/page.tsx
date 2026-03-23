@@ -291,7 +291,7 @@ function StationLogContent() {
     // Update URL
     const newParams = new URLSearchParams();
     if (selectedCohort) newParams.append('cohort', selectedCohort);
-    router.push(`/lab-management/stations/log${newParams.toString() ? `?${newParams}` : ''}`);
+    router.push(`/labs/stations/log${newParams.toString() ? `?${newParams}` : ''}`);
   };
 
   const selectStation = (station: Station) => {
@@ -300,7 +300,7 @@ function StationLogContent() {
     const newParams = new URLSearchParams();
     newParams.append('station', station.id);
     if (selectedCohort) newParams.append('cohort', selectedCohort);
-    router.push(`/lab-management/stations/log?${newParams}`);
+    router.push(`/labs/stations/log?${newParams}`);
   };
 
   // Sort stations: favorites first, then by original order
@@ -346,7 +346,7 @@ function StationLogContent() {
               </button>
             ) : (
               <Link
-                href="/lab-management"
+                href="/labs"
                 className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg dark:text-gray-300 dark:hover:bg-gray-700"
               >
                 <ChevronLeft className="w-5 h-5" />
@@ -403,7 +403,7 @@ function StationLogContent() {
                 <CheckSquare className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                 <p className="text-gray-600 dark:text-gray-400">No stations found</p>
                 <Link
-                  href="/lab-management/stations/pool"
+                  href="/labs/stations/pool"
                   className="text-blue-600 hover:underline text-sm mt-2 inline-block"
                 >
                   Manage Station Pool →

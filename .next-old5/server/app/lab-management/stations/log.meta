@@ -1,0 +1,17 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/lab-management/layout,_N_T_/lab-management/stations/layout,_N_T_/lab-management/stations/log/layout,_N_T_/lab-management/stations/log/page,_N_T_/lab-management/stations/log"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/lab-management/stations/log/__PAGE__",
+    "/lab-management/stations/log",
+    "/lab-management/stations",
+    "/lab-management",
+    "/_index",
+    "/_head"
+  ]
+}

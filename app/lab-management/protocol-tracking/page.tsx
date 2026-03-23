@@ -259,7 +259,7 @@ export default function ProtocolTrackingPage() {
       <div className="bg-white shadow-sm dark:bg-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1">
-            <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
+            <Link href="/labs" className="hover:text-blue-600 dark:hover:text-blue-400">Labs</Link>
             <ChevronRight className="w-4 h-4" />
             <span>Protocol Tracking</span>
           </div>

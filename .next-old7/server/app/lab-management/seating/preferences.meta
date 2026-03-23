@@ -1,0 +1,17 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/lab-management/layout,_N_T_/lab-management/seating/layout,_N_T_/lab-management/seating/preferences/layout,_N_T_/lab-management/seating/preferences/page,_N_T_/lab-management/seating/preferences"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/lab-management/seating/preferences/__PAGE__",
+    "/lab-management/seating/preferences",
+    "/lab-management/seating",
+    "/lab-management",
+    "/_index",
+    "/_head"
+  ]
+}

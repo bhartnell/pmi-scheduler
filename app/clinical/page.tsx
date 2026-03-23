@@ -301,7 +301,7 @@ export default function ClinicalDashboardPage() {
           {/* Cohort Manager - Secondary Prominent — lead_instructor+ only */}
           {effectiveRole && canAccessClinical(effectiveRole) && (
           <Link
-            href="/lab-management/admin/cohorts"
+            href="/academics/cohorts"
             className="bg-gradient-to-br from-purple-500 to-indigo-600 dark:from-purple-600 dark:to-indigo-700 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
           >
             <div className="flex items-start gap-4">

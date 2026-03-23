@@ -55,7 +55,7 @@ export default function RecentFeedbackWidget() {
     <WidgetCard
       title="Recent Feedback"
       icon={<MessageSquare className="w-5 h-5 text-pink-600 dark:text-pink-400" />}
-      viewAllLink="/lab-management/admin/feedback"
+      viewAllLink="/admin/feedback"
       loading={loading}
     >
       {reports.length === 0 ? (
@@ -68,7 +68,7 @@ export default function RecentFeedbackWidget() {
           {reports.map(report => (
             <Link
               key={report.id}
-              href={`/lab-management/admin/feedback?id=${report.id}`}
+              href={`/admin/feedback?id=${report.id}`}
               className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 border border-gray-200 dark:border-gray-700"
             >
               <div className="flex items-center gap-2 flex-1 min-w-0">

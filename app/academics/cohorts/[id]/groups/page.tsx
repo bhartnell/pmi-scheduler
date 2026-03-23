@@ -436,7 +436,7 @@ export default function LabGroupsPage() {
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
           <AlertTriangle className="w-12 h-12 text-red-500 mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">Cohort Not Found</h2>
-          <Link href="/lab-management/admin/cohorts" className="text-blue-600 dark:text-blue-400 hover:underline">
+          <Link href="/academics/cohorts" className="text-blue-600 dark:text-blue-400 hover:underline">
             Back to Cohorts
           </Link>
         </div>
@@ -455,9 +455,9 @@ export default function LabGroupsPage() {
               Home
             </Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
+            <Link href="/labs" className="hover:text-blue-600 dark:hover:text-blue-400">Labs</Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href={`/lab-management/cohorts/${cohortId}`} className="hover:text-blue-600 dark:hover:text-blue-400">
+            <Link href={`/academics/cohorts/${cohortId}`} className="hover:text-blue-600 dark:hover:text-blue-400">
               {cohort.program.abbreviation} {cohort.cohort_number}
             </Link>
             <ChevronRight className="w-4 h-4" />

@@ -612,7 +612,7 @@ const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number
     },
     {
       key: 'n',
-      handler: () => router.push('/lab-management/schedule/new'),
+      handler: () => router.push('/labs/schedule/new'),
       description: 'New lab day',
       category: 'Actions',
     },
@@ -928,7 +928,7 @@ const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number
                 Export to Calendar
               </button>
               <Link
-                href="/lab-management/schedule/new"
+                href="/labs/schedule/new"
                 className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
               >
                 <Plus className="w-5 h-5" />
@@ -1109,7 +1109,7 @@ const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number
                           </p>
                         </div>
                         <Link
-                          href={`/lab-management/schedule/${labDay.id}`}
+                          href={`/labs/schedule/${labDay.id}`}
                           className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
                         >
                           <Timer className="w-4 h-4" />
@@ -1166,7 +1166,7 @@ const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number
                           {labDay.stations.map((station) => (
                             <Link
                               key={station.id}
-                              href={`/lab-management/grade/station/${station.id}`}
+                              href={`/labs/grade/station/${station.id}`}
                               className="flex items-center gap-2 p-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
                             >
                               <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 flex items-center justify-center text-xs font-medium">
@@ -1263,7 +1263,7 @@ const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number
                     {/* Note + add lab action row */}
                     <div className="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Link
-                        href={`/lab-management/schedule/new?date=${date.toISOString().split('T')[0]}`}
+                        href={`/labs/schedule/new?date=${date.toISOString().split('T')[0]}`}
                         className="p-0.5 rounded text-gray-400 dark:text-gray-500 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors"
                         title="Create lab day"
                         onClick={(e) => e.stopPropagation()}
@@ -1350,7 +1350,7 @@ const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number
                       return (
                         <Link
                           key={labDay.id}
-                          href={`/lab-management/schedule/${labDay.id}`}
+                          href={`/labs/schedule/${labDay.id}`}
                           onClick={(e) => e.stopPropagation()}
                           className="block rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors p-2 text-left"
                         >
@@ -1513,7 +1513,7 @@ const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number
                     <div className="flex items-center gap-0.5">
                       {/* Add lab button - shows on hover */}
                       <Link
-                        href={`/lab-management/schedule/new?date=${date.toISOString().split('T')[0]}`}
+                        href={`/labs/schedule/new?date=${date.toISOString().split('T')[0]}`}
                         className="p-0.5 rounded text-gray-300 dark:text-gray-600 opacity-0 group-hover:opacity-100 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-all"
                         title="Create lab day"
                         onClick={(e) => e.stopPropagation()}
@@ -1581,7 +1581,7 @@ const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number
                     {dayLabDays.slice(0, notesForDate.length > 0 ? Math.max(0, 3 - notesForDate.length) : 3).map(labDay => (
                       <Link
                         key={labDay.id}
-                        href={`/lab-management/schedule/${labDay.id}`}
+                        href={`/labs/schedule/${labDay.id}`}
                         className="block px-1.5 py-1 text-xs rounded bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/70"
                         title={labDay.title || `${labDay.cohort.program.abbreviation} G${formatCohortNumber(labDay.cohort.cohort_number)}`}
                       >
@@ -1634,7 +1634,7 @@ const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number
                 title="No labs scheduled"
                 message="No lab days have been scheduled for this period."
                 actionLabel="Create Lab Day"
-                actionHref="/lab-management/schedule/new"
+                actionHref="/labs/schedule/new"
               />
             ) : (
               labDays
@@ -1648,7 +1648,7 @@ const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number
                   return (
                     <Link
                       key={labDay.id}
-                      href={`/lab-management/schedule/${labDay.id}`}
+                      href={`/labs/schedule/${labDay.id}`}
                       className="p-4 flex items-center gap-4 hover:bg-gray-50 dark:hover:bg-gray-700"
                     >
                       <div className={`text-center p-2 rounded-lg min-w-[60px] ${

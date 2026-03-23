@@ -1,0 +1,3 @@
+{
+  "/api/scheduling/send-availability-reminders/route": "app/api/scheduling/send-availability-reminders/route.js"
+}

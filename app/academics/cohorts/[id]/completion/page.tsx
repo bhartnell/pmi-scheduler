@@ -328,7 +328,7 @@ export default function CohortCompletionPage() {
             {error || 'Data not available'}
           </h2>
           <Link
-            href={`/lab-management/cohorts/${cohortId}`}
+            href={`/academics/cohorts/${cohortId}`}
             className="text-blue-600 dark:text-blue-400 hover:underline"
           >
             Back to Cohort
@@ -357,16 +357,16 @@ export default function CohortCompletionPage() {
               Home
             </Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">
+            <Link href="/labs" className="hover:text-blue-600 dark:hover:text-blue-400">
               Lab Management
             </Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management/admin/cohorts" className="hover:text-blue-600 dark:hover:text-blue-400">
+            <Link href="/academics/cohorts" className="hover:text-blue-600 dark:hover:text-blue-400">
               Cohorts
             </Link>
             <ChevronRight className="w-4 h-4" />
             <Link
-              href={`/lab-management/cohorts/${cohortId}`}
+              href={`/academics/cohorts/${cohortId}`}
               className="hover:text-blue-600 dark:hover:text-blue-400"
             >
               {cohort.label}
@@ -547,7 +547,7 @@ export default function CohortCompletionPage() {
                           )}
                           <div>
                             <Link
-                              href={`/lab-management/students/${student.id}`}
+                              href={`/academics/students/${student.id}`}
                               className="font-medium text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400"
                             >
                               {student.last_name}, {student.first_name}

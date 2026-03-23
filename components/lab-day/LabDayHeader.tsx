@@ -67,7 +67,7 @@ export default function LabDayHeader({
               className="mb-1"
             />
             <Link
-              href="/lab-management/schedule"
+              href="/labs/schedule"
               className="inline-flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 mb-1"
             >
               <ArrowLeft className="w-4 h-4" />
@@ -198,14 +198,14 @@ export default function LabDayHeader({
                 )}
               </div>
               <Link
-                href={`/lab-management/schedule/${labDayId}/edit`}
+                href={`/labs/schedule/${labDayId}/edit`}
                 className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 font-medium"
               >
                 <Edit2 className="w-4 h-4" />
                 Edit
               </Link>
               <Link
-                href={`/lab-management/schedule/${labDayId}/stations/new`}
+                href={`/labs/schedule/${labDayId}/stations/new`}
                 className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
               >
                 <Plus className="w-4 h-4" />

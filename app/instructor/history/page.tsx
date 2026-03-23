@@ -462,7 +462,7 @@ export default function InstructorHistoryPage() {
                           <td className="px-4 py-3 text-gray-900 dark:text-white">
                             {entry.lab_day_id ? (
                               <Link
-                                href={`/lab-management/schedule/${entry.lab_day_id}`}
+                                href={`/labs/schedule/${entry.lab_day_id}`}
                                 className="text-blue-600 dark:text-blue-400 hover:underline"
                               >
                                 {entry.lab_title}
@@ -538,7 +538,7 @@ export default function InstructorHistoryPage() {
                       <div className="font-medium text-gray-900 dark:text-white">
                         {entry.lab_day_id ? (
                           <Link
-                            href={`/lab-management/schedule/${entry.lab_day_id}`}
+                            href={`/labs/schedule/${entry.lab_day_id}`}
                             className="text-blue-600 dark:text-blue-400 hover:underline"
                           >
                             {entry.lab_title}

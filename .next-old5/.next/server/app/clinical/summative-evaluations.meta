@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/clinical/layout,_N_T_/clinical/summative-evaluations/layout,_N_T_/clinical/summative-evaluations/page,_N_T_/clinical/summative-evaluations"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/clinical/summative-evaluations/__PAGE__",
+    "/clinical/summative-evaluations",
+    "/clinical",
+    "/_index",
+    "/_head"
+  ]
+}

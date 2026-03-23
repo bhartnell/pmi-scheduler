@@ -368,7 +368,7 @@ export default function SchedulerReportsPage() {
 
             {/* Quick link to Workload Tracker */}
             <Link
-              href="/scheduling/planner/workload"
+              href="/academics/planner/workload"
               className="flex items-center gap-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-xl p-4 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition-colors group"
             >
               <BarChart3 className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />

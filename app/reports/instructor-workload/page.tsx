@@ -255,7 +255,7 @@ export default function InstructorWorkloadPage() {
               Home
             </Link>
             <ChevronRight className="w-4 h-4 flex-shrink-0" />
-            <Link href="/lab-management/reports" className="hover:text-blue-600 dark:hover:text-blue-400">
+            <Link href="/reports" className="hover:text-blue-600 dark:hover:text-blue-400">
               Reports
             </Link>
             <ChevronRight className="w-4 h-4 flex-shrink-0" />

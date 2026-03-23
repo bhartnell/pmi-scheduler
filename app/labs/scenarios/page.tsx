@@ -226,7 +226,7 @@ export default function ScenariosPage() {
       handler: () => {
         const idx = selectedIndexRef.current;
         if (idx >= 0 && idx < sortedScenarios.length) {
-          router.push(`/lab-management/scenarios/${sortedScenarios[idx].id}`);
+          router.push(`/labs/scenarios/${sortedScenarios[idx].id}`);
         }
       },
       description: 'Open selected scenario',
@@ -234,7 +234,7 @@ export default function ScenariosPage() {
     },
     {
       key: 'n',
-      handler: () => router.push('/lab-management/scenarios/new'),
+      handler: () => router.push('/labs/scenarios/new'),
       description: 'New scenario',
       category: 'Actions',
     },
@@ -317,7 +317,7 @@ export default function ScenariosPage() {
               <Keyboard className="w-4 h-4" />
             </button>
             <Link
-              href="/lab-management/scenarios/new"
+              href="/labs/scenarios/new"
               className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 font-medium"
             >
               <Plus className="w-5 h-5" />
@@ -454,7 +454,7 @@ export default function ScenariosPage() {
             </p>
             {!hasActiveFilters && (
               <Link
-                href="/lab-management/scenarios/new"
+                href="/labs/scenarios/new"
                 className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
               >
                 <Plus className="w-5 h-5" />
@@ -472,7 +472,7 @@ export default function ScenariosPage() {
               return (
                 <Link
                   key={scenario.id}
-                  href={`/lab-management/scenarios/${scenario.id}`}
+                  href={`/labs/scenarios/${scenario.id}`}
                   className={`relative bg-white rounded-lg shadow p-4 hover:shadow-lg transition-shadow dark:bg-gray-800 dark:hover:bg-gray-750 ${
                     isSelected ? 'ring-2 ring-blue-500 dark:ring-blue-400' : ''
                   }`}

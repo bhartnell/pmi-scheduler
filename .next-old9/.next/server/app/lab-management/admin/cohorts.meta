@@ -1,0 +1,17 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/lab-management/layout,_N_T_/lab-management/admin/layout,_N_T_/lab-management/admin/cohorts/layout,_N_T_/lab-management/admin/cohorts/page,_N_T_/lab-management/admin/cohorts"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/lab-management/admin/cohorts/__PAGE__",
+    "/lab-management/admin/cohorts",
+    "/lab-management/admin",
+    "/lab-management",
+    "/_index",
+    "/_head"
+  ]
+}

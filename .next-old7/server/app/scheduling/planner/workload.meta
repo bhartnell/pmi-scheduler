@@ -1,0 +1,17 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/scheduling/layout,_N_T_/scheduling/planner/layout,_N_T_/scheduling/planner/workload/layout,_N_T_/scheduling/planner/workload/page,_N_T_/scheduling/planner/workload"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/scheduling/planner/workload/__PAGE__",
+    "/scheduling/planner/workload",
+    "/scheduling/planner",
+    "/scheduling",
+    "/_index",
+    "/_head"
+  ]
+}

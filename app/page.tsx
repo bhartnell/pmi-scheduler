@@ -712,16 +712,16 @@ export default function HomePage() {
           {/* Lab Management Card - instructor+ only */}
           {currentUser && effectiveRole && hasMinRole(effectiveRole, 'instructor') && (
             <Link
-              href="/lab-management"
+              href="/labs"
               className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
             >
               <div className="flex flex-col items-center text-center">
                 <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-green-200 dark:group-hover:bg-green-900/50 transition-colors">
                   <GraduationCap className="w-8 h-8 text-green-600 dark:text-green-400" />
                 </div>
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Lab Management</h3>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Labs</h3>
                 <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-                  Manage lab schedules, scenarios, students, and assessments.
+                  Manage lab schedules, scenarios, and assessments.
                 </p>
                 <div className="flex flex-wrap justify-center gap-2 text-xs">
                   <span className="px-2 py-1 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full">Scenarios</span>
@@ -735,7 +735,7 @@ export default function HomePage() {
           {/* Lab Schedule (Read-Only) Card - For volunteer instructors only */}
           {currentUser && effectiveRole === 'volunteer_instructor' && (
             <Link
-              href="/lab-management/schedule"
+              href="/labs/schedule"
               className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
             >
               <div className="flex flex-col items-center text-center">
@@ -749,6 +749,29 @@ export default function HomePage() {
                 <div className="flex flex-wrap justify-center gap-2 text-xs">
                   <span className="px-2 py-1 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full">View Only</span>
                   <span className="px-2 py-1 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full">Schedule</span>
+                </div>
+              </div>
+            </Link>
+          )}
+
+          {/* Academics Card - instructor+ only */}
+          {currentUser && effectiveRole && hasMinRole(effectiveRole, 'instructor') && (
+            <Link
+              href="/academics"
+              className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
+            >
+              <div className="flex flex-col items-center text-center">
+                <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/30 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-indigo-200 dark:group-hover:bg-indigo-900/50 transition-colors">
+                  <BookOpen className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Academics</h3>
+                <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
+                  Manage students, cohorts, planner, and skill sheets.
+                </p>
+                <div className="flex flex-wrap justify-center gap-2 text-xs">
+                  <span className="px-2 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded-full">Students</span>
+                  <span className="px-2 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded-full">Cohorts</span>
+                  <span className="px-2 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded-full">Planner</span>
                 </div>
               </div>
             </Link>
@@ -780,7 +803,7 @@ export default function HomePage() {
           {/* Scheduling Card - instructor+ only */}
           {currentUser && effectiveRole && hasMinRole(effectiveRole, 'instructor') && (
           <Link
-            href="/scheduler"
+            href="/scheduling/polls"
             className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
           >
             <div className="flex flex-col items-center text-center">

@@ -215,11 +215,11 @@ export default function ReviewDetailPage() {
               <Home className="w-3 h-3" /> Home
             </Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
+            <Link href="/labs" className="hover:text-blue-600 dark:hover:text-blue-400">Labs</Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management/templates" className="hover:text-blue-600 dark:hover:text-blue-400">Templates</Link>
+            <Link href="/labs/templates" className="hover:text-blue-600 dark:hover:text-blue-400">Templates</Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management/templates/review" className="hover:text-blue-600 dark:hover:text-blue-400">Semester Review</Link>
+            <Link href="/labs/templates/review" className="hover:text-blue-600 dark:hover:text-blue-400">Semester Review</Link>
             <ChevronRight className="w-4 h-4" />
             <span className="dark:text-gray-300 truncate max-w-[200px]">{review.title}</span>
           </div>
@@ -337,7 +337,7 @@ export default function ReviewDetailPage() {
           {filteredItems.map(item => (
             <div
               key={item.id}
-              onClick={() => router.push(`/lab-management/templates/review/${reviewId}/item/${item.id}`)}
+              onClick={() => router.push(`/labs/templates/review/${reviewId}/item/${item.id}`)}
               className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 hover:border-indigo-300 dark:hover:border-indigo-600 border border-gray-200 dark:border-gray-700 cursor-pointer transition-colors"
             >
               <div className="flex items-center justify-between gap-4">

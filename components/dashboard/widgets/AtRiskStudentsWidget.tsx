@@ -79,7 +79,7 @@ export default function AtRiskStudentsWidget() {
     <WidgetCard
       title="Attendance Alerts"
       icon={<AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400" />}
-      viewAllLink="/lab-management/students"
+      viewAllLink="/academics/students"
       viewAllText="View Students"
       loading={loading}
     >
@@ -106,7 +106,7 @@ export default function AtRiskStudentsWidget() {
                   <UserX className="w-4 h-4 flex-shrink-0 mt-0.5 text-gray-400 dark:text-gray-500" />
                   <div className="min-w-0">
                     <Link
-                      href={`/lab-management/students/${student.student_id}`}
+                      href={`/academics/students/${student.student_id}`}
                       className="text-sm font-medium text-gray-900 dark:text-white hover:underline truncate block"
                     >
                       {student.first_name} {student.last_name}

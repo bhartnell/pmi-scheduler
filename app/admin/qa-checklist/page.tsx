@@ -195,7 +195,7 @@ const INITIAL_GROUPS: Omit<ChecklistGroup, 'collapsed'>[] = [
       { id: 'stu-01', feature: 'My Progress view', steps: 'Log in as a student. Navigate to the student portal. Verify skill completion percentages match actual sign-offs in admin.', priority: 'High', status: 'untested', notes: '' },
       { id: 'stu-02', feature: 'Student portfolio view', steps: 'As a student, view own portfolio. Verify all completed scenarios, skills, and attendance data is visible and accurate.', priority: 'High', status: 'untested', notes: '' },
       { id: 'stu-03', feature: 'Clinical hours view', steps: 'As a student, navigate to clinical hours. Verify all logged hours are displayed. Verify the hours total matches admin view.', priority: 'High', status: 'untested', notes: '' },
-      { id: 'stu-04', feature: 'Student access restrictions', steps: 'As a student, attempt to navigate to /admin, /lab-management/admin, or other restricted pages. Verify access is denied and user is redirected.', priority: 'Critical', status: 'untested', notes: '' },
+      { id: 'stu-04', feature: 'Student access restrictions', steps: 'As a student, attempt to navigate to /admin, /admin, or other restricted pages. Verify access is denied and user is redirected.', priority: 'Critical', status: 'untested', notes: '' },
     ],
   },
   {

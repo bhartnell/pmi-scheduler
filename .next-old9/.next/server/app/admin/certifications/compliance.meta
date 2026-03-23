@@ -1,0 +1,17 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/admin/layout,_N_T_/admin/certifications/layout,_N_T_/admin/certifications/compliance/layout,_N_T_/admin/certifications/compliance/page,_N_T_/admin/certifications/compliance"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/admin/certifications/compliance/__PAGE__",
+    "/admin/certifications/compliance",
+    "/admin/certifications",
+    "/admin",
+    "/_index",
+    "/_head"
+  ]
+}

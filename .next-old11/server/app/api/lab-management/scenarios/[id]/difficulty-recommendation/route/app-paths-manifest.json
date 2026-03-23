@@ -1,0 +1,3 @@
+{
+  "/api/lab-management/scenarios/[id]/difficulty-recommendation/route": "app/api/lab-management/scenarios/[id]/difficulty-recommendation/route.js"
+}

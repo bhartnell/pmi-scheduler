@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/scheduling/layout,_N_T_/scheduling/resource-bookings/layout,_N_T_/scheduling/resource-bookings/page,_N_T_/scheduling/resource-bookings"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/scheduling/resource-bookings/__PAGE__",
+    "/scheduling/resource-bookings",
+    "/scheduling",
+    "/_index",
+    "/_head"
+  ]
+}

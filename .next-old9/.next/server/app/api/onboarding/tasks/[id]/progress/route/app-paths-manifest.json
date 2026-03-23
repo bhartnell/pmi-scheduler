@@ -1,0 +1,3 @@
+{
+  "/api/onboarding/tasks/[id]/progress/route": "app/api/onboarding/tasks/[id]/progress/route.js"
+}

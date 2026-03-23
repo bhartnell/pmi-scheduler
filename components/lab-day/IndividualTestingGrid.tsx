@@ -391,7 +391,7 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
             <div className="space-y-1 pt-1">
               {cell.evaluationId && (
                 <a
-                  href={`/skill-sheets/evaluations/${cell.evaluationId}`}
+                  href={`/academics/skill-sheets/evaluations/${cell.evaluationId}`}
                   className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg"
                   onClick={(e) => e.stopPropagation()}
                 >
@@ -400,7 +400,7 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
               )}
               {cell.evaluationId && (
                 <a
-                  href={`/api/skill-sheets/evaluations/print?id=${cell.evaluationId}`}
+                  href={`/api/academics/skill-sheets/evaluations/print?id=${cell.evaluationId}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"

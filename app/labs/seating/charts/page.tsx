@@ -134,7 +134,7 @@ function SeatingChartsContent() {
 
       const data = await res.json();
       if (data.success) {
-        router.push(`/lab-management/seating/charts/${data.chart.id}`);
+        router.push(`/labs/seating/charts/${data.chart.id}`);
       } else {
         alert('Failed to create chart: ' + data.error);
       }
@@ -203,7 +203,7 @@ function SeatingChartsContent() {
               Home
             </Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
+            <Link href="/labs" className="hover:text-blue-600 dark:hover:text-blue-400">Labs</Link>
             <ChevronRight className="w-4 h-4" />
             <span className="dark:text-gray-300">Seating Charts</span>
           </div>
@@ -303,7 +303,7 @@ function SeatingChartsContent() {
 
                   <div className="flex items-center gap-2">
                     <Link
-                      href={`/lab-management/seating/charts/${chart.id}`}
+                      href={`/labs/seating/charts/${chart.id}`}
                       className="inline-flex items-center gap-1 px-3 py-1.5 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded"
                     >
                       <Eye className="w-4 h-4" />

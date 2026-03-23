@@ -1,0 +1,16 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/lab-management/layout,_N_T_/lab-management/mentorship/layout,_N_T_/lab-management/mentorship/page,_N_T_/lab-management/mentorship"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/lab-management/mentorship/__PAGE__",
+    "/lab-management/mentorship",
+    "/lab-management",
+    "/_index",
+    "/_head"
+  ]
+}

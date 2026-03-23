@@ -80,8 +80,8 @@ export default function GlobalTimerBanner() {
   // Pages that already have their own dedicated timer component (LabTimer, TimerBanner)
   // GlobalTimerBanner should NOT render on these pages to avoid showing two timers
   // that poll at different rates, which causes desync issues (Bug 6)
-  const hasOwnTimerComponent = pathname.startsWith('/lab-management/schedule/') ||
-    pathname.startsWith('/lab-management/grade/');
+  const hasOwnTimerComponent = pathname.startsWith('/labs/schedule/') ||
+    pathname.startsWith('/labs/grade/');
 
   // Poll for active timer - optimized interval based on state
   // Uses visibility-aware polling to pause when tab is hidden
@@ -232,7 +232,7 @@ export default function GlobalTimerBanner() {
           {/* Right: Link to timer page */}
           <div className="flex items-center gap-2">
             <Link
-              href={`/lab-management/schedule/${labDay.id}?timer=open`}
+              href={`/labs/schedule/${labDay.id}?timer=open`}
               aria-label={`Open timer for ${labDay.displayName}`}
               className="flex items-center gap-1 px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors"
             >

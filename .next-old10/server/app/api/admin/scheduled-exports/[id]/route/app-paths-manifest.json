@@ -1,0 +1,3 @@
+{
+  "/api/admin/scheduled-exports/[id]/route": "app/api/admin/scheduled-exports/[id]/route.js"
+}

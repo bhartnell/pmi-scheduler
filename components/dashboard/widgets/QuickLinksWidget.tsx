@@ -30,13 +30,13 @@ export const QUICK_LINK_DEFINITIONS: Record<string, {
   color: string;
 }> = {
   scenarios: {
-    href: '/lab-management/scenarios',
+    href: '/labs/scenarios',
     icon: BookOpen,
     label: 'Scenarios',
     color: 'bg-purple-500',
   },
   students: {
-    href: '/lab-management/students',
+    href: '/academics/students',
     icon: Users,
     label: 'Students',
     color: 'bg-green-500',
@@ -72,50 +72,50 @@ export const QUICK_LINK_DEFINITIONS: Record<string, {
     color: 'bg-indigo-500',
   },
   admin: {
-    href: '/lab-management/admin',
+    href: '/labs/admin',
     icon: Settings,
     label: 'Admin',
     color: 'bg-gray-500',
   },
   feedback: {
-    href: '/lab-management/admin/feedback',
+    href: '/admin/feedback',
     icon: MessageSquare,
     label: 'Feedback',
     color: 'bg-pink-500',
   },
   my_certs: {
-    href: '/lab-management/my-certifications',
+    href: '/labs/my-certifications',
     icon: Award,
     label: 'My Certs',
     color: 'bg-yellow-500',
   },
   // learning_styles - archived, hidden from nav
   // learning_styles: {
-  //   href: '/lab-management/seating/learning-styles',
+  //   href: '/labs/seating/learning-styles',
   //   icon: Brain,
   //   label: 'Learning',
   //   color: 'bg-cyan-500',
   // },
   cohorts: {
-    href: '/lab-management/admin/cohorts',
+    href: '/academics/cohorts',
     icon: Users,
     label: 'Cohorts',
     color: 'bg-teal-500',
   },
   lab_days: {
-    href: '/lab-management/schedule',
+    href: '/labs/schedule',
     icon: Calendar,
     label: 'Lab Days',
     color: 'bg-sky-500',
   },
   skill_sheets: {
-    href: '/lab-management/skill-sheets',
+    href: '/academics/skill-sheets',
     icon: FileText,
     label: 'Skill Sheets',
     color: 'bg-lime-500',
   },
   reports: {
-    href: '/lab-management/reports',
+    href: '/reports',
     icon: BarChart3,
     label: 'Reports',
     color: 'bg-violet-500',
@@ -127,7 +127,7 @@ export const QUICK_LINK_DEFINITIONS: Record<string, {
     color: 'bg-indigo-500',
   },
   todays_labs: {
-    href: '/lab-management/schedule?today=true',
+    href: '/labs/schedule?today=true',
     icon: Timer,
     label: "Today's Labs",
     color: 'bg-emerald-500',
@@ -139,7 +139,7 @@ export const QUICK_LINK_DEFINITIONS: Record<string, {
     color: 'bg-rose-500',
   },
   ekg_warmup: {
-    href: '/lab-management/ekg-warmup',
+    href: '/labs/ekg-warmup',
     icon: Activity,
     label: 'EKG Warmup',
     color: 'bg-red-600',

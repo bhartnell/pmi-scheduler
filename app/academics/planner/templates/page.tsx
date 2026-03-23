@@ -109,7 +109,7 @@ export default function TemplateEditorPage() {
     setLoading(true);
     setError(null);
     try {
-      let url = `/api/scheduling/planner/templates?program_type=${selectedProgram}`;
+      let url = `/api/academics/planner/templates?program_type=${selectedProgram}`;
       if (needsSemester && selectedSemester !== null) {
         url += `&semester_number=${selectedSemester}`;
       }
@@ -184,8 +184,8 @@ export default function TemplateEditorPage() {
     try {
       const isNew = !editingTemplate;
       const url = isNew
-        ? '/api/scheduling/planner/templates'
-        : `/api/scheduling/planner/templates/${editingTemplate!.id}`;
+        ? '/api/academics/planner/templates'
+        : `/api/academics/planner/templates/${editingTemplate!.id}`;
 
       const res = await fetch(url, {
         method: isNew ? 'POST' : 'PUT',
@@ -213,7 +213,7 @@ export default function TemplateEditorPage() {
     if (!confirm('Delete this template? This cannot be undone.')) return;
     setSaving(true);
     try {
-      const res = await fetch(`/api/scheduling/planner/templates/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/academics/planner/templates/${id}`, { method: 'DELETE' });
       if (!res.ok) {
         const result = await res.json();
         throw new Error(result.error);
@@ -239,7 +239,7 @@ export default function TemplateEditorPage() {
       <div className="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-6 py-4">
         <div className="flex items-center justify-between max-w-5xl mx-auto">
           <div className="flex items-center gap-3">
-            <a href="/scheduling/planner" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+            <a href="/academics/planner" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
               <ChevronLeft className="w-5 h-5" />
             </a>
             <div>

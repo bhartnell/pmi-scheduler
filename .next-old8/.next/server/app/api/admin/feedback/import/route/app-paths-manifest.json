@@ -1,0 +1,3 @@
+{
+  "/api/admin/feedback/import/route": "app/api/admin/feedback/import/route.js"
+}

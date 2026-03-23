@@ -380,7 +380,7 @@ export default function SkillCompetenciesPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       <LabHeader
         breadcrumbs={[
-          { label: 'Skills', href: '/lab-management/skill-sheets' },
+          { label: 'Skills', href: '/academics/skill-sheets' },
           { label: 'Competency Tracker' },
         ]}
         title="Skill Competency Tracker"
@@ -388,7 +388,7 @@ export default function SkillCompetenciesPage() {
           <div className="flex items-center gap-2">
             {selectedCohort && (
               <Link
-                href={`/lab-management/skills/competencies/report?cohort_id=${selectedCohort}${selectedCategory ? `&category=${encodeURIComponent(selectedCategory)}` : ''}`}
+                href={`/labs/skills/competencies/report?cohort_id=${selectedCohort}${selectedCategory ? `&category=${encodeURIComponent(selectedCategory)}` : ''}`}
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-lg transition-colors"
               >
                 <BarChart3 className="w-4 h-4" />
@@ -592,7 +592,7 @@ export default function SkillCompetenciesPage() {
                         {/* Sticky name cell */}
                         <td className="sticky left-0 z-10 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/20 px-3 py-1 border-r dark:border-gray-600 whitespace-nowrap">
                           <Link
-                            href={`/lab-management/students/${student.id}`}
+                            href={`/academics/students/${student.id}`}
                             className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline"
                           >
                             {student.last_name}, {student.first_name}

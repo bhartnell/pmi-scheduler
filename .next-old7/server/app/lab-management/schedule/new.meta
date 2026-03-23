@@ -1,0 +1,17 @@
+{
+  "headers": {
+    "x-nextjs-stale-time": "300",
+    "x-nextjs-prerender": "1",
+    "x-next-cache-tags": "_N_T_/layout,_N_T_/lab-management/layout,_N_T_/lab-management/schedule/layout,_N_T_/lab-management/schedule/new/layout,_N_T_/lab-management/schedule/new/page,_N_T_/lab-management/schedule/new"
+  },
+  "segmentPaths": [
+    "/_tree",
+    "/_full",
+    "/lab-management/schedule/new/__PAGE__",
+    "/lab-management/schedule/new",
+    "/lab-management/schedule",
+    "/lab-management",
+    "/_index",
+    "/_head"
+  ]
+}

@@ -561,7 +561,7 @@ function ScenarioCard({
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2 mb-1">
             <Link
-              href={`/lab-management/scenarios/${scenario.id}`}
+              href={`/labs/scenarios/${scenario.id}`}
               className="font-semibold text-gray-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 truncate"
             >
               {scenario.title}
@@ -691,7 +691,7 @@ function ScenarioCard({
 
           {/* Open arrow */}
           <Link
-            href={`/lab-management/scenarios/${scenario.id}`}
+            href={`/labs/scenarios/${scenario.id}`}
             className="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
             title="Open scenario"
           >
@@ -852,7 +852,7 @@ export default function ScenarioLibraryPage() {
     setCloneSuccess(`Cloned as "${newTitle}"`);
     setTimeout(() => setCloneSuccess(''), 4000);
     // Navigate to the clone
-    router.push(`/lab-management/scenarios/${newId}`);
+    router.push(`/labs/scenarios/${newId}`);
   }, [router]);
 
   // Export a single scenario as JSON
@@ -929,9 +929,9 @@ export default function ScenarioLibraryPage() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-1">
-                <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
+                <Link href="/labs" className="hover:text-blue-600 dark:hover:text-blue-400">Labs</Link>
                 <ChevronRight className="w-4 h-4" />
-                <Link href="/lab-management/scenarios" className="hover:text-blue-600 dark:hover:text-blue-400">Scenarios</Link>
+                <Link href="/labs/scenarios" className="hover:text-blue-600 dark:hover:text-blue-400">Scenarios</Link>
                 <ChevronRight className="w-4 h-4" />
                 <span className="text-gray-900 dark:text-white">Library</span>
               </div>
@@ -962,7 +962,7 @@ export default function ScenarioLibraryPage() {
 
               {/* New scenario */}
               <Link
-                href="/lab-management/scenarios/new"
+                href="/labs/scenarios/new"
                 className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-sm font-medium"
               >
                 <Plus className="w-4 h-4" />
@@ -1155,7 +1155,7 @@ export default function ScenarioLibraryPage() {
             </p>
             {!hasActiveFilters && (
               <Link
-                href="/lab-management/scenarios/new"
+                href="/labs/scenarios/new"
                 className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
               >
                 <Plus className="w-4 h-4" />

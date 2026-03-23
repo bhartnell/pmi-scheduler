@@ -1,0 +1,3 @@
+{
+  "/api/admin/bulk-operations/[id]/rollback/route": "app/api/admin/bulk-operations/[id]/rollback/route.js"
+}

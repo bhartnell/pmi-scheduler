@@ -394,9 +394,9 @@ export default function CohortManagementPage() {
       <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-6">
           <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1">
-            <Link href="/lab-management" className="hover:text-blue-600 dark:hover:text-blue-400">Lab Management</Link>
+            <Link href="/labs" className="hover:text-blue-600 dark:hover:text-blue-400">Labs</Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/lab-management/admin" className="hover:text-blue-600 dark:hover:text-blue-400">Admin</Link>
+            <Link href="/admin" className="hover:text-blue-600 dark:hover:text-blue-400">Admin</Link>
             <ChevronRight className="w-4 h-4" />
             <span className="dark:text-gray-300">Cohorts</span>
           </div>
@@ -724,7 +724,7 @@ export default function CohortManagementPage() {
                         </div>
                         <div className="flex items-center gap-1">
                           <Link
-                            href={`/lab-management/cohorts/${cohort.id}`}
+                            href={`/academics/cohorts/${cohort.id}`}
                             className="px-3 py-1 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded"
                           >
                             Open Hub

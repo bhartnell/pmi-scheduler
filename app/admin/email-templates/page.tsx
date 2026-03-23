@@ -165,7 +165,7 @@ const DEFAULT_SAMPLE_VALUES: Record<string, string> = {
   '{{taskUrl}}':            'https://pmiparamedic.tools/tasks',
   '{{labDate}}':            'February 28, 2026',
   '{{stationInfo}}':        'Station 1 – Airway Management',
-  '{{labUrl}}':             'https://pmiparamedic.tools/lab-management/schedule',
+  '{{labUrl}}':             'https://pmiparamedic.tools/labs/schedule',
   '{{lab_name}}':           'Cohort 24-A Lab',
   '{{shiftDate}}':          'February 28, 2026',
   '{{shiftDetails}}':       '0800–1600, Station 3',

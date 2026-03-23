@@ -1,0 +1,3 @@
+module.exports=[288774,a=>{"use strict";let b=(0,a.i(89592).default)("download",[["path",{d:"M12 15V3",key:"m9g1x1"}],["path",{d:"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4",key:"ih7n3h"}],["path",{d:"m7 10 5 5 5-5",key:"brsn70"}]]);a.s(["Download",()=>b],288774)},532345,a=>{"use strict";let b=(0,a.i(89592).default)("trending-up",[["path",{d:"M16 7h6v6",key:"box55l"}],["path",{d:"m22 7-8.5 8.5-5-5L2 17",key:"1t1m79"}]]);a.s(["TrendingUp",()=>b],532345)},863398,a=>{"use strict";let b=(0,a.i(89592).default)("dollar-sign",[["line",{x1:"12",x2:"12",y1:"2",y2:"22",key:"7eqyqh"}],["path",{d:"M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6",key:"1b0p4s"}]]);a.s(["DollarSign",()=>b],863398)}];
+
+//# sourceMappingURL=e71d5_lucide-react_dist_esm_icons_658befd0._.js.map

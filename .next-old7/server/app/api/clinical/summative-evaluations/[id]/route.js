@@ -1,0 +1,11 @@
+var R=require("../../../../../chunks/[turbopack]_runtime.js")("server/app/api/clinical/summative-evaluations/[id]/route.js")
+R.c("server/chunks/[root-of-the-server]__94a14e56._.js")
+R.c("server/chunks/[root-of-the-server]__a801940c._.js")
+R.c("server/chunks/[root-of-the-server]__2d48b7f9._.js")
+R.c("server/chunks/_claude_worktrees_focused-goodall_lib_supabase_ts_b99b8956._.js")
+R.c("server/chunks/[root-of-the-server]__6536df96._.js")
+R.c("server/chunks/[root-of-the-server]__d6dcdb21._.js")
+R.c("server/chunks/e71d5_next_7d129b84._.js")
+R.c("server/chunks/040eb_server_app_api_clinical_summative-evaluations_[id]_route_actions_4ae6e9c3.js")
+R.m(113818)
+module.exports=R.m(113818).exports
