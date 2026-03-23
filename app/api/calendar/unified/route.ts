@@ -17,6 +17,9 @@ export interface CalendarEvent {
   linked_id?: string;
   linked_url?: string;
   event_type: 'class' | 'lab' | 'exam' | 'clinical' | 'shift' | 'meeting' | 'other';
+  status?: 'draft' | 'published' | 'cancelled';
+  content_notes?: string;
+  linked_lab_day_id?: string;
   metadata?: Record<string, unknown>;
 }
 
@@ -69,6 +72,9 @@ export async function GET(request: NextRequest) {
 
     const events: CalendarEvent[] = [];
 
+    // Track linked lab day IDs from schedule blocks to avoid duplicate events
+    const linkedLabDayIds = new Set<string>();
+
     // 1. Schedule blocks (classes/exams) from pmi_schedule_blocks
     if (include.has('classes')) {
       try {
@@ -76,6 +82,7 @@ export async function GET(request: NextRequest) {
           .from('pmi_schedule_blocks')
           .select(`
             id, date, start_time, end_time, block_type, title, course_name, color,
+            content_notes, status, linked_lab_day_id,
             room:pmi_rooms!pmi_schedule_blocks_room_id_fkey(id, name),
             program_schedule:pmi_program_schedules!pmi_schedule_blocks_program_schedule_id_fkey(
               id, label,
@@ -132,6 +139,12 @@ export async function GET(request: NextRequest) {
 
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const roomData = block.room as any;
+            const blockStatus = (block.status as CalendarEvent['status']) || 'draft';
+
+            // Track linked lab day IDs so we don't duplicate them
+            if (block.linked_lab_day_id) {
+              linkedLabDayIds.add(block.linked_lab_day_id as string);
+            }
 
             events.push({
               id: `planner-${block.id}`,
@@ -148,6 +161,9 @@ export async function GET(request: NextRequest) {
               linked_id: block.id,
               linked_url: '/scheduling/planner',
               event_type: eventType,
+              status: blockStatus,
+              content_notes: (block.content_notes as string) || undefined,
+              linked_lab_day_id: (block.linked_lab_day_id as string) || undefined,
               metadata: {
                 block_type: block.block_type,
                 program_label: ps?.label,
@@ -160,7 +176,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 2. Lab days
+    // 2. Lab days — filter out any that are already linked from schedule blocks
     if (include.has('labs')) {
       try {
         let query = supabase
@@ -186,6 +202,9 @@ export async function GET(request: NextRequest) {
         if (labDays) {
           for (const ld of labDays) {
             if (!ld.date) continue;
+
+            // Skip lab days that are already linked to a schedule block
+            if (linkedLabDayIds.has(ld.id)) continue;
 
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const cohort = ld.cohort as any;
@@ -352,7 +371,7 @@ export async function GET(request: NextRequest) {
     // 5. Open shifts
     if (include.has('shifts')) {
       try {
-        let query = supabase
+        const query = supabase
           .from('open_shifts')
           .select(`
             id, title, date, start_time, end_time, location, department,

@@ -72,6 +72,9 @@ export interface PmiScheduleBlock {
   title: string | null;
   course_name: string | null;
   content_notes: string | null;
+  chapter_references: string[] | null;
+  status: 'draft' | 'published' | 'cancelled';
+  linked_lab_day_id: string | null;
   color: string | null;                // block-level color override
   is_recurring: boolean;
   specific_date: string | null;

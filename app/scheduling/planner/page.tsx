@@ -580,6 +580,7 @@ function BlockEditModal({
     title: block.title || '',
     course_name: block.course_name || '',
     content_notes: block.content_notes || '',
+    status: (block.status as string) || 'draft',
     color: block.color || '',
     instructor_ids: [] as string[],
     date: block.date || '',
@@ -655,6 +656,7 @@ function BlockEditModal({
       end_time: formData.end_time,
       title: formData.title || null,
       content_notes: formData.content_notes || null,
+      status: formData.status || 'draft',
       color: formData.color || null,
     };
 
@@ -718,6 +720,7 @@ function BlockEditModal({
         block_type: isLinked ? formData.block_type : 'other',
         color: formData.color || null,
         content_notes: formData.content_notes || null,
+        status: formData.status || 'draft',
         program_schedule_id: isLinked ? (formData.program_schedule_id || null) : null,
         room_id: isLinked ? (formData.room_id || null) : null,
         instructor_ids: formData.instructor_ids.length > 0 ? formData.instructor_ids : null,
@@ -1055,6 +1058,19 @@ function BlockEditModal({
                 placeholder="Content notes, topics covered, etc."
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 resize-none"
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+              <select
+                value={formData.status}
+                onChange={(e) => setField('status', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
+              >
+                <option value="draft">Draft</option>
+                <option value="published">Published</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
             </div>
 
             {/* Lab Day Cross-Reference */}
@@ -2738,6 +2754,33 @@ function SemesterPlannerPage() {
             >
               <Wand2 className="w-4 h-4 text-purple-500" /> Templates
             </a>
+
+            {/* Publish All */}
+            <button
+              onClick={async () => {
+                if (!selectedSemesterId) return;
+                if (!confirm('Publish all draft blocks for this semester? This will set all draft blocks to Published.')) return;
+                try {
+                  const res = await fetch('/api/scheduling/planner/blocks/publish-all', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ semester_id: selectedSemesterId }),
+                  });
+                  const result = await res.json();
+                  if (!res.ok) {
+                    alert(result.error || 'Failed to publish blocks');
+                    return;
+                  }
+                  alert(`Published ${result.count || 0} block(s)`);
+                  await loadSemesterData();
+                } catch (err) {
+                  alert(err instanceof Error ? err.message : 'Publish failed');
+                }
+              }}
+              className="px-3 py-1.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg flex items-center gap-1.5"
+            >
+              <Eye className="w-4 h-4" /> Publish All
+            </button>
 
             {/* Generate */}
             <button
