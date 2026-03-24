@@ -77,7 +77,20 @@ export async function POST(request: NextRequest) {
       const criteriaRatings = (assessment.criteria_ratings as any[]) || [];
       const ratingLabels: Record<string, string> = { S: 'Satisfactory', NI: 'Needs Improvement', U: 'Unsatisfactory' };
       const criteriaHtml = criteriaRatings
-        .map(r => `${r.criteria_name || r.criteria_id}: <strong>${ratingLabels[r.rating] || r.rating || 'N/A'}</strong>`)
+        .map(r => {
+          let line = `${r.criteria_name || r.criteria_id}: <strong>${ratingLabels[r.rating] || r.rating || 'N/A'}</strong>`;
+          // Add sub-item breakdown for SAMPLE/OPQRST/DCAP-BTLS
+          if (r.sub_items && Array.isArray(r.sub_items) && r.sub_items.length > 0) {
+            const got = r.sub_items.filter((s: any) => s.checked).map((s: any) => s.label);
+            const missed = r.sub_items.filter((s: any) => !s.checked).map((s: any) => s.label);
+            const total = r.sub_items.length;
+            line += `<br><span style="margin-left:16px;font-size:12px;color:#6b7280;">${got.length}/${total} obtained`;
+            if (got.length > 0) line += ` &mdash; Got: ${got.join(', ')}`;
+            if (missed.length > 0) line += `. Missed: ${missed.join(', ')}`;
+            line += '</span>';
+          }
+          return line;
+        })
         .join('<br>');
 
       // Build critical actions HTML
