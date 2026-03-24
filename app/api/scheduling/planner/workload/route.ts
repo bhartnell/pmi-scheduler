@@ -126,6 +126,7 @@ async function getWeekDetail(semesterId: string, instructorId: string, weekNumbe
       schedule_block_id,
       block:pmi_schedule_blocks!pmi_block_instructors_schedule_block_id_fkey(
         id, start_time, end_time, day_of_week, title, course_name, date, week_number,
+        linked_lab_day_id,
         room:pmi_rooms(name)
       )
     `)
@@ -143,6 +144,9 @@ async function getWeekDetail(semesterId: string, instructorId: string, weekNumbe
   }> = [];
 
   const seenSlots = new Set<string>();
+
+  // Track linked lab days for dedup
+  const linkedLabDayHours = new Map<string, number>(); // labDayId → block hours
 
   for (const ib of (instrBlocks || [])) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -177,13 +181,19 @@ async function getWeekDetail(semesterId: string, instructorId: string, weekNumbe
       room: b.room?.name || null,
       source: 'planner',
     });
+
+    // Track linked lab days for dedup
+    if (b.linked_lab_day_id) {
+      const existing = linkedLabDayHours.get(b.linked_lab_day_id) || 0;
+      if (hours > existing) linkedLabDayHours.set(b.linked_lab_day_id, hours);
+    }
   }
 
-  // Lab station hours for this week
+  // Lab hours for this week
   try {
     const { data: labDays } = await supabase
       .from('lab_days')
-      .select('id, date')
+      .select('id, date, start_time, end_time')
       .gte('date', weekStartStr)
       .lte('date', weekEndStr);
 
@@ -201,24 +211,57 @@ async function getWeekDetail(semesterId: string, instructorId: string, weekNumbe
           .eq('user_id', instructorId)
           .in('station_id', stations.map(s => s.id));
 
-        const labDayDateMap = new Map<string, string>();
-        for (const ld of labDays) labDayDateMap.set(ld.id, ld.date);
+        // Build lookup maps
+        const labDayMap = new Map<string, { date: string; start_time: string | null; end_time: string | null }>();
+        for (const ld of labDays) labDayMap.set(ld.id, { date: ld.date, start_time: ld.start_time, end_time: ld.end_time });
+
+        // Accumulate station hours per lab_day
+        const labDayStationHours = new Map<string, number>();
+        const assignedLabDayIds = new Set<string>();
 
         for (const a of (assignments || [])) {
           const station = stations.find(s => s.id === a.station_id);
           if (!station) continue;
-          const labDate = labDayDateMap.get(station.lab_day_id);
+          assignedLabDayIds.add(station.lab_day_id);
           const rotMinutes = station.rotation_minutes || 30;
           const numRotations = station.num_rotations || 1;
-          const hours = Math.round((rotMinutes * numRotations) / 60 * 100) / 100;
+          const sHours = (rotMinutes * numRotations) / 60;
+          labDayStationHours.set(station.lab_day_id, (labDayStationHours.get(station.lab_day_id) || 0) + sHours);
+        }
+
+        // Create one entry per lab_day
+        for (const labDayId of assignedLabDayIds) {
+          const ld = labDayMap.get(labDayId);
+          if (!ld) continue;
+
+          let labHours: number;
+          let labStart = '';
+          let labEnd = '';
+
+          if (ld.start_time && ld.end_time) {
+            const [lsh, lsm] = ld.start_time.split(':').map(Number);
+            const [leh, lem] = ld.end_time.split(':').map(Number);
+            labHours = ((leh * 60 + lem) - (lsh * 60 + lsm)) / 60;
+            labStart = ld.start_time;
+            labEnd = ld.end_time;
+          } else {
+            labHours = labDayStationHours.get(labDayId) || 2.5;
+          }
+
+          // Dedup with linked schedule blocks
+          const linkedBlockHours = linkedLabDayHours.get(labDayId);
+          if (linkedBlockHours !== undefined) {
+            if (labHours <= linkedBlockHours) continue;
+            labHours = labHours - linkedBlockHours;
+          }
 
           details.push({
-            title: `Lab: ${station.name || 'Station'}`,
-            start_time: '',
-            end_time: '',
-            hours,
+            title: 'Lab Day',
+            start_time: labStart,
+            end_time: labEnd,
+            hours: Math.round(labHours * 100) / 100,
             day_of_week: null,
-            date: labDate || null,
+            date: ld.date,
             room: null,
             source: 'lab',
           });
@@ -227,8 +270,40 @@ async function getWeekDetail(semesterId: string, instructorId: string, weekNumbe
     }
   } catch { /* lab tables may not exist */ }
 
-  // LVFR assignment hours for this week
+  // LVFR hours for this week
   try {
+    // First: plan placements with actual times
+    const { data: lvfrPlacements } = await supabase
+      .from('lvfr_aemt_plan_placements')
+      .select('instructor_id, date, start_time, end_time, custom_title')
+      .gte('date', weekStartStr)
+      .lte('date', weekEndStr)
+      .eq('instructor_id', instructorId);
+
+    const lvfrPlacementDates = new Set<string>();
+
+    for (const lp of (lvfrPlacements || [])) {
+      if (!lp.date) continue;
+      const [lsh, lsm] = lp.start_time.split(':').map(Number);
+      const [leh, lem] = lp.end_time.split(':').map(Number);
+      const hours = Math.round(((leh * 60 + lem) - (lsh * 60 + lsm)) / 60 * 100) / 100;
+      if (hours <= 0) continue;
+
+      lvfrPlacementDates.add(lp.date);
+
+      details.push({
+        title: lp.custom_title || 'LVFR',
+        start_time: lp.start_time,
+        end_time: lp.end_time,
+        hours,
+        day_of_week: null,
+        date: lp.date,
+        room: null,
+        source: 'lvfr',
+      });
+    }
+
+    // Fallback: instructor assignments for dates not covered by placements
     const { data: lvfrAssignments } = await supabase
       .from('lvfr_aemt_instructor_assignments')
       .select('date, primary_instructor_id, secondary_instructor_id, additional_instructors')
@@ -238,14 +313,14 @@ async function getWeekDetail(semesterId: string, instructorId: string, weekNumbe
     const LVFR_HOURS_PER_DAY = 8;
 
     for (const la of (lvfrAssignments || [])) {
-      const instructorIds: string[] = [];
-      if (la.primary_instructor_id) instructorIds.push(la.primary_instructor_id);
-      if (la.secondary_instructor_id) instructorIds.push(la.secondary_instructor_id);
+      const instrIds: string[] = [];
+      if (la.primary_instructor_id) instrIds.push(la.primary_instructor_id);
+      if (la.secondary_instructor_id) instrIds.push(la.secondary_instructor_id);
       if (la.additional_instructors && Array.isArray(la.additional_instructors)) {
-        instructorIds.push(...la.additional_instructors);
+        instrIds.push(...la.additional_instructors);
       }
-
-      if (!instructorIds.includes(instructorId)) continue;
+      if (!instrIds.includes(instructorId)) continue;
+      if (lvfrPlacementDates.has(la.date)) continue;
 
       details.push({
         title: 'LVFR Assignment',
@@ -258,7 +333,7 @@ async function getWeekDetail(semesterId: string, instructorId: string, weekNumbe
         source: 'lvfr',
       });
     }
-  } catch { /* LVFR table may not exist */ }
+  } catch { /* LVFR tables may not exist */ }
 
   // Sort by date then start_time
   details.sort((a, b) => {
@@ -313,6 +388,7 @@ export async function POST(request: NextRequest) {
       .from('pmi_schedule_blocks')
       .select(`
         id, start_time, end_time, day_of_week, title, course_name, date, week_number,
+        linked_lab_day_id,
         program_schedule:pmi_program_schedules!pmi_schedule_blocks_program_schedule_id_fkey(
           id,
           cohort:cohorts!pmi_program_schedules_cohort_id_fkey(
@@ -331,6 +407,10 @@ export async function POST(request: NextRequest) {
 
     // Build workload map: instructor_id → week_number → WeekEntry
     const workloadMap = new Map<string, Map<number, WeekEntry>>();
+
+    // Track linked lab days from schedule blocks for deduplication
+    // Key: "instrId|labDayId" → hours from the schedule block
+    const linkedLabDayBlockHours = new Map<string, number>();
 
     for (const block of (blocks || [])) {
       const [sh, sm] = block.start_time.split(':').map(Number);
@@ -376,13 +456,22 @@ export async function POST(request: NextRequest) {
           date: block.date,
           source: 'planner',
         });
+
+        // Track linked lab days for dedup
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const linkedLabDayId = (block as any).linked_lab_day_id;
+        if (linkedLabDayId) {
+          const dedupKey = `${instrId}|${linkedLabDayId}`;
+          const existing = linkedLabDayBlockHours.get(dedupKey) || 0;
+          if (hours > existing) linkedLabDayBlockHours.set(dedupKey, hours);
+        }
       }
     }
 
     // ── Lab station hours ──
     const { data: labDays } = await supabase
       .from('lab_days')
-      .select('id, date')
+      .select('id, date, start_time, end_time')
       .gte('date', semester.start_date)
       .lte('date', semester.end_date);
 
@@ -407,8 +496,16 @@ export async function POST(request: NextRequest) {
           `)
           .in('station_id', stationIds);
 
+        // Build lab day lookup maps
         const labDayDateMap = new Map<string, string>();
-        for (const ld of labDays) labDayDateMap.set(ld.id, ld.date);
+        const labDayTimeMap = new Map<string, { start_time: string | null; end_time: string | null }>();
+        for (const ld of labDays) {
+          labDayDateMap.set(ld.id, ld.date);
+          labDayTimeMap.set(ld.id, { start_time: ld.start_time, end_time: ld.end_time });
+        }
+
+        // Track hours per instructor per lab_day to dedup across multiple stations
+        const instrLabDayHours = new Map<string, number>();
 
         for (const sa of (stationAssignments || [])) {
           if (!sa.user_id) continue;
@@ -419,29 +516,73 @@ export async function POST(request: NextRequest) {
           const labDate = labDayDateMap.get(station.lab_day_id);
           if (!labDate) continue;
 
+          const weekNum = calcWeekNum(labDate, start);
+          if (weekNum < 1 || weekNum > totalWeeks) continue;
+
+          // Calculate station hours from rotation data
           const rotMinutes = station.rotation_minutes || 30;
           const numRotations = station.num_rotations || 1;
           const stationHours = (rotMinutes * numRotations) / 60;
 
+          // Accumulate per instructor per lab day
+          const ldKey = `${sa.user_id}|${station.lab_day_id}`;
+          instrLabDayHours.set(ldKey, (instrLabDayHours.get(ldKey) || 0) + stationHours);
+        }
+
+        // Now create entries per instructor per lab_day (one entry per lab day, not per station)
+        for (const [ldKey, stationTotalHours] of instrLabDayHours) {
+          const [instrId, labDayId] = ldKey.split('|');
+          const labDate = labDayDateMap.get(labDayId);
+          if (!labDate) continue;
+
           const weekNum = calcWeekNum(labDate, start);
           if (weekNum < 1 || weekNum > totalWeeks) continue;
 
-          const entry = getOrCreateWeek(workloadMap, sa.user_id, weekNum);
+          // Use lab_day start_time/end_time if available, else station rotation hours, else default 2.5h
+          const times = labDayTimeMap.get(labDayId);
+          let labHours: number;
+          let labStartTime = '';
+          let labEndTime = '';
 
-          // Dedup lab stations too (same station on same date)
-          const slotKey = `lab|${labDate}|${station.id}`;
+          if (times?.start_time && times?.end_time) {
+            const [sh, sm] = times.start_time.split(':').map(Number);
+            const [eh, em] = times.end_time.split(':').map(Number);
+            labHours = ((eh * 60 + em) - (sh * 60 + sm)) / 60;
+            labStartTime = times.start_time;
+            labEndTime = times.end_time;
+          } else if (stationTotalHours > 0) {
+            labHours = stationTotalHours;
+          } else {
+            labHours = 2.5; // default
+          }
+
+          // Dedup with linked schedule blocks: if this lab day is linked from a block,
+          // count only once using the longer duration
+          const dedupKey = `${instrId}|${labDayId}`;
+          const linkedBlockHours = linkedLabDayBlockHours.get(dedupKey);
+          if (linkedBlockHours !== undefined) {
+            // Block already counted these hours as class time.
+            // If lab hours are longer, add only the difference as lab hours.
+            // If block hours are longer or equal, skip the lab entry entirely.
+            if (labHours <= linkedBlockHours) continue;
+            labHours = labHours - linkedBlockHours;
+          }
+
+          const entry = getOrCreateWeek(workloadMap, instrId, weekNum);
+
+          const slotKey = `lab|${labDate}|${labDayId}`;
           if (entry.timeSlots.has(slotKey)) continue;
           entry.timeSlots.add(slotKey);
 
-          entry.hours += stationHours;
-          entry.labHours += stationHours;
+          entry.hours += labHours;
+          entry.labHours += labHours;
           entry.blocks += 1;
           entry.programs.add('Lab');
           entry.details.push({
-            title: `Lab: ${station.name || 'Station'}`,
-            start_time: '',
-            end_time: '',
-            hours: Math.round(stationHours * 100) / 100,
+            title: 'Lab Day',
+            start_time: labStartTime,
+            end_time: labEndTime,
+            hours: Math.round(labHours * 100) / 100,
             day_of_week: null,
             date: labDate,
             source: 'lab',
@@ -451,7 +592,53 @@ export async function POST(request: NextRequest) {
     }
 
     // ── LVFR hours ──
+    // First try lvfr_aemt_plan_placements (has actual start/end times per placement)
     try {
+      const { data: lvfrPlacements } = await supabase
+        .from('lvfr_aemt_plan_placements')
+        .select('instructor_id, date, start_time, end_time, custom_title')
+        .gte('date', semester.start_date)
+        .lte('date', semester.end_date)
+        .not('instructor_id', 'is', null);
+
+      // Track which instructor+date combos we've handled via placements
+      const lvfrPlacementDates = new Set<string>();
+
+      for (const lp of (lvfrPlacements || [])) {
+        if (!lp.instructor_id || !lp.date) continue;
+
+        const weekNum = calcWeekNum(lp.date, start);
+        if (weekNum < 1 || weekNum > totalWeeks) continue;
+
+        const [sh, sm] = lp.start_time.split(':').map(Number);
+        const [eh, em] = lp.end_time.split(':').map(Number);
+        const hours = ((eh * 60 + em) - (sh * 60 + sm)) / 60;
+        if (hours <= 0) continue;
+
+        const entry = getOrCreateWeek(workloadMap, lp.instructor_id, weekNum);
+
+        const slotKey = `lvfr|${lp.date}|${lp.start_time}|${lp.end_time}`;
+        if (entry.timeSlots.has(slotKey)) continue;
+        entry.timeSlots.add(slotKey);
+
+        entry.hours += hours;
+        entry.lvfrHours += hours;
+        entry.blocks += 1;
+        entry.programs.add('LVFR');
+        entry.details.push({
+          title: lp.custom_title || 'LVFR',
+          start_time: lp.start_time,
+          end_time: lp.end_time,
+          hours: Math.round(hours * 100) / 100,
+          day_of_week: null,
+          date: lp.date,
+          source: 'lvfr',
+        });
+
+        lvfrPlacementDates.add(`${lp.instructor_id}|${lp.date}`);
+      }
+
+      // Also query lvfr_aemt_instructor_assignments for dates NOT covered by placements
       const { data: lvfrAssignments } = await supabase
         .from('lvfr_aemt_instructor_assignments')
         .select('date, primary_instructor_id, secondary_instructor_id, additional_instructors')
@@ -472,6 +659,9 @@ export async function POST(request: NextRequest) {
         }
 
         for (const instrId of instructorIds) {
+          // Skip if already covered by plan placements
+          if (lvfrPlacementDates.has(`${instrId}|${la.date}`)) continue;
+
           const entry = getOrCreateWeek(workloadMap, instrId, weekNum);
 
           const slotKey = `lvfr|${la.date}`;
@@ -494,7 +684,7 @@ export async function POST(request: NextRequest) {
         }
       }
     } catch {
-      // LVFR table may not exist — skip
+      // LVFR tables may not exist — skip
     }
 
     // ── Clear old workload records for this semester before upserting ──
