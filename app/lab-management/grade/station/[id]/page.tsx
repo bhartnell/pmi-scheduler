@@ -25,12 +25,16 @@ import {
   toArray,
   EVALUATION_CRITERIA,
   SKILLS_EVALUATION_CRITERIA,
+  getMatchingMnemonic,
+  buildDefaultSubItems,
+  autoRatingFromSubItems,
 } from '@/components/grading/types';
 import type {
   Student,
   LabGroup,
   Station,
   CriteriaRating,
+  SubItem,
 } from '@/components/grading/types';
 
 export default function GradeStationPage() {
@@ -141,12 +145,16 @@ export default function GradeStationPage() {
     // Initialize criteria ratings based on station type
     if (station) {
       const criteria = station.station_type === 'skills' ? SKILLS_EVALUATION_CRITERIA : EVALUATION_CRITERIA;
-      setCriteriaRatings(criteria.map(c => ({
-        criteria_id: c.id,
-        criteria_name: c.name,
-        rating: null,
-        notes: ''
-      })));
+      setCriteriaRatings(criteria.map(c => {
+        const mnemonic = getMatchingMnemonic(c.name);
+        return {
+          criteria_id: c.id,
+          criteria_name: c.name,
+          rating: null,
+          notes: '',
+          ...(mnemonic ? { sub_items: buildDefaultSubItems(mnemonic) } : {}),
+        };
+      }));
     }
   }, [station?.station_type]);
 
@@ -295,6 +303,17 @@ export default function GradeStationPage() {
   const updateNotes = (criteriaId: string, notes: string) => {
     setCriteriaRatings(prev =>
       prev.map(r => r.criteria_id === criteriaId ? { ...r, notes } : r)
+    );
+    triggerAutoSave();
+  };
+
+  const updateSubItems = (criteriaId: string, subItems: SubItem[]) => {
+    const suggestedRating = autoRatingFromSubItems(subItems);
+    setCriteriaRatings(prev =>
+      prev.map(r => {
+        if (r.criteria_id !== criteriaId) return r;
+        return { ...r, sub_items: subItems, rating: suggestedRating ?? r.rating };
+      })
     );
     triggerAutoSave();
   };
@@ -728,6 +747,7 @@ export default function GradeStationPage() {
           phase2Pass={phase2Pass}
           onUpdateRating={updateRating}
           onUpdateNotes={updateNotes}
+          onUpdateSubItems={updateSubItems}
         />}
 
         {/* Overall Comments — ONLY for scenario stations */}

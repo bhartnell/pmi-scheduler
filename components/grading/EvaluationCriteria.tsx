@@ -7,8 +7,12 @@ import {
   FileText,
   ClipboardCheck
 } from 'lucide-react';
-import type { CriteriaRating } from './types';
-import { RATING_COLORS } from './types';
+import type { CriteriaRating, SubItem } from './types';
+import {
+  RATING_COLORS,
+  getMatchingMnemonic,
+  autoRatingFromSubItems,
+} from './types';
 
 interface EvaluationCriteriaProps {
   activeCriteria: { id: string; name: string; description: string }[];
@@ -25,6 +29,7 @@ interface EvaluationCriteriaProps {
   phase2Pass: boolean;
   onUpdateRating: (criteriaId: string, rating: 'S' | 'NI' | 'U') => void;
   onUpdateNotes: (criteriaId: string, notes: string) => void;
+  onUpdateSubItems?: (criteriaId: string, subItems: SubItem[]) => void;
 }
 
 export default function EvaluationCriteria({
@@ -42,6 +47,7 @@ export default function EvaluationCriteria({
   phase2Pass,
   onUpdateRating,
   onUpdateNotes,
+  onUpdateSubItems,
 }: EvaluationCriteriaProps) {
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
@@ -81,6 +87,12 @@ export default function EvaluationCriteria({
         {activeCriteria.map((criteria, index) => {
           const rating = criteriaRatings.find(r => r.criteria_id === criteria.id);
           const needsNotes = rating?.rating === 'NI' || rating?.rating === 'U';
+          const mnemonic = getMatchingMnemonic(criteria.name);
+          const subItems = rating?.sub_items;
+          const hasSubItems = mnemonic && subItems && subItems.length > 0;
+          const checkedCount = subItems?.filter(s => s.checked).length ?? 0;
+          const totalSubItems = subItems?.length ?? 0;
+          const isPartial = hasSubItems && checkedCount > 0 && checkedCount < totalSubItems;
 
           return (
             <div key={criteria.id} className="border dark:border-gray-700 rounded-lg p-3">
@@ -91,6 +103,61 @@ export default function EvaluationCriteria({
                 <div className="flex-1 min-w-0">
                   <div className="font-medium text-gray-900 dark:text-white">{criteria.name}</div>
                   <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">{criteria.description}</div>
+
+                  {/* Sub-item checkboxes for SAMPLE/OPQRST/DCAP-BTLS */}
+                  {hasSubItems && (
+                    <div className="mb-3 ml-1 p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wide">
+                          {mnemonic} Components
+                        </span>
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                          checkedCount === totalSubItems
+                            ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300'
+                            : checkedCount === 0
+                            ? 'bg-gray-100 dark:bg-gray-600 text-gray-500 dark:text-gray-400'
+                            : 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300'
+                        }`}>
+                          {checkedCount}/{totalSubItems}
+                          {isPartial && ' - Partial'}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-1">
+                        {subItems.map((item, idx) => (
+                          <label
+                            key={idx}
+                            className="flex items-center gap-2 py-1 px-2 rounded hover:bg-gray-100 dark:hover:bg-gray-600/50 cursor-pointer text-sm"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={item.checked}
+                              onChange={() => {
+                                if (!onUpdateSubItems) return;
+                                const updated = subItems.map((s, i) =>
+                                  i === idx ? { ...s, checked: !s.checked } : s
+                                );
+                                onUpdateSubItems(criteria.id, updated);
+                              }}
+                              className="w-4 h-4 rounded border-gray-300 dark:border-gray-500 text-blue-600 focus:ring-blue-500 dark:bg-gray-600"
+                            />
+                            <span className={`${
+                              item.checked
+                                ? 'text-gray-900 dark:text-white'
+                                : 'text-gray-500 dark:text-gray-400'
+                            }`}>
+                              {item.label}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                      {isPartial && (
+                        <div className="mt-2 flex items-center gap-1 text-xs text-yellow-600 dark:text-yellow-400">
+                          <AlertTriangle className="w-3 h-3" />
+                          <span>Partial completion - {checkedCount} of {totalSubItems} obtained</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Rating Buttons */}
                   <div className="flex gap-2 mb-2">
@@ -109,6 +176,13 @@ export default function EvaluationCriteria({
                       </button>
                     ))}
                   </div>
+
+                  {/* Auto-rating hint when sub-items drive the rating */}
+                  {hasSubItems && rating?.rating && (
+                    <div className="text-xs text-gray-400 dark:text-gray-500 mb-1">
+                      Auto-suggested from {mnemonic} ({checkedCount}/{totalSubItems}) - you can override
+                    </div>
+                  )}
 
                   {/* Notes (optional for NI/U) */}
                   {needsNotes && (

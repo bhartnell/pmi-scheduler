@@ -223,11 +223,101 @@ export interface Station {
   };
 }
 
+export interface SubItem {
+  label: string;
+  checked: boolean;
+}
+
 export interface CriteriaRating {
   criteria_id: string;
   criteria_name: string;
   rating: 'S' | 'NI' | 'U' | null;
   notes: string;
+  sub_items?: SubItem[];
+}
+
+// Sub-item definitions for assessment mnemonics
+export const MNEMONIC_SUB_ITEMS: Record<string, string[]> = {
+  SAMPLE: [
+    'Signs/Symptoms',
+    'Allergies',
+    'Medications',
+    'Past medical history',
+    'Last oral intake',
+    'Events leading up',
+  ],
+  OPQRST: [
+    'Onset',
+    'Provocation',
+    'Quality',
+    'Radiation',
+    'Severity',
+    'Time',
+  ],
+  'DCAP-BTLS': [
+    'Deformities',
+    'Contusions',
+    'Abrasions',
+    'Punctures',
+    'Burns',
+    'Tenderness',
+    'Lacerations',
+    'Swelling',
+  ],
+};
+
+/**
+ * Check if a criteria name matches a mnemonic and return the matching key.
+ * Matches case-insensitively against criteria name.
+ */
+export function getMatchingMnemonic(criteriaName: string): string | null {
+  const lower = criteriaName.toLowerCase();
+  for (const key of Object.keys(MNEMONIC_SUB_ITEMS)) {
+    if (lower.includes(key.toLowerCase())) return key;
+  }
+  return null;
+}
+
+/**
+ * Build default sub-items array for a mnemonic.
+ */
+export function buildDefaultSubItems(mnemonic: string): SubItem[] {
+  const labels = MNEMONIC_SUB_ITEMS[mnemonic];
+  if (!labels) return [];
+  return labels.map(label => ({ label, checked: false }));
+}
+
+/**
+ * Auto-calculate rating based on sub-item completion.
+ * Returns null if no sub-items exist.
+ */
+export function autoRatingFromSubItems(subItems: SubItem[]): 'S' | 'NI' | 'U' | null {
+  if (!subItems || subItems.length === 0) return null;
+  const checked = subItems.filter(s => s.checked).length;
+  const total = subItems.length;
+  if (checked === total) return 'S';
+  // For 6-item mnemonics: 4-5 = NI, 0-3 = U
+  // For 8-item mnemonics (DCAP-BTLS): 6-7 = NI, 0-5 = U
+  const niThreshold = total === 8 ? 6 : 4;
+  if (checked >= niThreshold) return 'NI';
+  return 'U';
+}
+
+/**
+ * Format sub-items for display in score sheets / emails.
+ * e.g. "SAMPLE: 3/6 (NI) -- Got: S&S, Allergies, Last intake. Missed: Meds, PMH, Events"
+ */
+export function formatSubItemsSummary(criteriaName: string, subItems: SubItem[], rating: string | null): string {
+  if (!subItems || subItems.length === 0) return '';
+  const got = subItems.filter(s => s.checked).map(s => s.label);
+  const missed = subItems.filter(s => !s.checked).map(s => s.label);
+  const mnemonic = getMatchingMnemonic(criteriaName);
+  const prefix = mnemonic || criteriaName;
+  const ratingStr = rating || '?';
+  let result = `${prefix}: ${got.length}/${subItems.length} (${ratingStr})`;
+  if (got.length > 0) result += ` — Got: ${got.join(', ')}`;
+  if (missed.length > 0) result += `. Missed: ${missed.join(', ')}`;
+  return result;
 }
 
 // Constants
