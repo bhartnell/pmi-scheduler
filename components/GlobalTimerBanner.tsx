@@ -48,6 +48,14 @@ export default function GlobalTimerBanner() {
         ? `/api/lab-management/timer/active?version=${versionRef.current}`
         : '/api/lab-management/timer/active';
       const res = await fetch(url);
+
+      // Stop polling on 401 — session expired (prevents wasting Vercel invocations)
+      if (res.status === 401) {
+        setTimer(null);
+        setLabDay(null);
+        return;
+      }
+
       const data = await res.json();
 
       // If not modified, skip state update to save re-renders
