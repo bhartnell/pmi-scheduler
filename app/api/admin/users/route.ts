@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     const supabase = getSupabaseAdmin();
     let query = supabase
       .from('lab_users')
-      .select('id, name, email, role, photo_url, created_at, last_login, is_active, is_part_time', { count: 'exact' })
+      .select('id, name, email, role, created_at, last_login, is_active, is_part_time', { count: 'exact' })
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
