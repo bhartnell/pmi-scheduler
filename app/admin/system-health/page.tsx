@@ -58,6 +58,7 @@ interface HealthData {
     totalBytes: number;
     totalMB: number;
   };
+  pmiLinkClicksThisMonth: number;
   serverTime: string;
   environment: string;
 }
@@ -744,6 +745,24 @@ export default function SystemHealthPage() {
                           </div>
                         );
                       })}
+                  </div>
+                </div>
+              </section>
+
+              {/* ── PMI Program Link Clicks ──────────────────────────────── */}
+              <section>
+                <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <BarChart3 className="w-5 h-5 text-indigo-600 dark:text-indigo-400 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <h3 className="font-medium text-indigo-900 dark:text-indigo-100">
+                        PMI Program Link
+                      </h3>
+                      <p className="text-sm text-indigo-700 dark:text-indigo-300 mt-1">
+                        <strong>{fmt(health.pmiLinkClicksThisMonth)}</strong> clicks this month
+                        <span className="text-indigo-500 dark:text-indigo-400 ml-1">(sign-in page)</span>
+                      </p>
+                    </div>
                   </div>
                 </div>
               </section>
