@@ -3,7 +3,6 @@
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useCallback } from 'react';
-import Link from 'next/link';
 import {
   ScrollText,
   Plus,
@@ -18,6 +17,9 @@ import {
   CheckCircle2,
   Clock,
   XCircle,
+  BellOff,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { canAccessAffiliations, canEditAffiliations, type Role } from '@/lib/permissions';
 import { exportToExcel } from '@/lib/export-utils';
@@ -38,6 +40,8 @@ interface Affiliation {
   notes: string | null;
   document_url: string | null;
   auto_renew: boolean;
+  is_pmi_contract: boolean;
+  notification_dismissed: boolean;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -131,6 +135,7 @@ export default function AffiliationsPage() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [showDismissed, setShowDismissed] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -143,6 +148,7 @@ export default function AffiliationsPage() {
     notes: '',
     document_url: '',
     auto_renew: false,
+    is_pmi_contract: false,
   });
 
   useEffect(() => {
@@ -206,8 +212,14 @@ export default function AffiliationsPage() {
 
   const canEdit = userRole ? canEditAffiliations(userRole) : false;
 
-  // Client-side search filter
+  // Client-side search & dismiss filter
   const filteredAffiliations = affiliations.filter((a) => {
+    // Hide dismissed expired affiliations unless showDismissed is on
+    if (!showDismissed && a.notification_dismissed) {
+      const isExpired = a.agreement_status === 'expired' || getDaysUntilExpiry(a.expiration_date) < 0;
+      if (isExpired) return false;
+    }
+
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return (
@@ -236,6 +248,7 @@ export default function AffiliationsPage() {
       notes: '',
       document_url: '',
       auto_renew: false,
+      is_pmi_contract: false,
     });
     setShowModal(true);
   };
@@ -252,6 +265,7 @@ export default function AffiliationsPage() {
       notes: aff.notes || '',
       document_url: aff.document_url || '',
       auto_renew: aff.auto_renew,
+      is_pmi_contract: aff.is_pmi_contract,
     });
     setShowModal(true);
   };
@@ -309,6 +323,25 @@ export default function AffiliationsPage() {
     }
   };
 
+  const handleDismiss = async (id: string, dismissed: boolean) => {
+    try {
+      const res = await fetch('/api/clinical/affiliations', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, notification_dismissed: dismissed }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSuccessMsg(dismissed ? 'Notification dismissed' : 'Notification restored');
+        await fetchAffiliations();
+      } else {
+        setErrorMsg(data.error || 'Failed to update');
+      }
+    } catch {
+      setErrorMsg('Failed to update notification status');
+    }
+  };
+
   const handleExport = () => {
     exportToExcel({
       title: 'Clinical Affiliation Agreements',
@@ -323,6 +356,7 @@ export default function AffiliationsPage() {
         { key: 'responsible_person', label: 'Responsible Person', getValue: (r: Affiliation) => r.responsible_person || '' },
         { key: 'responsible_person_email', label: 'Contact Email', getValue: (r: Affiliation) => r.responsible_person_email || '' },
         { key: 'auto_renew', label: 'Auto-Renew', getValue: (r: Affiliation) => r.auto_renew ? 'Yes' : 'No' },
+        { key: 'is_pmi_contract', label: 'PMI Standard', getValue: (r: Affiliation) => r.is_pmi_contract ? 'Yes' : 'No' },
         { key: 'notes', label: 'Notes', getValue: (r: Affiliation) => r.notes || '' },
         { key: 'document_url', label: 'Document URL', getValue: (r: Affiliation) => r.document_url || '' },
       ],
@@ -346,7 +380,8 @@ export default function AffiliationsPage() {
 
   // Stats summary
   const totalActive = affiliations.filter(a => a.agreement_status === 'active').length;
-  const totalExpired = affiliations.filter(a => a.agreement_status === 'expired' || getDaysUntilExpiry(a.expiration_date) < 0).length;
+  const totalExpired = affiliations.filter(a => !a.notification_dismissed && (a.agreement_status === 'expired' || getDaysUntilExpiry(a.expiration_date) < 0)).length;
+  const dismissedCount = affiliations.filter(a => a.notification_dismissed && (a.agreement_status === 'expired' || getDaysUntilExpiry(a.expiration_date) < 0)).length;
   const expiringIn30 = affiliations.filter(a => {
     const days = getDaysUntilExpiry(a.expiration_date);
     return days >= 0 && days <= 30 && a.agreement_status !== 'terminated';
@@ -452,6 +487,20 @@ export default function AffiliationsPage() {
               </option>
             ))}
           </select>
+          {dismissedCount > 0 && (
+            <button
+              onClick={() => setShowDismissed(!showDismissed)}
+              className={`px-3 py-2 rounded-lg text-sm flex items-center gap-1.5 transition-colors ${
+                showDismissed
+                  ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
+              title={showDismissed ? 'Hide dismissed' : 'Show dismissed'}
+            >
+              {showDismissed ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              {showDismissed ? 'Hide' : 'Show'} Dismissed ({dismissedCount})
+            </button>
+          )}
           <button
             onClick={() => { setLoading(true); fetchAffiliations().finally(() => setLoading(false)); }}
             className="px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
@@ -510,7 +559,23 @@ export default function AffiliationsPage() {
                         className={`${getRowColorClass(aff)} hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors`}
                       >
                         <td className="px-4 py-3">
-                          <div className="font-medium text-gray-900 dark:text-white">{aff.site_name}</div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-gray-900 dark:text-white">{aff.site_name}</span>
+                            {aff.is_pmi_contract ? (
+                              <span className="inline-flex px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded text-[10px] font-medium leading-tight whitespace-nowrap">
+                                PMI Standard
+                              </span>
+                            ) : (
+                              <span className="inline-flex px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 rounded text-[10px] font-medium leading-tight whitespace-nowrap">
+                                Site-Specific
+                              </span>
+                            )}
+                            {aff.notification_dismissed && (
+                              <span className="inline-flex px-1.5 py-0.5 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded text-[10px] font-medium leading-tight whitespace-nowrap">
+                                Dismissed
+                              </span>
+                            )}
+                          </div>
                           {aff.document_url && (
                             <a
                               href={aff.document_url}
@@ -569,6 +634,20 @@ export default function AffiliationsPage() {
                               </div>
                             ) : (
                               <div className="flex items-center gap-1 justify-end">
+                                {(daysLeft < 0 || aff.agreement_status === 'expired') && (
+                                  <button
+                                    onClick={() => handleDismiss(aff.id, !aff.notification_dismissed)}
+                                    className={`p-1.5 transition-colors ${
+                                      aff.notification_dismissed
+                                        ? 'text-orange-500 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300'
+                                        : 'text-gray-400 hover:text-orange-600 dark:hover:text-orange-400'
+                                    }`}
+                                    title={aff.notification_dismissed ? 'Restore notifications' : 'Dismiss notifications'}
+                                    aria-label={aff.notification_dismissed ? 'Restore notifications' : 'Dismiss notifications'}
+                                  >
+                                    <BellOff className="w-4 h-4" />
+                                  </button>
+                                )}
                                 <button
                                   onClick={() => openEditModal(aff)}
                                   className="p-1.5 text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 transition-colors"
@@ -734,6 +813,20 @@ export default function AffiliationsPage() {
                 />
                 <label htmlFor="auto_renew" className="text-sm text-gray-700 dark:text-gray-300">
                   Auto-renew agreement
+                </label>
+              </div>
+
+              {/* PMI Standard Contract Toggle */}
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="is_pmi_contract"
+                  checked={formData.is_pmi_contract}
+                  onChange={(e) => setFormData({ ...formData, is_pmi_contract: e.target.checked })}
+                  className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <label htmlFor="is_pmi_contract" className="text-sm text-gray-700 dark:text-gray-300">
+                  PMI Standard Contract
                 </label>
               </div>
             </div>

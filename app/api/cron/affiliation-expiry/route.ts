@@ -14,6 +14,7 @@ interface Affiliation {
   responsible_person: string | null;
   responsible_person_email: string | null;
   auto_renew: boolean;
+  notification_dismissed: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -80,8 +81,9 @@ export async function GET(request: NextRequest) {
     // Fetch all non-terminated affiliations
     const { data: affiliations, error: fetchError } = await supabase
       .from('clinical_affiliations')
-      .select('id, site_name, expiration_date, agreement_status, responsible_person, responsible_person_email, auto_renew')
-      .neq('agreement_status', 'terminated');
+      .select('id, site_name, expiration_date, agreement_status, responsible_person, responsible_person_email, auto_renew, notification_dismissed')
+      .neq('agreement_status', 'terminated')
+      .neq('notification_dismissed', true);
 
     if (fetchError) {
       if (fetchError.message?.includes('does not exist')) {

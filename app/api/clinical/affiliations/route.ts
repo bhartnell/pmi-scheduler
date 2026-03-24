@@ -94,6 +94,7 @@ export async function POST(request: NextRequest) {
       notes,
       document_url,
       auto_renew = false,
+      is_pmi_contract = false,
     } = body;
 
     if (!site_name || typeof site_name !== 'string' || !site_name.trim()) {
@@ -115,6 +116,7 @@ export async function POST(request: NextRequest) {
         notes: notes?.trim() || null,
         document_url: document_url?.trim() || null,
         auto_renew,
+        is_pmi_contract,
         created_by: session.user.email,
       })
       .select('*')
@@ -176,6 +178,8 @@ export async function PUT(request: NextRequest) {
     if (updates.notes !== undefined) sanitized.notes = updates.notes?.trim() || null;
     if (updates.document_url !== undefined) sanitized.document_url = updates.document_url?.trim() || null;
     if (updates.auto_renew !== undefined) sanitized.auto_renew = updates.auto_renew;
+    if (updates.is_pmi_contract !== undefined) sanitized.is_pmi_contract = updates.is_pmi_contract;
+    if (updates.notification_dismissed !== undefined) sanitized.notification_dismissed = updates.notification_dismissed;
 
     const { data, error } = await supabase
       .from('clinical_affiliations')
