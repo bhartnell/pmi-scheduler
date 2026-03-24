@@ -2,12 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { requireAuth } from '@/lib/api-auth';
 
+// PUBLIC: No auth required — polls are shared via link, anyone can submit
 export async function POST(request: NextRequest) {
-  const auth = await requireAuth('instructor');
-  if (auth instanceof NextResponse) return auth;
-
   try {
     const body = await request.json();
     const { pollId, name, email, agency, meetingType, respondentRole, availability } = body;
@@ -83,12 +80,8 @@ export async function POST(request: NextRequest) {
   }
 }
 
+// PUBLIC: Allow unauthenticated GET for poll pre-fill checks; returns all submissions for admin
 export async function GET(request: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
   const searchParams = request.nextUrl.searchParams;
   const pollId = searchParams.get('pollId');
 
