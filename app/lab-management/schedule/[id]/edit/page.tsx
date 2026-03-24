@@ -56,6 +56,9 @@ interface Scenario {
 interface LabDay {
   id: string;
   date: string;
+  title: string | null;
+  start_time: string | null;
+  end_time: string | null;
   week_number: number | null;
   day_number: number | null;
   num_rotations: number;
@@ -158,6 +161,8 @@ export default function EditLabDayPage() {
 
   // Form state
   const [labDate, setLabDate] = useState('');
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
   const [weekNumber, setWeekNumber] = useState<number | ''>('');
   const [dayNumber, setDayNumber] = useState<number | ''>('');
   const [numRotations, setNumRotations] = useState(4);
@@ -240,6 +245,9 @@ export default function EditLabDayPage() {
         setLabDay(data.labDay);
         // Populate form
         setLabDate(data.labDay.date);
+        // start_time/end_time come as HH:MM:SS from DB; trim to HH:MM for time inputs
+        setStartTime(data.labDay.start_time ? data.labDay.start_time.substring(0, 5) : '');
+        setEndTime(data.labDay.end_time ? data.labDay.end_time.substring(0, 5) : '');
         setWeekNumber(data.labDay.week_number || '');
         setDayNumber(data.labDay.day_number || '');
         setNumRotations(data.labDay.num_rotations || 4);
@@ -385,6 +393,8 @@ export default function EditLabDayPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           date: labDate,
+          start_time: startTime || null,
+          end_time: endTime || null,
           week_number: weekNumber || null,
           day_number: dayNumber || null,
           num_rotations: numRotations,
@@ -657,6 +667,32 @@ export default function EditLabDayPage() {
                 onChange={(e) => setLabDate(e.target.value)}
                 className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
               />
+            </div>
+
+            {/* Start Time / End Time */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Start Time
+                </label>
+                <input
+                  type="time"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  End Time
+                </label>
+                <input
+                  type="time"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                />
+              </div>
             </div>
 
             {/* Week/Day Numbers */}

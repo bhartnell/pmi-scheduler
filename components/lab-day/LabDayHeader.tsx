@@ -77,10 +77,15 @@ export default function LabDayHeader({
               {formatDate(labDay.date)}
             </h1>
             <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-gray-600 dark:text-gray-400">
-              {(labDay.start_time || labDay.end_time) && (
+              {(labDay.start_time || labDay.end_time) ? (
                 <span className="flex items-center gap-1 font-medium text-gray-700 dark:text-gray-300">
                   <Clock className="w-4 h-4" />
                   {formatTime(labDay.start_time)}{labDay.end_time ? ` - ${formatTime(labDay.end_time)}` : ''}
+                </span>
+              ) : (
+                <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                  <Clock className="w-4 h-4" />
+                  Time not set
                 </span>
               )}
               {labDay.week_number && labDay.day_number && (
