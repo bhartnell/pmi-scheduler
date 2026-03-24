@@ -186,6 +186,9 @@ export default function InternshipTrackerPage() {
   const [showDueThisWeek, setShowDueThisWeek] = useState(false);
   const [showIncomplete, setShowIncomplete] = useState(false);
 
+  // Closeout progress per internship: { internship_id: { checked: N, total: N } }
+  const [closeoutProgress, setCloseoutProgress] = useState<Record<string, { checked: number; total: number }>>({});
+
   // Check if selected cohort is a PM cohort
   const selectedCohortData = cohorts.find(c => c.id === selectedCohort);
   const isPMCohort = selectedCohortData?.program?.abbreviation === 'PM';
@@ -327,10 +330,32 @@ export default function InternshipTrackerPage() {
       const data = await res.json();
       if (data.success) {
         setInternships(data.internships || []);
+        // Fetch closeout progress for all internships
+        fetchCloseoutProgress(data.internships || []);
       }
     } catch (error) {
       console.error('Error fetching internships:', error);
     }
+  };
+
+  const fetchCloseoutProgress = async (internshipList: Internship[]) => {
+    if (internshipList.length === 0) return;
+    // Fetch in parallel for all internships (lightweight per-internship call)
+    const results: Record<string, { checked: number; total: number }> = {};
+    await Promise.all(
+      internshipList.map(async (i) => {
+        try {
+          const res = await fetch(`/api/clinical/internships/${i.id}/closeout/checklist`);
+          const data = await res.json();
+          if (data.success) {
+            results[i.id] = { checked: data.checked_count, total: data.total_count };
+          }
+        } catch {
+          // Skip failures silently
+        }
+      })
+    );
+    setCloseoutProgress(results);
   };
 
   const fetchCohortStudents = async (cohortId: string) => {
@@ -1236,13 +1261,26 @@ export default function InternshipTrackerPage() {
                               )}
                             </td>
                             <td className="px-4 py-3">
-                              {statusConfig ? (
-                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${statusConfig.bgColor} ${statusConfig.color} dark:bg-opacity-20`}>
-                                  {statusConfig.label}
-                                </span>
-                              ) : (
-                                <span className="text-gray-400 italic">-</span>
-                              )}
+                              <div className="flex flex-col gap-1">
+                                {statusConfig ? (
+                                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${statusConfig.bgColor} ${statusConfig.color} dark:bg-opacity-20`}>
+                                    {statusConfig.label}
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-400 italic">-</span>
+                                )}
+                                {internship && closeoutProgress[internship.id] && closeoutProgress[internship.id].total > 0 && (
+                                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                                    closeoutProgress[internship.id].checked === closeoutProgress[internship.id].total
+                                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                                      : closeoutProgress[internship.id].checked > 0
+                                      ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                                      : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
+                                  }`}>
+                                    Closeout: {closeoutProgress[internship.id].checked}/{closeoutProgress[internship.id].total}
+                                  </span>
+                                )}
+                              </div>
                             </td>
                             <td className="px-4 py-3 text-right">
                               <div className="flex items-center justify-end gap-1">
