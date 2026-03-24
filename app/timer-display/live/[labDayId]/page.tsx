@@ -62,6 +62,7 @@ export default function LiveTimerDisplayPage({ params }: { params: Promise<{ lab
   const [showControlPanel, setShowControlPanel] = useState(false);
   const [adjustmentFlash, setAdjustmentFlash] = useState<string | null>(null);
   const [controlActionLoading, setControlActionLoading] = useState(false);
+  const [sessionExpired, setSessionExpired] = useState(false);
 
   const lastFetchRef = useRef<number>(0);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
@@ -291,6 +292,10 @@ export default function LiveTimerDisplayPage({ params }: { params: Promise<{ lab
         ? `/api/lab-management/timer?labDayId=${labDayId}&version=${versionRef.current}`
         : `/api/lab-management/timer?labDayId=${labDayId}`;
       const res = await fetch(url);
+      if (res.status === 401) {
+        setSessionExpired(true);
+        return;
+      }
       const data = await res.json();
 
       // If not modified, skip state update to save re-renders
@@ -338,6 +343,10 @@ export default function LiveTimerDisplayPage({ params }: { params: Promise<{ lab
   const fetchReadyStatuses = useCallback(async () => {
     try {
       const res = await fetch(`/api/lab-management/timer/ready?labDayId=${labDayId}`);
+      if (res.status === 401) {
+        setSessionExpired(true);
+        return;
+      }
       const data = await res.json();
       if (data.success) {
         setReadyStatuses(data.readyStatuses || []);
@@ -349,7 +358,8 @@ export default function LiveTimerDisplayPage({ params }: { params: Promise<{ lab
   }, [labDayId]);
 
   // Adaptive poll interval based on timer state
-  const getTimerPollInterval = (): number => {
+  const getTimerPollInterval = (): number | null => {
+    if (sessionExpired) return null;       // Stop polling on session expiry
     if (!timer) return 10000;              // No timer yet, 10s (detect start quickly)
     if (timer.status === 'stopped') return 10000; // Stopped, 10s
     if (timer.status === 'paused') return 10000;  // Paused, 10s
@@ -358,7 +368,7 @@ export default function LiveTimerDisplayPage({ params }: { params: Promise<{ lab
   useVisibilityPolling(fetchTimerStatus, getTimerPollInterval());
 
   // Ready statuses only need polling when timer is actively running
-  const readyPollInterval = timer?.status === 'running' ? 5000 : null;
+  const readyPollInterval = sessionExpired ? null : (timer?.status === 'running' ? 5000 : null);
   useVisibilityPolling(fetchReadyStatuses, readyPollInterval);
 
   // --- Timer Display Calculation ---

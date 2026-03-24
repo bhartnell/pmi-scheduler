@@ -103,6 +103,7 @@ export default function LabTimer({
   const [adjustmentFlash, setAdjustmentFlash] = useState<string | null>(null);
   const [adjustLoading, setAdjustLoading] = useState(false);
   const [durationChangeMsg, setDurationChangeMsg] = useState<string | null>(null);
+  const [sessionExpired, setSessionExpired] = useState(false);
 
   const ROTATE_ALERT_TIMEOUT = 30000; // 30 seconds auto-dismiss
 
@@ -150,6 +151,10 @@ export default function LabTimer({
   const fetchTimerState = useCallback(async (checkStale = false): Promise<TimerState | null> => {
     try {
       const res = await fetch(`/api/lab-management/timer?labDayId=${labDayId}`);
+      if (res.status === 401) {
+        setSessionExpired(true);
+        return null;
+      }
       const data = await res.json();
 
       if (data.success) {
@@ -183,6 +188,10 @@ export default function LabTimer({
   const fetchReadyStatuses = useCallback(async () => {
     try {
       const res = await fetch(`/api/lab-management/timer/ready?labDayId=${labDayId}`);
+      if (res.status === 401) {
+        setSessionExpired(true);
+        return;
+      }
       const data = await res.json();
 
       if (data.success) {
@@ -371,6 +380,7 @@ export default function LabTimer({
   // Determine polling intervals based on timer state
   // When timer modal is open, user is actively managing the lab
   const getTimerPollInterval = () => {
+    if (sessionExpired) return null; // Stop polling on session expiry
     if (!timerState || timerState.status === 'stopped') return 30000; // 30s when stopped (user may restart)
     if (timerState.status === 'paused') return 5000; // 5s when paused
     // When running: faster polling in final 30 seconds for smooth countdown
@@ -379,6 +389,7 @@ export default function LabTimer({
   };
 
   const getReadyPollInterval = () => {
+    if (sessionExpired) return null; // Stop polling on session expiry
     if (!timerState || timerState.status === 'stopped') return 30000; // 30s when stopped
     return 5000; // 5s when active (instructors marking ready)
   };

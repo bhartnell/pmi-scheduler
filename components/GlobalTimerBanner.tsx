@@ -34,6 +34,7 @@ export default function GlobalTimerBanner() {
   const [displaySeconds, setDisplaySeconds] = useState(0);
   const [isDismissed, setIsDismissed] = useState(false);
   const [lastRotation, setLastRotation] = useState<number | null>(null);
+  const [sessionExpired, setSessionExpired] = useState(false);
   const versionRef = useRef<number>(0);
 
   // Show timer banner on all authenticated pages (not on login/auth pages)
@@ -51,6 +52,7 @@ export default function GlobalTimerBanner() {
 
       // Stop polling on 401 — session expired (prevents wasting Vercel invocations)
       if (res.status === 401) {
+        setSessionExpired(true);
         setTimer(null);
         setLabDay(null);
         return;
@@ -94,7 +96,7 @@ export default function GlobalTimerBanner() {
   // Poll for active timer - optimized interval based on state
   // Uses visibility-aware polling to pause when tab is hidden
   const getPollInterval = () => {
-    if (!isTimerRelevantPage || hasOwnTimerComponent) return null; // Don't poll on pages with dedicated timer
+    if (!isTimerRelevantPage || hasOwnTimerComponent || sessionExpired) return null; // Don't poll on expired session or pages with dedicated timer
     if (timer?.status === 'running') return 5000; // 5s when running
     if (timer?.status === 'paused') return 10000; // 10s when paused (catch resume)
     return 10000; // 10s when idle/no timer (detect new timer quickly)

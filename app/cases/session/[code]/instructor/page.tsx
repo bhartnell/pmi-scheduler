@@ -130,6 +130,7 @@ export default function InstructorControlPanel() {
   // Refs
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const realtimeRef = useRef<ReturnType<typeof getSupabase.prototype.channel> | null>(null);
+  const sessionExpiredRef = useRef(false);
 
   // =========================================================================
   // Data fetching
@@ -140,6 +141,10 @@ export default function InstructorControlPanel() {
 
     try {
       const res = await fetch(`/api/case-sessions/${code}/instructor`);
+      if (res.status === 401) {
+        sessionExpiredRef.current = true;
+        return;
+      }
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error || 'Failed to fetch session data');
@@ -242,10 +247,16 @@ export default function InstructorControlPanel() {
     };
   }, [code, fetchData]);
 
-  // Poll as fallback every 10 seconds
+  // Poll as fallback every 10 seconds (stops on 401 to avoid wasting invocations)
   useEffect(() => {
     if (!code || loading) return;
-    const interval = setInterval(fetchData, 10000);
+    const interval = setInterval(() => {
+      if (sessionExpiredRef.current) {
+        clearInterval(interval);
+        return;
+      }
+      fetchData();
+    }, 10000);
     return () => clearInterval(interval);
   }, [code, loading, fetchData]);
 

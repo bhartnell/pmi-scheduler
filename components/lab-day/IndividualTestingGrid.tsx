@@ -80,12 +80,18 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
 
   // ─── Data fetching ──────────────────────────────────────────────────────
 
+  const sessionExpiredRef = useRef(false);
+
   const fetchGrid = useCallback(async (isBackground = false) => {
     if (!isBackground) setLoading(true);
     else setRefreshing(true);
 
     try {
       const res = await fetch(`/api/lab-management/student-queue?lab_day_id=${labDayId}`);
+      if (res.status === 401) {
+        sessionExpiredRef.current = true;
+        return;
+      }
       const data = await res.json();
       if (data.success) {
         setStudents(data.students || []);
@@ -100,10 +106,16 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
     }
   }, [labDayId]);
 
-  // Initial fetch + polling every 5 seconds
+  // Initial fetch + polling every 5 seconds (stops on 401 to avoid wasting invocations)
   useEffect(() => {
     fetchGrid();
-    const interval = setInterval(() => fetchGrid(true), 5000);
+    const interval = setInterval(() => {
+      if (sessionExpiredRef.current) {
+        clearInterval(interval);
+        return;
+      }
+      fetchGrid(true);
+    }, 5000);
     return () => clearInterval(interval);
   }, [fetchGrid]);
 
