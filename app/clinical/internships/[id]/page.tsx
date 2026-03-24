@@ -27,7 +27,9 @@ import {
   AlertCircle,
   CheckSquare,
   ExternalLink,
-  X
+  X,
+  Copy,
+  Check
 } from 'lucide-react';
 import { canAccessClinical, canEditClinical, hasMinRole, type Role } from '@/lib/permissions';
 import { parseDateSafe } from '@/lib/utils';
@@ -216,6 +218,7 @@ export default function InternshipDetailPage() {
   const [showAddPreceptorModal, setShowAddPreceptorModal] = useState(false);
   const [newPreceptor, setNewPreceptor] = useState({ first_name: '', last_name: '', email: '', phone: '', agency_name: '' });
   const [addingPreceptor, setAddingPreceptor] = useState(false);
+  const [copiedEmail, setCopiedEmail] = useState<string | null>(null);
   // Multi-preceptor assignments
   const [preceptorAssignments, setPreceptorAssignments] = useState<any[]>([]);
   const [addingAssignment, setAddingAssignment] = useState(false);
@@ -426,6 +429,17 @@ export default function InternshipDetailPage() {
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleCopyEmail = async (email: string) => {
+    try {
+      await navigator.clipboard.writeText(email);
+      setCopiedEmail(email);
+      showToast('Copied!', 'success');
+      setTimeout(() => setCopiedEmail(null), 2000);
+    } catch {
+      showToast('Failed to copy', 'error');
+    }
   };
 
   const handleAddPreceptor = async () => {
@@ -752,6 +766,60 @@ export default function InternshipDetailPage() {
       </div>
 
       <main className="max-w-7xl mx-auto px-4 py-8">
+        {/* Quick Contacts */}
+        {(student?.email || internship.field_preceptors?.email || internship.agencies) && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-4 mb-6">
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
+              <Mail className="w-4 h-4" />
+              Quick Contacts
+            </h3>
+            <div className="flex flex-wrap gap-3">
+              {student?.email && (
+                <button
+                  onClick={() => handleCopyEmail(student.email)}
+                  className="inline-flex items-center gap-2 px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                >
+                  <User className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                  <span className="text-gray-700 dark:text-gray-300">{student.email}</span>
+                  {copiedEmail === student.email ? (
+                    <Check className="w-3.5 h-3.5 text-green-500" />
+                  ) : (
+                    <Copy className="w-3.5 h-3.5 text-gray-400" />
+                  )}
+                </button>
+              )}
+              {internship.field_preceptors?.email && (
+                <button
+                  onClick={() => handleCopyEmail(internship.field_preceptors!.email!)}
+                  className="inline-flex items-center gap-2 px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                >
+                  <Users className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                  <span className="text-gray-700 dark:text-gray-300">{internship.field_preceptors.email}</span>
+                  {copiedEmail === internship.field_preceptors.email ? (
+                    <Check className="w-3.5 h-3.5 text-green-500" />
+                  ) : (
+                    <Copy className="w-3.5 h-3.5 text-gray-400" />
+                  )}
+                </button>
+              )}
+              {internship.agencies?.phone && (
+                <button
+                  onClick={() => handleCopyEmail(internship.agencies!.phone!)}
+                  className="inline-flex items-center gap-2 px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                >
+                  <Building2 className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                  <span className="text-gray-700 dark:text-gray-300">{internship.agencies.name}: {internship.agencies.phone}</span>
+                  {copiedEmail === internship.agencies.phone ? (
+                    <Check className="w-3.5 h-3.5 text-green-500" />
+                  ) : (
+                    <Copy className="w-3.5 h-3.5 text-gray-400" />
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Overall Progress Card */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 mb-6">
           <div className="flex items-center justify-between mb-4">

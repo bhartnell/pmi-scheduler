@@ -97,6 +97,12 @@ export async function DELETE(
       return NextResponse.json({ success: false, error: 'evaluation_id is required' }, { status: 400 });
     }
 
+    // Clear FK references in lab_day_student_queue before deleting the evaluation
+    await supabase
+      .from('lab_day_student_queue')
+      .update({ evaluation_id: null })
+      .eq('evaluation_id', evaluationId);
+
     const { error } = await supabase
       .from('student_skill_evaluations')
       .delete()

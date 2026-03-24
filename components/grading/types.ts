@@ -4,9 +4,33 @@
 export const toArray = (value: any): string[] => {
   if (Array.isArray(value)) {
     return value.map((item) => {
-      if (typeof item === 'string') return item;
-      if (typeof item === 'object' && item !== null && item.description) return item.description;
-      if (typeof item === 'object' && item !== null) return JSON.stringify(item);
+      if (typeof item === 'string') {
+        // Handle JSON-encoded objects stored as strings (e.g. '{"id":"...","description":"..."}')
+        if (item.startsWith('{') && item.includes('"')) {
+          try {
+            const parsed = JSON.parse(item);
+            if (parsed.description) return parsed.description;
+            if (parsed.name) return parsed.name;
+            if (parsed.text) return parsed.text;
+            if (parsed.action) return parsed.action;
+            if (parsed.label) return parsed.label;
+          } catch {
+            // Not valid JSON, return as-is
+          }
+        }
+        return item;
+      }
+      if (typeof item === 'object' && item !== null) {
+        if (item.description) return item.description;
+        if (item.name) return item.name;
+        if (item.text) return item.text;
+        if (item.action) return item.action;
+        if (item.label) return item.label;
+        // Last resort: try to find any string value
+        const vals = Object.values(item).filter((v): v is string => typeof v === 'string');
+        if (vals.length > 0) return vals[0];
+        return JSON.stringify(item);
+      }
       return String(item);
     });
   }
