@@ -74,20 +74,16 @@ interface CloseoutSectionProps {
   program?: string;
 }
 
-interface CompletionCheck {
-  key: string;
-  label: string;
-  checked: boolean;
-  checked_at: string | null;
+interface CloseoutChecklistItem {
+  id: string;
+  internship_id: string;
+  item_name: string;
+  display_order: number;
+  is_checked: boolean;
   checked_by: string | null;
+  checked_at: string | null;
+  checked_by_name: string | null;
 }
-
-const COMPLETION_CHECK_KEYS = [
-  { key: 'exit_survey_completed', label: 'Exit survey completed (PMI system)' },
-  { key: 'final_affective_eval', label: 'Final affective evaluation completed' },
-  { key: 'final_skills_checkoff', label: 'Final skills checkoff completed' },
-  { key: 'exit_docs_collected', label: 'All exit documents collected' },
-];
 
 const DOC_TYPE_LABELS: Record<string, string> = {
   completion_form: 'Completion Form',
@@ -139,10 +135,10 @@ export default function CloseoutSection({
   // Packet generation state
   const [generatingPacket, setGeneratingPacket] = useState(false);
 
-  // Completion checks state
-  const [completionChecks, setCompletionChecks] = useState<CompletionCheck[]>(
-    COMPLETION_CHECK_KEYS.map(c => ({ ...c, checked: false, checked_at: null, checked_by: null }))
-  );
+  // Closeout checklist items state
+  const [closeoutItems, setCloseoutItems] = useState<CloseoutChecklistItem[]>([]);
+  const [closeoutCheckedCount, setCloseoutCheckedCount] = useState(0);
+  const [closeoutTotalCount, setCloseoutTotalCount] = useState(0);
 
   // Employment verification state
   const [employmentVerification, setEmploymentVerification] = useState<EmploymentVerification | null>(null);
@@ -156,6 +152,7 @@ export default function CloseoutSection({
   useEffect(() => {
     fetchCloseoutData();
     fetchEmploymentVerification();
+    fetchCloseoutChecklist();
   }, [internshipId]);
 
   const fetchCloseoutData = async () => {
@@ -168,17 +165,6 @@ export default function CloseoutSection({
         setDocuments(data.documents || []);
         setCompletedAt(data.completed_at || null);
         setCompletedBy(data.completed_by || null);
-        // Load completion checks from overrides
-        const overrides = data.overrides || {};
-        setCompletionChecks(
-          COMPLETION_CHECK_KEYS.map(c => {
-            const val = overrides[c.key];
-            if (val && typeof val === 'object') {
-              return { ...c, checked: true, checked_at: val.checked_at || null, checked_by: val.checked_by || null };
-            }
-            return { ...c, checked: !!val, checked_at: null, checked_by: null };
-          })
-        );
       }
     } catch (error) {
       console.error('Error fetching closeout data:', error);
@@ -200,74 +186,71 @@ export default function CloseoutSection({
     setEmploymentLoading(false);
   };
 
+  const fetchCloseoutChecklist = async () => {
+    try {
+      const res = await fetch(`/api/clinical/internships/${internshipId}/closeout/checklist`);
+      const data = await res.json();
+      if (data.success) {
+        setCloseoutItems(data.items || []);
+        setCloseoutCheckedCount(data.checked_count || 0);
+        setCloseoutTotalCount(data.total_count || 0);
+      }
+    } catch (error) {
+      console.error('Error fetching closeout checklist:', error);
+    }
+  };
+
+  const handleCloseoutItemToggle = async (itemId: string, isChecked: boolean) => {
+    // Optimistic update
+    setCloseoutItems(prev =>
+      prev.map(item =>
+        item.id === itemId
+          ? { ...item, is_checked: isChecked, checked_at: isChecked ? new Date().toISOString() : null, checked_by_name: isChecked ? 'You' : null }
+          : item
+      )
+    );
+    setCloseoutCheckedCount(prev => isChecked ? prev + 1 : prev - 1);
+
+    try {
+      const res = await fetch(`/api/clinical/internships/${internshipId}/closeout/checklist`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ item_id: itemId, is_checked: isChecked }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        // Revert
+        setCloseoutItems(prev =>
+          prev.map(item =>
+            item.id === itemId
+              ? { ...item, is_checked: !isChecked, checked_at: null, checked_by_name: null }
+              : item
+          )
+        );
+        setCloseoutCheckedCount(prev => isChecked ? prev - 1 : prev + 1);
+        showToastMessage('Failed to save', 'error');
+      }
+    } catch {
+      // Revert
+      setCloseoutItems(prev =>
+        prev.map(item =>
+          item.id === itemId
+            ? { ...item, is_checked: !isChecked, checked_at: null, checked_by_name: null }
+            : item
+        )
+      );
+      setCloseoutCheckedCount(prev => isChecked ? prev - 1 : prev + 1);
+      showToastMessage('Failed to save', 'error');
+    }
+  };
+
   const handleEmploymentSaved = (verification: EmploymentVerification) => {
     setEmploymentVerification(verification);
     setShowEmploymentModal(false);
     showToastMessage('Employment verification saved', 'success');
   };
 
-  // Handle completion checkbox toggle
-  const handleCompletionCheck = async (key: string, checked: boolean) => {
-    // Optimistic update
-    setCompletionChecks(prev =>
-      prev.map(c => c.key === key
-        ? { ...c, checked, checked_at: checked ? new Date().toISOString() : null, checked_by: checked ? 'current_user' : null }
-        : c
-      )
-    );
-
-    // Build overrides: merge existing checklist overrides with completion checks
-    const overrides: Record<string, unknown> = {};
-    for (const item of checklist) {
-      if (item.manual_override) {
-        overrides[item.key] = true;
-      }
-    }
-    // Add completion checks
-    for (const c of completionChecks) {
-      if (c.key === key) {
-        if (checked) {
-          overrides[key] = { checked_at: new Date().toISOString(), checked_by: 'current_user' };
-        }
-        // If unchecked, don't include the key
-      } else if (c.checked) {
-        overrides[c.key] = { checked_at: c.checked_at, checked_by: c.checked_by };
-      }
-    }
-
-    try {
-      const res = await fetch(`/api/clinical/internships/${internshipId}/closeout`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ overrides }),
-      });
-      const data = await res.json();
-      if (!data.success) {
-        // Revert
-        setCompletionChecks(prev =>
-          prev.map(c => c.key === key ? { ...c, checked: !checked } : c)
-        );
-        showToastMessage('Failed to save', 'error');
-      } else {
-        // Refresh to get server-persisted state
-        const savedOverrides = data.overrides || {};
-        setCompletionChecks(prev =>
-          prev.map(c => {
-            const val = savedOverrides[c.key];
-            if (val && typeof val === 'object') {
-              return { ...c, checked: true, checked_at: val.checked_at || null, checked_by: val.checked_by || null };
-            }
-            return { ...c, checked: !!val, checked_at: null, checked_by: null };
-          })
-        );
-      }
-    } catch {
-      setCompletionChecks(prev =>
-        prev.map(c => c.key === key ? { ...c, checked: !checked } : c)
-      );
-      showToastMessage('Failed to save', 'error');
-    }
-  };
+  // Old handleCompletionCheck removed - replaced by handleCloseoutItemToggle above
 
   const showToastMessage = (message: string, type: 'success' | 'error') => {
     setToast({ message, type });
@@ -1365,7 +1348,7 @@ export default function CloseoutSection({
         <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-emerald-50 dark:bg-emerald-900/20">
           <div className="flex items-center gap-2">
             <CheckSquare className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-            <h3 className="font-semibold text-gray-900 dark:text-white">Closeout Documents &amp; Completion</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-white">Closeout Documents</h3>
           </div>
         </div>
         <div className="p-8 flex justify-center">
@@ -1419,7 +1402,16 @@ export default function CloseoutSection({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <CheckSquare className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-            <h3 className="font-semibold text-gray-900 dark:text-white">Closeout Documents &amp; Completion</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-white">Closeout Documents</h3>
+            {closeoutTotalCount > 0 && (
+              <span className={`ml-1 px-2 py-0.5 text-xs font-medium rounded-full ${
+                closeoutCheckedCount === closeoutTotalCount
+                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                  : 'bg-gray-200 text-gray-600 dark:bg-gray-600 dark:text-gray-300'
+              }`}>
+                {closeoutCheckedCount}/{closeoutTotalCount} complete
+              </span>
+            )}
           </div>
           {completedAt && (
             <span className="px-2 py-1 text-xs font-medium rounded bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
@@ -1503,41 +1495,54 @@ export default function CloseoutSection({
           </div>
         </div>
 
-        {/* Completion Checklist Section */}
+        {/* Closeout Documents Checklist */}
         <div>
           <div className="flex items-center gap-2 mb-3">
             <ClipboardList className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Completion Checklist</h4>
+            <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Closeout Documents</h4>
+            {closeoutTotalCount > 0 && (
+              <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${
+                closeoutCheckedCount === closeoutTotalCount
+                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                  : 'bg-gray-200 text-gray-600 dark:bg-gray-600 dark:text-gray-300'
+              }`}>
+                {closeoutCheckedCount}/{closeoutTotalCount}
+              </span>
+            )}
           </div>
           <div className="space-y-2">
-            {completionChecks.map(check => (
+            {closeoutItems.map(item => (
               <label
-                key={check.key}
+                key={item.id}
                 className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
-                  check.checked
+                  item.is_checked
                     ? 'bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700'
                     : 'bg-gray-50 dark:bg-gray-700/30 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                 }`}
               >
                 <input
                   type="checkbox"
-                  checked={check.checked}
-                  onChange={(e) => canEdit && handleCompletionCheck(check.key, e.target.checked)}
-                  disabled={!canEdit}
+                  checked={item.is_checked}
+                  onChange={(e) => canEdit && !completedAt && handleCloseoutItemToggle(item.id, e.target.checked)}
+                  disabled={!canEdit || !!completedAt}
                   className="mt-0.5 h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-emerald-600 focus:ring-emerald-500 disabled:opacity-50"
                 />
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-gray-900 dark:text-white">
-                    {check.label}
+                  <div className={`text-sm font-medium ${
+                    item.is_checked
+                      ? 'text-green-800 dark:text-green-300'
+                      : 'text-gray-900 dark:text-white'
+                  }`}>
+                    {item.item_name}
                   </div>
-                  {check.checked && check.checked_at && (
+                  {item.is_checked && item.checked_at && (
                     <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                      Completed {new Date(check.checked_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                      {check.checked_by && check.checked_by !== 'current_user' && ` by ${check.checked_by}`}
+                      Completed {new Date(item.checked_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      {item.checked_by_name && ` by ${item.checked_by_name}`}
                     </div>
                   )}
                 </div>
-                {check.checked && (
+                {item.is_checked && (
                   <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
                 )}
               </label>
