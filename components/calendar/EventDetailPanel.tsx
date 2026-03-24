@@ -13,6 +13,7 @@ import {
   Calendar,
   Layers,
   Loader2,
+  CalendarPlus,
 } from 'lucide-react';
 
 interface CalendarEvent {
@@ -85,6 +86,82 @@ function formatTime(timeStr: string): string {
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr + 'T12:00:00');
   return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+}
+
+function escapeICSText(text: string): string {
+  return text
+    .replace(/\\/g, '\\\\')
+    .replace(/;/g, '\\;')
+    .replace(/,/g, '\\,')
+    .replace(/\r\n/g, '\\n')
+    .replace(/\n/g, '\\n')
+    .replace(/\r/g, '\\n');
+}
+
+function downloadSingleEventICS(event: CalendarEvent) {
+  const toICSDate = (dateStr: string, time: string): string => {
+    const [year, month, day] = dateStr.split('-');
+    const timeParts = time.split(':');
+    return `${year}${month}${day}T${timeParts[0] || '00'}${timeParts[1] || '00'}00`;
+  };
+
+  const descParts: string[] = [];
+  if (event.cohort_number) {
+    const progLabel = event.program && event.program !== 'other'
+      ? event.program.charAt(0).toUpperCase() + event.program.slice(1)
+      : '';
+    descParts.push(`${progLabel} Group ${event.cohort_number}`.trim());
+  }
+  if (event.instructor_names && event.instructor_names.length > 0) {
+    descParts.push(event.instructor_names.join(', '));
+  }
+  if (event.content_notes) {
+    descParts.push(event.content_notes);
+  }
+
+  const lines: string[] = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//PMI Paramedic Tools//Calendar//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    'X-WR-CALNAME:PMI Event',
+    'X-WR-TIMEZONE:America/Phoenix',
+    'BEGIN:VTIMEZONE',
+    'TZID:America/Phoenix',
+    'BEGIN:STANDARD',
+    'DTSTART:19700101T000000',
+    'TZOFFSETFROM:-0700',
+    'TZOFFSETTO:-0700',
+    'TZNAME:MST',
+    'END:STANDARD',
+    'END:VTIMEZONE',
+    'BEGIN:VEVENT',
+    `UID:${event.id}@pmi-scheduler`,
+    `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z`,
+    `DTSTART;TZID=America/Phoenix:${toICSDate(event.date, event.start_time)}`,
+    `DTEND;TZID=America/Phoenix:${toICSDate(event.date, event.end_time)}`,
+    `SUMMARY:${escapeICSText(event.title)}`,
+  ];
+
+  if (event.room) {
+    lines.push(`LOCATION:${escapeICSText(event.room)}`);
+  }
+  if (descParts.length > 0) {
+    lines.push(`DESCRIPTION:${escapeICSText(descParts.join('\n'))}`);
+  }
+
+  lines.push('END:VEVENT', 'END:VCALENDAR');
+
+  const blob = new Blob([lines.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${event.title.replace(/[^a-zA-Z0-9]/g, '-').replace(/-+/g, '-')}.ics`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 }
 
 export default function EventDetailPanel({ event, open, onClose }: EventDetailPanelProps) {
@@ -345,6 +422,15 @@ export default function EventDetailPanel({ event, open, onClose }: EventDetailPa
               Open Details
             </Link>
           )}
+
+          {/* Add to Calendar (.ics download) */}
+          <button
+            onClick={() => downloadSingleEventICS(event)}
+            className="flex items-center justify-center gap-2 w-full px-4 py-2 text-sm font-medium text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/20 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors"
+          >
+            <CalendarPlus className="h-4 w-4" />
+            Add to Calendar
+          </button>
         </div>
       </div>
     </>
