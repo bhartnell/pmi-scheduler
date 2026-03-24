@@ -51,17 +51,13 @@ export default function SchedulerHome() {
   }, [showAllPolls]);
 
   const fetchPolls = async () => {
-    // For admin/lead_instructor: show all polls by default
-    // For other roles: show only own polls
-    const isAdmin = userRole && hasMinRole(userRole, 'lead_instructor');
-
     let query = supabase
       .from('polls')
       .select('*')
       .order('created_at', { ascending: false });
 
-    // Only filter by creator for non-admin roles, or when admin chooses "My Polls"
-    if (!isAdmin || !showAllPolls) {
+    // Filter by creator only when user explicitly chooses "My Polls"
+    if (!showAllPolls) {
       query = query.eq('created_by', session?.user?.email);
     }
 
@@ -172,8 +168,8 @@ export default function SchedulerHome() {
             <p className="text-gray-600 dark:text-gray-300">Create and manage availability polls</p>
           </div>
           <div className="flex items-center gap-3">
-            {/* All Polls / My Polls toggle for admin+ */}
-            {isAdmin && (
+            {/* All Polls / My Polls toggle */}
+            {userRole && (
               <div className="flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden text-sm">
                 <button
                   onClick={() => setShowAllPolls(true)}
@@ -234,7 +230,7 @@ export default function SchedulerHome() {
                         {poll.mode === 'individual' ? 'Individual' : 'Group'}
                       </span>
                       {/* Show creator when viewing all polls */}
-                      {isAdmin && showAllPolls && poll.created_by && poll.created_by !== session?.user?.email && (
+                      {showAllPolls && poll.created_by && poll.created_by !== session?.user?.email && (
                         <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
                           by {poll.created_by.split('@')[0]}
                         </span>
