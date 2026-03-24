@@ -3,7 +3,7 @@
 import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import { signIn } from 'next-auth/react';
-import { Calendar, AlertCircle } from 'lucide-react';
+import { Calendar, AlertCircle, Stethoscope } from 'lucide-react';
 
 const SIGNIN_ERRORS: Record<string, string> = {
   OAuthSignin: 'Could not start sign-in. Please try again.',
@@ -89,6 +89,39 @@ function SignInContent() {
         <p className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
           Access restricted to authorized personnel only.
         </p>
+
+        {/* PMI Program Link */}
+        <div className="mt-6 pt-5 border-t border-gray-200 dark:border-gray-700">
+          <div className="text-center">
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+              Interested in becoming a Paramedic?
+            </p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mb-2">
+              Learn about our programs at Pima Medical Institute
+            </p>
+            <button
+              onClick={async () => {
+                try {
+                  await fetch('/api/analytics/link-click', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      link_id: 'pmi-paramedic-program',
+                      source: 'signin-page',
+                      timestamp: new Date().toISOString()
+                    })
+                  });
+                } catch {} // Don't block navigation on tracking failure
+                window.open('https://pmi.edu/on-campus-programs/associate/paramedic/', '_blank');
+              }}
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
+            >
+              <Stethoscope className="w-3.5 h-3.5" />
+              Visit PMI Paramedic Program
+              <span aria-hidden="true">&rarr;</span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

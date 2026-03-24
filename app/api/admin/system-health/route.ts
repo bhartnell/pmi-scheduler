@@ -216,6 +216,20 @@ export async function GET(request: NextRequest) {
       totalBytes += bytes;
     }
 
+    // ─── 6. PMI link clicks this month ──────────────────────────────────────
+    let pmiLinkClicksThisMonth = 0;
+    try {
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const { count } = await supabase
+        .from('link_clicks')
+        .select('id', { count: 'exact', head: true })
+        .eq('link_id', 'pmi-paramedic-program')
+        .gte('clicked_at', monthStart);
+      pmiLinkClicksThisMonth = count ?? 0;
+    } catch {
+      // Table may not exist yet
+    }
+
     return NextResponse.json({
       success: true,
       tableCounts,
@@ -230,6 +244,7 @@ export async function GET(request: NextRequest) {
         totalBytes,
         totalMB: Math.round((totalBytes / 1024 / 1024) * 100) / 100,
       },
+      pmiLinkClicksThisMonth,
       serverTime: now.toISOString(),
       environment: process.env.NODE_ENV ?? 'unknown',
     });
