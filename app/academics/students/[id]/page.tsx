@@ -142,6 +142,35 @@ interface StudentNote {
   author: { id: string; name: string; email: string } | null;
 }
 
+interface SkillEvaluation {
+  id: string;
+  skill_sheet_id: string;
+  evaluation_type: string;
+  result: string;
+  notes: string | null;
+  flagged_items: unknown;
+  created_at: string;
+  skill_sheet: {
+    id: string;
+    skill_name: string;
+    program: string;
+    source: string;
+  } | null;
+  evaluator: {
+    name: string;
+    email: string;
+  };
+}
+
+interface SkillEvalGroup {
+  canonical_skill: {
+    id: string;
+    canonical_name: string;
+    skill_category: string;
+  } | null;
+  evaluations: SkillEvaluation[];
+}
+
 interface ComplianceDocType {
   id: string;
   name: string;
@@ -293,6 +322,10 @@ export default function StudentDetailPage() {
   const [skillSignoffsLoading, setSkillSignoffsLoading] = useState(false);
   const [skillFilter, setSkillFilter] = useState<'all' | 'signed' | 'unsigned'>('all');
 
+  // Skill sheet evaluations state
+  const [skillEvalGroups, setSkillEvalGroups] = useState<SkillEvalGroup[]>([]);
+  const [skillEvalsLoading, setSkillEvalsLoading] = useState(false);
+
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/signin');
@@ -312,6 +345,7 @@ export default function StudentDetailPage() {
       fetchLabRatings();
       fetchSkillSignoffs();
       fetchAllSkills();
+      fetchSkillEvaluations();
     }
   }, [session, studentId]);
 
@@ -513,6 +547,20 @@ export default function StudentDetailPage() {
     } catch (error) {
       console.error('Error fetching skills:', error);
     }
+  };
+
+  const fetchSkillEvaluations = async () => {
+    setSkillEvalsLoading(true);
+    try {
+      const res = await fetch(`/api/students/${studentId}/skill-evaluations`);
+      const data = await res.json();
+      if (data.success) {
+        setSkillEvalGroups(data.groups || []);
+      }
+    } catch (error) {
+      console.error('Error fetching skill evaluations:', error);
+    }
+    setSkillEvalsLoading(false);
   };
 
   const handleSaveCompliance = async (docTypeId: string) => {
@@ -2242,6 +2290,84 @@ export default function StudentDetailPage() {
                       {entry.scenario.category}
                     </span>
                   )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Skill Sheet Evaluations */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+          <div className="p-4 border-b dark:border-gray-700">
+            <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <FileText className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+              Skill Sheet Evaluations
+            </h2>
+          </div>
+          {skillEvalsLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-600" />
+            </div>
+          ) : skillEvalGroups.length === 0 ? (
+            <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+              <FileText className="w-12 h-12 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
+              <p>No skill sheet evaluations recorded yet</p>
+            </div>
+          ) : (
+            <div className="divide-y dark:divide-gray-700">
+              {skillEvalGroups.map((group, gi) => (
+                <div key={group.canonical_skill?.id || `group-${gi}`}>
+                  {group.canonical_skill && (
+                    <div className="px-4 py-2 bg-gray-50 dark:bg-gray-750 border-b dark:border-gray-700">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                        {group.canonical_skill.skill_category} — {group.canonical_skill.canonical_name}
+                      </span>
+                    </div>
+                  )}
+                  {group.evaluations.map((ev) => (
+                    <div key={ev.id} className="p-4 flex items-start gap-3">
+                      <div className="shrink-0 mt-0.5">
+                        {ev.result === 'pass' ? (
+                          <CheckCircle className="w-5 h-5 text-green-500" />
+                        ) : ev.result === 'fail' ? (
+                          <XCircle className="w-5 h-5 text-red-500" />
+                        ) : (
+                          <AlertTriangle className="w-5 h-5 text-yellow-500" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium text-gray-900 dark:text-white text-sm">
+                            {ev.skill_sheet?.skill_name || 'Unknown Skill'}
+                          </span>
+                          <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                            ev.result === 'pass'
+                              ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                              : ev.result === 'fail'
+                                ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                                : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                          }`}>
+                            {ev.result}
+                          </span>
+                          <span className={`px-1.5 py-0.5 rounded text-xs ${
+                            ev.evaluation_type === 'final_competency'
+                              ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300'
+                              : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                          }`}>
+                            {ev.evaluation_type === 'final_competency' ? 'Final' : 'Formative'}
+                          </span>
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          {new Date(ev.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          {ev.evaluator?.name && ` — ${ev.evaluator.name}`}
+                          {ev.skill_sheet?.source && ` — ${ev.skill_sheet.source}`}
+                        </div>
+                        {ev.notes && (
+                          <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">{ev.notes}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ))}
             </div>
