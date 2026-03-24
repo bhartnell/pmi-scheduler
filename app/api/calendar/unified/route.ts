@@ -4,7 +4,7 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 
 export interface CalendarEvent {
   id: string;
-  source: 'planner' | 'lab_day' | 'lvfr' | 'clinical' | 'shift' | 'meeting';
+  source: 'planner' | 'lab_day' | 'lvfr' | 'clinical' | 'shift' | 'meeting' | 'ride_along';
   title: string;
   date: string;
   start_time: string;
@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
 
     const startDate = searchParams.get('start_date');
     const endDate = searchParams.get('end_date');
-    const includeParam = searchParams.get('include') || 'classes,labs,clinical,lvfr,shifts';
+    const includeParam = searchParams.get('include') || 'classes,labs,clinical,lvfr,shifts,ride_along';
     const include = new Set(includeParam.split(',').map(s => s.trim()));
     const programsParam = searchParams.get('programs');
     const programFilter = programsParam ? new Set(programsParam.split(',').map(s => s.trim())) : null;
@@ -429,6 +429,70 @@ export async function GET(request: NextRequest) {
         }
       } catch (err) {
         console.error('Error fetching shifts:', err);
+      }
+    }
+
+    // 6. Ride-along shifts
+    if (include.has('ride_along')) {
+      try {
+        let query = supabase
+          .from('ride_along_shifts')
+          .select(`
+            id, shift_date, start_time, end_time, shift_type, location,
+            unit_number, preceptor_name, status, agency_id, cohort_id,
+            assignments:ride_along_assignments(id, student_id, status)
+          `)
+          .gte('shift_date', startDate)
+          .lte('shift_date', endDate)
+          .neq('status', 'cancelled')
+          .order('shift_date')
+          .order('start_time');
+
+        if (cohortId) {
+          query = query.eq('cohort_id', cohortId);
+        }
+
+        const { data: raShifts } = await query;
+
+        if (raShifts) {
+          for (const s of raShifts) {
+            if (!s.shift_date) continue;
+
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const assignments = (s.assignments || []) as any[];
+            const activeCount = assignments.filter(
+              (a: { status: string }) => a.status !== 'cancelled'
+            ).length;
+
+            const shiftLabel = s.shift_type
+              ? `${s.shift_type.charAt(0).toUpperCase() + s.shift_type.slice(1)} Shift`
+              : 'Shift';
+
+            events.push({
+              id: `ride-along-${s.id}`,
+              source: 'ride_along',
+              title: `Ride-Along: ${shiftLabel}${s.unit_number ? ` (${s.unit_number})` : ''}`,
+              date: s.shift_date,
+              start_time: s.start_time || '08:00:00',
+              end_time: s.end_time || '16:00:00',
+              program: 'emt',
+              color: PROGRAM_COLORS.clinical,
+              instructor_names: s.preceptor_name ? [s.preceptor_name] : [],
+              room: s.location || undefined,
+              linked_id: s.id,
+              linked_url: '/clinical/ride-alongs/shifts',
+              event_type: 'clinical',
+              metadata: {
+                shift_type: s.shift_type,
+                unit_number: s.unit_number,
+                status: s.status,
+                assigned_count: activeCount,
+              },
+            });
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching ride-along shifts:', err);
       }
     }
 
