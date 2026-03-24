@@ -124,8 +124,9 @@ export default function RideAlongPollPage() {
       setFormError('Please enter your PMI email address.');
       return;
     }
-    if (!email.trim().toLowerCase().endsWith('@my.pmi.edu')) {
-      setFormError('Please use your @my.pmi.edu email address.');
+    const emailLower = email.trim().toLowerCase();
+    if (!emailLower.endsWith('@pmi.edu') && !emailLower.endsWith('@my.pmi.edu')) {
+      setFormError('Please use your PMI email address.');
       return;
     }
 
@@ -273,13 +274,13 @@ export default function RideAlongPollPage() {
               <label className="block text-sm font-medium text-gray-700 mb-2">Your Email</label>
               <input
                 type="email"
-                placeholder="yourname@my.pmi.edu"
+                placeholder="yourname@pmi.edu"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                 required
               />
-              <p className="text-xs text-gray-500 mt-1">Use your @my.pmi.edu email address</p>
+              <p className="text-xs text-gray-500 mt-1">Use your PMI email address (@pmi.edu or @my.pmi.edu)</p>
             </div>
 
             {/* Available Days */}
