@@ -92,41 +92,52 @@ export async function POST(
         })
       : 'as soon as possible';
 
-    // Send emails
-    let sentCount = 0;
-    let failedCount = 0;
+    // Send emails with rate-limit protection (500ms delay between sends)
+    const results: { email: string; success: boolean; error?: string }[] = [];
 
     for (const student of recipientStudents) {
       if (!student.email) {
-        failedCount++;
+        results.push({ email: `${student.first_name} ${student.last_name} (no email)`, success: false, error: 'No email address' });
         continue;
       }
 
-      const result = await sendEmail({
-        to: student.email,
-        subject: `EMT Ride-Along Availability — Please Submit by ${deadlineStr}`,
-        template: 'general',
-        data: {
+      try {
+        const result = await sendEmail({
+          to: student.email,
           subject: `EMT Ride-Along Availability — Please Submit by ${deadlineStr}`,
-          title: 'Ride-Along Availability',
-          message: `Hi ${student.first_name},<br><br>Please submit your ride-along availability for the upcoming semester. Click the button below to fill out the form.<br><br><strong>Deadline:</strong> ${deadlineStr}`,
-          actionUrl: pollUrl,
-          actionText: 'Submit Your Availability',
-        },
-      });
+          template: 'general',
+          data: {
+            subject: `EMT Ride-Along Availability — Please Submit by ${deadlineStr}`,
+            title: 'Ride-Along Availability',
+            message: `Hi ${student.first_name},<br><br>Please submit your ride-along availability for the upcoming semester. Click the button below to fill out the form.<br><br><strong>Deadline:</strong> ${deadlineStr}`,
+            actionUrl: pollUrl,
+            actionText: 'Submit Your Availability',
+          },
+        });
 
-      if (result.success) {
-        sentCount++;
-      } else {
-        failedCount++;
+        if (result.success) {
+          results.push({ email: student.email, success: true });
+        } else {
+          results.push({ email: student.email, success: false, error: result.error || 'Unknown error' });
+        }
+      } catch (err) {
+        const errMsg = err instanceof Error ? err.message : 'Unknown error';
+        results.push({ email: student.email, success: false, error: errMsg });
       }
+
+      // Rate limit protection — Resend free tier allows ~2 emails/sec
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
+
+    const sentCount = results.filter(r => r.success).length;
+    const failedCount = results.filter(r => !r.success).length;
 
     return NextResponse.json({
       success: true,
       sent: sentCount,
       failed: failedCount,
       total: recipientStudents.length,
+      results,
     });
   } catch (error) {
     console.error('Error sending ride-along poll emails:', error);

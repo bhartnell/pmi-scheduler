@@ -88,7 +88,7 @@ export default function RideAlongAvailabilityPage() {
   const [creatingPoll, setCreatingPoll] = useState(false);
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
   const [sendingPollId, setSendingPollId] = useState<string | null>(null);
-  const [sendResult, setSendResult] = useState<{ pollId: string; message: string } | null>(null);
+  const [sendResult, setSendResult] = useState<{ pollId: string; message: string; sent: number; failed: number; failedEmails?: string[] } | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/auth/signin');
@@ -216,19 +216,34 @@ export default function RideAlongAvailabilityPage() {
       });
       const data = await res.json();
       if (data.success) {
+        const failedEmails = (data.results || [])
+          .filter((r: { success: boolean }) => !r.success)
+          .map((r: { email: string }) => r.email);
         setSendResult({
           pollId,
-          message: `Sent to ${data.sent} student${data.sent !== 1 ? 's' : ''}${data.failed ? ` (${data.failed} failed)` : ''}`,
+          sent: data.sent ?? 0,
+          failed: data.failed ?? 0,
+          failedEmails: failedEmails.length > 0 ? failedEmails : undefined,
+          message: data.failed > 0
+            ? `${data.sent} sent, ${data.failed} failed`
+            : `${data.sent}/${data.total} emails sent successfully`,
         });
       } else {
-        setSendResult({ pollId, message: data.error || 'Failed to send' });
+        setSendResult({ pollId, sent: 0, failed: 0, message: data.error || 'Failed to send' });
       }
     } catch (error) {
       console.error('Error sending poll emails:', error);
-      setSendResult({ pollId, message: 'Network error' });
+      setSendResult({ pollId, sent: 0, failed: 0, message: 'Network error' });
     }
     setSendingPollId(null);
-    setTimeout(() => setSendResult(null), 5000);
+    // Keep result visible longer if there were failures so user can retry
+  };
+
+  const retryFailedEmails = async (pollId: string) => {
+    // Retry by sending to all — the failed emails need resending
+    // In practice, "non_responders" mode re-targets students who haven't submitted
+    // But for a true retry of failed sends, we re-send to all
+    await sendPollEmails(pollId, 'all');
   };
 
   const getCohortLabel = (cohortId: string) => {
@@ -318,11 +333,37 @@ export default function RideAlongAvailabilityPage() {
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
+                  <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
                     {sendResult?.pollId === poll.id && (
-                      <span className="text-xs text-gray-600 dark:text-gray-400">
-                        {sendResult.message}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs font-medium ${
+                          sendResult.failed > 0
+                            ? 'text-amber-600 dark:text-amber-400'
+                            : 'text-green-600 dark:text-green-400'
+                        }`}>
+                          {sendResult.failed > 0 ? (
+                            <span className="flex items-center gap-1">
+                              <AlertCircle className="w-3.5 h-3.5" />
+                              {sendResult.message}
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1">
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              {sendResult.message}
+                            </span>
+                          )}
+                        </span>
+                        {sendResult.failed > 0 && (
+                          <button
+                            onClick={() => retryFailedEmails(poll.id)}
+                            disabled={sendingPollId === poll.id}
+                            className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 dark:bg-amber-900/30 hover:bg-amber-200 dark:hover:bg-amber-900/50 text-amber-700 dark:text-amber-400 rounded text-xs font-medium transition-colors disabled:opacity-50"
+                          >
+                            <Send className="w-3 h-3" />
+                            Retry
+                          </button>
+                        )}
+                      </div>
                     )}
                     <button
                       onClick={() => copyPollLink(poll.token)}
