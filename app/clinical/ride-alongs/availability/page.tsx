@@ -115,10 +115,10 @@ export default function RideAlongAvailabilityPage() {
       }
 
       const [cohortsRes, availRes, pollsRes, semestersRes] = await Promise.all([
-        fetch('/api/cohorts?active_only=true'),
+        fetch('/api/lab-management/cohorts'),
         fetch('/api/clinical/ride-alongs/availability'),
         fetch('/api/clinical/ride-alongs/polls'),
-        fetch('/api/semesters?active_only=true'),
+        fetch('/api/scheduling/planner/semesters?active_only=true'),
       ]);
 
       const cohortsData = await cohortsRes.json();
@@ -141,7 +141,7 @@ export default function RideAlongAvailabilityPage() {
   const fetchCohortData = async () => {
     try {
       const [studentsRes, availRes] = await Promise.all([
-        fetch(`/api/students?cohort_id=${selectedCohort}&status=active`),
+        fetch(`/api/students?cohortId=${selectedCohort}`),
         fetch(`/api/clinical/ride-alongs/availability?cohort_id=${selectedCohort}`),
       ]);
 

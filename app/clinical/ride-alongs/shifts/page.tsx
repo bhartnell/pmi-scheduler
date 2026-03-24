@@ -145,7 +145,7 @@ export default function RideAlongShiftsPage() {
         fetch('/api/clinical/ride-alongs'),
         fetch('/api/clinical/ride-alongs/templates'),
         fetch('/api/clinical/agencies?type=ems'),
-        fetch('/api/cohorts?active_only=true'),
+        fetch('/api/lab-management/cohorts'),
       ]);
 
       const [shiftsData, templatesData, agenciesData, cohortsData] = await Promise.all([
@@ -185,7 +185,7 @@ export default function RideAlongShiftsPage() {
 
   const fetchStudentsForCohort = async (cohortId: string) => {
     try {
-      const res = await fetch(`/api/students?cohort_id=${cohortId}&status=active`);
+      const res = await fetch(`/api/students?cohortId=${cohortId}`);
       const data = await res.json();
       setStudents(data.students || []);
     } catch (error) {
