@@ -120,13 +120,9 @@ export default function RideAlongPollPage() {
       setFormError('Please enter your full name.');
       return;
     }
-    if (!email.trim()) {
-      setFormError('Please enter your PMI email address.');
-      return;
-    }
-    const emailLower = email.trim().toLowerCase();
-    if (!emailLower.endsWith('@pmi.edu') && !emailLower.endsWith('@my.pmi.edu')) {
-      setFormError('Please use your PMI email address.');
+    // Email is optional — name is sufficient to match student records
+    if (email.trim() && !email.trim().includes('@')) {
+      setFormError('Please enter a valid email address.');
       return;
     }
 
@@ -145,7 +141,7 @@ export default function RideAlongPollPage() {
         body: JSON.stringify({
           first_name: firstName.trim(),
           last_name: lastName.trim(),
-          email: email.trim().toLowerCase(),
+          email: email.trim().toLowerCase() || null,
           available_days: selectedDays,
           preferred_shift_type: shiftPreference.length > 0 ? shiftPreference : ['no_preference'],
           unavailable_dates: unavailableDates,
@@ -252,6 +248,9 @@ export default function RideAlongPollPage() {
               <div className="grid grid-cols-2 gap-3">
                 <input
                   type="text"
+                  id="firstName"
+                  name="firstName"
+                  autoComplete="given-name"
                   placeholder="First name"
                   value={firstName}
                   onChange={e => setFirstName(e.target.value)}
@@ -260,6 +259,9 @@ export default function RideAlongPollPage() {
                 />
                 <input
                   type="text"
+                  id="lastName"
+                  name="lastName"
+                  autoComplete="family-name"
                   placeholder="Last name"
                   value={lastName}
                   onChange={e => setLastName(e.target.value)}
@@ -274,13 +276,15 @@ export default function RideAlongPollPage() {
               <label className="block text-sm font-medium text-gray-700 mb-2">Your Email</label>
               <input
                 type="email"
-                placeholder="yourname@pmi.edu"
+                id="email"
+                name="email"
+                autoComplete="email"
+                placeholder="your.email@example.com"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                required
               />
-              <p className="text-xs text-gray-500 mt-1">Use your PMI email address (@pmi.edu or @my.pmi.edu)</p>
+              <p className="text-xs text-gray-500 mt-1">Optional — helps us match your response to your student record</p>
             </div>
 
             {/* Available Days */}
