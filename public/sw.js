@@ -55,8 +55,9 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Only handle same-origin requests
+  // Only handle same-origin GET requests (HEAD/POST/etc. go straight to network)
   if (url.origin !== self.location.origin) return;
+  if (request.method !== 'GET') return;
 
   // Never cache API routes — always go to the network
   if (url.pathname.startsWith('/api/')) {
