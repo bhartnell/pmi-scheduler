@@ -251,6 +251,11 @@ export default function SystemHealthPage() {
 
       try {
         const res = await fetch('/api/admin/system-health');
+        if (res.status === 401) {
+          if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; }
+          if (countdownRef.current) { clearInterval(countdownRef.current); countdownRef.current = null; }
+          return;
+        }
         const data = await res.json();
 
         if (data.success) {
