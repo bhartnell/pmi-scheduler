@@ -836,7 +836,7 @@ export default function WorkloadTrackerPage() {
         throw new Error(data.error || 'Failed to recalculate');
       }
       const result = await res.json();
-      console.log('Recalculate result:', result); // Debug info in console
+
       await fetchWorkload(selectedSemesterId);
     } catch (err) {
       console.error('Recalculate error:', err);

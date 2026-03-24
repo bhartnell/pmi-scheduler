@@ -308,7 +308,6 @@ export async function PUT(request: NextRequest) {
   try {
     const body = await request.json();
     const { id, lab_day_id, student_id, station_id, status, result, evaluation_id } = body;
-    console.log('[student-queue PUT]', { id, lab_day_id, student_id, station_id, status, result, evaluation_id: evaluation_id?.substring?.(0, 8) });
 
     const supabase = getSupabaseAdmin();
 

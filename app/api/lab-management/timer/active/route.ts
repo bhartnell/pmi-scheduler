@@ -74,7 +74,6 @@ export async function GET(request: NextRequest) {
         })
         .in('lab_day_id', staleTimerIds);
 
-      console.log(`Auto-stopped ${staleTimerIds.length} stale timer(s) running >24h`);
     }
 
     // Filter out stale timers from our active list
@@ -106,7 +105,6 @@ export async function GET(request: NextRequest) {
         })
         .in('lab_day_id', extraTimerIds);
 
-      console.log(`Stopped ${extraTimerIds.length} extra active timer(s), keeping most recent`);
     }
 
     // Version-based short-circuit: if the primary timer's version matches what

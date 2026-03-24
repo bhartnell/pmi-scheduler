@@ -48,8 +48,6 @@ export async function GET(request: NextRequest) {
     });
 
     if (matchedPrograms.length === 0) {
-      console.log(`[planner/cohorts] No programs matched for "${programType}". Available:`,
-        (allPrograms || []).map(p => `${p.name} (${p.abbreviation})`));
       return NextResponse.json({ cohorts: [], debug: { searched: searchTerm, available: (allPrograms || []).map(p => p.name) } });
     }
 

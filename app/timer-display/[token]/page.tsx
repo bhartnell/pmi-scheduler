@@ -503,7 +503,7 @@ export default function TimerDisplayPage() {
       >
         <head>
           <meta name="mobile-web-app-capable" content="yes" />
-          <meta name="apple-mobile-web-app-capable" content="yes" />
+
           <meta name="apple-mobile-web-app-status-bar-style" content="black" />
           <meta name="apple-mobile-web-app-title" content="PMI Timer" />
           <meta name="theme-color" content="#1e40af" />
@@ -523,7 +523,7 @@ export default function TimerDisplayPage() {
       <div className="min-h-screen bg-black flex items-center justify-center">
         <head>
           <meta name="mobile-web-app-capable" content="yes" />
-          <meta name="apple-mobile-web-app-capable" content="yes" />
+
           <meta name="apple-mobile-web-app-status-bar-style" content="black" />
           <meta name="apple-mobile-web-app-title" content="PMI Timer" />
           <meta name="theme-color" content="#1e40af" />
@@ -546,7 +546,7 @@ export default function TimerDisplayPage() {
       >
         <head>
           <meta name="mobile-web-app-capable" content="yes" />
-          <meta name="apple-mobile-web-app-capable" content="yes" />
+
           <meta name="apple-mobile-web-app-status-bar-style" content="black" />
           <meta name="apple-mobile-web-app-title" content="PMI Timer" />
           <meta name="theme-color" content="#1e40af" />

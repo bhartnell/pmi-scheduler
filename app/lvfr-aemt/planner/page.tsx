@@ -440,7 +440,7 @@ function BlockBar({
           e.preventDefault();
           return;
         }
-        console.log('[BlockBar DragStart]', block.name, placement.id, 'day', placement.day_number);
+
         e.dataTransfer.setData('application/json', JSON.stringify({
           type: 'placement',
           placement: placement,
@@ -805,7 +805,7 @@ function ContentLibrarySidebar({
                           e.preventDefault();
                           return;
                         }
-                        console.log('[Sidebar DragStart]', block.name, block.id);
+
                         const payload = JSON.stringify({
                           type: 'library',
                           block: block,
@@ -1263,16 +1263,13 @@ export default function CoursePlannerPage() {
 
     if (isReadOnly || !instance) return;
 
-    console.log('[DayCard Drop] day', dayNumber, 'types:', Array.from(e.dataTransfer.types));
 
     try {
       const raw = e.dataTransfer.getData('application/json');
-      console.log('[DayCard Drop] raw data:', raw?.substring(0, 120));
       const data = JSON.parse(raw);
 
       if (data.type === 'library') {
         // ── Add block from sidebar library onto a day ──
-        console.log('[DayCard Drop] Library block →', data.block?.name, '→ day', dayNumber);
         const block: ContentBlock = data.block;
         const dayPlacements = placementsByDay.get(dayNumber) || [];
         const startTime = getNextAvailableTime(dayPlacements);
@@ -1331,7 +1328,6 @@ export default function CoursePlannerPage() {
         }
       } else if (data.type === 'placement') {
         const sourcePlacement: Placement = data.placement;
-        console.log('[DayCard Drop] Move placement', sourcePlacement.content_block?.name, 'from day', sourcePlacement.day_number, '→ day', dayNumber);
 
         // Skip if dragging a fixed block
         if (getFixedRole(sourcePlacement.content_block)) return;
@@ -1607,7 +1603,6 @@ export default function CoursePlannerPage() {
     e.stopPropagation();
     dragCounters.current[dayNumber] = (dragCounters.current[dayNumber] || 0) + 1;
     if (dragCounters.current[dayNumber] === 1) {
-      console.log('[DayCard DragEnter] day', dayNumber);
     }
     setDropTargetDay(dayNumber);
   }, []);

@@ -144,7 +144,6 @@ export async function PUT(
 
         const updatedCount = batchResult?.length || 0;
         const updatedBlockIds = (batchResult || []).map((b: { id: string }) => b.id);
-        console.log(`Batch update mode=${update_mode}: recurring_group_id=${targetBlock.recurring_group_id}, updated ${updatedCount} blocks`);
 
         // Batch sync instructors for all affected blocks
         if (instructorIds !== undefined && updatedBlockIds.length > 0) {

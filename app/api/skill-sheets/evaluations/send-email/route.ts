@@ -63,7 +63,6 @@ export async function POST(request: NextRequest) {
     }
 
     const student = evaluation.student as any;
-    console.log('[send-email] Evaluation:', evaluation_id, '| Student:', student?.first_name, student?.last_name, '| Email:', student?.email, '| Status:', evaluation.email_status);
     if (!student?.email) {
       console.error('[send-email] No email for student:', student?.first_name, student?.last_name);
       return NextResponse.json({ success: false, error: 'Student has no email address' }, { status: 400 });
@@ -169,7 +168,6 @@ export async function POST(request: NextRequest) {
       </table>`;
 
     // Send email via Resend with full score sheet embedded
-    console.log('[send-email] Sending to:', student.email, '| Skill:', skillSheet?.skill_name, '| Steps:', passedSteps + '/' + totalSteps, '| Result:', displayResult);
     const emailResult = await sendSkillEvaluationEmail(student.email, {
       evaluationId: evaluation.id,
       studentFirstName: student.first_name,
@@ -194,7 +192,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: emailResult.error || 'Failed to send email' }, { status: 500 });
     }
 
-    console.log('[send-email] Success! Resend ID:', emailResult.id);
     // Update email_status to sent only after confirmed delivery
     await supabase
       .from('student_skill_evaluations')

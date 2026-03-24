@@ -110,19 +110,7 @@ export default function AdminPage() {
       description: 'Manage kiosk display tokens for Raspberry Pi or wall monitors',
       color: 'bg-green-500'
     },
-    // Seating Charts & Learning Styles - archived, hidden from nav
-    // {
-    //   href: '/labs/seating/learning-styles',
-    //   ...
-    // },
-    // {
-    //   href: '/labs/seating/preferences',
-    //   ...
-    // },
-    // {
-    //   href: '/labs/seating/charts',
-    //   ...
-    // }
+
   ];
 
   return (

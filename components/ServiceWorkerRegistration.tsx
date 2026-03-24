@@ -17,7 +17,6 @@ export default function ServiceWorkerRegistration() {
         const registration = await navigator.serviceWorker.register('/sw.js', {
           scope: '/',
         });
-        console.log('[SW] Registered successfully. Scope:', registration.scope);
 
         registration.addEventListener('updatefound', () => {
           const newWorker = registration.installing;
@@ -25,7 +24,6 @@ export default function ServiceWorkerRegistration() {
           newWorker.addEventListener('statechange', () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
               // A new service worker is available; the page will use it on next load
-              console.log('[SW] New service worker installed. Refresh to update.');
             }
           });
         });
