@@ -143,6 +143,8 @@ export default function NotificationBell() {
   const prevUnreadCountRef = useRef<number | null>(null);
   // Track whether the user has interacted with the page (required for autoplay policy)
   const hasInteractedRef = useRef(false);
+  // Stop polling on 401 to avoid console spam when session expires
+  const authFailedRef = useRef(false);
 
   // Mark that the user has interacted so chime can play
   useEffect(() => {
@@ -157,10 +159,15 @@ export default function NotificationBell() {
 
   // Fetch notifications -- plays a chime when new unread notifications arrive during polling
   const fetchNotifications = useCallback(async () => {
-    if (!session?.user?.email) return;
+    if (!session?.user?.email || authFailedRef.current) return;
 
     try {
       const res = await fetch('/api/notifications');
+      if (res.status === 401) {
+        // Session expired — stop polling to avoid console spam
+        authFailedRef.current = true;
+        return;
+      }
       if (res.ok) {
         const data = await res.json();
         const newCount: number = data.unreadCount || 0;
