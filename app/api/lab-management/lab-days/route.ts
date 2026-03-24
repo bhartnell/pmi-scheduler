@@ -4,7 +4,8 @@ import { hasMinRole } from '@/lib/permissions';
 import { requireAuth } from '@/lib/api-auth';
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAuth('instructor');
+  // Allow volunteer_instructor+ to read lab schedule data (read-only access)
+  const auth = await requireAuth('volunteer_instructor');
 
   if (auth instanceof NextResponse) return auth;
 

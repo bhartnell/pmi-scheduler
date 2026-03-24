@@ -26,6 +26,7 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  let blockId = 'unknown';
   try {
     const auth = await requireAuth();
     if (auth instanceof NextResponse) return auth;
@@ -36,6 +37,7 @@ export async function PUT(
     }
 
     const { id } = await params;
+    blockId = id;
     const body = await request.json();
     const { update_mode } = body; // 'this' | 'this_and_future' | 'all'
 
@@ -189,11 +191,13 @@ export async function PUT(
     return NextResponse.json({ block: data });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
-    const detail = (err as { details?: string })?.details || '';
-    console.error('Update schedule block error:', { message, detail, err });
+    const detail = (err as { details?: string; hint?: string; code?: string })?.details || '';
+    const code = (err as { code?: string })?.code || '';
+    console.error('Update schedule block error:', { blockId, message, detail, code, err });
     return NextResponse.json({
       error: message,
       detail: detail || undefined,
+      code: code || undefined,
     }, { status: 500 });
   }
 }

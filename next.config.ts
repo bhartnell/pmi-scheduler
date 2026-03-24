@@ -30,6 +30,17 @@ const nextConfig: NextConfig = {
   // Output settings
   output: 'standalone',
 
+  // API rewrites — proxy /api/academics/planner/* to /api/scheduling/planner/*
+  // The planner page moved to /academics/planner but API routes remain at /api/scheduling/planner
+  async rewrites() {
+    return [
+      {
+        source: '/api/academics/planner/:path*',
+        destination: '/api/scheduling/planner/:path*',
+      },
+    ];
+  },
+
   // Redirects for route reorganization
   async redirects() {
     return [
