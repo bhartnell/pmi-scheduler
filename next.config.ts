@@ -30,6 +30,24 @@ const nextConfig: NextConfig = {
   // Output settings
   output: 'standalone',
 
+  // Cache-control headers to prevent stale clients from caching API responses
+  async headers() {
+    return [
+      {
+        source: '/api/lab-management/timer/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate' },
+        ],
+      },
+      {
+        source: '/api/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate' },
+        ],
+      },
+    ];
+  },
+
   // API rewrites — proxy /api/academics/planner/* to /api/scheduling/planner/*
   // The planner page moved to /academics/planner but API routes remain at /api/scheduling/planner
   async rewrites() {

@@ -6,7 +6,8 @@
  *   - Cache-first with network fallback for app shell HTML pages
  */
 
-const CACHE_VERSION = 'pmi-scheduler-v1';
+const SW_VERSION = '2026-03-24';
+const CACHE_VERSION = 'pmi-scheduler-v2';
 
 // Static asset file extensions that benefit from cache-first
 const STATIC_EXTENSIONS = ['.js', '.css', '.woff', '.woff2', '.ttf', '.otf', '.ico', '.svg', '.png', '.jpg', '.jpeg', '.webp', '.gif'];
@@ -59,11 +60,12 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return;
   if (request.method !== 'GET') return;
 
-  // Never cache API routes — always go to the network
-  if (url.pathname.startsWith('/api/')) {
-    event.respondWith(networkOnly(request));
-    return;
-  }
+  // Skip ALL API routes entirely — don't intercept, let the browser handle them directly.
+  // This prevents the SW from masking 401s or interfering with polling responses.
+  if (url.pathname.startsWith('/api/')) return;
+
+  // Skip auth routes entirely
+  if (url.pathname.startsWith('/auth/')) return;
 
   // Never cache Next.js internals
   if (url.pathname.startsWith('/_next/')) {

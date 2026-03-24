@@ -157,6 +157,12 @@ export default function LabTimer({
       }
       const data = await res.json();
 
+      // Server explicitly told us to stop polling
+      if (data?.stop_polling) {
+        setSessionExpired(true);
+        return null;
+      }
+
       if (data.success) {
         setIsConnected(true);
         if (data.timer) {
@@ -193,6 +199,12 @@ export default function LabTimer({
         return;
       }
       const data = await res.json();
+
+      // Server explicitly told us to stop polling
+      if (data?.stop_polling) {
+        setSessionExpired(true);
+        return;
+      }
 
       if (data.success) {
         setReadyStatuses(data.readyStatuses || []);

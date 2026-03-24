@@ -60,6 +60,14 @@ export default function GlobalTimerBanner() {
 
       const data = await res.json();
 
+      // Server explicitly told us to stop polling (e.g., stale client with expired session)
+      if (data?.stop_polling) {
+        setSessionExpired(true);
+        setTimer(null);
+        setLabDay(null);
+        return;
+      }
+
       // If not modified, skip state update to save re-renders
       if (data.not_modified) return;
 

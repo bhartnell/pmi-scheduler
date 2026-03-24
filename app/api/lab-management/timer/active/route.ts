@@ -9,7 +9,22 @@ import { requireAuth } from '@/lib/api-auth';
 export async function GET(request: NextRequest) {
   const auth = await requireAuth('instructor');
 
-  if (auth instanceof NextResponse) return auth;
+  if (auth instanceof NextResponse) {
+    // Add stop_polling flag and Retry-After header on 401 to tell stale clients to stop
+    if (auth.status === 401) {
+      return NextResponse.json(
+        { success: false, error: 'unauthorized', stop_polling: true },
+        {
+          status: 401,
+          headers: {
+            'Retry-After': '86400',
+            'Cache-Control': 'no-store, no-cache, must-revalidate',
+          },
+        }
+      );
+    }
+    return auth;
+  }
 
   const { user } = auth;
 
