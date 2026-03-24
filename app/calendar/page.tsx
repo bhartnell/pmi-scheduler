@@ -20,6 +20,9 @@ import {
   ArrowRight,
   AlertTriangle,
   CalendarSearch,
+  Download,
+  X,
+  Check,
 } from 'lucide-react';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import ConflictPanel from '@/components/calendar/ConflictPanel';
@@ -195,6 +198,162 @@ function layoutEvents(events: CalendarEvent[]): (CalendarEvent & LayoutInfo)[] {
   return result;
 }
 
+// ── Export Dropdown ────────────────────────────────────────────────────
+
+interface ExportDropdownProps {
+  dateRange: { start: string; end: string };
+  activePrograms: Set<string>;
+  activeEventTypes: Set<string>;
+  selectedInstructor: string;
+  onClose: () => void;
+}
+
+function ExportDropdown({ dateRange, activePrograms, activeEventTypes, selectedInstructor, onClose }: ExportDropdownProps) {
+  const [exportMode, setExportMode] = useState<'current' | 'custom'>('current');
+  const [exportStartDate, setExportStartDate] = useState(dateRange.start);
+  const [exportEndDate, setExportEndDate] = useState(dateRange.end);
+  const [exportPrograms, setExportPrograms] = useState<Set<string>>(new Set(activePrograms));
+
+  useEffect(() => {
+    setExportStartDate(dateRange.start);
+    setExportEndDate(dateRange.end);
+    setExportPrograms(new Set(activePrograms));
+  }, [dateRange, activePrograms]);
+
+  const toggleExportProgram = (prog: string) => {
+    setExportPrograms(prev => {
+      const next = new Set(prev);
+      if (next.has(prog)) next.delete(prog);
+      else next.add(prog);
+      return next;
+    });
+  };
+
+  const handleDownload = () => {
+    const params = new URLSearchParams({
+      start_date: exportMode === 'current' ? dateRange.start : exportStartDate,
+      end_date: exportMode === 'current' ? dateRange.end : exportEndDate,
+    });
+
+    const progs = exportMode === 'current' ? activePrograms : exportPrograms;
+    if (progs.size > 0) {
+      params.set('programs', Array.from(progs).join(','));
+    }
+
+    if (exportMode === 'current' && activeEventTypes.size > 0 && activeEventTypes.size < EVENT_TYPES.length) {
+      params.set('event_types', Array.from(activeEventTypes).join(','));
+    }
+
+    if (exportMode === 'current' && selectedInstructor) {
+      params.set('instructor_id', selectedInstructor);
+    }
+
+    window.open(`/api/calendar/export-ics?${params}`, '_blank');
+    onClose();
+  };
+
+  return (
+    <>
+      {/* Click-away backdrop */}
+      <div className="fixed inset-0 z-30" onClick={onClose} />
+      <div className="absolute right-0 top-full mt-2 z-40 w-72 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Export Calendar</h3>
+          <button onClick={onClose} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700">
+            <X className="h-4 w-4 text-gray-400" />
+          </button>
+        </div>
+
+        {/* Mode selector */}
+        <div className="flex gap-2 mb-3">
+          <button
+            onClick={() => setExportMode('current')}
+            className={`flex-1 text-xs py-1.5 rounded-md font-medium transition-colors ${
+              exportMode === 'current'
+                ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+            }`}
+          >
+            Current View
+          </button>
+          <button
+            onClick={() => setExportMode('custom')}
+            className={`flex-1 text-xs py-1.5 rounded-md font-medium transition-colors ${
+              exportMode === 'custom'
+                ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+            }`}
+          >
+            Custom Range
+          </button>
+        </div>
+
+        {exportMode === 'custom' && (
+          <div className="space-y-2 mb-3">
+            <div>
+              <label className="text-xs text-gray-500 dark:text-gray-400">Start Date</label>
+              <input
+                type="date"
+                value={exportStartDate}
+                onChange={e => setExportStartDate(e.target.value)}
+                className="w-full mt-0.5 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 dark:text-gray-400">End Date</label>
+              <input
+                type="date"
+                value={exportEndDate}
+                onChange={e => setExportEndDate(e.target.value)}
+                className="w-full mt-0.5 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Program selector (for custom mode) */}
+        {exportMode === 'custom' && (
+          <div className="mb-3">
+            <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Programs</label>
+            <div className="flex flex-wrap gap-1.5">
+              {PROGRAMS.map(prog => (
+                <button
+                  key={prog}
+                  onClick={() => toggleExportProgram(prog)}
+                  className={`flex items-center gap-1 px-2 py-0.5 text-xs rounded-full border transition-colors ${
+                    exportPrograms.has(prog)
+                      ? 'text-white border-transparent'
+                      : 'bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-300 dark:border-gray-600'
+                  }`}
+                  style={exportPrograms.has(prog) ? { backgroundColor: PROGRAM_COLORS[prog] } : undefined}
+                >
+                  {exportPrograms.has(prog) && <Check className="h-3 w-3" />}
+                  {PROGRAM_LABELS[prog]}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Info line for current mode */}
+        {exportMode === 'current' && (
+          <div className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            Exports {dateRange.start} to {dateRange.end} with your active filters.
+          </div>
+        )}
+
+        <button
+          onClick={handleDownload}
+          className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors"
+        >
+          <Download className="h-4 w-4" />
+          Download .ics
+        </button>
+      </div>
+    </>
+  );
+}
+
 // ── Main component (wrapped in Suspense for useSearchParams) ───────────
 
 function CalendarContent() {
@@ -228,6 +387,9 @@ function CalendarContent() {
   const [showPublished, setShowPublished] = useState(true);
   const [showDrafts, setShowDrafts] = useState(true);
   const [showCancelled, setShowCancelled] = useState(false);
+
+  // Export panel
+  const [exportPanelOpen, setExportPanelOpen] = useState(false);
 
   // Initialize from URL params
   useEffect(() => {
@@ -608,6 +770,23 @@ function CalendarContent() {
           >
             <Printer className="h-4 w-4" /> Print
           </button>
+          <div className="relative">
+            <button
+              onClick={() => setExportPanelOpen(!exportPanelOpen)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600"
+            >
+              <Download className="h-4 w-4" /> Export
+            </button>
+            {exportPanelOpen && (
+              <ExportDropdown
+                dateRange={dateRange}
+                activePrograms={activePrograms}
+                activeEventTypes={activeEventTypes}
+                selectedInstructor={presetView === 'instructor' ? selectedInstructor : ''}
+                onClose={() => setExportPanelOpen(false)}
+              />
+            )}
+          </div>
         </div>
       </div>
 
