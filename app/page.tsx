@@ -742,7 +742,7 @@ export default function HomePage() {
                 <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-green-200 dark:group-hover:bg-green-900/50 transition-colors">
                   <GraduationCap className="w-8 h-8 text-green-600 dark:text-green-400" />
                 </div>
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Lab Schedule</h3>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Lab Schedule <span className="text-sm font-normal text-gray-500 dark:text-gray-400">(Read Only)</span></h3>
                 <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
                   View upcoming lab schedules and assignments (read-only).
                 </p>
@@ -845,7 +845,7 @@ export default function HomePage() {
           </Link>
           )}
 
-          {/* Part-Timer Scheduling Card - scheduling roles only */}
+          {/* Scheduling Card - scheduling roles only */}
           {currentUser && effectiveRole && canAccessScheduling(effectiveRole) && (
           <Link
             href="/scheduling"
@@ -855,7 +855,7 @@ export default function HomePage() {
               <div className="w-16 h-16 bg-cyan-100 dark:bg-cyan-900/30 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-cyan-200 dark:group-hover:bg-cyan-900/50 transition-colors">
                 <Clock className="w-8 h-8 text-cyan-600 dark:text-cyan-400" />
               </div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Part-Timer Scheduling</h3>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Scheduling</h3>
               <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
                 Set availability and sign up for open shifts.
               </p>

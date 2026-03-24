@@ -344,11 +344,24 @@ export default function PreceptorsPage() {
                 className="px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
               >
                 <option value="">All Agencies</option>
-                {agencies.filter(a => a.type === 'ems').map(agency => (
-                  <option key={agency.id} value={agency.id}>
-                    {agency.abbreviation || agency.name}
-                  </option>
-                ))}
+                {agencies.filter(a => a.type === 'ems').length > 0 && (
+                  <optgroup label="EMS Agencies">
+                    {agencies.filter(a => a.type === 'ems').map(agency => (
+                      <option key={agency.id} value={agency.id}>
+                        {agency.abbreviation || agency.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {agencies.filter(a => a.type === 'hospital').length > 0 && (
+                  <optgroup label="Hospitals">
+                    {agencies.filter(a => a.type === 'hospital').map(agency => (
+                      <option key={agency.id} value={agency.id}>
+                        {agency.abbreviation || agency.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
             </div>
 
