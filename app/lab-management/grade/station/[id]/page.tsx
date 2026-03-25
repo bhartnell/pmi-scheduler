@@ -620,7 +620,7 @@ export default function GradeStationPage() {
 
       {/* Embedded Skill Sheet Mode: Skills station with skill sheet available */}
       {useEmbeddedSkillSheet && panelSheetId ? (
-        <main className="max-w-2xl mx-auto px-4 py-4 space-y-4 pb-4">
+        <main className="max-w-3xl mx-auto px-4 py-4 space-y-4 pb-4">
           {/* Student Selection (compact) */}
           <StudentSelection
             isSkillsStation={isSkillsStation}
@@ -659,7 +659,7 @@ export default function GradeStationPage() {
           </div>
         </main>
       ) : (
-      <main className="max-w-2xl mx-auto px-4 py-4 space-y-4 pb-20">
+      <main className="max-w-3xl mx-auto px-4 py-4 space-y-4 pb-20">
         {/* Scenario/Skills Station Info */}
         <ScenarioGrading
           station={station}

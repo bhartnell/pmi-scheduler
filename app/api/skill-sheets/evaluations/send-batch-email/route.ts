@@ -95,6 +95,11 @@ export async function POST(request: NextRequest) {
         batch.map(async (evaluation) => {
           const student = evaluation.student as any;
           if (!student?.email) {
+            // Mark as do_not_send so it won't keep showing up in queue
+            await supabase
+              .from('student_skill_evaluations')
+              .update({ email_status: 'do_not_send' })
+              .eq('id', evaluation.id);
             skipped++;
             return;
           }

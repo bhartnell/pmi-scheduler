@@ -351,7 +351,7 @@ export default function TimerBanner({
   if (hasNotStarted || !timerState) {
     return (
       <div className={`fixed bottom-0 left-0 right-0 z-50 shadow-lg ${isConnected ? 'bg-gray-800' : 'bg-red-900'} text-white`}>
-        <div className="max-w-2xl mx-auto px-4 py-4">
+        <div className="max-w-3xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between flex-wrap gap-3">
             {/* Left: Waiting message */}
             <div className="flex items-center gap-3">
@@ -429,7 +429,7 @@ export default function TimerBanner({
         </div>
       )}
 
-      <div className="max-w-2xl mx-auto px-4 py-3">
+      <div className="max-w-3xl mx-auto px-4 py-3">
         {/* Main content row */}
         <div className="flex items-center justify-between">
           {/* Left: Rotation info */}
@@ -462,7 +462,15 @@ export default function TimerBanner({
                   }}
                   className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded-lg text-xs font-bold transition-colors"
                 >
-                  ACKNOWLEDGE
+                  READY
+                </button>
+                <button
+                  onClick={() => {
+                    setShowRotateAlert(false);
+                  }}
+                  className="px-3 py-1 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-medium transition-colors border border-white/30"
+                >
+                  NOT READY YET
                 </button>
               </div>
             )}

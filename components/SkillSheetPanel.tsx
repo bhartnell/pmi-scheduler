@@ -471,7 +471,12 @@ export default function SkillSheetPanel({
             const emailData = await emailRes.json();
             if (!emailData.success) {
               console.error('Email send failed:', emailData.error);
-              showToast(`Email failed: ${emailData.error || 'Unknown error'}`, 'error');
+              // Friendly message for missing email
+              if (emailData.no_email) {
+                showToast(emailData.error || 'Email not on file for this student', 'error');
+              } else {
+                showToast(`Email failed: ${emailData.error || 'Unknown error'}`, 'error');
+              }
             } else {
               showToast(`Email sent to ${studentName || 'student'}`, 'success');
             }

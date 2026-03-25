@@ -64,8 +64,17 @@ export async function POST(request: NextRequest) {
 
     const student = evaluation.student as any;
     if (!student?.email) {
-      console.error('[send-email] No email for student:', student?.first_name, student?.last_name);
-      return NextResponse.json({ success: false, error: 'Student has no email address' }, { status: 400 });
+      console.warn('[send-email] No email on file for student:', student?.first_name, student?.last_name);
+      // Mark as skipped so it doesn't block batch sends
+      await supabase
+        .from('student_skill_evaluations')
+        .update({ email_status: 'do_not_send' })
+        .eq('id', evaluation_id);
+      return NextResponse.json({
+        success: false,
+        error: `Email not on file for ${student?.first_name || ''} ${student?.last_name || 'this student'}`.trim(),
+        no_email: true,
+      }, { status: 200 });
     }
 
     const skillSheet = evaluation.skill_sheet as any;

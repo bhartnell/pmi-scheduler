@@ -794,6 +794,25 @@ export default function EditLabDayPage() {
               </div>
             </div>
 
+            {/* Estimated Lab Time */}
+            <div className="md:col-span-2">
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                <p className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-1">Estimated Lab Time</p>
+                <p className="text-lg font-bold text-blue-900 dark:text-blue-200">
+                  {(() => {
+                    const transitionMin = 3;
+                    const totalMinutes = (rotationDuration * numRotations) + (transitionMin * (numRotations - 1));
+                    const hours = Math.floor(totalMinutes / 60);
+                    const mins = totalMinutes % 60;
+                    return `~${totalMinutes} minutes${hours >= 1 ? ` (${hours}h ${mins}m)` : ''}`;
+                  })()}
+                </p>
+                <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                  {numRotations} rotations x {rotationDuration} min + ~3 min transition between each
+                </p>
+              </div>
+            </div>
+
             {/* Notes */}
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
