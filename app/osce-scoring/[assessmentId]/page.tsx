@@ -103,8 +103,9 @@ function FactorCard({ label, ratingKey, notesKey, score, onChange, disabled, exp
   expandedNotes: Set<string>;
   onToggleNotes: (key: string) => void;
 }) {
-  const rating = (score as Record<string, unknown>)[ratingKey] as Rating;
-  const notes = ((score as Record<string, unknown>)[notesKey] as string) || '';
+  const scoreRecord = score as unknown as Record<string, unknown>;
+  const rating = scoreRecord[ratingKey] as Rating;
+  const notes = (scoreRecord[notesKey] as string) || '';
   const isExpanded = expandedNotes.has(ratingKey);
 
   return (
@@ -377,8 +378,8 @@ export default function ScoringPage() {
                   <RatingButton
                     key={v}
                     value={v}
-                    selected={(score as Record<string, unknown>)[d.key] === v}
-                    onClick={() => handleChange(d.key, (score as Record<string, unknown>)[d.key] === v ? null : v)}
+                    selected={(score as unknown as Record<string, unknown>)[d.key] === v}
+                    onClick={() => handleChange(d.key, (score as unknown as Record<string, unknown>)[d.key] === v ? null : v)}
                     disabled={isSubmitted}
                   />
                 ))}
