@@ -166,6 +166,38 @@ function hasMultiPointScoring(steps: Step[]): boolean {
   return steps.some(s => (s.possible_points && s.possible_points > 1) || (s.sub_items && s.sub_items.length > 0));
 }
 
+/** Check if steps should be displayed sequentially (by step_number) instead of grouped by phase.
+ *  NREMT sheets use section_header for grouping, not the phase field. */
+function useSequentialDisplay(sheet: SkillSheet): boolean {
+  return sheet.source === 'nremt' || sheet.steps.some(s => s.section_header != null);
+}
+
+/** Group sequential steps into sections based on section_header values.
+ *  Returns an array of { header, steps } in step_number order. */
+function groupStepsBySectionHeader(steps: Step[]): Array<{ header: string | null; steps: Step[] }> {
+  const sorted = [...steps].sort((a, b) => a.step_number - b.step_number);
+  const sections: Array<{ header: string | null; steps: Step[] }> = [];
+  let currentHeader: string | null = null;
+  let currentSteps: Step[] = [];
+
+  for (const step of sorted) {
+    if (step.section_header != null) {
+      // Start a new section
+      if (currentSteps.length > 0) {
+        sections.push({ header: currentHeader, steps: currentSteps });
+      }
+      currentHeader = step.section_header;
+      currentSteps = [step];
+    } else {
+      currentSteps.push(step);
+    }
+  }
+  if (currentSteps.length > 0) {
+    sections.push({ header: currentHeader, steps: currentSteps });
+  }
+  return sections;
+}
+
 /** Get earned points for a step based on sub-item marks or pass/fail mark */
 function getStepEarnedPoints(
   step: Step,
@@ -688,6 +720,8 @@ export default function SkillSheetPanel({
   const stepsByPhase = sheet ? groupStepsByPhase(sheet.steps) : {};
   const orderedPhases = sheet ? getOrderedPhases(stepsByPhase) : [];
   const sourceBadge = sheet ? (SOURCE_BADGE[sheet.source] || SOURCE_BADGE.publisher) : null;
+  const isSequential = sheet ? useSequentialDisplay(sheet) : false;
+  const sectionGroups = sheet && isSequential ? groupStepsBySectionHeader(sheet.steps) : [];
 
   // Completion screen
   if (showCompletionScreen) {
@@ -994,62 +1028,98 @@ export default function SkillSheetPanel({
                 </div>
               )}
 
-              {/* Steps by Phase */}
-              <div className="space-y-3">
-                {orderedPhases.map(phase => {
-                  const phaseSteps = stepsByPhase[phase];
-                  const isCollapsed = collapsedPhases.has(phase);
-                  const phaseLabel = PHASE_LABELS[phase] || phase.charAt(0).toUpperCase() + phase.slice(1);
+              {/* Steps — sequential (NREMT) or by phase */}
+              {isSequential ? (
+                <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                  <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                    {sectionGroups.map((section, sIdx) => (
+                      <div key={sIdx}>
+                        {section.header && (
+                          <div className="bg-gray-100 dark:bg-gray-700 px-3 py-2 font-bold text-sm uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">
+                            {section.header}
+                          </div>
+                        )}
+                        {section.steps.map(step => (
+                          <PanelStepRow
+                            key={step.id}
+                            step={step}
+                            mode={mode}
+                            mark={stepMarks[step.step_number] || null}
+                            onSetMark={(mark) => setStepMarkDirect(step.step_number, mark)}
+                            sequenceNumber={stepSequence[step.step_number] ?? null}
+                            onToggleComplete={() => toggleStepComplete(step.step_number)}
+                            subItemChecks={subItemMarks[step.step_number]}
+                            onSubItemToggle={(idx) => {
+                              setSubItemMarks(prev => {
+                                const current = prev[step.step_number] || new Array(step.sub_items?.length || 0).fill(false);
+                                const next = [...current];
+                                next[idx] = !next[idx];
+                                return { ...prev, [step.step_number]: next };
+                              });
+                            }}
+                          />
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {orderedPhases.map(phase => {
+                    const phaseSteps = stepsByPhase[phase];
+                    const isCollapsed = collapsedPhases.has(phase);
+                    const phaseLabel = PHASE_LABELS[phase] || phase.charAt(0).toUpperCase() + phase.slice(1);
 
-                  return (
-                    <div key={phase} className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                      <button
-                        onClick={() => togglePhase(phase)}
-                        className="w-full flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                      >
-                        <h3 className="text-xs font-semibold text-gray-900 dark:text-white uppercase tracking-wide">
-                          {phaseLabel}
-                          <span className="ml-1.5 text-gray-400 font-normal normal-case tracking-normal">
-                            ({phaseSteps.length})
-                          </span>
-                        </h3>
-                        {isCollapsed ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronUp className="w-4 h-4 text-gray-400" />}
-                      </button>
+                    return (
+                      <div key={phase} className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                        <button
+                          onClick={() => togglePhase(phase)}
+                          className="w-full flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        >
+                          <h3 className="text-xs font-semibold text-gray-900 dark:text-white uppercase tracking-wide">
+                            {phaseLabel}
+                            <span className="ml-1.5 text-gray-400 font-normal normal-case tracking-normal">
+                              ({phaseSteps.length})
+                            </span>
+                          </h3>
+                          {isCollapsed ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronUp className="w-4 h-4 text-gray-400" />}
+                        </button>
 
-                      {!isCollapsed && (
-                        <div className="divide-y divide-gray-100 dark:divide-gray-700">
-                          {phaseSteps.map(step => (
-                            <div key={step.id}>
-                              {step.section_header && (
-                                <div className="bg-gray-100 dark:bg-gray-700 px-3 py-2 font-bold text-sm uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">
-                                  {step.section_header}
-                                </div>
-                              )}
-                              <PanelStepRow
-                                step={step}
-                                mode={mode}
-                                mark={stepMarks[step.step_number] || null}
-                                onSetMark={(mark) => setStepMarkDirect(step.step_number, mark)}
-                                sequenceNumber={stepSequence[step.step_number] ?? null}
-                                onToggleComplete={() => toggleStepComplete(step.step_number)}
-                                subItemChecks={subItemMarks[step.step_number]}
-                                onSubItemToggle={(idx) => {
-                                  setSubItemMarks(prev => {
-                                    const current = prev[step.step_number] || new Array(step.sub_items?.length || 0).fill(false);
-                                    const next = [...current];
-                                    next[idx] = !next[idx];
-                                    return { ...prev, [step.step_number]: next };
-                                  });
-                                }}
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+                        {!isCollapsed && (
+                          <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                            {phaseSteps.map(step => (
+                              <div key={step.id}>
+                                {step.section_header && (
+                                  <div className="bg-gray-100 dark:bg-gray-700 px-3 py-2 font-bold text-sm uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">
+                                    {step.section_header}
+                                  </div>
+                                )}
+                                <PanelStepRow
+                                  step={step}
+                                  mode={mode}
+                                  mark={stepMarks[step.step_number] || null}
+                                  onSetMark={(mark) => setStepMarkDirect(step.step_number, mark)}
+                                  sequenceNumber={stepSequence[step.step_number] ?? null}
+                                  onToggleComplete={() => toggleStepComplete(step.step_number)}
+                                  subItemChecks={subItemMarks[step.step_number]}
+                                  onSubItemToggle={(idx) => {
+                                    setSubItemMarks(prev => {
+                                      const current = prev[step.step_number] || new Array(step.sub_items?.length || 0).fill(false);
+                                      const next = [...current];
+                                      next[idx] = !next[idx];
+                                      return { ...prev, [step.step_number]: next };
+                                    });
+                                  }}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
               {/* Critical Criteria (teaching) */}
               {mode === 'teaching' && sheet.critical_criteria?.length > 0 && (
@@ -1458,62 +1528,98 @@ export default function SkillSheetPanel({
                 </div>
               )}
 
-              {/* Steps by Phase */}
-              <div className="space-y-3">
-                {orderedPhases.map(phase => {
-                  const phaseSteps = stepsByPhase[phase];
-                  const isCollapsed = collapsedPhases.has(phase);
-                  const phaseLabel = PHASE_LABELS[phase] || phase.charAt(0).toUpperCase() + phase.slice(1);
+              {/* Steps — sequential (NREMT) or by phase */}
+              {isSequential ? (
+                <div className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                  <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                    {sectionGroups.map((section, sIdx) => (
+                      <div key={sIdx}>
+                        {section.header && (
+                          <div className="bg-gray-100 dark:bg-gray-700 px-3 py-2 font-bold text-sm uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">
+                            {section.header}
+                          </div>
+                        )}
+                        {section.steps.map(step => (
+                          <PanelStepRow
+                            key={step.id}
+                            step={step}
+                            mode={mode}
+                            mark={stepMarks[step.step_number] || null}
+                            onSetMark={(mark) => setStepMarkDirect(step.step_number, mark)}
+                            sequenceNumber={stepSequence[step.step_number] ?? null}
+                            onToggleComplete={() => toggleStepComplete(step.step_number)}
+                            subItemChecks={subItemMarks[step.step_number]}
+                            onSubItemToggle={(idx) => {
+                              setSubItemMarks(prev => {
+                                const current = prev[step.step_number] || new Array(step.sub_items?.length || 0).fill(false);
+                                const next = [...current];
+                                next[idx] = !next[idx];
+                                return { ...prev, [step.step_number]: next };
+                              });
+                            }}
+                          />
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {orderedPhases.map(phase => {
+                    const phaseSteps = stepsByPhase[phase];
+                    const isCollapsed = collapsedPhases.has(phase);
+                    const phaseLabel = PHASE_LABELS[phase] || phase.charAt(0).toUpperCase() + phase.slice(1);
 
-                  return (
-                    <div key={phase} className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                      <button
-                        onClick={() => togglePhase(phase)}
-                        className="w-full flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                      >
-                        <h3 className="text-xs font-semibold text-gray-900 dark:text-white uppercase tracking-wide">
-                          {phaseLabel}
-                          <span className="ml-1.5 text-gray-400 font-normal normal-case tracking-normal">
-                            ({phaseSteps.length})
-                          </span>
-                        </h3>
-                        {isCollapsed ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronUp className="w-4 h-4 text-gray-400" />}
-                      </button>
+                    return (
+                      <div key={phase} className="rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                        <button
+                          onClick={() => togglePhase(phase)}
+                          className="w-full flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        >
+                          <h3 className="text-xs font-semibold text-gray-900 dark:text-white uppercase tracking-wide">
+                            {phaseLabel}
+                            <span className="ml-1.5 text-gray-400 font-normal normal-case tracking-normal">
+                              ({phaseSteps.length})
+                            </span>
+                          </h3>
+                          {isCollapsed ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronUp className="w-4 h-4 text-gray-400" />}
+                        </button>
 
-                      {!isCollapsed && (
-                        <div className="divide-y divide-gray-100 dark:divide-gray-700">
-                          {phaseSteps.map(step => (
-                            <div key={step.id}>
-                              {step.section_header && (
-                                <div className="bg-gray-100 dark:bg-gray-700 px-3 py-2 font-bold text-sm uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">
-                                  {step.section_header}
-                                </div>
-                              )}
-                              <PanelStepRow
-                                step={step}
-                                mode={mode}
-                                mark={stepMarks[step.step_number] || null}
-                                onSetMark={(mark) => setStepMarkDirect(step.step_number, mark)}
-                                sequenceNumber={stepSequence[step.step_number] ?? null}
-                                onToggleComplete={() => toggleStepComplete(step.step_number)}
-                                subItemChecks={subItemMarks[step.step_number]}
-                                onSubItemToggle={(idx) => {
-                                  setSubItemMarks(prev => {
-                                    const current = prev[step.step_number] || new Array(step.sub_items?.length || 0).fill(false);
-                                    const next = [...current];
-                                    next[idx] = !next[idx];
-                                    return { ...prev, [step.step_number]: next };
-                                  });
-                                }}
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+                        {!isCollapsed && (
+                          <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                            {phaseSteps.map(step => (
+                              <div key={step.id}>
+                                {step.section_header && (
+                                  <div className="bg-gray-100 dark:bg-gray-700 px-3 py-2 font-bold text-sm uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">
+                                    {step.section_header}
+                                  </div>
+                                )}
+                                <PanelStepRow
+                                  step={step}
+                                  mode={mode}
+                                  mark={stepMarks[step.step_number] || null}
+                                  onSetMark={(mark) => setStepMarkDirect(step.step_number, mark)}
+                                  sequenceNumber={stepSequence[step.step_number] ?? null}
+                                  onToggleComplete={() => toggleStepComplete(step.step_number)}
+                                  subItemChecks={subItemMarks[step.step_number]}
+                                  onSubItemToggle={(idx) => {
+                                    setSubItemMarks(prev => {
+                                      const current = prev[step.step_number] || new Array(step.sub_items?.length || 0).fill(false);
+                                      const next = [...current];
+                                      next[idx] = !next[idx];
+                                      return { ...prev, [step.step_number]: next };
+                                    });
+                                  }}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
               {/* Critical Criteria (teaching) */}
               {mode === 'teaching' && sheet.critical_criteria?.length > 0 && (

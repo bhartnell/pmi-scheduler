@@ -620,28 +620,30 @@ export default function GradeStationPage() {
 
       {/* Embedded Skill Sheet Mode: Skills station with skill sheet available */}
       {useEmbeddedSkillSheet && panelSheetId ? (
-        <main className="max-w-3xl mx-auto px-4 py-4 space-y-4 pb-4">
-          {/* Student Selection (compact) */}
-          <StudentSelection
-            isSkillsStation={isSkillsStation}
-            station={station}
-            allStudents={allStudents}
-            labGroups={labGroups}
-            selectedGroupId={selectedGroupId}
-            selectedStudentId={selectedStudentId}
-            teamLeaderId={teamLeaderId}
-            rotationNumber={rotationNumber}
-            onSetSelectedGroupId={setSelectedGroupId}
-            onSetSelectedStudentId={setSelectedStudentId}
-            onSetTeamLeaderId={setTeamLeaderId}
-            onSetRotationNumber={setRotationNumber}
-            triggerAutoSave={triggerAutoSave}
-            evaluatedStudents={evaluatedStudents}
-            inProgressStudents={inProgressStudents}
-          />
+        <main className="flex gap-6 max-w-7xl mx-auto px-4 py-4 pb-4">
+          {/* Left: Student panel */}
+          <div className="w-80 shrink-0 sticky top-0 h-screen overflow-y-auto pt-2 space-y-4">
+            <StudentSelection
+              isSkillsStation={isSkillsStation}
+              station={station}
+              allStudents={allStudents}
+              labGroups={labGroups}
+              selectedGroupId={selectedGroupId}
+              selectedStudentId={selectedStudentId}
+              teamLeaderId={teamLeaderId}
+              rotationNumber={rotationNumber}
+              onSetSelectedGroupId={setSelectedGroupId}
+              onSetSelectedStudentId={setSelectedStudentId}
+              onSetTeamLeaderId={setTeamLeaderId}
+              onSetRotationNumber={setRotationNumber}
+              triggerAutoSave={triggerAutoSave}
+              evaluatedStudents={evaluatedStudents}
+              inProgressStudents={inProgressStudents}
+            />
+          </div>
 
-          {/* Embedded Skill Sheet — full width, independently scrollable */}
-          <div className="min-h-[60vh]">
+          {/* Right: Skill sheet */}
+          <div className="flex-1 overflow-y-auto min-h-[60vh]">
             <SkillSheetPanel
               sheetId={panelSheetId}
               onClose={() => {
