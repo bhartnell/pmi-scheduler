@@ -456,7 +456,7 @@ export default function ScoringPage() {
           />
         </div>
 
-        {/* Submit */}
+        {/* Submit or Back to Dashboard */}
         {!isSubmitted ? (
           <div className="mt-8 mb-8">
             <button
@@ -478,7 +478,7 @@ export default function ScoringPage() {
           <div className="mt-8 mb-8">
             <button
               onClick={() => router.push('/osce-scoring/dashboard')}
-              className="w-full py-4 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 active:scale-[0.98] transition-all text-lg"
+              className="w-full py-4 rounded-xl font-bold text-lg bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.98] transition-all"
             >
               Back to Dashboard
             </button>

@@ -16,6 +16,8 @@ export default function OsceTokenManagement() {
   const [tokens, setTokens] = useState<Token[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [bulkGenerating, setBulkGenerating] = useState(false);
+  const [bulkResult, setBulkResult] = useState<{ created: Token[]; skipped: number } | null>(null);
   const [name, setName] = useState('');
   const [role, setRole] = useState<string>('');
   const [validHours, setValidHours] = useState(48);
@@ -70,6 +72,32 @@ export default function OsceTokenManagement() {
         setTokens(prev => prev.filter(t => t.id !== id));
       }
     } catch { /* ignore */ }
+  }
+
+  async function handleBulkGenerate() {
+    if (!confirm('Generate tokens for all registered observers who don\'t already have one?')) return;
+    setBulkGenerating(true);
+    setError('');
+    setBulkResult(null);
+    try {
+      const res = await fetch('/api/osce/guest-tokens', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bulk: true, valid_hours: 168 }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setBulkResult({ created: data.created || [], skipped: data.skipped || 0 });
+        // Refresh token list
+        fetchTokens();
+      } else {
+        setError(data.error || 'Bulk generation failed');
+      }
+    } catch {
+      setError('Bulk generation request failed');
+    } finally {
+      setBulkGenerating(false);
+    }
   }
 
   function getLink(token: string) {
@@ -140,6 +168,54 @@ export default function OsceTokenManagement() {
           </button>
         </div>
         {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
+      </div>
+
+      {/* Bulk generate */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <h2 className="font-semibold text-gray-900 dark:text-white">Bulk Generate</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Create tokens for all registered observers who don&apos;t already have an active one (valid 1 week)
+            </p>
+          </div>
+          <button
+            onClick={handleBulkGenerate}
+            disabled={bulkGenerating}
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-medium whitespace-nowrap"
+          >
+            {bulkGenerating ? 'Generating...' : 'Generate for All Registered Observers'}
+          </button>
+        </div>
+
+        {bulkResult && (
+          <div className="mt-4">
+            <div className="text-sm text-gray-600 dark:text-gray-300 mb-2">
+              Created {bulkResult.created.length} token{bulkResult.created.length !== 1 ? 's' : ''}
+              {bulkResult.skipped > 0 && ` (${bulkResult.skipped} already had tokens)`}
+            </div>
+            {bulkResult.created.length > 0 && (
+              <div className="bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-200 dark:divide-gray-700 max-h-80 overflow-y-auto">
+                {bulkResult.created.map(t => (
+                  <div key={t.id} className="flex items-center justify-between px-4 py-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="font-medium text-gray-900 dark:text-white truncate">{t.evaluator_name}</span>
+                      <span className="text-xs text-gray-400 dark:text-gray-500 font-mono truncate">
+                        /osce-scoring/enter?token={t.token}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => copyLink(t.token)}
+                      className="ml-2 px-3 py-1.5 text-sm bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-800 font-medium flex-shrink-0"
+                    >
+                      {copied === t.token ? 'Copied!' : 'Copy Link'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Token list */}
