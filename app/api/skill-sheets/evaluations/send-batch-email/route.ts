@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
       .select(`
         id, evaluation_type, result, notes, email_status, flagged_items, step_marks, created_at,
         student:students!student_skill_evaluations_student_id_fkey(id, first_name, last_name, email),
-        skill_sheet:skill_sheets!student_skill_evaluations_skill_sheet_id_fkey(id, skill_name, source, steps:skill_sheet_steps(step_number, is_critical)),
+        skill_sheet:skill_sheets!student_skill_evaluations_skill_sheet_id_fkey(id, skill_name, source, steps:skill_sheet_steps(step_number, is_critical, possible_points, sub_items)),
         evaluator:lab_users!student_skill_evaluations_evaluator_id_fkey(id, name),
         lab_day:lab_days!student_skill_evaluations_lab_day_id_fkey(id, date, title)
       `)
@@ -104,12 +104,29 @@ export async function POST(request: NextRequest) {
           const labDay = evaluation.lab_day as any;
 
           const totalSteps = skillSheet?.steps?.length || 0;
-          const stepMarks = evaluation.step_marks as Record<string, string> | null;
-          const passedSteps = stepMarks ? Object.values(stepMarks).filter(m => m === 'pass').length : 0;
-          const criticalSteps = skillSheet?.steps?.filter((s: any) => s.is_critical) || [];
-          const criticalPassed = stepMarks
-            ? criticalSteps.filter((s: any) => stepMarks[String(s.step_number)] === 'pass').length
-            : 0;
+          const rawMarks = (evaluation.step_marks || {}) as Record<string, unknown>;
+          const stepsArr = skillSheet?.steps || [];
+          const isMultiPoint = stepsArr.some((s: any) => (s.possible_points && s.possible_points > 1) || (s.sub_items && s.sub_items.length > 0));
+          const totalPossiblePoints = stepsArr.reduce((sum: number, s: any) => sum + (s.possible_points || 1), 0);
+
+          let passedSteps = 0;
+          let earnedPoints = 0;
+          const criticalSteps = stepsArr.filter((s: any) => s.is_critical);
+          let criticalPassed = 0;
+
+          for (const [key, val] of Object.entries(rawMarks)) {
+            if (typeof val === 'string') {
+              const step = stepsArr.find((s: any) => String(s.step_number) === key);
+              if (val === 'pass') { passedSteps++; earnedPoints += step?.possible_points || 1; }
+              if (step?.is_critical && val === 'pass') criticalPassed++;
+            } else if (typeof val === 'object' && val !== null) {
+              const obj = val as { completed?: boolean; points?: number };
+              earnedPoints += obj.points || 0;
+              if (obj.completed) passedSteps++;
+              const step = stepsArr.find((s: any) => String(s.step_number) === key);
+              if (step?.is_critical && obj.completed) criticalPassed++;
+            }
+          }
 
           const evalDate = labDay?.date
             ? new Date(labDay.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
@@ -121,7 +138,9 @@ export async function POST(request: NextRequest) {
             skillName: skillSheet?.skill_name || 'Skill Evaluation',
             evaluationType: evaluation.evaluation_type,
             result: evaluation.result,
-            stepsCompleted: totalSteps > 0 ? `${passedSteps}/${totalSteps}` : undefined,
+            stepsCompleted: isMultiPoint
+              ? `${earnedPoints}/${totalPossiblePoints} points (${totalPossiblePoints > 0 ? Math.round((earnedPoints / totalPossiblePoints) * 100) : 0}%)`
+              : (totalSteps > 0 ? `${passedSteps}/${totalSteps}` : undefined),
             criticalSteps: criticalSteps.length > 0 ? `${criticalPassed}/${criticalSteps.length}` : undefined,
             notes: evaluation.notes || undefined,
             evaluatorName: evaluator?.name ? formatInstructorName(evaluator.name) : 'Instructor',
