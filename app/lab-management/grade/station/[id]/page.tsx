@@ -661,7 +661,7 @@ export default function GradeStationPage() {
           </div>
         </main>
       ) : (
-      <main className="max-w-3xl mx-auto px-4 py-4 space-y-4 pb-20">
+      <main className="max-w-7xl mx-auto px-4 py-4 space-y-4 pb-20">
         {/* Scenario/Skills Station Info */}
         <ScenarioGrading
           station={station}

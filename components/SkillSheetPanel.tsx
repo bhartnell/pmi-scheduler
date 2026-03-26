@@ -214,7 +214,11 @@ function getStepEarnedPoints(
 
 /** Calculate total possible points across all steps */
 function getTotalPossiblePoints(steps: Step[]): number {
-  return steps.reduce((sum, s) => sum + (s.possible_points || 1), 0);
+  return steps.reduce((sum, s) => {
+    // Use sub_items length as authoritative when sub_items exist
+    if (s.sub_items && s.sub_items.length > 0) return sum + s.sub_items.length;
+    return sum + (s.possible_points || 1);
+  }, 0);
 }
 
 /** Calculate total earned points */
@@ -257,6 +261,10 @@ export default function SkillSheetPanel({
   // Sub-item checkbox state: { [stepNumber]: [true, false, true, ...] }
   const [subItemMarks, setSubItemMarks] = useState<Record<number, boolean[]>>({});
 
+  // Sub-item sequence tracking: { [stepNumber]: { [subItemIndex]: sequenceNumber } }
+  // Uses the SAME global sequence counter as stepSequence for single-point steps.
+  const [subItemSequence, setSubItemSequence] = useState<Record<number, Record<number, number>>>({});
+
   // ===== FORMATIVE NUMBERED COMPLETION =====
   // DO NOT REPLACE with pass/fail/caution icons.
   // Each step gets a single tap target that assigns a sequence number.
@@ -277,9 +285,18 @@ export default function SkillSheetPanel({
   const [expandedEvalId, setExpandedEvalId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
+  // Helper: get the current max sequence number across steps and sub-items
+  const getMaxSequence = (): number => {
+    const stepSeqValues = Object.values(stepSequence);
+    const subSeqValues = Object.values(subItemSequence).flatMap(m => Object.values(m));
+    const all = [...stepSeqValues, ...subSeqValues];
+    return all.length > 0 ? Math.max(...all) : 0;
+  };
+
   // Check if there are unsaved changes (any step completed, notes typed, etc.)
   const hasUnsavedChanges = Object.keys(stepMarks).some(k => stepMarks[parseInt(k)] !== null) ||
     Object.keys(stepSequence).length > 0 ||
+    Object.keys(subItemSequence).length > 0 ||
     notes.trim().length > 0;
 
   // Safe close: confirm if unsaved changes exist
@@ -393,28 +410,53 @@ export default function SkillSheetPanel({
     }));
   };
 
-  // Toggle step completion with sequence numbering (formative mode)
-  const toggleStepComplete = (stepNumber: number) => {
+  // Helper: renumber all sequences after removing one sequence number
+  const renumberAfterRemoval = (removedSeq: number) => {
     setStepSequence(prev => {
-      if (prev[stepNumber] !== undefined) {
-        // Uncomplete: remove this step and renumber subsequent ones
-        const removedSeq = prev[stepNumber];
-        const next: Record<number, number> = {};
-        for (const [sn, seq] of Object.entries(prev)) {
-          const snNum = parseInt(sn);
-          if (snNum === stepNumber) continue;
+      const next: Record<number, number> = {};
+      for (const [sn, seq] of Object.entries(prev)) {
+        if (seq > removedSeq) {
+          next[parseInt(sn)] = seq - 1;
+        } else {
+          next[parseInt(sn)] = seq;
+        }
+      }
+      return next;
+    });
+    setSubItemSequence(prev => {
+      const next: Record<number, Record<number, number>> = {};
+      for (const [sn, idxMap] of Object.entries(prev)) {
+        const newMap: Record<number, number> = {};
+        for (const [idx, seq] of Object.entries(idxMap)) {
           if (seq > removedSeq) {
-            next[snNum] = seq - 1;
+            newMap[parseInt(idx)] = seq - 1;
           } else {
-            next[snNum] = seq;
+            newMap[parseInt(idx)] = seq;
           }
         }
-        return next;
-      } else {
-        const maxSeq = Object.values(prev).length;
-        return { ...prev, [stepNumber]: maxSeq + 1 };
+        if (Object.keys(newMap).length > 0) {
+          next[parseInt(sn)] = newMap;
+        }
       }
+      return next;
     });
+  };
+
+  // Toggle step completion with sequence numbering (formative mode)
+  const toggleStepComplete = (stepNumber: number) => {
+    if (stepSequence[stepNumber] !== undefined) {
+      // Uncomplete: remove and renumber
+      const removedSeq = stepSequence[stepNumber];
+      setStepSequence(prev => {
+        const next = { ...prev };
+        delete next[stepNumber];
+        return next;
+      });
+      renumberAfterRemoval(removedSeq);
+    } else {
+      const nextSeq = getMaxSequence() + 1;
+      setStepSequence(prev => ({ ...prev, [stepNumber]: nextSeq }));
+    }
     // Also toggle the pass mark so step_marks saves correctly
     setStepMarks(prev => ({
       ...prev,
@@ -422,9 +464,45 @@ export default function SkillSheetPanel({
     }));
   };
 
+  // Toggle sub-item completion with sequence numbering (formative mode)
+  const toggleSubItemComplete = (stepNumber: number, subItemIndex: number) => {
+    const currentSubSeq = subItemSequence[stepNumber]?.[subItemIndex];
+    if (currentSubSeq !== undefined) {
+      // Uncomplete: remove and renumber
+      setSubItemSequence(prev => {
+        const stepMap = { ...prev[stepNumber] };
+        delete stepMap[subItemIndex];
+        const next = { ...prev };
+        if (Object.keys(stepMap).length > 0) {
+          next[stepNumber] = stepMap;
+        } else {
+          delete next[stepNumber];
+        }
+        return next;
+      });
+      renumberAfterRemoval(currentSubSeq);
+    } else {
+      const nextSeq = getMaxSequence() + 1;
+      setSubItemSequence(prev => ({
+        ...prev,
+        [stepNumber]: { ...(prev[stepNumber] || {}), [subItemIndex]: nextSeq },
+      }));
+    }
+    // Also toggle the boolean mark
+    setSubItemMarks(prev => {
+      const current = prev[stepNumber] || new Array(0).fill(false);
+      const next = [...current];
+      // Ensure array is long enough
+      while (next.length <= subItemIndex) next.push(false);
+      next[subItemIndex] = !next[subItemIndex];
+      return { ...prev, [stepNumber]: next };
+    });
+  };
+
   const resetForm = () => {
     setStepMarks({});
     setStepSequence({});
+    setSubItemSequence({});
     setSubItemMarks({});
     setNotes('');
     setResult('pass');
@@ -462,10 +540,20 @@ export default function SkillSheetPanel({
         const subs = subItemMarks[step.step_number];
         if (step.sub_items && step.sub_items.length > 0 && subs) {
           const pts = subs.filter(Boolean).length;
+          // Build sub_items object with sequence numbers
+          const subItemsObj: Record<string, { completed: boolean; sequence?: number }> = {};
+          subs.forEach((checked, idx) => {
+            const seq = subItemSequence[step.step_number]?.[idx];
+            subItemsObj[String(idx)] = {
+              completed: checked,
+              ...(seq !== undefined ? { sequence: seq } : {}),
+            };
+          });
           stepMarksToSave[String(step.step_number)] = {
-            completed: pts === (step.possible_points || step.sub_items.length),
-            sub_items: subs,
-            points: pts,
+            completed: pts === step.sub_items.length,
+            sub_items: subItemsObj,
+            points_awarded: pts,
+            possible_points: step.sub_items.length,
           };
         } else if (mark) {
           stepMarksToSave[String(step.step_number)] = {
@@ -677,22 +765,42 @@ export default function SkillSheetPanel({
     if (evalItem.step_marks) {
       const marks: Record<number, StepMark> = {};
       const subs: Record<number, boolean[]> = {};
+      const subSeqs: Record<number, Record<number, number>> = {};
       for (const [key, val] of Object.entries(evalItem.step_marks)) {
         const stepNum = parseInt(key);
         if (typeof val === 'string') {
           // Old format: simple string mark
           marks[stepNum] = val as StepMark;
         } else if (typeof val === 'object' && val !== null) {
-          // New format: { completed, sub_items, points }
-          const obj = val as { completed?: boolean; sub_items?: boolean[]; points?: number };
+          // New format: { completed, sub_items, points/points_awarded }
+          const obj = val as { completed?: boolean; sub_items?: boolean[] | Record<string, { completed: boolean; sequence?: number }>; points?: number; points_awarded?: number };
           marks[stepNum] = obj.completed ? 'pass' : null;
           if (obj.sub_items) {
-            subs[stepNum] = obj.sub_items;
+            if (Array.isArray(obj.sub_items)) {
+              // Legacy boolean array format
+              subs[stepNum] = obj.sub_items;
+            } else {
+              // New object format with sequence numbers
+              const boolArr: boolean[] = [];
+              const seqMap: Record<number, number> = {};
+              for (const [idx, item] of Object.entries(obj.sub_items)) {
+                const i = parseInt(idx);
+                boolArr[i] = item.completed;
+                if (item.sequence !== undefined) {
+                  seqMap[i] = item.sequence;
+                }
+              }
+              subs[stepNum] = boolArr;
+              if (Object.keys(seqMap).length > 0) {
+                subSeqs[stepNum] = seqMap;
+              }
+            }
           }
         }
       }
       setStepMarks(marks);
       setSubItemMarks(subs);
+      setSubItemSequence(subSeqs);
     }
     if (evalItem.step_details && Array.isArray(evalItem.step_details)) {
       const seq: Record<number, number> = {};
@@ -1049,13 +1157,18 @@ export default function SkillSheetPanel({
                             sequenceNumber={stepSequence[step.step_number] ?? null}
                             onToggleComplete={() => toggleStepComplete(step.step_number)}
                             subItemChecks={subItemMarks[step.step_number]}
+                            subItemSequences={subItemSequence[step.step_number]}
                             onSubItemToggle={(idx) => {
-                              setSubItemMarks(prev => {
-                                const current = prev[step.step_number] || new Array(step.sub_items?.length || 0).fill(false);
-                                const next = [...current];
-                                next[idx] = !next[idx];
-                                return { ...prev, [step.step_number]: next };
-                              });
+                              if (mode === 'formative') {
+                                toggleSubItemComplete(step.step_number, idx);
+                              } else {
+                                setSubItemMarks(prev => {
+                                  const current = prev[step.step_number] || new Array(step.sub_items?.length || 0).fill(false);
+                                  const next = [...current];
+                                  next[idx] = !next[idx];
+                                  return { ...prev, [step.step_number]: next };
+                                });
+                              }
                             }}
                           />
                         ))}
@@ -1102,13 +1215,18 @@ export default function SkillSheetPanel({
                                   sequenceNumber={stepSequence[step.step_number] ?? null}
                                   onToggleComplete={() => toggleStepComplete(step.step_number)}
                                   subItemChecks={subItemMarks[step.step_number]}
+                                  subItemSequences={subItemSequence[step.step_number]}
                                   onSubItemToggle={(idx) => {
-                                    setSubItemMarks(prev => {
-                                      const current = prev[step.step_number] || new Array(step.sub_items?.length || 0).fill(false);
-                                      const next = [...current];
-                                      next[idx] = !next[idx];
-                                      return { ...prev, [step.step_number]: next };
-                                    });
+                                    if (mode === 'formative') {
+                                      toggleSubItemComplete(step.step_number, idx);
+                                    } else {
+                                      setSubItemMarks(prev => {
+                                        const current = prev[step.step_number] || new Array(step.sub_items?.length || 0).fill(false);
+                                        const next = [...current];
+                                        next[idx] = !next[idx];
+                                        return { ...prev, [step.step_number]: next };
+                                      });
+                                    }
                                   }}
                                 />
                               </div>
@@ -1549,13 +1667,18 @@ export default function SkillSheetPanel({
                             sequenceNumber={stepSequence[step.step_number] ?? null}
                             onToggleComplete={() => toggleStepComplete(step.step_number)}
                             subItemChecks={subItemMarks[step.step_number]}
+                            subItemSequences={subItemSequence[step.step_number]}
                             onSubItemToggle={(idx) => {
-                              setSubItemMarks(prev => {
-                                const current = prev[step.step_number] || new Array(step.sub_items?.length || 0).fill(false);
-                                const next = [...current];
-                                next[idx] = !next[idx];
-                                return { ...prev, [step.step_number]: next };
-                              });
+                              if (mode === 'formative') {
+                                toggleSubItemComplete(step.step_number, idx);
+                              } else {
+                                setSubItemMarks(prev => {
+                                  const current = prev[step.step_number] || new Array(step.sub_items?.length || 0).fill(false);
+                                  const next = [...current];
+                                  next[idx] = !next[idx];
+                                  return { ...prev, [step.step_number]: next };
+                                });
+                              }
                             }}
                           />
                         ))}
@@ -1602,13 +1725,18 @@ export default function SkillSheetPanel({
                                   sequenceNumber={stepSequence[step.step_number] ?? null}
                                   onToggleComplete={() => toggleStepComplete(step.step_number)}
                                   subItemChecks={subItemMarks[step.step_number]}
+                                  subItemSequences={subItemSequence[step.step_number]}
                                   onSubItemToggle={(idx) => {
-                                    setSubItemMarks(prev => {
-                                      const current = prev[step.step_number] || new Array(step.sub_items?.length || 0).fill(false);
-                                      const next = [...current];
-                                      next[idx] = !next[idx];
-                                      return { ...prev, [step.step_number]: next };
-                                    });
+                                    if (mode === 'formative') {
+                                      toggleSubItemComplete(step.step_number, idx);
+                                    } else {
+                                      setSubItemMarks(prev => {
+                                        const current = prev[step.step_number] || new Array(step.sub_items?.length || 0).fill(false);
+                                        const next = [...current];
+                                        next[idx] = !next[idx];
+                                        return { ...prev, [step.step_number]: next };
+                                      });
+                                    }
                                   }}
                                 />
                               </div>
@@ -1849,6 +1977,7 @@ function PanelStepRow({
   onToggleComplete,
   subItemChecks,
   onSubItemToggle,
+  subItemSequences,
 }: {
   step: Step;
   mode: DisplayMode;
@@ -1858,11 +1987,13 @@ function PanelStepRow({
   onToggleComplete?: () => void;
   subItemChecks?: boolean[];
   onSubItemToggle?: (index: number) => void;
+  subItemSequences?: Record<number, number>;
 }) {
   const isCritical = step.is_critical;
   const [noteExpanded, setNoteExpanded] = useState(false);
   const hasSubItems = step.sub_items && step.sub_items.length > 0;
-  const possiblePts = step.possible_points || 1;
+  // Use sub_items length as the authoritative possible_points when sub_items exist
+  const possiblePts = hasSubItems ? step.sub_items!.length : (step.possible_points || 1);
   const isMultiPoint = possiblePts > 1 || hasSubItems;
 
   // Compute checked count for sub-items
@@ -1880,18 +2011,37 @@ function PanelStepRow({
     <div className="mt-1 space-y-0.5">
       {step.sub_items!.map((item, i) => {
         const isChecked = subItemChecks ? subItemChecks[i] || false : false;
+        const subSeqNum = subItemSequences?.[i];
+        const useSequenceStyle = mode === 'formative' && subSeqNum !== undefined;
         return (
-          <label key={i} className="flex items-center gap-2 ml-6 py-0.5 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={isChecked}
-              onChange={() => onSubItemToggle(i)}
-              className="w-3.5 h-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            />
+          <div key={i} className="flex items-center gap-2 ml-6 py-0.5 cursor-pointer" onClick={() => onSubItemToggle(i)}>
+            {mode === 'formative' ? (
+              // Formative mode: green numbered circle (same pattern as single-point steps)
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                {useSequenceStyle ? (
+                  <span className="w-5 h-5 rounded-full bg-green-600 text-white text-[9px] font-bold flex items-center justify-center">
+                    {subSeqNum}
+                  </span>
+                ) : (
+                  <span className="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
+                    <CheckCircle className="w-3 h-3 text-gray-400 dark:text-gray-500" />
+                  </span>
+                )}
+              </div>
+            ) : (
+              // Final mode: checkbox
+              <input
+                type="checkbox"
+                checked={isChecked}
+                onChange={() => onSubItemToggle(i)}
+                onClick={(e) => e.stopPropagation()}
+                className="w-3.5 h-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+            )}
             <span className={`text-xs ${isChecked ? 'text-gray-500 dark:text-gray-400 line-through' : 'text-gray-700 dark:text-gray-300'}`}>
               {item.label || item.description || String(item)}
             </span>
-          </label>
+          </div>
         );
       })}
     </div>
