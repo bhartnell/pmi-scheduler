@@ -303,7 +303,7 @@ export default function ScoringPage() {
           <div className="flex items-center justify-between">
             <button
               onClick={() => router.push('/osce-scoring/dashboard')}
-              className="text-slate-500 hover:text-slate-700 dark:text-slate-400 p-1"
+              className="text-slate-500 hover:text-slate-700 dark:text-slate-400 p-2 min-h-[44px] min-w-[44px] flex items-center justify-center"
             >
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -450,8 +450,8 @@ export default function ScoringPage() {
           />
         </div>
 
-        {/* Submit */}
-        {!isSubmitted && (
+        {/* Submit or Back to Dashboard */}
+        {!isSubmitted ? (
           <div className="mt-8 mb-8">
             <button
               onClick={handleSubmit}
@@ -467,6 +467,15 @@ export default function ScoringPage() {
             <p className="text-xs text-slate-500 dark:text-slate-400 text-center mt-2">
               Once submitted, the score cannot be modified.
             </p>
+          </div>
+        ) : (
+          <div className="mt-8 mb-8">
+            <button
+              onClick={() => router.push('/osce-scoring/dashboard')}
+              className="w-full py-4 rounded-xl font-bold text-lg bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.98] transition-all"
+            >
+              Back to Dashboard
+            </button>
           </div>
         )}
       </div>
