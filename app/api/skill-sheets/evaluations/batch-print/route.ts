@@ -14,31 +14,46 @@ function escapeHtml(str: string): string {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-function renderEvaluationPage(evaluation: any, includePageBreak: boolean = false, evalIndex?: number, totalEvals?: number): string {
+function renderEvaluationPage(evaluation: any, includePageBreak: boolean = false): string {
   const student = evaluation.student;
   const skillSheet = evaluation.skill_sheet;
   const evaluator = evaluation.evaluator;
   const labDay = evaluation.lab_day;
-  // step_marks can be { "1": "pass" } or step_details can be { "1": { status: "pass" } }
-  const rawStepMarks = evaluation.step_marks || {};
-  const stepDetails = evaluation.step_details || {};
-  // Merge: prefer step_marks, fall back to step_details
-  const stepMarks: Record<string, string> = {};
-  for (const [k, v] of Object.entries(rawStepMarks)) {
-    stepMarks[k] = typeof v === 'string' ? v : (v as any)?.status || '';
-  }
-  for (const [k, v] of Object.entries(stepDetails)) {
-    if (!stepMarks[k]) {
-      stepMarks[k] = typeof v === 'string' ? v : (v as any)?.status || '';
-    }
-  }
+  const rawMarks = (evaluation.step_marks || {}) as Record<string, unknown>;
   const flaggedItems = (evaluation.flagged_items || []) as { step_number: number; status: string }[];
 
   const steps = (skillSheet?.steps || []).sort((a: any, b: any) => a.step_number - b.step_number);
   const totalSteps = steps.length;
-  const passedSteps = Object.values(stepMarks).filter(m => m === 'pass').length;
+  const isMultiPoint = steps.some((s: any) => (s.possible_points && s.possible_points > 1) || (s.sub_items && s.sub_items.length > 0));
+  const totalPossiblePoints = steps.reduce((sum: number, s: any) => sum + (s.possible_points || 1), 0);
+
+  let passedSteps = 0;
+  let earnedPoints = 0;
   const criticalSteps = steps.filter((s: any) => s.is_critical);
-  const criticalPassed = criticalSteps.filter((s: any) => stepMarks[String(s.step_number)] === 'pass').length;
+  let criticalPassed = 0;
+
+  const stepMarkLookup: Record<string, { mark: string; points: number; subItems?: boolean[] }> = {};
+  for (const [key, val] of Object.entries(rawMarks)) {
+    if (typeof val === 'string') {
+      const step = steps.find((s: any) => String(s.step_number) === key);
+      const pts = val === 'pass' ? (step?.possible_points || 1) : 0;
+      stepMarkLookup[key] = { mark: val, points: pts };
+      if (val === 'pass') { passedSteps++; earnedPoints += pts; }
+      if (step?.is_critical && val === 'pass') criticalPassed++;
+    } else if (typeof val === 'object' && val !== null) {
+      const obj = val as { completed?: boolean; sub_items?: boolean[]; points?: number };
+      const pts = obj.points || 0;
+      stepMarkLookup[key] = { mark: obj.completed ? 'pass' : 'fail', points: pts, subItems: obj.sub_items };
+      earnedPoints += pts;
+      if (obj.completed) passedSteps++;
+      const step = steps.find((s: any) => String(s.step_number) === key);
+      if (step?.is_critical && obj.completed) criticalPassed++;
+    }
+  }
+  const stepMarks: Record<string, string> = {};
+  for (const [k, v] of Object.entries(stepMarkLookup)) {
+    stepMarks[k] = v.mark;
+  }
 
   const evalDate = labDay?.date
     ? new Date(labDay.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
@@ -64,22 +79,38 @@ function renderEvaluationPage(evaluation: any, includePageBreak: boolean = false
   for (const phase of orderedPhases) {
     const phaseSteps = stepsByPhase[phase];
     const phaseLabel = phaseLabels[phase] || phase.charAt(0).toUpperCase() + phase.slice(1);
-    stepRows += `<tr style="background-color: #f3f4f6;"><td colspan="3" style="padding: 6px 12px; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #374151; border-bottom: 1px solid #e5e7eb;">${escapeHtml(phaseLabel)} (${phaseSteps.length})</td></tr>`;
+    const colSpan = isMultiPoint ? 4 : 3;
+    stepRows += `<tr style="background-color: #f3f4f6;"><td colspan="${colSpan}" style="padding: 6px 12px; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #374151; border-bottom: 1px solid #e5e7eb;">${escapeHtml(phaseLabel)} (${phaseSteps.length})</td></tr>`;
     for (const step of phaseSteps) {
       stepNum++;
+      if (step.section_header) {
+        stepRows += `<tr style="background-color: #e5e7eb;"><td colspan="${colSpan}" style="padding: 5px 10px; font-weight: 700; font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: #1f2937;">${escapeHtml(step.section_header)}</td></tr>`;
+      }
       const mark = stepMarks[String(step.step_number)];
+      const markData = stepMarkLookup[String(step.step_number)];
       const flagged = flaggedItems.find((f) => f.step_number === step.step_number);
       const statusSymbol = mark === 'pass' ? '&#10003;' : mark === 'fail' ? '&#10007;' : flagged?.status === 'fail' ? '&#10007;' : flagged?.status === 'caution' ? '&#9888;' : '&mdash;';
       const statusColor = mark === 'pass' ? '#10b981' : mark === 'fail' ? '#ef4444' : flagged?.status === 'caution' ? '#f59e0b' : '#9ca3af';
-      stepRows += `<tr style="border-bottom: 1px solid #f3f4f6;"><td style="padding: 5px 10px; font-size: 11px; color: #6b7280; text-align: center; width: 30px;">${stepNum}</td><td style="padding: 5px 10px; font-size: 11px; color: #111827;">${escapeHtml(step.instruction)}${step.is_critical ? ' <span style="color: #ef4444; font-weight: 700; font-size: 9px;">[CRIT]</span>' : ''}</td><td style="padding: 5px 10px; font-size: 14px; text-align: center; width: 40px; color: ${statusColor}; font-weight: 700;">${statusSymbol}</td></tr>`;
+      const possiblePts = step.possible_points || 1;
+      const earnedPts = markData?.points || 0;
+      stepRows += `<tr style="border-bottom: 1px solid #f3f4f6;"><td style="padding: 5px 10px; font-size: 11px; color: #6b7280; text-align: center; width: 30px;">${stepNum}</td><td style="padding: 5px 10px; font-size: 11px; color: #111827;">${escapeHtml(step.instruction)}${step.is_critical ? ' <span style="color: #ef4444; font-weight: 700; font-size: 9px;">[CRIT]</span>' : ''}</td>${isMultiPoint ? `<td style="padding: 5px 10px; font-size: 10px; text-align: center; width: 40px; color: #6b7280;">${earnedPts}/${possiblePts}</td>` : ''}<td style="padding: 5px 10px; font-size: 14px; text-align: center; width: 40px; color: ${statusColor}; font-weight: 700;">${statusSymbol}</td></tr>`;
+      if (step.sub_items && Array.isArray(step.sub_items) && markData?.subItems) {
+        for (let i = 0; i < step.sub_items.length; i++) {
+          const subItem = step.sub_items[i];
+          const subLabel = subItem.label || subItem.description || String(subItem);
+          const subChecked = markData.subItems[i] || false;
+          const subSymbol = subChecked ? '&#10003;' : '&mdash;';
+          const subColor = subChecked ? '#10b981' : '#9ca3af';
+          stepRows += `<tr style="border-bottom: 1px solid #f9fafb; background-color: #fafafa;"><td></td><td style="padding: 3px 10px 3px 28px; font-size: 10px; color: #4b5563;">${escapeHtml(subLabel)}</td>${isMultiPoint ? '<td></td>' : ''}<td style="padding: 3px 10px; font-size: 12px; text-align: center; color: ${subColor};">${subSymbol}</td></tr>`;
+        }
+      }
     }
   }
 
   return `
     <div ${includePageBreak ? 'style="page-break-before: always;"' : ''}>
-      <div style="border-bottom: 2px solid #2563eb; padding-bottom: 8px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: baseline;">
+      <div style="border-bottom: 2px solid #2563eb; padding-bottom: 8px; margin-bottom: 12px;">
         <h2 style="margin: 0; font-size: 15px; color: #111827;">${escapeHtml(skillSheet?.skill_name || 'Skill Evaluation')}</h2>
-        ${evalIndex != null && totalEvals != null ? `<span style="font-size: 11px; color: #6b7280;">Evaluation ${evalIndex} of ${totalEvals}</span>` : ''}
       </div>
       <table style="width: 100%; margin-bottom: 12px; font-size: 12px;">
         <tr>
@@ -92,11 +123,11 @@ function renderEvaluationPage(evaluation: any, includePageBreak: boolean = false
         </tr>
       </table>
       <table style="width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb; margin-bottom: 12px;">
-        <thead><tr style="background-color: #1e40af; color: white;"><th style="padding: 6px 10px; font-size: 10px; text-align: center; width: 30px;">#</th><th style="padding: 6px 10px; font-size: 10px; text-align: left;">Description</th><th style="padding: 6px 10px; font-size: 10px; text-align: center; width: 40px;">Status</th></tr></thead>
+        <thead><tr style="background-color: #1e40af; color: white;"><th style="padding: 6px 10px; font-size: 10px; text-align: center; width: 30px;">#</th><th style="padding: 6px 10px; font-size: 10px; text-align: left;">Description</th>${isMultiPoint ? '<th style="padding: 6px 10px; font-size: 10px; text-align: center; width: 40px;">Points</th>' : ''}<th style="padding: 6px 10px; font-size: 10px; text-align: center; width: 40px;">Status</th></tr></thead>
         <tbody>${stepRows}</tbody>
       </table>
       <table style="width: 100%; margin-bottom: 12px; font-size: 12px;">
-        <tr><td><strong>Steps:</strong> ${passedSteps}/${totalSteps}</td><td><strong>Critical:</strong> ${criticalPassed}/${criticalSteps.length}</td><td><strong>Result:</strong> <span style="color: ${resultColor}; font-weight: 700;">${evaluation.result.toUpperCase()}</span></td></tr>
+        <tr><td>${isMultiPoint ? `<strong>Points:</strong> ${earnedPoints}/${totalPossiblePoints} (${totalPossiblePoints > 0 ? Math.round((earnedPoints / totalPossiblePoints) * 100) : 0}%)` : `<strong>Steps:</strong> ${passedSteps}/${totalSteps}`}</td><td><strong>Critical:</strong> ${criticalPassed}/${criticalSteps.length}</td><td><strong>Result:</strong> <span style="color: ${resultColor}; font-weight: 700;">${evaluation.result.toUpperCase()}</span></td></tr>
       </table>
       ${evaluation.notes ? `<div style="border: 1px solid #e5e7eb; border-radius: 4px; padding: 8px; margin-bottom: 12px; font-size: 11px;"><strong>Comments:</strong> ${escapeHtml(evaluation.notes)}</div>` : ''}
       <div style="margin-top: 20px; display: flex; justify-content: space-between;">
@@ -141,18 +172,17 @@ export async function GET(request: NextRequest) {
     const { data: evaluations, error: evalsError } = await supabase
       .from('student_skill_evaluations')
       .select(`
-        id, evaluation_type, result, notes, flagged_items, step_marks, step_details, created_at,
+        id, evaluation_type, result, notes, flagged_items, step_marks, created_at,
         student:students!student_skill_evaluations_student_id_fkey(id, first_name, last_name),
-        skill_sheet:skill_sheets!student_skill_evaluations_skill_sheet_id_fkey(id, skill_name, source, steps:skill_sheet_steps(step_number, phase, instruction, is_critical)),
+        skill_sheet:skill_sheets!student_skill_evaluations_skill_sheet_id_fkey(id, skill_name, source, steps:skill_sheet_steps(step_number, phase, instruction, is_critical, possible_points, sub_items, section_header)),
         evaluator:lab_users!student_skill_evaluations_evaluator_id_fkey(id, name),
         lab_day:lab_days!student_skill_evaluations_lab_day_id_fkey(id, date, title)
       `)
       .eq('lab_day_id', labDayId)
-      .in('result', ['pass', 'fail'])
       .order('created_at', { ascending: true });
 
     if (evalsError || !evaluations?.length) {
-      return NextResponse.json({ success: false, error: 'No completed evaluations found for this lab day' }, { status: 404 });
+      return NextResponse.json({ success: false, error: 'No evaluations found for this lab day' }, { status: 404 });
     }
 
     const cohort = (labDay as any)?.cohort;
@@ -160,11 +190,8 @@ export async function GET(request: NextRequest) {
       ? new Date(labDay.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
       : 'Unknown Date';
 
-    // Unique evaluators and stations
+    // Unique evaluators
     const evaluatorNames = [...new Set(evaluations.map((e: any) => e.evaluator?.name).filter(Boolean))].map(n => formatInstructorName(n as string));
-    const stationNames = [...new Set(evaluations.map((e: any) => e.skill_sheet?.skill_name).filter(Boolean))];
-    const passCount = evaluations.filter((e: any) => e.result === 'pass').length;
-    const failCount = evaluations.filter((e: any) => e.result === 'fail').length;
 
     const coverPage = `
       <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 80vh; text-align: center;">
@@ -174,13 +201,12 @@ export async function GET(request: NextRequest) {
           <p><strong>Date:</strong> ${labDate}</p>
           ${labDay?.title ? `<p><strong>Lab Day:</strong> ${escapeHtml(labDay.title)}</p>` : ''}
           ${cohort ? `<p><strong>Cohort:</strong> ${escapeHtml(cohort.program?.abbreviation || '')}${escapeHtml(String(cohort.cohort_number || ''))}</p>` : ''}
-          <p><strong>Stations:</strong> ${stationNames.map(n => escapeHtml(n as string)).join(', ')}</p>
+          <p><strong>Evaluations:</strong> ${evaluations.length}</p>
           <p><strong>Evaluator${evaluatorNames.length > 1 ? 's' : ''}:</strong> ${evaluatorNames.join(', ')}</p>
-          <p><strong>Evaluations:</strong> ${evaluations.length} &nbsp;(<span style="color: #10b981;">${passCount} pass</span>${failCount > 0 ? ` / <span style="color: #ef4444;">${failCount} fail</span>` : ''})</p>
         </div>
       </div>`;
 
-    const evalPages = evaluations.map((e: any, i: number) => renderEvaluationPage(e, true, i + 1, evaluations.length)).join('\n');
+    const evalPages = evaluations.map((e, i: number) => renderEvaluationPage(e, true)).join('\n');
 
     const html = `<!DOCTYPE html>
 <html lang="en">

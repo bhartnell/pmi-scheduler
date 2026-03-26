@@ -40,9 +40,9 @@ export async function POST(request: NextRequest) {
     let query = supabase
       .from('student_skill_evaluations')
       .select(`
-        id, evaluation_type, result, notes, email_status, flagged_items, step_marks, step_details, created_at,
+        id, evaluation_type, result, notes, email_status, flagged_items, step_marks, created_at,
         student:students!student_skill_evaluations_student_id_fkey(id, first_name, last_name, email),
-        skill_sheet:skill_sheets!student_skill_evaluations_skill_sheet_id_fkey(id, skill_name, source, steps:skill_sheet_steps(step_number, phase, instruction, is_critical)),
+        skill_sheet:skill_sheets!student_skill_evaluations_skill_sheet_id_fkey(id, skill_name, source, steps:skill_sheet_steps(step_number, is_critical, possible_points, sub_items)),
         evaluator:lab_users!student_skill_evaluations_evaluator_id_fkey(id, name),
         lab_day:lab_days!student_skill_evaluations_lab_day_id_fkey(id, date, title)
       `)
@@ -107,67 +107,49 @@ export async function POST(request: NextRequest) {
           const skillSheet = evaluation.skill_sheet as any;
           const evaluator = evaluation.evaluator as any;
           const labDay = evaluation.lab_day as any;
-          const stepDetails = (evaluation as any).step_details as any[] | null;
 
-          const steps = (skillSheet?.steps || []).sort((a: any, b: any) => a.step_number - b.step_number);
-          const totalSteps = steps.length;
-          const stepMarks = evaluation.step_marks as Record<string, string> | null;
-          const criticalSteps = steps.filter((s: any) => s.is_critical);
+          const totalSteps = skillSheet?.steps?.length || 0;
+          const rawMarks = (evaluation.step_marks || {}) as Record<string, unknown>;
+          const stepsArr = skillSheet?.steps || [];
+          const isMultiPoint = stepsArr.some((s: any) => (s.possible_points && s.possible_points > 1) || (s.sub_items && s.sub_items.length > 0));
+          const totalPossiblePoints = stepsArr.reduce((sum: number, s: any) => sum + (s.possible_points || 1), 0);
 
           let passedSteps = 0;
+          let earnedPoints = 0;
+          const criticalSteps = stepsArr.filter((s: any) => s.is_critical);
           let criticalPassed = 0;
-          if (stepDetails && stepDetails.length > 0) {
-            passedSteps = stepDetails.filter((sd: any) => sd.completed).length;
-            criticalPassed = stepDetails.filter((sd: any) => sd.completed && sd.is_critical).length;
-          } else if (stepMarks) {
-            passedSteps = Object.values(stepMarks).filter(m => m === 'pass').length;
-            criticalPassed = criticalSteps.filter((s: any) => stepMarks[String(s.step_number)] === 'pass').length;
-          }
 
-          // Determine display result
-          let displayResult = evaluation.result;
-          if (evaluation.evaluation_type === 'formative') {
-            const allCriticalDone = criticalSteps.length === 0 || criticalPassed === criticalSteps.length;
-            if (passedSteps < totalSteps || !allCriticalDone) displayResult = 'remediation';
+          for (const [key, val] of Object.entries(rawMarks)) {
+            if (typeof val === 'string') {
+              const step = stepsArr.find((s: any) => String(s.step_number) === key);
+              if (val === 'pass') { passedSteps++; earnedPoints += step?.possible_points || 1; }
+              if (step?.is_critical && val === 'pass') criticalPassed++;
+            } else if (typeof val === 'object' && val !== null) {
+              const obj = val as { completed?: boolean; points?: number };
+              earnedPoints += obj.points || 0;
+              if (obj.completed) passedSteps++;
+              const step = stepsArr.find((s: any) => String(s.step_number) === key);
+              if (step?.is_critical && obj.completed) criticalPassed++;
+            }
           }
 
           const evalDate = labDay?.date
             ? new Date(labDay.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
             : new Date(evaluation.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
-          // Build score sheet HTML
-          const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-          const completionMap: Record<number, { completed: boolean; sequence?: number }> = {};
-          if (stepDetails && stepDetails.length > 0) {
-            for (const sd of stepDetails) completionMap[sd.step_number] = { completed: sd.completed, sequence: sd.sequence_number };
-          } else if (stepMarks) {
-            for (const [sn, mark] of Object.entries(stepMarks)) completionMap[parseInt(sn)] = { completed: mark === 'pass' };
-          }
-
-          let stepTableRows = '';
-          for (const step of steps) {
-            const comp = completionMap[step.step_number];
-            const isDone = comp?.completed || false;
-            const seq = comp?.sequence;
-            stepTableRows += `<tr style="border-bottom:1px solid #f3f4f6;"><td style="padding:4px 8px;font-size:12px;color:#6b7280;text-align:center;width:30px;">${step.step_number}</td><td style="padding:4px 8px;font-size:12px;color:#111827;">${escapeHtml(step.instruction || '')}${step.is_critical ? ' <span style="color:#ef4444;font-weight:700;font-size:10px;">[CRIT]</span>' : ''}</td><td style="padding:4px 8px;font-size:12px;text-align:center;width:30px;">${seq ? `<span style="color:#6b7280;font-size:10px;">${seq}</span>` : ''}</td><td style="padding:4px 8px;font-size:16px;text-align:center;width:30px;color:${isDone ? '#10b981' : '#9ca3af'};font-weight:700;">${isDone ? '&#10003;' : '&mdash;'}</td></tr>`;
-          }
-
-          const resultColor = displayResult === 'pass' ? '#10b981' : displayResult === 'fail' ? '#ef4444' : '#f59e0b';
-          const resultLabel = displayResult === 'pass' ? 'PASS' : displayResult === 'fail' ? 'FAIL' : 'NEEDS IMPROVEMENT';
-          const scoreSheetHtml = `<table style="width:100%;border-collapse:collapse;border:1px solid #e5e7eb;margin:16px 0;"><thead><tr style="background-color:#1e40af;color:white;"><th style="padding:6px 8px;font-size:11px;text-align:center;width:30px;">#</th><th style="padding:6px 8px;font-size:11px;text-align:left;">Description</th><th style="padding:6px 8px;font-size:11px;text-align:center;width:30px;">Order</th><th style="padding:6px 8px;font-size:11px;text-align:center;width:30px;">&#10003;</th></tr></thead><tbody>${stepTableRows}</tbody></table><table style="width:100%;margin:12px 0;font-size:13px;"><tr><td><strong>Steps:</strong> ${passedSteps}/${totalSteps}</td><td><strong>Critical:</strong> ${criticalPassed}/${criticalSteps.length}</td><td><strong>Result:</strong> <span style="color:${resultColor};font-weight:700;">${resultLabel}</span></td></tr></table>`;
-
           const emailResult = await sendSkillEvaluationEmail(student.email, {
             evaluationId: evaluation.id,
             studentFirstName: student.first_name,
             skillName: skillSheet?.skill_name || 'Skill Evaluation',
             evaluationType: evaluation.evaluation_type,
-            result: displayResult,
-            stepsCompleted: totalSteps > 0 ? `${passedSteps}/${totalSteps}` : undefined,
+            result: evaluation.result,
+            stepsCompleted: isMultiPoint
+              ? `${earnedPoints}/${totalPossiblePoints} points (${totalPossiblePoints > 0 ? Math.round((earnedPoints / totalPossiblePoints) * 100) : 0}%)`
+              : (totalSteps > 0 ? `${passedSteps}/${totalSteps}` : undefined),
             criticalSteps: criticalSteps.length > 0 ? `${criticalPassed}/${criticalSteps.length}` : undefined,
             notes: evaluation.notes || undefined,
             evaluatorName: evaluator?.name ? formatInstructorName(evaluator.name) : 'Instructor',
             date: evalDate,
-            scoreSheetHtml,
           });
 
           if (emailResult.success) {

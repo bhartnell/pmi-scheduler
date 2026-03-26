@@ -31,6 +31,11 @@ import {
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
+interface SubItem {
+  label?: string;
+  description?: string;
+}
+
 interface Step {
   id: string;
   step_number: number;
@@ -38,6 +43,9 @@ interface Step {
   instruction: string;
   is_critical: boolean;
   detail_notes: string | null;
+  possible_points: number | null;
+  sub_items: SubItem[] | null;
+  section_header: string | null;
 }
 
 interface CanonicalSkill {
@@ -153,6 +161,41 @@ function getOrderedPhases(groups: Record<string, Step[]>): string[] {
   return ordered;
 }
 
+/** Check if a skill sheet uses multi-point scoring (has any step with possible_points > 1 or sub_items) */
+function hasMultiPointScoring(steps: Step[]): boolean {
+  return steps.some(s => (s.possible_points && s.possible_points > 1) || (s.sub_items && s.sub_items.length > 0));
+}
+
+/** Get earned points for a step based on sub-item marks or pass/fail mark */
+function getStepEarnedPoints(
+  step: Step,
+  mark: StepMark,
+  subItemChecks?: boolean[],
+): number {
+  const possiblePts = step.possible_points || 1;
+  if (step.sub_items && step.sub_items.length > 0 && subItemChecks) {
+    return subItemChecks.filter(Boolean).length;
+  }
+  // Simple step: pass = full points, anything else = 0
+  return mark === 'pass' ? possiblePts : 0;
+}
+
+/** Calculate total possible points across all steps */
+function getTotalPossiblePoints(steps: Step[]): number {
+  return steps.reduce((sum, s) => sum + (s.possible_points || 1), 0);
+}
+
+/** Calculate total earned points */
+function getTotalEarnedPoints(
+  steps: Step[],
+  stepMarks: Record<number, StepMark>,
+  subItemMarks: Record<number, boolean[]>,
+): number {
+  return steps.reduce((sum, s) => {
+    return sum + getStepEarnedPoints(s, stepMarks[s.step_number] || null, subItemMarks[s.step_number]);
+  }, 0);
+}
+
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export default function SkillSheetPanel({
@@ -178,6 +221,9 @@ export default function SkillSheetPanel({
   const [result, setResult] = useState<'pass' | 'fail' | 'remediation'>('pass');
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  // Sub-item checkbox state: { [stepNumber]: [true, false, true, ...] }
+  const [subItemMarks, setSubItemMarks] = useState<Record<number, boolean[]>>({});
 
   // ===== FORMATIVE NUMBERED COMPLETION =====
   // DO NOT REPLACE with pass/fail/caution icons.
@@ -347,6 +393,7 @@ export default function SkillSheetPanel({
   const resetForm = () => {
     setStepMarks({});
     setStepSequence({});
+    setSubItemMarks({});
     setNotes('');
     setResult('pass');
   };
@@ -373,9 +420,32 @@ export default function SkillSheetPanel({
     const evaluationResult = mode === 'formative' ? 'pass' : result;
 
     // Build step_marks as a serializable object
-    const stepMarksToSave: Record<string, string> = {};
-    for (const [key, val] of Object.entries(stepMarks)) {
-      if (val) stepMarksToSave[key] = val;
+    // New format for multi-point steps: { "1": { "completed": true, "sub_items": [true, false, true], "points": 2 } }
+    // Old format for simple steps: { "1": "pass" }
+    const isMultiPoint = sheet ? hasMultiPointScoring(sheet.steps) : false;
+    const stepMarksToSave: Record<string, unknown> = {};
+    if (isMultiPoint && sheet) {
+      for (const step of sheet.steps) {
+        const mark = stepMarks[step.step_number];
+        const subs = subItemMarks[step.step_number];
+        if (step.sub_items && step.sub_items.length > 0 && subs) {
+          const pts = subs.filter(Boolean).length;
+          stepMarksToSave[String(step.step_number)] = {
+            completed: pts === (step.possible_points || step.sub_items.length),
+            sub_items: subs,
+            points: pts,
+          };
+        } else if (mark) {
+          stepMarksToSave[String(step.step_number)] = {
+            completed: mark === 'pass',
+            points: mark === 'pass' ? (step.possible_points || 1) : 0,
+          };
+        }
+      }
+    } else {
+      for (const [key, val] of Object.entries(stepMarks)) {
+        if (val) stepMarksToSave[key] = val;
+      }
     }
 
     // Build step details with sequence numbers (formative mode)
@@ -574,10 +644,23 @@ export default function SkillSheetPanel({
   const handleEditEval = (evalItem: ExistingEvaluation) => {
     if (evalItem.step_marks) {
       const marks: Record<number, StepMark> = {};
+      const subs: Record<number, boolean[]> = {};
       for (const [key, val] of Object.entries(evalItem.step_marks)) {
-        marks[parseInt(key)] = val as StepMark;
+        const stepNum = parseInt(key);
+        if (typeof val === 'string') {
+          // Old format: simple string mark
+          marks[stepNum] = val as StepMark;
+        } else if (typeof val === 'object' && val !== null) {
+          // New format: { completed, sub_items, points }
+          const obj = val as { completed?: boolean; sub_items?: boolean[]; points?: number };
+          marks[stepNum] = obj.completed ? 'pass' : null;
+          if (obj.sub_items) {
+            subs[stepNum] = obj.sub_items;
+          }
+        }
       }
       setStepMarks(marks);
+      setSubItemMarks(subs);
     }
     if (evalItem.step_details && Array.isArray(evalItem.step_details)) {
       const seq: Record<number, number> = {};
@@ -814,7 +897,12 @@ export default function SkillSheetPanel({
               </div>
               {mode === 'formative' && sheet.steps.length > 0 && (
                 <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                  {Object.keys(stepSequence).length}/{sheet.steps.length} completed
+                  {hasMultiPointScoring(sheet.steps) ? (() => {
+                    const earned = getTotalEarnedPoints(sheet.steps, stepMarks, subItemMarks);
+                    const total = getTotalPossiblePoints(sheet.steps);
+                    const pct = total > 0 ? Math.round((earned / total) * 100) : 0;
+                    return `Points: ${earned}/${total} (${pct}%)`;
+                  })() : `${Object.keys(stepSequence).length}/${sheet.steps.length} completed`}
                 </span>
               )}
             </div>
@@ -931,15 +1019,30 @@ export default function SkillSheetPanel({
                       {!isCollapsed && (
                         <div className="divide-y divide-gray-100 dark:divide-gray-700">
                           {phaseSteps.map(step => (
-                            <PanelStepRow
-                              key={step.id}
-                              step={step}
-                              mode={mode}
-                              mark={stepMarks[step.step_number] || null}
-                              onSetMark={(mark) => setStepMarkDirect(step.step_number, mark)}
-                              sequenceNumber={stepSequence[step.step_number] ?? null}
-                              onToggleComplete={() => toggleStepComplete(step.step_number)}
-                            />
+                            <div key={step.id}>
+                              {step.section_header && (
+                                <div className="bg-gray-100 dark:bg-gray-700 px-3 py-2 font-bold text-sm uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">
+                                  {step.section_header}
+                                </div>
+                              )}
+                              <PanelStepRow
+                                step={step}
+                                mode={mode}
+                                mark={stepMarks[step.step_number] || null}
+                                onSetMark={(mark) => setStepMarkDirect(step.step_number, mark)}
+                                sequenceNumber={stepSequence[step.step_number] ?? null}
+                                onToggleComplete={() => toggleStepComplete(step.step_number)}
+                                subItemChecks={subItemMarks[step.step_number]}
+                                onSubItemToggle={(idx) => {
+                                  setSubItemMarks(prev => {
+                                    const current = prev[step.step_number] || new Array(step.sub_items?.length || 0).fill(false);
+                                    const next = [...current];
+                                    next[idx] = !next[idx];
+                                    return { ...prev, [step.step_number]: next };
+                                  });
+                                }}
+                              />
+                            </div>
                           ))}
                         </div>
                       )}
@@ -1380,15 +1483,30 @@ export default function SkillSheetPanel({
                       {!isCollapsed && (
                         <div className="divide-y divide-gray-100 dark:divide-gray-700">
                           {phaseSteps.map(step => (
-                            <PanelStepRow
-                              key={step.id}
-                              step={step}
-                              mode={mode}
-                              mark={stepMarks[step.step_number] || null}
-                              onSetMark={(mark) => setStepMarkDirect(step.step_number, mark)}
-                              sequenceNumber={stepSequence[step.step_number] ?? null}
-                              onToggleComplete={() => toggleStepComplete(step.step_number)}
-                            />
+                            <div key={step.id}>
+                              {step.section_header && (
+                                <div className="bg-gray-100 dark:bg-gray-700 px-3 py-2 font-bold text-sm uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">
+                                  {step.section_header}
+                                </div>
+                              )}
+                              <PanelStepRow
+                                step={step}
+                                mode={mode}
+                                mark={stepMarks[step.step_number] || null}
+                                onSetMark={(mark) => setStepMarkDirect(step.step_number, mark)}
+                                sequenceNumber={stepSequence[step.step_number] ?? null}
+                                onToggleComplete={() => toggleStepComplete(step.step_number)}
+                                subItemChecks={subItemMarks[step.step_number]}
+                                onSubItemToggle={(idx) => {
+                                  setSubItemMarks(prev => {
+                                    const current = prev[step.step_number] || new Array(step.sub_items?.length || 0).fill(false);
+                                    const next = [...current];
+                                    next[idx] = !next[idx];
+                                    return { ...prev, [step.step_number]: next };
+                                  });
+                                }}
+                              />
+                            </div>
                           ))}
                         </div>
                       )}
@@ -1623,6 +1741,8 @@ function PanelStepRow({
   onSetMark,
   sequenceNumber,
   onToggleComplete,
+  subItemChecks,
+  onSubItemToggle,
 }: {
   step: Step;
   mode: DisplayMode;
@@ -1630,9 +1750,67 @@ function PanelStepRow({
   onSetMark: (mark: StepMark) => void;
   sequenceNumber?: number | null;
   onToggleComplete?: () => void;
+  subItemChecks?: boolean[];
+  onSubItemToggle?: (index: number) => void;
 }) {
   const isCritical = step.is_critical;
   const [noteExpanded, setNoteExpanded] = useState(false);
+  const hasSubItems = step.sub_items && step.sub_items.length > 0;
+  const possiblePts = step.possible_points || 1;
+  const isMultiPoint = possiblePts > 1 || hasSubItems;
+
+  // Compute checked count for sub-items
+  const checkedCount = subItemChecks ? subItemChecks.filter(Boolean).length : 0;
+
+  // Detail notes tooltip helper
+  const detailNotesIcon = step.detail_notes ? (
+    <span className="text-gray-400 dark:text-gray-500 cursor-help flex-shrink-0" title={step.detail_notes}>
+      <Info className="w-3 h-3" />
+    </span>
+  ) : null;
+
+  // Sub-items rendering (for formative and final modes)
+  const subItemsBlock = hasSubItems && mode !== 'teaching' && onSubItemToggle ? (
+    <div className="mt-1 space-y-0.5">
+      {step.sub_items!.map((item, i) => {
+        const isChecked = subItemChecks ? subItemChecks[i] || false : false;
+        return (
+          <label key={i} className="flex items-center gap-2 ml-6 py-0.5 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isChecked}
+              onChange={() => onSubItemToggle(i)}
+              className="w-3.5 h-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
+            <span className={`text-xs ${isChecked ? 'text-gray-500 dark:text-gray-400 line-through' : 'text-gray-700 dark:text-gray-300'}`}>
+              {item.label || item.description || String(item)}
+            </span>
+          </label>
+        );
+      })}
+    </div>
+  ) : null;
+
+  // Sub-items rendering for teaching mode (read-only list)
+  const subItemsTeaching = hasSubItems && mode === 'teaching' ? (
+    <div className="mt-1 space-y-0.5">
+      {step.sub_items!.map((item, i) => (
+        <div key={i} className="flex items-center gap-2 ml-6 py-0.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
+          <span className="text-xs text-gray-600 dark:text-gray-400">
+            {item.label || item.description || String(item)}
+          </span>
+        </div>
+      ))}
+    </div>
+  ) : null;
+
+  // Point display for multi-point steps
+  const pointsBadge = isMultiPoint && mode !== 'teaching' ? (
+    <span className="text-[10px] text-gray-500 dark:text-gray-400 flex-shrink-0 whitespace-nowrap">
+      {hasSubItems ? checkedCount : (mark === 'pass' ? possiblePts : 0)}/{possiblePts} pts
+    </span>
+  ) : null;
 
   // Teaching mode - read-only
   if (mode === 'teaching') {
@@ -1650,6 +1828,10 @@ function PanelStepRow({
                   CRITICAL
                 </span>
               )}
+              {detailNotesIcon}
+              {isMultiPoint && (
+                <span className="text-[10px] text-gray-400 flex-shrink-0 whitespace-nowrap">({possiblePts} pts)</span>
+              )}
             </div>
             {step.detail_notes && (
               <>
@@ -1664,6 +1846,7 @@ function PanelStepRow({
                 )}
               </>
             )}
+            {subItemsTeaching}
           </div>
         </div>
       </div>
@@ -1673,10 +1856,11 @@ function PanelStepRow({
   // ===== FORMATIVE NUMBERED COMPLETION =====
   // DO NOT REPLACE with pass/fail/caution icons.
   // Each step gets a single tap target that assigns a sequence number.
+  // For multi-point steps with sub-items, use checkboxes instead.
   // This has been accidentally reverted 3 times — preserve this code.
   // ==========================================
   if (mode === 'formative') {
-    const isComplete = sequenceNumber != null;
+    const isComplete = hasSubItems ? checkedCount === possiblePts : sequenceNumber != null;
     return (
       <div className={`px-3 py-2 transition-colors ${isCritical ? 'bg-red-50 dark:bg-red-900/20' : ''} ${isComplete ? 'bg-green-50 dark:bg-green-900/10' : ''}`}>
         <div className="flex items-start gap-2">
@@ -1695,6 +1879,7 @@ function PanelStepRow({
                       CRITICAL
                     </span>
                   )}
+                  {detailNotesIcon}
                 </div>
                 {step.detail_notes && (
                   <>
@@ -1710,33 +1895,39 @@ function PanelStepRow({
                   </>
                 )}
               </div>
-              {/* Single tap target: numbered completion */}
+              {/* For simple steps: numbered completion button. For sub-item steps: point badge */}
               <div className="flex items-center gap-1.5 flex-shrink-0">
-                {isComplete && (
-                  <span className="w-6 h-6 rounded-full bg-green-600 text-white text-[10px] font-bold flex items-center justify-center">
-                    {sequenceNumber}
-                  </span>
+                {pointsBadge}
+                {!hasSubItems && (
+                  <>
+                    {sequenceNumber != null && (
+                      <span className="w-6 h-6 rounded-full bg-green-600 text-white text-[10px] font-bold flex items-center justify-center">
+                        {sequenceNumber}
+                      </span>
+                    )}
+                    <button
+                      onClick={onToggleComplete}
+                      className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
+                        sequenceNumber != null
+                          ? 'bg-green-500 text-white shadow-sm'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 hover:bg-green-100 dark:hover:bg-green-900/30 hover:text-green-600'
+                      }`}
+                      title={sequenceNumber != null ? `Completed #${sequenceNumber} — tap to undo` : 'Mark as completed'}
+                    >
+                      <CheckCircle className="w-4 h-4" />
+                    </button>
+                  </>
                 )}
-                <button
-                  onClick={onToggleComplete}
-                  className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${
-                    isComplete
-                      ? 'bg-green-500 text-white shadow-sm'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 hover:bg-green-100 dark:hover:bg-green-900/30 hover:text-green-600'
-                  }`}
-                  title={isComplete ? `Completed #${sequenceNumber} — tap to undo` : 'Mark as completed'}
-                >
-                  <CheckCircle className="w-4 h-4" />
-                </button>
               </div>
             </div>
+            {subItemsBlock}
           </div>
         </div>
       </div>
     );
   }
 
-  // Final mode - pass/fail icons
+  // Final mode - pass/fail icons (for simple steps) or sub-item checkboxes (for multi-point)
   return (
     <div className={`px-3 py-2 ${isCritical ? 'bg-red-50 dark:bg-red-900/20' : ''}`}>
       <div className="flex items-start gap-2">
@@ -1753,34 +1944,41 @@ function PanelStepRow({
                     CRITICAL
                   </span>
                 )}
+                {detailNotesIcon}
               </div>
             </div>
-            {/* Final mode: Pass/Fail buttons */}
+            {/* Final mode: Pass/Fail buttons for simple steps, point badge for sub-item steps */}
             <div className="flex items-center gap-0.5 flex-shrink-0">
-              <button
-                onClick={() => onSetMark('pass')}
-                className={`w-7 h-7 rounded flex items-center justify-center transition-colors ${
-                  mark === 'pass'
-                    ? 'bg-green-500 text-white'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-400 hover:bg-green-100 dark:hover:bg-green-900/30'
-                }`}
-                title="Pass"
-              >
-                <CheckCircle className="w-3.5 h-3.5" />
-              </button>
-              <button
-                onClick={() => onSetMark('fail')}
-                className={`w-7 h-7 rounded flex items-center justify-center transition-colors ${
-                  mark === 'fail'
-                    ? 'bg-red-500 text-white'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-400 hover:bg-red-100 dark:hover:bg-red-900/30'
-                }`}
-                title="Fail"
-              >
-                <XCircle className="w-3.5 h-3.5" />
-              </button>
+              {pointsBadge}
+              {!hasSubItems && (
+                <>
+                  <button
+                    onClick={() => onSetMark('pass')}
+                    className={`w-7 h-7 rounded flex items-center justify-center transition-colors ${
+                      mark === 'pass'
+                        ? 'bg-green-500 text-white'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-400 hover:bg-green-100 dark:hover:bg-green-900/30'
+                    }`}
+                    title="Pass"
+                  >
+                    <CheckCircle className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => onSetMark('fail')}
+                    className={`w-7 h-7 rounded flex items-center justify-center transition-colors ${
+                      mark === 'fail'
+                        ? 'bg-red-500 text-white'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-400 hover:bg-red-100 dark:hover:bg-red-900/30'
+                    }`}
+                    title="Fail"
+                  >
+                    <XCircle className="w-3.5 h-3.5" />
+                  </button>
+                </>
+              )}
             </div>
           </div>
+          {subItemsBlock}
         </div>
       </div>
     </div>
@@ -1828,11 +2026,37 @@ function ExistingEvalSummary({
 
       {completedEvals.map((ev) => {
         const isExpanded = expandedId === ev.id;
-        const stepMarks = ev.step_marks as Record<string, string> | null;
-        const passedSteps = stepMarks ? Object.values(stepMarks).filter(m => m === 'pass').length : 0;
-        const criticalPassed = stepMarks
-          ? sheet.steps.filter(s => s.is_critical && stepMarks[String(s.step_number)] === 'pass').length
-          : 0;
+        const rawMarks = ev.step_marks as Record<string, unknown> | null;
+
+        // Handle both old format (string marks) and new format (object marks with points)
+        let passedSteps = 0;
+        let earnedPts = 0;
+        let criticalPassed = 0;
+        const isMultiPt = hasMultiPointScoring(sheet.steps);
+
+        if (rawMarks) {
+          for (const [key, val] of Object.entries(rawMarks)) {
+            const stepNum = parseInt(key);
+            const stepDef = sheet.steps.find(s => s.step_number === stepNum);
+            if (typeof val === 'string') {
+              // Old format
+              if (val === 'pass') {
+                passedSteps++;
+                earnedPts += stepDef?.possible_points || 1;
+                if (stepDef?.is_critical) criticalPassed++;
+              }
+            } else if (typeof val === 'object' && val !== null) {
+              // New format
+              const obj = val as { completed?: boolean; points?: number };
+              if (obj.completed) {
+                passedSteps++;
+                if (stepDef?.is_critical) criticalPassed++;
+              }
+              earnedPts += obj.points || 0;
+            }
+          }
+        }
+
         const evalDate = new Date(ev.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
         const evaluatorName = ev.evaluator?.name
           ? `${ev.evaluator.name.split(' ')[0][0]}. ${ev.evaluator.name.split(' ').slice(1).join(' ')}`
@@ -1865,7 +2089,11 @@ function ExistingEvalSummary({
                 <span className="text-[10px] text-gray-400">{evalDate}</span>
               </div>
               <div className="flex items-center gap-3 mt-1 text-[10px] text-gray-500 dark:text-gray-400">
-                <span>Steps: {passedSteps}/{totalSteps}</span>
+                {isMultiPt ? (
+                  <span>Points: {earnedPts}/{getTotalPossiblePoints(sheet.steps)} ({getTotalPossiblePoints(sheet.steps) > 0 ? Math.round((earnedPts / getTotalPossiblePoints(sheet.steps)) * 100) : 0}%)</span>
+                ) : (
+                  <span>Steps: {passedSteps}/{totalSteps}</span>
+                )}
                 <span>Critical: {criticalPassed}/{criticalCount}</span>
                 <span>By: {evaluatorName}</span>
               </div>

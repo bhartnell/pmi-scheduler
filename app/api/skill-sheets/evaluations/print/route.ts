@@ -21,7 +21,6 @@ interface EvalData {
   notes: string | null;
   flagged_items: any;
   step_marks: Record<string, string> | null;
-  step_details: any[] | null;
   created_at: string;
   student: any;
   skill_sheet: any;
@@ -34,44 +33,52 @@ function renderEvaluationPage(evaluation: EvalData, includePageBreak: boolean = 
   const skillSheet = evaluation.skill_sheet;
   const evaluator = evaluation.evaluator;
   const labDay = evaluation.lab_day;
-  const stepMarks = evaluation.step_marks || {};
+  const rawMarks = (evaluation.step_marks || {}) as Record<string, unknown>;
   const flaggedItems = (evaluation.flagged_items || []) as { step_number: number; status: string }[];
 
-  const stepDetails = evaluation.step_details || [];
   const steps = (skillSheet?.steps || []).sort((a: any, b: any) => a.step_number - b.step_number);
   const totalSteps = steps.length;
+  const isMultiPoint = steps.some((s: any) => (s.possible_points && s.possible_points > 1) || (s.sub_items && s.sub_items.length > 0));
+  const totalPossiblePoints = steps.reduce((sum: number, s: any) => sum + (s.possible_points || 1), 0);
 
-  // Build completion map from step_details (formative) or step_marks (final)
-  const completionMap: Record<number, { completed: boolean; sequence?: number }> = {};
-  if (stepDetails.length > 0) {
-    for (const sd of stepDetails) {
-      completionMap[sd.step_number] = { completed: sd.completed, sequence: sd.sequence_number };
-    }
-  } else {
-    for (const [sn, mark] of Object.entries(stepMarks)) {
-      completionMap[parseInt(sn)] = { completed: mark === 'pass' };
+  // Calculate stats handling both old (string) and new (object) step_marks formats
+  let passedSteps = 0;
+  let earnedPoints = 0;
+  const criticalSteps = steps.filter((s: any) => s.is_critical);
+  let criticalPassed = 0;
+
+  // Build a normalized mark lookup: stepNumber -> { mark, points, subItems }
+  const stepMarkLookup: Record<string, { mark: string; points: number; subItems?: boolean[] }> = {};
+  for (const [key, val] of Object.entries(rawMarks)) {
+    if (typeof val === 'string') {
+      // Old format: simple string
+      const step = steps.find((s: any) => String(s.step_number) === key);
+      const pts = val === 'pass' ? (step?.possible_points || 1) : 0;
+      stepMarkLookup[key] = { mark: val, points: pts };
+      if (val === 'pass') { passedSteps++; earnedPoints += pts; }
+      if (step?.is_critical && val === 'pass') criticalPassed++;
+    } else if (typeof val === 'object' && val !== null) {
+      // New format: { completed, sub_items, points }
+      const obj = val as { completed?: boolean; sub_items?: boolean[]; points?: number };
+      const pts = obj.points || 0;
+      stepMarkLookup[key] = { mark: obj.completed ? 'pass' : 'fail', points: pts, subItems: obj.sub_items };
+      earnedPoints += pts;
+      if (obj.completed) passedSteps++;
+      const step = steps.find((s: any) => String(s.step_number) === key);
+      if (step?.is_critical && obj.completed) criticalPassed++;
     }
   }
-
-  const passedSteps = Object.values(completionMap).filter(c => c.completed).length;
-  const criticalSteps = steps.filter((s: any) => s.is_critical);
-  const criticalPassed = criticalSteps.filter((s: any) => completionMap[s.step_number]?.completed).length;
-  const hasSequenceData = stepDetails.length > 0 && stepDetails.some((sd: any) => sd.sequence_number);
+  // Backward compat alias
+  const stepMarks: Record<string, string> = {};
+  for (const [k, v] of Object.entries(stepMarkLookup)) {
+    stepMarks[k] = v.mark;
+  }
 
   const evalDate = labDay?.date
     ? new Date(labDay.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
     : new Date(evaluation.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
-  // For formative: recalculate result based on actual completion
-  let displayResult = evaluation.result;
-  if (evaluation.evaluation_type === 'formative') {
-    const allCriticalDone = criticalSteps.length === 0 || criticalPassed === criticalSteps.length;
-    if (passedSteps < totalSteps || !allCriticalDone) {
-      displayResult = 'remediation';
-    }
-  }
-  const resultColor = displayResult === 'pass' ? '#10b981' : displayResult === 'fail' ? '#ef4444' : '#f59e0b';
-  const resultLabel = displayResult === 'pass' ? 'PASS' : displayResult === 'fail' ? 'FAIL' : 'NEEDS IMPROVEMENT';
+  const resultColor = evaluation.result === 'pass' ? '#10b981' : evaluation.result === 'fail' ? '#ef4444' : '#f59e0b';
 
   // Group steps by phase
   const phaseOrder = ['preparation', 'procedure', 'assessment', 'packaging'];
@@ -93,27 +100,36 @@ function renderEvaluationPage(evaluation: EvalData, includePageBreak: boolean = 
     const phaseSteps = stepsByPhase[phase];
     const phaseLabel = phaseLabels[phase] || phase.charAt(0).toUpperCase() + phase.slice(1);
 
-    const colSpan = hasSequenceData ? 4 : 3;
     stepRows += `
       <tr style="background-color: #f3f4f6;">
-        <td colspan="${colSpan}" style="padding: 6px 12px; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #374151; border-bottom: 1px solid #e5e7eb;">
+        <td colspan="4" style="padding: 6px 12px; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #374151; border-bottom: 1px solid #e5e7eb;">
           ${escapeHtml(phaseLabel)} (${phaseSteps.length} steps)
         </td>
       </tr>`;
 
     for (const step of phaseSteps) {
       stepNum++;
-      const comp = completionMap[step.step_number];
-      const isDone = comp?.completed || false;
-      const seq = comp?.sequence;
-      const flagged = flaggedItems.find(f => f.step_number === step.step_number);
-      const statusSymbol = isDone ? '&#10003;' : flagged?.status === 'fail' ? '&#10007;' : flagged?.status === 'caution' ? '&#9888;' : '&mdash;';
-      const statusColor = isDone ? '#10b981' : flagged?.status === 'fail' ? '#ef4444' : flagged?.status === 'caution' ? '#f59e0b' : '#9ca3af';
 
-      // Highlight out-of-order: if sequence number doesn't match step number
-      const isOutOfOrder = seq !== undefined && seq !== stepNum;
-      const seqColor = isOutOfOrder ? '#f59e0b' : '#6b7280';
-      const seqBg = isOutOfOrder ? 'background-color: #fef3c7;' : '';
+      // Section header
+      if (step.section_header) {
+        stepRows += `
+          <tr style="background-color: #e5e7eb;">
+            <td colspan="4" style="padding: 6px 12px; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #1f2937; border-bottom: 1px solid #d1d5db;">
+              ${escapeHtml(step.section_header)}
+            </td>
+          </tr>`;
+      }
+
+      const mark = stepMarks[String(step.step_number)];
+      const markData = stepMarkLookup[String(step.step_number)];
+      const flagged = flaggedItems.find(f => f.step_number === step.step_number);
+      const statusSymbol = mark === 'pass' ? '&#10003;' : mark === 'fail' ? '&#10007;' : flagged?.status === 'fail' ? '&#10007;' : flagged?.status === 'caution' ? '&#9888;' : '&mdash;';
+      const statusColor = mark === 'pass' ? '#10b981' : mark === 'fail' ? '#ef4444' : flagged?.status === 'caution' ? '#f59e0b' : '#9ca3af';
+
+      // Points column for multi-point steps
+      const possiblePts = step.possible_points || 1;
+      const earnedPts = markData?.points || 0;
+      const pointsDisplay = isMultiPoint ? `${earnedPts}/${possiblePts}` : '';
 
       stepRows += `
         <tr style="border-bottom: 1px solid #f3f4f6;">
@@ -122,9 +138,29 @@ function renderEvaluationPage(evaluation: EvalData, includePageBreak: boolean = 
             ${escapeHtml(step.instruction)}
             ${step.is_critical ? '<span style="color: #ef4444; font-weight: 700; font-size: 10px; margin-left: 4px;">[CRIT]</span>' : ''}
           </td>
-          ${hasSequenceData ? `<td style="padding: 6px 12px; font-size: 12px; text-align: center; width: 50px; color: ${seqColor}; font-weight: 600; ${seqBg}">${seq || '&mdash;'}</td>` : ''}
+          ${isMultiPoint ? `<td style="padding: 6px 12px; font-size: 11px; text-align: center; width: 50px; color: #6b7280;">${pointsDisplay}</td>` : ''}
           <td style="padding: 6px 12px; font-size: 16px; text-align: center; width: 50px; color: ${statusColor}; font-weight: 700;">${statusSymbol}</td>
         </tr>`;
+
+      // Sub-item rows
+      if (step.sub_items && Array.isArray(step.sub_items) && markData?.subItems) {
+        for (let i = 0; i < step.sub_items.length; i++) {
+          const subItem = step.sub_items[i];
+          const subLabel = subItem.label || subItem.description || String(subItem);
+          const subChecked = markData.subItems[i] || false;
+          const subSymbol = subChecked ? '&#10003;' : '&mdash;';
+          const subColor = subChecked ? '#10b981' : '#9ca3af';
+          stepRows += `
+            <tr style="border-bottom: 1px solid #f9fafb; background-color: #fafafa;">
+              <td style="padding: 3px 12px;"></td>
+              <td style="padding: 3px 12px 3px 32px; font-size: 11px; color: #4b5563;">
+                ${escapeHtml(subLabel)}
+              </td>
+              ${isMultiPoint ? '<td style="padding: 3px 12px;"></td>' : ''}
+              <td style="padding: 3px 12px; font-size: 14px; text-align: center; width: 50px; color: ${subColor};">${subSymbol}</td>
+            </tr>`;
+        }
+      }
     }
   }
 
@@ -161,7 +197,7 @@ function renderEvaluationPage(evaluation: EvalData, includePageBreak: boolean = 
           <tr style="background-color: #1e40af; color: white;">
             <th style="padding: 8px 12px; font-size: 11px; text-align: center; width: 40px;">#</th>
             <th style="padding: 8px 12px; font-size: 11px; text-align: left;">Description</th>
-            ${hasSequenceData ? '<th style="padding: 8px 12px; font-size: 11px; text-align: center; width: 50px;">Order</th>' : ''}
+            ${isMultiPoint ? '<th style="padding: 8px 12px; font-size: 11px; text-align: center; width: 50px;">Points</th>' : ''}
             <th style="padding: 8px 12px; font-size: 11px; text-align: center; width: 50px;">Status</th>
           </tr>
         </thead>
@@ -173,9 +209,12 @@ function renderEvaluationPage(evaluation: EvalData, includePageBreak: boolean = 
       <!-- Summary -->
       <table style="width: 100%; margin-bottom: 16px; font-size: 13px;">
         <tr>
-          <td style="width: 33%;"><strong>Steps Completed:</strong> ${passedSteps}/${totalSteps}</td>
+          ${isMultiPoint
+            ? `<td style="width: 33%;"><strong>Points:</strong> ${earnedPoints}/${totalPossiblePoints} (${totalPossiblePoints > 0 ? Math.round((earnedPoints / totalPossiblePoints) * 100) : 0}%)</td>`
+            : `<td style="width: 33%;"><strong>Steps Completed:</strong> ${passedSteps}/${totalSteps}</td>`
+          }
           <td style="width: 33%;"><strong>Critical Steps:</strong> ${criticalPassed}/${criticalSteps.length}</td>
-          <td style="width: 33%;"><strong>Result:</strong> <span style="color: ${resultColor}; font-weight: 700; font-size: 15px;">${resultLabel}</span></td>
+          <td style="width: 33%;"><strong>Result:</strong> <span style="color: ${resultColor}; font-weight: 700; font-size: 15px;">${evaluation.result.toUpperCase()}</span></td>
         </tr>
       </table>
 
@@ -230,9 +269,9 @@ export async function GET(request: NextRequest) {
     const { data: evaluation, error: evalError } = await supabase
       .from('student_skill_evaluations')
       .select(`
-        id, evaluation_type, result, notes, flagged_items, step_marks, step_details, created_at,
+        id, evaluation_type, result, notes, flagged_items, step_marks, created_at,
         student:students!student_skill_evaluations_student_id_fkey(id, first_name, last_name),
-        skill_sheet:skill_sheets!student_skill_evaluations_skill_sheet_id_fkey(id, skill_name, source, steps:skill_sheet_steps(step_number, phase, instruction, is_critical)),
+        skill_sheet:skill_sheets!student_skill_evaluations_skill_sheet_id_fkey(id, skill_name, source, steps:skill_sheet_steps(step_number, phase, instruction, is_critical, possible_points, sub_items, section_header)),
         evaluator:lab_users!student_skill_evaluations_evaluator_id_fkey(id, name),
         lab_day:lab_days!student_skill_evaluations_lab_day_id_fkey(id, date, title)
       `)
