@@ -9,9 +9,7 @@ import QuickActionsMenu from '@/components/QuickActionsMenu';
 import { ActivityTracker } from '@/components/ActivityTracker';
 import OnboardingTourWrapper from '@/components/OnboardingTourWrapper';
 import { OfflineProvider } from '@/components/OfflineProvider';
-import ServiceWorkerRegistration from '@/components/ServiceWorkerRegistration';
 import WhatsNewWrapper from '@/components/WhatsNewWrapper';
-import AppBanner from '@/components/AppBanner';
 import RolePreviewBanner from '@/components/RolePreviewBanner';
 import RolePreviewSelector from '@/components/RolePreviewSelector';
 
@@ -30,11 +28,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#2563eb" />
-        <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="PMI Scheduler" />
       </head>
       <body className={inter.className}>
         <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:p-2 focus:bg-blue-600 focus:text-white focus:rounded focus:outline-none">
@@ -43,7 +37,6 @@ export default function RootLayout({
         <Providers>
           <OfflineProvider>
             <RolePreviewBanner />
-            <AppBanner />
             <GlobalTimerBanner />
             {children}
             <ActivityTracker />
@@ -53,7 +46,6 @@ export default function RootLayout({
             <QuickActionsMenu />
             <RolePreviewSelector />
             <CommandPalette />
-            <ServiceWorkerRegistration />
           </OfflineProvider>
         </Providers>
       </body>

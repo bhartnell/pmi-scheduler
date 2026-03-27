@@ -143,20 +143,22 @@ export async function POST(request: NextRequest) {
     let description: string;
     let page_url: string | null;
     let user_agent: string | null;
-    let screenshotFile: File | null = null;
+    let screenshotFiles: File[] = [];
 
     const contentType = request.headers.get('content-type') || '';
 
     if (contentType.includes('multipart/form-data')) {
-      // Parse FormData (new path - supports screenshot upload)
+      // Parse FormData (supports multiple screenshot uploads)
       const formData = await request.formData();
       description = (formData.get('description') as string) || '';
       report_type = (formData.get('report_type') as string) || 'other';
       page_url = (formData.get('page_url') as string) || null;
       user_agent = (formData.get('user_agent') as string) || null;
-      const fileField = formData.get('screenshot');
-      if (fileField && typeof fileField !== 'string') {
-        screenshotFile = fileField as File;
+      const fileFields = formData.getAll('screenshot');
+      for (const fileField of fileFields) {
+        if (fileField && typeof fileField !== 'string') {
+          screenshotFiles.push(fileField as File);
+        }
       }
     } else {
       // Parse JSON (legacy path - backward compatible)
@@ -187,15 +189,21 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error;
 
-    // Upload screenshot if provided
-    if (screenshotFile && screenshotFile.size > 0) {
-      try {
-        const validTypes = ['image/png', 'image/jpeg', 'image/jpg'];
-        if (!validTypes.includes(screenshotFile.type)) {
-          console.warn('Screenshot upload skipped: invalid file type', screenshotFile.type);
-        } else if (screenshotFile.size > 5 * 1024 * 1024) {
-          console.warn('Screenshot upload skipped: file too large', screenshotFile.size);
-        } else {
+    // Upload screenshots if provided (supports multiple)
+    if (screenshotFiles.length > 0) {
+      const uploadedUrls: string[] = [];
+      for (const screenshotFile of screenshotFiles) {
+        try {
+          const validTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+          if (!validTypes.includes(screenshotFile.type)) {
+            console.warn('Screenshot upload skipped: invalid file type', screenshotFile.type);
+            continue;
+          }
+          if (screenshotFile.size > 5 * 1024 * 1024) {
+            console.warn('Screenshot upload skipped: file too large', screenshotFile.size);
+            continue;
+          }
+
           const bytes = await screenshotFile.arrayBuffer();
           const buffer = Buffer.from(bytes);
 
@@ -208,33 +216,38 @@ export async function POST(request: NextRequest) {
             .upload(fileName, buffer, { contentType: screenshotFile.type });
 
           if (uploadError) {
-            // Log but do not fail the request - screenshot is optional
             console.error('Screenshot upload failed (non-fatal):', uploadError);
           } else {
             const { data: urlData } = supabase
               .storage
               .from('feedback-screenshots')
               .getPublicUrl(fileName);
-
-            const screenshotUrl = urlData.publicUrl;
-
-            // Update the record with the screenshot URL
-            const { error: updateError } = await supabase
-              .from('feedback_reports')
-              .update({ screenshot_url: screenshotUrl })
-              .eq('id', data.id);
-
-            if (updateError) {
-              console.error('Failed to save screenshot URL (non-fatal):', updateError);
-            } else {
-              // Reflect the URL in the returned record
-              data.screenshot_url = screenshotUrl;
-            }
+            uploadedUrls.push(urlData.publicUrl);
           }
+        } catch (uploadErr) {
+          console.error('Screenshot processing error (non-fatal):', uploadErr);
         }
-      } catch (uploadErr) {
-        // Screenshot failures are non-fatal - the feedback was already saved
-        console.error('Screenshot processing error (non-fatal):', uploadErr);
+      }
+
+      // Update the record with screenshot URL(s)
+      if (uploadedUrls.length > 0) {
+        try {
+          // Store the first URL in screenshot_url for backward compatibility,
+          // and all URLs as a JSON array in screenshot_urls (if column exists)
+          const updatePayload: Record<string, unknown> = { screenshot_url: uploadedUrls[0] };
+          const { error: updateError } = await supabase
+            .from('feedback_reports')
+            .update(updatePayload)
+            .eq('id', data.id);
+
+          if (updateError) {
+            console.error('Failed to save screenshot URL (non-fatal):', updateError);
+          } else {
+            data.screenshot_url = uploadedUrls[0];
+          }
+        } catch (updateErr) {
+          console.error('Failed to save screenshot URLs (non-fatal):', updateErr);
+        }
       }
     }
 

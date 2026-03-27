@@ -7,6 +7,8 @@ import { MessageSquare, X, Send, Bug, Lightbulb, HelpCircle, Loader2, CheckCircl
 
 type ReportType = 'bug' | 'feature' | 'other';
 
+const MAX_SCREENSHOTS = 3;
+
 export default function FeedbackButton() {
   const { data: session } = useSession();
   const pathname = usePathname();
@@ -17,8 +19,8 @@ export default function FeedbackButton() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
-  const [screenshotPreviewUrl, setScreenshotPreviewUrl] = useState<string | null>(null);
+  const [screenshotFiles, setScreenshotFiles] = useState<File[]>([]);
+  const [screenshotPreviewUrls, setScreenshotPreviewUrls] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Reset form when modal opens
@@ -28,52 +30,67 @@ export default function FeedbackButton() {
       setReportType('bug');
       setSubmitted(false);
       setError(null);
-      setScreenshotFile(null);
-      setScreenshotPreviewUrl(null);
+      setScreenshotFiles([]);
+      setScreenshotPreviewUrls([]);
     }
   }, [isOpen]);
 
   // Revoke object URLs to avoid memory leaks
   useEffect(() => {
     return () => {
-      if (screenshotPreviewUrl) {
-        URL.revokeObjectURL(screenshotPreviewUrl);
-      }
+      screenshotPreviewUrls.forEach(url => URL.revokeObjectURL(url));
     };
-  }, [screenshotPreviewUrl]);
+  }, [screenshotPreviewUrls]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null;
-    if (!file) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
     const validTypes = ['image/png', 'image/jpeg', 'image/jpg'];
-    if (!validTypes.includes(file.type)) {
-      setError('Screenshot must be a PNG or JPG image');
-      e.target.value = '';
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setError('Screenshot must be under 5MB');
-      e.target.value = '';
-      return;
+    const newFiles: File[] = [];
+    const newUrls: string[] = [];
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+
+      if (screenshotFiles.length + newFiles.length >= MAX_SCREENSHOTS) {
+        setError(`Maximum ${MAX_SCREENSHOTS} screenshots allowed`);
+        break;
+      }
+
+      if (!validTypes.includes(file.type)) {
+        setError('Screenshots must be PNG or JPG images');
+        continue;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        setError('Each screenshot must be under 5MB');
+        continue;
+      }
+
+      newFiles.push(file);
+      newUrls.push(URL.createObjectURL(file));
     }
 
-    // Revoke previous preview URL before creating a new one
-    if (screenshotPreviewUrl) {
-      URL.revokeObjectURL(screenshotPreviewUrl);
+    if (newFiles.length > 0) {
+      setScreenshotFiles(prev => [...prev, ...newFiles]);
+      setScreenshotPreviewUrls(prev => [...prev, ...newUrls]);
+      if (!error || error === `Maximum ${MAX_SCREENSHOTS} screenshots allowed`) {
+        // Only clear non-limit errors
+      } else {
+        setError(null);
+      }
     }
 
-    setScreenshotFile(file);
-    setScreenshotPreviewUrl(URL.createObjectURL(file));
-    setError(null);
+    // Reset input so the same file can be re-selected
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
-  const removeScreenshot = () => {
-    if (screenshotPreviewUrl) {
-      URL.revokeObjectURL(screenshotPreviewUrl);
-    }
-    setScreenshotFile(null);
-    setScreenshotPreviewUrl(null);
+  const removeScreenshot = (index: number) => {
+    URL.revokeObjectURL(screenshotPreviewUrls[index]);
+    setScreenshotFiles(prev => prev.filter((_, i) => i !== index));
+    setScreenshotPreviewUrls(prev => prev.filter((_, i) => i !== index));
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -94,9 +111,9 @@ export default function FeedbackButton() {
       formData.append('report_type', reportType);
       formData.append('page_url', pathname);
       formData.append('user_agent', typeof navigator !== 'undefined' ? navigator.userAgent : '');
-      if (screenshotFile) {
-        formData.append('screenshot', screenshotFile);
-      }
+      screenshotFiles.forEach((file) => {
+        formData.append('screenshot', file);
+      });
 
       // Do NOT set Content-Type header - the browser sets it automatically with the multipart boundary
       const res = await fetch('/api/feedback', {
@@ -295,47 +312,55 @@ export default function FeedbackButton() {
                   {/* Screenshot Upload */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Screenshot <span className="font-normal text-gray-500 dark:text-gray-400">(optional)</span>
+                      Screenshots <span className="font-normal text-gray-500 dark:text-gray-400">(optional, up to {MAX_SCREENSHOTS})</span>
                     </label>
                     <div className="flex items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                      >
-                        <Camera className="h-4 w-4" aria-hidden="true" />
-                        Attach Screenshot
-                      </button>
+                      {screenshotFiles.length < MAX_SCREENSHOTS && (
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                        >
+                          <Camera className="h-4 w-4" aria-hidden="true" />
+                          Attach Screenshot
+                        </button>
+                      )}
                       <input
                         ref={fileInputRef}
                         type="file"
                         accept="image/png,image/jpeg"
+                        multiple
                         onChange={handleFileSelect}
                         className="hidden"
-                        aria-label="Attach screenshot"
+                        aria-label="Attach screenshots"
                       />
-                      {screenshotFile && screenshotPreviewUrl && (
-                        <div className="flex items-center gap-2">
-                          <img
-                            src={screenshotPreviewUrl}
-                            alt="Screenshot preview"
-                            className="h-10 w-10 object-cover rounded border border-gray-300 dark:border-gray-600"
-                          />
-                          <span className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-[120px]">
-                            {screenshotFile.name}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={removeScreenshot}
-                            aria-label="Remove screenshot"
-                            className="text-red-500 hover:text-red-700 dark:hover:text-red-400 transition-colors"
-                          >
-                            <X className="h-4 w-4" aria-hidden="true" />
-                          </button>
-                        </div>
-                      )}
                     </div>
-                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">PNG or JPG, max 5MB</p>
+                    {/* Preview thumbnails */}
+                    {screenshotFiles.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {screenshotFiles.map((file, index) => (
+                          <div key={index} className="relative group">
+                            <img
+                              src={screenshotPreviewUrls[index]}
+                              alt={`Screenshot ${index + 1} preview`}
+                              className="h-16 w-16 object-cover rounded border border-gray-300 dark:border-gray-600"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeScreenshot(index)}
+                              aria-label={`Remove screenshot ${index + 1}`}
+                              className="absolute -top-1.5 -right-1.5 w-5 h-5 flex items-center justify-center bg-red-500 text-white rounded-full text-xs hover:bg-red-600 transition-colors shadow-sm"
+                            >
+                              <X className="h-3 w-3" aria-hidden="true" />
+                            </button>
+                            <span className="block text-[10px] text-gray-500 dark:text-gray-400 truncate max-w-[64px] mt-0.5 text-center">
+                              {file.name}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">PNG or JPG, max 5MB each</p>
                   </div>
 
                   {/* Error Message */}

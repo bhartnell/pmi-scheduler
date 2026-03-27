@@ -2008,13 +2008,13 @@ function PanelStepRow({
 
   // Sub-items rendering (for formative and final modes)
   const subItemsBlock = hasSubItems && mode !== 'teaching' && onSubItemToggle ? (
-    <div className="mt-1 space-y-0.5">
+    <div className="flex flex-col md:flex-row md:flex-wrap md:gap-x-6 gap-y-0.5 ml-6 mt-1">
       {step.sub_items!.map((item, i) => {
         const isChecked = subItemChecks ? subItemChecks[i] || false : false;
         const subSeqNum = subItemSequences?.[i];
         const useSequenceStyle = mode === 'formative' && subSeqNum !== undefined;
         return (
-          <div key={i} className="flex items-center gap-2 ml-6 py-0.5 cursor-pointer" onClick={() => onSubItemToggle(i)}>
+          <div key={i} className="flex items-center gap-2 py-0.5 cursor-pointer min-w-[200px]" onClick={() => onSubItemToggle(i)}>
             {mode === 'formative' ? (
               // Formative mode: green numbered circle (same pattern as single-point steps)
               <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -2049,9 +2049,9 @@ function PanelStepRow({
 
   // Sub-items rendering for teaching mode (read-only list)
   const subItemsTeaching = hasSubItems && mode === 'teaching' ? (
-    <div className="mt-1 space-y-0.5">
+    <div className="flex flex-col md:flex-row md:flex-wrap md:gap-x-6 gap-y-0.5 ml-6 mt-1">
       {step.sub_items!.map((item, i) => (
-        <div key={i} className="flex items-center gap-2 ml-6 py-0.5">
+        <div key={i} className="flex items-center gap-2 py-0.5 min-w-[200px]">
           <span className="w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
           <span className="text-xs text-gray-600 dark:text-gray-400">
             {item.label || item.description || String(item)}
