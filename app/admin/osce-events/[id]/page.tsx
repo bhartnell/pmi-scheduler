@@ -31,6 +31,7 @@ import {
   FlaskConical,
   AlertTriangle,
   Save,
+  ClipboardCheck,
 } from 'lucide-react';
 import Breadcrumbs from '@/components/Breadcrumbs';
 
@@ -222,14 +223,23 @@ export default function OsceEventDetailPage({ params }: { params: Promise<{ id: 
               )}
             </div>
           </div>
-          <button
-            onClick={handleCopyUrl}
-            className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-          >
-            <ExternalLink className="w-3.5 h-3.5" />
-            /osce/{event.slug}
-            {copiedUrl ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => router.push(`/admin/osce-events/${eventId}/checklist`)}
+              className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <ClipboardCheck className="w-3.5 h-3.5" />
+              Day-of Checklist
+            </button>
+            <button
+              onClick={handleCopyUrl}
+              className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              /osce/{event.slug}
+              {copiedUrl ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
+            </button>
+          </div>
         </div>
       </div>
 
