@@ -77,6 +77,7 @@ export async function PUT(
       end_date,
       max_observers_per_block,
       status,
+      event_pin,
     } = body;
 
     // Build update object with only provided fields
@@ -91,6 +92,7 @@ export async function PUT(
     if (end_date !== undefined) updates.end_date = end_date;
     if (max_observers_per_block !== undefined) updates.max_observers_per_block = max_observers_per_block;
     if (status !== undefined) updates.status = status;
+    if (event_pin !== undefined) updates.event_pin = event_pin?.trim() || null;
 
     const supabase = getSupabaseAdmin();
 

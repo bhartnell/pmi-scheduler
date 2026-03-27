@@ -272,11 +272,17 @@ export default function LabTimer({
   // End lab - completely clear timer state
   const endLab = useCallback(async () => {
     try {
+      console.log('[LabTimer] endLab called, labDayId:', labDayId);
       const res = await fetch(`/api/lab-management/timer?labDayId=${labDayId}`, {
         method: 'DELETE'
       });
 
+      if (!res.ok) {
+        console.error('[LabTimer] DELETE failed with status:', res.status, res.statusText);
+      }
+
       const data = await res.json();
+      console.log('[LabTimer] endLab response:', data);
       if (data.success) {
         setTimerState(null);
         setShowEndLabConfirm(false);
@@ -286,20 +292,27 @@ export default function LabTimer({
         lastAlertRotationRef.current = 0;
         setShowRotateAlert(false);
         setShowDebriefAlert(false);
+      } else {
+        console.error('[LabTimer] endLab failed:', data.error);
       }
     } catch (error) {
-      console.error('Error ending lab:', error);
+      console.error('[LabTimer] Error ending lab:', error);
     }
   }, [labDayId]);
 
   // Send action to server
   const sendAction = useCallback(async (action: string, updates?: any) => {
     try {
+      console.log('[LabTimer] sendAction:', action, 'labDayId:', labDayId);
       const res = await fetch('/api/lab-management/timer', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ labDayId, action, ...updates })
       });
+
+      if (!res.ok) {
+        console.error('[LabTimer] PATCH failed with status:', res.status, res.statusText);
+      }
 
       const data = await res.json();
       if (data.success) {
@@ -309,9 +322,11 @@ export default function LabTimer({
           setShowDebriefAlert(false);
           debriefAlertShownRef.current = false;
         }
+      } else {
+        console.error('[LabTimer] sendAction failed:', action, data.error);
       }
     } catch (error) {
-      console.error('Error sending action:', error);
+      console.error('[LabTimer] Error sending action:', action, error);
     }
   }, [labDayId]);
 
@@ -595,8 +610,9 @@ export default function LabTimer({
   const handleReset = useCallback(() => sendAction('reset'), [sendAction]);
 
   const handleClose = useCallback(async () => {
-    // If timer is paused when closing, stop it to prevent stale state
-    if (timerState?.status === 'paused') {
+    // If timer is running or paused when closing, stop it to prevent stale state
+    if (timerState?.status === 'running' || timerState?.status === 'paused') {
+      console.log('[LabTimer] handleClose: stopping timer before close, status:', timerState.status);
       await sendAction('stop');
     }
     onClose();
