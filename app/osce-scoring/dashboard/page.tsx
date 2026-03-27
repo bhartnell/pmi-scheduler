@@ -62,6 +62,7 @@ export default function EvaluatorDashboard() {
   function handleLogout() {
     localStorage.removeItem('osce_token');
     localStorage.removeItem('osce_evaluator');
+    localStorage.removeItem('osce_session');
     router.push('/osce-scoring/enter');
   }
 

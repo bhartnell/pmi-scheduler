@@ -140,6 +140,8 @@ interface Internship {
     name: string;
     abbreviation: string | null;
     phone: string | null;
+    clinical_coordinator_name: string | null;
+    clinical_coordinator_email: string | null;
   } | null;
 }
 
@@ -767,7 +769,16 @@ export default function InternshipDetailPage() {
 
       <main className="max-w-7xl mx-auto px-4 py-8">
         {/* Quick Contacts */}
-        {(student?.email || internship.field_preceptors?.email || internship.agencies) && (
+        {(() => {
+          // Resolve preceptor contact — prefer active assignment, fall back to legacy join
+          const primaryAssignment = preceptorAssignments.find((a: any) => a.is_active && a.role === 'primary');
+          const anyActiveAssignment = preceptorAssignments.find((a: any) => a.is_active);
+          const preceptorContact = primaryAssignment?.preceptor || anyActiveAssignment?.preceptor || internship.field_preceptors;
+          const preceptorEmail = preceptorContact?.email as string | null | undefined;
+          const preceptorLabel = preceptorContact
+            ? `${preceptorContact.first_name} ${preceptorContact.last_name}`
+            : null;
+          return (student?.email || preceptorEmail || internship.agencies) ? (
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-4 mb-6">
             <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
               <Mail className="w-4 h-4" />
@@ -780,6 +791,7 @@ export default function InternshipDetailPage() {
                   className="inline-flex items-center gap-2 px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
                 >
                   <User className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                  <span className="font-medium text-gray-900 dark:text-white mr-1">Student:</span>
                   <span className="text-gray-700 dark:text-gray-300">{student.email}</span>
                   {copiedEmail === student.email ? (
                     <Check className="w-3.5 h-3.5 text-green-500" />
@@ -788,14 +800,15 @@ export default function InternshipDetailPage() {
                   )}
                 </button>
               )}
-              {internship.field_preceptors?.email && (
+              {preceptorEmail && (
                 <button
-                  onClick={() => handleCopyEmail(internship.field_preceptors!.email!)}
+                  onClick={() => handleCopyEmail(preceptorEmail)}
                   className="inline-flex items-center gap-2 px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
                 >
                   <Users className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                  <span className="text-gray-700 dark:text-gray-300">{internship.field_preceptors.email}</span>
-                  {copiedEmail === internship.field_preceptors.email ? (
+                  <span className="font-medium text-gray-900 dark:text-white mr-1">Preceptor{preceptorLabel ? ` (${preceptorLabel})` : ''}:</span>
+                  <span className="text-gray-700 dark:text-gray-300">{preceptorEmail}</span>
+                  {copiedEmail === preceptorEmail ? (
                     <Check className="w-3.5 h-3.5 text-green-500" />
                   ) : (
                     <Copy className="w-3.5 h-3.5 text-gray-400" />
@@ -808,6 +821,7 @@ export default function InternshipDetailPage() {
                   className="inline-flex items-center gap-2 px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
                 >
                   <Building2 className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                  <span className="font-medium text-gray-900 dark:text-white mr-1">Agency:</span>
                   <span className="text-gray-700 dark:text-gray-300">{internship.agencies.name}: {internship.agencies.phone}</span>
                   {copiedEmail === internship.agencies.phone ? (
                     <Check className="w-3.5 h-3.5 text-green-500" />
@@ -816,9 +830,28 @@ export default function InternshipDetailPage() {
                   )}
                 </button>
               )}
+              {internship.agencies?.clinical_coordinator_email && (
+                <button
+                  onClick={() => handleCopyEmail(internship.agencies!.clinical_coordinator_email!)}
+                  className="inline-flex items-center gap-2 px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                >
+                  <Building2 className="w-3.5 h-3.5 text-orange-600 dark:text-orange-400" />
+                  <span className="font-medium text-gray-900 dark:text-white mr-1">Clinical Rep:</span>
+                  <span className="text-gray-700 dark:text-gray-300">
+                    {internship.agencies.clinical_coordinator_name ? `${internship.agencies.clinical_coordinator_name} — ` : ''}
+                    {internship.agencies.clinical_coordinator_email}
+                  </span>
+                  {copiedEmail === internship.agencies.clinical_coordinator_email ? (
+                    <Check className="w-3.5 h-3.5 text-green-500" />
+                  ) : (
+                    <Copy className="w-3.5 h-3.5 text-gray-400" />
+                  )}
+                </button>
+              )}
             </div>
           </div>
-        )}
+        ) : null;
+        })()}
 
         {/* Overall Progress Card */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-6 mb-6">

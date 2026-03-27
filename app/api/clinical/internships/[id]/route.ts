@@ -66,7 +66,9 @@ export async function GET(
           id,
           name,
           abbreviation,
-          phone
+          phone,
+          clinical_coordinator_name,
+          clinical_coordinator_email
         )
       `)
       .eq('id', id)

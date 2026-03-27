@@ -2346,6 +2346,9 @@ function SemesterPlannerPage() {
   const [selectedInstructor, setSelectedInstructor] = useState<string>('');
   const [editingBlock, setEditingBlock] = useState<(Partial<PmiScheduleBlock> & { day_of_week: number }) | null>(null);
   const [showWizard, setShowWizard] = useState(false);
+  const [showAddSemester, setShowAddSemester] = useState(false);
+  const [newSemester, setNewSemester] = useState({ name: '', start_date: '', end_date: '' });
+  const [addSemesterError, setAddSemesterError] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const wizardAutoOpened = useRef(false);
   const [dragOverCell, setDragOverCell] = useState<string | null>(null);
@@ -2417,6 +2420,42 @@ function SemesterPlannerPage() {
     }
     loadInitial();
   }, []);
+
+  // Create a new semester
+  const handleCreateSemester = async () => {
+    if (!newSemester.name.trim() || !newSemester.start_date || !newSemester.end_date) {
+      setAddSemesterError('All fields are required');
+      return;
+    }
+    try {
+      setAddSemesterError(null);
+      const res = await fetch('/api/academics/planner/semesters', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newSemester),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setAddSemesterError(data.error || 'Failed to create semester');
+        return;
+      }
+      // Refresh semesters list and select the new one
+      const semRes = await fetch('/api/academics/planner/semesters?active_only=false');
+      const semData = await semRes.json();
+      const semList = safeArray<PmiSemester>(semData.semesters);
+      setSemesters(semList);
+      if (data.semester?.id) {
+        setSelectedSemesterId(data.semester.id);
+        if (data.semester.start_date) {
+          setCurrentWeekStart(getMonday(new Date(data.semester.start_date + 'T00:00:00')));
+        }
+      }
+      setShowAddSemester(false);
+      setNewSemester({ name: '', start_date: '', end_date: '' });
+    } catch (err) {
+      setAddSemesterError(err instanceof Error ? err.message : 'Failed to create semester');
+    }
+  };
 
   const loadSemesterData = useCallback(async () => {
     if (!selectedSemesterId) return;
@@ -2777,6 +2816,13 @@ function SemesterPlannerPage() {
                 </option>
               ))}
             </select>
+            <button
+              onClick={() => setShowAddSemester(true)}
+              className="p-1.5 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+              title="Add Semester"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
 
             {/* Room filter */}
             <div className="relative">
@@ -3171,6 +3217,69 @@ function SemesterPlannerPage() {
           }}
           onClose={() => setPendingDrop(null)}
         />
+      )}
+
+      {/* Add Semester Modal */}
+      {showAddSemester && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Add Semester</h3>
+              <button onClick={() => { setShowAddSemester(false); setAddSemesterError(null); }} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            {addSemesterError && (
+              <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700 rounded-lg text-sm text-red-700 dark:text-red-400">
+                {addSemesterError}
+              </div>
+            )}
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Name</label>
+                <input
+                  type="text"
+                  value={newSemester.name}
+                  onChange={(e) => setNewSemester({ ...newSemester, name: e.target.value })}
+                  placeholder="e.g. Spring 2027"
+                  className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Date</label>
+                <input
+                  type="date"
+                  value={newSemester.start_date}
+                  onChange={(e) => setNewSemester({ ...newSemester, start_date: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">End Date</label>
+                <input
+                  type="date"
+                  value={newSemester.end_date}
+                  onChange={(e) => setNewSemester({ ...newSemester, end_date: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={handleCreateSemester}
+                className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+              >
+                Create Semester
+              </button>
+              <button
+                onClick={() => { setShowAddSemester(false); setAddSemesterError(null); }}
+                className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg font-medium transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -47,6 +47,7 @@ interface OsceEvent {
   end_date: string;
   max_observers_per_block: number;
   status: 'draft' | 'open' | 'closed' | 'archived';
+  event_pin: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -1571,6 +1572,7 @@ function SettingsTab({ event, onRefresh }: { event: OsceEvent; onRefresh: () => 
     end_date: event.end_date,
     max_observers_per_block: event.max_observers_per_block,
     status: event.status,
+    event_pin: event.event_pin || '',
   });
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -1597,6 +1599,7 @@ function SettingsTab({ event, onRefresh }: { event: OsceEvent; onRefresh: () => 
           end_date: form.end_date,
           max_observers_per_block: form.max_observers_per_block,
           status: form.status,
+          event_pin: form.event_pin.trim() || null,
         }),
       });
       if (!res.ok) {
@@ -1716,6 +1719,40 @@ function SettingsTab({ event, onRefresh }: { event: OsceEvent; onRefresh: () => 
               {saving ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
+        </div>
+      </div>
+
+      {/* Evaluator Access PIN */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Evaluator Access</h3>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+          Evaluators enter this PIN at <span className="font-mono text-xs bg-gray-100 dark:bg-gray-700 px-1.5 py-0.5 rounded">/osce-scoring/enter</span> to access the scoring portal. They select their name from the list of registered observers and faculty.
+        </p>
+        <div>
+          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Event PIN</label>
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={form.event_pin}
+              onChange={e => setForm(p => ({ ...p, event_pin: e.target.value }))}
+              placeholder="e.g. OSCE2026"
+              className="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm font-mono tracking-wider focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+            <button
+              onClick={() => {
+                const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+                let pin = '';
+                for (let i = 0; i < 8; i++) pin += chars[Math.floor(Math.random() * chars.length)];
+                setForm(p => ({ ...p, event_pin: pin }));
+              }}
+              className="px-3 py-2 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 whitespace-nowrap"
+            >
+              Generate
+            </button>
+          </div>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+            Share this code with evaluators on event day. Changes are saved with the button above.
+          </p>
         </div>
       </div>
 

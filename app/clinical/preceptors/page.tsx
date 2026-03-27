@@ -114,8 +114,9 @@ export default function PreceptorsPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
+      const preceptorUrl = `/api/clinical/preceptors?activeOnly=${!showInactive}${filterAgency ? `&agencyId=${filterAgency}` : ''}`;
       const [preceptorsRes, agenciesRes] = await Promise.all([
-        fetch(`/api/clinical/preceptors?activeOnly=${!showInactive}`),
+        fetch(preceptorUrl),
         fetch('/api/clinical/agencies'),
       ]);
 
@@ -139,11 +140,13 @@ export default function PreceptorsPage() {
     if (session) {
       fetchPreceptors();
     }
-  }, [showInactive]);
+  }, [showInactive, filterAgency]);
 
   const fetchPreceptors = async () => {
     try {
-      const res = await fetch(`/api/clinical/preceptors?activeOnly=${!showInactive}`);
+      let url = `/api/clinical/preceptors?activeOnly=${!showInactive}`;
+      if (filterAgency) url += `&agencyId=${filterAgency}`;
+      const res = await fetch(url);
       const data = await res.json();
       if (data.success) {
         setPreceptors(data.preceptors || []);
@@ -161,10 +164,15 @@ export default function PreceptorsPage() {
       (p.email && p.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (p.agency_name && p.agency_name.toLowerCase().includes(searchQuery.toLowerCase()));
 
-    // Match by agency_id OR by the linked agencies relation
+    // Match by agency_id, embedded agencies relation, or denormalized agency_name
+    const filterAgencyObj = filterAgency ? agencies.find(a => a.id === filterAgency) : null;
     const matchesAgency = !filterAgency ||
       p.agency_id === filterAgency ||
-      p.agencies?.id === filterAgency;
+      p.agencies?.id === filterAgency ||
+      (filterAgencyObj && p.agency_name && (
+        p.agency_name === filterAgencyObj.name ||
+        p.agency_name === filterAgencyObj.abbreviation
+      ));
 
     return matchesSearch && matchesAgency;
   });
