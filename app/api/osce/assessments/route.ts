@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
-// GET - List assessments (filtered by day, date, or all)
+// GET - List assessments (filtered by event_id, day, date, or all)
 // Public access (token-based auth handled client-side)
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const day = searchParams.get('day');
   const date = searchParams.get('date');
   const evaluatorName = searchParams.get('evaluator');
+  const eventId = searchParams.get('event_id');
 
   try {
     const supabase = getSupabaseAdmin();
@@ -17,6 +18,9 @@ export async function GET(req: NextRequest) {
       .order('day_number', { ascending: true })
       .order('slot_number', { ascending: true });
 
+    if (eventId) {
+      query = query.eq('event_id', eventId);
+    }
     if (day) {
       query = query.eq('day_number', parseInt(day));
     }

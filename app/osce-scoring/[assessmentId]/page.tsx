@@ -159,6 +159,7 @@ export default function ScoringPage() {
   const [submitting, setSubmitting] = useState(false);
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
   const [isOnline, setIsOnline] = useState(true);
+  const [isTestMode, setIsTestMode] = useState(false);
 
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingChangesRef = useRef<Record<string, unknown>>({});
@@ -187,6 +188,20 @@ export default function ScoringPage() {
     }
     const ev = JSON.parse(saved);
     setEvaluator(ev);
+
+    // Check for test mode
+    const sessionStr = localStorage.getItem('osce_session');
+    if (sessionStr) {
+      try {
+        const session = JSON.parse(sessionStr);
+        const pin = session.pin || '';
+        const title = session.eventTitle || '';
+        if (pin.toUpperCase() === 'TEST2026' || title.includes('TEST') || title.includes('DRY RUN')) {
+          setIsTestMode(true);
+        }
+      } catch { /* ignore */ }
+    }
+
     fetchScore(ev.name);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assessmentId]);
@@ -451,6 +466,13 @@ ${score.general_notes ? `<div class="notes"><strong>General Notes:</strong> ${sc
           </div>
         </div>
       </div>
+
+      {/* Test mode banner */}
+      {isTestMode && (
+        <div className="bg-orange-500 text-white text-center py-2 font-bold text-sm print:hidden">
+          TEST MODE — Practice event. Scores will not affect real assessments.
+        </div>
+      )}
 
       {/* Connection status indicator */}
       {!isOnline && (

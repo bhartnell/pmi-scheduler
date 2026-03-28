@@ -114,6 +114,7 @@ function EnterContent() {
       evaluatorName: selectedEvaluator.name,
       evaluatorRole: selectedEvaluator.role,
       pin: pin.trim(),
+      eventTitle: eventInfo.title,
     };
     localStorage.setItem('osce_session', JSON.stringify(session));
     localStorage.setItem('osce_evaluator', JSON.stringify({

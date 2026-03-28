@@ -21,12 +21,22 @@ interface Evaluator {
   role: string;
 }
 
+interface OsceSession {
+  eventId: string;
+  evaluatorName: string;
+  evaluatorRole: string;
+  pin: string;
+  eventTitle?: string;
+}
+
 export default function EvaluatorDashboard() {
   const router = useRouter();
   const [evaluator, setEvaluator] = useState<Evaluator | null>(null);
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeDay, setActiveDay] = useState<number>(1);
+  const [isTestMode, setIsTestMode] = useState(false);
+  const [eventTitle, setEventTitle] = useState<string>('');
 
   useEffect(() => {
     const saved = localStorage.getItem('osce_evaluator');
@@ -37,17 +47,35 @@ export default function EvaluatorDashboard() {
     const ev = JSON.parse(saved);
     setEvaluator(ev);
 
+    // Check for test mode from session
+    const sessionStr = localStorage.getItem('osce_session');
+    let eventId: string | undefined;
+    if (sessionStr) {
+      try {
+        const session: OsceSession = JSON.parse(sessionStr);
+        eventId = session.eventId;
+        const pin = session.pin || '';
+        const title = session.eventTitle || '';
+        if (pin.toUpperCase() === 'TEST2026' || title.includes('TEST') || title.includes('DRY RUN')) {
+          setIsTestMode(true);
+        }
+        setEventTitle(title);
+      } catch { /* ignore */ }
+    }
+
     // Determine which day based on date
     const today = new Date().toISOString().split('T')[0];
     if (today === '2026-03-31') setActiveDay(2);
 
-    fetchAssessments(ev.name);
+    fetchAssessments(ev.name, eventId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function fetchAssessments(evaluatorName: string) {
+  async function fetchAssessments(evaluatorName: string, eventId?: string) {
     try {
-      const res = await fetch(`/api/osce/assessments?evaluator=${encodeURIComponent(evaluatorName)}`);
+      const params = new URLSearchParams({ evaluator: evaluatorName });
+      if (eventId) params.set('event_id', eventId);
+      const res = await fetch(`/api/osce/assessments?${params.toString()}`);
       const data = await res.json();
       if (data.success) {
         setAssessments(data.assessments);
@@ -102,6 +130,13 @@ export default function EvaluatorDashboard() {
           </button>
         </div>
       </div>
+
+      {/* Test mode banner */}
+      {isTestMode && (
+        <div className="bg-orange-500 text-white text-center py-2 font-bold text-sm">
+          TEST MODE — This is a practice event. Scores will not affect real assessments.
+        </div>
+      )}
 
       {/* Day tabs */}
       <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
