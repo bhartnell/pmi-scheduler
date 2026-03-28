@@ -134,6 +134,9 @@ export default function OsceEventDetailPage({ params }: { params: Promise<{ id: 
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabKey>('observers');
   const [copiedUrl, setCopiedUrl] = useState(false);
+  const [deletingTestData, setDeletingTestData] = useState(false);
+  const [testDataMessage, setTestDataMessage] = useState<string | null>(null);
+  const [confirmDeleteTestData, setConfirmDeleteTestData] = useState(false);
 
   // Resolve params
   useEffect(() => {
@@ -167,6 +170,32 @@ export default function OsceEventDetailPage({ params }: { params: Promise<{ id: 
     navigator.clipboard.writeText(`${window.location.origin}/osce/${event.slug}`);
     setCopiedUrl(true);
     setTimeout(() => setCopiedUrl(false), 2000);
+  };
+
+  // ─── Delete test data ───────────────────────────────────────────────────
+
+  const isTestEvent = event
+    ? (event.event_pin?.toUpperCase().includes('TEST') || event.title.includes('TEST') || event.title.includes('DRY RUN'))
+    : false;
+
+  const handleDeleteTestData = async () => {
+    if (!eventId || !isTestEvent) return;
+    setDeletingTestData(true);
+    setTestDataMessage(null);
+    try {
+      const res = await fetch(`/api/osce/events/${eventId}/test-data`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        setTestDataMessage(data.message);
+      } else {
+        setTestDataMessage(`Error: ${data.error}`);
+      }
+    } catch {
+      setTestDataMessage('Error: Failed to delete test data');
+    } finally {
+      setDeletingTestData(false);
+      setConfirmDeleteTestData(false);
+    }
   };
 
   // ─── Loading / not found ──────────────────────────────────────────────────
@@ -232,6 +261,57 @@ export default function OsceEventDetailPage({ params }: { params: Promise<{ id: 
           </button>
         </div>
       </div>
+
+      {/* Test event banner */}
+      {isTestEvent && (
+        <div className="mb-4 p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <FlaskConical className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+              <div>
+                <p className="font-semibold text-orange-800 dark:text-orange-200">Test Event</p>
+                <p className="text-sm text-orange-600 dark:text-orange-400">
+                  This is a dry-run practice event. PIN: <span className="font-mono font-bold">{event.event_pin}</span>
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {testDataMessage && (
+                <span className={`text-sm ${testDataMessage.startsWith('Error') ? 'text-red-600' : 'text-green-600'}`}>
+                  {testDataMessage}
+                </span>
+              )}
+              {!confirmDeleteTestData ? (
+                <button
+                  onClick={() => setConfirmDeleteTestData(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-orange-700 dark:text-orange-300 bg-orange-100 dark:bg-orange-900/40 rounded-lg hover:bg-orange-200 dark:hover:bg-orange-900/60 transition-colors"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Reset Test Data
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-orange-700 dark:text-orange-300">Delete all scores &amp; observers?</span>
+                  <button
+                    onClick={handleDeleteTestData}
+                    disabled={deletingTestData}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
+                  >
+                    {deletingTestData ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                    Confirm
+                  </button>
+                  <button
+                    onClick={() => setConfirmDeleteTestData(false)}
+                    className="px-2 py-1.5 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Tab navigation */}
       <div className="flex border-b border-gray-200 dark:border-gray-700 mb-6 overflow-x-auto">
