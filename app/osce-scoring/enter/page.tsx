@@ -33,11 +33,21 @@ function EnterContent() {
   // Legacy token flow state
   const [showTokenFallback, setShowTokenFallback] = useState(false);
   const [token, setToken] = useState('');
+  const [autoRedirect, setAutoRedirect] = useState(false);
 
   // Shared state
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [evaluator, setEvaluator] = useState<{ name: string; role: string } | null>(null);
+
+  // Auto-redirect to dashboard when token from URL is validated
+  useEffect(() => {
+    if (autoRedirect && evaluator && !loading) {
+      localStorage.setItem('osce_token', token);
+      router.push('/osce-scoring/dashboard');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoRedirect, evaluator, loading]);
 
   const roleLabels: Record<string, string> = {
     md: 'Medical Director',
@@ -46,11 +56,12 @@ function EnterContent() {
   };
 
   useEffect(() => {
-    // Check for token in URL (legacy link flow)
+    // Check for token in URL (auto-login flow)
     const t = searchParams.get('token');
     if (t) {
       setToken(t);
       setShowTokenFallback(true);
+      setAutoRedirect(true);
       validateToken(t);
       return;
     }
@@ -135,6 +146,21 @@ function EnterContent() {
       if (data.valid) {
         setEvaluator({ name: data.evaluator_name, role: data.evaluator_role });
         setToken(t);
+        // Store session so dashboard can filter by event_id
+        if (data.event_id) {
+          const session = {
+            eventId: data.event_id,
+            evaluatorName: data.evaluator_name,
+            evaluatorRole: data.evaluator_role || '',
+            pin: data.event_pin || '',
+            eventTitle: data.event_title || '',
+          };
+          localStorage.setItem('osce_session', JSON.stringify(session));
+          localStorage.setItem('osce_evaluator', JSON.stringify({
+            name: data.evaluator_name,
+            role: data.evaluator_role || '',
+          }));
+        }
       } else {
         setError(data.error || 'Invalid token');
         setEvaluator(null);

@@ -50,7 +50,6 @@ export async function DELETE(
     const assessmentIds = assessments?.map(a => a.id) || [];
     let deletedScores = 0;
     let resetAssessments = 0;
-    let deletedObservers = 0;
 
     // 3. Delete evaluator scores for these assessments
     if (assessmentIds.length > 0) {
@@ -62,21 +61,16 @@ export async function DELETE(
       resetAssessments = assessmentIds.length;
     }
 
-    // 4. Delete observer registrations for this event
-    const { count: obsCount } = await supabase
-      .from('osce_observers')
-      .delete({ count: 'exact' })
-      .eq('event_id', id);
-    deletedObservers = obsCount || 0;
+    // Note: Observers and guest tokens are intentionally preserved so the
+    // test event can be re-run without re-seeding evaluators/tokens.
 
     return NextResponse.json({
       success: true,
       deleted: {
         evaluator_scores: deletedScores,
         assessments_reset: resetAssessments,
-        observers: deletedObservers,
       },
-      message: `Test data cleared: ${deletedScores} scores deleted, ${resetAssessments} assessments reset, ${deletedObservers} observers removed.`,
+      message: `Test data cleared: ${deletedScores} scores deleted, ${resetAssessments} assessments reset. Observers and tokens preserved for re-testing.`,
     });
   } catch (error) {
     console.error('Error deleting test data:', error);

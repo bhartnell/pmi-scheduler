@@ -30,10 +30,26 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ valid: false, error: 'Token has expired' }, { status: 403 });
     }
 
+    // Look up event title if event_id is present
+    let eventTitle: string | null = null;
+    let eventPin: string | null = null;
+    if (data.event_id) {
+      const { data: event } = await supabase
+        .from('osce_events')
+        .select('title, event_pin')
+        .eq('id', data.event_id)
+        .single();
+      eventTitle = event?.title || null;
+      eventPin = event?.event_pin || null;
+    }
+
     return NextResponse.json({
       valid: true,
       evaluator_name: data.evaluator_name,
       evaluator_role: data.evaluator_role,
+      event_id: data.event_id || null,
+      event_title: eventTitle,
+      event_pin: eventPin,
       valid_until: data.valid_until,
     });
   } catch (err) {
