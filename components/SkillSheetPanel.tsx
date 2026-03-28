@@ -27,6 +27,9 @@ import {
   Trash2,
   Edit2,
   Eye,
+  Users,
+  Star,
+  User,
 } from 'lucide-react';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -77,6 +80,22 @@ interface SkillSheet {
 type DisplayMode = 'teaching' | 'formative' | 'final';
 type StepMark = 'pass' | 'fail' | 'caution' | null;
 type EmailPreference = 'pending' | 'queued' | 'sent' | 'do_not_send';
+type GradeMode = 'individual' | 'team';
+
+interface TeamMember {
+  student_id: string;
+  student_name: string;
+  team_role: 'leader' | 'assistant';
+}
+
+interface TeamEvalResult {
+  student_name: string;
+  team_role: string;
+  result: string;
+  score?: number;
+  total?: number;
+  id: string;
+}
 
 interface ExistingEvaluation {
   id: string;
@@ -214,11 +233,7 @@ function getStepEarnedPoints(
 
 /** Calculate total possible points across all steps */
 function getTotalPossiblePoints(steps: Step[]): number {
-  return steps.reduce((sum, s) => {
-    // Use sub_items length as authoritative when sub_items exist
-    if (s.sub_items && s.sub_items.length > 0) return sum + s.sub_items.length;
-    return sum + (s.possible_points || 1);
-  }, 0);
+  return steps.reduce((sum, s) => sum + (s.possible_points || 1), 0);
 }
 
 /** Calculate total earned points */
@@ -261,10 +276,6 @@ export default function SkillSheetPanel({
   // Sub-item checkbox state: { [stepNumber]: [true, false, true, ...] }
   const [subItemMarks, setSubItemMarks] = useState<Record<number, boolean[]>>({});
 
-  // Sub-item sequence tracking: { [stepNumber]: { [subItemIndex]: sequenceNumber } }
-  // Uses the SAME global sequence counter as stepSequence for single-point steps.
-  const [subItemSequence, setSubItemSequence] = useState<Record<number, Record<number, number>>>({});
-
   // ===== FORMATIVE NUMBERED COMPLETION =====
   // DO NOT REPLACE with pass/fail/caution icons.
   // Each step gets a single tap target that assigns a sequence number.
@@ -285,30 +296,12 @@ export default function SkillSheetPanel({
   const [expandedEvalId, setExpandedEvalId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
-  // Helper: get the current max sequence number across steps and sub-items
-  const getMaxSequence = (): number => {
-    const stepSeqValues = Object.values(stepSequence);
-    const subSeqValues = Object.values(subItemSequence).flatMap(m => Object.values(m));
-    const all = [...stepSeqValues, ...subSeqValues];
-    return all.length > 0 ? Math.max(...all) : 0;
-  };
-
-  // Check if there are unsaved changes (any step completed, notes typed, etc.)
-  const hasUnsavedChanges = Object.keys(stepMarks).some(k => stepMarks[parseInt(k)] !== null) ||
-    Object.keys(stepSequence).length > 0 ||
-    Object.keys(subItemSequence).length > 0 ||
-    notes.trim().length > 0;
-
-  // Safe close: confirm if unsaved changes exist
-  const handleSafeClose = () => {
-    if (hasUnsavedChanges) {
-      if (window.confirm('You have unsaved changes. Close anyway?')) {
-        onClose();
-      }
-    } else {
-      onClose();
-    }
-  };
+  // Team grading state
+  const [gradeMode, setGradeMode] = useState<GradeMode>('individual');
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [showTeamAddDropdown, setShowTeamAddDropdown] = useState(false);
+  const [teamSearchQuery, setTeamSearchQuery] = useState('');
+  const [teamCompletionResults, setTeamCompletionResults] = useState<TeamEvalResult[] | null>(null);
 
   // ─── Data Fetching ──────────────────────────────────────────────────────
 
@@ -381,7 +374,7 @@ export default function SkillSheetPanel({
   // Close on Escape key
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') handleSafeClose();
+      if (e.key === 'Escape') onClose();
     };
     document.addEventListener('keydown', handleKey);
     return () => document.removeEventListener('keydown', handleKey);
@@ -410,53 +403,28 @@ export default function SkillSheetPanel({
     }));
   };
 
-  // Helper: renumber all sequences after removing one sequence number
-  const renumberAfterRemoval = (removedSeq: number) => {
-    setStepSequence(prev => {
-      const next: Record<number, number> = {};
-      for (const [sn, seq] of Object.entries(prev)) {
-        if (seq > removedSeq) {
-          next[parseInt(sn)] = seq - 1;
-        } else {
-          next[parseInt(sn)] = seq;
-        }
-      }
-      return next;
-    });
-    setSubItemSequence(prev => {
-      const next: Record<number, Record<number, number>> = {};
-      for (const [sn, idxMap] of Object.entries(prev)) {
-        const newMap: Record<number, number> = {};
-        for (const [idx, seq] of Object.entries(idxMap)) {
-          if (seq > removedSeq) {
-            newMap[parseInt(idx)] = seq - 1;
-          } else {
-            newMap[parseInt(idx)] = seq;
-          }
-        }
-        if (Object.keys(newMap).length > 0) {
-          next[parseInt(sn)] = newMap;
-        }
-      }
-      return next;
-    });
-  };
-
   // Toggle step completion with sequence numbering (formative mode)
   const toggleStepComplete = (stepNumber: number) => {
-    if (stepSequence[stepNumber] !== undefined) {
-      // Uncomplete: remove and renumber
-      const removedSeq = stepSequence[stepNumber];
-      setStepSequence(prev => {
-        const next = { ...prev };
-        delete next[stepNumber];
+    setStepSequence(prev => {
+      if (prev[stepNumber] !== undefined) {
+        // Uncomplete: remove this step and renumber subsequent ones
+        const removedSeq = prev[stepNumber];
+        const next: Record<number, number> = {};
+        for (const [sn, seq] of Object.entries(prev)) {
+          const snNum = parseInt(sn);
+          if (snNum === stepNumber) continue;
+          if (seq > removedSeq) {
+            next[snNum] = seq - 1;
+          } else {
+            next[snNum] = seq;
+          }
+        }
         return next;
-      });
-      renumberAfterRemoval(removedSeq);
-    } else {
-      const nextSeq = getMaxSequence() + 1;
-      setStepSequence(prev => ({ ...prev, [stepNumber]: nextSeq }));
-    }
+      } else {
+        const maxSeq = Object.values(prev).length;
+        return { ...prev, [stepNumber]: maxSeq + 1 };
+      }
+    });
     // Also toggle the pass mark so step_marks saves correctly
     setStepMarks(prev => ({
       ...prev,
@@ -464,45 +432,9 @@ export default function SkillSheetPanel({
     }));
   };
 
-  // Toggle sub-item completion with sequence numbering (formative mode)
-  const toggleSubItemComplete = (stepNumber: number, subItemIndex: number) => {
-    const currentSubSeq = subItemSequence[stepNumber]?.[subItemIndex];
-    if (currentSubSeq !== undefined) {
-      // Uncomplete: remove and renumber
-      setSubItemSequence(prev => {
-        const stepMap = { ...prev[stepNumber] };
-        delete stepMap[subItemIndex];
-        const next = { ...prev };
-        if (Object.keys(stepMap).length > 0) {
-          next[stepNumber] = stepMap;
-        } else {
-          delete next[stepNumber];
-        }
-        return next;
-      });
-      renumberAfterRemoval(currentSubSeq);
-    } else {
-      const nextSeq = getMaxSequence() + 1;
-      setSubItemSequence(prev => ({
-        ...prev,
-        [stepNumber]: { ...(prev[stepNumber] || {}), [subItemIndex]: nextSeq },
-      }));
-    }
-    // Also toggle the boolean mark
-    setSubItemMarks(prev => {
-      const current = prev[stepNumber] || new Array(0).fill(false);
-      const next = [...current];
-      // Ensure array is long enough
-      while (next.length <= subItemIndex) next.push(false);
-      next[subItemIndex] = !next[subItemIndex];
-      return { ...prev, [stepNumber]: next };
-    });
-  };
-
   const resetForm = () => {
     setStepMarks({});
     setStepSequence({});
-    setSubItemSequence({});
     setSubItemMarks({});
     setNotes('');
     setResult('pass');
@@ -540,20 +472,10 @@ export default function SkillSheetPanel({
         const subs = subItemMarks[step.step_number];
         if (step.sub_items && step.sub_items.length > 0 && subs) {
           const pts = subs.filter(Boolean).length;
-          // Build sub_items object with sequence numbers
-          const subItemsObj: Record<string, { completed: boolean; sequence?: number }> = {};
-          subs.forEach((checked, idx) => {
-            const seq = subItemSequence[step.step_number]?.[idx];
-            subItemsObj[String(idx)] = {
-              completed: checked,
-              ...(seq !== undefined ? { sequence: seq } : {}),
-            };
-          });
           stepMarksToSave[String(step.step_number)] = {
-            completed: pts === step.sub_items.length,
-            sub_items: subItemsObj,
-            points_awarded: pts,
-            possible_points: step.sub_items.length,
+            completed: pts === (step.possible_points || step.sub_items.length),
+            sub_items: subs,
+            points: pts,
           };
         } else if (mark) {
           stepMarksToSave[String(step.step_number)] = {
@@ -610,23 +532,8 @@ export default function SkillSheetPanel({
         }
 
         // Update student queue (fire-and-forget, non-blocking)
-        // For formative mode, calculate pass/fail from actual step completion
         if (labDayId && studentId && stationPoolId) {
-          let queueResult: string | undefined = undefined;
-          if (saveStatus === 'complete') {
-            if (mode === 'formative') {
-              // Calculate from step data: pass only if all critical steps done AND >=70% total
-              const totalSteps = sheet?.steps?.length || 0;
-              const completedCount = Object.keys(stepSequence).length;
-              const criticalSteps = (sheet?.steps || []).filter((s: { is_critical?: boolean }) => s.is_critical);
-              const criticalDone = criticalSteps.filter((s: { step_number: number }) => stepSequence[s.step_number] !== undefined).length;
-              const allCriticalDone = criticalSteps.length === 0 || criticalDone === criticalSteps.length;
-              const meetsThreshold = totalSteps === 0 || (completedCount / totalSteps) >= 0.7;
-              queueResult = (allCriticalDone && meetsThreshold) ? 'pass' : 'fail';
-            } else {
-              queueResult = evaluationResult === 'pass' ? 'pass' : 'fail';
-            }
-          }
+          const queueResult = saveStatus === 'complete' ? (evaluationResult === 'pass' ? 'pass' : 'fail') : undefined;
           fetch('/api/lab-management/student-queue', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -653,26 +560,13 @@ export default function SkillSheetPanel({
         if (saveStatus === 'complete' && emailPref === 'sent' && evalId) {
           setSendingEmail(true);
           try {
-            const emailRes = await fetch('/api/skill-sheets/evaluations/send-email', {
+            await fetch('/api/skill-sheets/evaluations/send-email', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ evaluation_id: evalId }),
             });
-            const emailData = await emailRes.json();
-            if (!emailData.success) {
-              console.error('Email send failed:', emailData.error);
-              // Friendly message for missing email
-              if (emailData.no_email) {
-                showToast(emailData.error || 'Email not on file for this student', 'error');
-              } else {
-                showToast(`Email failed: ${emailData.error || 'Unknown error'}`, 'error');
-              }
-            } else {
-              showToast(`Email sent to ${studentName || 'student'}`, 'success');
-            }
-          } catch (emailErr) {
-            console.error('Email send error:', emailErr);
-            showToast('Email failed: Network error', 'error');
+          } catch {
+            console.warn('Failed to send immediate email');
           }
           setSendingEmail(false);
         }
@@ -765,42 +659,22 @@ export default function SkillSheetPanel({
     if (evalItem.step_marks) {
       const marks: Record<number, StepMark> = {};
       const subs: Record<number, boolean[]> = {};
-      const subSeqs: Record<number, Record<number, number>> = {};
       for (const [key, val] of Object.entries(evalItem.step_marks)) {
         const stepNum = parseInt(key);
         if (typeof val === 'string') {
           // Old format: simple string mark
           marks[stepNum] = val as StepMark;
         } else if (typeof val === 'object' && val !== null) {
-          // New format: { completed, sub_items, points/points_awarded }
-          const obj = val as { completed?: boolean; sub_items?: boolean[] | Record<string, { completed: boolean; sequence?: number }>; points?: number; points_awarded?: number };
+          // New format: { completed, sub_items, points }
+          const obj = val as { completed?: boolean; sub_items?: boolean[]; points?: number };
           marks[stepNum] = obj.completed ? 'pass' : null;
           if (obj.sub_items) {
-            if (Array.isArray(obj.sub_items)) {
-              // Legacy boolean array format
-              subs[stepNum] = obj.sub_items;
-            } else {
-              // New object format with sequence numbers
-              const boolArr: boolean[] = [];
-              const seqMap: Record<number, number> = {};
-              for (const [idx, item] of Object.entries(obj.sub_items)) {
-                const i = parseInt(idx);
-                boolArr[i] = item.completed;
-                if (item.sequence !== undefined) {
-                  seqMap[i] = item.sequence;
-                }
-              }
-              subs[stepNum] = boolArr;
-              if (Object.keys(seqMap).length > 0) {
-                subSeqs[stepNum] = seqMap;
-              }
-            }
+            subs[stepNum] = obj.sub_items;
           }
         }
       }
       setStepMarks(marks);
       setSubItemMarks(subs);
-      setSubItemSequence(subSeqs);
     }
     if (evalItem.step_details && Array.isArray(evalItem.step_details)) {
       const seq: Record<number, number> = {};
@@ -822,6 +696,173 @@ export default function SkillSheetPanel({
     setMode('formative');
     setEvalViewMode('new');
   };
+
+  // ─── Team Grading Handlers ────────────────────────────────────────────────
+
+  const addTeamMember = (student: StudentInfo) => {
+    if (teamMembers.find(m => m.student_id === student.id)) return;
+    const isFirst = teamMembers.length === 0;
+    setTeamMembers(prev => [...prev, {
+      student_id: student.id,
+      student_name: student.name,
+      team_role: isFirst ? 'leader' : 'assistant',
+    }]);
+    setShowTeamAddDropdown(false);
+    setTeamSearchQuery('');
+  };
+
+  const removeTeamMember = (studentId: string) => {
+    setTeamMembers(prev => {
+      const updated = prev.filter(m => m.student_id !== studentId);
+      // If we removed the leader, promote the first remaining member
+      if (updated.length > 0 && !updated.some(m => m.team_role === 'leader')) {
+        updated[0].team_role = 'leader';
+      }
+      return updated;
+    });
+  };
+
+  const setTeamLeader = (studentId: string) => {
+    setTeamMembers(prev => prev.map(m => ({
+      ...m,
+      team_role: m.student_id === studentId ? 'leader' : 'assistant',
+    })));
+  };
+
+  const handleTeamSave = async (emailPref: EmailPreference = 'queued', saveStatus: 'complete' | 'in_progress' = 'complete') => {
+    if (teamMembers.length < 2) {
+      showToast('Team must have at least 2 members', 'error');
+      return;
+    }
+    if (!teamMembers.some(m => m.team_role === 'leader')) {
+      showToast('Team must have a leader', 'error');
+      return;
+    }
+
+    if (saveStatus === 'complete' && mode === 'final' && result !== 'pass' && !notes.trim()) {
+      showToast('Remediation plan is required for non-pass results', 'error');
+      return;
+    }
+
+    const flaggedItems = Object.entries(stepMarks)
+      .filter(([, mark]) => mark === 'fail' || mark === 'caution')
+      .map(([stepNum, mark]) => ({ step_number: parseInt(stepNum), status: mark }));
+
+    const evaluationType = mode === 'formative' ? 'formative' : 'final_competency';
+    const evaluationResult = mode === 'formative' ? 'pass' : result;
+
+    // Build step_marks (same logic as individual)
+    const isMultiPoint = sheet ? hasMultiPointScoring(sheet.steps) : false;
+    const stepMarksToSave: Record<string, unknown> = {};
+    if (isMultiPoint && sheet) {
+      for (const step of sheet.steps) {
+        const mark = stepMarks[step.step_number];
+        const subs = subItemMarks[step.step_number];
+        if (step.sub_items && step.sub_items.length > 0 && subs) {
+          const pts = subs.filter(Boolean).length;
+          stepMarksToSave[String(step.step_number)] = {
+            completed: pts === (step.possible_points || step.sub_items.length),
+            sub_items: subs,
+            points: pts,
+          };
+        } else if (mark) {
+          stepMarksToSave[String(step.step_number)] = {
+            completed: mark === 'pass',
+            points: mark === 'pass' ? (step.possible_points || 1) : 0,
+          };
+        }
+      }
+    } else {
+      for (const [key, val] of Object.entries(stepMarks)) {
+        if (val) stepMarksToSave[key] = val;
+      }
+    }
+
+    const stepDetails = mode === 'formative' && sheet ? sheet.steps.map(s => ({
+      step_id: s.id,
+      step_number: s.step_number,
+      completed: stepSequence[s.step_number] !== undefined,
+      sequence_number: stepSequence[s.step_number] ?? null,
+      mark: stepMarks[s.step_number] || null,
+      is_critical: s.is_critical,
+    })) : undefined;
+
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/skill-sheets/${sheetId}/evaluate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          team_members: teamMembers,
+          lab_day_id: labDayId || null,
+          evaluation_type: evaluationType,
+          result: evaluationResult,
+          notes: notes.trim() || null,
+          flagged_items: flaggedItems,
+          station_id: stationPoolId || null,
+          email_status: saveStatus === 'in_progress' ? 'pending' : (mode === 'final' ? 'do_not_send' : (emailPref === 'sent' ? 'queued' : emailPref)),
+          step_marks: Object.keys(stepMarksToSave).length > 0 ? stepMarksToSave : null,
+          step_details: stepDetails || null,
+          status: saveStatus,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success && data.team) {
+        // Compute score for completion screen
+        let earned = 0;
+        let total = 0;
+        if (sheet) {
+          earned = getTotalEarnedPoints(sheet.steps, stepMarks, subItemMarks);
+          total = getTotalPossiblePoints(sheet.steps);
+        }
+
+        const results: TeamEvalResult[] = (data.evaluations || []).map((ev: Record<string, unknown>) => ({
+          student_name: ev.student_name as string,
+          team_role: ev.team_role as string,
+          result: ev.result as string,
+          score: earned,
+          total: total,
+          id: ev.id as string,
+        }));
+
+        setTeamCompletionResults(results);
+
+        // Notify parent for each team member
+        if (onEvaluationSaved) {
+          for (const ev of data.evaluations || []) {
+            onEvaluationSaved(ev.student_id as string, ev.id as string, saveStatus);
+          }
+        }
+
+        showToast(`Team evaluation saved for ${teamMembers.length} students`, 'success');
+
+        if (saveStatus === 'complete') {
+          resetForm();
+        }
+      } else {
+        showToast(data.error || 'Failed to save team evaluation', 'error');
+      }
+    } catch (err) {
+      console.error('Failed to save team evaluation:', err);
+      showToast('Failed to save team evaluation', 'error');
+    }
+    setSaving(false);
+  };
+
+  // Dispatch save: team or individual
+  const dispatchSave = (emailPref: EmailPreference = 'queued', saveStatus: 'complete' | 'in_progress' = 'complete') => {
+    if (gradeMode === 'team') {
+      handleTeamSave(emailPref, saveStatus);
+    } else {
+      handleSave(emailPref, saveStatus);
+    }
+  };
+
+  // Can save? For individual mode: needs studentId. For team mode: needs 2+ members.
+  const canSave = gradeMode === 'team'
+    ? teamMembers.length >= 2 && teamMembers.some(m => m.team_role === 'leader')
+    : !!studentId;
 
   // ─── Render ─────────────────────────────────────────────────────────────
 
@@ -892,6 +933,297 @@ export default function SkillSheetPanel({
     );
   }
 
+  // Team completion screen for slide-out mode (before the team completion screen variable definition)
+  if (teamCompletionResults && !embedded) {
+    return (
+      <>
+        <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
+        <div className="fixed inset-y-0 right-0 z-50 w-full sm:w-[60%] md:w-[55%] lg:w-[50%] max-w-3xl bg-white dark:bg-gray-900 shadow-2xl flex flex-col animate-slide-in-right">
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+            <Users className="w-16 h-16 text-green-500 mb-4" />
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+              Team evaluation saved for {teamCompletionResults.length} students
+            </h2>
+            <div className="w-full max-w-md space-y-2 mt-4">
+              {teamCompletionResults.map((tr) => (
+                <div key={tr.id} className="flex items-center gap-3 px-4 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <span className="flex-shrink-0">
+                    {tr.team_role === 'leader' ? (
+                      <Star className="w-5 h-5 text-amber-500 fill-amber-500" />
+                    ) : (
+                      <User className="w-5 h-5 text-gray-400" />
+                    )}
+                  </span>
+                  <span className="flex-1 text-sm font-medium text-gray-900 dark:text-white text-left">
+                    {tr.student_name}
+                    <span className="ml-2 text-xs text-gray-500">
+                      ({tr.team_role === 'leader' ? 'Leader' : 'Assistant'})
+                    </span>
+                  </span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    {tr.score !== undefined && tr.total !== undefined ? `${tr.score}/${tr.total} pts` : ''}
+                  </span>
+                  <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                    tr.result === 'pass'
+                      ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                      : tr.result === 'fail'
+                      ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                      : 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400'
+                  }`}>
+                    {tr.result === 'pass' ? 'Pass' : tr.result === 'fail' ? 'Fail' : 'Remediation'}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className="w-full max-w-sm space-y-3 mt-6">
+              <button
+                onClick={() => {
+                  setTeamCompletionResults(null);
+                  setTeamMembers([]);
+                  resetForm();
+                }}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+              >
+                <Users className="w-5 h-5" />
+                Next Team
+              </button>
+              <button
+                onClick={onClose}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 font-medium"
+              >
+                Back to Lab Day
+              </button>
+            </div>
+          </div>
+        </div>
+        <style jsx global>{`
+          @keyframes slide-in-right {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+          }
+          .animate-slide-in-right {
+            animation: slide-in-right 0.25s ease-out;
+          }
+        `}</style>
+      </>
+    );
+  }
+
+  // ─── Team Completion Screen ───────────────────────────────────────────────
+  const teamCompletionScreen = teamCompletionResults && (
+    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+      <Users className="w-16 h-16 text-green-500 mb-4" />
+      <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+        Team evaluation saved for {teamCompletionResults.length} students
+      </h2>
+      <div className="w-full max-w-md space-y-2 mt-4">
+        {teamCompletionResults.map((tr) => (
+          <div key={tr.id} className="flex items-center gap-3 px-4 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+            <span className="flex-shrink-0">
+              {tr.team_role === 'leader' ? (
+                <Star className="w-5 h-5 text-amber-500 fill-amber-500" />
+              ) : (
+                <User className="w-5 h-5 text-gray-400" />
+              )}
+            </span>
+            <span className="flex-1 text-sm font-medium text-gray-900 dark:text-white text-left">
+              {tr.student_name}
+              <span className="ml-2 text-xs text-gray-500">
+                ({tr.team_role === 'leader' ? 'Leader' : 'Assistant'})
+              </span>
+            </span>
+            <span className="text-sm text-gray-600 dark:text-gray-400">
+              {tr.score !== undefined && tr.total !== undefined ? `${tr.score}/${tr.total} pts` : ''}
+            </span>
+            <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
+              tr.result === 'pass'
+                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                : tr.result === 'fail'
+                ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                : 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400'
+            }`}>
+              {tr.result === 'pass' ? 'Pass' : tr.result === 'fail' ? 'Fail' : 'Remediation'}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <div className="w-full max-w-sm space-y-3 mt-6">
+        <button
+          onClick={handleBatchEmail}
+          disabled={batchEmailProgress !== null}
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium disabled:opacity-50"
+        >
+          <Mail className="w-5 h-5" />
+          {batchEmailProgress ? `${batchEmailProgress.sent} emails sent` : 'Send Emails'}
+        </button>
+
+        <div className="grid grid-cols-2 gap-3">
+          {teamCompletionResults.map((tr) => (
+            <button
+              key={`print-${tr.id}`}
+              onClick={() => handlePrint(tr.id)}
+              className="flex items-center justify-center gap-1.5 px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-xs font-medium"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              Print {tr.student_name.split(',')[0]}
+            </button>
+          ))}
+        </div>
+
+        <button
+          onClick={() => {
+            setTeamCompletionResults(null);
+            setTeamMembers([]);
+            resetForm();
+          }}
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+        >
+          <Users className="w-5 h-5" />
+          Next Team
+        </button>
+
+        <button
+          onClick={onClose}
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 font-medium"
+        >
+          Back to Lab Day
+        </button>
+      </div>
+    </div>
+  );
+
+  // ─── Team Member Selector UI ────────────────────────────────────────────
+  const availableStudents = (studentQueue || []).filter(
+    s => !teamMembers.find(m => m.student_id === s.id)
+  );
+  const filteredStudents = teamSearchQuery
+    ? availableStudents.filter(s => s.name.toLowerCase().includes(teamSearchQuery.toLowerCase()))
+    : availableStudents;
+
+  const teamMemberSelector = gradeMode === 'team' && (mode === 'formative' || mode === 'final') && (
+    <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex-shrink-0">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+          Team Members ({teamMembers.length})
+        </span>
+        {teamMembers.length < 2 && (
+          <span className="text-[10px] text-amber-600 dark:text-amber-400">Min. 2 members required</span>
+        )}
+      </div>
+
+      {/* Current team members list */}
+      {teamMembers.length > 0 && (
+        <div className="space-y-1.5 mb-2">
+          {teamMembers.map((member) => (
+            <div key={member.student_id} className="flex items-center gap-2 px-2.5 py-1.5 bg-gray-50 dark:bg-gray-700 rounded-lg">
+              <button
+                onClick={() => setTeamLeader(member.student_id)}
+                className="flex-shrink-0"
+                title={member.team_role === 'leader' ? 'Team Leader' : 'Click to make leader'}
+              >
+                {member.team_role === 'leader' ? (
+                  <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+                ) : (
+                  <User className="w-4 h-4 text-gray-400 hover:text-amber-400" />
+                )}
+              </button>
+              <span className="flex-1 text-xs text-gray-900 dark:text-white font-medium">
+                {member.student_name}
+              </span>
+              <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                {member.team_role === 'leader' ? 'Team Leader' : 'Assistant'}
+              </span>
+              <button
+                onClick={() => removeTeamMember(member.student_id)}
+                className="flex-shrink-0 p-0.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-500"
+                title="Remove from team"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Add team member dropdown */}
+      <div className="relative">
+        <button
+          onClick={() => setShowTeamAddDropdown(!showTeamAddDropdown)}
+          className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-300"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          Add team member
+        </button>
+
+        {showTeamAddDropdown && (
+          <div className="absolute z-30 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 max-h-48 overflow-hidden">
+            <div className="p-2 border-b border-gray-100 dark:border-gray-700">
+              <input
+                type="text"
+                value={teamSearchQuery}
+                onChange={(e) => setTeamSearchQuery(e.target.value)}
+                placeholder="Search students..."
+                className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500"
+                autoFocus
+              />
+            </div>
+            <div className="overflow-y-auto max-h-32">
+              {filteredStudents.length === 0 ? (
+                <p className="px-3 py-2 text-xs text-gray-400">
+                  {availableStudents.length === 0 ? 'All students added' : 'No matches'}
+                </p>
+              ) : (
+                filteredStudents.map(student => (
+                  <button
+                    key={student.id}
+                    onClick={() => addTeamMember(student)}
+                    className="w-full text-left px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                  >
+                    {student.name}
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  // ─── Grade Mode Selector ────────────────────────────────────────────────
+  const gradeModeSelector = (mode === 'formative' || mode === 'final') && studentQueue && studentQueue.length > 1 && (
+    <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex-shrink-0">
+      <div className="flex items-center gap-2">
+        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Grade Mode:</span>
+        <div className="inline-flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden">
+          <button
+            onClick={() => { setGradeMode('individual'); setTeamMembers([]); setTeamCompletionResults(null); }}
+            className={`flex items-center gap-1 px-2.5 py-1 text-xs font-medium transition-colors ${
+              gradeMode === 'individual'
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+            }`}
+          >
+            <User className="w-3 h-3" />
+            Individual
+          </button>
+          <button
+            onClick={() => setGradeMode('team')}
+            className={`flex items-center gap-1 px-2.5 py-1 text-xs font-medium transition-colors border-l border-gray-300 dark:border-gray-600 ${
+              gradeMode === 'team'
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+            }`}
+          >
+            <Users className="w-3 h-3" />
+            Team
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   // ─── Shared inner content ─────────────────────────────────────────────────
   const panelInner = (
     <>
@@ -941,7 +1273,7 @@ export default function SkillSheetPanel({
       const completedCount = studentQueue?.filter(s => s.evaluated).length || 0;
       const totalCount = studentQueue?.length || 0;
       return (
-        <div className="flex flex-col bg-white dark:bg-gray-900 rounded-lg shadow-lg">
+        <div className="flex flex-col h-full bg-white dark:bg-gray-900 rounded-lg shadow-lg overflow-hidden">
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
             <PartyPopper className="w-16 h-16 text-green-500 mb-4" />
             <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
@@ -981,12 +1313,21 @@ export default function SkillSheetPanel({
       );
     }
 
+    // Team completion screen for embedded mode
+    if (teamCompletionResults) {
+      return (
+        <div className="flex flex-col h-full bg-white dark:bg-gray-900 rounded-lg shadow-lg overflow-hidden">
+          {teamCompletionScreen}
+        </div>
+      );
+    }
+
     return (
-      <div className="flex flex-col bg-white dark:bg-gray-900 rounded-lg shadow-lg">
+      <div className="flex flex-col h-full bg-white dark:bg-gray-900 rounded-lg shadow-lg overflow-hidden">
         {panelInner}
 
-        {/* Student queue progress */}
-        {studentQueue && studentQueue.length > 1 && (mode === 'formative' || mode === 'final') && (
+        {/* Student queue progress (individual mode only) */}
+        {gradeMode === 'individual' && studentQueue && studentQueue.length > 1 && (mode === 'formative' || mode === 'final') && (
           <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex-shrink-0">
             <div className="flex items-center justify-between">
               <span className="text-xs text-gray-500 dark:text-gray-400">
@@ -1048,7 +1389,7 @@ export default function SkillSheetPanel({
                 </span>
               )}
             </div>
-            {(mode === 'formative' || mode === 'final') && !studentId && (
+            {(mode === 'formative' || mode === 'final') && gradeMode === 'individual' && !studentId && (
               <p className="mt-2 text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
                 <AlertTriangle className="w-3.5 h-3.5" />
                 Select a student first
@@ -1057,8 +1398,14 @@ export default function SkillSheetPanel({
           </div>
         )}
 
-        {/* Content — embedded mode: no scroll container, flows with page */}
-        <div className="flex-1">
+        {/* Grade Mode Selector */}
+        {gradeModeSelector}
+
+        {/* Team Member Selector */}
+        {teamMemberSelector}
+
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto overscroll-contain">
           {loading ? (
             <div className="flex items-center justify-center py-16">
               <Loader2 className="w-8 h-8 animate-spin text-blue-600 dark:text-blue-400" />
@@ -1157,18 +1504,13 @@ export default function SkillSheetPanel({
                             sequenceNumber={stepSequence[step.step_number] ?? null}
                             onToggleComplete={() => toggleStepComplete(step.step_number)}
                             subItemChecks={subItemMarks[step.step_number]}
-                            subItemSequences={subItemSequence[step.step_number]}
                             onSubItemToggle={(idx) => {
-                              if (mode === 'formative') {
-                                toggleSubItemComplete(step.step_number, idx);
-                              } else {
-                                setSubItemMarks(prev => {
-                                  const current = prev[step.step_number] || new Array(step.sub_items?.length || 0).fill(false);
-                                  const next = [...current];
-                                  next[idx] = !next[idx];
-                                  return { ...prev, [step.step_number]: next };
-                                });
-                              }
+                              setSubItemMarks(prev => {
+                                const current = prev[step.step_number] || new Array(step.sub_items?.length || 0).fill(false);
+                                const next = [...current];
+                                next[idx] = !next[idx];
+                                return { ...prev, [step.step_number]: next };
+                              });
                             }}
                           />
                         ))}
@@ -1215,18 +1557,13 @@ export default function SkillSheetPanel({
                                   sequenceNumber={stepSequence[step.step_number] ?? null}
                                   onToggleComplete={() => toggleStepComplete(step.step_number)}
                                   subItemChecks={subItemMarks[step.step_number]}
-                                  subItemSequences={subItemSequence[step.step_number]}
                                   onSubItemToggle={(idx) => {
-                                    if (mode === 'formative') {
-                                      toggleSubItemComplete(step.step_number, idx);
-                                    } else {
-                                      setSubItemMarks(prev => {
-                                        const current = prev[step.step_number] || new Array(step.sub_items?.length || 0).fill(false);
-                                        const next = [...current];
-                                        next[idx] = !next[idx];
-                                        return { ...prev, [step.step_number]: next };
-                                      });
-                                    }
+                                    setSubItemMarks(prev => {
+                                      const current = prev[step.step_number] || new Array(step.sub_items?.length || 0).fill(false);
+                                      const next = [...current];
+                                      next[idx] = !next[idx];
+                                      return { ...prev, [step.step_number]: next };
+                                    });
                                   }}
                                 />
                               </div>
@@ -1310,44 +1647,48 @@ export default function SkillSheetPanel({
                   {/* Formative Save Options — four buttons */}
                   <div className="mt-3 space-y-2">
                     <button
-                      onClick={() => handleSave('pending', 'in_progress')}
-                      disabled={saving || !studentId}
+                      onClick={() => dispatchSave('pending', 'in_progress')}
+                      disabled={saving || !canSave}
                       className="w-full flex items-center justify-center gap-2 px-4 py-2 border-2 border-amber-400 dark:border-amber-600 text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/40 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
                     >
                       <Save className="w-4 h-4" />
                       Finish Later
                     </button>
                     <button
-                      onClick={() => handleSave('queued')}
-                      disabled={saving || !studentId}
+                      onClick={() => dispatchSave('queued')}
+                      disabled={saving || !canSave}
                       className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
                     >
                       {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Clock className="w-4 h-4" />}
-                      Save — Send Later
+                      {gradeMode === 'team' ? `Save Team (${teamMembers.length})` : 'Save — Send Later'}
                     </button>
                     <div className="grid grid-cols-2 gap-2">
                       <button
-                        onClick={() => handleSave('sent')}
-                        disabled={saving || sendingEmail || !studentId}
+                        onClick={() => dispatchSave('sent')}
+                        disabled={saving || sendingEmail || !canSave}
                         className="flex items-center justify-center gap-1.5 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-medium"
                       >
                         {sendingEmail ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
                         Save — Send Now
                       </button>
                       <button
-                        onClick={() => handleSave('do_not_send')}
-                        disabled={saving || !studentId}
+                        onClick={() => dispatchSave('do_not_send')}
+                        disabled={saving || !canSave}
                         className="flex items-center justify-center gap-1.5 px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-medium"
                       >
                         <Ban className="w-3.5 h-3.5" />
                         Do Not Send
                       </button>
                     </div>
-                    {studentName && (
+                    {gradeMode === 'team' ? (
+                      <p className="text-[10px] text-gray-400 text-center">
+                        Saving for team: {teamMembers.map(m => m.student_name.split(',')[0]).join(', ')}
+                      </p>
+                    ) : studentName ? (
                       <p className="text-[10px] text-gray-400 text-center">
                         Saving for: {studentName}
                       </p>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               )}
@@ -1391,22 +1732,22 @@ export default function SkillSheetPanel({
                   </div>
                   <div className="space-y-2">
                     <button
-                      onClick={() => handleSave('pending', 'in_progress')}
-                      disabled={saving || !studentId}
+                      onClick={() => dispatchSave('pending', 'in_progress')}
+                      disabled={saving || !canSave}
                       className="w-full flex items-center justify-center gap-2 px-4 py-2 border-2 border-amber-400 dark:border-amber-600 text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/40 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
                     >
                       <Save className="w-4 h-4" />
                       Finish Later
                     </button>
                     <button
-                      onClick={() => handleSave('do_not_send')}
-                      disabled={saving || !studentId}
+                      onClick={() => dispatchSave('do_not_send')}
+                      disabled={saving || !canSave}
                       className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium ${
                         result === 'fail' ? 'bg-red-600 hover:bg-red-700' : result === 'remediation' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700'
                       }`}
                     >
                       {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Shield className="w-4 h-4" />}
-                      Submit Competency{studentName ? ` — ${studentName}` : ''}
+                      {gradeMode === 'team' ? `Submit Team (${teamMembers.length})` : `Submit Competency${studentName ? ` — ${studentName}` : ''}`}
                     </button>
                     <p className="text-[10px] text-gray-400 text-center">
                       Final evaluations are not emailed to students
@@ -1433,10 +1774,10 @@ export default function SkillSheetPanel({
 
   return (
     <>
-      {/* Backdrop — confirm if unsaved changes */}
+      {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/40 z-40 transition-opacity"
-        onClick={handleSafeClose}
+        onClick={onClose}
       />
 
       {/* Panel */}
@@ -1482,7 +1823,7 @@ export default function SkillSheetPanel({
           )}
 
           <button
-            onClick={handleSafeClose}
+            onClick={onClose}
             className="ml-1 p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors flex-shrink-0"
             title="Close (Esc)"
           >
@@ -1553,7 +1894,7 @@ export default function SkillSheetPanel({
                 </button>
               ))}
             </div>
-            {(mode === 'formative' || mode === 'final') && !studentId && (
+            {(mode === 'formative' || mode === 'final') && gradeMode === 'individual' && !studentId && (
               <p className="mt-2 text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
                 <AlertTriangle className="w-3.5 h-3.5" />
                 Select a student on the grading page first
@@ -1561,6 +1902,12 @@ export default function SkillSheetPanel({
             )}
           </div>
         )}
+
+        {/* Grade Mode Selector */}
+        {gradeModeSelector}
+
+        {/* Team Member Selector */}
+        {teamMemberSelector}
 
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto">
@@ -1667,18 +2014,13 @@ export default function SkillSheetPanel({
                             sequenceNumber={stepSequence[step.step_number] ?? null}
                             onToggleComplete={() => toggleStepComplete(step.step_number)}
                             subItemChecks={subItemMarks[step.step_number]}
-                            subItemSequences={subItemSequence[step.step_number]}
                             onSubItemToggle={(idx) => {
-                              if (mode === 'formative') {
-                                toggleSubItemComplete(step.step_number, idx);
-                              } else {
-                                setSubItemMarks(prev => {
-                                  const current = prev[step.step_number] || new Array(step.sub_items?.length || 0).fill(false);
-                                  const next = [...current];
-                                  next[idx] = !next[idx];
-                                  return { ...prev, [step.step_number]: next };
-                                });
-                              }
+                              setSubItemMarks(prev => {
+                                const current = prev[step.step_number] || new Array(step.sub_items?.length || 0).fill(false);
+                                const next = [...current];
+                                next[idx] = !next[idx];
+                                return { ...prev, [step.step_number]: next };
+                              });
                             }}
                           />
                         ))}
@@ -1725,18 +2067,13 @@ export default function SkillSheetPanel({
                                   sequenceNumber={stepSequence[step.step_number] ?? null}
                                   onToggleComplete={() => toggleStepComplete(step.step_number)}
                                   subItemChecks={subItemMarks[step.step_number]}
-                                  subItemSequences={subItemSequence[step.step_number]}
                                   onSubItemToggle={(idx) => {
-                                    if (mode === 'formative') {
-                                      toggleSubItemComplete(step.step_number, idx);
-                                    } else {
-                                      setSubItemMarks(prev => {
-                                        const current = prev[step.step_number] || new Array(step.sub_items?.length || 0).fill(false);
-                                        const next = [...current];
-                                        next[idx] = !next[idx];
-                                        return { ...prev, [step.step_number]: next };
-                                      });
-                                    }
+                                    setSubItemMarks(prev => {
+                                      const current = prev[step.step_number] || new Array(step.sub_items?.length || 0).fill(false);
+                                      const next = [...current];
+                                      next[idx] = !next[idx];
+                                      return { ...prev, [step.step_number]: next };
+                                    });
                                   }}
                                 />
                               </div>
@@ -1820,44 +2157,48 @@ export default function SkillSheetPanel({
                   {/* Formative Save Options — four buttons */}
                   <div className="mt-3 space-y-2">
                     <button
-                      onClick={() => handleSave('pending', 'in_progress')}
-                      disabled={saving || !studentId}
+                      onClick={() => dispatchSave('pending', 'in_progress')}
+                      disabled={saving || !canSave}
                       className="w-full flex items-center justify-center gap-2 px-4 py-2 border-2 border-amber-400 dark:border-amber-600 text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/40 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
                     >
                       <Save className="w-4 h-4" />
                       Finish Later
                     </button>
                     <button
-                      onClick={() => handleSave('queued')}
-                      disabled={saving || !studentId}
+                      onClick={() => dispatchSave('queued')}
+                      disabled={saving || !canSave}
                       className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
                     >
                       {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Clock className="w-4 h-4" />}
-                      Save — Send Later
+                      {gradeMode === 'team' ? `Save Team (${teamMembers.length})` : 'Save — Send Later'}
                     </button>
                     <div className="grid grid-cols-2 gap-2">
                       <button
-                        onClick={() => handleSave('sent')}
-                        disabled={saving || sendingEmail || !studentId}
+                        onClick={() => dispatchSave('sent')}
+                        disabled={saving || sendingEmail || !canSave}
                         className="flex items-center justify-center gap-1.5 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-medium"
                       >
                         {sendingEmail ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
                         Save — Send Now
                       </button>
                       <button
-                        onClick={() => handleSave('do_not_send')}
-                        disabled={saving || !studentId}
+                        onClick={() => dispatchSave('do_not_send')}
+                        disabled={saving || !canSave}
                         className="flex items-center justify-center gap-1.5 px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-medium"
                       >
                         <Ban className="w-3.5 h-3.5" />
                         Do Not Send
                       </button>
                     </div>
-                    {studentName && (
+                    {gradeMode === 'team' ? (
+                      <p className="text-[10px] text-gray-400 text-center">
+                        Saving for team: {teamMembers.map(m => m.student_name.split(',')[0]).join(', ')}
+                      </p>
+                    ) : studentName ? (
                       <p className="text-[10px] text-gray-400 text-center">
                         Saving for: {studentName}
                       </p>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               )}
@@ -1909,16 +2250,16 @@ export default function SkillSheetPanel({
 
                   <div className="space-y-2">
                     <button
-                      onClick={() => handleSave('pending', 'in_progress')}
-                      disabled={saving || !studentId}
+                      onClick={() => dispatchSave('pending', 'in_progress')}
+                      disabled={saving || !canSave}
                       className="w-full flex items-center justify-center gap-2 px-4 py-2 border-2 border-amber-400 dark:border-amber-600 text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/40 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
                     >
                       <Save className="w-4 h-4" />
                       Finish Later
                     </button>
                     <button
-                      onClick={() => handleSave('do_not_send')}
-                      disabled={saving || !studentId}
+                      onClick={() => dispatchSave('do_not_send')}
+                      disabled={saving || !canSave}
                       className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium ${
                         result === 'fail'
                           ? 'bg-red-600 hover:bg-red-700'
@@ -1928,7 +2269,7 @@ export default function SkillSheetPanel({
                       }`}
                     >
                       {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Shield className="w-4 h-4" />}
-                      Submit Competency{studentName ? ` — ${studentName}` : ''}
+                      {gradeMode === 'team' ? `Submit Team (${teamMembers.length})` : `Submit Competency${studentName ? ` — ${studentName}` : ''}`}
                     </button>
                     <p className="text-[10px] text-gray-400 text-center">
                       Final evaluations are not emailed to students
@@ -1977,7 +2318,6 @@ function PanelStepRow({
   onToggleComplete,
   subItemChecks,
   onSubItemToggle,
-  subItemSequences,
 }: {
   step: Step;
   mode: DisplayMode;
@@ -1987,13 +2327,11 @@ function PanelStepRow({
   onToggleComplete?: () => void;
   subItemChecks?: boolean[];
   onSubItemToggle?: (index: number) => void;
-  subItemSequences?: Record<number, number>;
 }) {
   const isCritical = step.is_critical;
   const [noteExpanded, setNoteExpanded] = useState(false);
   const hasSubItems = step.sub_items && step.sub_items.length > 0;
-  // Use sub_items length as the authoritative possible_points when sub_items exist
-  const possiblePts = hasSubItems ? step.sub_items!.length : (step.possible_points || 1);
+  const possiblePts = step.possible_points || 1;
   const isMultiPoint = possiblePts > 1 || hasSubItems;
 
   // Compute checked count for sub-items
@@ -2008,40 +2346,21 @@ function PanelStepRow({
 
   // Sub-items rendering (for formative and final modes)
   const subItemsBlock = hasSubItems && mode !== 'teaching' && onSubItemToggle ? (
-    <div className="flex flex-col md:flex-row md:flex-wrap md:gap-x-6 gap-y-0.5 ml-6 mt-1">
+    <div className="mt-1 space-y-0.5">
       {step.sub_items!.map((item, i) => {
         const isChecked = subItemChecks ? subItemChecks[i] || false : false;
-        const subSeqNum = subItemSequences?.[i];
-        const useSequenceStyle = mode === 'formative' && subSeqNum !== undefined;
         return (
-          <div key={i} className="flex items-center gap-2 py-0.5 cursor-pointer min-w-[200px]" onClick={() => onSubItemToggle(i)}>
-            {mode === 'formative' ? (
-              // Formative mode: green numbered circle (same pattern as single-point steps)
-              <div className="flex items-center gap-1.5 flex-shrink-0">
-                {useSequenceStyle ? (
-                  <span className="w-5 h-5 rounded-full bg-green-600 text-white text-[9px] font-bold flex items-center justify-center">
-                    {subSeqNum}
-                  </span>
-                ) : (
-                  <span className="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
-                    <CheckCircle className="w-3 h-3 text-gray-400 dark:text-gray-500" />
-                  </span>
-                )}
-              </div>
-            ) : (
-              // Final mode: checkbox
-              <input
-                type="checkbox"
-                checked={isChecked}
-                onChange={() => onSubItemToggle(i)}
-                onClick={(e) => e.stopPropagation()}
-                className="w-3.5 h-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-              />
-            )}
+          <label key={i} className="flex items-center gap-2 ml-6 py-0.5 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isChecked}
+              onChange={() => onSubItemToggle(i)}
+              className="w-3.5 h-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            />
             <span className={`text-xs ${isChecked ? 'text-gray-500 dark:text-gray-400 line-through' : 'text-gray-700 dark:text-gray-300'}`}>
               {item.label || item.description || String(item)}
             </span>
-          </div>
+          </label>
         );
       })}
     </div>
@@ -2049,9 +2368,9 @@ function PanelStepRow({
 
   // Sub-items rendering for teaching mode (read-only list)
   const subItemsTeaching = hasSubItems && mode === 'teaching' ? (
-    <div className="flex flex-col md:flex-row md:flex-wrap md:gap-x-6 gap-y-0.5 ml-6 mt-1">
+    <div className="mt-1 space-y-0.5">
       {step.sub_items!.map((item, i) => (
-        <div key={i} className="flex items-center gap-2 py-0.5 min-w-[200px]">
+        <div key={i} className="flex items-center gap-2 ml-6 py-0.5">
           <span className="w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0" />
           <span className="text-xs text-gray-600 dark:text-gray-400">
             {item.label || item.description || String(item)}

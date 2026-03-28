@@ -49,6 +49,7 @@ interface CellData {
   result: string | null; // 'pass' | 'fail' | 'incomplete'
   evaluationId: string | null;
   evalSummary: EvalSummary | null;
+  teamRole: string | null;
 }
 
 interface IndividualTestingGridProps {
@@ -148,6 +149,7 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
               result: null,
               evaluationId: null,
               evalSummary: null,
+              teamRole: null,
             },
           }));
         }
@@ -218,47 +220,12 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
             result: null,
             evaluationId: null,
             evalSummary: null,
+            teamRole: null,
           },
         }));
       }
     } catch (err) {
       console.error('Error creating new attempt:', err);
-    } finally {
-      setActionLoading(null);
-      setPopoverCell(null);
-    }
-  };
-
-  const handleResetCell = async (studentId: string, stationId: string, hasEvaluation: boolean) => {
-    // If cell has an evaluation, confirm first
-    if (hasEvaluation) {
-      const ok = window.confirm('This will remove the queue entry. The evaluation record will be kept. Continue?');
-      if (!ok) return;
-    }
-
-    const key = `${studentId}_${stationId}`;
-    const cell = cells[key];
-    setActionLoading(key);
-    try {
-      const res = await fetch('/api/lab-management/student-queue', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(
-          cell?.queueId
-            ? { id: cell.queueId }
-            : { lab_day_id: labDayId, student_id: studentId, station_id: stationId }
-        ),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setCells(prev => {
-          const next = { ...prev };
-          delete next[key];
-          return next;
-        });
-      }
-    } catch (err) {
-      console.error('Error resetting cell:', err);
     } finally {
       setActionLoading(null);
       setPopoverCell(null);
@@ -332,11 +299,11 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
       return (
         <button
           onClick={() => handleCellClick(studentId, stationId)}
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-bold bg-gray-100 dark:bg-gray-800/60 text-gray-400 dark:text-gray-500 border border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors cursor-pointer"
           title="Click to send to station"
         >
           <Circle className="w-4 h-4" />
-          <span className="hidden sm:inline">—</span>
+          <span className="hidden sm:inline">Not Started</span>
         </button>
       );
     }
@@ -345,24 +312,31 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
       return (
         <button
           onClick={() => handleCellClick(studentId, stationId)}
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-bold bg-amber-500/20 dark:bg-amber-500/30 text-amber-800 dark:text-amber-200 border border-amber-400 dark:border-amber-500 cursor-pointer"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 cursor-pointer"
           title="In Progress"
         >
           <Clock className="w-4 h-4 animate-pulse" />
-          <span className="hidden sm:inline">Testing</span>
+          <span className="hidden sm:inline">In Progress</span>
         </button>
       );
     }
 
     if (cell.status === 'completed') {
+      const teamIcon = cell.teamRole ? (
+        <span title={`Team: ${cell.teamRole}`}>
+          <Users className="w-3 h-3 text-indigo-500 dark:text-indigo-400 flex-shrink-0" />
+        </span>
+      ) : null;
+
       if (cell.result === 'pass') {
         return (
           <button
             onClick={() => handleCellClick(studentId, stationId)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-bold bg-emerald-600 dark:bg-emerald-600 text-white border border-emerald-700 cursor-pointer hover:bg-emerald-700 transition-colors"
-            title="Pass"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800 cursor-pointer"
+            title={cell.teamRole ? `Pass (Team ${cell.teamRole})` : 'Pass'}
           >
             <Check className="w-4 h-4 stroke-[3]" />
+            {teamIcon}
             <span className="hidden sm:inline">Pass</span>
           </button>
         );
@@ -371,10 +345,11 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
         return (
           <button
             onClick={() => handleCellClick(studentId, stationId)}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-bold bg-red-600 dark:bg-red-600 text-white border border-red-700 cursor-pointer hover:bg-red-700 transition-colors"
-            title="Fail"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 cursor-pointer"
+            title={cell.teamRole ? `Fail (Team ${cell.teamRole})` : 'Fail'}
           >
             <X className="w-4 h-4 stroke-[3]" />
+            {teamIcon}
             <span className="hidden sm:inline">Fail</span>
           </button>
         );
@@ -387,6 +362,7 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
           title="Completed"
         >
           <Check className="w-4 h-4" />
+          {teamIcon}
           <span className="hidden sm:inline">Done</span>
         </button>
       );
@@ -439,9 +415,7 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
             <div className="space-y-1 pt-1">
               {cell.evaluationId && (
                 <a
-                  href={`/api/skill-sheets/evaluations/print?evaluation_id=${cell.evaluationId}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  href={`/academics/skill-sheets/evaluations/${cell.evaluationId}`}
                   className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg"
                   onClick={(e) => e.stopPropagation()}
                 >
@@ -450,7 +424,7 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
               )}
               {cell.evaluationId && (
                 <a
-                  href={`/api/skill-sheets/evaluations/print?evaluation_id=${cell.evaluationId}`}
+                  href={`/api/academics/skill-sheets/evaluations/print?id=${cell.evaluationId}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
@@ -472,27 +446,14 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
               >
                 <Edit2 className="w-4 h-4" /> Override to {cell.result === 'pass' ? 'Fail' : 'Pass'}
               </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); handleResetCell(studentId, stationId, !!cell.evaluationId); }}
-                className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
-              >
-                <Circle className="w-4 h-4" /> Reset to Not Started
-              </button>
             </div>
           </div>
         )}
 
-        {/* In-progress popover: reset, mark pass/fail */}
+        {/* In-progress popover: mark pass/fail */}
         {cell.status === 'in_progress' && (
           <div className="space-y-1">
-            <button
-              onClick={(e) => { e.stopPropagation(); handleResetCell(studentId, stationId, false); }}
-              className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
-            >
-              <Circle className="w-4 h-4" /> Reset to Not Started
-            </button>
-            <div className="border-t border-gray-100 dark:border-gray-700 my-1" />
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Manual override:</p>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Manual override:</p>
             <button
               onClick={(e) => { e.stopPropagation(); handleOverrideResult(key, 'pass'); }}
               className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg"
@@ -547,14 +508,6 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
             <strong className="text-gray-700 dark:text-gray-300">{totalCompleted}/{totalCells}</strong> complete
           </span>
           <button
-            onClick={() => window.open(`/api/skill-sheets/evaluations/batch-print?lab_day_id=${labDayId}`, '_blank')}
-            className="text-xs text-purple-600 dark:text-purple-400 flex items-center gap-1 hover:underline"
-            title="Print all completed evaluations"
-          >
-            <Printer className="w-3.5 h-3.5" />
-            Print All
-          </button>
-          <button
             onClick={() => fetchGrid(true)}
             className="text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1 hover:underline"
           >
@@ -569,31 +522,31 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
         <table className="w-full">
           {/* Column headers: station info */}
           <thead>
-            <tr className="border-b-2 border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/80">
-              <th className="text-left px-5 py-3 font-semibold text-gray-700 dark:text-gray-300 text-sm sticky left-0 bg-gray-50 dark:bg-gray-900/80 z-10 min-w-[220px]">
+            <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-750">
+              <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400 sticky left-0 bg-gray-50 dark:bg-gray-750 z-10 min-w-[180px]">
                 Student
               </th>
               {stations.map(station => (
                 <th
                   key={station.id}
-                  className="text-center px-3 py-3 font-medium text-gray-600 dark:text-gray-400 min-w-[150px]"
+                  className="text-center px-3 py-3 font-medium text-gray-600 dark:text-gray-400 min-w-[140px]"
                 >
                   <div className="space-y-0.5">
-                    <div className="text-xs font-bold text-gray-800 dark:text-gray-100">
+                    <div className="text-xs font-semibold text-gray-800 dark:text-gray-200">
                       Station {station.station_number}
                     </div>
-                    <div className="text-xs font-normal text-gray-500 dark:text-gray-400 leading-tight max-w-[150px] mx-auto" title={getStationTitle(station)}>
+                    <div className="text-xs font-normal text-gray-500 dark:text-gray-400 truncate max-w-[140px] mx-auto" title={getStationTitle(station)}>
                       {getStationTitle(station)}
                     </div>
                     {station.instructorName && (
-                      <div className="text-[11px] font-medium text-blue-500 dark:text-blue-400">
+                      <div className="text-[11px] font-normal text-blue-500 dark:text-blue-400">
                         {formatInstructor(station.instructorName)}
                       </div>
                     )}
                   </div>
                 </th>
               ))}
-              <th className="text-center px-3 py-3 font-semibold text-gray-700 dark:text-gray-300 text-sm min-w-[120px]">
+              <th className="text-center px-3 py-3 font-medium text-gray-600 dark:text-gray-400 min-w-[80px]">
                 Progress
               </th>
             </tr>
@@ -605,51 +558,36 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
               const summary = studentSummary.find(s => s.studentId === student.id);
               const done = summary?.completed || 0;
               const total = summary?.total || 0;
-              const pct = total > 0 ? Math.round((done / total) * 100) : 0;
 
               return (
                 <tr
                   key={student.id}
                   className={`border-b border-gray-100 dark:border-gray-700/50 ${
-                    idx % 2 === 0 ? 'bg-white dark:bg-gray-800/40' : 'bg-gray-50/80 dark:bg-gray-900/50'
-                  } hover:bg-blue-50/50 dark:hover:bg-blue-900/20 transition-colors`}
+                    idx % 2 === 0 ? '' : 'bg-gray-50/50 dark:bg-gray-750/30'
+                  } hover:bg-blue-50/40 dark:hover:bg-blue-900/10 transition-colors`}
                 >
-                  {/* Student name — wider, clearer */}
-                  <td className={`px-5 py-3 font-semibold text-gray-900 dark:text-gray-100 text-sm sticky left-0 z-10 whitespace-nowrap ${
-                    idx % 2 === 0 ? 'bg-white dark:bg-gray-800/40' : 'bg-gray-50/80 dark:bg-gray-900/50'
-                  }`}>
-                    {student.last_name}, {student.first_name}
+                  {/* Student name */}
+                  <td className="px-4 py-2.5 font-medium text-gray-900 dark:text-gray-100 text-sm sticky left-0 bg-inherit z-10 whitespace-nowrap">
+                    {student.last_name}, {student.first_name.charAt(0)}.
                   </td>
 
-                  {/* Station cells — distinct cell backgrounds */}
+                  {/* Station cells */}
                   {stations.map(station => (
-                    <td key={station.id} className="px-2 py-2 text-center relative">
-                      <div className="bg-gray-50 dark:bg-gray-800/80 border border-gray-100 dark:border-gray-700 rounded-lg p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700/80 transition-colors">
-                        {renderBadge(student.id, station.id)}
-                      </div>
+                    <td key={station.id} className="px-3 py-2 text-center relative">
+                      {renderBadge(student.id, station.id)}
                       {renderPopover(student.id, station.id)}
                     </td>
                   ))}
 
-                  {/* Progress bar */}
-                  <td className="px-3 py-3 text-center">
-                    <div className="flex items-center gap-2 justify-center">
-                      <div className="w-16 h-2.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all ${
-                            done === total && total > 0 ? 'bg-emerald-500' : done > 0 ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'
-                          }`}
-                          style={{ width: `${pct}%` }}
-                        />
-                      </div>
-                      <span className={`text-xs font-bold tabular-nums ${
-                        done === total && total > 0
-                          ? 'text-emerald-600 dark:text-emerald-400'
-                          : 'text-gray-500 dark:text-gray-400'
-                      }`}>
-                        {done}/{total}
-                      </span>
-                    </div>
+                  {/* Progress indicator */}
+                  <td className="px-3 py-2 text-center">
+                    <span className={`inline-flex items-center justify-center text-sm font-mono font-semibold px-2 py-0.5 rounded ${
+                      done === total && total > 0
+                        ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                    }`}>
+                      [{done}/{total}]
+                    </span>
                   </td>
                 </tr>
               );
@@ -658,27 +596,27 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
 
           {/* Summary footer */}
           <tfoot>
-            <tr className="bg-gray-100 dark:bg-gray-900/80 border-t-2 border-gray-300 dark:border-gray-600">
-              <td className="px-5 py-3 font-bold text-gray-800 dark:text-gray-200 text-sm sticky left-0 bg-gray-100 dark:bg-gray-900/80 z-10">
+            <tr className="bg-gray-50 dark:bg-gray-750 border-t-2 border-gray-200 dark:border-gray-600">
+              <td className="px-4 py-2.5 font-semibold text-gray-700 dark:text-gray-300 text-sm sticky left-0 bg-gray-50 dark:bg-gray-750 z-10">
                 Summary
               </td>
               {stationSummary.map(s => (
-                <td key={s.stationId} className="px-3 py-3 text-center">
+                <td key={s.stationId} className="px-3 py-2.5 text-center">
                   <div className="space-y-0.5">
-                    <div className="text-sm font-bold text-gray-800 dark:text-gray-200">
-                      {s.completed}/{s.total}
+                    <div className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                      {s.completed}/{s.total} done
                     </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400">
-                      <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{s.passed}P</span>
+                    <div className="text-[11px] text-gray-500 dark:text-gray-400">
+                      <span className="text-green-600 dark:text-green-400">{s.passed} pass</span>
                       {s.failed > 0 && (
-                        <span className="text-red-500 dark:text-red-400 font-semibold ml-1">{s.failed}F</span>
+                        <span className="text-red-500 dark:text-red-400 ml-1">{s.failed} fail</span>
                       )}
                     </div>
                   </div>
                 </td>
               ))}
-              <td className="px-3 py-3 text-center">
-                <div className="text-sm font-bold text-gray-700 dark:text-gray-300">
+              <td className="px-3 py-2.5 text-center">
+                <div className="text-xs font-semibold text-gray-600 dark:text-gray-400">
                   {studentsFullyDone}/{students.length}
                 </div>
                 <div className="text-[11px] text-gray-400 dark:text-gray-500">
@@ -693,19 +631,19 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
       {/* Legend */}
       <div className="px-4 py-2.5 border-t border-gray-200 dark:border-gray-700 flex flex-wrap items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
         <span className="flex items-center gap-1.5">
-          <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-gray-100 dark:bg-gray-800/50 text-gray-400 border border-gray-200 dark:border-gray-700"><Circle className="w-3 h-3" /></span>
+          <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-gray-100 dark:bg-gray-700 text-gray-400"><Circle className="w-3 h-3" /></span>
           Not started
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-300 dark:border-amber-500"><Clock className="w-3 h-3" /></span>
+          <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-amber-50 dark:bg-amber-900/30 text-amber-600"><Clock className="w-3 h-3" /></span>
           In progress
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500"><Check className="w-3 h-3 stroke-[3]" /></span>
+          <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-green-50 dark:bg-green-900/30 text-green-600"><Check className="w-3 h-3 stroke-[3]" /></span>
           Pass
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-red-500/10 dark:bg-red-500/20 text-red-500 dark:text-red-400 border border-red-300 dark:border-red-500"><X className="w-3 h-3 stroke-[3]" /></span>
+          <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-red-50 dark:bg-red-900/30 text-red-500"><X className="w-3 h-3 stroke-[3]" /></span>
           Fail
         </span>
         <span className="ml-auto text-gray-400 dark:text-gray-500">
