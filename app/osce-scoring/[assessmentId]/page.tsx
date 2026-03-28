@@ -158,10 +158,26 @@ export default function ScoringPage() {
   const [lastSaved, setLastSaved] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
+  const [isOnline, setIsOnline] = useState(true);
 
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingChangesRef = useRef<Record<string, unknown>>({});
+  const saveQueueRef = useRef<Record<string, unknown>[]>([]);
   const isSubmitted = !!score?.submitted_at;
+
+  // Online/offline detection
+  useEffect(() => {
+    const handleOnline = () => { setIsOnline(true); flushQueue(); };
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    setIsOnline(navigator.onLine);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const saved = localStorage.getItem('osce_evaluator');
@@ -192,8 +208,38 @@ export default function ScoringPage() {
     }
   }
 
+  async function flushQueue() {
+    if (!evaluator || saveQueueRef.current.length === 0) return;
+    const queue = [...saveQueueRef.current];
+    saveQueueRef.current = [];
+    // Merge all queued saves into one payload
+    const merged: Record<string, unknown> = {};
+    for (const item of queue) {
+      Object.assign(merged, item);
+    }
+    try {
+      const res = await fetch(`/api/osce/scores/${assessmentId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          evaluator_name: evaluator.name,
+          ...merged,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setLastSaved(new Date().toLocaleTimeString());
+      }
+    } catch {
+      // Re-queue on failure
+      saveQueueRef.current.unshift(merged);
+    }
+  }
+
   const debouncedSave = useCallback(async () => {
     if (!evaluator || Object.keys(pendingChangesRef.current).length === 0) return;
+    const dataToSave = { ...pendingChangesRef.current };
+    pendingChangesRef.current = {};
     setSaving(true);
     try {
       const res = await fetch(`/api/osce/scores/${assessmentId}`, {
@@ -201,19 +247,24 @@ export default function ScoringPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           evaluator_name: evaluator.name,
-          ...pendingChangesRef.current,
+          ...dataToSave,
         }),
       });
       const data = await res.json();
       if (data.success) {
-        pendingChangesRef.current = {};
+        // Flush any queued saves too
+        if (saveQueueRef.current.length > 0) {
+          flushQueue();
+        }
         setLastSaved(new Date().toLocaleTimeString());
       }
-    } catch (err) {
-      console.error('Auto-save error:', err);
+    } catch {
+      // Queue for later when back online
+      saveQueueRef.current.push(dataToSave);
     } finally {
       setSaving(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assessmentId, evaluator]);
 
   function handleChange(field: string, value: string | null) {
@@ -232,6 +283,72 @@ export default function ScoringPage() {
       else next.add(key);
       return next;
     });
+  }
+
+  function handlePrintScore() {
+    if (!assessment || !score || !evaluator) return;
+    const scoreRecord = score as unknown as Record<string, unknown>;
+
+    const readinessMap: Record<string, string> = {
+      ready: 'READY FOR FIELD',
+      ready_with_concerns: 'READY WITH CONCERNS',
+      not_yet_ready: 'NOT YET READY',
+    };
+
+    const snhdRows = SNHD_FACTORS.map(f => {
+      const rating = (scoreRecord[f.key] as string) || '--';
+      const notes = (scoreRecord[`${f.key}_notes`] as string) || '';
+      return `<tr><td style="padding:6px 10px;border:1px solid #ddd;">${f.label}</td><td style="padding:6px 10px;border:1px solid #ddd;text-align:center;font-weight:bold;">${rating}</td><td style="padding:6px 10px;border:1px solid #ddd;font-size:12px;">${notes}</td></tr>`;
+    }).join('');
+
+    const oralRows = ORAL_DOMAINS.map(d => {
+      const rating = (scoreRecord[d.key] as string) || '--';
+      return `<tr><td style="padding:6px 10px;border:1px solid #ddd;">${d.label}</td><td style="padding:6px 10px;border:1px solid #ddd;text-align:center;font-weight:bold;">${rating}</td></tr>`;
+    }).join('');
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    printWindow.document.write(`<!DOCTYPE html><html><head><title>OSCE Score Sheet - ${assessment.student_name}</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; color: #1a1a1a; }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  h2 { font-size: 15px; margin-top: 20px; margin-bottom: 8px; color: #555; text-transform: uppercase; letter-spacing: 0.05em; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 13px; }
+  th { padding: 6px 10px; border: 1px solid #ddd; background: #f5f5f5; text-align: left; font-size: 12px; }
+  .meta { font-size: 13px; color: #555; margin-bottom: 16px; }
+  .readiness { font-size: 16px; font-weight: bold; margin: 12px 0; padding: 10px; border: 2px solid #333; text-align: center; }
+  .notes { font-size: 12px; color: #333; margin: 6px 0 12px; padding: 8px; background: #f9f9f9; border-radius: 4px; white-space: pre-wrap; }
+  @media print { body { padding: 0; } }
+</style></head><body>
+<h1>OSCE Clinical Capstone - Score Sheet</h1>
+<p class="meta">
+  <strong>Student:</strong> ${assessment.student_name} &nbsp;|&nbsp;
+  <strong>Scenario:</strong> ${assessment.scenario} &nbsp;|&nbsp;
+  <strong>Slot:</strong> ${assessment.slot_number} &nbsp;|&nbsp;
+  <strong>Day:</strong> ${assessment.day_number}<br/>
+  <strong>Evaluator:</strong> ${evaluator.name} &nbsp;|&nbsp;
+  <strong>Submitted:</strong> ${score.submitted_at ? new Date(score.submitted_at).toLocaleString() : 'Not submitted'}
+</p>
+
+<h2>SNHD Evaluation Factors</h2>
+<table><thead><tr><th>Factor</th><th style="width:60px;text-align:center;">Rating</th><th>Notes</th></tr></thead><tbody>${snhdRows}</tbody></table>
+
+<h2>Oral Board Domains</h2>
+<table><thead><tr><th>Domain</th><th style="width:60px;text-align:center;">Rating</th></tr></thead><tbody>${oralRows}</tbody></table>
+${score.oral_notes ? `<div class="notes"><strong>Oral Board Notes:</strong> ${score.oral_notes}</div>` : ''}
+
+<h2>Field Readiness Assessment</h2>
+<div class="readiness">${score.readiness ? readinessMap[score.readiness] || score.readiness : 'Not assessed'}</div>
+${score.concerns_notes ? `<div class="notes"><strong>Concerns:</strong> ${score.concerns_notes}</div>` : ''}
+${score.general_notes ? `<div class="notes"><strong>General Notes:</strong> ${score.general_notes}</div>` : ''}
+
+<p style="font-size:11px;color:#999;margin-top:24px;text-align:center;">Pima Medical Institute &mdash; Paramedic Program &mdash; Spring 2026 Clinical Capstone</p>
+</body></html>`);
+
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => printWindow.print(), 300);
   }
 
   async function handleSubmit() {
@@ -335,7 +452,22 @@ export default function ScoringPage() {
         </div>
       </div>
 
+      {/* Connection status indicator */}
+      {!isOnline && (
+        <div className="bg-red-600 text-white text-center py-2 px-4 text-sm font-medium print:hidden">
+          <span className="inline-block w-2 h-2 bg-red-300 rounded-full mr-2 animate-pulse" />
+          Offline — scores saved locally, will sync when reconnected
+        </div>
+      )}
+
       <div className="max-w-3xl mx-auto px-4 pt-4">
+        {isOnline && !isSubmitted && (
+          <div className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400 mb-2 print:hidden">
+            <span className="inline-block w-1.5 h-1.5 bg-green-500 rounded-full" />
+            Connected
+          </div>
+        )}
+
         {isSubmitted && (
           <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4 mb-4">
             <p className="text-green-800 dark:text-green-200 font-medium text-sm">
@@ -469,10 +601,16 @@ export default function ScoringPage() {
             </p>
           </div>
         ) : (
-          <div className="mt-8 mb-8">
+          <div className="mt-8 mb-8 space-y-3">
+            <button
+              onClick={() => handlePrintScore()}
+              className="w-full py-4 rounded-xl font-bold text-lg bg-slate-700 text-white hover:bg-slate-800 active:scale-[0.98] transition-all print:hidden"
+            >
+              Print Score Sheet
+            </button>
             <button
               onClick={() => router.push('/osce-scoring/dashboard')}
-              className="w-full py-4 rounded-xl font-bold text-lg bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.98] transition-all"
+              className="w-full py-4 rounded-xl font-bold text-lg bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.98] transition-all print:hidden"
             >
               Back to Dashboard
             </button>
