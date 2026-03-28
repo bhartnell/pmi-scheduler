@@ -71,7 +71,9 @@ export async function GET(
         evaluator_id,
         notes,
         flagged_items,
-        created_at
+        created_at,
+        team_role,
+        team_evaluation_id
       `)
       .eq('student_id', studentId)
       .order('created_at', { ascending: false });
@@ -179,6 +181,39 @@ export async function GET(
     }
 
     // -----------------------------------------------
+    // Fetch team leader names for assistant evaluations
+    // -----------------------------------------------
+    const teamEvalIds = evaluations
+      .filter(e => e.team_evaluation_id)
+      .map(e => e.team_evaluation_id as string);
+
+    const teamLeaderMap: Record<string, string> = {};
+    if (teamEvalIds.length > 0) {
+      // Get the leader evaluations
+      const { data: leaderEvals } = await supabase
+        .from('student_skill_evaluations')
+        .select('id, student_id')
+        .in('id', teamEvalIds);
+
+      if (leaderEvals && leaderEvals.length > 0) {
+        const leaderStudentIds = [...new Set(leaderEvals.map(e => e.student_id))];
+        const { data: leaderStudents } = await supabase
+          .from('students')
+          .select('id, first_name, last_name')
+          .in('id', leaderStudentIds);
+
+        const studentNameMap: Record<string, string> = {};
+        for (const s of leaderStudents || []) {
+          studentNameMap[s.id] = `${s.last_name}, ${s.first_name}`;
+        }
+
+        for (const le of leaderEvals || []) {
+          teamLeaderMap[le.id] = studentNameMap[le.student_id] || 'Unknown';
+        }
+      }
+    }
+
+    // -----------------------------------------------
     // Group evaluations by canonical_skill_id
     // -----------------------------------------------
     const UNCATEGORIZED_KEY = '__uncategorized__';
@@ -210,6 +245,15 @@ export async function GET(
         ? evaluatorMap[evaluation.evaluator_id] || { name: 'Unknown', email: '' }
         : { name: 'Unknown', email: '' };
 
+      // Team info
+      let teamInfo: { team_role: string; leader_name?: string } | null = null;
+      if (evaluation.team_role) {
+        teamInfo = { team_role: evaluation.team_role };
+        if (evaluation.team_role === 'assistant' && evaluation.team_evaluation_id) {
+          teamInfo.leader_name = teamLeaderMap[evaluation.team_evaluation_id] || undefined;
+        }
+      }
+
       groupMap[canonicalSkillId].evaluations.push({
         id: evaluation.id,
         skill_sheet_id: evaluation.skill_sheet_id,
@@ -228,6 +272,7 @@ export async function GET(
             }
           : null,
         evaluator,
+        team_info: teamInfo,
       });
     }
 

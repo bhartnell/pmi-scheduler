@@ -160,6 +160,10 @@ interface SkillEvaluation {
     name: string;
     email: string;
   };
+  team_info?: {
+    team_role: string;
+    leader_name?: string;
+  } | null;
 }
 
 interface SkillEvalGroup {
@@ -2356,6 +2360,11 @@ export default function StudentDetailPage() {
                           }`}>
                             {ev.evaluation_type === 'final_competency' ? 'Final' : 'Formative'}
                           </span>
+                          {ev.team_info && (
+                            <span className="px-1.5 py-0.5 rounded text-xs bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
+                              Team — {ev.team_info.team_role === 'leader' ? 'Leader' : `Assistant${ev.team_info.leader_name ? ` (Leader: ${ev.team_info.leader_name})` : ''}`}
+                            </span>
+                          )}
                         </div>
                         <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                           {new Date(ev.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}

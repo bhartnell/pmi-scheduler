@@ -27,6 +27,9 @@ import {
   Trash2,
   Edit2,
   Eye,
+  Users,
+  Star,
+  User,
 } from 'lucide-react';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -77,6 +80,22 @@ interface SkillSheet {
 type DisplayMode = 'teaching' | 'formative' | 'final';
 type StepMark = 'pass' | 'fail' | 'caution' | null;
 type EmailPreference = 'pending' | 'queued' | 'sent' | 'do_not_send';
+type GradeMode = 'individual' | 'team';
+
+interface TeamMember {
+  student_id: string;
+  student_name: string;
+  team_role: 'leader' | 'assistant';
+}
+
+interface TeamEvalResult {
+  student_name: string;
+  team_role: string;
+  result: string;
+  score?: number;
+  total?: number;
+  id: string;
+}
 
 interface ExistingEvaluation {
   id: string;
@@ -276,6 +295,13 @@ export default function SkillSheetPanel({
   const [evalViewMode, setEvalViewMode] = useState<'new' | 'existing'>('new');
   const [expandedEvalId, setExpandedEvalId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  // Team grading state
+  const [gradeMode, setGradeMode] = useState<GradeMode>('individual');
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [showTeamAddDropdown, setShowTeamAddDropdown] = useState(false);
+  const [teamSearchQuery, setTeamSearchQuery] = useState('');
+  const [teamCompletionResults, setTeamCompletionResults] = useState<TeamEvalResult[] | null>(null);
 
   // ─── Data Fetching ──────────────────────────────────────────────────────
 
@@ -671,6 +697,173 @@ export default function SkillSheetPanel({
     setEvalViewMode('new');
   };
 
+  // ─── Team Grading Handlers ────────────────────────────────────────────────
+
+  const addTeamMember = (student: StudentInfo) => {
+    if (teamMembers.find(m => m.student_id === student.id)) return;
+    const isFirst = teamMembers.length === 0;
+    setTeamMembers(prev => [...prev, {
+      student_id: student.id,
+      student_name: student.name,
+      team_role: isFirst ? 'leader' : 'assistant',
+    }]);
+    setShowTeamAddDropdown(false);
+    setTeamSearchQuery('');
+  };
+
+  const removeTeamMember = (studentId: string) => {
+    setTeamMembers(prev => {
+      const updated = prev.filter(m => m.student_id !== studentId);
+      // If we removed the leader, promote the first remaining member
+      if (updated.length > 0 && !updated.some(m => m.team_role === 'leader')) {
+        updated[0].team_role = 'leader';
+      }
+      return updated;
+    });
+  };
+
+  const setTeamLeader = (studentId: string) => {
+    setTeamMembers(prev => prev.map(m => ({
+      ...m,
+      team_role: m.student_id === studentId ? 'leader' : 'assistant',
+    })));
+  };
+
+  const handleTeamSave = async (emailPref: EmailPreference = 'queued', saveStatus: 'complete' | 'in_progress' = 'complete') => {
+    if (teamMembers.length < 2) {
+      showToast('Team must have at least 2 members', 'error');
+      return;
+    }
+    if (!teamMembers.some(m => m.team_role === 'leader')) {
+      showToast('Team must have a leader', 'error');
+      return;
+    }
+
+    if (saveStatus === 'complete' && mode === 'final' && result !== 'pass' && !notes.trim()) {
+      showToast('Remediation plan is required for non-pass results', 'error');
+      return;
+    }
+
+    const flaggedItems = Object.entries(stepMarks)
+      .filter(([, mark]) => mark === 'fail' || mark === 'caution')
+      .map(([stepNum, mark]) => ({ step_number: parseInt(stepNum), status: mark }));
+
+    const evaluationType = mode === 'formative' ? 'formative' : 'final_competency';
+    const evaluationResult = mode === 'formative' ? 'pass' : result;
+
+    // Build step_marks (same logic as individual)
+    const isMultiPoint = sheet ? hasMultiPointScoring(sheet.steps) : false;
+    const stepMarksToSave: Record<string, unknown> = {};
+    if (isMultiPoint && sheet) {
+      for (const step of sheet.steps) {
+        const mark = stepMarks[step.step_number];
+        const subs = subItemMarks[step.step_number];
+        if (step.sub_items && step.sub_items.length > 0 && subs) {
+          const pts = subs.filter(Boolean).length;
+          stepMarksToSave[String(step.step_number)] = {
+            completed: pts === (step.possible_points || step.sub_items.length),
+            sub_items: subs,
+            points: pts,
+          };
+        } else if (mark) {
+          stepMarksToSave[String(step.step_number)] = {
+            completed: mark === 'pass',
+            points: mark === 'pass' ? (step.possible_points || 1) : 0,
+          };
+        }
+      }
+    } else {
+      for (const [key, val] of Object.entries(stepMarks)) {
+        if (val) stepMarksToSave[key] = val;
+      }
+    }
+
+    const stepDetails = mode === 'formative' && sheet ? sheet.steps.map(s => ({
+      step_id: s.id,
+      step_number: s.step_number,
+      completed: stepSequence[s.step_number] !== undefined,
+      sequence_number: stepSequence[s.step_number] ?? null,
+      mark: stepMarks[s.step_number] || null,
+      is_critical: s.is_critical,
+    })) : undefined;
+
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/skill-sheets/${sheetId}/evaluate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          team_members: teamMembers,
+          lab_day_id: labDayId || null,
+          evaluation_type: evaluationType,
+          result: evaluationResult,
+          notes: notes.trim() || null,
+          flagged_items: flaggedItems,
+          station_id: stationPoolId || null,
+          email_status: saveStatus === 'in_progress' ? 'pending' : (mode === 'final' ? 'do_not_send' : (emailPref === 'sent' ? 'queued' : emailPref)),
+          step_marks: Object.keys(stepMarksToSave).length > 0 ? stepMarksToSave : null,
+          step_details: stepDetails || null,
+          status: saveStatus,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success && data.team) {
+        // Compute score for completion screen
+        let earned = 0;
+        let total = 0;
+        if (sheet) {
+          earned = getTotalEarnedPoints(sheet.steps, stepMarks, subItemMarks);
+          total = getTotalPossiblePoints(sheet.steps);
+        }
+
+        const results: TeamEvalResult[] = (data.evaluations || []).map((ev: Record<string, unknown>) => ({
+          student_name: ev.student_name as string,
+          team_role: ev.team_role as string,
+          result: ev.result as string,
+          score: earned,
+          total: total,
+          id: ev.id as string,
+        }));
+
+        setTeamCompletionResults(results);
+
+        // Notify parent for each team member
+        if (onEvaluationSaved) {
+          for (const ev of data.evaluations || []) {
+            onEvaluationSaved(ev.student_id as string, ev.id as string, saveStatus);
+          }
+        }
+
+        showToast(`Team evaluation saved for ${teamMembers.length} students`, 'success');
+
+        if (saveStatus === 'complete') {
+          resetForm();
+        }
+      } else {
+        showToast(data.error || 'Failed to save team evaluation', 'error');
+      }
+    } catch (err) {
+      console.error('Failed to save team evaluation:', err);
+      showToast('Failed to save team evaluation', 'error');
+    }
+    setSaving(false);
+  };
+
+  // Dispatch save: team or individual
+  const dispatchSave = (emailPref: EmailPreference = 'queued', saveStatus: 'complete' | 'in_progress' = 'complete') => {
+    if (gradeMode === 'team') {
+      handleTeamSave(emailPref, saveStatus);
+    } else {
+      handleSave(emailPref, saveStatus);
+    }
+  };
+
+  // Can save? For individual mode: needs studentId. For team mode: needs 2+ members.
+  const canSave = gradeMode === 'team'
+    ? teamMembers.length >= 2 && teamMembers.some(m => m.team_role === 'leader')
+    : !!studentId;
+
   // ─── Render ─────────────────────────────────────────────────────────────
 
   const stepsByPhase = sheet ? groupStepsByPhase(sheet.steps) : {};
@@ -739,6 +932,297 @@ export default function SkillSheetPanel({
       </>
     );
   }
+
+  // Team completion screen for slide-out mode (before the team completion screen variable definition)
+  if (teamCompletionResults && !embedded) {
+    return (
+      <>
+        <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
+        <div className="fixed inset-y-0 right-0 z-50 w-full sm:w-[60%] md:w-[55%] lg:w-[50%] max-w-3xl bg-white dark:bg-gray-900 shadow-2xl flex flex-col animate-slide-in-right">
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+            <Users className="w-16 h-16 text-green-500 mb-4" />
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+              Team evaluation saved for {teamCompletionResults.length} students
+            </h2>
+            <div className="w-full max-w-md space-y-2 mt-4">
+              {teamCompletionResults.map((tr) => (
+                <div key={tr.id} className="flex items-center gap-3 px-4 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <span className="flex-shrink-0">
+                    {tr.team_role === 'leader' ? (
+                      <Star className="w-5 h-5 text-amber-500 fill-amber-500" />
+                    ) : (
+                      <User className="w-5 h-5 text-gray-400" />
+                    )}
+                  </span>
+                  <span className="flex-1 text-sm font-medium text-gray-900 dark:text-white text-left">
+                    {tr.student_name}
+                    <span className="ml-2 text-xs text-gray-500">
+                      ({tr.team_role === 'leader' ? 'Leader' : 'Assistant'})
+                    </span>
+                  </span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    {tr.score !== undefined && tr.total !== undefined ? `${tr.score}/${tr.total} pts` : ''}
+                  </span>
+                  <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                    tr.result === 'pass'
+                      ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                      : tr.result === 'fail'
+                      ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                      : 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400'
+                  }`}>
+                    {tr.result === 'pass' ? 'Pass' : tr.result === 'fail' ? 'Fail' : 'Remediation'}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className="w-full max-w-sm space-y-3 mt-6">
+              <button
+                onClick={() => {
+                  setTeamCompletionResults(null);
+                  setTeamMembers([]);
+                  resetForm();
+                }}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+              >
+                <Users className="w-5 h-5" />
+                Next Team
+              </button>
+              <button
+                onClick={onClose}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 font-medium"
+              >
+                Back to Lab Day
+              </button>
+            </div>
+          </div>
+        </div>
+        <style jsx global>{`
+          @keyframes slide-in-right {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+          }
+          .animate-slide-in-right {
+            animation: slide-in-right 0.25s ease-out;
+          }
+        `}</style>
+      </>
+    );
+  }
+
+  // ─── Team Completion Screen ───────────────────────────────────────────────
+  const teamCompletionScreen = teamCompletionResults && (
+    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+      <Users className="w-16 h-16 text-green-500 mb-4" />
+      <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+        Team evaluation saved for {teamCompletionResults.length} students
+      </h2>
+      <div className="w-full max-w-md space-y-2 mt-4">
+        {teamCompletionResults.map((tr) => (
+          <div key={tr.id} className="flex items-center gap-3 px-4 py-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+            <span className="flex-shrink-0">
+              {tr.team_role === 'leader' ? (
+                <Star className="w-5 h-5 text-amber-500 fill-amber-500" />
+              ) : (
+                <User className="w-5 h-5 text-gray-400" />
+              )}
+            </span>
+            <span className="flex-1 text-sm font-medium text-gray-900 dark:text-white text-left">
+              {tr.student_name}
+              <span className="ml-2 text-xs text-gray-500">
+                ({tr.team_role === 'leader' ? 'Leader' : 'Assistant'})
+              </span>
+            </span>
+            <span className="text-sm text-gray-600 dark:text-gray-400">
+              {tr.score !== undefined && tr.total !== undefined ? `${tr.score}/${tr.total} pts` : ''}
+            </span>
+            <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
+              tr.result === 'pass'
+                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                : tr.result === 'fail'
+                ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                : 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400'
+            }`}>
+              {tr.result === 'pass' ? 'Pass' : tr.result === 'fail' ? 'Fail' : 'Remediation'}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <div className="w-full max-w-sm space-y-3 mt-6">
+        <button
+          onClick={handleBatchEmail}
+          disabled={batchEmailProgress !== null}
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium disabled:opacity-50"
+        >
+          <Mail className="w-5 h-5" />
+          {batchEmailProgress ? `${batchEmailProgress.sent} emails sent` : 'Send Emails'}
+        </button>
+
+        <div className="grid grid-cols-2 gap-3">
+          {teamCompletionResults.map((tr) => (
+            <button
+              key={`print-${tr.id}`}
+              onClick={() => handlePrint(tr.id)}
+              className="flex items-center justify-center gap-1.5 px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 text-xs font-medium"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              Print {tr.student_name.split(',')[0]}
+            </button>
+          ))}
+        </div>
+
+        <button
+          onClick={() => {
+            setTeamCompletionResults(null);
+            setTeamMembers([]);
+            resetForm();
+          }}
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+        >
+          <Users className="w-5 h-5" />
+          Next Team
+        </button>
+
+        <button
+          onClick={onClose}
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 font-medium"
+        >
+          Back to Lab Day
+        </button>
+      </div>
+    </div>
+  );
+
+  // ─── Team Member Selector UI ────────────────────────────────────────────
+  const availableStudents = (studentQueue || []).filter(
+    s => !teamMembers.find(m => m.student_id === s.id)
+  );
+  const filteredStudents = teamSearchQuery
+    ? availableStudents.filter(s => s.name.toLowerCase().includes(teamSearchQuery.toLowerCase()))
+    : availableStudents;
+
+  const teamMemberSelector = gradeMode === 'team' && (mode === 'formative' || mode === 'final') && (
+    <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex-shrink-0">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+          Team Members ({teamMembers.length})
+        </span>
+        {teamMembers.length < 2 && (
+          <span className="text-[10px] text-amber-600 dark:text-amber-400">Min. 2 members required</span>
+        )}
+      </div>
+
+      {/* Current team members list */}
+      {teamMembers.length > 0 && (
+        <div className="space-y-1.5 mb-2">
+          {teamMembers.map((member) => (
+            <div key={member.student_id} className="flex items-center gap-2 px-2.5 py-1.5 bg-gray-50 dark:bg-gray-700 rounded-lg">
+              <button
+                onClick={() => setTeamLeader(member.student_id)}
+                className="flex-shrink-0"
+                title={member.team_role === 'leader' ? 'Team Leader' : 'Click to make leader'}
+              >
+                {member.team_role === 'leader' ? (
+                  <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+                ) : (
+                  <User className="w-4 h-4 text-gray-400 hover:text-amber-400" />
+                )}
+              </button>
+              <span className="flex-1 text-xs text-gray-900 dark:text-white font-medium">
+                {member.student_name}
+              </span>
+              <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                {member.team_role === 'leader' ? 'Team Leader' : 'Assistant'}
+              </span>
+              <button
+                onClick={() => removeTeamMember(member.student_id)}
+                className="flex-shrink-0 p-0.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-500"
+                title="Remove from team"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Add team member dropdown */}
+      <div className="relative">
+        <button
+          onClick={() => setShowTeamAddDropdown(!showTeamAddDropdown)}
+          className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-xs text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-700 dark:hover:text-gray-300"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          Add team member
+        </button>
+
+        {showTeamAddDropdown && (
+          <div className="absolute z-30 mt-1 w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 max-h-48 overflow-hidden">
+            <div className="p-2 border-b border-gray-100 dark:border-gray-700">
+              <input
+                type="text"
+                value={teamSearchQuery}
+                onChange={(e) => setTeamSearchQuery(e.target.value)}
+                placeholder="Search students..."
+                className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-1 focus:ring-blue-500"
+                autoFocus
+              />
+            </div>
+            <div className="overflow-y-auto max-h-32">
+              {filteredStudents.length === 0 ? (
+                <p className="px-3 py-2 text-xs text-gray-400">
+                  {availableStudents.length === 0 ? 'All students added' : 'No matches'}
+                </p>
+              ) : (
+                filteredStudents.map(student => (
+                  <button
+                    key={student.id}
+                    onClick={() => addTeamMember(student)}
+                    className="w-full text-left px-3 py-1.5 text-xs text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                  >
+                    {student.name}
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  // ─── Grade Mode Selector ────────────────────────────────────────────────
+  const gradeModeSelector = (mode === 'formative' || mode === 'final') && studentQueue && studentQueue.length > 1 && (
+    <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex-shrink-0">
+      <div className="flex items-center gap-2">
+        <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Grade Mode:</span>
+        <div className="inline-flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden">
+          <button
+            onClick={() => { setGradeMode('individual'); setTeamMembers([]); setTeamCompletionResults(null); }}
+            className={`flex items-center gap-1 px-2.5 py-1 text-xs font-medium transition-colors ${
+              gradeMode === 'individual'
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+            }`}
+          >
+            <User className="w-3 h-3" />
+            Individual
+          </button>
+          <button
+            onClick={() => setGradeMode('team')}
+            className={`flex items-center gap-1 px-2.5 py-1 text-xs font-medium transition-colors border-l border-gray-300 dark:border-gray-600 ${
+              gradeMode === 'team'
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+            }`}
+          >
+            <Users className="w-3 h-3" />
+            Team
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 
   // ─── Shared inner content ─────────────────────────────────────────────────
   const panelInner = (
@@ -829,12 +1313,21 @@ export default function SkillSheetPanel({
       );
     }
 
+    // Team completion screen for embedded mode
+    if (teamCompletionResults) {
+      return (
+        <div className="flex flex-col h-full bg-white dark:bg-gray-900 rounded-lg shadow-lg overflow-hidden">
+          {teamCompletionScreen}
+        </div>
+      );
+    }
+
     return (
       <div className="flex flex-col h-full bg-white dark:bg-gray-900 rounded-lg shadow-lg overflow-hidden">
         {panelInner}
 
-        {/* Student queue progress */}
-        {studentQueue && studentQueue.length > 1 && (mode === 'formative' || mode === 'final') && (
+        {/* Student queue progress (individual mode only) */}
+        {gradeMode === 'individual' && studentQueue && studentQueue.length > 1 && (mode === 'formative' || mode === 'final') && (
           <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex-shrink-0">
             <div className="flex items-center justify-between">
               <span className="text-xs text-gray-500 dark:text-gray-400">
@@ -896,7 +1389,7 @@ export default function SkillSheetPanel({
                 </span>
               )}
             </div>
-            {(mode === 'formative' || mode === 'final') && !studentId && (
+            {(mode === 'formative' || mode === 'final') && gradeMode === 'individual' && !studentId && (
               <p className="mt-2 text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
                 <AlertTriangle className="w-3.5 h-3.5" />
                 Select a student first
@@ -904,6 +1397,12 @@ export default function SkillSheetPanel({
             )}
           </div>
         )}
+
+        {/* Grade Mode Selector */}
+        {gradeModeSelector}
+
+        {/* Team Member Selector */}
+        {teamMemberSelector}
 
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto overscroll-contain">
@@ -1148,44 +1647,48 @@ export default function SkillSheetPanel({
                   {/* Formative Save Options — four buttons */}
                   <div className="mt-3 space-y-2">
                     <button
-                      onClick={() => handleSave('pending', 'in_progress')}
-                      disabled={saving || !studentId}
+                      onClick={() => dispatchSave('pending', 'in_progress')}
+                      disabled={saving || !canSave}
                       className="w-full flex items-center justify-center gap-2 px-4 py-2 border-2 border-amber-400 dark:border-amber-600 text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/40 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
                     >
                       <Save className="w-4 h-4" />
                       Finish Later
                     </button>
                     <button
-                      onClick={() => handleSave('queued')}
-                      disabled={saving || !studentId}
+                      onClick={() => dispatchSave('queued')}
+                      disabled={saving || !canSave}
                       className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
                     >
                       {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Clock className="w-4 h-4" />}
-                      Save — Send Later
+                      {gradeMode === 'team' ? `Save Team (${teamMembers.length})` : 'Save — Send Later'}
                     </button>
                     <div className="grid grid-cols-2 gap-2">
                       <button
-                        onClick={() => handleSave('sent')}
-                        disabled={saving || sendingEmail || !studentId}
+                        onClick={() => dispatchSave('sent')}
+                        disabled={saving || sendingEmail || !canSave}
                         className="flex items-center justify-center gap-1.5 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-medium"
                       >
                         {sendingEmail ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
                         Save — Send Now
                       </button>
                       <button
-                        onClick={() => handleSave('do_not_send')}
-                        disabled={saving || !studentId}
+                        onClick={() => dispatchSave('do_not_send')}
+                        disabled={saving || !canSave}
                         className="flex items-center justify-center gap-1.5 px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-medium"
                       >
                         <Ban className="w-3.5 h-3.5" />
                         Do Not Send
                       </button>
                     </div>
-                    {studentName && (
+                    {gradeMode === 'team' ? (
+                      <p className="text-[10px] text-gray-400 text-center">
+                        Saving for team: {teamMembers.map(m => m.student_name.split(',')[0]).join(', ')}
+                      </p>
+                    ) : studentName ? (
                       <p className="text-[10px] text-gray-400 text-center">
                         Saving for: {studentName}
                       </p>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               )}
@@ -1229,22 +1732,22 @@ export default function SkillSheetPanel({
                   </div>
                   <div className="space-y-2">
                     <button
-                      onClick={() => handleSave('pending', 'in_progress')}
-                      disabled={saving || !studentId}
+                      onClick={() => dispatchSave('pending', 'in_progress')}
+                      disabled={saving || !canSave}
                       className="w-full flex items-center justify-center gap-2 px-4 py-2 border-2 border-amber-400 dark:border-amber-600 text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/40 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
                     >
                       <Save className="w-4 h-4" />
                       Finish Later
                     </button>
                     <button
-                      onClick={() => handleSave('do_not_send')}
-                      disabled={saving || !studentId}
+                      onClick={() => dispatchSave('do_not_send')}
+                      disabled={saving || !canSave}
                       className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium ${
                         result === 'fail' ? 'bg-red-600 hover:bg-red-700' : result === 'remediation' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700'
                       }`}
                     >
                       {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Shield className="w-4 h-4" />}
-                      Submit Competency{studentName ? ` — ${studentName}` : ''}
+                      {gradeMode === 'team' ? `Submit Team (${teamMembers.length})` : `Submit Competency${studentName ? ` — ${studentName}` : ''}`}
                     </button>
                     <p className="text-[10px] text-gray-400 text-center">
                       Final evaluations are not emailed to students
@@ -1391,7 +1894,7 @@ export default function SkillSheetPanel({
                 </button>
               ))}
             </div>
-            {(mode === 'formative' || mode === 'final') && !studentId && (
+            {(mode === 'formative' || mode === 'final') && gradeMode === 'individual' && !studentId && (
               <p className="mt-2 text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
                 <AlertTriangle className="w-3.5 h-3.5" />
                 Select a student on the grading page first
@@ -1399,6 +1902,12 @@ export default function SkillSheetPanel({
             )}
           </div>
         )}
+
+        {/* Grade Mode Selector */}
+        {gradeModeSelector}
+
+        {/* Team Member Selector */}
+        {teamMemberSelector}
 
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto">
@@ -1648,44 +2157,48 @@ export default function SkillSheetPanel({
                   {/* Formative Save Options — four buttons */}
                   <div className="mt-3 space-y-2">
                     <button
-                      onClick={() => handleSave('pending', 'in_progress')}
-                      disabled={saving || !studentId}
+                      onClick={() => dispatchSave('pending', 'in_progress')}
+                      disabled={saving || !canSave}
                       className="w-full flex items-center justify-center gap-2 px-4 py-2 border-2 border-amber-400 dark:border-amber-600 text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/40 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
                     >
                       <Save className="w-4 h-4" />
                       Finish Later
                     </button>
                     <button
-                      onClick={() => handleSave('queued')}
-                      disabled={saving || !studentId}
+                      onClick={() => dispatchSave('queued')}
+                      disabled={saving || !canSave}
                       className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
                     >
                       {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Clock className="w-4 h-4" />}
-                      Save — Send Later
+                      {gradeMode === 'team' ? `Save Team (${teamMembers.length})` : 'Save — Send Later'}
                     </button>
                     <div className="grid grid-cols-2 gap-2">
                       <button
-                        onClick={() => handleSave('sent')}
-                        disabled={saving || sendingEmail || !studentId}
+                        onClick={() => dispatchSave('sent')}
+                        disabled={saving || sendingEmail || !canSave}
                         className="flex items-center justify-center gap-1.5 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-medium"
                       >
                         {sendingEmail ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
                         Save — Send Now
                       </button>
                       <button
-                        onClick={() => handleSave('do_not_send')}
-                        disabled={saving || !studentId}
+                        onClick={() => dispatchSave('do_not_send')}
+                        disabled={saving || !canSave}
                         className="flex items-center justify-center gap-1.5 px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-medium"
                       >
                         <Ban className="w-3.5 h-3.5" />
                         Do Not Send
                       </button>
                     </div>
-                    {studentName && (
+                    {gradeMode === 'team' ? (
+                      <p className="text-[10px] text-gray-400 text-center">
+                        Saving for team: {teamMembers.map(m => m.student_name.split(',')[0]).join(', ')}
+                      </p>
+                    ) : studentName ? (
                       <p className="text-[10px] text-gray-400 text-center">
                         Saving for: {studentName}
                       </p>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               )}
@@ -1737,16 +2250,16 @@ export default function SkillSheetPanel({
 
                   <div className="space-y-2">
                     <button
-                      onClick={() => handleSave('pending', 'in_progress')}
-                      disabled={saving || !studentId}
+                      onClick={() => dispatchSave('pending', 'in_progress')}
+                      disabled={saving || !canSave}
                       className="w-full flex items-center justify-center gap-2 px-4 py-2 border-2 border-amber-400 dark:border-amber-600 text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/40 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
                     >
                       <Save className="w-4 h-4" />
                       Finish Later
                     </button>
                     <button
-                      onClick={() => handleSave('do_not_send')}
-                      disabled={saving || !studentId}
+                      onClick={() => dispatchSave('do_not_send')}
+                      disabled={saving || !canSave}
                       className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium ${
                         result === 'fail'
                           ? 'bg-red-600 hover:bg-red-700'
@@ -1756,7 +2269,7 @@ export default function SkillSheetPanel({
                       }`}
                     >
                       {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Shield className="w-4 h-4" />}
-                      Submit Competency{studentName ? ` — ${studentName}` : ''}
+                      {gradeMode === 'team' ? `Submit Team (${teamMembers.length})` : `Submit Competency${studentName ? ` — ${studentName}` : ''}`}
                     </button>
                     <p className="text-[10px] text-gray-400 text-center">
                       Final evaluations are not emailed to students

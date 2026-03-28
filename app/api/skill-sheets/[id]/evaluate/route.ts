@@ -43,10 +43,24 @@ export async function POST(
       email_status,
       step_marks,
       status: evalStatus,
+      // Team evaluation fields
+      team_members,
     } = body;
 
     // -----------------------------------------------
-    // Validation
+    // Team evaluation mode: batch-create for all team members
+    // -----------------------------------------------
+    if (Array.isArray(team_members) && team_members.length > 0) {
+      return handleTeamEvaluation({
+        skillSheetId,
+        body,
+        team_members,
+        currentUser,
+      });
+    }
+
+    // -----------------------------------------------
+    // Individual evaluation (existing logic)
     // -----------------------------------------------
     if (!student_id) {
       return NextResponse.json(
@@ -205,4 +219,221 @@ export async function POST(
       { status: 500 }
     );
   }
+}
+
+// ─── Team Evaluation Handler ──────────────────────────────────────────────────
+
+interface TeamMember {
+  student_id: string;
+  student_name: string;
+  team_role: 'leader' | 'assistant';
+}
+
+async function handleTeamEvaluation({
+  skillSheetId,
+  body,
+  team_members,
+  currentUser,
+}: {
+  skillSheetId: string;
+  body: Record<string, unknown>;
+  team_members: TeamMember[];
+  currentUser: { id: string; name: string; email: string; role: string };
+}) {
+  const supabase = getSupabaseAdmin();
+
+  const {
+    lab_day_id,
+    evaluation_type,
+    result,
+    notes,
+    flagged_items,
+    station_id,
+    email_status,
+    step_marks,
+    step_details,
+    status: evalStatus,
+  } = body as Record<string, unknown>;
+
+  // Validate
+  const validEvaluationTypes = ['formative', 'final_competency'];
+  if (!evaluation_type || !validEvaluationTypes.includes(evaluation_type as string)) {
+    return NextResponse.json(
+      { success: false, error: 'evaluation_type must be "formative" or "final_competency"' },
+      { status: 400 }
+    );
+  }
+
+  const isInProgress = evalStatus === 'in_progress';
+  const validResults = ['pass', 'fail', 'remediation'];
+  if (!isInProgress && (!result || !validResults.includes(result as string))) {
+    return NextResponse.json(
+      { success: false, error: 'result must be "pass", "fail", or "remediation"' },
+      { status: 400 }
+    );
+  }
+
+  // Verify skill sheet
+  const { data: sheet, error: sheetError } = await supabase
+    .from('skill_sheets')
+    .select('id, skill_name')
+    .eq('id', skillSheetId)
+    .single();
+
+  if (sheetError) {
+    if (sheetError.code === 'PGRST116') {
+      return NextResponse.json({ success: false, error: 'Skill sheet not found' }, { status: 404 });
+    }
+    throw sheetError;
+  }
+
+  // Find the leader
+  const leader = team_members.find(m => m.team_role === 'leader');
+  if (!leader) {
+    return NextResponse.json(
+      { success: false, error: 'Team must have exactly one leader' },
+      { status: 400 }
+    );
+  }
+
+  const resolvedEmailStatus = isInProgress
+    ? 'pending'
+    : evaluation_type === 'final_competency'
+      ? 'do_not_send'
+      : (email_status && ['pending', 'sent', 'do_not_send', 'queued'].includes(email_status as string))
+        ? email_status
+        : 'pending';
+
+  const resolvedResult = isInProgress ? ((result as string) || 'pass') : result;
+
+  const evaluations: Array<Record<string, unknown>> = [];
+
+  // 1. Create the leader's evaluation first
+  let leaderAttemptNumber = 1;
+  try {
+    const { data: prevEvals } = await supabase
+      .from('student_skill_evaluations')
+      .select('attempt_number')
+      .eq('skill_sheet_id', skillSheetId)
+      .eq('student_id', leader.student_id)
+      .order('attempt_number', { ascending: false })
+      .limit(1);
+    if (prevEvals && prevEvals.length > 0 && prevEvals[0].attempt_number) {
+      leaderAttemptNumber = prevEvals[0].attempt_number + 1;
+    }
+  } catch {
+    // ignore
+  }
+
+  const { data: leaderEval, error: leaderError } = await supabase
+    .from('student_skill_evaluations')
+    .insert({
+      skill_sheet_id: skillSheetId,
+      student_id: leader.student_id,
+      lab_day_id: (lab_day_id as string) || null,
+      evaluation_type,
+      result: resolvedResult,
+      evaluator_id: currentUser.id,
+      notes: (notes as string) || null,
+      flagged_items: flagged_items || null,
+      email_status: resolvedEmailStatus,
+      step_marks: step_marks || null,
+      step_details: step_details || null,
+      attempt_number: leaderAttemptNumber,
+      status: isInProgress ? 'in_progress' : 'complete',
+      team_role: 'leader',
+      team_evaluation_id: null, // leader has no parent
+    })
+    .select('*')
+    .single();
+
+  if (leaderError) {
+    throw leaderError;
+  }
+
+  evaluations.push({ ...leaderEval, student_name: leader.student_name });
+
+  // 2. Create assistant evaluations referencing the leader
+  const assistants = team_members.filter(m => m.team_role === 'assistant');
+
+  for (const assistant of assistants) {
+    let assistantAttempt = 1;
+    try {
+      const { data: prevEvals } = await supabase
+        .from('student_skill_evaluations')
+        .select('attempt_number')
+        .eq('skill_sheet_id', skillSheetId)
+        .eq('student_id', assistant.student_id)
+        .order('attempt_number', { ascending: false })
+        .limit(1);
+      if (prevEvals && prevEvals.length > 0 && prevEvals[0].attempt_number) {
+        assistantAttempt = prevEvals[0].attempt_number + 1;
+      }
+    } catch {
+      // ignore
+    }
+
+    const { data: assistantEval, error: assistantError } = await supabase
+      .from('student_skill_evaluations')
+      .insert({
+        skill_sheet_id: skillSheetId,
+        student_id: assistant.student_id,
+        lab_day_id: (lab_day_id as string) || null,
+        evaluation_type,
+        result: resolvedResult,
+        evaluator_id: currentUser.id,
+        notes: (notes as string) || null,
+        flagged_items: flagged_items || null,
+        email_status: resolvedEmailStatus,
+        step_marks: step_marks || null,
+        step_details: step_details || null,
+        attempt_number: assistantAttempt,
+        status: isInProgress ? 'in_progress' : 'complete',
+        team_role: 'assistant',
+        team_evaluation_id: leaderEval.id,
+      })
+      .select('*')
+      .single();
+
+    if (assistantError) {
+      console.error(`Failed to create assistant evaluation for ${assistant.student_id}:`, assistantError);
+      continue; // Don't fail the whole batch
+    }
+
+    evaluations.push({ ...assistantEval, student_name: assistant.student_name });
+  }
+
+  // 3. Station completions for all team members (best-effort)
+  if (station_id) {
+    for (const member of team_members) {
+      try {
+        const completionResult = (result as string) === 'pass' ? 'pass'
+          : (result as string) === 'fail' ? 'incomplete'
+          : 'needs_review';
+
+        await supabase
+          .from('station_completions')
+          .upsert({
+            student_id: member.student_id,
+            station_id,
+            result: completionResult,
+            completed_at: new Date().toISOString(),
+            logged_by: currentUser.id,
+            lab_day_id: (lab_day_id as string) || null,
+            notes: `Team skill sheet: ${sheet?.skill_name || 'Unknown'} — ${evaluation_type} ${result} (${member.team_role})`,
+          }, { onConflict: 'student_id,station_id,lab_day_id' })
+          .select('id')
+          .single();
+      } catch {
+        console.warn(`Failed to upsert station_completions for team member ${member.student_id}`);
+      }
+    }
+  }
+
+  return NextResponse.json({
+    success: true,
+    team: true,
+    evaluations,
+    leader_evaluation_id: leaderEval.id,
+  });
 }

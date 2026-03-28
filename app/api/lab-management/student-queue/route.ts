@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
     // 6. Get evaluations for this lab day (with step counts)
     const { data: evaluations } = await supabase
       .from('student_skill_evaluations')
-      .select('id, student_id, skill_sheet_id, result, step_marks, created_at, evaluator:lab_users!student_skill_evaluations_evaluator_id_fkey(name)')
+      .select('id, student_id, skill_sheet_id, result, step_marks, created_at, team_role, evaluator:lab_users!student_skill_evaluations_evaluator_id_fkey(name)')
       .eq('lab_day_id', labDayId);
 
     // 7. Get station-to-skill-sheet mapping (via station_skills table)
@@ -182,6 +182,7 @@ export async function GET(request: NextRequest) {
         criticalTotal: number;
         evaluatorName: string | null;
       } | null;
+      teamRole: string | null;
     }> = {};
 
     // First populate from queue entries
@@ -193,6 +194,7 @@ export async function GET(request: NextRequest) {
         result: entry.result,
         evaluationId: entry.evaluation_id,
         evalSummary: entry.evaluation_id ? (evalSummaryMap[entry.evaluation_id] || null) : null,
+        teamRole: null,
       };
     }
 
@@ -209,6 +211,7 @@ export async function GET(request: NextRequest) {
             result: evalItem.result === 'pass' ? 'pass' : 'fail',
             evaluationId: evalItem.id,
             evalSummary: evalSummaryMap[evalItem.id] || null,
+            teamRole: (evalItem as Record<string, unknown>).team_role as string | null || null,
           };
         }
       }

@@ -49,6 +49,7 @@ interface CellData {
   result: string | null; // 'pass' | 'fail' | 'incomplete'
   evaluationId: string | null;
   evalSummary: EvalSummary | null;
+  teamRole: string | null;
 }
 
 interface IndividualTestingGridProps {
@@ -148,6 +149,7 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
               result: null,
               evaluationId: null,
               evalSummary: null,
+              teamRole: null,
             },
           }));
         }
@@ -218,6 +220,7 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
             result: null,
             evaluationId: null,
             evalSummary: null,
+            teamRole: null,
           },
         }));
       }
@@ -319,14 +322,21 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
     }
 
     if (cell.status === 'completed') {
+      const teamIcon = cell.teamRole ? (
+        <span title={`Team: ${cell.teamRole}`}>
+          <Users className="w-3 h-3 text-indigo-500 dark:text-indigo-400 flex-shrink-0" />
+        </span>
+      ) : null;
+
       if (cell.result === 'pass') {
         return (
           <button
             onClick={() => handleCellClick(studentId, stationId)}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800 cursor-pointer"
-            title="Pass"
+            title={cell.teamRole ? `Pass (Team ${cell.teamRole})` : 'Pass'}
           >
             <Check className="w-4 h-4 stroke-[3]" />
+            {teamIcon}
             <span className="hidden sm:inline">Pass</span>
           </button>
         );
@@ -336,9 +346,10 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
           <button
             onClick={() => handleCellClick(studentId, stationId)}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 cursor-pointer"
-            title="Fail"
+            title={cell.teamRole ? `Fail (Team ${cell.teamRole})` : 'Fail'}
           >
             <X className="w-4 h-4 stroke-[3]" />
+            {teamIcon}
             <span className="hidden sm:inline">Fail</span>
           </button>
         );
@@ -351,6 +362,7 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
           title="Completed"
         >
           <Check className="w-4 h-4" />
+          {teamIcon}
           <span className="hidden sm:inline">Done</span>
         </button>
       );
