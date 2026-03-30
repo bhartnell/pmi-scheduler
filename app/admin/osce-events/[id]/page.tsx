@@ -1846,6 +1846,56 @@ function SettingsTab({ event, onRefresh }: { event: OsceEvent; onRefresh: () => 
         </div>
       </div>
 
+      {/* QR Code & Quick Link */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">Quick Access Link & QR Code</h3>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+          Evaluators can access the scoring portal at the short URL below. Print the QR code and tape it to each tablet or station desk.
+        </p>
+        <div className="flex flex-col md:flex-row gap-6 items-start">
+          <div className="flex-1">
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Short URL</label>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 px-3 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg text-sm font-mono text-blue-600 dark:text-blue-400">
+                {typeof window !== 'undefined' ? window.location.origin : 'https://www.pmiparamedic.tools'}/osce
+              </code>
+              <button
+                onClick={() => {
+                  const url = `${window.location.origin}/osce`;
+                  navigator.clipboard.writeText(url);
+                }}
+                className="px-3 py-2 text-xs bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
+              >
+                <Copy className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+              Redirects to /osce-scoring/enter where evaluators enter the PIN.
+            </p>
+          </div>
+          <div className="text-center">
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">QR Code</label>
+            {/* Simple QR code via Google Charts API */}
+            <img
+              src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(
+                (typeof window !== 'undefined' ? window.location.origin : 'https://www.pmiparamedic.tools') + '/osce'
+              )}`}
+              alt="QR Code for OSCE scoring"
+              className="w-[150px] h-[150px] rounded border border-gray-200 dark:border-gray-600"
+            />
+            <button
+              onClick={() => {
+                const url = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(window.location.origin + '/osce')}`;
+                window.open(url, '_blank');
+              }}
+              className="mt-2 text-xs text-blue-600 dark:text-blue-400 hover:underline"
+            >
+              Open large (for printing)
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Danger Zone */}
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-red-200 dark:border-red-800 p-6">
         <h3 className="text-lg font-semibold text-red-700 dark:text-red-400 mb-2 flex items-center gap-2">
