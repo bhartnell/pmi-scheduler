@@ -6,6 +6,247 @@ import { useRouter, useParams } from 'next/navigation';
 type Rating = 'S' | 'N' | 'U' | null;
 type Readiness = 'ready' | 'ready_with_concerns' | 'not_yet_ready' | null;
 
+// Scenario reference data (evaluator-safe, no instructor notes)
+interface ScenarioData {
+  title: string;
+  dispatch: string;
+  patient: string;
+  age: string;
+  setting: string;
+  cc: string;
+  vitals: { label: string; value: string }[];
+  history: string;
+  criticalActions: string[];
+  oralQuestions: string[];
+}
+
+const SCENARIOS: Record<string, ScenarioData> = {
+  A: {
+    title: 'Chest Pain / ACS',
+    dispatch: '56-year-old male, chest pain, difficulty breathing',
+    patient: 'MARTINEZ, Robert',
+    age: '56 M',
+    setting: 'Residential — patient sitting in recliner',
+    cc: 'Substernal chest pain, crushing quality, radiating to left arm, onset 45 minutes ago',
+    vitals: [
+      { label: 'BP', value: '168/94' },
+      { label: 'HR', value: '92, regular' },
+      { label: 'RR', value: '22' },
+      { label: 'SpO2', value: '94% RA' },
+      { label: 'Temp', value: '98.6F' },
+      { label: 'GCS', value: '15' },
+      { label: 'BGL', value: '142' },
+      { label: '12-Lead', value: 'ST elevation V1-V4' },
+    ],
+    history: 'HTN, Hyperlipidemia, Type 2 DM. Meds: Lisinopril, Metformin, Atorvastatin. NKDA.',
+    criticalActions: [
+      'Scene safety and BSI/PPE',
+      'Obtain 12-lead ECG — identify STEMI',
+      'Administer Aspirin 324mg PO',
+      'Establish IV access',
+      'Administer Nitroglycerin 0.4mg SL (if BP permits)',
+      'Pain management per protocol',
+      'Early STEMI alert / cath lab activation',
+      'Monitor and reassess vitals q5min',
+      'Prepare for potential cardiac arrest',
+    ],
+    oralQuestions: [
+      'What is your field impression and what findings support it?',
+      'Describe your differential diagnosis for this presentation.',
+      'What are contraindications for Nitroglycerin in this patient?',
+      'How would you manage if the patient becomes hypotensive?',
+      'What is your transport decision and destination rationale?',
+    ],
+  },
+  B: {
+    title: 'Respiratory Distress / CHF',
+    dispatch: '72-year-old female, difficulty breathing, worsening over 3 days',
+    patient: 'JOHNSON, Patricia',
+    age: '72 F',
+    setting: 'Residential — patient in bed, tripod position',
+    cc: 'Progressive dyspnea, orthopnea, productive cough with pink frothy sputum',
+    vitals: [
+      { label: 'BP', value: '186/102' },
+      { label: 'HR', value: '108, irregular' },
+      { label: 'RR', value: '28, labored' },
+      { label: 'SpO2', value: '88% RA' },
+      { label: 'Temp', value: '98.2F' },
+      { label: 'GCS', value: '15' },
+      { label: 'BGL', value: '156' },
+      { label: 'Lung Sounds', value: 'Bilateral rales to apices' },
+    ],
+    history: 'CHF, A-fib, HTN. Meds: Furosemide, Digoxin, Warfarin, Metoprolol. NKDA. Recently ran out of Furosemide.',
+    criticalActions: [
+      'Scene safety and BSI/PPE',
+      'Position patient upright',
+      'Apply CPAP 5-10 cmH2O',
+      'High-flow O2 if CPAP unavailable',
+      'Establish IV access',
+      'Administer Nitroglycerin per protocol',
+      'Obtain 12-lead ECG',
+      'Monitor SpO2 and reassess lung sounds',
+      'Consider Furosemide per protocol if available',
+    ],
+    oralQuestions: [
+      'What is your field impression and what clinical findings support it?',
+      'How do you differentiate CHF exacerbation from pneumonia?',
+      'Explain the mechanism of CPAP in acute pulmonary edema.',
+      'What if the patient deteriorates on CPAP?',
+      'Describe your reassessment strategy during transport.',
+    ],
+  },
+  C: {
+    title: 'Trauma / MVC',
+    dispatch: 'Motor vehicle collision, single vehicle into pole, one patient trapped',
+    patient: 'DAVIS, Michael',
+    age: '34 M',
+    setting: 'Roadside — patient restrained driver, moderate damage, steering wheel deformation',
+    cc: 'Chest pain, abdominal pain, altered mental status',
+    vitals: [
+      { label: 'BP', value: '88/54' },
+      { label: 'HR', value: '124, weak' },
+      { label: 'RR', value: '26, shallow' },
+      { label: 'SpO2', value: '92% RA' },
+      { label: 'GCS', value: '13 (E3V4M6)' },
+      { label: 'Skin', value: 'Pale, cool, diaphoretic' },
+      { label: 'FAST', value: 'Positive LUQ' },
+      { label: 'Pelvis', value: 'Stable' },
+    ],
+    history: 'No significant PMH. Unknown medications. NKDA.',
+    criticalActions: [
+      'Scene safety — assess hazards, request fire/rescue',
+      'Rapid trauma assessment with C-spine stabilization',
+      'Control external hemorrhage',
+      'Establish bilateral large-bore IV access',
+      'Fluid resuscitation — permissive hypotension',
+      'Apply pelvic binder if indicated',
+      'Rapid transport decision — trauma center',
+      'TXA administration per protocol',
+      'Serial reassessment of mental status and vitals',
+    ],
+    oralQuestions: [
+      'What is your primary concern based on mechanism and presentation?',
+      'Describe your approach to the patient while still entrapped.',
+      'What are the indications for permissive hypotension?',
+      'How would you prioritize interventions during extrication?',
+      'What criteria drive your transport destination decision?',
+    ],
+  },
+  D: {
+    title: 'Altered Mental Status / Stroke',
+    dispatch: '68-year-old male, sudden confusion, unable to move right side',
+    patient: 'WILSON, James',
+    age: '68 M',
+    setting: 'Residential — patient found by spouse on floor',
+    cc: 'Sudden onset right-sided weakness, slurred speech, facial droop',
+    vitals: [
+      { label: 'BP', value: '178/96' },
+      { label: 'HR', value: '82, regular' },
+      { label: 'RR', value: '16' },
+      { label: 'SpO2', value: '97% RA' },
+      { label: 'Temp', value: '98.4F' },
+      { label: 'GCS', value: '13 (E4V3M6)' },
+      { label: 'BGL', value: '118' },
+      { label: 'Cincinnati', value: 'Positive: facial droop, arm drift, speech' },
+    ],
+    history: 'HTN, A-fib (on Eliquis), prior TIA. Meds: Eliquis, Amlodipine, Atorvastatin. NKDA.',
+    criticalActions: [
+      'Scene safety and BSI/PPE',
+      'Rapid neurological assessment — stroke scale',
+      'Determine last known well time (critical for tPA window)',
+      'Obtain blood glucose — rule out hypoglycemia',
+      'Establish IV access — do NOT give D50 unless hypoglycemic',
+      'Pre-notify stroke center',
+      'Obtain 12-lead ECG',
+      'Position head of stretcher 30 degrees',
+      'Rapid transport to stroke center',
+    ],
+    oralQuestions: [
+      'What is your field impression and what findings confirm it?',
+      'Why is "last known well" time critical?',
+      'How does the patient\'s Eliquis use affect treatment decisions?',
+      'What are the differences between stroke and hypoglycemia presentations?',
+      'Describe your handoff report to the stroke team.',
+    ],
+  },
+  E: {
+    title: 'Pediatric Respiratory / Asthma',
+    dispatch: '8-year-old male, severe difficulty breathing, history of asthma',
+    patient: 'GARCIA, Lucas',
+    age: '8 M',
+    setting: 'School — patient sitting in nurse\'s office',
+    cc: 'Acute asthma exacerbation, wheezing, unable to speak in full sentences',
+    vitals: [
+      { label: 'BP', value: '96/62' },
+      { label: 'HR', value: '138' },
+      { label: 'RR', value: '32, accessory muscles' },
+      { label: 'SpO2', value: '89% RA' },
+      { label: 'Temp', value: '98.8F' },
+      { label: 'Weight', value: '~25 kg' },
+      { label: 'Lung Sounds', value: 'Bilateral expiratory wheezes, diminished bases' },
+      { label: 'Appearance', value: 'Tripod, retractions, nasal flaring' },
+    ],
+    history: 'Asthma (frequent exacerbations), eczema. Meds: Albuterol MDI (used 3x today, no improvement). Allergic to sulfa drugs.',
+    criticalActions: [
+      'Scene safety and BSI/PPE',
+      'Blow-by or mask O2 to maintain SpO2 >94%',
+      'Continuous nebulized Albuterol',
+      'Administer Ipratropium Bromide per protocol',
+      'Consider Epinephrine IM if severe/imminent arrest',
+      'Establish IV access (do not delay treatments)',
+      'Dexamethasone or Methylprednisolone per protocol',
+      'Monitor for silent chest (worsening sign)',
+      'Prepare for BVM ventilation if decompensation',
+    ],
+    oralQuestions: [
+      'What severity indicators tell you this is a severe exacerbation?',
+      'What is the significance of diminished breath sounds in asthma?',
+      'Describe weight-based medication dosing for this patient.',
+      'When would you consider intubation in pediatric status asthmaticus?',
+      'How do you manage the anxious parent during treatment?',
+    ],
+  },
+  F: {
+    title: 'Cardiac Arrest / ACLS',
+    dispatch: '62-year-old male, unresponsive, not breathing',
+    patient: 'THOMPSON, William',
+    age: '62 M',
+    setting: 'Office building — patient found on floor by coworker, bystander CPR in progress',
+    cc: 'Witnessed cardiac arrest, bystander CPR x 4 minutes',
+    vitals: [
+      { label: 'Pulse', value: 'None' },
+      { label: 'Rhythm', value: 'V-Fib (initial)' },
+      { label: 'RR', value: 'Apneic' },
+      { label: 'SpO2', value: 'N/A' },
+      { label: 'Pupils', value: 'Dilated, sluggish' },
+      { label: 'Skin', value: 'Cyanotic, warm' },
+      { label: 'Downtime', value: '~4 min with CPR' },
+      { label: 'AED', value: 'Not applied' },
+    ],
+    history: 'Per coworker: HTN, "heart problems." Unknown medications. Unknown allergies.',
+    criticalActions: [
+      'Scene safety and BSI/PPE',
+      'Confirm cardiac arrest — start/continue high-quality CPR',
+      'Apply pads — analyze rhythm — identify V-Fib',
+      'Defibrillate immediately',
+      'Resume CPR for 2 minutes post-shock',
+      'Establish IV/IO access',
+      'Administer Epinephrine 1mg q3-5min',
+      'After 2nd shock: Amiodarone 300mg',
+      'Advanced airway — minimize CPR interruptions',
+      'Identify and treat reversible causes (H\'s & T\'s)',
+      'Post-ROSC care if rhythm converts',
+    ],
+    oralQuestions: [
+      'Walk through your team assignments and crew resource management.',
+      'What rhythm do you see and what is your immediate treatment?',
+      'Describe the sequence of medications in refractory V-Fib.',
+      'What are the H\'s and T\'s and which are most likely here?',
+      'If ROSC is achieved, describe your post-arrest care plan.',
+    ],
+  },
+};
+
 interface Assessment {
   id: string;
   student_name: string;
@@ -145,6 +386,79 @@ function FactorCard({ label, ratingKey, notesKey, score, onChange, disabled, exp
   );
 }
 
+function ScenarioPanel({ scenario, letter }: { scenario: ScenarioData; letter: string }) {
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="bg-blue-600 text-white rounded-xl p-4">
+        <p className="text-blue-200 text-xs mb-1">PMI Paramedic Clinical Capstone</p>
+        <h2 className="text-lg font-bold">Scenario {letter} — {scenario.title}</h2>
+        <p className="text-blue-100 text-sm mt-1">{scenario.dispatch}</p>
+      </div>
+
+      {/* Patient Info */}
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
+        <h3 className="font-semibold text-slate-900 dark:text-white mb-2 text-sm uppercase tracking-wider text-slate-500 dark:text-slate-400">Patient Information</h3>
+        <div className="grid grid-cols-2 gap-2 text-sm">
+          <div><span className="text-slate-500 dark:text-slate-400">Patient:</span> <span className="font-medium text-slate-900 dark:text-white">{scenario.patient}</span></div>
+          <div><span className="text-slate-500 dark:text-slate-400">Age/Sex:</span> <span className="font-medium text-slate-900 dark:text-white">{scenario.age}</span></div>
+          <div className="col-span-2"><span className="text-slate-500 dark:text-slate-400">Setting:</span> <span className="font-medium text-slate-900 dark:text-white">{scenario.setting}</span></div>
+          <div className="col-span-2"><span className="text-slate-500 dark:text-slate-400">Chief Complaint:</span> <span className="font-medium text-slate-900 dark:text-white">{scenario.cc}</span></div>
+        </div>
+      </div>
+
+      {/* Vitals */}
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
+        <h3 className="font-semibold text-sm uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Vital Signs</h3>
+        <div className="grid grid-cols-2 gap-2">
+          {scenario.vitals.map(v => (
+            <div key={v.label} className="bg-slate-50 dark:bg-slate-700 rounded-lg p-2 text-center">
+              <p className="text-xs text-slate-500 dark:text-slate-400">{v.label}</p>
+              <p className="font-bold text-slate-900 dark:text-white text-sm">{v.value}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* History */}
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
+        <h3 className="font-semibold text-sm uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Medical History</h3>
+        <p className="text-sm text-slate-700 dark:text-slate-300">{scenario.history}</p>
+      </div>
+
+      {/* Critical Actions */}
+      <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800 p-4">
+        <h3 className="font-semibold text-sm uppercase tracking-wider text-amber-700 dark:text-amber-400 mb-2">Critical Actions</h3>
+        <ul className="space-y-1.5">
+          {scenario.criticalActions.map((action, i) => (
+            <li key={i} className="flex items-start gap-2 text-sm">
+              <span className="flex-shrink-0 w-5 h-5 bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200 rounded-full flex items-center justify-center text-xs font-bold mt-0.5">
+                {i + 1}
+              </span>
+              <span className="text-slate-700 dark:text-slate-300">{action}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Oral Board Questions */}
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
+        <h3 className="font-semibold text-sm uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Oral Board Questions</h3>
+        <ol className="space-y-2">
+          {scenario.oralQuestions.map((q, i) => (
+            <li key={i} className="flex items-start gap-2 text-sm">
+              <span className="flex-shrink-0 w-5 h-5 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 rounded-full flex items-center justify-center text-xs font-bold mt-0.5">
+                {i + 1}
+              </span>
+              <span className="text-slate-700 dark:text-slate-300">{q}</span>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </div>
+  );
+}
+
 export default function ScoringPage() {
   const router = useRouter();
   const params = useParams();
@@ -160,6 +474,14 @@ export default function ScoringPage() {
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
   const [isOnline, setIsOnline] = useState(true);
   const [isTestMode, setIsTestMode] = useState(false);
+  const [showScenario, setShowScenario] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('osce_show_scenario');
+      return saved !== null ? saved === 'true' : true;
+    }
+    return true;
+  });
+  const [activeTab, setActiveTab] = useState<'scenario' | 'score'>('score');
 
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingChangesRef = useRef<Record<string, unknown>>({});
@@ -205,6 +527,15 @@ export default function ScoringPage() {
     fetchScore(ev.name);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assessmentId]);
+
+  // Persist scenario panel preference
+  useEffect(() => {
+    localStorage.setItem('osce_show_scenario', String(showScenario));
+  }, [showScenario]);
+
+  // Get scenario data from assessment
+  const scenarioData = assessment ? SCENARIOS[assessment.scenario.toUpperCase()] : null;
+  const scenarioLetter = assessment?.scenario?.toUpperCase() || '';
 
   async function fetchScore(evaluatorName: string) {
     try {
@@ -427,11 +758,195 @@ ${score.general_notes ? `<div class="notes"><strong>General Notes:</strong> ${sc
     { value: 'not_yet_ready' as const, label: 'Not Yet Ready', color: 'bg-red-600 text-white ring-red-400', icon: '✗' },
   ];
 
+  // Scoring content extracted as a variable for reuse in both mobile and desktop layouts
+  const scoringContent = (
+    <>
+      {isOnline && !isSubmitted && (
+        <div className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400 mb-2 print:hidden">
+          <span className="inline-block w-1.5 h-1.5 bg-green-500 rounded-full" />
+          Connected
+        </div>
+      )}
+
+      {isSubmitted && (
+        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4 mb-4">
+          <p className="text-green-800 dark:text-green-200 font-medium text-sm">
+            This score was submitted and locked on {new Date(score.submitted_at!).toLocaleString()}.
+            Scores cannot be modified after submission.
+          </p>
+          <button
+            onClick={() => router.push('/osce-scoring/dashboard')}
+            className="mt-3 w-full py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 active:scale-[0.98] transition-all text-base"
+          >
+            Back to Dashboard
+          </button>
+        </div>
+      )}
+
+      {/* Scenario title in score sheet header */}
+      {scenarioData && (
+        <div className="flex items-center gap-2 mb-3">
+          <span className={`w-8 h-8 rounded-lg ${scenarioColors[scenarioLetter]} text-white font-bold flex items-center justify-center text-sm flex-shrink-0`}>
+            {scenarioLetter}
+          </span>
+          <div>
+            <p className="font-bold text-slate-900 dark:text-white text-sm">
+              Scenario {scenarioLetter} — {scenarioData.title}
+            </p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              {assessment.student_name} | Slot {assessment.slot_number} | Day {assessment.day_number}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* SNHD Evaluation Factors */}
+      <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mt-4 mb-3">
+        SNHD Evaluation Factors
+      </h2>
+      <div className="space-y-3">
+        {SNHD_FACTORS.map(f => (
+          <FactorCard
+            key={f.key}
+            label={f.label}
+            ratingKey={f.key}
+            notesKey={`${f.key}_notes`}
+            score={score}
+            onChange={handleChange}
+            disabled={isSubmitted}
+            expandedNotes={expandedNotes}
+            onToggleNotes={handleToggleNotes}
+          />
+        ))}
+      </div>
+
+      {/* Oral Board Domains */}
+      <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mt-8 mb-3">
+        Oral Board Domains
+      </h2>
+      <div className="space-y-3">
+        {ORAL_DOMAINS.map(d => (
+          <div key={d.key} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
+            <h3 className="font-semibold text-slate-900 dark:text-white mb-3">{d.label}</h3>
+            <div className="flex gap-2">
+              {(['S', 'N', 'U'] as const).map(v => (
+                <RatingButton
+                  key={v}
+                  value={v}
+                  selected={(score as unknown as Record<string, unknown>)[d.key] === v}
+                  onClick={() => handleChange(d.key, (score as unknown as Record<string, unknown>)[d.key] === v ? null : v)}
+                  disabled={isSubmitted}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
+          <h3 className="font-semibold text-slate-900 dark:text-white mb-2">Oral Board Notes</h3>
+          <textarea
+            value={score.oral_notes || ''}
+            onChange={e => handleChange('oral_notes', e.target.value)}
+            disabled={isSubmitted}
+            placeholder="Notes on oral board performance..."
+            className="w-full p-3 border border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-sm resize-none"
+            rows={3}
+          />
+        </div>
+      </div>
+
+      {/* Readiness Assessment */}
+      <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mt-8 mb-3">
+        Field Readiness Assessment
+      </h2>
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+          {readinessOptions.map(opt => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => handleChange('readiness', score.readiness === opt.value ? null : opt.value)}
+              disabled={isSubmitted}
+              className={`min-h-[60px] rounded-xl font-bold text-center transition-all ${
+                score.readiness === opt.value
+                  ? `${opt.color} ring-2`
+                  : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300 hover:bg-slate-200'
+              } ${isSubmitted ? 'opacity-60 cursor-not-allowed' : 'active:scale-95'}`}
+            >
+              <span className="text-2xl block">{opt.icon}</span>
+              <span className="text-xs">{opt.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {(score.readiness === 'ready_with_concerns' || score.readiness === 'not_yet_ready') && (
+          <textarea
+            value={score.concerns_notes || ''}
+            onChange={e => handleChange('concerns_notes', e.target.value)}
+            disabled={isSubmitted}
+            placeholder="Describe specific concerns..."
+            className="w-full p-3 border border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-sm resize-none mb-3"
+            rows={3}
+          />
+        )}
+      </div>
+
+      {/* General Notes */}
+      <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mt-8 mb-3">
+        General Notes
+      </h2>
+      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
+        <textarea
+          value={score.general_notes || ''}
+          onChange={e => handleChange('general_notes', e.target.value)}
+          disabled={isSubmitted}
+          placeholder="Any additional observations..."
+          className="w-full p-3 border border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-sm resize-none"
+          rows={4}
+        />
+      </div>
+
+      {/* Submit or Back to Dashboard */}
+      {!isSubmitted ? (
+        <div className="mt-8 mb-8">
+          <button
+            onClick={handleSubmit}
+            disabled={submitting || !score.readiness}
+            className={`w-full py-4 rounded-xl font-bold text-lg transition-all ${
+              score.readiness
+                ? 'bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.98]'
+                : 'bg-slate-200 text-slate-400 cursor-not-allowed dark:bg-slate-700 dark:text-slate-500'
+            }`}
+          >
+            {submitting ? 'Submitting...' : !score.readiness ? 'Select Readiness to Submit' : 'Submit & Lock Score'}
+          </button>
+          <p className="text-xs text-slate-500 dark:text-slate-400 text-center mt-2">
+            Once submitted, the score cannot be modified.
+          </p>
+        </div>
+      ) : (
+        <div className="mt-8 mb-8 space-y-3">
+          <button
+            onClick={() => handlePrintScore()}
+            className="w-full py-4 rounded-xl font-bold text-lg bg-slate-700 text-white hover:bg-slate-800 active:scale-[0.98] transition-all print:hidden"
+          >
+            Print Score Sheet
+          </button>
+          <button
+            onClick={() => router.push('/osce-scoring/dashboard')}
+            className="w-full py-4 rounded-xl font-bold text-lg bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.98] transition-all print:hidden"
+          >
+            Back to Dashboard
+          </button>
+        </div>
+      )}
+    </>
+  );
+
   return (
-    <div className="min-h-screen bg-slate-100 dark:bg-slate-900 pb-32">
-      {/* Sticky header */}
-      <div className="sticky top-0 z-20 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shadow-sm">
-        <div className="max-w-3xl mx-auto px-4 py-3">
+    <div className="h-screen flex flex-col bg-slate-100 dark:bg-slate-900">
+      {/* Sticky header — shared across all layouts */}
+      <div className="flex-shrink-0 z-20 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shadow-sm">
+        <div className="px-4 py-3">
           <div className="flex items-center justify-between">
             <button
               onClick={() => router.push('/osce-scoring/dashboard')}
@@ -449,7 +964,7 @@ ${score.general_notes ? `<div class="notes"><strong>General Notes:</strong> ${sc
                 <h1 className="text-lg font-bold text-slate-900 dark:text-white">{assessment.student_name}</h1>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Slot {assessment.slot_number} &middot; {evaluator.name}
+                {scenarioData ? `Scenario ${scenarioLetter} — ${scenarioData.title} | ` : ''}Slot {assessment.slot_number} &middot; {evaluator.name}
               </p>
             </div>
             <div className="text-right min-w-[60px]">
@@ -469,181 +984,98 @@ ${score.general_notes ? `<div class="notes"><strong>General Notes:</strong> ${sc
 
       {/* Test mode banner */}
       {isTestMode && (
-        <div className="bg-orange-500 text-white text-center py-2 font-bold text-sm print:hidden">
+        <div className="flex-shrink-0 bg-orange-500 text-white text-center py-2 font-bold text-sm print:hidden">
           TEST MODE — Practice event. Scores will not affect real assessments.
         </div>
       )}
 
       {/* Connection status indicator */}
       {!isOnline && (
-        <div className="bg-red-600 text-white text-center py-2 px-4 text-sm font-medium print:hidden">
+        <div className="flex-shrink-0 bg-red-600 text-white text-center py-2 px-4 text-sm font-medium print:hidden">
           <span className="inline-block w-2 h-2 bg-red-300 rounded-full mr-2 animate-pulse" />
           Offline — scores saved locally, will sync when reconnected
         </div>
       )}
 
-      <div className="max-w-3xl mx-auto px-4 pt-4">
-        {isOnline && !isSubmitted && (
-          <div className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400 mb-2 print:hidden">
-            <span className="inline-block w-1.5 h-1.5 bg-green-500 rounded-full" />
-            Connected
+      {/* Mobile: Tab toggle bar (< 1024px) */}
+      {scenarioData && (
+        <div className="flex-shrink-0 lg:hidden flex border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+          <button
+            onClick={() => setActiveTab('scenario')}
+            className={`flex-1 py-3 text-sm font-semibold text-center transition-colors ${
+              activeTab === 'scenario'
+                ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'
+            }`}
+          >
+            Scenario
+          </button>
+          <button
+            onClick={() => setActiveTab('score')}
+            className={`flex-1 py-3 text-sm font-semibold text-center transition-colors ${
+              activeTab === 'score'
+                ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'
+            }`}
+          >
+            Score Sheet
+          </button>
+        </div>
+      )}
+
+      {/* Main content area */}
+      <div className="flex-1 flex flex-col lg:flex-row min-h-0">
+        {/* Desktop: Left panel — Scenario Reference (>= 1024px) */}
+        {scenarioData && showScenario && (
+          <div className="hidden lg:flex lg:flex-col lg:w-1/2 border-r border-slate-200 dark:border-slate-700">
+            <div className="flex items-center justify-between px-4 pt-3 pb-2 flex-shrink-0">
+              <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Scenario Reference</h2>
+              <button
+                onClick={() => setShowScenario(false)}
+                className="text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 px-2 py-1"
+              >
+                &#9664; Hide
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 pt-0">
+              <ScenarioPanel scenario={scenarioData} letter={scenarioLetter} />
+            </div>
           </div>
         )}
 
-        {isSubmitted && (
-          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4 mb-4">
-            <p className="text-green-800 dark:text-green-200 font-medium text-sm">
-              This score was submitted and locked on {new Date(score.submitted_at!).toLocaleString()}.
-              Scores cannot be modified after submission.
-            </p>
-            <button
-              onClick={() => router.push('/osce-scoring/dashboard')}
-              className="mt-3 w-full py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 active:scale-[0.98] transition-all text-base"
-            >
-              Back to Dashboard
-            </button>
+        {/* Desktop: Right panel — Score Sheet (>= 1024px) */}
+        <div className={`hidden lg:flex lg:flex-col ${scenarioData && showScenario ? 'lg:w-1/2' : 'lg:w-full'}`}>
+          {scenarioData && !showScenario && (
+            <div className="flex-shrink-0 px-4 pt-3">
+              <button
+                onClick={() => setShowScenario(true)}
+                className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+              >
+                &#9654; Show Scenario
+              </button>
+            </div>
+          )}
+          <div className="flex-1 overflow-y-auto p-4 pb-32">
+            <div className="max-w-3xl mx-auto">
+              {scoringContent}
+            </div>
           </div>
-        )}
-
-        {/* SNHD Evaluation Factors */}
-        <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mt-4 mb-3">
-          SNHD Evaluation Factors
-        </h2>
-        <div className="space-y-3">
-          {SNHD_FACTORS.map(f => (
-            <FactorCard
-              key={f.key}
-              label={f.label}
-              ratingKey={f.key}
-              notesKey={`${f.key}_notes`}
-              score={score}
-              onChange={handleChange}
-              disabled={isSubmitted}
-              expandedNotes={expandedNotes}
-              onToggleNotes={handleToggleNotes}
-            />
-          ))}
         </div>
 
-        {/* Oral Board Domains */}
-        <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mt-8 mb-3">
-          Oral Board Domains
-        </h2>
-        <div className="space-y-3">
-          {ORAL_DOMAINS.map(d => (
-            <div key={d.key} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
-              <h3 className="font-semibold text-slate-900 dark:text-white mb-3">{d.label}</h3>
-              <div className="flex gap-2">
-                {(['S', 'N', 'U'] as const).map(v => (
-                  <RatingButton
-                    key={v}
-                    value={v}
-                    selected={(score as unknown as Record<string, unknown>)[d.key] === v}
-                    onClick={() => handleChange(d.key, (score as unknown as Record<string, unknown>)[d.key] === v ? null : v)}
-                    disabled={isSubmitted}
-                  />
-                ))}
+        {/* Mobile: Single panel with tab switching (< 1024px) */}
+        <div className="flex-1 lg:hidden overflow-y-auto">
+          {scenarioData && activeTab === 'scenario' ? (
+            <div className="p-4">
+              <ScenarioPanel scenario={scenarioData} letter={scenarioLetter} />
+            </div>
+          ) : (
+            <div className="p-4 pb-32">
+              <div className="max-w-3xl mx-auto">
+                {scoringContent}
               </div>
             </div>
-          ))}
-          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
-            <h3 className="font-semibold text-slate-900 dark:text-white mb-2">Oral Board Notes</h3>
-            <textarea
-              value={score.oral_notes || ''}
-              onChange={e => handleChange('oral_notes', e.target.value)}
-              disabled={isSubmitted}
-              placeholder="Notes on oral board performance..."
-              className="w-full p-3 border border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-sm resize-none"
-              rows={3}
-            />
-          </div>
-        </div>
-
-        {/* Readiness Assessment */}
-        <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mt-8 mb-3">
-          Field Readiness Assessment
-        </h2>
-        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-            {readinessOptions.map(opt => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => handleChange('readiness', score.readiness === opt.value ? null : opt.value)}
-                disabled={isSubmitted}
-                className={`min-h-[60px] rounded-xl font-bold text-center transition-all ${
-                  score.readiness === opt.value
-                    ? `${opt.color} ring-2`
-                    : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300 hover:bg-slate-200'
-                } ${isSubmitted ? 'opacity-60 cursor-not-allowed' : 'active:scale-95'}`}
-              >
-                <span className="text-2xl block">{opt.icon}</span>
-                <span className="text-xs">{opt.label}</span>
-              </button>
-            ))}
-          </div>
-
-          {(score.readiness === 'ready_with_concerns' || score.readiness === 'not_yet_ready') && (
-            <textarea
-              value={score.concerns_notes || ''}
-              onChange={e => handleChange('concerns_notes', e.target.value)}
-              disabled={isSubmitted}
-              placeholder="Describe specific concerns..."
-              className="w-full p-3 border border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-sm resize-none mb-3"
-              rows={3}
-            />
           )}
         </div>
-
-        {/* General Notes */}
-        <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mt-8 mb-3">
-          General Notes
-        </h2>
-        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
-          <textarea
-            value={score.general_notes || ''}
-            onChange={e => handleChange('general_notes', e.target.value)}
-            disabled={isSubmitted}
-            placeholder="Any additional observations..."
-            className="w-full p-3 border border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-sm resize-none"
-            rows={4}
-          />
-        </div>
-
-        {/* Submit or Back to Dashboard */}
-        {!isSubmitted ? (
-          <div className="mt-8 mb-8">
-            <button
-              onClick={handleSubmit}
-              disabled={submitting || !score.readiness}
-              className={`w-full py-4 rounded-xl font-bold text-lg transition-all ${
-                score.readiness
-                  ? 'bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.98]'
-                  : 'bg-slate-200 text-slate-400 cursor-not-allowed dark:bg-slate-700 dark:text-slate-500'
-              }`}
-            >
-              {submitting ? 'Submitting...' : !score.readiness ? 'Select Readiness to Submit' : 'Submit & Lock Score'}
-            </button>
-            <p className="text-xs text-slate-500 dark:text-slate-400 text-center mt-2">
-              Once submitted, the score cannot be modified.
-            </p>
-          </div>
-        ) : (
-          <div className="mt-8 mb-8 space-y-3">
-            <button
-              onClick={() => handlePrintScore()}
-              className="w-full py-4 rounded-xl font-bold text-lg bg-slate-700 text-white hover:bg-slate-800 active:scale-[0.98] transition-all print:hidden"
-            >
-              Print Score Sheet
-            </button>
-            <button
-              onClick={() => router.push('/osce-scoring/dashboard')}
-              className="w-full py-4 rounded-xl font-bold text-lg bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.98] transition-all print:hidden"
-            >
-              Back to Dashboard
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );
