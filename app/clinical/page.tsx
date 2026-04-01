@@ -490,6 +490,30 @@ export default function ClinicalDashboardPage() {
           </Link>
           )}
 
+          {/* Volunteer Recruitment — lead_instructor+ only */}
+          {effectiveRole && canAccessClinical(effectiveRole) && (
+          <Link
+            href="/admin/volunteer-events"
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
+          >
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-teal-100 dark:bg-teal-900/30 rounded-xl group-hover:bg-teal-200 dark:group-hover:bg-teal-900/50 transition-colors">
+                <Users className="w-6 h-6 text-teal-600 dark:text-teal-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Volunteer Recruitment</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                  NREMT testing day & Instructor 1 lab volunteers
+                </p>
+                <div className="flex items-center text-teal-600 dark:text-teal-400 text-sm font-medium">
+                  Manage volunteers
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </div>
+              </div>
+            </div>
+          </Link>
+          )}
+
           {/* Summative Evaluations — lead_instructor+ only */}
           {effectiveRole && canAccessClinical(effectiveRole) && (
           <Link
