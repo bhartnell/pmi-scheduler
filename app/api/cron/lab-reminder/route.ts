@@ -12,7 +12,6 @@ interface LabDayRow {
   week_number: number | null;
   day_number: number | null;
   start_time: string | null;
-  location: string | null;
   cohort_id: string;
   cohort: {
     id: string;
@@ -98,7 +97,6 @@ export async function GET(request: NextRequest) {
       week_number,
       day_number,
       start_time,
-      location,
       cohort_id,
       cohort:cohorts(
         id,
@@ -164,7 +162,7 @@ export async function GET(request: NextRequest) {
       ? `${program?.abbreviation ?? 'PMI'} Cohort ${cohort.cohort_number}`
       : 'Lab';
     const timeStr = formatTime(labDay.start_time);
-    const locationStr = labDay.location ? ` at ${labDay.location}` : '';
+    const locationStr = '';
 
     // Collect instructor email addresses from stations
     const instructorEmailSet = new Set<string>();
