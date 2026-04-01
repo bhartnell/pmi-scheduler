@@ -46,6 +46,7 @@ import {
   BarChart3,
   RefreshCw,
   Archive,
+  HeartHandshake,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import {
@@ -357,6 +358,13 @@ function buildSections(pendingAccessRequests: number): AdminSection[] {
       icon: GraduationCap,
       defaultExpanded: false,
       links: [
+        {
+          href: '/admin/volunteer-events',
+          icon: Users,
+          title: 'Volunteer Management',
+          description: 'Recruit volunteers for NREMT testing and lab days, manage invite campaigns',
+          color: 'bg-teal-500',
+        },
         {
           href: '/admin/alumni',
           icon: GraduationCap,
