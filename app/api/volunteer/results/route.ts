@@ -71,10 +71,10 @@ export async function GET(request: NextRequest) {
       csvRows.push('Event,Date,Name,Email,Phone,Type,Agency,Needs Evaluation,Evaluation Skill,Status,Notes');
 
       for (const event of results) {
-        for (const reg of event.registrations as Array<Record<string, unknown>>) {
+        for (const reg of (event as Record<string, unknown>).registrations as Array<Record<string, unknown>>) {
           const row = [
-            `"${(event.name as string || '').replace(/"/g, '""')}"`,
-            event.date as string,
+            `"${((event as Record<string, unknown>).name as string || '').replace(/"/g, '""')}"`,
+            (event as Record<string, unknown>).date as string,
             `"${(reg.name as string || '').replace(/"/g, '""')}"`,
             reg.email as string,
             reg.phone as string || '',

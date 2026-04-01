@@ -56,6 +56,8 @@ const ROUTE_LABELS: Record<string, string> = {
   'scheduling/reports': 'Reports',
   'tasks': 'Tasks',
   'admin': 'Admin',
+  'admin/volunteer-events': 'Volunteer Management',
+  'admin/volunteer-events/results': 'Results',
   'admin/users': 'Users',
   'admin/osce-events': 'OSCE Events',
   'admin/osce-observers': 'OSCE Observers',

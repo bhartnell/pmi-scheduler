@@ -128,13 +128,7 @@ export default function VolunteerResultsPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-8">
       <div className="max-w-6xl mx-auto">
-        <Breadcrumbs
-          items={[
-            { label: 'Admin', href: '/admin' },
-            { label: 'Volunteer Management', href: '/admin/volunteer-events' },
-            { label: 'Results' },
-          ]}
-        />
+        <Breadcrumbs className="mb-2" />
 
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
