@@ -61,6 +61,7 @@ import EditStationModal from '@/components/lab-day/EditStationModal';
 import ScenarioRoleModal from '@/components/lab-day/ScenarioRoleModal';
 import DuplicateModals from '@/components/lab-day/DuplicateModals';
 import LabDayPrintView from '@/components/lab-day/LabDayPrintView';
+import LabDayVolunteers from '@/components/lab-day/LabDayVolunteers';
 
 export default function LabDayPage() {
   const { data: session, status } = useSession();
@@ -259,6 +260,8 @@ export default function LabDayPage() {
         {calendarLoading && (<div className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500 mb-3 print:hidden"><Loader2 className="w-4 h-4 animate-spin" /><span>Checking calendar availability...</span></div>)}
 
         <LabDayCoverageSection labDayId={labDayId} userRole={userRole} />
+
+        <LabDayVolunteers labDayId={labDayId} />
 
         {showQuickAddStation && (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6 border-2 border-blue-200 dark:border-blue-800 print:hidden">
