@@ -114,6 +114,14 @@ export default function VolunteerEventsPage() {
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const [selectedCalendarEvents, setSelectedCalendarEvents] = useState<Set<string>>(new Set());
   const [calendarLoading, setCalendarLoading] = useState(false);
+  const [calTypeFilter, setCalTypeFilter] = useState<string>('lab');
+  const [calProgramFilter, setCalProgramFilter] = useState<string>('all');
+  const [calDateRange, setCalDateRange] = useState(() => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    return { start, end };
+  });
 
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -197,6 +205,22 @@ export default function VolunteerEventsPage() {
     } finally {
       setCalendarLoading(false);
     }
+  };
+
+  const filteredCalendarEvents = calendarEvents.filter((e) => {
+    if (calTypeFilter !== 'all' && e.event_type !== calTypeFilter) return false;
+    if (calProgramFilter !== 'all' && e.program !== calProgramFilter) return false;
+    const eventDate = new Date(e.date + 'T00:00:00');
+    if (eventDate < calDateRange.start || eventDate > calDateRange.end) return false;
+    return true;
+  });
+
+  const shiftCalMonth = (delta: number) => {
+    setCalDateRange((prev) => {
+      const newStart = new Date(prev.start.getFullYear(), prev.start.getMonth() + delta, 1);
+      const newEnd = new Date(newStart.getFullYear(), newStart.getMonth() + 1, 0);
+      return { start: newStart, end: newEnd };
+    });
   };
 
   const handleCalendarImport = async () => {
@@ -735,10 +759,80 @@ export default function VolunteerEventsPage() {
                   </div>
                 ) : (
                   <div className="space-y-2">
+                    {/* ── Filter controls ── */}
+                    <div className="flex flex-wrap items-center gap-2 mb-3">
+                      <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Type:</span>
+                      {['all', 'lab', 'class', 'exam'].map((t) => (
+                        <button
+                          key={t}
+                          onClick={() => setCalTypeFilter(t)}
+                          className={`px-3 py-1 rounded-full text-xs font-medium transition ${
+                            calTypeFilter === t
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
+                          }`}
+                        >
+                          {t === 'all' ? 'All' : t === 'lab' ? 'Labs Only' : t.charAt(0).toUpperCase() + t.slice(1) + 's'}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 mb-3">
+                      <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Program:</span>
+                      {['all', 'paramedic', 'emt', 'aemt', 'lvfr'].map((p) => (
+                        <button
+                          key={p}
+                          onClick={() => setCalProgramFilter(p)}
+                          className={`px-3 py-1 rounded-full text-xs font-medium transition ${
+                            calProgramFilter === p
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
+                          }`}
+                        >
+                          {p === 'all' ? 'All' : p.toUpperCase()}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="flex items-center gap-2 mb-3">
+                      <button
+                        onClick={() => shiftCalMonth(-1)}
+                        className="px-2 py-1 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition text-sm"
+                      >
+                        &#9664;
+                      </button>
+                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                        {calDateRange.start.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                      </span>
+                      <button
+                        onClick={() => shiftCalMonth(1)}
+                        className="px-2 py-1 rounded text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition text-sm"
+                      >
+                        &#9654;
+                      </button>
+                    </div>
+
+                    {/* ── Select All / Clear All ── */}
+                    <div className="flex gap-2 mb-2">
+                      <button
+                        onClick={() => setSelectedCalendarEvents(new Set(filteredCalendarEvents.map((e) => e.id)))}
+                        className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                      >
+                        Select All Visible ({filteredCalendarEvents.length})
+                      </button>
+                      <span className="text-gray-300 dark:text-gray-600">|</span>
+                      <button
+                        onClick={() => setSelectedCalendarEvents(new Set())}
+                        className="text-xs text-gray-500 dark:text-gray-400 hover:underline"
+                      >
+                        Clear All
+                      </button>
+                    </div>
+
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                      Select events to create as volunteer events:
+                      {filteredCalendarEvents.length} event{filteredCalendarEvents.length !== 1 ? 's' : ''} matching filters:
                     </p>
-                    {calendarEvents.map((cal) => {
+                    {filteredCalendarEvents.map((cal) => {
                       const typeLabel = cal.event_type === 'lab' ? 'lab' : cal.event_type === 'exam' ? 'exam' : 'class';
                       const typeBadgeStyle = cal.event_type === 'lab'
                         ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
@@ -824,7 +918,7 @@ export default function VolunteerEventsPage() {
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 flex items-center gap-2"
                 >
                   {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                  Import {selectedCalendarEvents.size + (nremtDate ? 1 : 0)} Event(s)
+                  Import Selected ({selectedCalendarEvents.size + (nremtDate ? 1 : 0)})
                 </button>
               </div>
             </div>
