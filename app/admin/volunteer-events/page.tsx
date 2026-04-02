@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -115,7 +115,8 @@ export default function VolunteerEventsPage() {
   const [selectedCalendarEvents, setSelectedCalendarEvents] = useState<Set<string>>(new Set());
   const [calendarLoading, setCalendarLoading] = useState(false);
   const [calTypeFilter, setCalTypeFilter] = useState<string>('lab');
-  const [calProgramFilter, setCalProgramFilter] = useState<string>('all');
+  const [calProgramFilters, setCalProgramFilters] = useState<Set<string>>(new Set(['paramedic', 'emt', 'aemt', 'lvfr']));
+  const [calCohortFilters, setCalCohortFilters] = useState<Set<string>>(new Set());
   const [calDateRange, setCalDateRange] = useState(() => {
     const now = new Date();
     const start = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -207,9 +208,43 @@ export default function VolunteerEventsPage() {
     }
   };
 
+  const toggleProgram = (program: string) => {
+    setCalProgramFilters(prev => {
+      const next = new Set(prev);
+      if (next.has(program)) next.delete(program);
+      else next.add(program);
+      return next;
+    });
+  };
+
+  const toggleCohort = (key: string) => {
+    setCalCohortFilters(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const availableCohorts = useMemo(() => {
+    const cohorts = new Map<string, { label: string; program: string }>();
+    calendarEvents.forEach(e => {
+      if (e.program && calProgramFilters.has(e.program) && e.cohort_number) {
+        const key = `${e.program}-${e.cohort_number}`;
+        const abbr = e.program === 'paramedic' ? 'PM' : e.program.toUpperCase();
+        cohorts.set(key, { label: `${abbr} Grp ${e.cohort_number}`, program: e.program });
+      }
+    });
+    return Array.from(cohorts.entries());
+  }, [calendarEvents, calProgramFilters]);
+
   const filteredCalendarEvents = calendarEvents.filter((e) => {
     if (calTypeFilter !== 'all' && e.event_type !== calTypeFilter) return false;
-    if (calProgramFilter !== 'all' && e.program !== calProgramFilter) return false;
+    if (e.program && !calProgramFilters.has(e.program)) return false;
+    if (calCohortFilters.size > 0 && e.cohort_number) {
+      const key = `${e.program}-${e.cohort_number}`;
+      if (!calCohortFilters.has(key)) return false;
+    }
     const eventDate = new Date(e.date + 'T00:00:00');
     if (eventDate < calDateRange.start || eventDate > calDateRange.end) return false;
     return true;
@@ -779,20 +814,47 @@ export default function VolunteerEventsPage() {
 
                     <div className="flex flex-wrap items-center gap-2 mb-3">
                       <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Program:</span>
-                      {['all', 'paramedic', 'emt', 'aemt', 'lvfr'].map((p) => (
+                      {['paramedic', 'emt', 'aemt', 'lvfr'].map((p) => (
                         <button
                           key={p}
-                          onClick={() => setCalProgramFilter(p)}
+                          onClick={() => toggleProgram(p)}
                           className={`px-3 py-1 rounded-full text-xs font-medium transition ${
-                            calProgramFilter === p
+                            calProgramFilters.has(p)
                               ? 'bg-blue-600 text-white'
                               : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
                           }`}
                         >
-                          {p === 'all' ? 'All' : p.toUpperCase()}
+                          {p.toUpperCase()}
                         </button>
                       ))}
                     </div>
+
+                    {availableCohorts.length > 0 && (
+                      <div className="flex flex-wrap items-center gap-2 mb-3">
+                        <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Cohort:</span>
+                        {availableCohorts.map(([key, { label }]) => (
+                          <button
+                            key={key}
+                            onClick={() => toggleCohort(key)}
+                            className={`px-3 py-1 rounded-full text-xs font-medium transition ${
+                              calCohortFilters.size === 0 || calCohortFilters.has(key)
+                                ? 'bg-green-600 text-white'
+                                : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                        {calCohortFilters.size > 0 && (
+                          <button
+                            onClick={() => setCalCohortFilters(new Set())}
+                            className="px-2 py-1 text-xs text-gray-500 hover:underline"
+                          >
+                            Show All
+                          </button>
+                        )}
+                      </div>
+                    )}
 
                     <div className="flex items-center gap-2 mb-3">
                       <button
