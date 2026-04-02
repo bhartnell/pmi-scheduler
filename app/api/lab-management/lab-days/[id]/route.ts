@@ -57,6 +57,18 @@ export async function GET(
       .single();
 
     if (error) {
+      // Not found
+      if (error.code === 'PGRST116' || error.message?.includes('0 rows')) {
+        return NextResponse.json({ error: 'Lab day not found' }, { status: 404 });
+      }
+      // Supabase/database connectivity issues
+      if (error.message?.includes('502') || error.message?.includes('Bad gateway') || error.message?.includes('503') || error.message?.includes('ECONNREFUSED')) {
+        return NextResponse.json(
+          { error: 'Database temporarily unavailable. Please try again in a moment.' },
+          { status: 503 }
+        );
+      }
+
       // If the error is due to source_template_id column or lab_day_templates table not existing,
       // fall back to a query without the source_template join
       const errMsg = (error.message || '').toLowerCase();
@@ -100,7 +112,12 @@ export async function GET(
           .eq('id', id)
           .single();
 
-        if (fallbackError) throw fallbackError;
+        if (fallbackError) {
+          if (fallbackError.code === 'PGRST116' || fallbackError.message?.includes('0 rows')) {
+            return NextResponse.json({ error: 'Lab day not found' }, { status: 404 });
+          }
+          throw fallbackError;
+        }
 
         if (fallbackData.stations) {
           fallbackData.stations.sort((a: any, b: any) => a.station_number - b.station_number);
@@ -138,11 +155,20 @@ export async function PATCH(
   try {
     const supabase = getSupabaseAdmin();
 
-    const { data: callerUser } = await supabase
+    const { data: callerUser, error: callerError } = await supabase
       .from('lab_users')
       .select('role')
       .ilike('email', session.user.email)
       .single();
+
+    if (callerError) {
+      if (callerError.message?.includes('502') || callerError.message?.includes('Bad gateway') || callerError.message?.includes('503') || callerError.message?.includes('ECONNREFUSED')) {
+        return NextResponse.json(
+          { error: 'Database temporarily unavailable. Please try again in a moment.' },
+          { status: 503 }
+        );
+      }
+    }
 
     if (!callerUser || !hasMinRole(callerUser.role, 'instructor')) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -188,7 +214,18 @@ export async function PATCH(
       `)
       .single();
 
-    if (error) throw error;
+    if (error) {
+      if (error.code === 'PGRST116' || error.message?.includes('0 rows')) {
+        return NextResponse.json({ error: 'Lab day not found' }, { status: 404 });
+      }
+      if (error.message?.includes('502') || error.message?.includes('Bad gateway') || error.message?.includes('503') || error.message?.includes('ECONNREFUSED')) {
+        return NextResponse.json(
+          { error: 'Database temporarily unavailable. Please try again in a moment.' },
+          { status: 503 }
+        );
+      }
+      throw error;
+    }
 
     // Fire-and-forget: update linked Google Calendar events if date/time/title changed
     if (allowedFields.date || allowedFields.title || allowedFields.start_time || allowedFields.end_time) {
@@ -237,11 +274,20 @@ export async function DELETE(
   try {
     const supabase = getSupabaseAdmin();
 
-    const { data: callerUser } = await supabase
+    const { data: callerUser, error: callerError } = await supabase
       .from('lab_users')
       .select('role')
       .ilike('email', session.user.email)
       .single();
+
+    if (callerError) {
+      if (callerError.message?.includes('502') || callerError.message?.includes('Bad gateway') || callerError.message?.includes('503') || callerError.message?.includes('ECONNREFUSED')) {
+        return NextResponse.json(
+          { error: 'Database temporarily unavailable. Please try again in a moment.' },
+          { status: 503 }
+        );
+      }
+    }
 
     if (!callerUser || !isSuperadmin(callerUser.role)) {
       return NextResponse.json({ error: 'Lab day deletion requires superadmin approval via deletion requests' }, { status: 403 });
@@ -260,7 +306,15 @@ export async function DELETE(
       .delete()
       .eq('id', id);
 
-    if (error) throw error;
+    if (error) {
+      if (error.message?.includes('502') || error.message?.includes('Bad gateway') || error.message?.includes('503') || error.message?.includes('ECONNREFUSED')) {
+        return NextResponse.json(
+          { error: 'Database temporarily unavailable. Please try again in a moment.' },
+          { status: 503 }
+        );
+      }
+      throw error;
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
