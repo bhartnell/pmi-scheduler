@@ -311,7 +311,7 @@ export default function LabDayPage() {
 
         <div className="mt-8 flex flex-wrap gap-3 print:hidden">
           <Link href={`/academics/students?cohortId=${labDay.cohort.id}`} className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"><Users className="w-4 h-4" /> View Students</Link>
-          <Link href={`/reports/team-leads?cohortId=${labDay.cohort.id}`} className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"><ClipboardCheck className="w-4 h-4" /> Team Lead Report</Link>
+          <Link href={`/lab-management/reports/team-leads?cohortId=${labDay.cohort.id}`} className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"><ClipboardCheck className="w-4 h-4" /> Team Lead Report</Link>
         </div>
       </main>
 

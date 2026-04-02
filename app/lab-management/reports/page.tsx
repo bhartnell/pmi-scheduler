@@ -105,7 +105,7 @@ export default function ReportsIndexPage() {
       title: 'Team Lead Rotations',
       description: 'Who has led, how often, and who needs more opportunities.',
       icon: Users,
-      href: '/reports/team-leads',
+      href: '/lab-management/reports/team-leads',
       color: 'text-orange-600 dark:text-orange-400',
       bgColor: 'bg-orange-100 dark:bg-orange-900/30',
     },

@@ -7,11 +7,13 @@ import Link from 'next/link';
 import {
   Download,
   Users,
-  UserCheck,
   Loader2,
   ArrowLeft,
   Filter,
   ClipboardCheck,
+  Pencil,
+  Trash2,
+  X,
 } from 'lucide-react';
 import Breadcrumbs from '@/components/Breadcrumbs';
 
@@ -84,6 +86,18 @@ export default function VolunteerResultsPage() {
   const [loading, setLoading] = useState(true);
   const [typeFilter, setTypeFilter] = useState('all');
 
+  // Edit modal state
+  const [editingReg, setEditingReg] = useState<Registration | null>(null);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    status: '',
+    volunteer_type: '',
+    notes: '',
+  });
+  const [saving, setSaving] = useState(false);
+
   const fetchResults = useCallback(async (filter: string) => {
     setLoading(true);
     try {
@@ -115,6 +129,52 @@ export default function VolunteerResultsPage() {
   const handleExport = () => {
     const params = typeFilter !== 'all' ? `&type=${typeFilter}` : '';
     window.open(`/api/volunteer/results?format=csv${params}`, '_blank');
+  };
+
+  const handleDelete = async (regId: string) => {
+    if (!confirm('Delete this registration? This cannot be undone.')) return;
+    try {
+      const res = await fetch(`/api/volunteer/register?id=${regId}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        fetchResults(typeFilter);
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  const openEdit = (reg: Registration) => {
+    setEditingReg(reg);
+    setEditForm({
+      name: reg.name,
+      email: reg.email,
+      phone: reg.phone || '',
+      status: reg.status,
+      volunteer_type: reg.volunteer_type,
+      notes: reg.notes || '',
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingReg) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/volunteer/register?id=${editingReg.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editForm),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setEditingReg(null);
+        fetchResults(typeFilter);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (status === 'loading' || loading) {
@@ -259,6 +319,7 @@ export default function VolunteerResultsPage() {
                           <th className="px-4 py-2 font-medium">Agency</th>
                           <th className="px-4 py-2 font-medium">Evaluation</th>
                           <th className="px-4 py-2 font-medium">Status</th>
+                          <th className="px-4 py-2 font-medium">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -294,6 +355,24 @@ export default function VolunteerResultsPage() {
                                 {reg.status}
                               </span>
                             </td>
+                            <td className="px-4 py-2">
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => openEdit(reg)}
+                                  className="p-1 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition"
+                                  title="Edit registration"
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => handleDelete(reg.id)}
+                                  className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition"
+                                  title="Delete registration"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -302,6 +381,116 @@ export default function VolunteerResultsPage() {
                 )}
               </div>
             ))}
+          </div>
+        )}
+
+        {/* ─── Edit Registration Modal ──────────────────────────────────────── */}
+        {editingReg && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+              <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Edit Registration
+                </h3>
+                <button onClick={() => setEditingReg(null)}>
+                  <X className="h-5 w-5 text-gray-500" />
+                </button>
+              </div>
+              <div className="p-4 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Name
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.name}
+                    onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    value={editForm.email}
+                    onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Phone
+                  </label>
+                  <input
+                    type="tel"
+                    value={editForm.phone}
+                    onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Status
+                  </label>
+                  <select
+                    value={editForm.status}
+                    onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  >
+                    <option value="registered">Registered</option>
+                    <option value="confirmed">Confirmed</option>
+                    <option value="attended">Attended</option>
+                    <option value="no_show">No Show</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Volunteer Type
+                  </label>
+                  <select
+                    value={editForm.volunteer_type}
+                    onChange={(e) => setEditForm({ ...editForm, volunteer_type: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  >
+                    <option value="instructor1">Instructor 1</option>
+                    <option value="general">General</option>
+                    <option value="former_student">Former Student</option>
+                    <option value="community">Community</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Notes
+                  </label>
+                  <textarea
+                    value={editForm.notes}
+                    onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    placeholder="Optional notes..."
+                  />
+                </div>
+              </div>
+              <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
+                <button
+                  onClick={() => setEditingReg(null)}
+                  className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveEdit}
+                  disabled={saving}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 flex items-center gap-2"
+                >
+                  {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Save Changes
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

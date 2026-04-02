@@ -421,6 +421,19 @@ export default function VolunteerEventsPage() {
     }
   };
 
+  // ─── Delete Invite ──────────────────────────────────────────────────────────
+
+  const handleDeleteInvite = async (id: string) => {
+    if (!confirm('Delete this invite campaign? The signup link will stop working.')) return;
+
+    try {
+      await fetch(`/api/volunteer/invites?id=${id}`, { method: 'DELETE' });
+      await fetchData();
+    } catch {
+      setError('Failed to delete invite');
+    }
+  };
+
   // ─── Copy Link ──────────────────────────────────────────────────────────────
 
   const copyLink = (token: string) => {
@@ -624,6 +637,13 @@ export default function VolunteerEventsPage() {
                       >
                         <ExternalLink className="h-4 w-4" />
                       </a>
+                      <button
+                        onClick={() => handleDeleteInvite(invite.id)}
+                        className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition"
+                        title="Delete campaign"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
                     </div>
                   </div>
                   {invite.message && (
@@ -807,7 +827,7 @@ export default function VolunteerEventsPage() {
                               : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
                           }`}
                         >
-                          {t === 'all' ? 'All' : t === 'lab' ? 'Labs Only' : t.charAt(0).toUpperCase() + t.slice(1) + 's'}
+                          {t === 'all' ? 'All' : t === 'lab' ? 'Labs Only' : t === 'class' ? 'Classes' : t.charAt(0).toUpperCase() + t.slice(1) + 's'}
                         </button>
                       ))}
                     </div>

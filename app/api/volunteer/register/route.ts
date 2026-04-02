@@ -1,5 +1,84 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+
+// DELETE /api/volunteer/register?id=<registration_id> — admin only
+export async function DELETE(request: NextRequest) {
+  try {
+    const auth = await requireAuth('admin');
+    if (auth instanceof NextResponse) return auth;
+
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: 'Registration ID is required' },
+        { status: 400 }
+      );
+    }
+
+    const supabase = getSupabaseAdmin();
+    const { error } = await supabase
+      .from('volunteer_registrations')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    return NextResponse.json({ success: true });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
+  }
+}
+
+// PUT /api/volunteer/register?id=<registration_id> — admin only
+export async function PUT(request: NextRequest) {
+  try {
+    const auth = await requireAuth('admin');
+    if (auth instanceof NextResponse) return auth;
+
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: 'Registration ID is required' },
+        { status: 400 }
+      );
+    }
+
+    const body = await request.json();
+    const allowedFields = ['name', 'email', 'phone', 'status', 'volunteer_type', 'notes'];
+    const updates: Record<string, unknown> = {};
+    for (const field of allowedFields) {
+      if (field in body) {
+        updates[field] = body[field];
+      }
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'No valid fields to update' },
+        { status: 400 }
+      );
+    }
+
+    const supabase = getSupabaseAdmin();
+    const { data, error } = await supabase
+      .from('volunteer_registrations')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return NextResponse.json({ success: true, data });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
+  }
+}
 
 // POST /api/volunteer/register — PUBLIC (no auth)
 // Register a volunteer for one or more events
