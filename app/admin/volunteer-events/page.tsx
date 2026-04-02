@@ -58,7 +58,11 @@ interface CalendarEvent {
   start_time: string;
   end_time: string;
   linked_lab_day_id?: string;
+  linked_id?: string;
   source: string;
+  event_type: string;
+  cohort_number?: number;
+  program?: string;
 }
 
 interface CreateEventForm {
@@ -113,6 +117,7 @@ export default function VolunteerEventsPage() {
 
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [nremtDate, setNremtDate] = useState('');
 
   const [eventForm, setEventForm] = useState<CreateEventForm>({
     name: '',
@@ -173,17 +178,19 @@ export default function VolunteerEventsPage() {
       const future = new Date();
       future.setMonth(future.getMonth() + 3);
 
+      const startDate = now.toISOString().split('T')[0];
+      const endDate = future.toISOString().split('T')[0];
+
       const res = await fetch(
-        `/api/calendar/unified?start=${now.toISOString().split('T')[0]}&end=${future.toISOString().split('T')[0]}`
+        `/api/calendar/unified?start_date=${startDate}&end_date=${endDate}&include=classes,labs`
       );
       const data = await res.json();
 
-      if (data.success || data.data) {
-        // Filter to lab-type events only
-        const labEvents = (data.data || []).filter(
-          (e: CalendarEvent) => e.source === 'lab_day' || e.source === 'planner'
-        );
-        setCalendarEvents(labEvents);
+      if (data.events) {
+        // Show all events (labs and classes) — already filtered by include param
+        setCalendarEvents(data.events);
+      } else {
+        setCalendarEvents([]);
       }
     } catch {
       setError('Failed to load calendar events');
@@ -200,25 +207,70 @@ export default function VolunteerEventsPage() {
       const selected = calendarEvents.filter((e) => selectedCalendarEvents.has(e.id));
 
       for (const cal of selected) {
+        const volEventType = cal.event_type === 'lab' ? 'lab_day' : 'other';
+        const linkedLabId = cal.source === 'lab_day' ? cal.linked_id : (cal.linked_lab_day_id || null);
         await fetch('/api/volunteer/events', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             name: cal.title,
-            event_type: 'lab_day',
+            event_type: volEventType,
             date: cal.date,
             start_time: cal.start_time,
             end_time: cal.end_time,
-            linked_lab_day_id: cal.linked_lab_day_id || null,
+            linked_lab_day_id: linkedLabId,
+          }),
+        });
+      }
+
+      // Also create NREMT Testing Day if date was entered
+      if (nremtDate) {
+        await fetch('/api/volunteer/events', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: `NREMT Testing Day`,
+            event_type: 'nremt_testing',
+            date: nremtDate,
+            location: 'PMI Las Vegas Campus',
           }),
         });
       }
 
       setShowCalendarPicker(false);
       setSelectedCalendarEvents(new Set());
+      setNremtDate('');
       await fetchData();
     } catch {
       setError('Failed to import calendar events');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleAddNremtOnly = async () => {
+    if (!nremtDate) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch('/api/volunteer/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: `NREMT Testing Day`,
+          event_type: 'nremt_testing',
+          date: nremtDate,
+          location: 'PMI Las Vegas Campus',
+        }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error);
+
+      setShowCalendarPicker(false);
+      setSelectedCalendarEvents(new Set());
+      setNremtDate('');
+      await fetchData();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to create NREMT event');
     } finally {
       setSubmitting(false);
     }
@@ -677,59 +729,102 @@ export default function VolunteerEventsPage() {
                     <span className="ml-2 text-gray-500">Loading calendar events...</span>
                   </div>
                 ) : calendarEvents.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                    No lab day events found in the next 3 months.
+                  <div className="text-center py-6 text-gray-500 dark:text-gray-400">
+                    <p className="mb-2">No events found in this date range.</p>
+                    <p className="text-sm">Use <strong>Create Manual</strong> instead, or add an NREMT Testing Day below.</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                      Select lab days to create as volunteer events:
+                      Select events to create as volunteer events:
                     </p>
-                    {calendarEvents.map((cal) => (
-                      <label
-                        key={cal.id}
-                        className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedCalendarEvents.has(cal.id)}
-                          onChange={(e) => {
-                            const next = new Set(selectedCalendarEvents);
-                            if (e.target.checked) next.add(cal.id);
-                            else next.delete(cal.id);
-                            setSelectedCalendarEvents(next);
-                          }}
-                          className="h-4 w-4 rounded border-gray-300 text-blue-600"
-                        />
-                        <div>
-                          <div className="font-medium text-gray-900 dark:text-white text-sm">
-                            {cal.title}
+                    {calendarEvents.map((cal) => {
+                      const typeLabel = cal.event_type === 'lab' ? 'lab' : cal.event_type === 'exam' ? 'exam' : 'class';
+                      const typeBadgeStyle = cal.event_type === 'lab'
+                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                        : cal.event_type === 'exam'
+                        ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
+                        : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300';
+                      const cohortLabel = cal.cohort_number ? ` (C${cal.cohort_number})` : '';
+                      return (
+                        <label
+                          key={cal.id}
+                          className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedCalendarEvents.has(cal.id)}
+                            onChange={(e) => {
+                              const next = new Set(selectedCalendarEvents);
+                              if (e.target.checked) next.add(cal.id);
+                              else next.delete(cal.id);
+                              setSelectedCalendarEvents(next);
+                            }}
+                            className="h-4 w-4 rounded border-gray-300 text-blue-600 mt-0.5"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-medium text-gray-900 dark:text-white text-sm truncate">
+                                {cal.title}{cohortLabel}
+                              </span>
+                              <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${typeBadgeStyle}`}>
+                                {typeLabel}
+                              </span>
+                            </div>
+                            <div className="text-xs text-gray-500 mt-0.5">
+                              {new Date(cal.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                              {cal.start_time && ` ${cal.start_time.slice(0, 5)}`}
+                              {cal.end_time && ` - ${cal.end_time.slice(0, 5)}`}
+                            </div>
                           </div>
-                          <div className="text-xs text-gray-500">
-                            {new Date(cal.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                            {cal.start_time && ` ${cal.start_time.slice(0, 5)}`}
-                            {cal.end_time && ` - ${cal.end_time.slice(0, 5)}`}
-                          </div>
-                        </div>
-                      </label>
-                    ))}
+                        </label>
+                      );
+                    })}
                   </div>
                 )}
+
+                {/* NREMT Testing Day quick-add */}
+                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    + Add NREMT Testing Day
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="date"
+                      value={nremtDate}
+                      onChange={(e) => setNremtDate(e.target.value)}
+                      className="flex-1 px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                    />
+                    {calendarEvents.length === 0 && nremtDate && (
+                      <button
+                        onClick={handleAddNremtOnly}
+                        disabled={submitting}
+                        className="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition text-sm disabled:opacity-50 flex items-center gap-1"
+                      >
+                        {submitting && <Loader2 className="h-3 w-3 animate-spin" />}
+                        Add
+                      </button>
+                    )}
+                  </div>
+                  {nremtDate && calendarEvents.length > 0 && (
+                    <p className="text-xs text-gray-500 mt-1">Will be included when you click Import below.</p>
+                  )}
+                </div>
               </div>
               <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
                 <button
-                  onClick={() => setShowCalendarPicker(false)}
+                  onClick={() => { setShowCalendarPicker(false); setNremtDate(''); }}
                   className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleCalendarImport}
-                  disabled={selectedCalendarEvents.size === 0 || submitting}
+                  disabled={(selectedCalendarEvents.size === 0 && !nremtDate) || submitting}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 flex items-center gap-2"
                 >
                   {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-                  Import {selectedCalendarEvents.size} Event(s)
+                  Import {selectedCalendarEvents.size + (nremtDate ? 1 : 0)} Event(s)
                 </button>
               </div>
             </div>
