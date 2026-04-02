@@ -57,8 +57,8 @@ export async function GET(request: NextRequest) {
     const supabase = getSupabaseAdmin();
     const { searchParams } = new URL(request.url);
 
-    const startDate = searchParams.get('start_date');
-    const endDate = searchParams.get('end_date');
+    const startDate = searchParams.get('start_date') || searchParams.get('start');
+    const endDate = searchParams.get('end_date') || searchParams.get('end');
     const includeParam = searchParams.get('include') || 'classes,labs,clinical,lvfr,shifts,ride_along';
     const include = new Set(includeParam.split(',').map(s => s.trim()));
     const programsParam = searchParams.get('programs');
