@@ -42,6 +42,14 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ success: true, user: newUser });
       }
 
+      // Supabase/database connectivity issues
+      if (error.message?.includes('502') || error.message?.includes('Bad gateway') || error.message?.includes('503') || error.message?.includes('ECONNREFUSED')) {
+        return NextResponse.json(
+          { success: false, error: 'Database temporarily unavailable. Please try again in a moment.' },
+          { status: 503 }
+        );
+      }
+
       throw error;
     }
 
