@@ -12,6 +12,10 @@ import {
   ArrowLeft,
   Filter,
   ClipboardCheck,
+  Link as LinkIcon,
+  Copy,
+  Check,
+  Send,
 } from 'lucide-react';
 import Breadcrumbs from '@/components/Breadcrumbs';
 
@@ -41,8 +45,18 @@ interface EventWithRegistrations {
   start_time: string | null;
   end_time: string | null;
   location: string | null;
+  linked_lab_day_id: string | null;
   registrations: Registration[];
   registration_count: number;
+}
+
+interface LabToken {
+  id: string;
+  token: string;
+  registration_id: string | null;
+  volunteer_name: string;
+  is_active: boolean;
+  valid_until: string;
 }
 
 interface Summary {
@@ -83,6 +97,88 @@ export default function VolunteerResultsPage() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
   const [typeFilter, setTypeFilter] = useState('all');
+  const [tokens, setTokens] = useState<Record<string, LabToken>>({});
+  const [generatingToken, setGeneratingToken] = useState<string | null>(null);
+  const [bulkGenerating, setBulkGenerating] = useState<string | null>(null);
+  const [copiedToken, setCopiedToken] = useState<string | null>(null);
+
+  // Fetch existing tokens for all events
+  const fetchTokens = useCallback(async () => {
+    try {
+      const res = await fetch('/api/volunteer/lab-tokens');
+      const data = await res.json();
+      if (data.success && data.data) {
+        const tokenMap: Record<string, LabToken> = {};
+        for (const t of data.data) {
+          if (t.registration_id) {
+            tokenMap[t.registration_id] = t;
+          }
+        }
+        setTokens(tokenMap);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const generateToken = async (reg: Registration, eventId: string, linkedLabDayId: string | null) => {
+    if (!linkedLabDayId) {
+      alert('This event has no linked lab day. Please link a lab day first.');
+      return;
+    }
+    setGeneratingToken(reg.id);
+    try {
+      const res = await fetch('/api/volunteer/lab-tokens', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          registration_id: reg.id,
+          volunteer_name: reg.name,
+          volunteer_email: reg.email,
+          lab_day_id: linkedLabDayId,
+          event_id: eventId,
+          valid_hours: 48,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTokens((prev) => ({ ...prev, [reg.id]: data.data }));
+      }
+    } catch {
+      // ignore
+    } finally {
+      setGeneratingToken(null);
+    }
+  };
+
+  const generateBulkTokens = async (eventId: string) => {
+    setBulkGenerating(eventId);
+    try {
+      const res = await fetch('/api/volunteer/lab-tokens/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ event_id: eventId, valid_hours: 48 }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        // Refresh tokens
+        await fetchTokens();
+      } else {
+        alert(data.error || 'Failed to generate bulk tokens');
+      }
+    } catch {
+      alert('Network error generating tokens');
+    } finally {
+      setBulkGenerating(null);
+    }
+  };
+
+  const copyLink = (tokenStr: string) => {
+    const url = `${window.location.origin}/volunteer-lab/${tokenStr}`;
+    navigator.clipboard.writeText(url);
+    setCopiedToken(tokenStr);
+    setTimeout(() => setCopiedToken(null), 2000);
+  };
 
   const fetchResults = useCallback(async (filter: string) => {
     setLoading(true);
@@ -109,8 +205,9 @@ export default function VolunteerResultsPage() {
     }
     if (status === 'authenticated') {
       fetchResults(typeFilter);
+      fetchTokens();
     }
-  }, [status, router, fetchResults, typeFilter]);
+  }, [status, router, fetchResults, fetchTokens, typeFilter]);
 
   const handleExport = () => {
     const params = typeFilter !== 'all' ? `&type=${typeFilter}` : '';
@@ -242,9 +339,25 @@ export default function VolunteerResultsPage() {
                         {event.location && <span>{event.location}</span>}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-                      <Users className="h-4 w-4" />
-                      {event.registration_count} volunteer(s)
+                    <div className="flex items-center gap-3">
+                      <span className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                        <Users className="h-4 w-4" />
+                        {event.registration_count} volunteer(s)
+                      </span>
+                      {event.linked_lab_day_id && (
+                        <button
+                          onClick={() => generateBulkTokens(event.id)}
+                          disabled={bulkGenerating === event.id}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-purple-600 text-white hover:bg-purple-700 disabled:opacity-50 transition"
+                        >
+                          {bulkGenerating === event.id ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Send className="h-3 w-3" />
+                          )}
+                          Generate All Links
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -265,6 +378,7 @@ export default function VolunteerResultsPage() {
                           <th className="px-4 py-2 font-medium">Agency</th>
                           <th className="px-4 py-2 font-medium">Evaluation</th>
                           <th className="px-4 py-2 font-medium">Status</th>
+                          <th className="px-4 py-2 font-medium">Lab Access</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -299,6 +413,37 @@ export default function VolunteerResultsPage() {
                               <span className={`px-2 py-0.5 rounded text-xs font-medium ${STATUS_STYLES[reg.status] || ''}`}>
                                 {reg.status}
                               </span>
+                            </td>
+                            <td className="px-4 py-2">
+                              {tokens[reg.id] ? (
+                                <button
+                                  onClick={() => copyLink(tokens[reg.id].token)}
+                                  className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/40 dark:text-green-300 transition"
+                                  title="Copy access link"
+                                >
+                                  {copiedToken === tokens[reg.id].token ? (
+                                    <Check className="h-3 w-3" />
+                                  ) : (
+                                    <Copy className="h-3 w-3" />
+                                  )}
+                                  {copiedToken === tokens[reg.id].token ? 'Copied!' : 'Copy Link'}
+                                </button>
+                              ) : event.linked_lab_day_id ? (
+                                <button
+                                  onClick={() => generateToken(reg, event.id, event.linked_lab_day_id)}
+                                  disabled={generatingToken === reg.id}
+                                  className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/40 dark:text-blue-300 disabled:opacity-50 transition"
+                                >
+                                  {generatingToken === reg.id ? (
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                  ) : (
+                                    <LinkIcon className="h-3 w-3" />
+                                  )}
+                                  Generate
+                                </button>
+                              ) : (
+                                <span className="text-xs text-gray-400">No lab linked</span>
+                              )}
                             </td>
                           </tr>
                         ))}
