@@ -10,6 +10,8 @@ import {
   ClipboardCheck,
   Mail,
   Phone,
+  Link as LinkIcon,
+  Loader2,
 } from 'lucide-react';
 
 interface Volunteer {
@@ -24,6 +26,14 @@ interface Volunteer {
   evaluation_status: string | null;
   status: string;
   notes: string | null;
+  registration_id?: string;
+}
+
+interface LabToken {
+  id: string;
+  token: string;
+  registration_id: string | null;
+  is_active: boolean;
 }
 
 interface LabDayVolunteersProps {
@@ -56,6 +66,9 @@ export default function LabDayVolunteers({ labDayId }: LabDayVolunteersProps) {
   const [loading, setLoading] = useState(true);
   const [collapsed, setCollapsed] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [labTokens, setLabTokens] = useState<Record<string, LabToken>>({});
+  const [generatingTokenFor, setGeneratingTokenFor] = useState<string | null>(null);
+  const [copiedTokenId, setCopiedTokenId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchVolunteers();
@@ -67,6 +80,12 @@ export default function LabDayVolunteers({ labDayId }: LabDayVolunteersProps) {
       setCollapsed(true);
     }
   }, [loading, volunteers.length]);
+
+  useEffect(() => {
+    if (!loading && volunteers.length > 0) {
+      fetchLabTokens();
+    }
+  }, [loading, volunteers.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchVolunteers = async () => {
     try {
@@ -82,6 +101,59 @@ export default function LabDayVolunteers({ labDayId }: LabDayVolunteersProps) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchLabTokens = async () => {
+    try {
+      const res = await fetch(`/api/volunteer/lab-tokens?lab_day_id=${labDayId}`);
+      const data = await res.json();
+      if (data.success && data.data) {
+        const tokenMap: Record<string, LabToken> = {};
+        for (const t of data.data) {
+          if (t.registration_id) {
+            tokenMap[t.registration_id] = t;
+          }
+          // Also index by volunteer name for volunteers without registration_id
+          tokenMap[`name:${t.volunteer_name}`] = t;
+        }
+        setLabTokens(tokenMap);
+      }
+    } catch {
+      // ignore
+    }
+  };
+
+  const generateLabToken = async (v: Volunteer) => {
+    setGeneratingTokenFor(v.id);
+    try {
+      const res = await fetch('/api/volunteer/lab-tokens', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          registration_id: v.registration_id || null,
+          volunteer_name: v.name,
+          volunteer_email: v.email,
+          lab_day_id: labDayId,
+          valid_hours: 48,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        const key = v.registration_id || `name:${v.name}`;
+        setLabTokens((prev) => ({ ...prev, [key]: data.data }));
+      }
+    } catch {
+      // ignore
+    } finally {
+      setGeneratingTokenFor(null);
+    }
+  };
+
+  const copyLabLink = (tokenStr: string) => {
+    const url = `${window.location.origin}/volunteer-lab/${tokenStr}`;
+    navigator.clipboard.writeText(url);
+    setCopiedTokenId(tokenStr);
+    setTimeout(() => setCopiedTokenId(null), 2000);
   };
 
   const copyEmail = (volunteer: Volunteer) => {
@@ -188,6 +260,43 @@ export default function LabDayVolunteers({ labDayId }: LabDayVolunteersProps) {
                     {v.notes}
                   </span>
                 )}
+
+                {/* Lab access token button */}
+                {(() => {
+                  const key = v.registration_id || `name:${v.name}`;
+                  const existingToken = labTokens[key];
+                  if (existingToken) {
+                    return (
+                      <button
+                        onClick={() => copyLabLink(existingToken.token)}
+                        className="ml-auto inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/40 dark:text-green-300 transition print:hidden"
+                        title="Copy lab access link"
+                      >
+                        {copiedTokenId === existingToken.token ? (
+                          <Check className="h-3 w-3" />
+                        ) : (
+                          <Copy className="h-3 w-3" />
+                        )}
+                        {copiedTokenId === existingToken.token ? 'Copied!' : 'Lab Link'}
+                      </button>
+                    );
+                  }
+                  return (
+                    <button
+                      onClick={() => generateLabToken(v)}
+                      disabled={generatingTokenFor === v.id}
+                      className="ml-auto inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/40 dark:text-blue-300 disabled:opacity-50 transition print:hidden"
+                      title="Generate lab access link"
+                    >
+                      {generatingTokenFor === v.id ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <LinkIcon className="h-3 w-3" />
+                      )}
+                      Send Lab Access
+                    </button>
+                  );
+                })()}
               </div>
             ))
           )}
