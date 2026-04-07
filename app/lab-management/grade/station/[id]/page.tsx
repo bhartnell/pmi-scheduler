@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import TimerBanner from '@/components/TimerBanner';
 import SkillSheetPanel from '@/components/SkillSheetPanel';
+import NremtCandidateInstructions from '@/components/NremtCandidateInstructions';
+import NremtTimer from '@/components/NremtTimer';
 
 // Sub-components
 import GradingHeader from '@/components/grading/GradingHeader';
@@ -79,6 +81,9 @@ export default function GradeStationPage() {
   // Skill sheet panel state
   const [panelSheetId, setPanelSheetId] = useState<string | null>(null);
   const [useEmbeddedSkillSheet, setUseEmbeddedSkillSheet] = useState(false);
+
+  // NREMT candidate instructions state
+  const [nremtInstructionsRead, setNremtInstructionsRead] = useState(false);
 
   // Evaluation tracking for auto-advance
   const [evaluatedStudents, setEvaluatedStudents] = useState<Record<string, string>>({});
@@ -603,6 +608,20 @@ export default function GradeStationPage() {
           userName={session?.user?.name || undefined}
           numRotations={4}
         />
+      )}
+
+      {/* NREMT Candidate Instructions & Timer */}
+      {station?.lab_day?.is_nremt_testing && (
+        <div className="max-w-7xl mx-auto px-4 pt-2 space-y-2">
+          <NremtCandidateInstructions
+            stationName={station.custom_title || station.skill_name || ''}
+            onInstructionsRead={setNremtInstructionsRead}
+          />
+          <NremtTimer
+            stationName={station.custom_title || station.skill_name || ''}
+            instructionsRead={nremtInstructionsRead}
+          />
+        </div>
       )}
 
       {/* Header */}

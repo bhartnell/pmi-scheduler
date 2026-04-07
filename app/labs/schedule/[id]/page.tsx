@@ -297,6 +297,9 @@ export default function LabDayPage() {
           <button onClick={() => handleToggleLabMode('group_rotations')} disabled={labModeLoading} className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${labMode === 'group_rotations' ? 'bg-blue-600 text-white border-blue-600 dark:bg-blue-500 dark:border-blue-500' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-750'}`}><Layers className="w-3.5 h-3.5" /> Group Rotations</button>
           <button onClick={() => handleToggleLabMode('individual_testing')} disabled={labModeLoading} className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${labMode === 'individual_testing' ? 'bg-blue-600 text-white border-blue-600 dark:bg-blue-500 dark:border-blue-500' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-750'}`}><ClipboardCheck className="w-3.5 h-3.5" /> Individual Testing</button>
           {labModeLoading && <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-400" />}
+          {(labDay.is_nremt_testing || labMode === 'individual_testing') && (
+            <Link href={`/labs/schedule/${labDayId}/coordinator`} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-900/30 rounded-lg hover:bg-orange-100 dark:hover:bg-orange-900/50 border border-orange-200 dark:border-orange-800 ml-auto"><Users className="w-3.5 h-3.5" /> Coordinator View</Link>
+          )}
         </div>
 
         {labMode === 'individual_testing' && (<div className="mt-6 print:hidden"><IndividualTestingGrid labDayId={labDayId as string} isNremtTesting={!!labDay.is_nremt_testing} /></div>)}
