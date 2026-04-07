@@ -11,14 +11,30 @@ try {
   const envPath = path.join(__dirname, '..', '.env.local');
   const envContent = fs.readFileSync(envPath, 'utf8');
   for (const line of envContent.split('\n')) {
-    const match = line.match(/^([^#=]+)=(.*)$/);
-    if (match) {
-      const key = match[1].trim();
-      const val = match[2].trim().replace(/^['"]|['"]$/g, '');
-      if (!process.env[key]) process.env[key] = val;
-    }
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const eqIdx = trimmed.indexOf('=');
+    if (eqIdx === -1) continue;
+    const key = trimmed.substring(0, eqIdx).trim();
+    const val = trimmed.substring(eqIdx + 1).trim();
+    if (!process.env[key]) process.env[key] = val;
   }
 } catch {}
+
+function getConnectionString() {
+  if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
+  if (process.env.SUPABASE_DB_URL) return process.env.SUPABASE_DB_URL;
+  const host = process.env.SUPABASE_DB_HOST || 'aws-0-us-west-2.pooler.supabase.com';
+  const port = process.env.SUPABASE_DB_PORT || '5432';
+  const user = process.env.SUPABASE_DB_USER || 'postgres.mkrqpwncfjpppxyntdtp';
+  const password = process.env.SUPABASE_DB_PASSWORD;
+  const database = process.env.SUPABASE_DB_NAME || 'postgres';
+  if (!password) {
+    console.error('ERROR: No database connection configured.');
+    process.exit(1);
+  }
+  return `postgresql://${user}:${password}@${host}:${port}/${database}`;
+}
 
 const updates = [
   { id: '581b945f-49af-4588-b83e-43316ab69375', notes: 'Create poll button now routes to internal scheduler instead of external rallly.co' },
@@ -28,12 +44,7 @@ const updates = [
 ];
 
 async function main() {
-  const connStr = process.env.SUPABASE_DB_URL;
-  if (!connStr) {
-    console.error('SUPABASE_DB_URL not found in .env.local');
-    process.exit(1);
-  }
-
+  const connStr = getConnectionString();
   const client = new Client({ connectionString: connStr });
   await client.connect();
   console.log('Connected to database');
