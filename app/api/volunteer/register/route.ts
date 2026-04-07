@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { sendEmail } from '@/lib/email';
 
 // DELETE /api/volunteer/register?id=<registration_id> — admin only
 export async function DELETE(request: NextRequest) {
@@ -133,7 +134,7 @@ export async function POST(request: NextRequest) {
     // Validate events exist and are active
     const { data: validEvents } = await supabase
       .from('volunteer_events')
-      .select('id, max_volunteers')
+      .select('id, max_volunteers, linked_lab_day_id, title')
       .in('id', event_ids)
       .eq('is_active', true);
 
@@ -194,9 +195,89 @@ export async function POST(request: NextRequest) {
       throw error;
     }
 
+    // Auto-generate volunteer lab tokens for events linked to a lab day
+    const createdTokens: Array<{ token: string; event_title: string }> = [];
+    const normalizedEmail = email.toLowerCase().trim();
+
+    for (const evt of validEvents) {
+      if (!evt.linked_lab_day_id) continue;
+
+      // Find the registration we just created for this event
+      const reg = (data || []).find(
+        (d: { event_id: string }) => d.event_id === evt.id
+      );
+      if (!reg) continue;
+
+      // Check if a token already exists for this registration
+      const { data: existingToken } = await supabase
+        .from('volunteer_lab_tokens')
+        .select('id, token')
+        .eq('registration_id', (reg as { id: string }).id)
+        .eq('lab_day_id', evt.linked_lab_day_id)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (existingToken) {
+        createdTokens.push({
+          token: existingToken.token,
+          event_title: evt.title || 'Volunteer Event',
+        });
+        continue;
+      }
+
+      // Create a new token
+      const { data: newToken } = await supabase
+        .from('volunteer_lab_tokens')
+        .insert({
+          registration_id: (reg as { id: string }).id,
+          volunteer_name: name,
+          volunteer_email: normalizedEmail,
+          lab_day_id: evt.linked_lab_day_id,
+          event_id: evt.id,
+          role: volunteer_type === 'instructor1' ? 'instructor1_evaluee' : 'volunteer_grader',
+        })
+        .select('token')
+        .single();
+
+      if (newToken) {
+        createdTokens.push({
+          token: newToken.token,
+          event_title: evt.title || 'Volunteer Event',
+        });
+      }
+    }
+
+    // Send confirmation email with token links (best-effort, don't fail registration)
+    if (createdTokens.length > 0) {
+      try {
+        const tokenLinks = createdTokens.map(
+          (t) => `${t.event_title}: https://pmiparamedic.tools/volunteer-lab/${t.token}`
+        ).join('\n');
+
+        await sendEmail({
+          to: normalizedEmail,
+          subject: 'Volunteer Registration Confirmation',
+          template: 'general',
+          data: {
+            subject: 'Volunteer Registration Confirmed',
+            title: 'Thank You for Volunteering!',
+            message: `Hi ${name},<br><br>You have been registered as a volunteer. Use the link below to access the grading portal on the day of the event:<br><br>${createdTokens.map(
+              (t) => `<strong>${t.event_title}:</strong><br><a href="https://pmiparamedic.tools/volunteer-lab/${t.token}">https://pmiparamedic.tools/volunteer-lab/${t.token}</a>`
+            ).join('<br><br>')}<br><br>Please save this email for your records.`,
+            actionUrl: `https://pmiparamedic.tools/volunteer-lab/${createdTokens[0].token}`,
+            actionText: 'Open Grading Portal',
+          },
+        });
+      } catch (emailErr) {
+        console.error('Failed to send volunteer confirmation email:', emailErr);
+        // Don't fail the registration if email fails
+      }
+    }
+
     return NextResponse.json({
       success: true,
       data,
+      tokens: createdTokens.length > 0 ? createdTokens : undefined,
       message: `Successfully registered for ${data?.length || 0} event(s)`,
     });
   } catch (err: unknown) {
