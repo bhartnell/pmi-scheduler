@@ -6,6 +6,7 @@ import {
   Pause,
   Square,
   SkipForward,
+  SkipBack,
   RotateCcw,
   Maximize2,
   Minimize2,
@@ -636,6 +637,12 @@ export default function LabTimer({
     }
   }, [timerState, numRotations, sendAction]);
 
+  const handlePrevRotation = useCallback(() => {
+    if (timerState && timerState.rotation_number > 1) {
+      sendAction('prev');
+    }
+  }, [timerState, sendAction]);
+
   const updateSettings = (updates: any) => {
     sendAction('update', updates);
   };
@@ -665,6 +672,12 @@ export default function LabTimer({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isController) return;
 
+      // Don't trigger shortcuts when typing in input fields
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable) {
+        return;
+      }
+
       if (e.key === ' ' || e.key === 'Space') {
         e.preventDefault();
         // If rotate alert is showing, acknowledge it instead of play/pause
@@ -683,6 +696,8 @@ export default function LabTimer({
         }
       } else if (e.key === 'n' || e.key === 'N') {
         handleNextRotation();
+      } else if (e.key === 'p' || e.key === 'P') {
+        handlePrevRotation();
       } else if (e.key === 'r' || e.key === 'R') {
         handleReset();
       } else if (e.key === '+' || e.key === '=') {
@@ -694,7 +709,7 @@ export default function LabTimer({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isFullscreen, timerState, numRotations, isController, handleClose, handlePlayPause, handleNextRotation, handleReset, handleTimeAdjust, showRotateAlert, acknowledgeRotation]);
+  }, [isFullscreen, timerState, numRotations, isController, handleClose, handlePlayPause, handleNextRotation, handlePrevRotation, handleReset, handleTimeAdjust, showRotateAlert, acknowledgeRotation]);
 
   // Get background color based on time/alerts
   const getBackgroundClass = () => {
@@ -1189,7 +1204,7 @@ export default function LabTimer({
                 {/* Info */}
                 <div className="text-xs opacity-60 pt-2 border-t border-gray-700">
                   <p><strong>Shortcuts:</strong></p>
-                  <p>Space = Play/Pause | N = Next | R = Reset | +/- = ±1 min | Esc = Close</p>
+                  <p>Space = Play/Pause | N = Next | P = Prev | R = Reset | +/- = ±1 min | Esc = Close</p>
                 </div>
               </div>
             )}
@@ -1345,6 +1360,17 @@ export default function LabTimer({
           >
             <Square className="w-6 h-6" />
           </button>
+
+          {currentRotation > 1 && (
+            <button
+              onClick={handlePrevRotation}
+              className="flex items-center gap-2 px-3 py-3 rounded-full transition-colors bg-gray-600 hover:bg-gray-500"
+              title="Previous Rotation (P)"
+            >
+              <SkipBack className="w-5 h-5" />
+              <span className="font-medium text-sm">Prev</span>
+            </button>
+          )}
 
           {currentRotation < numRotations ? (
             <button

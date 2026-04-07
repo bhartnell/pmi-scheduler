@@ -178,7 +178,6 @@ export default function BLSPlatinumChecklist({
                   type="checkbox"
                   checked={isSelectedHere}
                   onChange={() => onToggleSkill?.(skill.id)}
-                  disabled={isAssignedElsewhere}
                   className="w-4 h-4 text-green-600 rounded flex-shrink-0"
                 />
               )}
@@ -186,10 +185,10 @@ export default function BLSPlatinumChecklist({
               {/* Skill name */}
               <span
                 className={`text-sm flex-1 ${
-                  isAssignedElsewhere && !isSelectedHere
-                    ? 'line-through text-gray-400 dark:text-gray-500'
-                    : isSelectedHere
+                  isSelectedHere
                     ? 'text-green-800 dark:text-green-300 font-medium'
+                    : isAssignedElsewhere
+                    ? 'text-amber-700 dark:text-amber-400'
                     : 'text-gray-700 dark:text-gray-300'
                 }`}
               >
@@ -198,7 +197,7 @@ export default function BLSPlatinumChecklist({
 
               {/* Station indicator */}
               {(isAssignedElsewhere || isSelectedHere) && (
-                <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
+                <span className={`text-xs flex-shrink-0 ${isAssignedElsewhere && !isSelectedHere ? 'text-amber-600 dark:text-amber-400' : 'text-gray-500 dark:text-gray-400'}`}>
                   {isSelectedHere && 'This station'}
                   {isSelectedHere && isAssignedElsewhere && ', '}
                   {isAssignedElsewhere && (
@@ -214,8 +213,8 @@ export default function BLSPlatinumChecklist({
       {/* Footer summary */}
       <div className="px-4 py-2 border-t border-gray-200 dark:border-gray-600 text-xs text-gray-500 dark:text-gray-400">
         <span className="inline-flex items-center gap-1">
-          <span className="w-3 h-0.5 bg-gray-400 line-through"></span>
-          = assigned to another station
+          <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+          = also assigned to another station (can still be selected)
         </span>
       </div>
     </div>

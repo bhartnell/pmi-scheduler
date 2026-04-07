@@ -330,6 +330,25 @@ export async function PATCH(request: NextRequest) {
           .eq('lab_day_id', labDayId);
         break;
 
+      case 'prev':
+        // Move to previous rotation
+        const prevRotation = Math.max(1, (currentState.rotation_number || 1) - 1);
+        updateData = {
+          rotation_number: prevRotation,
+          status: 'stopped',
+          started_at: null,
+          paused_at: null,
+          elapsed_when_paused: 0,
+          rotation_acknowledged: true,
+          version: nextVersion
+        };
+        // Reset all ready statuses for this lab day when rotation changes
+        await supabase
+          .from('lab_timer_ready_status')
+          .update({ is_ready: false, updated_at: new Date().toISOString() })
+          .eq('lab_day_id', labDayId);
+        break;
+
       case 'reset':
         // Reset current rotation
         updateData = {

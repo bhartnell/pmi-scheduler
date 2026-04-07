@@ -622,7 +622,7 @@ export default function GradeStationPage() {
       {useEmbeddedSkillSheet && panelSheetId ? (
         <main className="flex gap-6 max-w-7xl mx-auto px-4 py-4 pb-4">
           {/* Left: Student panel */}
-          <div className="w-80 shrink-0 sticky top-0 h-screen overflow-y-auto pt-2 space-y-4">
+          <div className="w-80 shrink-0 sticky top-0 max-h-screen overflow-y-auto pt-2 space-y-4">
             <StudentSelection
               isSkillsStation={isSkillsStation}
               station={station}
@@ -643,7 +643,7 @@ export default function GradeStationPage() {
           </div>
 
           {/* Right: Skill sheet */}
-          <div className="flex-1 overflow-y-auto min-h-[60vh]">
+          <div className="flex-1 min-h-[60vh]">
             <SkillSheetPanel
               sheetId={panelSheetId}
               onClose={() => {
