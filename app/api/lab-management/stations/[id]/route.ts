@@ -56,6 +56,7 @@ export async function GET(
         lab_day:lab_days(
           id,
           date,
+          is_nremt_testing,
           cohort:cohorts(
             id,
             cohort_number,

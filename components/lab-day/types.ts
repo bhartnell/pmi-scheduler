@@ -21,6 +21,7 @@ export interface LabDay {
       abbreviation: string;
     };
   };
+  is_nremt_testing?: boolean;
   lab_mode?: 'group_rotations' | 'individual_testing';
   stations: Station[];
   source_template_id?: string | null;

@@ -39,6 +39,7 @@ interface SkillSheetRow {
   equipment: string | null;
   overview: string | null;
   platinum_skill_type: string | null;
+  nremt_code: string | null;
   canonical_skill: CanonicalSkillRef | null;
   step_count: number;
 }
@@ -309,6 +310,9 @@ export default function SkillSheetsBrowsePage() {
                       <span className="text-sm font-medium text-gray-900 dark:text-white truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                         {sheet.skill_name}
                       </span>
+                      {sheet.nremt_code && (
+                        <span className="ml-1 px-1.5 py-0.5 text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 rounded flex-shrink-0">NREMT</span>
+                      )}
                     </div>
 
                     {/* Program badge */}

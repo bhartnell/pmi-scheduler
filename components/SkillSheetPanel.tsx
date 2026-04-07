@@ -72,6 +72,7 @@ interface SkillSheet {
   critical_failures: string[];
   notes: string;
   platinum_skill_type: string | null;
+  nremt_code: string | null;
   steps: Step[];
   canonical_skill: CanonicalSkill | null;
   alternate_sheets: { id: string; skill_name: string; source: string }[];
@@ -135,6 +136,10 @@ interface SkillSheetPanelProps {
   onEvaluationSaved?: (studentId: string, evaluationId: string, status: 'complete' | 'in_progress') => void;
   /** When true, renders as full-width embedded content instead of slide-out panel */
   embedded?: boolean;
+  /** Default display mode — use 'final' for NREMT testing days */
+  defaultMode?: DisplayMode;
+  /** When true, hide Teaching and Formative tabs (NREMT mode) */
+  nremtMode?: boolean;
 }
 
 // ─── Constants ──────────────────────────────────────────────────────────────
@@ -259,11 +264,13 @@ export default function SkillSheetPanel({
   studentQueue,
   onEvaluationSaved,
   embedded = false,
+  defaultMode,
+  nremtMode = false,
 }: SkillSheetPanelProps) {
   const [sheet, setSheet] = useState<SkillSheet | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [mode, setMode] = useState<DisplayMode>('teaching');
+  const [mode, setMode] = useState<DisplayMode>(defaultMode || (nremtMode ? 'final' : 'teaching'));
   const [collapsedPhases, setCollapsedPhases] = useState<Set<string>>(new Set());
 
   // Evaluation state
@@ -1241,6 +1248,9 @@ export default function SkillSheetPanel({
         <div className="flex-1 min-w-0">
           <h2 className="text-base font-semibold text-gray-900 dark:text-white truncate">
             {loading ? 'Loading...' : sheet?.skill_name || 'Skill Sheet'}
+            {sheet?.nremt_code && (
+              <span className="ml-2 px-1.5 py-0.5 text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 rounded align-middle">NREMT</span>
+            )}
           </h2>
           {sheet && sourceBadge && (
             <div className="flex items-center gap-2 mt-1">
@@ -1363,7 +1373,7 @@ export default function SkillSheetPanel({
                   { key: 'teaching' as const, label: 'Teaching', icon: FileText },
                   { key: 'formative' as const, label: 'Formative', icon: ClipboardCheck },
                   { key: 'final' as const, label: 'Final', icon: Shield },
-                ]).map(({ key, label, icon: Icon }) => (
+                ]).filter(({ key }) => !nremtMode || key === 'final').map(({ key, label, icon: Icon }) => (
                   <button
                     key={key}
                     onClick={() => setMode(key)}
@@ -1796,6 +1806,9 @@ export default function SkillSheetPanel({
           <div className="flex-1 min-w-0">
             <h2 className="text-base font-semibold text-gray-900 dark:text-white truncate">
               {loading ? 'Loading...' : sheet?.skill_name || 'Skill Sheet'}
+              {sheet?.nremt_code && (
+                <span className="ml-2 px-1.5 py-0.5 text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 rounded align-middle">NREMT</span>
+              )}
             </h2>
             {sheet && sourceBadge && (
               <div className="flex items-center gap-2 mt-1">
