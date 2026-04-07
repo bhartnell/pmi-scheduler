@@ -199,6 +199,15 @@ export async function PUT(
     if (body.final_exam_poll_id !== undefined) updateData.final_exam_poll_id = body.final_exam_poll_id || null;
     if (body.final_exam_scheduled !== undefined) updateData.final_exam_scheduled = body.final_exam_scheduled || null;
 
+    // Extension tracking
+    if (body.is_extended !== undefined) updateData.is_extended = body.is_extended;
+    if (body.extension_reason !== undefined) updateData.extension_reason = body.extension_reason?.trim() || null;
+    if (body.extension_date !== undefined) updateData.extension_date = body.extension_date || null;
+    if (body.original_expected_end_date !== undefined) updateData.original_expected_end_date = body.original_expected_end_date || null;
+    if (body.extension_eval_completed !== undefined) updateData.extension_eval_completed = body.extension_eval_completed;
+    if (body.extension_eval_date !== undefined) updateData.extension_eval_date = body.extension_eval_date || null;
+    if (body.extension_eval_notes !== undefined) updateData.extension_eval_notes = body.extension_eval_notes?.trim() || null;
+
     // Handle agency update
     if (body.agency_id !== undefined) {
       updateData.agency_id = body.agency_id || null;
@@ -214,12 +223,12 @@ export async function PUT(
       }
     }
 
-    // Columns that may not exist yet if migration hasn't been applied
+    // Legacy columns that may not exist — only truly optional/unused columns belong here.
+    // DO NOT add active columns (snhd_field_docs_submitted_at, snhd_course_completion_submitted_at)
+    // as the retry logic strips them, causing date saves to silently fail.
     const OPTIONAL_COLUMNS = [
       'snhd_course_completion_submitted_date',
       'field_internship_docs_submitted_date',
-      'snhd_field_docs_submitted_at',
-      'snhd_course_completion_submitted_at',
     ];
 
     const selectQuery = `

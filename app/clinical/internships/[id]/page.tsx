@@ -376,15 +376,37 @@ export default function InternshipDetailPage() {
     setHasChanges(true);
   };
 
+  // Date fields that need empty-string-to-null sanitization before save
+  const DATE_FIELDS = [
+    'placement_date', 'orientation_date', 'internship_start_date', 'expected_end_date',
+    'actual_end_date', 'phase_1_start_date', 'phase_1_end_date', 'phase_1_eval_scheduled',
+    'phase_2_start_date', 'phase_2_end_date', 'phase_2_eval_scheduled',
+    'closeout_meeting_date', 'internship_completion_date', 'snhd_submitted_date',
+    'snhd_field_docs_submitted_at', 'snhd_course_completion_submitted_at',
+    'nremt_clearance_date', 'ryan_notified_date', 'written_exam_date',
+    'psychomotor_exam_date', 'course_completion_date',
+    'phase_1_meeting_scheduled', 'phase_2_meeting_scheduled', 'final_exam_scheduled',
+    'extension_date', 'original_expected_end_date', 'extension_eval_date',
+  ];
+
   const handleSave = async () => {
     if (!userRole || !canEditClinical(userRole)) return;
 
     setSaving(true);
     try {
+      // Sanitize date fields: convert empty strings to null to avoid
+      // PostgreSQL errors on DATE columns receiving empty strings
+      const sanitizedData = { ...formData };
+      for (const key of DATE_FIELDS) {
+        if (key in sanitizedData) {
+          sanitizedData[key] = sanitizedData[key] || null;
+        }
+      }
+
       const res = await fetch(`/api/clinical/internships/${internshipId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(sanitizedData),
       });
 
       const data = await res.json();
