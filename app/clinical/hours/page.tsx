@@ -92,6 +92,16 @@ const HOUR_REQUIREMENTS: Record<string, number> = {
 
 const TOTAL_REQUIRED_HOURS = 290;
 
+// Elective auto-calculation constants
+const ED_MINIMUM_HOURS = 132; // ER minimum requirement
+const SHIFT_INCREMENT = 12;   // Full shift = 12 hours
+
+/** Calculate auto-elective hours from excess ED shifts (display only). */
+function calculateAutoElective(edHours: number): number {
+  const excess = Math.max(0, edHours - ED_MINIMUM_HOURS);
+  return Math.floor(excess / SHIFT_INCREMENT) * SHIFT_INCREMENT;
+}
+
 // Department requirements used for progress visualization (required > 0 only)
 const DEPT_PROGRESS_ITEMS = [
   { key: 'psych_hours', label: 'Psych', required: 12, color: 'bg-purple-500' },
@@ -1328,6 +1338,36 @@ export default function ClinicalHoursTrackerPage() {
                           </td>
                           {DEPT_COLUMNS.map(col => {
                             const hours = studentHours?.[col.hoursField] || 0;
+
+                            // Elective column: show auto-calc from excess ED if no manual entry
+                            if (col.key === 'ems_field') {
+                              const edHours = studentHours?.ed_hours || 0;
+                              const autoElective = calculateAutoElective(edHours);
+                              const hasManual = hours > 0;
+                              const displayHours = hasManual ? hours : autoElective;
+                              const excessHours = Math.max(0, edHours - ED_MINIMUM_HOURS);
+                              const colorClass = getCompletionColor(displayHours, col.required);
+
+                              return (
+                                <td key={col.key} className="px-2 py-2 text-center">
+                                  <div
+                                    className={`inline-block px-2 py-1 rounded text-xs font-medium ${
+                                      hasManual ? colorClass : 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
+                                    }`}
+                                    title={hasManual
+                                      ? `Manually entered: ${hours}h`
+                                      : `Auto-calculated from excess ER shifts: ${excessHours} excess hours / ${SHIFT_INCREMENT}hr shifts = ${autoElective} elective hours`
+                                    }
+                                  >
+                                    {displayHours}{col.required > 0 ? `/${col.required}` : ''}
+                                    {!hasManual && autoElective > 0 && (
+                                      <span className="ml-1 text-[9px] bg-blue-200 dark:bg-blue-800 text-blue-700 dark:text-blue-300 px-1 rounded">auto</span>
+                                    )}
+                                  </div>
+                                </td>
+                              );
+                            }
+
                             const colorClass = getCompletionColor(hours, col.required);
 
                             return (
@@ -1440,6 +1480,14 @@ export default function ClinicalHoursTrackerPage() {
                             const isEditing = editingCell === cellKey;
                             const isSaving = saving === cellKey;
 
+                            // Elective column: show auto-calc when no manual entry
+                            const isElective = col.key === 'ems_field';
+                            const edHours = studentHours?.ed_hours || 0;
+                            const autoElective = isElective ? calculateAutoElective(edHours) : 0;
+                            const hasManualElective = isElective && (shifts > 0 || hours > 0);
+                            const showAutoElective = isElective && !hasManualElective && autoElective > 0;
+                            const excessHours = Math.max(0, edHours - ED_MINIMUM_HOURS);
+
                             return (
                               <td key={col.key} className="px-3 py-2 text-center">
                                 {isEditing ? (
@@ -1480,6 +1528,18 @@ export default function ClinicalHoursTrackerPage() {
                                       </button>
                                     </div>
                                   </div>
+                                ) : showAutoElective ? (
+                                  <button
+                                    onClick={() => startEditing(student.id, col)}
+                                    disabled={!canEdit}
+                                    className={`min-w-[60px] px-2 py-1 rounded text-xs transition-colors bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 ${canEdit ? 'hover:bg-blue-100 dark:hover:bg-blue-900/40 cursor-pointer' : 'cursor-not-allowed'}`}
+                                    title={`Auto-calculated from excess ER shifts: ${excessHours} excess hours / ${SHIFT_INCREMENT}hr shifts = ${autoElective} elective hours`}
+                                  >
+                                    <div>
+                                      <div className="font-medium">{autoElective}h</div>
+                                      <span className="text-[9px] bg-blue-200 dark:bg-blue-800 text-blue-700 dark:text-blue-300 px-1 rounded">auto</span>
+                                    </div>
+                                  </button>
                                 ) : (
                                   <button
                                     onClick={() => startEditing(student.id, col)}
