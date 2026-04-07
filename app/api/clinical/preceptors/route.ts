@@ -24,7 +24,21 @@ export async function GET(request: NextRequest) {
       .order('first_name');
 
     if (agencyId) {
-      query = query.eq('agency_id', agencyId);
+      // Look up agency name/abbreviation so we also match legacy records with only agency_name
+      const { data: agencyData } = await supabase
+        .from('agencies')
+        .select('name, abbreviation')
+        .eq('id', agencyId)
+        .single();
+
+      if (agencyData) {
+        const conditions = [`agency_id.eq.${agencyId}`];
+        if (agencyData.name) conditions.push(`agency_name.eq.${agencyData.name}`);
+        if (agencyData.abbreviation) conditions.push(`agency_name.eq.${agencyData.abbreviation}`);
+        query = query.or(conditions.join(','));
+      } else {
+        query = query.eq('agency_id', agencyId);
+      }
     }
 
     if (activeOnly) {

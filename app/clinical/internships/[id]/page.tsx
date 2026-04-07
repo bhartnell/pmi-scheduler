@@ -800,7 +800,9 @@ export default function InternshipDetailPage() {
           const preceptorLabel = preceptorContact
             ? `${preceptorContact.first_name} ${preceptorContact.last_name}`
             : null;
-          return (student?.email || preceptorEmail || internship.agencies) ? (
+          // Legacy preceptor: has preceptor_id but no resolved contact (FK join failed)
+          const isLegacyPreceptor = !preceptorContact && !!formData.preceptor_id;
+          return (student?.email || preceptorEmail || isLegacyPreceptor || internship.agencies) ? (
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-4 mb-6">
             <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
               <Mail className="w-4 h-4" />
@@ -836,6 +838,16 @@ export default function InternshipDetailPage() {
                     <Copy className="w-3.5 h-3.5 text-gray-400" />
                   )}
                 </button>
+              )}
+              {isLegacyPreceptor && (
+                <Link
+                  href="/clinical/preceptors"
+                  className="inline-flex items-center gap-2 px-3 py-2 text-sm bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
+                >
+                  <Users className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                  <span className="font-medium text-amber-800 dark:text-amber-300">Preceptor:</span>
+                  <span className="text-amber-700 dark:text-amber-400">Legacy record — view in preceptor directory</span>
+                </Link>
               )}
               {internship.agencies?.phone && (
                 <button
@@ -1769,14 +1781,12 @@ export default function InternshipDetailPage() {
                       </a>
                     )}
                     {!formData.phase_1_meeting_poll_id && (
-                      <a
-                        href="https://rallly.co/new"
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <Link
+                        href="/scheduling/polls/create"
                         className="flex items-center gap-1 px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
                       >
                         Create Poll <ExternalLink className="w-3 h-3" />
-                      </a>
+                      </Link>
                     )}
                   </div>
                 </div>
@@ -1812,14 +1822,12 @@ export default function InternshipDetailPage() {
                       </a>
                     )}
                     {!formData.phase_2_meeting_poll_id && (
-                      <a
-                        href="https://rallly.co/new"
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <Link
+                        href="/scheduling/polls/create"
                         className="flex items-center gap-1 px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
                       >
                         Create Poll <ExternalLink className="w-3 h-3" />
-                      </a>
+                      </Link>
                     )}
                   </div>
                 </div>
@@ -1855,14 +1863,12 @@ export default function InternshipDetailPage() {
                       </a>
                     )}
                     {!formData.final_exam_poll_id && (
-                      <a
-                        href="https://rallly.co/new"
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <Link
+                        href="/scheduling/polls/create"
                         className="flex items-center gap-1 px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
                       >
                         Create Poll <ExternalLink className="w-3 h-3" />
-                      </a>
+                      </Link>
                     )}
                   </div>
                 </div>

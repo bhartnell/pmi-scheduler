@@ -155,7 +155,12 @@ export default function ClinicalHoursTrackerPage() {
   const [userRole, setUserRole] = useState<Role | null>(null);
 
   const [selectedProgram, setSelectedProgram] = useState<string>('Paramedic');
-  const [selectedCohort, setSelectedCohort] = useState('');
+  const [selectedCohort, setSelectedCohort] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('clinical_hours_cohort') || '';
+    }
+    return '';
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [editingCell, setEditingCell] = useState<string | null>(null);
   const [editValue, setEditValue] = useState({ shifts: 0, hours: 0 });
@@ -187,6 +192,13 @@ export default function ClinicalHoursTrackerPage() {
       fetchCohortData();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCohort]);
+
+  // Persist cohort selection to localStorage
+  useEffect(() => {
+    if (selectedCohort) {
+      localStorage.setItem('clinical_hours_cohort', selectedCohort);
+    }
   }, [selectedCohort]);
 
   useEffect(() => {
