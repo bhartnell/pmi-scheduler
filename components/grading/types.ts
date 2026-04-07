@@ -215,6 +215,7 @@ export interface Station {
   lab_day: {
     id: string;
     date: string;
+    is_nremt_testing?: boolean;
     cohort: {
       id: string;
       cohort_number: number;

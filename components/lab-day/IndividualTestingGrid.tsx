@@ -54,11 +54,12 @@ interface CellData {
 
 interface IndividualTestingGridProps {
   labDayId: string;
+  isNremtTesting?: boolean;
 }
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
-export default function IndividualTestingGrid({ labDayId }: IndividualTestingGridProps) {
+export default function IndividualTestingGrid({ labDayId, isNremtTesting = false }: IndividualTestingGridProps) {
   const [students, setStudents] = useState<Student[]>([]);
   const [stations, setStations] = useState<GridStation[]>([]);
   const [cells, setCells] = useState<Record<string, CellData>>({});
@@ -497,6 +498,12 @@ export default function IndividualTestingGrid({ labDayId }: IndividualTestingGri
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+      {/* NREMT banner */}
+      {isNremtTesting && (
+        <div className="bg-red-600 text-white text-center py-1.5 text-sm font-bold">
+          NREMT Psychomotor Testing &mdash; Final Evaluations Only
+        </div>
+      )}
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
         <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">

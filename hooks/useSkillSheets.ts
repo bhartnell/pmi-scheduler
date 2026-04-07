@@ -16,6 +16,7 @@ interface SkillSheetRow {
   equipment: string | null;
   overview: string | null;
   platinum_skill_type: string | null;
+  nremt_code: string | null;
   canonical_skill: CanonicalSkillRef | null;
   step_count: number;
 }

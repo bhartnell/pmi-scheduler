@@ -657,6 +657,8 @@ export default function GradeStationPage() {
               studentQueue={studentQueue}
               onEvaluationSaved={handleEvaluationSaved}
               embedded={true}
+              nremtMode={!!station?.lab_day?.is_nremt_testing}
+              defaultMode={station?.lab_day?.is_nremt_testing ? 'final' : undefined}
             />
           </div>
         </main>
@@ -863,6 +865,8 @@ export default function GradeStationPage() {
           stationPoolId={stationId}
           studentQueue={isSkillsStation ? studentQueue : undefined}
           onEvaluationSaved={handleEvaluationSaved}
+          nremtMode={!!station?.lab_day?.is_nremt_testing}
+          defaultMode={station?.lab_day?.is_nremt_testing ? 'final' : undefined}
         />
       )}
     </div>

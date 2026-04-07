@@ -57,6 +57,7 @@ export async function GET(request: NextRequest) {
         equipment,
         overview,
         platinum_skill_type,
+        nremt_code,
         canonical_skill:canonical_skills(
           id,
           canonical_name,
