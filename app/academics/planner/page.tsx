@@ -2328,9 +2328,16 @@ function SemesterPlannerPage() {
         const active = semList.find(s => s.is_active);
         if (active) {
           setSelectedSemesterId(active.id);
-          // Navigate to semester start date week
+          // Navigate to today if within semester, otherwise semester start
           if (active.start_date) {
-            setCurrentWeekStart(getMonday(new Date(active.start_date + 'T00:00:00')));
+            const today = new Date();
+            const semStart = new Date(active.start_date + 'T00:00:00');
+            const semEnd = active.end_date ? new Date(active.end_date + 'T00:00:00') : null;
+            if (today >= semStart && (!semEnd || today <= semEnd)) {
+              setCurrentWeekStart(getMonday(today));
+            } else {
+              setCurrentWeekStart(getMonday(semStart));
+            }
           }
         } else if (semList.length > 0) {
           setSelectedSemesterId(semList[0].id);
