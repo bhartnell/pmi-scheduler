@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import {
   ChevronLeft,
@@ -11,12 +11,19 @@ import {
   Users,
   BarChart3,
   Activity,
-  Send,
   AlertCircle,
   Loader2,
   CheckCircle2,
   Circle,
   Timer,
+  Plus,
+  ChevronDown,
+  ChevronUp,
+  ArrowRight,
+  UserCheck,
+  Edit3,
+  X,
+  Check,
 } from 'lucide-react';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -36,6 +43,7 @@ interface GridStation {
   skillSheetId: string | null;
   instructorName: string | null;
   scenario?: { id: string; title: string } | null;
+  addedDuringExam?: boolean;
 }
 
 interface EvalSummary {
@@ -69,6 +77,30 @@ interface LabDayInfo {
     program: { name: string; abbreviation: string };
   };
 }
+
+// ─── Constants ─────────────────────────────────────────────────────────────
+
+const NREMT_SKILLS = [
+  'Cardiac Arrest Management / AED',
+  'Patient Assessment - Medical',
+  'Patient Assessment - Trauma',
+  'Spinal Immobilization (Supine Patient)',
+  'BVM Ventilation of an Apneic Adult Patient',
+  'Oxygen Administration by Non-Rebreather Mask',
+  'Bleeding Control/Shock Management',
+];
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const NREMT_SKILL_TIMES: Record<string, number> = {
+  'Cardiac Arrest Management / AED': 15,
+  'Patient Assessment - Medical': 15,
+  'Patient Assessment - Trauma': 10,
+  'Spinal Immobilization (Supine Patient)': 10,
+  'BVM Ventilation of an Apneic Adult Patient': 5,
+  'Oxygen Administration by Non-Rebreather Mask': 5,
+  'Bleeding Control/Shock Management': 10,
+};
+const AVG_SKILL_TIME = 10; // ~70 min total / 7 skills
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -145,33 +177,65 @@ function isStudentCurrentlyTesting(
   student: Student,
   stations: GridStation[],
   cells: Record<string, CellData>
-): boolean {
+): GridStation | null {
   for (const station of stations) {
     const key = `${student.id}_${station.id}`;
     const cell = cells[key];
-    if (cell?.status === 'in_progress') return true;
+    if (cell?.status === 'in_progress') return station;
   }
-  return false;
+  return null;
 }
 
-function getStudentAvailableStations(
+/** Find the best available station for a student: not completed, station not busy, fewest completions */
+function suggestStationForStudent(
   student: Student,
   stations: GridStation[],
+  students: Student[],
   cells: Record<string, CellData>
-): GridStation[] {
-  return stations.filter(station => {
+): GridStation | null {
+  const candidates = stations.filter(station => {
     const key = `${student.id}_${station.id}`;
     const cell = cells[key];
-    // Not started and station is not in_progress for someone else
-    const notStarted = !cell || (cell.status !== 'completed' && cell.status !== 'in_progress');
-    return notStarted;
+    // Student hasn't completed this station
+    const notCompleted = !cell || cell.status !== 'completed';
+    // Station is not currently occupied by another student
+    const stationAvailable = !students.some(s => {
+      if (s.id === student.id) return false;
+      const k = `${s.id}_${station.id}`;
+      return cells[k]?.status === 'in_progress';
+    });
+    return notCompleted && stationAvailable;
   });
+
+  if (candidates.length === 0) return null;
+
+  // Pick the station with fewest total completions (load balancing)
+  let best = candidates[0];
+  let bestCount = getStationCompletedCount(best, students, cells);
+  for (const s of candidates) {
+    const c = getStationCompletedCount(s, students, cells);
+    if (c < bestCount) {
+      best = s;
+      bestCount = c;
+    }
+  }
+  return best;
 }
 
 function formatDate(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00');
   return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
 }
+
+function formatTimeRemaining(minutes: number): string {
+  if (minutes <= 0) return '0m';
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h === 0) return `${m}m`;
+  return `${h}h ${m}m`;
+}
+
+type ProgressSortKey = 'name' | 'completions' | 'failures';
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
@@ -189,9 +253,25 @@ export default function CoordinatorViewPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   const [secondsAgo, setSecondsAgo] = useState(0);
-  const [sendingStudent, setSendingStudent] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Section 2: Add station modal
+  const [showAddStationModal, setShowAddStationModal] = useState(false);
+  const [addStationSkill, setAddStationSkill] = useState(NREMT_SKILLS[0]);
+  const [addStationExaminer, setAddStationExaminer] = useState('');
+  const [addStationRoom, setAddStationRoom] = useState('');
+  const [addingStation, setAddingStation] = useState(false);
+
+  // Section 3: Progress table
+  const [showProgressTable, setShowProgressTable] = useState(false);
+  const [progressSort, setProgressSort] = useState<ProgressSortKey>('completions');
+  const [progressSortAsc, setProgressSortAsc] = useState(true);
+
+  // Section 4: Proctor editing
+  const [editingProctor, setEditingProctor] = useState<string | null>(null);
+  const [proctorName, setProctorName] = useState('');
+  const [localProctorOverrides, setLocalProctorOverrides] = useState<Record<string, string>>({});
 
   // Auth redirect
   useEffect(() => {
@@ -288,30 +368,56 @@ export default function CoordinatorViewPage() {
     };
   }, [lastUpdated]);
 
-  // Send student to station
-  const handleSendToStation = async (studentId: string, stationId: string) => {
-    const key = `${studentId}_${stationId}`;
-    setSendingStudent(key);
+  // ─── Add Station Handler (Section 2) ────────────────────────────────────
+
+  const handleAddStation = async () => {
+    setAddingStation(true);
     try {
-      const res = await fetch('/api/lab-management/student-queue', {
+      const nextNumber = stations.length > 0
+        ? Math.max(...stations.map(s => s.station_number)) + 1
+        : 1;
+
+      const res = await fetch('/api/lab-management/stations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           lab_day_id: labDayId,
-          student_id: studentId,
-          station_id: stationId,
-          status: 'queued',
+          station_type: 'skills',
+          station_number: nextNumber,
+          custom_title: `${addStationSkill} (Added)`,
+          skill_name: addStationSkill,
+          instructor_name: addStationExaminer || null,
+          room: addStationRoom || null,
+          notes: 'Added during exam',
         }),
       });
       const data = await res.json();
       if (data.success) {
-        await fetchGridData();
+        setShowAddStationModal(false);
+        setAddStationSkill(NREMT_SKILLS[0]);
+        setAddStationExaminer('');
+        setAddStationRoom('');
+        await fetchGridData(true);
       }
     } catch (err) {
-      console.error('Error sending student to station:', err);
+      console.error('Error adding station:', err);
     } finally {
-      setSendingStudent(null);
+      setAddingStation(false);
     }
+  };
+
+  // ─── Proctor edit handler (Section 4 - local only for MVP) ──────────────
+
+  const handleSaveProctor = (stationId: string) => {
+    if (proctorName.trim()) {
+      setLocalProctorOverrides(prev => ({ ...prev, [stationId]: proctorName.trim() }));
+    }
+    setEditingProctor(null);
+    setProctorName('');
+  };
+
+  const getDisplayProctor = (station: GridStation): string | null => {
+    return localProctorOverrides[station.id] || station.instructorName || null;
   };
 
   // ─── Computed values ──────────────────────────────────────────────────────
@@ -337,38 +443,129 @@ export default function CoordinatorViewPage() {
     ? (totalCompleted / totalStudents).toFixed(1)
     : '0';
 
-  // Estimated time remaining (rough: assume 15 min per test)
+  // Estimated time remaining - FIXED calculation using NREMT skill times
   const remainingTests = totalPossible - totalCompleted;
-  const estMinutes = totalStations > 0 ? Math.ceil((remainingTests / Math.max(activeStationCount, 1)) * 15) : 0;
-  const estHours = (estMinutes / 60).toFixed(1);
+  const effectiveStations = Math.max(activeStationCount, 1);
+  const estMinutes = totalStations > 0
+    ? Math.ceil((remainingTests * AVG_SKILL_TIME) / effectiveStations)
+    : 0;
 
-  // ─── Student queue / routing suggestions ──────────────────────────────────
+  // ─── Student list with categories ────────────────────────────────────────
 
-  const nextUpStudents = students
-    .filter(s => !isStudentCurrentlyTesting(s, stations, cells))
-    .map(s => ({
-      student: s,
-      completedCount: getStudentCompletionCount(s, stations, cells),
-      availableStations: getStudentAvailableStations(s, stations, cells),
-    }))
-    .filter(s => s.completedCount < totalStations && s.availableStations.length > 0)
-    .sort((a, b) => a.completedCount - b.completedCount)
-    .slice(0, 8);
+  const studentListData = useMemo(() => {
+    const testing: Array<{
+      student: Student;
+      completedCount: number;
+      testingStation: GridStation;
+    }> = [];
+    const waiting: Array<{
+      student: Student;
+      completedCount: number;
+      suggestedStation: GridStation | null;
+    }> = [];
+    const complete: Array<{
+      student: Student;
+      completedCount: number;
+    }> = [];
 
-  // For each next-up student, suggest the station with the fewest completions (fairness)
-  const suggestStation = (availableStations: GridStation[]): GridStation | null => {
-    if (availableStations.length === 0) return null;
-    // Pick the available station with fewest completions
-    let best = availableStations[0];
-    let bestCount = getStationCompletedCount(best, students, cells);
-    for (const s of availableStations) {
-      const c = getStationCompletedCount(s, students, cells);
-      if (c < bestCount) {
-        best = s;
-        bestCount = c;
+    for (const student of students) {
+      const completedCount = getStudentCompletionCount(student, stations, cells);
+      const testingStation = isStudentCurrentlyTesting(student, stations, cells);
+
+      if (completedCount >= totalStations && totalStations > 0) {
+        complete.push({ student, completedCount });
+      } else if (testingStation) {
+        testing.push({ student, completedCount, testingStation });
+      } else {
+        const suggested = suggestStationForStudent(student, stations, students, cells);
+        waiting.push({ student, completedCount, suggestedStation: suggested });
       }
     }
-    return best;
+
+    // Sort waiting by fewest completions first
+    waiting.sort((a, b) => a.completedCount - b.completedCount);
+
+    return { testing, waiting, complete };
+  }, [students, stations, cells, totalStations]);
+
+  // ─── Progress table data (Section 3) ─────────────────────────────────────
+
+  const progressTableData = useMemo(() => {
+    const rows = students.map(student => {
+      let completions = 0;
+      let failures = 0;
+      let hasFail = false;
+      let allComplete = true;
+
+      const stationResults: Record<string, { status: string; result: string | null }> = {};
+
+      for (const station of stations) {
+        const key = `${student.id}_${station.id}`;
+        const cell = cells[key];
+        if (cell?.status === 'completed') {
+          completions++;
+          if (cell.result === 'fail') {
+            failures++;
+            hasFail = true;
+          }
+          stationResults[station.id] = { status: 'completed', result: cell.result };
+        } else if (cell?.status === 'in_progress') {
+          allComplete = false;
+          stationResults[station.id] = { status: 'in_progress', result: null };
+        } else {
+          allComplete = false;
+          stationResults[station.id] = { status: 'not_started', result: null };
+        }
+      }
+
+      if (stations.length === 0) allComplete = false;
+
+      return { student, completions, failures, hasFail, allComplete, stationResults };
+    });
+
+    // Sort
+    rows.sort((a, b) => {
+      let cmp = 0;
+      if (progressSort === 'name') {
+        cmp = `${a.student.last_name} ${a.student.first_name}`.localeCompare(
+          `${b.student.last_name} ${b.student.first_name}`
+        );
+      } else if (progressSort === 'completions') {
+        cmp = a.completions - b.completions;
+      } else if (progressSort === 'failures') {
+        cmp = a.failures - b.failures;
+      }
+      return progressSortAsc ? cmp : -cmp;
+    });
+
+    // Summary row
+    const summary: Record<string, { pass: number; fail: number; inProgress: number; notStarted: number }> = {};
+    for (const station of stations) {
+      summary[station.id] = { pass: 0, fail: 0, inProgress: 0, notStarted: 0 };
+      for (const student of students) {
+        const key = `${student.id}_${station.id}`;
+        const cell = cells[key];
+        if (cell?.status === 'completed') {
+          if (cell.result === 'fail') summary[station.id].fail++;
+          else summary[station.id].pass++;
+        } else if (cell?.status === 'in_progress') {
+          summary[station.id].inProgress++;
+        } else {
+          summary[station.id].notStarted++;
+        }
+      }
+    }
+
+    return { rows, summary };
+  }, [students, stations, cells, progressSort, progressSortAsc]);
+
+  const handleProgressSort = (key: ProgressSortKey) => {
+    if (progressSort === key) {
+      setProgressSortAsc(!progressSortAsc);
+    } else {
+      setProgressSort(key);
+      setProgressSortAsc(true);
+    }
   };
 
   // ─── Status colors ────────────────────────────────────────────────────────
@@ -496,7 +693,7 @@ export default function CoordinatorViewPage() {
             <div className="flex items-center gap-2">
               <Clock className="w-5 h-5 text-orange-600 dark:text-orange-400" />
               <div>
-                <div className="text-lg font-bold text-gray-900 dark:text-white">~{estHours}h</div>
+                <div className="text-lg font-bold text-gray-900 dark:text-white">~{formatTimeRemaining(estMinutes)}</div>
                 <div className="text-xs text-gray-500 dark:text-gray-400">Est. Remaining</div>
               </div>
             </div>
@@ -527,6 +724,9 @@ export default function CoordinatorViewPage() {
             const currentStudent = getCurrentStudentAtStation(station, students, cells);
             const completedCount = getStationCompletedCount(station, students, cells);
             const progressPercent = totalStudents > 0 ? Math.round((completedCount / totalStudents) * 100) : 0;
+            const displayProctor = getDisplayProctor(station);
+            const allStudentsDone = completedCount === totalStudents && totalStudents > 0;
+            const isAddedDuringExam = station.custom_title?.includes('(Added)') || station.addedDuringExam;
 
             return (
               <div
@@ -536,8 +736,13 @@ export default function CoordinatorViewPage() {
                 {/* Station header */}
                 <div className="flex items-start justify-between mb-2">
                   <div className="min-w-0 flex-1">
-                    <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+                    <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide flex items-center gap-1">
                       Station {station.station_number}
+                      {isAddedDuringExam && (
+                        <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/40 px-1.5 py-0.5 rounded-full normal-case">
+                          Added
+                        </span>
+                      )}
                     </div>
                     <div className="text-sm sm:text-base font-bold text-gray-900 dark:text-white truncate" title={getStationDisplayName(station)}>
                       {getStationDisplayName(station)}
@@ -562,10 +767,61 @@ export default function CoordinatorViewPage() {
                   )}
                 </div>
 
-                {/* Instructor */}
-                {station.instructorName && (
-                  <div className="text-xs text-gray-500 dark:text-gray-400 mb-2 truncate">
-                    Instr: {station.instructorName}
+                {/* Proctor / Instructor (Section 4) */}
+                <div className="mb-2 min-h-[1.25rem]">
+                  {editingProctor === station.id ? (
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="text"
+                        value={proctorName}
+                        onChange={e => setProctorName(e.target.value)}
+                        placeholder="Examiner name"
+                        className="flex-1 text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white min-w-0"
+                        autoFocus
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') handleSaveProctor(station.id);
+                          if (e.key === 'Escape') { setEditingProctor(null); setProctorName(''); }
+                        }}
+                      />
+                      <button
+                        onClick={() => handleSaveProctor(station.id)}
+                        className="p-1 text-green-600 hover:text-green-700 min-w-[28px] min-h-[28px] flex items-center justify-center"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => { setEditingProctor(null); setProctorName(''); }}
+                        className="p-1 text-gray-400 hover:text-gray-600 min-w-[28px] min-h-[28px] flex items-center justify-center"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                        {displayProctor ? `Examiner: ${displayProctor}` : 'No examiner assigned'}
+                      </span>
+                      <button
+                        onClick={() => {
+                          setEditingProctor(station.id);
+                          setProctorName(displayProctor || '');
+                        }}
+                        className="flex-shrink-0 p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 min-w-[28px] min-h-[28px] flex items-center justify-center"
+                        title="Change examiner"
+                      >
+                        <Edit3 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* All Complete badge (Section 4) */}
+                {allStudentsDone && (
+                  <div className="mb-2">
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300">
+                      <CheckCircle2 className="w-3 h-3" />
+                      All Complete
+                    </span>
                   </div>
                 )}
 
@@ -584,42 +840,48 @@ export default function CoordinatorViewPage() {
               </div>
             );
           })}
+
+          {/* Add Station Button (Section 2) */}
+          {labDayInfo?.is_nremt_testing && (
+            <button
+              onClick={() => setShowAddStationModal(true)}
+              className="rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 p-3 sm:p-4 flex flex-col items-center justify-center gap-2 text-gray-500 dark:text-gray-400 hover:border-blue-400 hover:text-blue-600 dark:hover:border-blue-500 dark:hover:text-blue-400 transition-colors min-h-[160px] cursor-pointer"
+            >
+              <Plus className="w-8 h-8" />
+              <span className="text-sm font-medium">Open Additional Station</span>
+            </button>
+          )}
         </div>
 
-        {/* ─── Next Up / Student Queue ──────────────────────────────── */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+        {/* ─── Next Up / Student Queue (Section 1 - Enhanced) ──────── */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden mb-6">
           <div className="px-4 py-3 bg-gray-50 dark:bg-gray-750 border-b border-gray-200 dark:border-gray-700">
             <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <Send className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-              Next Up -- Student Queue
+              <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              Student Queue
             </h2>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-              Students with fewest completions are prioritized. Tap to send to a station.
+              Students with fewest completions shown first. Suggestion badges show the best available station.
             </p>
           </div>
 
-          {nextUpStudents.length === 0 ? (
-            <div className="p-6 text-center text-gray-500 dark:text-gray-400">
-              <CheckCircle2 className="w-10 h-10 mx-auto mb-2 text-green-500" />
-              <p className="font-medium">All students are either testing or finished!</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-gray-100 dark:divide-gray-700">
-              {nextUpStudents.map(({ student, completedCount, availableStations }, idx) => {
-                const suggested = suggestStation(availableStations);
-                const sendKey = suggested ? `${student.id}_${suggested.id}` : '';
-
-                return (
+          {/* Currently Testing */}
+          {studentListData.testing.length > 0 && (
+            <div className="border-b border-gray-100 dark:border-gray-700">
+              <div className="px-4 py-2 bg-yellow-50/50 dark:bg-yellow-900/10">
+                <span className="text-xs font-semibold text-yellow-700 dark:text-yellow-400 uppercase tracking-wide">
+                  Currently Testing ({studentListData.testing.length})
+                </span>
+              </div>
+              <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                {studentListData.testing.map(({ student, completedCount, testingStation }) => (
                   <div
                     key={student.id}
-                    className="px-4 py-3 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors"
+                    className="px-4 py-3 flex items-center gap-3"
                   >
-                    {/* Priority number */}
-                    <span className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 flex items-center justify-center text-xs font-bold">
-                      {idx + 1}
+                    <span className="flex-shrink-0 w-7 h-7 rounded-full bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300 flex items-center justify-center">
+                      <Clock className="w-3.5 h-3.5" />
                     </span>
-
-                    {/* Student info */}
                     <div className="flex-1 min-w-0">
                       <div className="text-sm sm:text-base font-medium text-gray-900 dark:text-white truncate">
                         {student.first_name} {student.last_name}
@@ -628,26 +890,227 @@ export default function CoordinatorViewPage() {
                         {completedCount}/{totalStations} completed
                       </div>
                     </div>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-yellow-700 dark:text-yellow-300 bg-yellow-100 dark:bg-yellow-900/40 rounded-lg whitespace-nowrap">
+                      <Activity className="w-3.5 h-3.5" />
+                      Testing at Stn {testingStation.station_number}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
-                    {/* Suggested station + send button */}
-                    {suggested && (
-                      <button
-                        onClick={() => handleSendToStation(student.id, suggested.id)}
-                        disabled={sendingStudent === sendKey}
-                        className="inline-flex items-center gap-1.5 px-3 py-2 text-xs sm:text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors min-h-[44px] whitespace-nowrap"
-                      >
-                        {sendingStudent === sendKey ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Send className="w-3.5 h-3.5" />
-                        )}
-                        <span className="hidden sm:inline">Send to </span>
-                        Stn {suggested.station_number}
-                      </button>
+          {/* Waiting / Next Up */}
+          {studentListData.waiting.length > 0 && (
+            <div className="border-b border-gray-100 dark:border-gray-700">
+              <div className="px-4 py-2 bg-blue-50/50 dark:bg-blue-900/10">
+                <span className="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase tracking-wide">
+                  Next Up ({studentListData.waiting.length})
+                </span>
+              </div>
+              <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                {studentListData.waiting.map(({ student, completedCount, suggestedStation }, idx) => (
+                  <div
+                    key={student.id}
+                    className="px-4 py-3 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors"
+                  >
+                    <span className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 flex items-center justify-center text-xs font-bold">
+                      {idx + 1}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm sm:text-base font-medium text-gray-900 dark:text-white truncate">
+                        {student.first_name} {student.last_name}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        {completedCount}/{totalStations} completed
+                      </div>
+                    </div>
+                    {suggestedStation ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/40 rounded-lg whitespace-nowrap">
+                        <ArrowRight className="w-3.5 h-3.5" />
+                        Stn {suggestedStation.station_number}
+                        <span className="hidden sm:inline truncate max-w-[120px]">
+                          ({getStationDisplayName(suggestedStation)})
+                        </span>
+                      </span>
+                    ) : (
+                      <span className="text-xs text-gray-400 dark:text-gray-500 italic whitespace-nowrap">
+                        All stations busy
+                      </span>
                     )}
                   </div>
-                );
-              })}
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Completed Students */}
+          {studentListData.complete.length > 0 && (
+            <div>
+              <div className="px-4 py-2 bg-green-50/50 dark:bg-green-900/10">
+                <span className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase tracking-wide">
+                  Complete ({studentListData.complete.length})
+                </span>
+              </div>
+              <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                {studentListData.complete.map(({ student, completedCount }) => (
+                  <div
+                    key={student.id}
+                    className="px-4 py-3 flex items-center gap-3 opacity-75"
+                  >
+                    <span className="flex-shrink-0 w-7 h-7 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 flex items-center justify-center">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm sm:text-base font-medium text-gray-900 dark:text-white truncate">
+                        {student.first_name} {student.last_name}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        {completedCount}/{totalStations} completed
+                      </div>
+                    </div>
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/40 rounded-lg">
+                      <UserCheck className="w-3.5 h-3.5" />
+                      Complete
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Empty state */}
+          {studentListData.testing.length === 0 && studentListData.waiting.length === 0 && studentListData.complete.length === 0 && (
+            <div className="p-6 text-center text-gray-500 dark:text-gray-400">
+              <Users className="w-10 h-10 mx-auto mb-2 text-gray-400" />
+              <p className="font-medium">No students loaded yet.</p>
+            </div>
+          )}
+        </div>
+
+        {/* ─── Progress Table (Section 3) ───────────────────────────── */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden mb-6">
+          <button
+            onClick={() => setShowProgressTable(!showProgressTable)}
+            className="w-full px-4 py-3 flex items-center justify-between bg-gray-50 dark:bg-gray-750 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors min-h-[44px]"
+          >
+            <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+              {showProgressTable ? 'Hide Progress Table' : 'Show Progress Table'}
+            </h2>
+            {showProgressTable ? (
+              <ChevronUp className="w-5 h-5 text-gray-500" />
+            ) : (
+              <ChevronDown className="w-5 h-5 text-gray-500" />
+            )}
+          </button>
+
+          {showProgressTable && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50 dark:bg-gray-750 border-b border-gray-200 dark:border-gray-700">
+                    <th
+                      className="px-3 py-2 text-left font-semibold text-gray-700 dark:text-gray-300 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 min-w-[140px] whitespace-nowrap"
+                      onClick={() => handleProgressSort('name')}
+                    >
+                      Student {progressSort === 'name' ? (progressSortAsc ? '\u2191' : '\u2193') : ''}
+                    </th>
+                    {stations.map(station => (
+                      <th
+                        key={station.id}
+                        className="px-2 py-2 text-center font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap min-w-[60px]"
+                        title={getStationDisplayName(station)}
+                      >
+                        <div className="text-xs">Stn {station.station_number}</div>
+                      </th>
+                    ))}
+                    <th
+                      className="px-3 py-2 text-center font-semibold text-gray-700 dark:text-gray-300 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 whitespace-nowrap"
+                      onClick={() => handleProgressSort('completions')}
+                    >
+                      Done {progressSort === 'completions' ? (progressSortAsc ? '\u2191' : '\u2193') : ''}
+                    </th>
+                    <th
+                      className="px-3 py-2 text-center font-semibold text-gray-700 dark:text-gray-300 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 whitespace-nowrap"
+                      onClick={() => handleProgressSort('failures')}
+                    >
+                      Fail {progressSort === 'failures' ? (progressSortAsc ? '\u2191' : '\u2193') : ''}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {progressTableData.rows.map(row => {
+                    let rowBg = '';
+                    if (row.hasFail) rowBg = 'bg-red-50/50 dark:bg-red-900/10';
+                    else if (row.allComplete) rowBg = 'bg-green-50/50 dark:bg-green-900/10';
+
+                    return (
+                      <tr
+                        key={row.student.id}
+                        className={`border-b border-gray-100 dark:border-gray-700 ${rowBg}`}
+                      >
+                        <td className="px-3 py-2 text-gray-900 dark:text-white font-medium whitespace-nowrap">
+                          {row.student.last_name}, {row.student.first_name}
+                        </td>
+                        {stations.map(station => {
+                          const r = row.stationResults[station.id];
+                          let cellContent = '';
+                          let cellColor = 'text-gray-300 dark:text-gray-600';
+                          if (r?.status === 'completed' && r.result === 'pass') {
+                            cellContent = '\u2705';
+                          } else if (r?.status === 'completed' && r.result === 'fail') {
+                            cellContent = '\u274C';
+                          } else if (r?.status === 'in_progress') {
+                            cellContent = '\uD83D\uDFE1';
+                          } else {
+                            cellContent = '\u25CB';
+                            cellColor = 'text-gray-400 dark:text-gray-500';
+                          }
+                          return (
+                            <td key={station.id} className={`px-2 py-2 text-center ${cellColor}`}>
+                              {cellContent}
+                            </td>
+                          );
+                        })}
+                        <td className="px-3 py-2 text-center font-medium text-gray-700 dark:text-gray-300">
+                          {row.completions}
+                        </td>
+                        <td className={`px-3 py-2 text-center font-medium ${row.failures > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-400 dark:text-gray-500'}`}>
+                          {row.failures}
+                        </td>
+                      </tr>
+                    );
+                  })}
+
+                  {/* Summary row */}
+                  <tr className="bg-gray-100 dark:bg-gray-700 font-semibold border-t-2 border-gray-300 dark:border-gray-600">
+                    <td className="px-3 py-2 text-gray-700 dark:text-gray-300">
+                      Summary
+                    </td>
+                    {stations.map(station => {
+                      const s = progressTableData.summary[station.id];
+                      return (
+                        <td key={station.id} className="px-2 py-2 text-center">
+                          <div className="text-xs leading-tight">
+                            <span className="text-green-600 dark:text-green-400">{s?.pass || 0}P</span>
+                            {' / '}
+                            <span className="text-red-600 dark:text-red-400">{s?.fail || 0}F</span>
+                            {' / '}
+                            <span className="text-gray-400">{s?.notStarted || 0}W</span>
+                          </div>
+                        </td>
+                      );
+                    })}
+                    <td className="px-3 py-2 text-center text-gray-700 dark:text-gray-300">
+                      {totalCompleted}
+                    </td>
+                    <td className="px-3 py-2 text-center text-red-600 dark:text-red-400">
+                      {progressTableData.rows.reduce((sum, r) => sum + r.failures, 0)}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           )}
         </div>
@@ -655,6 +1118,92 @@ export default function CoordinatorViewPage() {
         {/* ─── Footer spacer ────────────────────────────────────────── */}
         <div className="h-8" />
       </main>
+
+      {/* ─── Add Station Modal (Section 2) ──────────────────────────── */}
+      {showAddStationModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md border border-gray-200 dark:border-gray-700">
+            <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                Open Additional Station
+              </h3>
+              <button
+                onClick={() => setShowAddStationModal(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 min-w-[44px] min-h-[44px] flex items-center justify-center"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              {/* Skill selection */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Skill Type
+                </label>
+                <select
+                  value={addStationSkill}
+                  onChange={e => setAddStationSkill(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm min-h-[44px]"
+                >
+                  {NREMT_SKILLS.map(skill => (
+                    <option key={skill} value={skill}>{skill}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Examiner name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Examiner / Proctor Name (optional)
+                </label>
+                <input
+                  type="text"
+                  value={addStationExaminer}
+                  onChange={e => setAddStationExaminer(e.target.value)}
+                  placeholder="e.g. Dr. Smith"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm min-h-[44px]"
+                />
+              </div>
+
+              {/* Room */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Room / Location (optional)
+                </label>
+                <input
+                  type="text"
+                  value={addStationRoom}
+                  onChange={e => setAddStationRoom(e.target.value)}
+                  placeholder="e.g. Room 204"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm min-h-[44px]"
+                />
+              </div>
+            </div>
+
+            <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+              <button
+                onClick={() => setShowAddStationModal(false)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 min-h-[44px]"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAddStation}
+                disabled={addingStation}
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 min-h-[44px]"
+              >
+                {addingStation ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Plus className="w-4 h-4" />
+                )}
+                Create Station
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
