@@ -66,6 +66,8 @@ export async function POST(
       email_status,
       step_marks,
       status: evalStatus,
+      critical_fail,
+      critical_fail_notes,
       // Team evaluation fields
       team_members,
     } = body;
@@ -189,6 +191,8 @@ export async function POST(
         step_details: body.step_details || null,
         attempt_number: attemptNumber,
         status: isInProgress ? 'in_progress' : 'complete',
+        critical_fail: critical_fail ?? false,
+        critical_fail_notes: critical_fail_notes || null,
       })
       .select('*')
       .single();
@@ -276,6 +280,8 @@ async function handleTeamEvaluation({
     step_marks,
     step_details,
     status: evalStatus,
+    critical_fail,
+    critical_fail_notes,
   } = body as Record<string, unknown>;
 
   // Validate
@@ -366,6 +372,8 @@ async function handleTeamEvaluation({
       status: isInProgress ? 'in_progress' : 'complete',
       team_role: 'leader',
       team_evaluation_id: null, // leader has no parent
+      critical_fail: (critical_fail as boolean) ?? false,
+      critical_fail_notes: (critical_fail_notes as string) || null,
     })
     .select('*')
     .single();
@@ -414,6 +422,8 @@ async function handleTeamEvaluation({
         status: isInProgress ? 'in_progress' : 'complete',
         team_role: 'assistant',
         team_evaluation_id: leaderEval.id,
+        critical_fail: (critical_fail as boolean) ?? false,
+        critical_fail_notes: (critical_fail_notes as string) || null,
       })
       .select('*')
       .single();

@@ -24,6 +24,9 @@ import {
   Edit3,
   X,
   Check,
+  AlertTriangle,
+  Undo2,
+  Send,
 } from 'lucide-react';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -78,6 +81,19 @@ interface LabDayInfo {
   };
 }
 
+interface AssistanceAlert {
+  id: string;
+  station_name: string;
+  requested_at: string;
+  notes: string | null;
+}
+
+interface EnRouteEntry {
+  studentId: string;
+  studentName: string;
+  sentAt: number;
+}
+
 // ─── Constants ─────────────────────────────────────────────────────────────
 
 const NREMT_SKILLS = [
@@ -88,6 +104,9 @@ const NREMT_SKILLS = [
   'BVM Ventilation of an Apneic Adult Patient',
   'Oxygen Administration by Non-Rebreather Mask',
   'Bleeding Control/Shock Management',
+  'Spinal Immobilization (Seated Patient)',
+  'Joint Immobilization',
+  'Long Bone Immobilization',
 ];
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -99,6 +118,9 @@ const NREMT_SKILL_TIMES: Record<string, number> = {
   'BVM Ventilation of an Apneic Adult Patient': 5,
   'Oxygen Administration by Non-Rebreather Mask': 5,
   'Bleeding Control/Shock Management': 10,
+  'Spinal Immobilization (Seated Patient)': 10,
+  'Joint Immobilization': 5,
+  'Long Bone Immobilization': 5,
 };
 const AVG_SKILL_TIME = 10; // ~70 min total / 7 skills
 
@@ -256,19 +278,31 @@ export default function CoordinatorViewPage() {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Section 2: Add station modal
+  // Section 1: Assistance alerts
+  const [alerts, setAlerts] = useState<AssistanceAlert[]>([]);
+  const alertPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Section 3: En route students (station.id -> entry)
+  const [enRouteStudents, setEnRouteStudents] = useState<Record<string, EnRouteEntry>>({});
+  const [stationDropdownSelections, setStationDropdownSelections] = useState<Record<string, string>>({});
+  const undoTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
+  // Section 4: Next Up Queue collapsible
+  const [showNextUpQueue, setShowNextUpQueue] = useState(true);
+
+  // Add station modal
   const [showAddStationModal, setShowAddStationModal] = useState(false);
   const [addStationSkill, setAddStationSkill] = useState(NREMT_SKILLS[0]);
   const [addStationExaminer, setAddStationExaminer] = useState('');
   const [addStationRoom, setAddStationRoom] = useState('');
   const [addingStation, setAddingStation] = useState(false);
 
-  // Section 3: Progress table
+  // Progress table
   const [showProgressTable, setShowProgressTable] = useState(false);
   const [progressSort, setProgressSort] = useState<ProgressSortKey>('completions');
   const [progressSortAsc, setProgressSortAsc] = useState(true);
 
-  // Section 4: Proctor editing
+  // Proctor editing
   const [editingProctor, setEditingProctor] = useState<string | null>(null);
   const [proctorName, setProctorName] = useState('');
   const [localProctorOverrides, setLocalProctorOverrides] = useState<Record<string, string>>({});
@@ -320,13 +354,45 @@ export default function CoordinatorViewPage() {
     }
   }, [labDayId]);
 
+  // Fetch assistance alerts
+  const fetchAlerts = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/lab-management/lab-days/${labDayId}/assistance-alerts?unresolved=true`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setAlerts(data.alerts || []);
+        }
+      }
+    } catch {
+      // Silently ignore alert fetch errors
+    }
+  }, [labDayId]);
+
+  // Resolve an assistance alert
+  const handleResolveAlert = async (alertId: string) => {
+    try {
+      const res = await fetch(`/api/lab-management/lab-days/${labDayId}/assistance-alerts`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ alert_id: alertId }),
+      });
+      if (res.ok) {
+        setAlerts(prev => prev.filter(a => a.id !== alertId));
+      }
+    } catch (err) {
+      console.error('Error resolving alert:', err);
+    }
+  };
+
   // Initial fetch
   useEffect(() => {
     if (session && labDayId) {
       fetchLabDayInfo();
       fetchGridData();
+      fetchAlerts();
     }
-  }, [session, labDayId, fetchLabDayInfo, fetchGridData]);
+  }, [session, labDayId, fetchLabDayInfo, fetchGridData, fetchAlerts]);
 
   // Polling every 30 seconds with visibility check
   useEffect(() => {
@@ -358,6 +424,17 @@ export default function CoordinatorViewPage() {
     };
   }, [fetchGridData]);
 
+  // Alert polling every 5 seconds
+  useEffect(() => {
+    alertPollRef.current = setInterval(() => {
+      fetchAlerts();
+    }, 5000);
+
+    return () => {
+      if (alertPollRef.current) clearInterval(alertPollRef.current);
+    };
+  }, [fetchAlerts]);
+
   // Tick the "seconds ago" counter
   useEffect(() => {
     tickRef.current = setInterval(() => {
@@ -368,7 +445,16 @@ export default function CoordinatorViewPage() {
     };
   }, [lastUpdated]);
 
-  // ─── Add Station Handler (Section 2) ────────────────────────────────────
+  // Cleanup undo timers on unmount
+  useEffect(() => {
+    return () => {
+      for (const timer of Object.values(undoTimersRef.current)) {
+        clearTimeout(timer);
+      }
+    };
+  }, []);
+
+  // ─── Add Station Handler ────────────────────────────────────────────────
 
   const handleAddStation = async () => {
     setAddingStation(true);
@@ -406,7 +492,7 @@ export default function CoordinatorViewPage() {
     }
   };
 
-  // ─── Proctor edit handler (Section 4 - local only for MVP) ──────────────
+  // ─── Proctor edit handler (local only for MVP) ──────────────────────────
 
   const handleSaveProctor = (stationId: string) => {
     if (proctorName.trim()) {
@@ -418,6 +504,47 @@ export default function CoordinatorViewPage() {
 
   const getDisplayProctor = (station: GridStation): string | null => {
     return localProctorOverrides[station.id] || station.instructorName || null;
+  };
+
+  // ─── En Route Handlers ──────────────────────────────────────────────────
+
+  const handleSendStudent = (stationId: string, studentId: string, studentName: string) => {
+    setEnRouteStudents(prev => ({
+      ...prev,
+      [stationId]: { studentId, studentName, sentAt: Date.now() },
+    }));
+    setStationDropdownSelections(prev => {
+      const next = { ...prev };
+      delete next[stationId];
+      return next;
+    });
+
+    // Clear any existing timer for this station
+    if (undoTimersRef.current[stationId]) {
+      clearTimeout(undoTimersRef.current[stationId]);
+    }
+
+    // Set 30s undo timeout
+    undoTimersRef.current[stationId] = setTimeout(() => {
+      setEnRouteStudents(prev => {
+        const next = { ...prev };
+        delete next[stationId];
+        return next;
+      });
+      delete undoTimersRef.current[stationId];
+    }, 30000);
+  };
+
+  const handleUndoSend = (stationId: string) => {
+    setEnRouteStudents(prev => {
+      const next = { ...prev };
+      delete next[stationId];
+      return next;
+    });
+    if (undoTimersRef.current[stationId]) {
+      clearTimeout(undoTimersRef.current[stationId]);
+      delete undoTimersRef.current[stationId];
+    }
   };
 
   // ─── Computed values ──────────────────────────────────────────────────────
@@ -449,6 +576,15 @@ export default function CoordinatorViewPage() {
   const estMinutes = totalStations > 0
     ? Math.ceil((remainingTests * AVG_SKILL_TIME) / effectiveStations)
     : 0;
+
+  // Set of student IDs that are en route to any station
+  const enRouteStudentIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const entry of Object.values(enRouteStudents)) {
+      ids.add(entry.studentId);
+    }
+    return ids;
+  }, [enRouteStudents]);
 
   // ─── Student list with categories ────────────────────────────────────────
 
@@ -488,7 +624,45 @@ export default function CoordinatorViewPage() {
     return { testing, waiting, complete };
   }, [students, stations, cells, totalStations]);
 
-  // ─── Progress table data (Section 3) ─────────────────────────────────────
+  // ─── Eligible students for a station dropdown ────────────────────────────
+
+  const getEligibleStudentsForStation = useCallback((station: GridStation) => {
+    // Students who haven't completed this station AND aren't currently testing elsewhere AND aren't en route to another station
+    const eligible = students.filter(student => {
+      const key = `${student.id}_${station.id}`;
+      const cell = cells[key];
+      // Must not have completed this station
+      if (cell?.status === 'completed') return false;
+      // Must not be currently testing at any station
+      if (isStudentCurrentlyTesting(student, stations, cells)) return false;
+      // Must not be en route to a different station
+      const isEnRouteElsewhere = Object.entries(enRouteStudents).some(
+        ([sId, entry]) => entry.studentId === student.id && sId !== station.id
+      );
+      if (isEnRouteElsewhere) return false;
+      // Must not already be all complete
+      const completedCount = getStudentCompletionCount(student, stations, cells);
+      if (completedCount >= totalStations && totalStations > 0) return false;
+      return true;
+    });
+
+    // Sort by fewest completions first
+    eligible.sort((a, b) => {
+      const aCount = getStudentCompletionCount(a, stations, cells);
+      const bCount = getStudentCompletionCount(b, stations, cells);
+      return aCount - bCount;
+    });
+
+    // Find the top suggestion (same logic as suggestStationForStudent but from station perspective)
+    let topSuggestionId: string | null = null;
+    if (eligible.length > 0) {
+      topSuggestionId = eligible[0].id;
+    }
+
+    return { eligible, topSuggestionId };
+  }, [students, stations, cells, enRouteStudents, totalStations]);
+
+  // ─── Progress table data ─────────────────────────────────────────────────
 
   const progressTableData = useMemo(() => {
     const rows = students.map(student => {
@@ -649,6 +823,34 @@ export default function CoordinatorViewPage() {
         </div>
       </div>
 
+      {/* ─── Section 1: Alert Bar (conditional) ──────────────────────── */}
+      {alerts.length > 0 && (
+        <div className="sticky top-[73px] z-25">
+          {alerts.map(alert => (
+            <div
+              key={alert.id}
+              className="animate-pulse bg-amber-500 dark:bg-amber-600 text-white border-b border-amber-600 dark:border-amber-700"
+            >
+              <div className="max-w-7xl mx-auto px-4 py-2 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+                  <span className="font-bold text-sm truncate">
+                    ASSISTANCE NEEDED — {alert.station_name}
+                    {alert.notes ? ` — ${alert.notes}` : ''}
+                  </span>
+                </div>
+                <button
+                  onClick={() => handleResolveAlert(alert.id)}
+                  className="flex-shrink-0 px-3 py-1 text-xs font-bold bg-white/20 hover:bg-white/30 rounded-lg transition-colors min-h-[32px]"
+                >
+                  Resolve
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* ─── Title ────────────────────────────────────────────────────── */}
       <div className="max-w-7xl mx-auto px-4 pt-4 pb-2">
         {labDayInfo?.is_nremt_testing && (
@@ -665,49 +867,49 @@ export default function CoordinatorViewPage() {
         </p>
       </div>
 
-      {/* ─── Summary Stats Bar (sticky below top bar) ─────────────────── */}
+      {/* ─── Section 2: Stats Row (compact, sticky) ──────────────────── */}
       <div className="sticky top-[73px] z-20 bg-white/90 dark:bg-gray-800/90 backdrop-blur border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 py-3">
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-2">
+        <div className="max-w-7xl mx-auto px-4 py-2">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-1.5">
             <div className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              <Users className="w-4 h-4 text-blue-600 dark:text-blue-400" />
               <div>
-                <div className="text-lg font-bold text-gray-900 dark:text-white">{totalStudents}</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">Students</div>
+                <div className="text-base font-bold text-gray-900 dark:text-white leading-tight">{totalStudents}</div>
+                <div className="text-[11px] text-gray-500 dark:text-gray-400">Students</div>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Activity className="w-5 h-5 text-green-600 dark:text-green-400" />
+              <Activity className="w-4 h-4 text-green-600 dark:text-green-400" />
               <div>
-                <div className="text-lg font-bold text-gray-900 dark:text-white">{activeStationCount}/{totalStations}</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">Stations Active</div>
+                <div className="text-base font-bold text-gray-900 dark:text-white leading-tight">{activeStationCount}/{totalStations}</div>
+                <div className="text-[11px] text-gray-500 dark:text-gray-400">Stations Active</div>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <BarChart3 className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+              <BarChart3 className="w-4 h-4 text-purple-600 dark:text-purple-400" />
               <div>
-                <div className="text-lg font-bold text-gray-900 dark:text-white">{avgCompletion}/{totalStations}</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">Avg Completion</div>
+                <div className="text-base font-bold text-gray-900 dark:text-white leading-tight">{avgCompletion}/{totalStations}</div>
+                <div className="text-[11px] text-gray-500 dark:text-gray-400">Avg Completion</div>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Clock className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+              <Clock className="w-4 h-4 text-orange-600 dark:text-orange-400" />
               <div>
-                <div className="text-lg font-bold text-gray-900 dark:text-white">~{formatTimeRemaining(estMinutes)}</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">Est. Remaining</div>
+                <div className="text-base font-bold text-gray-900 dark:text-white leading-tight">~{formatTimeRemaining(estMinutes)}</div>
+                <div className="text-[11px] text-gray-500 dark:text-gray-400">Est. Remaining</div>
               </div>
             </div>
           </div>
 
           {/* Overall progress bar */}
           <div className="flex items-center gap-3">
-            <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
+            <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 overflow-hidden">
               <div
                 className="bg-blue-600 dark:bg-blue-500 h-full rounded-full transition-all duration-500"
                 style={{ width: `${overallPercent}%` }}
               />
             </div>
-            <span className="text-sm font-bold text-gray-700 dark:text-gray-300 min-w-[3rem] text-right">
+            <span className="text-xs font-bold text-gray-700 dark:text-gray-300 min-w-[3rem] text-right">
               {overallPercent}%
             </span>
           </div>
@@ -715,7 +917,7 @@ export default function CoordinatorViewPage() {
       </div>
 
       <main className="max-w-7xl mx-auto px-4 py-4">
-        {/* ─── Station Status Board ─────────────────────────────────── */}
+        {/* ─── Section 3: Station Board (PRIMARY WORKFLOW) ────────── */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
           {stations.map(station => {
             const stationStatus = getStationStatus(station, students, cells);
@@ -727,6 +929,10 @@ export default function CoordinatorViewPage() {
             const displayProctor = getDisplayProctor(station);
             const allStudentsDone = completedCount === totalStudents && totalStudents > 0;
             const isAddedDuringExam = station.custom_title?.includes('(Added)') || station.addedDuringExam;
+            const enRouteEntry = enRouteStudents[station.id];
+            const hasCurrentStudent = !!currentStudent;
+            const { eligible, topSuggestionId } = getEligibleStudentsForStation(station);
+            const selectedStudentId = stationDropdownSelections[station.id] || '';
 
             return (
               <div
@@ -754,11 +960,27 @@ export default function CoordinatorViewPage() {
                   </span>
                 </div>
 
-                {/* Current student */}
+                {/* Current student or en route */}
                 <div className="mb-2 min-h-[1.5rem]">
                   {currentStudent ? (
                     <div className="text-sm font-medium text-gray-800 dark:text-gray-200">
                       {currentStudent.first_name} {currentStudent.last_name}
+                    </div>
+                  ) : enRouteEntry ? (
+                    <div className="flex items-center gap-1.5">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300">
+                        <ArrowRight className="w-3 h-3" />
+                        En Route — {enRouteEntry.studentName}
+                      </span>
+                      {(Date.now() - enRouteEntry.sentAt) < 30000 && (
+                        <button
+                          onClick={() => handleUndoSend(station.id)}
+                          className="p-0.5 text-gray-400 hover:text-red-500 dark:hover:text-red-400"
+                          title="Undo send"
+                        >
+                          <Undo2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                   ) : (
                     <div className="text-sm text-gray-400 dark:text-gray-500 italic">
@@ -767,7 +989,7 @@ export default function CoordinatorViewPage() {
                   )}
                 </div>
 
-                {/* Proctor / Instructor (Section 4) */}
+                {/* Proctor / Instructor */}
                 <div className="mb-2 min-h-[1.25rem]">
                   {editingProctor === station.id ? (
                     <div className="flex items-center gap-1">
@@ -815,13 +1037,59 @@ export default function CoordinatorViewPage() {
                   )}
                 </div>
 
-                {/* All Complete badge (Section 4) */}
+                {/* All Complete badge */}
                 {allStudentsDone && (
                   <div className="mb-2">
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300">
                       <CheckCircle2 className="w-3 h-3" />
                       All Complete
                     </span>
+                  </div>
+                )}
+
+                {/* Send Student dropdown (only when no current student testing) */}
+                {!hasCurrentStudent && !allStudentsDone && (
+                  <div className="mb-2">
+                    <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-0.5 block">
+                      Send Student:
+                    </label>
+                    <div className="flex items-center gap-1">
+                      <select
+                        value={selectedStudentId}
+                        onChange={e => setStationDropdownSelections(prev => ({ ...prev, [station.id]: e.target.value }))}
+                        className="flex-1 text-xs px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white min-w-0 min-h-[32px]"
+                      >
+                        <option value="">-- Select student --</option>
+                        {eligible.map(student => {
+                          const completions = getStudentCompletionCount(student, stations, cells);
+                          const isTopSuggestion = student.id === topSuggestionId;
+                          return (
+                            <option
+                              key={student.id}
+                              value={student.id}
+                              className={isTopSuggestion ? 'bg-amber-100' : ''}
+                            >
+                              {isTopSuggestion ? '\u2605 ' : ''}{student.first_name} {student.last_name} ({completions}/{totalStations})
+                            </option>
+                          );
+                        })}
+                      </select>
+                      <button
+                        onClick={() => {
+                          if (selectedStudentId) {
+                            const student = students.find(s => s.id === selectedStudentId);
+                            if (student) {
+                              handleSendStudent(station.id, student.id, `${student.first_name} ${student.last_name}`);
+                            }
+                          }
+                        }}
+                        disabled={!selectedStudentId}
+                        className="flex-shrink-0 p-1.5 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 disabled:text-gray-300 dark:disabled:text-gray-600 min-w-[28px] min-h-[28px] flex items-center justify-center"
+                        title="Send student to this station"
+                      >
+                        <Send className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 )}
 
@@ -841,7 +1109,7 @@ export default function CoordinatorViewPage() {
             );
           })}
 
-          {/* Add Station Button (Section 2) */}
+          {/* Add Station Button */}
           {labDayInfo?.is_nremt_testing && (
             <button
               onClick={() => setShowAddStationModal(true)}
@@ -853,142 +1121,145 @@ export default function CoordinatorViewPage() {
           )}
         </div>
 
-        {/* ─── Next Up / Student Queue (Section 1 - Enhanced) ──────── */}
+        {/* ─── Section 4: Next Up Queue (compact, collapsible) ───────── */}
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden mb-6">
-          <div className="px-4 py-3 bg-gray-50 dark:bg-gray-750 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-              Student Queue
+          <button
+            onClick={() => setShowNextUpQueue(!showNextUpQueue)}
+            className="w-full px-4 py-3 flex items-center justify-between bg-gray-50 dark:bg-gray-750 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors min-h-[44px]"
+          >
+            <h2 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <Users className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+              Next Up ({studentListData.waiting.length} waiting)
             </h2>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-              Students with fewest completions shown first. Suggestion badges show the best available station.
-            </p>
-          </div>
+            {showNextUpQueue ? (
+              <ChevronUp className="w-5 h-5 text-gray-500" />
+            ) : (
+              <ChevronDown className="w-5 h-5 text-gray-500" />
+            )}
+          </button>
 
-          {/* Currently Testing */}
-          {studentListData.testing.length > 0 && (
-            <div className="border-b border-gray-100 dark:border-gray-700">
-              <div className="px-4 py-2 bg-yellow-50/50 dark:bg-yellow-900/10">
-                <span className="text-xs font-semibold text-yellow-700 dark:text-yellow-400 uppercase tracking-wide">
-                  Currently Testing ({studentListData.testing.length})
-                </span>
-              </div>
-              <div className="divide-y divide-gray-100 dark:divide-gray-700">
-                {studentListData.testing.map(({ student, completedCount, testingStation }) => (
-                  <div
-                    key={student.id}
-                    className="px-4 py-3 flex items-center gap-3"
-                  >
-                    <span className="flex-shrink-0 w-7 h-7 rounded-full bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300 flex items-center justify-center">
-                      <Clock className="w-3.5 h-3.5" />
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm sm:text-base font-medium text-gray-900 dark:text-white truncate">
-                        {student.first_name} {student.last_name}
-                      </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                        {completedCount}/{totalStations} completed
-                      </div>
-                    </div>
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-yellow-700 dark:text-yellow-300 bg-yellow-100 dark:bg-yellow-900/40 rounded-lg whitespace-nowrap">
-                      <Activity className="w-3.5 h-3.5" />
-                      Testing at Stn {testingStation.station_number}
+          {showNextUpQueue && (
+            <>
+              {/* Currently Testing (compact summary) */}
+              {studentListData.testing.length > 0 && (
+                <div className="border-b border-gray-100 dark:border-gray-700">
+                  <div className="px-4 py-1.5 bg-yellow-50/50 dark:bg-yellow-900/10">
+                    <span className="text-xs font-semibold text-yellow-700 dark:text-yellow-400 uppercase tracking-wide">
+                      Testing ({studentListData.testing.length})
                     </span>
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Waiting / Next Up */}
-          {studentListData.waiting.length > 0 && (
-            <div className="border-b border-gray-100 dark:border-gray-700">
-              <div className="px-4 py-2 bg-blue-50/50 dark:bg-blue-900/10">
-                <span className="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase tracking-wide">
-                  Next Up ({studentListData.waiting.length})
-                </span>
-              </div>
-              <div className="divide-y divide-gray-100 dark:divide-gray-700">
-                {studentListData.waiting.map(({ student, completedCount, suggestedStation }, idx) => (
-                  <div
-                    key={student.id}
-                    className="px-4 py-3 flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors"
-                  >
-                    <span className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 flex items-center justify-center text-xs font-bold">
-                      {idx + 1}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm sm:text-base font-medium text-gray-900 dark:text-white truncate">
-                        {student.first_name} {student.last_name}
-                      </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                        {completedCount}/{totalStations} completed
-                      </div>
-                    </div>
-                    {suggestedStation ? (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/40 rounded-lg whitespace-nowrap">
-                        <ArrowRight className="w-3.5 h-3.5" />
-                        Stn {suggestedStation.station_number}
-                        <span className="hidden sm:inline truncate max-w-[120px]">
-                          ({getStationDisplayName(suggestedStation)})
+                  <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                    {studentListData.testing.map(({ student, completedCount, testingStation }) => (
+                      <div
+                        key={student.id}
+                        className="px-4 py-2 flex items-center gap-3"
+                      >
+                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300 flex items-center justify-center">
+                          <Clock className="w-3 h-3" />
                         </span>
-                      </span>
-                    ) : (
-                      <span className="text-xs text-gray-400 dark:text-gray-500 italic whitespace-nowrap">
-                        All stations busy
-                      </span>
-                    )}
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                            {student.first_name} {student.last_name}
+                          </span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
+                            {completedCount}/{totalStations}
+                          </span>
+                        </div>
+                        <span className="text-xs font-medium text-yellow-700 dark:text-yellow-300 whitespace-nowrap">
+                          Stn {testingStation.station_number}
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
+                </div>
+              )}
 
-          {/* Completed Students */}
-          {studentListData.complete.length > 0 && (
-            <div>
-              <div className="px-4 py-2 bg-green-50/50 dark:bg-green-900/10">
-                <span className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase tracking-wide">
-                  Complete ({studentListData.complete.length})
-                </span>
-              </div>
-              <div className="divide-y divide-gray-100 dark:divide-gray-700">
-                {studentListData.complete.map(({ student, completedCount }) => (
-                  <div
-                    key={student.id}
-                    className="px-4 py-3 flex items-center gap-3 opacity-75"
-                  >
-                    <span className="flex-shrink-0 w-7 h-7 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 flex items-center justify-center">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm sm:text-base font-medium text-gray-900 dark:text-white truncate">
-                        {student.first_name} {student.last_name}
-                      </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                        {completedCount}/{totalStations} completed
-                      </div>
-                    </div>
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/40 rounded-lg">
-                      <UserCheck className="w-3.5 h-3.5" />
-                      Complete
+              {/* Waiting / Next Up */}
+              {studentListData.waiting.length > 0 && (
+                <div className="border-b border-gray-100 dark:border-gray-700">
+                  <div className="px-4 py-1.5 bg-blue-50/50 dark:bg-blue-900/10">
+                    <span className="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase tracking-wide">
+                      Waiting ({studentListData.waiting.length})
                     </span>
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
+                  <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                    {studentListData.waiting.map(({ student, completedCount }) => {
+                      // Check if this student is en route somewhere
+                      const enRouteStation = Object.entries(enRouteStudents).find(
+                        ([, entry]) => entry.studentId === student.id
+                      );
+                      const enRouteStationObj = enRouteStation
+                        ? stations.find(s => s.id === enRouteStation[0])
+                        : null;
 
-          {/* Empty state */}
-          {studentListData.testing.length === 0 && studentListData.waiting.length === 0 && studentListData.complete.length === 0 && (
-            <div className="p-6 text-center text-gray-500 dark:text-gray-400">
-              <Users className="w-10 h-10 mx-auto mb-2 text-gray-400" />
-              <p className="font-medium">No students loaded yet.</p>
-            </div>
+                      return (
+                        <div
+                          key={student.id}
+                          className="px-4 py-2 flex items-center gap-3"
+                        >
+                          <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 flex items-center justify-center text-xs font-bold">
+                            {completedCount}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                              {student.first_name} {student.last_name}
+                            </span>
+                            <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
+                              {completedCount}/{totalStations} done
+                            </span>
+                          </div>
+                          {enRouteStationObj && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/40 rounded-full whitespace-nowrap">
+                              <ArrowRight className="w-3 h-3" />
+                              Stn {enRouteStationObj.station_number}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Completed Students */}
+              {studentListData.complete.length > 0 && (
+                <div>
+                  <div className="px-4 py-1.5 bg-green-50/50 dark:bg-green-900/10">
+                    <span className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase tracking-wide">
+                      Complete ({studentListData.complete.length})
+                    </span>
+                  </div>
+                  <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                    {studentListData.complete.map(({ student, completedCount }) => (
+                      <div
+                        key={student.id}
+                        className="px-4 py-2 flex items-center gap-3 opacity-75"
+                      >
+                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 flex items-center justify-center">
+                          <CheckCircle2 className="w-3 h-3" />
+                        </span>
+                        <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                          {student.first_name} {student.last_name}
+                        </span>
+                        <span className="text-xs text-gray-500 ml-auto">{completedCount}/{totalStations}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Empty state */}
+              {studentListData.testing.length === 0 && studentListData.waiting.length === 0 && studentListData.complete.length === 0 && (
+                <div className="p-6 text-center text-gray-500 dark:text-gray-400">
+                  <Users className="w-10 h-10 mx-auto mb-2 text-gray-400" />
+                  <p className="font-medium">No students loaded yet.</p>
+                </div>
+              )}
+            </>
           )}
         </div>
 
-        {/* ─── Progress Table (Section 3) ───────────────────────────── */}
+        {/* ─── Section 5: Progress Table ─────────────────────────────── */}
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden mb-6">
           <button
             onClick={() => setShowProgressTable(!showProgressTable)}
@@ -1119,7 +1390,7 @@ export default function CoordinatorViewPage() {
         <div className="h-8" />
       </main>
 
-      {/* ─── Add Station Modal (Section 2) ──────────────────────────── */}
+      {/* ─── Add Station Modal ──────────────────────────────────────── */}
       {showAddStationModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md border border-gray-200 dark:border-gray-700">

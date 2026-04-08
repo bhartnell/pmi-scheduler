@@ -497,7 +497,7 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
   // ─── Render ─────────────────────────────────────────────────────────────
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden xl:w-full">
       {/* NREMT banner */}
       {isNremtTesting && (
         <div className="bg-red-600 text-white text-center py-1.5 text-sm font-bold">
@@ -525,12 +525,12 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
       </div>
 
       {/* Grid */}
-      <div className="overflow-x-auto">
-        <table className="w-full">
+      <div className="overflow-x-auto max-w-full">
+        <table className="w-full" style={{ minWidth: `${180 + stations.length * 140 + 80}px` }}>
           {/* Column headers: station info */}
           <thead>
             <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-750">
-              <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400 sticky left-0 bg-gray-50 dark:bg-gray-750 z-10 min-w-[180px]">
+              <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400 sticky left-0 bg-gray-50 dark:bg-gray-750 z-10 min-w-[140px] max-w-[180px]" style={{ boxShadow: '2px 0 4px -2px rgba(0,0,0,0.1)' }}>
                 Student
               </th>
               {stations.map(station => (
@@ -574,7 +574,13 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
                   } hover:bg-blue-50/40 dark:hover:bg-blue-900/10 transition-colors`}
                 >
                   {/* Student name */}
-                  <td className="px-4 py-2.5 font-medium text-gray-900 dark:text-gray-100 text-sm sticky left-0 bg-inherit z-10 whitespace-nowrap">
+                  <td
+                    className={`px-4 py-2.5 font-medium text-gray-900 dark:text-gray-100 text-sm sticky left-0 z-10 whitespace-nowrap min-w-[140px] max-w-[180px] overflow-hidden text-ellipsis ${
+                      idx % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-800'
+                    }`}
+                    style={{ boxShadow: '2px 0 4px -2px rgba(0,0,0,0.1)' }}
+                    title={`${student.last_name}, ${student.first_name}`}
+                  >
                     {student.last_name}, {student.first_name.charAt(0)}.
                   </td>
 
@@ -604,7 +610,7 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
           {/* Summary footer */}
           <tfoot>
             <tr className="bg-gray-50 dark:bg-gray-750 border-t-2 border-gray-200 dark:border-gray-600">
-              <td className="px-4 py-2.5 font-semibold text-gray-700 dark:text-gray-300 text-sm sticky left-0 bg-gray-50 dark:bg-gray-750 z-10">
+              <td className="px-4 py-2.5 font-semibold text-gray-700 dark:text-gray-300 text-sm sticky left-0 bg-gray-50 dark:bg-gray-750 z-10 min-w-[140px] max-w-[180px]" style={{ boxShadow: '2px 0 4px -2px rgba(0,0,0,0.1)' }}>
                 Summary
               </td>
               {stationSummary.map(s => (
