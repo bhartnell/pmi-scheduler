@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole } from '@/lib/permissions';
+import { validateVolunteerToken } from '@/lib/api-auth';
 
 async function getCurrentUser(email: string) {
   const supabase = getSupabaseAdmin();
@@ -19,14 +20,21 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Try session auth first
+    let isVolunteer = false;
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const currentUser = await getCurrentUser(session.user.email);
-    if (!currentUser || !hasMinRole(currentUser.role, 'instructor')) {
-      return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
+      // Fall back to volunteer token auth
+      const volunteerAuth = await validateVolunteerToken(request);
+      if (!volunteerAuth) {
+        return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+      }
+      isVolunteer = true;
+    } else {
+      const currentUser = await getCurrentUser(session.user.email);
+      if (!currentUser || !hasMinRole(currentUser.role, 'instructor')) {
+        return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
+      }
     }
 
     const { id } = await params;

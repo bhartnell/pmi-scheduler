@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { requireAuth } from '@/lib/api-auth';
+import { requireAuthOrVolunteerToken } from '@/lib/api-auth';
 
 // POST - Bulk lookup skill sheet IDs by multiple skill names
 // Returns a map of { skillName: sheetId } for the first matching sheet per name
+// Supports volunteer lab tokens for read-only access
 export async function POST(request: NextRequest) {
   try {
-    const auth = await requireAuth('instructor');
+    const auth = await requireAuthOrVolunteerToken(request, 'instructor');
     if (auth instanceof NextResponse) return auth;
 
     const body = await request.json();

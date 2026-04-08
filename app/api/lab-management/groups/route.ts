@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { requireAuth } from '@/lib/api-auth';
+import { requireAuth, requireAuthOrVolunteerToken } from '@/lib/api-auth';
 import { logAuditEvent } from '@/lib/audit';
 
 export async function GET(request: NextRequest) {
@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
   const includeMembers = searchParams.get('include') === 'members';
 
   try {
-    const auth = await requireAuth('instructor');
+    const auth = await requireAuthOrVolunteerToken(request, 'instructor');
     if (auth instanceof NextResponse) return auth;
     const supabase = getSupabaseAdmin();
     let query = supabase

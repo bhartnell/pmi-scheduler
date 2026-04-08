@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { requireAuth } from '@/lib/api-auth';
+import { requireAuthOrVolunteerToken } from '@/lib/api-auth';
 
 export async function GET(request: NextRequest) {
   try {
-    const auth = await requireAuth('instructor');
+    const auth = await requireAuthOrVolunteerToken(request, 'instructor');
 
     if (auth instanceof NextResponse) return auth;
-
-    const { user } = auth;
 
     const searchParams = request.nextUrl.searchParams;
     const name = searchParams.get('name');

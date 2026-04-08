@@ -1,24 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole } from '@/lib/permissions';
-import { requireAuth } from '@/lib/api-auth';
+import { requireAuth, requireAuthOrVolunteerToken } from '@/lib/api-auth';
+import type { VolunteerTokenResult } from '@/lib/api-auth';
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAuth('instructor');
+  const auth = await requireAuthOrVolunteerToken(request, 'instructor');
 
   if (auth instanceof NextResponse) return auth;
 
-  const { user, session } = auth;
+  // Skip redundant role check for volunteer tokens (already validated)
+  if (!(auth as VolunteerTokenResult).isVolunteerToken) {
+    const { session } = auth as { session: { user: { email: string } } };
+    const supabaseForRole = getSupabaseAdmin();
+    const { data: callerUser } = await supabaseForRole
+      .from('lab_users')
+      .select('role')
+      .ilike('email', session.user.email)
+      .single();
 
-  const supabaseForRole = getSupabaseAdmin();
-  const { data: callerUser } = await supabaseForRole
-    .from('lab_users')
-    .select('role')
-    .ilike('email', session.user.email)
-    .single();
-
-  if (!callerUser || !hasMinRole(callerUser.role, 'instructor')) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (!callerUser || !hasMinRole(callerUser.role, 'instructor')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
   }
 
   const searchParams = request.nextUrl.searchParams;

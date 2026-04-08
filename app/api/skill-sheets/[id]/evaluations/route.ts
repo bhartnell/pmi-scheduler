@@ -3,28 +3,35 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole } from '@/lib/permissions';
+import { validateVolunteerToken } from '@/lib/api-auth';
 
 // GET /api/skill-sheets/[id]/evaluations?student_id=UUID
 // Returns all evaluations for a specific student + skill sheet, ordered by attempt_number desc
+// Supports volunteer lab tokens for read-only access
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const supabase = getSupabaseAdmin();
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
+      // Fall back to volunteer token auth
+      const volunteerAuth = await validateVolunteerToken(request);
+      if (!volunteerAuth) {
+        return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+      }
+      // Volunteer token is valid — proceed (read-only access)
+    } else {
+      const { data: currentUser } = await supabase
+        .from('lab_users')
+        .select('id, role')
+        .ilike('email', session.user.email)
+        .single();
 
-    const supabase = getSupabaseAdmin();
-    const { data: currentUser } = await supabase
-      .from('lab_users')
-      .select('id, role')
-      .ilike('email', session.user.email)
-      .single();
-
-    if (!currentUser || !hasMinRole(currentUser.role, 'instructor')) {
-      return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
+      if (!currentUser || !hasMinRole(currentUser.role, 'instructor')) {
+        return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
+      }
     }
 
     const { id: skillSheetId } = await params;

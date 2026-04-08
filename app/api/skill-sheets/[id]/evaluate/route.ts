@@ -3,6 +3,8 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole } from '@/lib/permissions';
+import { validateVolunteerToken } from '@/lib/api-auth';
+import type { VolunteerTokenResult } from '@/lib/api-auth';
 
 async function getCurrentUser(email: string) {
   const supabase = getSupabaseAdmin();
@@ -19,18 +21,39 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    let currentUser: { id: string; name: string; email: string; role: string } | null = null;
+    let volunteerAuth: VolunteerTokenResult | null = null;
+
     const session = await getServerSession(authOptions);
     if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const currentUser = await getCurrentUser(session.user.email);
-    if (!currentUser || !hasMinRole(currentUser.role, 'instructor')) {
-      return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
+      // Fall back to volunteer token auth
+      volunteerAuth = await validateVolunteerToken(request);
+      if (!volunteerAuth) {
+        return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+      }
+    } else {
+      currentUser = await getCurrentUser(session.user.email);
+      if (!currentUser || !hasMinRole(currentUser.role, 'instructor')) {
+        return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
+      }
     }
 
     const { id: skillSheetId } = await params;
     const body = await request.json();
+
+    // For volunteer tokens, use a synthetic user reference
+    // Volunteers should use /api/volunteer/lab-tokens/[token]/evaluate instead,
+    // but if they reach this endpoint, we need a valid evaluator identity.
+    const effectiveUser = currentUser || (volunteerAuth ? {
+      id: volunteerAuth.tokenId,
+      name: volunteerAuth.volunteerName,
+      email: `volunteer-${volunteerAuth.tokenId}@volunteer.local`,
+      role: 'volunteer',
+    } : null);
+
+    if (!effectiveUser) {
+      return NextResponse.json({ success: false, error: 'No valid user context' }, { status: 401 });
+    }
 
     const {
       student_id,
@@ -55,7 +78,7 @@ export async function POST(
         skillSheetId,
         body,
         team_members,
-        currentUser,
+        currentUser: effectiveUser,
       });
     }
 
@@ -158,7 +181,7 @@ export async function POST(
         lab_day_id: lab_day_id || null,
         evaluation_type,
         result: resolvedResult,
-        evaluator_id: currentUser.id,
+        evaluator_id: effectiveUser.id,
         notes: notes || null,
         flagged_items: flagged_items || null,
         email_status: resolvedEmailStatus,
@@ -198,7 +221,7 @@ export async function POST(
             station_id,
             result: completionResult,
             completed_at: new Date().toISOString(),
-            logged_by: currentUser.id,
+            logged_by: effectiveUser.id,
             lab_day_id: lab_day_id || null,
             notes: `Skill sheet: ${sheet?.skill_name || 'Unknown'} — ${evaluation_type} ${result}${notes ? '. ' + notes : ''}`,
           }, { onConflict: 'student_id,station_id,lab_day_id' })
