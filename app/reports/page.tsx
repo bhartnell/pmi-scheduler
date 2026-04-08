@@ -97,6 +97,14 @@ const REPORT_SECTIONS: { heading: string; reports: ReportLink[] }[] = [
         bgColor: 'bg-teal-100 dark:bg-teal-900/30',
       },
       {
+        title: 'Skill Evaluation Trends',
+        description: 'Pass rates by skill, student trajectories, and low-pass alerts across lab days.',
+        href: '/reports/skill-trends',
+        icon: TrendingUp,
+        color: 'text-emerald-600 dark:text-emerald-400',
+        bgColor: 'bg-emerald-100 dark:bg-emerald-900/30',
+      },
+      {
         title: 'Gradebook',
         description: 'Student grades and assessment results.',
         href: '/reports/gradebook',
