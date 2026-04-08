@@ -14,6 +14,7 @@ import TimerBanner from '@/components/TimerBanner';
 import SkillSheetPanel from '@/components/SkillSheetPanel';
 import NremtCandidateInstructions from '@/components/NremtCandidateInstructions';
 import NremtTimer from '@/components/NremtTimer';
+import NremtStickyNotesPanel from '@/components/NremtStickyNotesPanel';
 
 // Sub-components
 import GradingHeader from '@/components/grading/GradingHeader';
@@ -84,6 +85,35 @@ export default function GradeStationPage() {
 
   // NREMT candidate instructions state
   const [nremtInstructionsRead, setNremtInstructionsRead] = useState(false);
+
+  // NREMT examiner panel state (sticky notes, critical fail, need assistance)
+  const [examinerNotes, setExaminerNotes] = useState('');
+  const [criticalFail, setCriticalFail] = useState(false);
+  const [criticalFailNotes, setCriticalFailNotes] = useState('');
+  const [assistanceRequested, setAssistanceRequested] = useState(false);
+
+  // Handle need assistance - send alert to coordinator
+  const handleNeedAssistance = useCallback(async () => {
+    if (!station?.lab_day?.id || !stationId) return;
+    try {
+      const res = await fetch(`/api/lab-management/lab-days/${station.lab_day.id}/assistance-alerts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          station_id: stationId,
+          station_name: station.custom_title || station.skill_name || `Station ${station.station_number}`,
+          notes: examinerNotes ? `Examiner notes: ${examinerNotes}` : null,
+        }),
+      });
+      if (res.ok) {
+        setAssistanceRequested(true);
+        // Reset after 60 seconds so they can request again
+        setTimeout(() => setAssistanceRequested(false), 60000);
+      }
+    } catch (err) {
+      console.error('Failed to send assistance alert:', err);
+    }
+  }, [station, stationId, examinerNotes]);
 
   // Evaluation tracking for auto-advance
   const [evaluatedStudents, setEvaluatedStudents] = useState<Record<string, string>>({});
@@ -661,7 +691,7 @@ export default function GradeStationPage() {
             />
           </div>
 
-          {/* Right: Skill sheet */}
+          {/* Center: Skill sheet */}
           <div className="flex-1 min-h-[60vh]">
             <SkillSheetPanel
               sheetId={panelSheetId}
@@ -680,6 +710,20 @@ export default function GradeStationPage() {
               defaultMode={station?.lab_day?.is_nremt_testing ? 'final' : undefined}
             />
           </div>
+
+          {/* Right: NREMT Examiner Panel (sticky notes, critical fail, assistance) */}
+          {station?.lab_day?.is_nremt_testing && (
+            <NremtStickyNotesPanel
+              notes={examinerNotes}
+              onNotesChange={setExaminerNotes}
+              criticalFail={criticalFail}
+              onCriticalFailChange={setCriticalFail}
+              criticalFailNotes={criticalFailNotes}
+              onCriticalFailNotesChange={setCriticalFailNotes}
+              onNeedAssistance={handleNeedAssistance}
+              assistanceRequested={assistanceRequested}
+            />
+          )}
         </main>
       ) : (
       <main className="max-w-7xl mx-auto px-4 py-4 space-y-4 pb-20">
@@ -869,6 +913,19 @@ export default function GradeStationPage() {
               </p>
             )}
           </div>
+        )}
+        {/* NREMT Examiner Panel (non-embedded mode) */}
+        {station?.lab_day?.is_nremt_testing && (
+          <NremtStickyNotesPanel
+            notes={examinerNotes}
+            onNotesChange={setExaminerNotes}
+            criticalFail={criticalFail}
+            onCriticalFailChange={setCriticalFail}
+            criticalFailNotes={criticalFailNotes}
+            onCriticalFailNotesChange={setCriticalFailNotes}
+            onNeedAssistance={handleNeedAssistance}
+            assistanceRequested={assistanceRequested}
+          />
         )}
       </main>
       )}

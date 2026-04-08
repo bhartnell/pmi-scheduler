@@ -370,8 +370,10 @@ export default function LabDayPage() {
             <span className={`text-xs font-medium ${labDay.is_nremt_testing ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}`}>NREMT Testing Day</span>
           </label>
           {(labDay.is_nremt_testing || labMode === 'individual_testing') && (
-            <Link href={`/labs/schedule/${labDayId}/results`} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/30 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200 dark:border-emerald-800"><ClipboardCheck className="w-3.5 h-3.5" /> Skill Results</Link>
-            <Link href={`/labs/schedule/${labDayId}/coordinator`} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-900/30 rounded-lg hover:bg-orange-100 dark:hover:bg-orange-900/50 border border-orange-200 dark:border-orange-800 ml-auto"><Users className="w-3.5 h-3.5" /> Coordinator View</Link>
+            <>
+              <Link href={`/labs/schedule/${labDayId}/results`} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/30 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200 dark:border-emerald-800"><ClipboardCheck className="w-3.5 h-3.5" /> Skill Results</Link>
+              <Link href={`/labs/schedule/${labDayId}/coordinator`} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-900/30 rounded-lg hover:bg-orange-100 dark:hover:bg-orange-900/50 border border-orange-200 dark:border-orange-800 ml-auto"><Users className="w-3.5 h-3.5" /> Coordinator View</Link>
+            </>
           )}
         </div>
 
