@@ -9,7 +9,7 @@ export const ROLE_LEVELS: Record<Role, number> = {
   agency_liaison: 2.5,       // Agency teaching staff — full read/write on scoped programs (e.g., LVFR AEMT)
   instructor: 2,
   program_director: 1.75,    // Affiliations access only — non-instructor campus staff
-  volunteer_instructor: 1.5, // Can access scheduling and lab schedule (read-only), no student data
+  volunteer_instructor: 2,   // Same access level as instructor — former students who volunteer to grade
   agency_observer: 1.25,     // Agency read-only staff (e.g., Training Captain) — read scoped program data only
   student: 1,                // Student portal access only
   guest: 1,                  // Guest access (same level as student)
