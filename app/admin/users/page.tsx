@@ -481,6 +481,7 @@ export default function UserManagementPage() {
                 <li><strong>Lead Instructor:</strong> Full access to cohorts, students, clinical</li>
                 <li>You can only assign roles at a lower level than your own</li>
                 <li>Protected superadmin accounts (Ben & Josh) cannot be demoted</li>
+                <li><strong>Note:</strong> Role changes take effect immediately for API calls. The user does not need to sign out and back in.</li>
               </ul>
             </div>
           </div>

@@ -6,7 +6,10 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseAdmin();
 
-    const auth = await requireAuth('instructor');
+    // Allow volunteer_instructor+ to fetch the instructor list
+    // (volunteer_instructor level 1.5 is below instructor level 2,
+    //  so we use 'volunteer_instructor' as the minimum role here)
+    const auth = await requireAuth('volunteer_instructor');
     if (auth instanceof NextResponse) return auth;
     const { user } = auth;
 

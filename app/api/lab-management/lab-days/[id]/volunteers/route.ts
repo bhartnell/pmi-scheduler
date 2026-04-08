@@ -7,7 +7,8 @@ type RouteContext = { params: Promise<{ id: string }> };
 // GET /api/lab-management/lab-days/[id]/volunteers
 // Returns confirmed/registered volunteers linked to this lab day via volunteer_events
 export async function GET(request: NextRequest, { params }: RouteContext) {
-  const auth = await requireAuth('instructor');
+  // Allow volunteer_instructor+ to view volunteers for a lab day
+  const auth = await requireAuth('volunteer_instructor');
   if (auth instanceof NextResponse) return auth;
 
   const { id: labDayId } = await params;
