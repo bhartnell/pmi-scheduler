@@ -89,15 +89,11 @@ export async function POST(request: NextRequest) {
     try {
       body = await request.json();
     } catch {
-      console.error('[volunteer/register] Failed to parse request body');
       return NextResponse.json(
         { success: false, error: 'Invalid request body' },
         { status: 400 }
       );
     }
-
-    // DEBUG: log incoming payload
-    console.log('[volunteer/register] Incoming body:', JSON.stringify(body, null, 2));
 
     const {
       name,
@@ -117,10 +113,7 @@ export async function POST(request: NextRequest) {
       ? event_ids
       : event_ids ? [event_ids] : [];
 
-    console.log('[volunteer/register] Parsed fields:', { name: !!name, email: !!email, event_ids_raw: event_ids, normalizedEventIds, invite_token: !!invite_token });
-
     if (!name || !email || normalizedEventIds.length === 0) {
-      console.error('[volunteer/register] Validation failed:', { name: !!name, email: !!email, eventCount: normalizedEventIds.length });
       return NextResponse.json(
         { success: false, error: 'Name, email, and at least one event are required' },
         { status: 400 }
@@ -156,13 +149,10 @@ export async function POST(request: NextRequest) {
     // First check without is_active filter to distinguish "not found" from "deactivated"
     const { data: allEvents } = await supabase
       .from('volunteer_events')
-      .select('id, max_volunteers, is_active, linked_lab_day_id, title')
+      .select('id, max_volunteers, is_active, linked_lab_day_id, name')
       .in('id', normalizedEventIds);
 
-    console.log('[volunteer/register] Event lookup result:', { queriedIds: normalizedEventIds, foundCount: allEvents?.length || 0, events: allEvents?.map((e: { id: string; is_active: boolean | null }) => ({ id: e.id, is_active: e.is_active })) });
-
     if (!allEvents || allEvents.length === 0) {
-      console.error('[volunteer/register] No matching events found for IDs:', normalizedEventIds);
       return NextResponse.json(
         { success: false, error: 'No matching events found. The events may have been removed.' },
         { status: 400 }
@@ -172,7 +162,6 @@ export async function POST(request: NextRequest) {
     const validEvents = allEvents.filter((e: { is_active: boolean | null }) => e.is_active !== false);
 
     if (validEvents.length === 0) {
-      console.error('[volunteer/register] All events inactive:', allEvents.map((e: { id: string; is_active: boolean | null }) => ({ id: e.id, is_active: e.is_active })));
       return NextResponse.json(
         { success: false, error: 'The selected events are no longer accepting registrations' },
         { status: 400 }
@@ -214,15 +203,12 @@ export async function POST(request: NextRequest) {
       notes: notes || null,
     }));
 
-    console.log('[volunteer/register] Upserting rows:', JSON.stringify(rows, null, 2));
-
     const { data, error } = await supabase
       .from('volunteer_registrations')
       .upsert(rows, { onConflict: 'event_id,email' })
       .select();
 
     if (error) {
-      console.error('[volunteer/register] Upsert error:', { code: error.code, message: error.message, details: error.details, hint: error.hint });
       if (error.code === '23505') {
         return NextResponse.json(
           { success: false, error: 'You are already registered for one or more of these events' },
@@ -231,8 +217,6 @@ export async function POST(request: NextRequest) {
       }
       throw error;
     }
-
-    console.log('[volunteer/register] Upsert success:', data?.length, 'rows');
 
     // Auto-generate volunteer lab tokens for events linked to a lab day
     const createdTokens: Array<{ token: string; event_title: string }> = [];
@@ -259,7 +243,7 @@ export async function POST(request: NextRequest) {
       if (existingToken) {
         createdTokens.push({
           token: existingToken.token,
-          event_title: evt.title || 'Volunteer Event',
+          event_title: evt.name || 'Volunteer Event',
         });
         continue;
       }
@@ -281,7 +265,7 @@ export async function POST(request: NextRequest) {
       if (newToken) {
         createdTokens.push({
           token: newToken.token,
-          event_title: evt.title || 'Volunteer Event',
+          event_title: evt.name || 'Volunteer Event',
         });
       }
     }
