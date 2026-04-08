@@ -7,7 +7,8 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseAdmin();
 
-    const auth = await requireAuth('instructor');
+    // Allow volunteer_instructor+ to view locations
+    const auth = await requireAuth('volunteer_instructor');
     if (auth instanceof NextResponse) return auth;
     const { user } = auth;
 

@@ -7,7 +7,8 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requireAuth('instructor');
+  // Allow volunteer_instructor+ to view lab day details
+  const auth = await requireAuth('volunteer_instructor');
 
   if (auth instanceof NextResponse) return auth;
 

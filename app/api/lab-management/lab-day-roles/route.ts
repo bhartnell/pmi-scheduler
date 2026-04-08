@@ -19,7 +19,8 @@ export interface LabDayRole {
 // GET - Fetch roles for a lab day
 export async function GET(request: NextRequest) {
   try {
-    const auth = await requireAuth('instructor');
+    // Allow volunteer_instructor+ to view lab day roles
+    const auth = await requireAuth('volunteer_instructor');
 
     if (auth instanceof NextResponse) return auth;
 

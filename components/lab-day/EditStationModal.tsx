@@ -866,15 +866,32 @@ export default function EditStationModal({
             <div className="flex gap-2">
               <select value={selectedInstructor} onChange={(e) => handleInstructorChange(e.target.value)} className="flex-1 px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700">
                 <option value="">Add instructor...</option>
-                {instructors
-                  .filter(i => !stationInstructors.some(si => si.user_email === i.email))
-                  .map((instructor) => {
+                {(() => {
+                  const available = instructors.filter(i => !stationInstructors.some(si => si.user_email === i.email));
+                  const staffInstructors = available.filter(i => i.role !== 'volunteer_instructor');
+                  const volunteerInstructors = available.filter(i => i.role === 'volunteer_instructor');
+                  const renderOption = (instructor: Instructor, suffix?: string) => {
                     const avail = instructor.email ? calendarAvailability.get(instructor.email.toLowerCase()) : undefined;
                     const dot = avail ? avail.status === 'free' ? '\u{1F7E2} ' : avail.status === 'partial' ? '\u{1F7E1} ' : avail.status === 'busy' ? '\u{1F534} ' : '\u26AA ' : '';
                     return (
-                      <option key={instructor.id} value={`${instructor.name}|${instructor.email}`}>{dot}{instructor.name}</option>
+                      <option key={instructor.id} value={`${instructor.name}|${instructor.email}`}>{dot}{instructor.name}{suffix || ''}</option>
                     );
-                  })}
+                  };
+                  return (
+                    <>
+                      {staffInstructors.length > 0 && (
+                        <optgroup label="Instructors">
+                          {staffInstructors.map(i => renderOption(i))}
+                        </optgroup>
+                      )}
+                      {volunteerInstructors.length > 0 && (
+                        <optgroup label="Volunteer Instructors">
+                          {volunteerInstructors.map(i => renderOption(i, ' (Volunteer)'))}
+                        </optgroup>
+                      )}
+                    </>
+                  );
+                })()}
                 <option value="custom">+ Custom name...</option>
               </select>
               {selectedInstructor && selectedInstructor !== 'custom' && (
