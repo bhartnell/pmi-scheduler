@@ -4,6 +4,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { formatCohortNumber } from '@/lib/format-cohort';
 import {
   ChevronLeft,
   Calendar,
@@ -15,6 +16,7 @@ import {
   Loader2,
   Layers,
   RefreshCw,
+  GraduationCap,
 } from 'lucide-react';
 import LabTimer from '@/components/LabTimer';
 import AttendanceSection from '@/components/AttendanceSection';
@@ -86,6 +88,8 @@ export default function LabDayPage() {
   const [locations, setLocations] = useState<{ id: string; name: string }[]>([]);
   const [skills, setSkills] = useState<Skill[]>([]);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [allCohorts, setAllCohorts] = useState<{ id: string; cohort_number: number; program: { abbreviation: string } }[]>([]);
+  const [cohortChanging, setCohortChanging] = useState(false);
 
   // UI state
   const [showRosterPrint, setShowRosterPrint] = useState(false);
@@ -106,7 +110,7 @@ export default function LabDayPage() {
   const [roleModalStation, setRoleModalStation] = useState<Station | null>(null);
 
   useEffect(() => { if (status === 'unauthenticated') router.push('/auth/signin'); }, [status, router]);
-  useEffect(() => { if (session && labDayId) { fetchLabDay(); fetchScenarioParticipation(); fetchCurrentUserRole(); fetchSkillsForSignoffs(); } }, [session, labDayId]);
+  useEffect(() => { if (session && labDayId) { fetchLabDay(); fetchScenarioParticipation(); fetchCurrentUserRole(); fetchSkillsForSignoffs(); fetchAllCohorts(); } }, [session, labDayId]);
   useEffect(() => { if (labDay?.cohort?.id) fetchCohortStudents(); }, [labDay?.cohort?.id]);
 
   // Calendar availability
@@ -201,6 +205,38 @@ export default function LabDayPage() {
     catch (error) { console.error('Error fetching skills for signoffs:', error); }
   };
 
+  const fetchAllCohorts = async () => {
+    try {
+      const res = await fetch('/api/lab-management/cohorts');
+      const data = await res.json();
+      if (data.success) setAllCohorts(data.cohorts || []);
+    } catch (error) { console.error('Error fetching cohorts:', error); }
+  };
+
+  const handleCohortChange = async (newCohortId: string) => {
+    if (!newCohortId || newCohortId === labDay?.cohort?.id) return;
+    setCohortChanging(true);
+    try {
+      const res = await fetch(`/api/lab-management/lab-days/${labDayId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cohort_id: newCohortId }),
+      });
+      const data = await res.json();
+      if (!data.error) {
+        toast?.addToast('success', 'Cohort updated');
+        fetchLabDay();
+      } else {
+        toast?.addToast('error', data.error || 'Failed to update cohort');
+      }
+    } catch (err) {
+      console.error('Error changing cohort:', err);
+      toast?.addToast('error', 'Failed to update cohort');
+    } finally {
+      setCohortChanging(false);
+    }
+  };
+
   // ---- Quick add & lab mode ----
   const handleQuickAddStation = async () => {
     if (!quickAddTitle.trim()) return; setQuickAddSaving(true);
@@ -255,6 +291,28 @@ export default function LabDayPage() {
             NREMT Psychomotor Testing Day &mdash; Official Examination
           </div>
         )}
+
+        {/* Cohort selector */}
+        {userRole && hasMinRole(userRole, 'instructor') && (
+          <div className="flex items-center gap-3 mb-4 print:hidden">
+            <GraduationCap className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
+            <label className="text-sm font-medium text-gray-600 dark:text-gray-400">Cohort:</label>
+            <select
+              value={labDay.cohort?.id || ''}
+              onChange={(e) => handleCohortChange(e.target.value)}
+              disabled={cohortChanging}
+              className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+            >
+              {allCohorts.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.program?.abbreviation || 'Unknown'} Cohort {formatCohortNumber(c.cohort_number)}
+                </option>
+              ))}
+            </select>
+            {cohortChanging && <Loader2 className="w-4 h-4 animate-spin text-gray-400" />}
+          </div>
+        )}
+
         {labDay.notes && (<div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded-lg p-4 mb-6"><h3 className="font-medium text-yellow-800 dark:text-yellow-300 mb-1">Notes</h3><p className="text-yellow-700 dark:text-yellow-400 text-sm">{labDay.notes}</p></div>)}
 
         {labDay.source_template && (
