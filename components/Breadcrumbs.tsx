@@ -140,6 +140,7 @@ const ROUTE_LABELS: Record<string, string> = {
   'scheduling/polls': 'Scheduling Polls',
   // Other
   'reports': 'Reports',
+  'reports/skill-trends': 'Skill Trends',
   'poll': 'Poll',
   'student': 'Student Portal',
 };
