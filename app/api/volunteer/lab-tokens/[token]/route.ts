@@ -115,13 +115,13 @@ export async function GET(
     if (labDay.cohort_id) {
       const { data: studentData } = await supabase
         .from('students')
-        .select('id, name')
+        .select('id, first_name, last_name')
         .eq('cohort_id', labDay.cohort_id)
-        .eq('is_active', true)
-        .order('name');
-      students = (studentData || []).map((s: { id: string; name: string }) => ({
+        .eq('status', 'active')
+        .order('last_name');
+      students = (studentData || []).map((s: { id: string; first_name: string; last_name: string }) => ({
         id: s.id,
-        name: s.name,
+        name: `${s.first_name} ${s.last_name}`,
       }));
     }
 

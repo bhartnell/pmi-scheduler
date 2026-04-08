@@ -85,7 +85,16 @@ export async function PUT(request: NextRequest) {
 // Register a volunteer for one or more events
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { success: false, error: 'Invalid request body' },
+        { status: 400 }
+      );
+    }
+
     const {
       name,
       email,
@@ -99,7 +108,12 @@ export async function POST(request: NextRequest) {
       notes,
     } = body;
 
-    if (!name || !email || !event_ids?.length) {
+    // Normalize event_ids: accept both array and single string
+    const normalizedEventIds = Array.isArray(event_ids)
+      ? event_ids
+      : event_ids ? [event_ids] : [];
+
+    if (!name || !email || normalizedEventIds.length === 0) {
       return NextResponse.json(
         { success: false, error: 'Name, email, and at least one event are required' },
         { status: 400 }
@@ -132,15 +146,24 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate events exist and are active
-    const { data: validEvents } = await supabase
+    // First check without is_active filter to distinguish "not found" from "deactivated"
+    const { data: allEvents } = await supabase
       .from('volunteer_events')
-      .select('id, max_volunteers, linked_lab_day_id, title')
-      .in('id', event_ids)
-      .eq('is_active', true);
+      .select('id, max_volunteers, is_active, linked_lab_day_id, title')
+      .in('id', normalizedEventIds);
 
-    if (!validEvents || validEvents.length === 0) {
+    if (!allEvents || allEvents.length === 0) {
       return NextResponse.json(
-        { success: false, error: 'No valid active events found' },
+        { success: false, error: 'No matching events found. The events may have been removed.' },
+        { status: 400 }
+      );
+    }
+
+    const validEvents = allEvents.filter((e: { is_active: boolean | null }) => e.is_active !== false);
+
+    if (validEvents.length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'The selected events are no longer accepting registrations' },
         { status: 400 }
       );
     }

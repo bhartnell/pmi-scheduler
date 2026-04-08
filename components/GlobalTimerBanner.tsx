@@ -37,10 +37,12 @@ export default function GlobalTimerBanner() {
   const [sessionExpired, setSessionExpired] = useState(false);
   const versionRef = useRef<number>(0);
 
-  // Show timer banner on all authenticated pages (not on login/auth pages)
+  // Show timer banner on all authenticated pages (not on login/auth/public pages)
   const isTimerRelevantPage = !pathname.startsWith('/auth') &&
     !pathname.startsWith('/api') &&
-    !pathname.startsWith('/timer-display');
+    !pathname.startsWith('/timer-display') &&
+    !pathname.startsWith('/volunteer-lab') &&
+    !pathname.startsWith('/volunteer');
 
   // Fetch active timer with version tracking
   const fetchActiveTimer = useCallback(async () => {

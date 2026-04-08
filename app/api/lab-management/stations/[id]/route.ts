@@ -1,19 +1,35 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { notifyInstructorAssigned } from '@/lib/notifications';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { requireAuth } from '@/lib/api-auth';
+import { requireAuth, requireAuthOrVolunteerToken } from '@/lib/api-auth';
+import type { VolunteerTokenResult } from '@/lib/api-auth';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requireAuth('instructor');
+  const auth = await requireAuthOrVolunteerToken(request, 'instructor');
 
   if (auth instanceof NextResponse) return auth;
 
-  const { user } = auth;
-
   const { id } = await params;
+
+  // Volunteer tokens: verify the station belongs to their scoped lab day
+  if ((auth as VolunteerTokenResult).isVolunteerToken) {
+    const supabaseCheck = getSupabaseAdmin();
+    const { data: stationCheck } = await supabaseCheck
+      .from('lab_stations')
+      .select('lab_day_id')
+      .eq('id', id)
+      .single();
+
+    if (!stationCheck || stationCheck.lab_day_id !== (auth as VolunteerTokenResult).labDayId) {
+      return NextResponse.json(
+        { success: false, error: 'Access denied: station not in your lab day' },
+        { status: 403 }
+      );
+    }
+  }
 
   try {
     const supabase = getSupabaseAdmin();

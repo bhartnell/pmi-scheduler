@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { requireAuth } from '@/lib/api-auth';
+import { requireAuth, requireAuthOrVolunteerToken } from '@/lib/api-auth';
+import type { VolunteerTokenResult } from '@/lib/api-auth';
 
 // ---------------------------------------------------------------------------
 // GET /api/lab-management/student-queue?lab_day_id=UUID
 //
 // Returns the student x station grid data for individual testing mode.
 // Includes station instructor names and evaluation summary data.
+// Supports volunteer lab tokens (scoped to their lab day).
 // ---------------------------------------------------------------------------
 export async function GET(request: NextRequest) {
-  const auth = await requireAuth('instructor');
+  const auth = await requireAuthOrVolunteerToken(request, 'instructor');
   if (auth instanceof NextResponse) return auth;
 
   const labDayId = request.nextUrl.searchParams.get('lab_day_id');
@@ -18,6 +20,16 @@ export async function GET(request: NextRequest) {
       { success: false, error: 'lab_day_id is required' },
       { status: 400 }
     );
+  }
+
+  // Volunteer tokens: ensure they can only access their scoped lab day
+  if ((auth as VolunteerTokenResult).isVolunteerToken) {
+    if (labDayId !== (auth as VolunteerTokenResult).labDayId) {
+      return NextResponse.json(
+        { success: false, error: 'Access denied: not your lab day' },
+        { status: 403 }
+      );
+    }
   }
 
   try {

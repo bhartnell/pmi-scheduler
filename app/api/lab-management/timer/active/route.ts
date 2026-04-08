@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { requireAuth } from '@/lib/api-auth';
+import { requireAuthOrVolunteerToken } from '@/lib/api-auth';
+import type { VolunteerTokenResult } from '@/lib/api-auth';
 
 // GET - Get any active (running or paused) timer across all lab days
 // Enforces single active timer: if multiple found, keeps the most recent and stops others
 // Also cleans up stale timers that have been running for >24 hours
 // Supports ?version=N for efficient polling (returns not_modified when unchanged)
+// Supports volunteer lab tokens (scoped to their lab day)
 export async function GET(request: NextRequest) {
-  const auth = await requireAuth('instructor');
+  const auth = await requireAuthOrVolunteerToken(request, 'instructor');
 
   if (auth instanceof NextResponse) {
     // Add stop_polling flag and Retry-After header on 401 to tell stale clients to stop
@@ -26,7 +28,10 @@ export async function GET(request: NextRequest) {
     return auth;
   }
 
-  const { user } = auth;
+  // Volunteer tokens are scoped to a specific lab day
+  const volunteerLabDayId = (auth as VolunteerTokenResult).isVolunteerToken
+    ? (auth as VolunteerTokenResult).labDayId
+    : null;
 
   try {
     const supabase = getSupabaseAdmin();
@@ -34,12 +39,19 @@ export async function GET(request: NextRequest) {
     // Version-based polling: if client sends version, check if any timer has changed
     const clientVersion = parseInt(request.nextUrl.searchParams.get('version') || '0');
 
-    // Find ALL timers that are currently running or paused (not stopped)
-    const { data: activeTimers, error: timerError } = await supabase
+    // Find timers that are currently running or paused (not stopped)
+    // Volunteer tokens are scoped to their lab day only
+    let timerQuery = supabase
       .from('lab_timer_state')
       .select('id, lab_day_id, rotation_number, status, started_at, paused_at, elapsed_when_paused, duration_seconds, debrief_seconds, mode, rotation_acknowledged, version, updated_at')
       .in('status', ['running', 'paused'])
       .order('updated_at', { ascending: false });
+
+    if (volunteerLabDayId) {
+      timerQuery = timerQuery.eq('lab_day_id', volunteerLabDayId);
+    }
+
+    const { data: activeTimers, error: timerError } = await timerQuery;
 
     if (timerError) {
       // Table might not exist yet
