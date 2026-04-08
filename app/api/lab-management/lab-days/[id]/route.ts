@@ -195,6 +195,7 @@ export async function PATCH(
     if (body.coverage_note !== undefined) allowedFields.coverage_note = body.coverage_note;
     if (body.room !== undefined) allowedFields.room = body.room;
     if (body.lab_mode !== undefined) allowedFields.lab_mode = body.lab_mode;
+    if (body.is_nremt_testing !== undefined) allowedFields.is_nremt_testing = body.is_nremt_testing;
 
     if (Object.keys(allowedFields).length === 0) {
       return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });

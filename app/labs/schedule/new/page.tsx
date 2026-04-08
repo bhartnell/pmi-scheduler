@@ -220,6 +220,7 @@ function NewLabDayPageContent() {
 
   // Coverage Request state
   const [needsCoverage, setNeedsCoverage] = useState(false);
+  const [isNremtTesting, setIsNremtTesting] = useState(false);
   const [coverageNeeded, setCoverageNeeded] = useState(1);
   const [coverageNote, setCoverageNote] = useState('');
 
@@ -933,7 +934,8 @@ function NewLabDayPageContent() {
           rotation_duration: safeDuration,
           needs_coverage: needsCoverage,
           coverage_needed: needsCoverage ? coverageNeeded : 0,
-          coverage_note: needsCoverage ? (coverageNote || null) : null
+          coverage_note: needsCoverage ? (coverageNote || null) : null,
+          is_nremt_testing: isNremtTesting
         })
       });
 
@@ -1798,6 +1800,24 @@ function NewLabDayPageContent() {
                 </div>
               </div>
             )}
+          </div>
+
+          {/* NREMT Testing Day */}
+          <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isNremtTesting}
+                onChange={(e) => setIsNremtTesting(e.target.checked)}
+                className="w-4 h-4 text-red-600 rounded"
+              />
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                NREMT Psychomotor Testing Day
+              </span>
+            </label>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-7">
+              Enables Final evaluations only, per-station timers, candidate instructions, and coordinator view
+            </p>
           </div>
         </div>
 

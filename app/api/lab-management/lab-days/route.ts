@@ -190,6 +190,7 @@ export async function POST(request: NextRequest) {
       rotation_duration: labDayData.rotation_duration || 30,
       notes: labDayData.notes || null,
       source_template_id: labDayData.source_template_id || null,
+      is_nremt_testing: labDayData.is_nremt_testing || false,
     };
 
     const { data: labDay, error: labDayError } = await supabase

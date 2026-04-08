@@ -216,6 +216,15 @@ export default function LabDayPage() {
     finally { setLabModeLoading(false); }
   };
 
+  const handleToggleNremt = async () => {
+    const newValue = !labDay?.is_nremt_testing;
+    try {
+      const res = await fetch(`/api/lab-management/lab-days/${labDayId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ is_nremt_testing: newValue }) });
+      const data = await res.json();
+      if (!data.error && labDay) { setLabDay({ ...labDay, is_nremt_testing: newValue }); if (newValue) handleToggleLabMode('individual_testing'); }
+    } catch (err) { console.error('Error:', err); }
+  };
+
   // ---- Date helpers ----
   const isLabDayPast = (): boolean => { if (!labDay?.date) return false; const today = new Date(); today.setHours(0, 0, 0, 0); return new Date(labDay.date + 'T00:00:00') < today; };
   const isLabDayPastOrToday = (): boolean => { if (!labDay?.date) return false; const tomorrow = new Date(); tomorrow.setHours(0, 0, 0, 0); tomorrow.setDate(tomorrow.getDate() + 1); return new Date(labDay.date + 'T00:00:00') < tomorrow; };
@@ -297,6 +306,11 @@ export default function LabDayPage() {
           <button onClick={() => handleToggleLabMode('group_rotations')} disabled={labModeLoading} className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${labMode === 'group_rotations' ? 'bg-blue-600 text-white border-blue-600 dark:bg-blue-500 dark:border-blue-500' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-750'}`}><Layers className="w-3.5 h-3.5" /> Group Rotations</button>
           <button onClick={() => handleToggleLabMode('individual_testing')} disabled={labModeLoading} className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${labMode === 'individual_testing' ? 'bg-blue-600 text-white border-blue-600 dark:bg-blue-500 dark:border-blue-500' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-750'}`}><ClipboardCheck className="w-3.5 h-3.5" /> Individual Testing</button>
           {labModeLoading && <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-400" />}
+          <span className="mx-1 text-gray-300 dark:text-gray-600">|</span>
+          <label className="inline-flex items-center gap-1.5 cursor-pointer" title="Enables Final evaluations only, per-station timers, candidate instructions, and coordinator view">
+            <input type="checkbox" checked={!!labDay.is_nremt_testing} onChange={handleToggleNremt} className="w-3.5 h-3.5 rounded border-gray-300 text-red-600 focus:ring-red-500" />
+            <span className={`text-xs font-medium ${labDay.is_nremt_testing ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}`}>NREMT Testing Day</span>
+          </label>
           {(labDay.is_nremt_testing || labMode === 'individual_testing') && (
             <Link href={`/labs/schedule/${labDayId}/coordinator`} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-900/30 rounded-lg hover:bg-orange-100 dark:hover:bg-orange-900/50 border border-orange-200 dark:border-orange-800 ml-auto"><Users className="w-3.5 h-3.5" /> Coordinator View</Link>
           )}
