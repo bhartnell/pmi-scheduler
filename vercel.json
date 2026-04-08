@@ -75,6 +75,10 @@
     {
       "path": "/api/cron/data-export",
       "schedule": "0 5 * * 0"
+    },
+    {
+      "path": "/api/cron/generate-open-lab-sessions",
+      "schedule": "0 6 * * 0"
     }
   ]
 }

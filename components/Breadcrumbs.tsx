@@ -125,6 +125,8 @@ const ROUTE_LABELS: Record<string, string> = {
   'admin/time-clock': 'Time Clock',
   'admin/user-activity': 'User Activity',
   'admin/webhooks': 'Webhooks',
+  'admin/open-labs': 'Open Labs',
+  'admin/open-labs/qr-code': 'QR Code',
   // Clinical sub-pages
   'clinical/aemt-tracking': 'AEMT Tracking',
   'clinical/capacity': 'Capacity',

@@ -359,6 +359,13 @@ function buildSections(pendingAccessRequests: number): AdminSection[] {
       defaultExpanded: false,
       links: [
         {
+          href: '/admin/open-labs',
+          icon: BookOpen,
+          title: 'Open Lab',
+          description: 'Manage weekly open lab sessions, view signups, and download the QR flyer',
+          color: 'bg-emerald-500',
+        },
+        {
           href: '/admin/volunteer-events',
           icon: Users,
           title: 'Volunteer Management',

@@ -216,6 +216,7 @@ export default function StudentDetailPage() {
   const [student, setStudent] = useState<Student | null>(null);
   const [teamLeadHistory, setTeamLeadHistory] = useState<TeamLeadEntry[]>([]);
   const [assessments, setAssessments] = useState<Assessment[]>([]);
+  const [openLabHistory, setOpenLabHistory] = useState<{ id: string; date: string; program_level: string; what_to_work_on: string; requested_instructor: { name: string } | null }[]>([]);
   const [clinicalTasks, setClinicalTasks] = useState<ClinicalTasks | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -312,6 +313,7 @@ export default function StudentDetailPage() {
       fetchLabRatings();
       fetchSkillSignoffs();
       fetchAllSkills();
+      fetchOpenLabHistory();
     }
   }, [session, studentId]);
 
@@ -440,6 +442,18 @@ export default function StudentDetailPage() {
       }
     } catch (error) {
       console.error('Error fetching clinical tasks:', error);
+    }
+  };
+
+  const fetchOpenLabHistory = async () => {
+    try {
+      const res = await fetch(`/api/lab-management/students/${studentId}/open-lab-history`);
+      if (res.ok) {
+        const data = await res.json();
+        setOpenLabHistory(data.signups || []);
+      }
+    } catch {
+      // Non-critical — silently fail
     }
   };
 
@@ -2308,6 +2322,52 @@ export default function StudentDetailPage() {
                       )}
                     </div>
                   )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Open Lab History */}
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+          <div className="p-4 border-b dark:border-gray-700 flex items-center justify-between">
+            <h2 className="font-semibold text-gray-900 dark:text-white">Open Lab History</h2>
+            {openLabHistory.length > 0 && (
+              <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 text-xs font-medium rounded-full">
+                {openLabHistory.length} visit{openLabHistory.length !== 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
+          {openLabHistory.length === 0 ? (
+            <div className="p-8 text-center text-gray-500 dark:text-gray-400">
+              <Calendar className="w-12 h-12 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
+              <p>No open lab visits recorded</p>
+            </div>
+          ) : (
+            <div className="divide-y dark:divide-gray-700">
+              {openLabHistory.map((visit) => (
+                <div key={visit.id} className="p-4 flex items-start gap-4">
+                  <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <BookOpen className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        {new Date(visit.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                      </span>
+                      <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs rounded-full">
+                        {visit.program_level}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 truncate">
+                      {visit.what_to_work_on}
+                    </p>
+                    {visit.requested_instructor && (
+                      <p className="text-xs text-gray-500 dark:text-gray-500 mt-0.5">
+                        Requested: {visit.requested_instructor.name}
+                      </p>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
