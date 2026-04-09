@@ -820,11 +820,6 @@ export default function InternshipDetailPage() {
           const preceptorName = preceptorContact
             ? `${preceptorContact.last_name}, ${preceptorContact.first_name}`
             : null;
-<<<<<<< HEAD
-          // Legacy preceptor: has preceptor_id but no resolved contact (FK join failed)
-          const isLegacyPreceptor = !preceptorContact && !!formData.preceptor_id;
-          return (student?.email || preceptorEmail || isLegacyPreceptor || internship.agencies) ? (
-=======
           const preceptorEmail = preceptorContact?.email as string | null | undefined;
           const preceptorPhone = preceptorContact?.phone as string | null | undefined;
           const agencyRep = getAgencyRep(internship.agencies?.name, internship.agencies?.abbreviation);
@@ -860,88 +855,11 @@ export default function InternshipDetailPage() {
           const hasAnyContact = student || preceptorContact || internship.agencies || agencyRep;
 
           return hasAnyContact ? (
->>>>>>> claude/focused-goodall
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-4 mb-6">
             <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
               <Users className="w-4 h-4" />
               Quick Contacts
             </h3>
-<<<<<<< HEAD
-            <div className="flex flex-wrap gap-3">
-              {student?.email && (
-                <button
-                  onClick={() => handleCopyEmail(student.email)}
-                  className="inline-flex items-center gap-2 px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
-                >
-                  <User className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
-                  <span className="font-medium text-gray-900 dark:text-white mr-1">Student:</span>
-                  <span className="text-gray-700 dark:text-gray-300">{student.email}</span>
-                  {copiedEmail === student.email ? (
-                    <Check className="w-3.5 h-3.5 text-green-500" />
-                  ) : (
-                    <Copy className="w-3.5 h-3.5 text-gray-400" />
-                  )}
-                </button>
-              )}
-              {preceptorEmail && (
-                <button
-                  onClick={() => handleCopyEmail(preceptorEmail)}
-                  className="inline-flex items-center gap-2 px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
-                >
-                  <Users className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                  <span className="font-medium text-gray-900 dark:text-white mr-1">Preceptor{preceptorLabel ? ` (${preceptorLabel})` : ''}:</span>
-                  <span className="text-gray-700 dark:text-gray-300">{preceptorEmail}</span>
-                  {copiedEmail === preceptorEmail ? (
-                    <Check className="w-3.5 h-3.5 text-green-500" />
-                  ) : (
-                    <Copy className="w-3.5 h-3.5 text-gray-400" />
-                  )}
-                </button>
-              )}
-              {isLegacyPreceptor && (
-                <Link
-                  href="/clinical/preceptors"
-                  className="inline-flex items-center gap-2 px-3 py-2 text-sm bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
-                >
-                  <Users className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                  <span className="font-medium text-amber-800 dark:text-amber-300">Preceptor:</span>
-                  <span className="text-amber-700 dark:text-amber-400">Legacy record — view in preceptor directory</span>
-                </Link>
-              )}
-              {internship.agencies?.phone && (
-                <button
-                  onClick={() => handleCopyEmail(internship.agencies!.phone!)}
-                  className="inline-flex items-center gap-2 px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
-                >
-                  <Building2 className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
-                  <span className="font-medium text-gray-900 dark:text-white mr-1">Agency:</span>
-                  <span className="text-gray-700 dark:text-gray-300">{internship.agencies.name}: {internship.agencies.phone}</span>
-                  {copiedEmail === internship.agencies.phone ? (
-                    <Check className="w-3.5 h-3.5 text-green-500" />
-                  ) : (
-                    <Copy className="w-3.5 h-3.5 text-gray-400" />
-                  )}
-                </button>
-              )}
-              {internship.agencies?.clinical_coordinator_email && (
-                <button
-                  onClick={() => handleCopyEmail(internship.agencies!.clinical_coordinator_email!)}
-                  className="inline-flex items-center gap-2 px-3 py-2 text-sm bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
-                >
-                  <Building2 className="w-3.5 h-3.5 text-orange-600 dark:text-orange-400" />
-                  <span className="font-medium text-gray-900 dark:text-white mr-1">Clinical Rep:</span>
-                  <span className="text-gray-700 dark:text-gray-300">
-                    {internship.agencies.clinical_coordinator_name ? `${internship.agencies.clinical_coordinator_name} — ` : ''}
-                    {internship.agencies.clinical_coordinator_email}
-                  </span>
-                  {copiedEmail === internship.agencies.clinical_coordinator_email ? (
-                    <Check className="w-3.5 h-3.5 text-green-500" />
-                  ) : (
-                    <Copy className="w-3.5 h-3.5 text-gray-400" />
-                  )}
-                </button>
-              )}
-=======
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Student */}
               <div className="space-y-1">
@@ -1043,7 +961,6 @@ export default function InternshipDetailPage() {
                   <span className="text-xs text-gray-400 italic">Contact coordinator for agency rep info</span>
                 )}
               </div>
->>>>>>> claude/focused-goodall
             </div>
           </div>
         ) : null;
